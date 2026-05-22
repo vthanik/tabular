@@ -33,8 +33,4 @@ A \code{tabular_spec} S7 object holding the figure.
 Figure constructor; separate from \code{\link[=tb_table]{tb_table()}} because a ggplot or
 grob is type-distinct from a \code{data.frame}.
 }
-\seealso{
-Other entry-points: 
-\code{\link{tb_table}()}
-}
 \concept{entry-points}

@@ -11,9 +11,13 @@
 #   - Predicates take the herald shape: `is_<name>()` accepts both S7
 #     and pre-S7 S3 dual-class objects.
 #
-# Constructors stay minimal: S7-generated defaults at this scaffold
-# stage. Phase 1 adds custom constructors with validation + cli::cli_abort
-# input checks, paralleling class_ggplot in ggplot2.
+# Validation strategy: user-facing `tb_*()` verbs run cli `check_*`
+# helpers (R/sanity.R) at the call boundary -- friendly error messages
+# with `tabular_error_input` class plumbing. S7's typed properties act
+# as the last-line defense for internal mutations (engine, backends);
+# if a Phase 1b path accidentally writes a malformed field, S7 rejects
+# at the property write. cli wrappers + S7 typed properties are
+# complementary, not exclusive.
 
 #' tabular S7 classes
 #'
@@ -43,11 +47,14 @@ tabular_spec <- S7::new_class(
   "tabular_spec",
   package = "tabular",
   properties = list(
-    data = S7::class_any,
+    data = S7::class_data.frame,
     titles = S7::new_property(S7::class_character, default = character()),
     footnotes = S7::new_property(S7::class_character, default = character()),
     preset = S7::class_any,
-    paginate_at = S7::new_property(S7::class_integer, default = NA_integer_),
+    rows_per_page = S7::new_property(
+      S7::class_integer,
+      default = NA_integer_
+    ),
     continuation = S7::new_property(
       S7::class_character,
       default = "(continued)"

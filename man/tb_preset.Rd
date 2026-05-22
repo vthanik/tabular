@@ -2,29 +2,111 @@
 % Please edit documentation in R/tb_preset.R
 \name{tb_preset}
 \alias{tb_preset}
-\title{Study-wide rendering defaults}
+\title{Apply rendering defaults to a tabular spec}
 \usage{
-tb_preset(name = NULL, ..., reset = FALSE)
+tb_preset(spec, ..., reset = FALSE)
 }
 \arguments{
-\item{name}{\code{character(1)} registered preset name to apply
-(e.g. \code{"gsk_house_style"}), or \code{NULL} (default) when supplying
-values inline via \code{...}.}
+\item{spec}{A \code{tabular_spec} produced by \code{\link[=tb_table]{tb_table()}} (or any
+later verb in the chain).}
 
-\item{...}{Named geometry / styling values. Accepted keys:
-\code{font_size}, \code{font_family}, \code{orientation} (\code{"portrait"}/
-\code{"landscape"}), \code{margins}, \code{paper_size}, \code{hlines}, \code{n_format},
-\code{pagehead} (list of left/center/right), \code{pagefoot} (same).}
+\item{...}{Named geometry / styling values. The package owns
+\emph{render-time} concerns only -- cell formatting, percent precision,
+stat-label text, and similar shape decisions belong to the upstream
+data-prep step that builds the wide \code{data.frame}. Accepted keys:
+\itemize{
+\item \strong{\code{font_size}} -- body font size in points.
+\item \strong{\code{font_family}} -- body font name.
+\item \strong{\code{orientation}} -- \code{"portrait"} or \code{"landscape"}.
+\item \strong{\code{paper_size}} -- \code{"letter"} or \code{"a4"}.
+\item \strong{\code{margins}} -- length-1 or length-4 numeric in inches.
+\item \strong{\code{title_align}} -- \code{"left"} / \code{"center"} / \code{"right"}.
+Default \code{"center"} (BMS / GSK convention); set \code{"left"} for
+Lilly-style title blocks.
+\item \strong{\code{footnote_align}} -- \code{"left"} / \code{"center"} / \code{"right"}.
+Default \code{"left"} (all surveyed submission standards).
+\item \strong{\code{na_text}} -- string substituted for \code{NA} cells in the
+wide data at render time. Default \code{""} (blank cell).
+Common sponsor variants: \code{"-"}, \code{"NE"}, \code{"."}. Operates on
+cells only; titles and footnotes already reject \code{NA} at
+construction time.
+\item \strong{\code{pagehead}} -- list of named lists, one per header row;
+each row is \code{list(left=, center=, right=)}. Token strings
+(\code{{thepage}}, \code{{total_pages}}, \code{{study}}, ...) are interpolated
+at render time.
+\item \strong{\code{pagefoot}} -- same shape as \code{pagehead}, with an optional
+\code{rule_above} (logical) controlling the solid line above the
+footer block.
+\item \strong{\code{hlines}} -- \code{"header"} / \code{"none"} / \code{"all"}.
+\item \strong{\code{indent_chars}} -- prefix the backend prepends when
+\code{\link[=tb_rows]{tb_rows()}}'s \code{indent_by} is set.
+\item \strong{\code{continuation}} -- continuation marker rendered on page 2+
+of paginated tables (e.g. \code{"(continued)"}, \code{"(suite)"}).
+\item \strong{\code{rows_per_page}} -- default row-per-page count when
+\code{tb_table(rows_per_page = ...)} is unset.
+}}
 
-\item{reset}{Logical. \code{TRUE} clears the active preset to defaults.}
+\item{reset}{Logical. \code{TRUE} clears the spec's preset back to
+defaults (ignores the \code{...} values).}
 }
 \value{
-Invisibly returns the preset list that is now active.
+The updated \code{tabular_spec}.
 }
 \description{
-Set page geometry (orientation, margins, font), n-counts formatting,
-page header/footer, and horizontal-rule style for the entire session.
-Called once per program; subsequent \code{tb_table()} calls pick up the
-active preset. Code-only -- no YAML / config-file discovery.
+\code{tb_preset()} is a pipe-chained verb: takes a \code{tabular_spec} and
+returns a \code{tabular_spec} with its \verb{@preset} property updated. The
+new values are merged into any preset already on the spec (or the
+session default set via \code{\link[=tb_set_preset]{tb_set_preset()}}) and override at render
+time.
+}
+\details{
+For a session-wide default applied to every subsequent
+\code{\link[=tb_table]{tb_table()}} call, see \code{\link[=tb_set_preset]{tb_set_preset()}}.
+}
+\section{Style profiles}{
+
+The package ships \strong{no named style profiles}. Wrap \code{tb_preset()}
+(or \code{\link[=tb_set_preset]{tb_set_preset()}}) in your own helper function for any house
+style you need to reuse:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{custom_style <- function(spec) \{
+  spec |>
+    tb_preset(
+      font_size    = 8,
+      orientation  = "landscape",
+      hlines       = "header",
+      indent_chars = "   "
+    )
+\}
+
+saf_demo |>
+  tb_table(titles = "Table 14.1.1") |>
+  custom_style() |>
+  tb_render(tempfile(fileext = ".rtf"))
+}\if{html}{\out{</div>}}
+
+Or set the same defaults session-wide so every \code{tb_table()} picks
+them up automatically:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{tb_set_preset(font_size = 8, orientation = "landscape")
+
+saf_demo |>
+  tb_table(titles = "Table 14.1.1") |>
+  tb_render(tempfile(fileext = ".rtf"))
+}\if{html}{\out{</div>}}
+}
+
+\section{Errors}{
+
+Raises \code{tabular_error_runtime} while the implementation is still
+stubbed. Phase 1b lifts the stub.
+}
+
+\seealso{
+\code{\link[=tb_set_preset]{tb_set_preset()}} for the session-scope default.
+
+Other defaults: 
+\code{\link{tb_get_preset}()},
+\code{\link{tb_set_preset}()}
 }
 \concept{defaults}

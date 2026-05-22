@@ -4,44 +4,106 @@
 \alias{tb_table}
 \title{Construct a tabular spec from pre-summarised wide data}
 \usage{
-tb_table(
-  data,
-  titles = NULL,
-  footnotes = NULL,
-  preset = NULL,
-  paginate_at = NULL,
-  continuation = "(continued)"
-)
+tb_table(data, titles = NULL, footnotes = NULL, rows_per_page = NULL)
 }
 \arguments{
 \item{data}{Pre-summarised wide \code{data.frame}. One row per displayed
-row; columns are stat-label, treatment arms, and optional \code{Total}.}
+row; columns carry the row label, treatment arms, and optional
+\code{Total}. Every cell is the final character string that will appear
+in the output. Required.}
 
-\item{titles}{\code{character()} of title lines (e.g. table number, body,
-population). Rendered top-of-table.}
+\item{titles}{\code{character()} of title lines. Rendered at the top of
+the table, centred, one line per element. Submission conventions
+typically use up to four lines (table number / description /
+population / qualifier); more is permitted but uncommon. \code{NULL}
+(default) means no title block.}
 
-\item{footnotes}{\code{character()} of footnote lines, rendered below table.}
+\item{footnotes}{\code{character()} of user footnote lines. Rendered
+left-aligned below the table, after the footer rule. \code{NULL}
+(default) means no user footnotes; the backend still emits the
+mandatory program-path / timestamp lines from the active preset.}
 
-\item{preset}{Name of a \code{tb_preset()} to apply, or \code{NULL} (default) to
-use the current session preset.}
-
-\item{paginate_at}{Integer row count at which to break to a new page,
-or \code{NULL} (default) to let the backend handle it.}
-
-\item{continuation}{\code{character(1)} continuation text for paginated
-tables (e.g. \code{"(continued)"}). Default \code{"(continued)"}.}
+\item{rows_per_page}{Single whole number; the backend breaks to a
+new page after this many data rows. \code{NULL} (default) defers to
+the backend's pagination policy (typically driven by paper size,
+font size, and orphan / widow rules). Group-aware pagination
+(e.g. keep-with-next on SOC -> PT blocks) is handled by the
+engine regardless of this value.}
 }
 \value{
 A \code{tabular_spec} S7 object.
 }
 \description{
-Lean constructor for the 95\% case. Takes a pre-summarised wide
-\code{data.frame} (one row per display row, columns per treatment arm) plus
-title and footnote strings. The result is a \code{tabular_spec} that further
-verbs (\code{tb_cols()}, \code{tb_rows()}, ...) update functionally.
+Entry point for the 95\% case. Takes a pre-summarised wide
+\code{data.frame} (one row per displayed table row, columns per treatment
+arm) plus title and footnote strings. Returns a \code{tabular_spec} that
+the remaining verbs (\code{\link[=tb_cols]{tb_cols()}}, \code{\link[=tb_rows]{tb_rows()}}, ...) update
+functionally and that \code{\link[=tb_render]{tb_render()}} emits to RTF / LaTeX / PDF /
+HTML / DOCX.
+}
+\details{
+\code{tb_table()} is deliberately thin (4 args). Cell formatting,
+percent precision, stat-label text, MISSING-row policy, and similar
+shape decisions belong \strong{upstream} in the data-preparation step
+that builds the wide \code{data.frame}. The package boundary is
+\emph{pre-summarised data in, rendered file out.}
+}
+\section{Layout map}{
+
+The four-section canonical page layout has fixed slots; \code{tb_table()}
+populates two of them and the active preset populates the rest:
+\itemize{
+\item \strong{Header} -- protocol / draft-marker / page-number. Owned by
+\code{\link[=tb_preset]{tb_preset()}} (\code{pagehead}).
+\item \strong{Title block} -- \code{titles} lines, centred. Owned by this verb.
+\item \strong{Data section} -- \code{data}, column headers, optional subgroup
+banner. Column shape and headers are owned by \code{\link[=tb_cols]{tb_cols()}} /
+\code{\link[=tb_rows]{tb_rows()}}; the data itself comes from this verb.
+\item \strong{Footnote block} -- \code{footnotes} (user) plus program-path /
+timestamp (preset). Top-rule, blank line, then user footnotes.
+User portion owned by this verb; backend portion owned by
+\code{\link[=tb_preset]{tb_preset()}} (\code{pagefoot}).
+}
+}
+
+\section{Style profile}{
+
+\code{tb_table()} does not take a \code{preset} argument. Style defaults flow
+from the session preset set via \code{\link[=tb_set_preset]{tb_set_preset()}}; per-table
+overrides compose in the pipe via \code{\link[=tb_preset]{tb_preset()}}. The continuation
+marker for paginated tables (\code{"(continued)"}, \code{"(suite)"}, ...) is
+a preset value, not a \code{tb_table()} argument.
+}
+
+\section{Errors}{
+
+Raises \code{tabular_error_input} when:
+\itemize{
+\item \code{data} is not a data frame.
+\item \code{titles} / \code{footnotes} are non-character or contain \code{NA}.
+\item \code{rows_per_page} is not a single whole number (or \code{NULL}).
+}
+}
+
+\examples{
+# 95\% case -- pre-summarised demographics
+spec <- tb_table(
+  saf_demo,
+  titles    = c(
+    "Table 14.1.1",
+    "Summary of Demographics and Baseline Characteristics",
+    "Safety Population"
+  ),
+  footnotes = "Percentages are based on the number of subjects per arm."
+)
+spec
+
+# With explicit pagination
+tb_table(saf_demo, rows_per_page = 40L)
 }
 \seealso{
-Other entry-points: 
-\code{\link{tb_figure}()}
+\code{\link[=tb_cols]{tb_cols()}}, \code{\link[=tb_rows]{tb_rows()}}, \code{\link[=tb_render]{tb_render()}} for the rest of
+the verb chain. \code{\link[=tb_preset]{tb_preset()}} / \code{\link[=tb_set_preset]{tb_set_preset()}} for style
+defaults.
 }
-\concept{entry-points}
+\concept{entry_points}

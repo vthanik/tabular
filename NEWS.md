@@ -1,4 +1,4 @@
-# tabular (development version)
+# tabular 0.0.0.9000
 
 * Initial package skeleton. S7 classes (`tabular_spec`, `tabular_grid`,
   `column_spec`) declared in `R/aaa_class.R`; nine `tb_*` verbs stubbed
