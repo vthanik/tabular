@@ -1,0 +1,83 @@
+#' Print a `tabular_spec`
+#'
+#' Pretty-prints a `tabular_spec` as a structured cli tree showing
+#' data dimensions, titles, footnotes, and any column / header /
+#' sort / pivot / derive / style / pagination configuration the spec
+#' carries.
+#'
+#' Phase 1b upgrade: once the HTML backend lands, this method will
+#' render the spec to a tempfile via `emit()` and open it in the
+#' active viewer (`getOption("viewer")`) when called interactively --
+#' mirroring `gt::gt()` and `tinytable::tt()`. Until then, the cli
+#' tree view is the print output.
+#'
+#' @param x A `tabular_spec` object.
+#' @param ... Ignored.
+#' @return Invisibly returns `x`.
+#'
+#' @examples
+#' # Until tabular() lands, this example is documentation-only.
+#' # tabular(saf_demo, titles = c("Table 14.1.1", "Demographics"))
+#'
+#' @name print.tabular_spec
+#' @usage NULL
+NULL
+
+# The body is a stand-alone helper so covr can instrument it (S7
+# stores the method as a separate function object, and covr does not
+# follow the dispatch path).
+.tabular_spec_print <- function(x, ...) {
+  cli::cli_h3("{.cls tabular_spec}")
+
+  nr <- nrow(x@data)
+  nc <- ncol(x@data)
+  cli::cli_text("Data: {nr} row{?s} x {nc} column{?s}")
+
+  n_titles <- length(x@titles)
+  if (n_titles > 0L) {
+    cli::cli_text("Titles ({n_titles}):")
+    for (i in seq_len(n_titles)) {
+      t <- x@titles[[i]]
+      if (nchar(t) > 60L) {
+        t <- paste0(substr(t, 1L, 57L), "...")
+      }
+      cli::cli_text("  {i}. {.val {t}}")
+    }
+  }
+
+  n_footnotes <- length(x@footnotes)
+  if (n_footnotes > 0L) {
+    cli::cli_text("Footnotes: {n_footnotes} line{?s}")
+  }
+
+  configured <- c(
+    cols = length(x@cols),
+    headers = length(x@headers),
+    pivots = length(x@pivots),
+    derives = length(x@derives)
+  )
+  configured <- configured[configured > 0L]
+  if (length(configured) > 0L) {
+    parts <- paste0(names(configured), " (", configured, ")")
+    cli::cli_text("Config: {paste(parts, collapse = ', ')}")
+  }
+
+  if (is_sort_spec(x@sort) && length(x@sort@by) > 0L) {
+    cli::cli_text("Sort: {paste(x@sort@by, collapse = ', ')}")
+  }
+  if (
+    is_pagination_spec(x@pagination) &&
+      !is.na(x@pagination@rows_per_page)
+  ) {
+    cli::cli_text("Pagination: every {x@pagination@rows_per_page} row{?s}")
+  }
+
+  invisible(x)
+}
+
+# nocov start -- S7::method<- assignments are not instrumented by
+# covr; tests cover .tabular_spec_print() directly.
+S7::method(print, tabular_spec) <- function(x, ...) {
+  .tabular_spec_print(x, ...)
+}
+# nocov end
