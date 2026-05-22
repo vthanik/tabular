@@ -72,6 +72,36 @@ check_rows_per_page <- function(
   )
 }
 
+#' Check that `x` is a `tabular_spec`
+#'
+#' Gate at the top of every verb that takes a spec as its first argument
+#' (`tb_cols`, `tb_rows`, `tb_spans`, `tb_styles`, `tb_preset`,
+#' `tb_render`, ...). Fails with a friendly `tabular_error_input` and
+#' points the user back to `tb_table()`.
+#'
+#' @inheritParams check_data_frame
+#' @return `x` invisibly on success; otherwise aborts.
+#' @keywords internal
+#' @noRd
+check_tabular_spec <- function(
+  x,
+  arg = rlang::caller_arg(x),
+  call = rlang::caller_env()
+) {
+  if (is_tabular_spec(x)) {
+    return(invisible(x))
+  }
+  cli::cli_abort(
+    c(
+      "{.arg {arg}} must be a {.cls tabular_spec}.",
+      "x" = "You supplied {.obj_type_friendly {x}}.",
+      "i" = "Build one with {.fn tb_table}."
+    ),
+    class = "tabular_error_input",
+    call = call
+  )
+}
+
 #' Check that `x` is a character vector (any length, no NAs)
 #'
 #' Empty vectors are allowed; this is the right type for `titles` /
