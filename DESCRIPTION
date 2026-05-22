@@ -1,0 +1,36 @@
+Package: tabular
+Title: TFL Rendering for Regulatory Submissions
+Version: 0.0.0.9000
+Authors@R:
+    person("Vignesh", "Thanikachalam", email = "about.vignesh@gmail.com",
+           role = c("aut", "cre"))
+Description: Native emission of clinical tables, figures, and listings to
+    RTF, LaTeX, HTML, PDF, and DOCX from a single dplyr-style API. Handles
+    decimal alignment via font metrics, group-aware pagination, page-field
+    tokens, and inline markup that survives string operations. Designed
+    for CDISC ADaM workflows and FDA/EMA regulatory submissions; replaces
+    the tfrmt + r2rtf + flextable + gt stitched-together stack with one
+    package per format.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.3.0)
+Imports:
+    S7,
+    cli,
+    rlang
+Suggests:
+    testthat (>= 3.0.0),
+    withr,
+    ggplot2,
+    knitr,
+    quarto,
+    pkgdown,
+    tinytex
+VignetteBuilder:
+    quarto
+Config/testthat/edition: 3
+Config/Needs/website: pkgdown
+LazyData: true

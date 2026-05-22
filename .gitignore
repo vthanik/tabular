@@ -1,0 +1,24 @@
+# Local-only Claude Code files
+CLAUDE.local.md
+MEMORY.md
+plan.md
+build.md
+debugging.md
+.local/
+
+# R session/state
+*.Rproj
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# pkgdown build output / installed vignettes
+docs/
+inst/doc/
+
+# data-raw transient
+data-raw/cache/
+
+# macOS
+.DS_Store
