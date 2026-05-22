@@ -7,7 +7,6 @@
 \alias{is_col_spec}
 \alias{is_header_node}
 \alias{is_sort_spec}
-\alias{is_pivot_spec}
 \alias{is_derive_spec}
 \alias{is_style_node}
 \alias{is_style_predicate}
@@ -25,8 +24,6 @@ is_col_spec(x)
 is_header_node(x)
 
 is_sort_spec(x)
-
-is_pivot_spec(x)
 
 is_derive_spec(x)
 

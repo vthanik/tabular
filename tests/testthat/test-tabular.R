@@ -35,7 +35,7 @@ test_that("tabular(matrix) raises tabular_error_input", {
   expect_error(tabular(matrix(1:4, 2, 2)), class = "tabular_error_input")
 })
 
-# Edge case 2: tibble / data.table -- coerce to data.frame -------------
+# Edge case 2: tibble / data.table — coerce to data.frame -------------
 
 test_that("tabular() coerces tibble to data.frame", {
   skip_if_not_installed("tibble")
@@ -44,7 +44,7 @@ test_that("tabular() coerces tibble to data.frame", {
   expect_identical(class(s@data), "data.frame")
 })
 
-# Edge case 3: zero rows -- accept -------------------------------------
+# Edge case 3: zero rows — accept -------------------------------------
 
 test_that("tabular() accepts a 0-row data.frame", {
   s <- tabular(data.frame(x = integer(), y = character()))
@@ -52,7 +52,7 @@ test_that("tabular() accepts a 0-row data.frame", {
   expect_identical(nrow(s@data), 0L)
 })
 
-# Edge case 4: zero columns -- reject ----------------------------------
+# Edge case 4: zero columns — reject ----------------------------------
 
 test_that("tabular() rejects a 0-column data.frame", {
   empty <- data.frame()
@@ -60,7 +60,7 @@ test_that("tabular() rejects a 0-column data.frame", {
   expect_error(tabular(empty), "at least one column")
 })
 
-# Edge case 5: duplicate column names -- reject ------------------------
+# Edge case 5: duplicate column names — reject ------------------------
 
 test_that("tabular() rejects duplicate column names", {
   df <- data.frame(x = 1, y = 2)
@@ -69,7 +69,7 @@ test_that("tabular() rejects duplicate column names", {
   expect_error(tabular(df), "duplicate column names")
 })
 
-# Edge case 6: titles non-character -- reject --------------------------
+# Edge case 6: titles non-character — reject --------------------------
 
 test_that("tabular() rejects numeric titles", {
   expect_error(
@@ -85,7 +85,7 @@ test_that("tabular() rejects list titles", {
   )
 })
 
-# Edge case 7: titles contains NA -- reject ----------------------------
+# Edge case 7: titles contains NA — reject ----------------------------
 
 test_that("tabular() rejects titles containing NA", {
   expect_error(
@@ -94,14 +94,14 @@ test_that("tabular() rejects titles containing NA", {
   )
 })
 
-# Edge case 8: titles length 0 -- accept -------------------------------
+# Edge case 8: titles length 0 — accept -------------------------------
 
 test_that("tabular() accepts character() (length 0) titles", {
   s <- tabular(data.frame(x = 1), titles = character())
   expect_identical(s@titles, character())
 })
 
-# Edge case 9: footnotes non-character -- reject -----------------------
+# Edge case 9: footnotes non-character — reject -----------------------
 
 test_that("tabular() rejects numeric footnotes", {
   expect_error(
@@ -129,7 +129,7 @@ test_that("tabular() preserves factor columns", {
   expect_identical(levels(s@data$grp), c("C", "A", "B"))
 })
 
-# NULL titles / footnotes -- default behaviour -------------------------
+# NULL titles / footnotes — default behaviour -------------------------
 
 test_that("tabular() with NULL titles produces empty character()", {
   s <- tabular(data.frame(x = 1), titles = NULL, footnotes = NULL)

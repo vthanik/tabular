@@ -28,7 +28,7 @@ LaTeX, HTML, PDF, and DOCX from a single dplyr-style API. Designed
 for CDISC ADaM workflows and FDA / EMA regulatory submissions.
 
 `tabular` replaces the `tfrmt` + `r2rtf` + `flextable` + `gt`
-stitched-together stack with one package per format -- decimal
+stitched-together stack with one package per format — decimal
 alignment, group-aware pagination, page-field tokens, and inline
 markup that survives string operations all handled natively.
 
@@ -47,7 +47,7 @@ pak::pak("vthanik/tabular")
 classes, and bundled demo datasets are in place; backends land
 incrementally per `plan.md`. Break-anything-anytime until v0.1.0.
 
-## Example -- 95% case (planned)
+## Example — 95% case (planned)
 
 Pre-summarised wide data flows through five verbs to a regulatory
 submission file:

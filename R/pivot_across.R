@@ -294,7 +294,7 @@ pivot_across <- function(
   df <- .apply_overall_label(df, overall = overall)
   df <- .filter_to_column_group(df, column = column, overall = overall)
 
-  # nocov start -- defensive: .filter_to_column_group only narrows, and
+  # nocov start — defensive: .filter_to_column_group only narrows, and
   # the earlier post-internal-filter check at L286 catches the realistic
   # empty case. Kept as a final safety net for malformed input.
   if (nrow(df) == 0L) {

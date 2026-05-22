@@ -2,11 +2,11 @@
 
 Source scripts for the five lazy-loaded demo datasets in `data/`:
 
-- `saf_demo` -- Demographics, Safety Population
-- `saf_aeoverall` -- High-level AE summary
-- `saf_aesocpt` -- AEs by SOC and PT
-- `saf_vital` -- Vital-signs summary
-- `eff_resp` -- Best Overall Response + ORR / DCR
+- `saf_demo` — Demographics, Safety Population
+- `saf_aeoverall` — High-level AE summary
+- `saf_aesocpt` — AEs by SOC and PT
+- `saf_vital` — Vital-signs summary
+- `eff_resp` — Best Overall Response + ORR / DCR
 
 ## Build
 
@@ -37,11 +37,11 @@ install.packages(c("pharmaverseadam", "dplyr", "tidyr", "tibble",
 - Each `.rda` capped at 50 KB by the size guard at the bottom of
   `bundle-demo.R`. If size grows, trim rows (e.g. top-N SOCs in
   `saf_aesocpt`) rather than columns.
-- Values are illustrative -- they're derived from `pharmaverseadam`'s
+- Values are illustrative — they're derived from `pharmaverseadam`'s
   synthetic CDISC Pilot 03 dataset, not real subjects.
 
 ## Why a build script (vs. hand-coded `data.frame()` literals)
 
 Reproducibility. If pharmaverseadam updates, or we tweak filter
-criteria / stat formats, we rebuild -- we don't hand-update cell
+criteria / stat formats, we rebuild — we don't hand-update cell
 values. Matches the herald `bundle-pilot.R` pattern.

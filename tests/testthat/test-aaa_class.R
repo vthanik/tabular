@@ -53,15 +53,6 @@ test_that("sort_spec() builds with defaults", {
   expect_false(s@descending)
 })
 
-# pivot_spec ----------------------------------------------------------
-
-test_that("pivot_spec() builds with defaults", {
-  p <- pivot_spec(by = "year", values = "sales")
-  expect_true(is_pivot_spec(p))
-  expect_identical(p@by, "year")
-  expect_true(p@expand)
-})
-
 # derive_spec ---------------------------------------------------------
 
 test_that("derive_spec() defaults to numeric type", {
@@ -190,7 +181,7 @@ test_that("predicates never error and return FALSE for non-matches", {
   expect_false(is_tabular_spec(NULL))
   expect_false(is_tabular_spec(data.frame()))
   expect_false(is_col_spec(list()))
-  expect_false(is_pivot_spec("not a spec"))
+  expect_false(is_sort_spec("not a spec"))
   expect_false(is_pagination_spec(42L))
   expect_false(is_preset_spec(NA))
 })

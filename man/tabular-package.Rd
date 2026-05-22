@@ -5,7 +5,7 @@
 \alias{tabular-package}
 \title{tabular: TFL Rendering for Regulatory Submissions}
 \description{
-Native emission of clinical tables, figures, and listings to RTF, LaTeX, HTML, PDF, and DOCX from a single dplyr-style API. Handles decimal alignment via font metrics, group-aware pagination, page-field tokens, and inline markup that survives string operations. Designed for CDISC ADaM workflows and FDA/EMA regulatory submissions; replaces the tfrmt + r2rtf + flextable + gt stitched-together stack with one package per format.
+Native emission of clinical tables, figures, and listings to RTF, LaTeX, HTML, PDF, and DOCX from a single dplyr-style API. Handles decimal alignment via font metrics, group-aware pagination, page-field tokens, and inline markup that survives string operations. Designed for CDISC ADaM workflows and FDA/EMA regulatory submissions.
 }
 \author{
 \strong{Maintainer}: Vignesh Thanikachalam \email{about.vignesh@gmail.com}

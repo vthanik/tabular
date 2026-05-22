@@ -1,4 +1,4 @@
-# cols.R -- variadic per-column DSL verb. Attaches col_spec objects
+# cols.R — variadic per-column DSL verb. Attaches col_spec objects
 # to a tabular_spec, keyed by input column name. Repeat-call merge
 # is field-by-field: a non-default field overrides the prior value;
 # a default-valued field leaves the prior alone.
@@ -99,7 +99,7 @@ cols <- function(spec, ...) {
     dups <- unique(arg_names[dup_idx])
     cli::cli_warn(
       c(
-        "{length(dups)} duplicate column name{?s} in {.fn cols} -- last value wins.",
+        "{length(dups)} duplicate column name{?s} in {.fn cols}, last value wins.",
         "x" = "Repeated: {.val {dups}}."
       ),
       call = call

@@ -25,7 +25,7 @@ test_that("cols() attaches col_specs keyed by input name", {
   expect_identical(s@cols$drug_a@name, "drug_a")
 })
 
-# Edge case 1: name not in data, usage != computed -- reject -----------
+# Edge case 1: name not in data, usage != computed — reject -----------
 
 test_that("cols() rejects a name not in data when usage != computed", {
   expect_error(
@@ -49,7 +49,7 @@ test_that("cols() with no args returns the spec unchanged", {
   expect_length(s1@cols, 0L)
 })
 
-# Edge case 3: duplicate name in same call -- warn, last wins ----------
+# Edge case 3: duplicate name in same call — warn, last wins ----------
 
 test_that("cols() warns on duplicate names and keeps the last", {
   expect_warning(
@@ -105,13 +105,13 @@ test_that("cols() accepts computed col with name absent from data", {
   expect_identical(s@cols$rate@label, "Rate")
 })
 
-# Edge case 8: across with high cardinality -- not checked here --------
+# Edge case 8: across with high cardinality — not checked here --------
 # That check belongs to engine_validate (not cols()).
 
-# Edge case 9: malformed sprintf -- already caught by col_spec() -------
+# Edge case 9: malformed sprintf — already caught by col_spec() -------
 # Engine doesn't see it. Covered in test-col_spec.R.
 
-# Edge case 10: width <= 0 -- caught at col_spec() ---------------------
+# Edge case 10: width <= 0 — caught at col_spec() ---------------------
 # Covered in test-col_spec.R.
 
 # Spec input validation ------------------------------------------------

@@ -58,7 +58,6 @@ NULL
   configured <- c(
     cols = length(x@cols),
     headers = length(x@headers),
-    pivots = length(x@pivots),
     derives = length(x@derives)
   )
   configured <- configured[configured > 0L]
@@ -80,7 +79,7 @@ NULL
   invisible(x)
 }
 
-# nocov start -- S7::method<- assignments are not instrumented by
+# nocov start — S7::method<- assignments are not instrumented by
 # covr; tests cover .tabular_spec_print() directly.
 S7::method(print, tabular_spec) <- function(x, ...) {
   .tabular_spec_print(x, ...)

@@ -1,4 +1,4 @@
-# sanity.R -- input-validation helpers used by every public verb.
+# sanity.R — input-validation helpers used by every public verb.
 #
 # Each helper aborts with class = "tabular_error_input" so callers can
 # catch construction-time bad input separately from runtime/backend

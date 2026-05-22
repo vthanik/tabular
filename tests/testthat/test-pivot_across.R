@@ -94,7 +94,7 @@ test_that("Shape C: ungrouped ARD lands rows under the overall column", {
 })
 
 # ---------------------------------------------------------------------
-# Edge case 4: Shape D (fully-renamed) -- requires explicit column
+# Edge case 4: Shape D (fully-renamed) — requires explicit column
 # ---------------------------------------------------------------------
 
 test_that("Shape D: fully-renamed ARD without `column` errors helpfully", {
@@ -130,7 +130,7 @@ test_that("list-column stat normalises to numeric", {
 })
 
 # ---------------------------------------------------------------------
-# Edge case 7-8: hierarchical (SOC / PT) -- saf_aesocpt_card
+# Edge case 7-8: hierarchical (SOC / PT) — saf_aesocpt_card
 # ---------------------------------------------------------------------
 
 test_that("Hierarchical ARD: SOC and PT columns appear in output", {
@@ -208,7 +208,7 @@ test_that("Named-list-by-variable: per-variable spec wins, default falls through
     )
   )
   age_row <- out[out$variable == "AGE", ]
-  # Per-var format produced bare {mean} -- no parentheses
+  # Per-var format produced bare {mean} — no parentheses
   expect_false(grepl("\\(", age_row$Placebo[[1L]]))
 })
 

@@ -1,4 +1,4 @@
-# tabular.R -- entry verb. Wraps an input data.frame, titles, and
+# tabular.R — entry verb. Wraps an input data.frame, titles, and
 # footnotes into a tabular_spec. Subsequent verbs (cols, headers,
 # sort_rows, ...) attach configuration to the returned spec.
 

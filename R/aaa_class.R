@@ -1,9 +1,9 @@
-# aaa_class.R -- S7 class declarations for tabular's internal IR.
+# aaa_class.R — S7 class declarations for tabular's internal IR.
 #
 # Loaded first (aaa_ prefix) so subsequent files can register methods
 # against these classes. The IR is display-side only: pre-summarised
 # data in, rendered file out. We DO NOT model aggregation, filtering,
-# weighting, or row-generating subtotals -- users do that upstream.
+# weighting, or row-generating subtotals — users do that upstream.
 #
 # Conventions follow ggplot2 (rstudio/ggplot2/R/all-classes.R) and
 # S7 best practice: one class per concept, typed properties, no
@@ -28,7 +28,7 @@
 .decimal_metrics_values <- c("afm", "systemfonts")
 
 # ---------------------------------------------------------------------
-# col_spec -- 7-field per-column DSL
+# col_spec — 7-field per-column DSL
 # ---------------------------------------------------------------------
 #
 # The S7 class binding is .col_spec_class (internal); the user-facing
@@ -111,7 +111,7 @@ NULL
 )
 
 # ---------------------------------------------------------------------
-# header_node -- recursive multi-level header hierarchy
+# header_node — recursive multi-level header hierarchy
 # ---------------------------------------------------------------------
 
 #' @rdname tabular_classes
@@ -145,25 +145,6 @@ sort_spec <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
-# pivot_spec
-# ---------------------------------------------------------------------
-
-#' @rdname tabular_classes
-#' @format NULL
-#' @usage NULL
-pivot_spec <- S7::new_class(
-  "pivot_spec",
-  package = "tabular",
-  properties = list(
-    name = S7::new_property(S7::class_character, default = NA_character_),
-    by = S7::new_property(S7::class_character, default = NA_character_),
-    values = S7::new_property(S7::class_character, default = NA_character_),
-    label_fn = S7::class_any,
-    expand = S7::new_property(S7::class_logical, default = TRUE)
-  )
-)
-
-# ---------------------------------------------------------------------
 # derive_spec
 # ---------------------------------------------------------------------
 
@@ -192,7 +173,7 @@ derive_spec <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
-# style_node -- the flat attribute record applied to cells/rows/cols
+# style_node — the flat attribute record applied to cells/rows/cols
 # ---------------------------------------------------------------------
 
 #' @rdname tabular_classes
@@ -224,7 +205,7 @@ style_node <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
-# style_predicate -- predicate + style + scope
+# style_predicate — predicate + style + scope
 # ---------------------------------------------------------------------
 
 #' @rdname tabular_classes
@@ -252,7 +233,7 @@ style_predicate <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
-# style_spec -- container for the cascade
+# style_spec — container for the cascade
 # ---------------------------------------------------------------------
 
 #' @rdname tabular_classes
@@ -380,7 +361,7 @@ preset_spec <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
-# tabular_spec -- root user-facing IR
+# tabular_spec — root user-facing IR
 # ---------------------------------------------------------------------
 
 #' @rdname tabular_classes
@@ -394,7 +375,6 @@ tabular_spec <- S7::new_class(
     cols = S7::new_property(S7::class_list, default = list()),
     headers = S7::new_property(S7::class_list, default = list()),
     sort = S7::class_any,
-    pivots = S7::new_property(S7::class_list, default = list()),
     derives = S7::new_property(S7::class_list, default = list()),
     styles = S7::class_any,
     preset = S7::class_any,
@@ -411,7 +391,7 @@ tabular_spec <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
-# tabular_grid -- resolved IR (post-engine, pre-backend)
+# tabular_grid — resolved IR (post-engine, pre-backend)
 # ---------------------------------------------------------------------
 
 #' @rdname tabular_classes
@@ -460,10 +440,6 @@ is_header_node <- function(x) S7::S7_inherits(x, header_node)
 #' @rdname tabular_predicates
 #' @export
 is_sort_spec <- function(x) S7::S7_inherits(x, sort_spec)
-
-#' @rdname tabular_predicates
-#' @export
-is_pivot_spec <- function(x) S7::S7_inherits(x, pivot_spec)
 
 #' @rdname tabular_predicates
 #' @export

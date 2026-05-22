@@ -72,7 +72,7 @@ arm_n_int <- arm_n_int[arm_levels]
 N_total   <- as.integer(sum(arm_n_int))
 
 # ────────────────────────────────────────────────────────────────────────
-# saf_demo -- demographics (continuous AGE + categorical AGEGR1/SEX/RACE/ETHNIC)
+# saf_demo — demographics (continuous AGE + categorical AGEGR1/SEX/RACE/ETHNIC)
 # ────────────────────────────────────────────────────────────────────────
 demog_data <- adsl_saf |>
   mutate(
@@ -153,7 +153,7 @@ saf_demo <- bind_rows(
   as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
-# saf_aeoverall -- high-level AE flag counts + per-severity rows
+# saf_aeoverall — high-level AE flag counts + per-severity rows
 # ────────────────────────────────────────────────────────────────────────
 adae <- pharmaverseadam::adae |>
   blank_to_na() |>
@@ -232,7 +232,7 @@ saf_aeoverall <- bind_rows(
   as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
-# saf_aesocpt -- AEs by SOC and PT; top SOCs only to fit <50KB
+# saf_aesocpt — AEs by SOC and PT; top SOCs only to fit <50KB
 # ────────────────────────────────────────────────────────────────────────
 n_pct <- function(n, denom) sprintf("%d (%.1f)", n, n / denom * 100)
 
@@ -338,7 +338,7 @@ saf_aesocpt <- bind_rows(
   as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
-# saf_vital -- vital-signs continuous-stat summary (BP/Pulse/Temp at 2 visits)
+# saf_vital — vital-signs continuous-stat summary (BP/Pulse/Temp at 2 visits)
 # ────────────────────────────────────────────────────────────────────────
 advs_saf <- pharmaverseadam::advs |>
   blank_to_na() |>
@@ -383,7 +383,7 @@ saf_vital <- vs_summary |>
   as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
-# eff_resp -- best overall response counts + derived ORR / DCR rows
+# eff_resp — best overall response counts + derived ORR / DCR rows
 # ────────────────────────────────────────────────────────────────────────
 adrs_bor <- pharmaverseadam::adrs_onco |>
   blank_to_na() |>
@@ -583,7 +583,7 @@ cat(sprintf(
         sep = "=", collapse = "  ")
 ))
 stopifnot(
-  "Any demo dataset exceeds 50 KB -- trim columns/rows" =
+  "Any demo dataset exceeds 50 KB — trim columns/rows" =
     all(sizes <= 50 * 1024)
 )
 

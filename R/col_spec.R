@@ -1,4 +1,4 @@
-# col_spec.R -- user-facing per-column DSL constructor.
+# col_spec.R — user-facing per-column DSL constructor.
 #
 # Wraps .col_spec_class (the S7 class in aaa_class.R) with cli-friendly
 # tabular_error_input messages instead of bare S7 validator strings.
