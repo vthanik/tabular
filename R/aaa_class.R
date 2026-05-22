@@ -3,8 +3,7 @@
 # Loaded first (aaa_ prefix) so subsequent files can register methods
 # against these classes. The IR is display-side only: pre-summarised
 # data in, rendered file out. We DO NOT model aggregation, filtering,
-# weighting, or row-generating subtotals -- users do that upstream
-# in mint / herald / dplyr / SAS.
+# weighting, or row-generating subtotals -- users do that upstream.
 #
 # Conventions follow ggplot2 (rstudio/ggplot2/R/all-classes.R) and
 # S7 best practice: one class per concept, typed properties, no
@@ -31,6 +30,10 @@
 # ---------------------------------------------------------------------
 # col_spec -- 7-field per-column DSL
 # ---------------------------------------------------------------------
+#
+# The S7 class binding is .col_spec_class (internal); the user-facing
+# constructor `col_spec()` lives in R/col_spec.R and wraps this with
+# cli-friendly tabular_error_input errors.
 
 #' tabular S7 classes
 #'
@@ -46,7 +49,7 @@ NULL
 #' @rdname tabular_classes
 #' @format NULL
 #' @usage NULL
-col_spec <- S7::new_class(
+.col_spec_class <- S7::new_class(
   "col_spec",
   package = "tabular",
   properties = list(
@@ -448,7 +451,7 @@ is_tabular_grid <- function(x) S7::S7_inherits(x, tabular_grid)
 
 #' @rdname tabular_predicates
 #' @export
-is_col_spec <- function(x) S7::S7_inherits(x, col_spec)
+is_col_spec <- function(x) S7::S7_inherits(x, .col_spec_class)
 
 #' @rdname tabular_predicates
 #' @export

@@ -2,7 +2,7 @@
 % Please edit documentation in R/aaa_class.R
 \name{tabular_classes}
 \alias{tabular_classes}
-\alias{col_spec}
+\alias{.col_spec_class}
 \alias{header_node}
 \alias{sort_spec}
 \alias{pivot_spec}

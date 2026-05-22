@@ -25,7 +25,12 @@ mirroring \code{gt::gt()} and \code{tinytable::tt()}. Until then, the cli
 tree view is the print output.
 }
 \examples{
-# Until tabular() lands, this example is documentation-only.
-# tabular(saf_demo, titles = c("Table 14.1.1", "Demographics"))
+# Build a spec and print it — the cli tree shows data dims,
+# titles, footnotes, and any verb-state attached so far.
+tabular(
+  saf_demo,
+  titles = c("Table 14.1.1", "Demographics"),
+  footnotes = "Safety Population."
+)
 
 }

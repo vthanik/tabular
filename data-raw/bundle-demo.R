@@ -1,24 +1,39 @@
 # data-raw/bundle-demo.R
-# Build 5 pre-summarised demo datasets for tabular's examples, tests, vignettes.
+# Build 12 demo datasets for tabular's examples, tests, vignettes.
 # Source data: pharmaverseadam (adsl, adae, advs, adrs_onco).
-# Summarisation logic:
-#   saf_demo       -- demographics (continuous + categorical)
-#   saf_aeoverall  -- high-level AE flag counts
-#   saf_aesocpt    -- AEs by SOC and PT (2-level nesting)
-#   saf_vital      -- vital-signs summary
-#   eff_resp       -- best overall response + ORR / DCR
+# Five pre-summarised wide tables that tabular consumes directly,
+# five long-format Analysis Results Data (ARD) companions showing
+# the upstream cards::ard_stack() output users would convert to wide
+# before piping into tabular(), plus two BigN denominator tables —
+# one per analysis population — for joining inline into row labels
+# or column headers:
+#   saf_demo           — demographics (continuous + categorical)
+#   saf_aeoverall      — high-level AE flag counts
+#   saf_aesocpt        — AEs by SOC and PT (2-level nesting)
+#   saf_vital          — vital-signs summary
+#   eff_resp           — best overall response + ORR / DCR
+#   saf_demo_card      — cards ARD for saf_demo
+#   saf_aeoverall_card — cards ARD for saf_aeoverall
+#   saf_aesocpt_card   — cards ARD for saf_aesocpt (hierarchical)
+#   saf_vital_card     — cards ARD for saf_vital
+#   eff_resp_card      — cards ARD for eff_resp
+#   saf_n              — safety-population BigN per arm
+#   eff_n              — efficacy-population BigN per arm
 #
 # Run from package root:
 #   Rscript data-raw/bundle-demo.R
 #
-# Build-time deps: pharmaverseadam, dplyr, tidyr, tibble, usethis, devtools.
-# Runtime package has NO dependency on these (.rda files are self-contained).
+# Build-time deps: pharmaverseadam, dplyr, tidyr, tibble, cards,
+#                  usethis, devtools.
+# Runtime package has NO dependency on these (.rda files are
+# self-contained).
 
 suppressPackageStartupMessages({
   library(pharmaverseadam)
   library(dplyr)
   library(tidyr)
   library(tibble)
+  library(cards)
 })
 
 # Shared arm rename: pharmaverseadam labels -> tabular column convention
@@ -55,11 +70,6 @@ adsl_saf <- pharmaverseadam::adsl |>
 arm_n_int <- adsl_saf |> count(TRT01A) |> pull(n, name = TRT01A)
 arm_n_int <- arm_n_int[arm_levels]
 N_total   <- as.integer(sum(arm_n_int))
-
-attr_n <- c(
-  setNames(as.integer(arm_n_int), unname(arm_rename[names(arm_n_int)])),
-  Total = N_total
-)
 
 # ────────────────────────────────────────────────────────────────────────
 # saf_demo -- demographics (continuous AGE + categorical AGEGR1/SEX/RACE/ETHNIC)
@@ -141,7 +151,6 @@ saf_demo <- bind_rows(
 ) |>
   rename_arms() |>
   as.data.frame()
-attr(saf_demo, "n") <- attr_n
 
 # ────────────────────────────────────────────────────────────────────────
 # saf_aeoverall -- high-level AE flag counts + per-severity rows
@@ -221,7 +230,6 @@ saf_aeoverall <- bind_rows(
   )) |>
   rename_arms() |>
   as.data.frame()
-attr(saf_aeoverall, "n") <- attr_n
 
 # ────────────────────────────────────────────────────────────────────────
 # saf_aesocpt -- AEs by SOC and PT; top SOCs only to fit <50KB
@@ -328,7 +336,6 @@ saf_aesocpt <- bind_rows(
 ) |>
   rename_arms() |>
   as.data.frame()
-attr(saf_aesocpt, "n") <- attr_n
 
 # ────────────────────────────────────────────────────────────────────────
 # saf_vital -- vital-signs continuous-stat summary (BP/Pulse/Temp at 2 visits)
@@ -374,7 +381,6 @@ saf_vital <- vs_summary |>
   rename(paramcd = PARAMCD, param = PARAM, visit = AVISIT) |>
   rename_arms() |>
   as.data.frame()
-attr(saf_vital, "n") <- attr_n
 
 # ────────────────────────────────────────────────────────────────────────
 # eff_resp -- best overall response counts + derived ORR / DCR rows
@@ -426,21 +432,149 @@ eff_resp <- bind_rows(bor_wide, orr_wide, dcr_wide) |>
 for (a in setdiff(arm_levels, bor_arms_present)) eff_resp[[a]] <- ""
 eff_resp <- eff_resp[, c("stat_label", "row_type", arm_levels)]
 eff_resp <- rename_arms(eff_resp) |> as.data.frame()
-attr(eff_resp, "n") <- attr_n
+
+# ────────────────────────────────────────────────────────────────────────
+# Cards Analysis Results Data (ARD) companions
+#
+# Long-format counterparts to the five pre-summarised wide datasets
+# above. Shipped purely as teaching material so users can see the
+# upstream `cards` output and the wide shape tabular() expects side
+# by side. tabular itself does NOT accept the long ARD format —
+# users convert with cards::pivot_wider_ard() (or their own pivot)
+# before piping into tabular().
+# ────────────────────────────────────────────────────────────────────────
+
+# Helper: drop list-columns that bloat the .rda without informing
+# the demo. `fmt_fun` is a function-valued list-column (~3 kB
+# closures); `warning` / `error` are almost always NULL.
+strip_card_cols <- function(ard) {
+  for (col in c("fmt_fun", "warning", "error")) {
+    if (col %in% names(ard)) ard[[col]] <- NULL
+  }
+  ard
+}
+
+# saf_demo_card — demographics ARD
+saf_demo_card <- ard_stack(
+  data = adsl_saf,
+  .by = "TRT01A",
+  ard_continuous(variables = "AGE"),
+  ard_categorical(variables = c("SEX", "RACE")),
+  .overall = TRUE
+) |> strip_card_cols()
+
+# saf_aeoverall_card — AE flag + max-severity ARD.
+# Built from a per-subject flag table so denominators are adsl-level
+# (subjects with no TEAE are still counted in the "N" denominator).
+sev_levels <- c("MILD", "MODERATE", "SEVERE")
+ae_flags <- adsl_saf |>
+  left_join(
+    adae |>
+      group_by(USUBJID) |>
+      summarise(
+        ANY_TEAE = "Y",
+        ANY_SAE = if (any(AESER == "Y", na.rm = TRUE)) "Y" else "N",
+        ANY_REL = if (any(AEREL %in% c("POSSIBLE", "PROBABLE"))) "Y" else "N",
+        MAX_SEV = sev_levels[max(match(AESEV, sev_levels), na.rm = TRUE)],
+        .groups = "drop"
+      ),
+    by = "USUBJID"
+  ) |>
+  mutate(
+    ANY_TEAE = factor(tidyr::replace_na(ANY_TEAE, "N"), levels = c("Y", "N")),
+    ANY_SAE = factor(tidyr::replace_na(ANY_SAE, "N"), levels = c("Y", "N")),
+    ANY_REL = factor(tidyr::replace_na(ANY_REL, "N"), levels = c("Y", "N")),
+    MAX_SEV = factor(MAX_SEV, levels = sev_levels)
+  )
+
+saf_aeoverall_card <- ard_stack(
+  data = ae_flags,
+  .by = "TRT01A",
+  ard_categorical(variables = c("ANY_TEAE", "ANY_SAE", "ANY_REL", "MAX_SEV")),
+  .overall = TRUE
+) |> strip_card_cols()
+
+# saf_aesocpt_card — hierarchical AE ARD (SOC / PT).
+# Trimmed to the same top-5 SOC, top-3 PT subset as saf_aesocpt so
+# the two datasets describe the same slice of the data.
+saf_aesocpt_card <- ard_stack_hierarchical(
+  data = adae_trim,
+  variables = c(AEBODSYS, AEDECOD),
+  by = TRT01A,
+  denominator = adsl_saf,
+  id = USUBJID,
+  over_variables = TRUE
+) |>
+  sort_ard_hierarchical(sort = "descending") |>
+  strip_card_cols()
+
+# saf_vital_card — vital-signs continuous ARD.
+# AVAL stats grouped by (paramcd, visit, treatment); same population
+# slice as saf_vital.
+saf_vital_card <- ard_stack(
+  data = advs_saf,
+  .by = c("PARAMCD", "AVISIT", "TRT01A"),
+  ard_continuous(variables = "AVAL")
+) |> strip_card_cols()
+
+# eff_resp_card — best overall response categorical ARD.
+# Counts per AVALC per ARM, matching the eff_resp wide table.
+eff_resp_card <- ard_stack(
+  data = adrs_bor |> mutate(AVALC = factor(AVALC, levels = bor_levels)),
+  .by = "ARM",
+  ard_categorical(variables = "AVALC")
+) |> strip_card_cols()
+
+# ────────────────────────────────────────────────────────────────────────
+# BigN per analysis population — discoverable data frames so users
+# can join them into row labels / column headers and so a downstream
+# `dplyr::mutate()` doesn't silently strip the denominator (which
+# attribute-based BigN does). Long-format with both arm-name styles
+# side by side: `arm` matches the raw pharmaverseadam labels carried
+# by the `_card` ARDs; `arm_short` matches the renamed columns of
+# the wide datasets.
+# ────────────────────────────────────────────────────────────────────────
+
+saf_n <- data.frame(
+  arm = c(arm_levels, "Total"),
+  arm_short = c(unname(arm_rename[arm_levels]), "Total"),
+  n = c(as.integer(arm_n_int[arm_levels]), N_total),
+  stringsAsFactors = FALSE
+)
+
+eff_arm_n_int <- bor_counts |>
+  distinct(ARM, N) |>
+  arrange(match(as.character(ARM), arm_levels))
+eff_arms <- as.character(eff_arm_n_int$ARM)
+eff_n <- data.frame(
+  arm = c(eff_arms, "Total"),
+  arm_short = c(unname(arm_rename[eff_arms]), "Total"),
+  n = c(as.integer(eff_arm_n_int$N), as.integer(sum(eff_arm_n_int$N))),
+  stringsAsFactors = FALSE
+)
 
 # ────────────────────────────────────────────────────────────────────────
 # Save (xz compressed)
 # ────────────────────────────────────────────────────────────────────────
 usethis::use_data(
   saf_demo, saf_aeoverall, saf_aesocpt, saf_vital, eff_resp,
+  saf_demo_card, saf_aeoverall_card, saf_aesocpt_card,
+  saf_vital_card, eff_resp_card,
+  saf_n, eff_n,
   overwrite = TRUE, compress = "xz"
 )
 
-# Size guard (herald bundle-pilot.R pattern)
+# Size guard
 files <- file.path(
   "data",
-  c("saf_demo.rda", "saf_aeoverall.rda", "saf_aesocpt.rda",
-    "saf_vital.rda", "eff_resp.rda")
+  c(
+    "saf_demo.rda", "saf_aeoverall.rda", "saf_aesocpt.rda",
+    "saf_vital.rda", "eff_resp.rda",
+    "saf_demo_card.rda", "saf_aeoverall_card.rda",
+    "saf_aesocpt_card.rda", "saf_vital_card.rda",
+    "eff_resp_card.rda",
+    "saf_n.rda", "eff_n.rda"
+  )
 )
 sizes <- vapply(files, function(f) file.info(f)$size, numeric(1))
 cat(sprintf(

@@ -2,7 +2,6 @@
 % Please edit documentation in R/package.R
 \docType{package}
 \name{tabular-package}
-\alias{tabular}
 \alias{tabular-package}
 \title{tabular: TFL Rendering for Regulatory Submissions}
 \description{

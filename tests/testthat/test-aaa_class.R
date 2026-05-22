@@ -1,45 +1,38 @@
-# Constructor + predicate + validator tests for the 11 S7 classes.
+# Constructor + predicate + validator tests for the 10 S7 classes
+# whose construction is not user-facing. col_spec() has its own
+# test file (test-col_spec.R) since it is the only user-facing S7
+# wrapper.
 
-# col_spec ------------------------------------------------------------
+# .col_spec_class S7 validator (last-line-of-defense; user-facing
+# col_spec() validates first, so these direct calls exist to ensure
+# the S7 validator still catches bad input from set_props() in
+# engine code).
 
-test_that("col_spec() builds with defaults", {
-  c1 <- col_spec()
-  expect_true(is_col_spec(c1))
-  expect_true(is.na(c1@usage))
-  expect_true(is.na(c1@label))
-  expect_true(c1@visible)
-  expect_identical(c1@na_text, "")
-})
-
-test_that("col_spec() accepts the 4 valid usage values", {
+test_that(".col_spec_class accepts the 4 valid usage values", {
   for (u in c("display", "group", "across", "computed")) {
-    expect_true(is_col_spec(col_spec(usage = u)))
+    expect_true(is_col_spec(tabular:::.col_spec_class(usage = u)))
   }
 })
 
-test_that("col_spec() rejects unknown usage", {
-  expect_error(col_spec(usage = "analysis"), "must be one of")
+test_that(".col_spec_class rejects unknown usage", {
+  expect_error(tabular:::.col_spec_class(usage = "analysis"), "must be one of")
 })
 
-test_that("col_spec() rejects unknown align", {
-  expect_error(col_spec(align = "justify"), "must be one of")
+test_that(".col_spec_class rejects unknown align", {
+  expect_error(tabular:::.col_spec_class(align = "justify"), "must be one of")
 })
 
-test_that("col_spec() accepts decimal align", {
-  expect_true(is_col_spec(col_spec(align = "decimal")))
+test_that(".col_spec_class rejects zero / negative / infinite width", {
+  expect_error(tabular:::.col_spec_class(width = 0), "positive finite")
+  expect_error(tabular:::.col_spec_class(width = -1), "positive finite")
+  expect_error(tabular:::.col_spec_class(width = Inf), "positive finite")
 })
 
-test_that("col_spec() rejects zero or negative width", {
-  expect_error(col_spec(width = 0), "positive finite")
-  expect_error(col_spec(width = -1), "positive finite")
-})
-
-test_that("col_spec() rejects non-finite width", {
-  expect_error(col_spec(width = Inf), "positive finite")
-})
-
-test_that("col_spec() rejects multi-element na_text", {
-  expect_error(col_spec(na_text = c("a", "b")), "length 1")
+test_that(".col_spec_class rejects multi-element na_text", {
+  expect_error(
+    tabular:::.col_spec_class(na_text = c("a", "b")),
+    "length 1"
+  )
 })
 
 # header_node ---------------------------------------------------------

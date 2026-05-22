@@ -14,8 +14,8 @@ Derived in \code{data-raw/bundle-demo.R} from \code{pharmaverseadam}.
 saf_vital
 }
 \description{
-Pre-summarised vital-signs results -- systolic / diastolic BP,
-pulse, weight, height, BMI -- one row per stat label per
+Pre-summarised vital-signs results — systolic / diastolic BP,
+pulse, weight, height, BMI — one row per stat label per
 parameter.
 }
 \keyword{datasets}
