@@ -1,6 +1,0 @@
-# constants.R -- placeholder.
-#
-# To be derived from / contains: constants.R (1600 LOC) -- AFM font metric tables (loaded into sysdata.rda)
-#
-# Phase 1+ work fills this in. Until then, the file exists to lock the
-# layout from plan.md Step 4 so subsequent code lands in known places.
