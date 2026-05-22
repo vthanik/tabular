@@ -4,14 +4,7 @@
 \alias{tb_figure}
 \title{Construct a tabular spec for a figure}
 \usage{
-tb_figure(
-  plot,
-  titles = NULL,
-  footnotes = NULL,
-  width = NULL,
-  height = NULL,
-  preset = NULL
-)
+tb_figure(plot, titles = NULL, footnotes = NULL, width = NULL, height = NULL)
 }
 \arguments{
 \item{plot}{A ggplot object or grob.}
@@ -23,14 +16,18 @@ tb_figure(
 \item{width}{Physical width in inches.}
 
 \item{height}{Physical height in inches.}
-
-\item{preset}{Name of a \code{tb_preset()} to apply, or \code{NULL} (default).}
 }
 \value{
 A \code{tabular_spec} S7 object holding the figure.
 }
 \description{
 Figure constructor; separate from \code{\link[=tb_table]{tb_table()}} because a ggplot or
-grob is type-distinct from a \code{data.frame}.
+grob is type-distinct from a \code{data.frame}. Style defaults (preset)
+flow from the session preset set via \code{\link[=tb_set_preset]{tb_set_preset()}}; per-figure
+overrides compose in the pipe via \code{\link[=tb_preset]{tb_preset()}}.
 }
-\concept{entry-points}
+\seealso{
+Other entry_points: 
+\code{\link{tb_table}()}
+}
+\concept{entry_points}

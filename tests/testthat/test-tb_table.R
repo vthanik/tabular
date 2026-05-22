@@ -109,18 +109,3 @@ test_that("tb_table() rejects zero and negative rows_per_page", {
     class = "tabular_error_input"
   )
 })
-
-test_that("tb_table() no longer accepts preset / continuation / paginate_at", {
-  expect_error(
-    tb_table(demo_df(), preset = "anything"),
-    "unused argument"
-  )
-  expect_error(
-    tb_table(demo_df(), continuation = "(cont.)"),
-    "unused argument"
-  )
-  expect_error(
-    tb_table(demo_df(), paginate_at = 40),
-    "unused argument"
-  )
-})

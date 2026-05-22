@@ -17,17 +17,6 @@ test_that("is_tabular_grid() recognises grids and rejects non-grids", {
   expect_false(is_tabular_grid(NULL))
 })
 
-test_that("predicates handle the S3-dual-class branch", {
-  # A bare S3 object that claims `tabular_spec` / `tabular_grid` class
-  # should still return TRUE via the `inherits()` fallback. This guards
-  # the second clause of each predicate from being dead code.
-  fake_spec <- structure(list(), class = "tabular_spec")
-  expect_true(is_tabular_spec(fake_spec))
-
-  fake_grid <- structure(list(), class = "tabular_grid")
-  expect_true(is_tabular_grid(fake_grid))
-})
-
 test_that("column_spec() builds an S7 column_spec object", {
   col <- column_spec(name = "trt_a", label = "Treatment A", width = 1.5)
   expect_true(S7::S7_inherits(col, column_spec))

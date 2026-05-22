@@ -8,8 +8,7 @@
 #   - Class object named the same as the class name where there is no
 #     collision with a user-facing constructor function. tabular has no
 #     such collision (entry points are tb_*()), so we use bare names.
-#   - Predicates take the herald shape: `is_<name>()` accepts both S7
-#     and pre-S7 S3 dual-class objects.
+#   - Predicates are `is_<name>()` wrapping `S7::S7_inherits()`.
 #
 # Validation strategy: user-facing `tb_*()` verbs run cli `check_*`
 # helpers (R/sanity.R) at the call boundary -- friendly error messages
@@ -108,9 +107,7 @@ column_spec <- S7::new_class(
 #'   else `FALSE`. Never errors.
 #' @keywords internal
 #' @export
-is_tabular_spec <- function(x) {
-  S7::S7_inherits(x, tabular_spec) || inherits(x, "tabular_spec")
-}
+is_tabular_spec <- function(x) S7::S7_inherits(x, tabular_spec)
 
 #' Test for a `tabular_grid` object
 #'
@@ -119,6 +116,4 @@ is_tabular_spec <- function(x) {
 #'   else `FALSE`. Never errors.
 #' @keywords internal
 #' @export
-is_tabular_grid <- function(x) {
-  S7::S7_inherits(x, tabular_grid) || inherits(x, "tabular_grid")
-}
+is_tabular_grid <- function(x) S7::S7_inherits(x, tabular_grid)

@@ -105,5 +105,8 @@ tb_table(saf_demo, rows_per_page = 40L)
 \code{\link[=tb_cols]{tb_cols()}}, \code{\link[=tb_rows]{tb_rows()}}, \code{\link[=tb_render]{tb_render()}} for the rest of
 the verb chain. \code{\link[=tb_preset]{tb_preset()}} / \code{\link[=tb_set_preset]{tb_set_preset()}} for style
 defaults.
+
+Other entry_points: 
+\code{\link{tb_figure}()}
 }
 \concept{entry_points}
