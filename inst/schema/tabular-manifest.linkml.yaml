@@ -1,0 +1,288 @@
+# LinkML schema for tabular's CDISC ARS Output audit manifest.
+#
+# This schema documents the structure of `<file>.audit.yml` files
+# emitted by `emit(spec, ..., manifest = TRUE)`. The Output-side
+# classes mirror CDISC Analysis Results Standard LDM v1.0.0
+# (cdisc-org/analysis-results-standard, tag v1.0.0); the
+# `x-tabular` namespace carries tabular-specific extensions that
+# the CDISC standard does not model (rendering geometry, predicate
+# style traces, input provenance).
+#
+# Schema reference:
+#   ~/.claude/projects/-Users-vignesh-projects-r-tabular/memory/
+#   reference_cdisc_ars.md
+#
+# Validation (Suggests-only):
+#   jsonvalidate::json_validate(manifest, schema)
+#   linkml-validate (Python CLI; standard in pharma CI pipelines)
+#
+# Determinism contract for emitted manifests:
+#   - Byte-identical across two emit() runs, modulo the
+#     `programmingCode.parameters[name == "rendered_at"].value`
+#     timestamp.
+#   - Round-trippable through yaml::read_yaml() + yaml::write_yaml().
+
+id: https://w3id.org/tabular/manifest
+name: tabular-manifest
+title: tabular CDISC ARS Output Audit Manifest
+description: >-
+  Sidecar manifest emitted by tabular::emit(..., manifest = TRUE).
+  Top-level keys map to CDISC ARS LDM v1.0 Output entities.
+prefixes:
+  linkml: https://w3id.org/linkml/
+  ars: https://w3id.org/cdisc/ars/
+  tabular: https://w3id.org/tabular/
+default_prefix: tabular
+default_range: string
+imports:
+  - linkml:types
+
+# ---------------------------------------------------------------------
+# Classes
+# ---------------------------------------------------------------------
+classes:
+
+  Manifest:
+    description: >-
+      Top-level container — one manifest per rendered artefact.
+      Mirrors `ars_output` from CDISC ARS LDM v1.0.
+    attributes:
+      id:
+        range: string
+        required: true
+      version:
+        range: integer
+        required: true
+      name:
+        range: string
+        required: true
+      programmingCode:
+        range: ProgrammingCode
+        required: true
+      fileSpecifications:
+        range: OutputFile
+        multivalued: true
+        required: true
+      displays:
+        range: OrderedDisplay
+        multivalued: true
+        required: true
+      referencedAnalyses:
+        range: ReferencedAnalysis
+        multivalued: true
+      x-tabular:
+        range: XTabular
+        required: true
+
+  ProgrammingCode:
+    description: >-
+      ars_output_programming_code. Best-effort provenance block
+      with render parameters as a free-form list.
+    attributes:
+      context:
+        range: string
+        required: true
+      code:
+        range: string
+      parameters:
+        range: Parameter
+        multivalued: true
+
+  Parameter:
+    description: ars_output_parameter — free-form name/value pair.
+    attributes:
+      name:
+        range: string
+        required: true
+      value:
+        range: string
+
+  OutputFile:
+    description: >-
+      ars_output_file. `sha256` is a tabular extension; pharma
+      reviewers expect file integrity hashes even though the CDISC
+      standard does not mandate them.
+    attributes:
+      name:
+        range: string
+        required: true
+      fileType:
+        range: OutputFileTypeEnum
+        required: true
+      location:
+        range: string
+        required: true
+      sha256:
+        range: string
+
+  OrderedDisplay:
+    description: ars_ordered_display — order + display.
+    attributes:
+      order:
+        range: integer
+        required: true
+      display:
+        range: Display
+        required: true
+
+  Display:
+    description: ars_output_display.
+    attributes:
+      id:
+        range: string
+        required: true
+      version:
+        range: integer
+      name:
+        range: string
+        required: true
+      displayTitle:
+        range: string
+      displaySections:
+        range: DisplaySection
+        multivalued: true
+
+  DisplaySection:
+    description: ars_display_section.
+    attributes:
+      sectionType:
+        range: DisplaySectionTypeEnum
+        required: true
+      orderedSubSections:
+        range: OrderedDisplaySubSection
+        multivalued: true
+      text:
+        range: string
+
+  OrderedDisplaySubSection:
+    attributes:
+      order:
+        range: integer
+        required: true
+      subSection:
+        range: DisplaySubSection
+        required: true
+
+  DisplaySubSection:
+    attributes:
+      id:
+        range: string
+      text:
+        range: string
+        required: true
+
+  ReferencedAnalysis:
+    description: >-
+      ars_referenced_analysis. Foreign key from Output to upstream
+      mint analyses. Empty in tabular v0.1.0; populated when mint
+      stamps `attr(spec@data, "ars_analysis_ids")`.
+    attributes:
+      analysisId:
+        range: string
+        required: true
+      reportingEventId:
+        range: string
+
+  XTabular:
+    description: >-
+      tabular vendor extension. Pharma reviewers ignore unknown
+      `x-*` keys per LinkML convention; rendering geometry and
+      style intent live here.
+    attributes:
+      schema_version:
+        range: string
+        required: true
+      preset:
+        range: XTabularPreset
+      pagination:
+        range: XTabularPagination
+      styles:
+        range: XTabularStyles
+      inputProvenance:
+        range: XTabularInputProvenance
+
+  XTabularPreset:
+    attributes:
+      font_family:
+        range: string
+      font_size:
+        range: integer
+      paper_size:
+        range: string
+      orientation:
+        range: string
+      margins:
+        range: float
+      hlines:
+        range: string
+
+  XTabularPagination:
+    attributes:
+      rows_per_page:
+        range: integer
+      total_pages:
+        range: integer
+      total_panels:
+        range: integer
+
+  XTabularStyles:
+    attributes:
+      predicates:
+        range: XTabularPredicate
+        multivalued: true
+
+  XTabularPredicate:
+    attributes:
+      where:
+        range: string
+      scope:
+        range: string
+      style:
+        description: Free-form style-node fields with NA entries dropped.
+
+  XTabularInputProvenance:
+    attributes:
+      nrow:
+        range: integer
+      ncol:
+        range: integer
+      col_names:
+        range: string
+        multivalued: true
+
+# ---------------------------------------------------------------------
+# Enums — exact-match controlled terminology
+# ---------------------------------------------------------------------
+enums:
+
+  DisplaySectionTypeEnum:
+    permissible_values:
+      Title:
+      Header:
+      Body:
+      Footer:
+      Footnote:
+      Abbreviation:
+      Legend:
+      Rowlabel:
+
+  OutputFileTypeEnum:
+    description: Lowercase file-type token; case-sensitive per CDISC.
+    permissible_values:
+      rtf:
+      pdf:
+      html:
+      docx:
+      txt:
+      csv:
+      tsv:
+      xlsx:
+      png:
+      jpg:
+      json:
+      xml:
+      yml:
+      md:
+      tex:
+      rds:
+      linkml:

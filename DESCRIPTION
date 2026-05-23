@@ -25,12 +25,14 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     withr,
+    digest,
     ggplot2,
     knitr,
     quarto,
     pkgdown,
     tibble,
-    tinytex
+    tinytex,
+    yaml
 VignetteBuilder:
     quarto
 Config/testthat/edition: 3
