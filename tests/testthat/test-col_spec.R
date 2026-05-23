@@ -130,7 +130,10 @@ test_that("col_spec(na_text = c('a', 'b')) raises tabular_error_input", {
 })
 
 test_that("col_spec(na_text = NA_character_) is rejected", {
-  expect_error(col_spec(na_text = NA_character_), class = "tabular_error_input")
+  expect_error(
+    col_spec(na_text = NA_character_),
+    class = "tabular_error_input"
+  )
 })
 
 test_that("col_spec(na_text = '') is allowed (default)", {

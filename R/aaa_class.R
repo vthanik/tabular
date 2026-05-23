@@ -187,7 +187,10 @@ style_node <- S7::new_class(
     italic = S7::new_property(S7::class_any, default = NA),
     underline = S7::new_property(S7::class_any, default = NA),
     color = S7::new_property(S7::class_character, default = NA_character_),
-    background = S7::new_property(S7::class_character, default = NA_character_),
+    background = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    ),
     font_family = S7::new_property(
       S7::class_character,
       default = NA_character_
@@ -261,10 +264,6 @@ pagination_spec <- S7::new_class(
   "pagination_spec",
   package = "tabular",
   properties = list(
-    rows_per_page = S7::new_property(
-      S7::class_integer,
-      default = NA_integer_
-    ),
     keep_with_next = S7::new_property(
       S7::class_character,
       default = character()
@@ -275,7 +274,7 @@ pagination_spec <- S7::new_class(
     repeat_headers = S7::new_property(S7::class_logical, default = TRUE),
     continuation = S7::new_property(
       S7::class_character,
-      default = "(continued)"
+      default = character()
     )
   )
 )

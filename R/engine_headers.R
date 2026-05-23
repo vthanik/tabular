@@ -44,7 +44,12 @@ engine_headers <- function(spec) {
   bands <- do.call(
     rbind,
     lapply(spec@headers, function(node) {
-      .flatten_header_node(node, depth = 1L, col_order = col_order, call = call)
+      .flatten_header_node(
+        node,
+        depth = 1L,
+        col_order = col_order,
+        call = call
+      )
     })
   )
 

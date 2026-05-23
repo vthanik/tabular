@@ -116,35 +116,32 @@ check_lgl <- function(
   )
 }
 
-#' Check that `x` is `NULL` or a single positive finite whole number
+#' Check that `x` is a single positive whole number
 #'
-#' Used for pagination row-count arguments. `NULL` is the "use the
-#' backend default" signal and returns `NA_integer_`.
+#' Used for pagination floors (orphan_floor, widow_floor) and
+#' integer-style enumerations. Returns the value coerced to integer.
 #'
 #' @inheritParams check_tabular_spec
-#' @return `NA_integer_` when `x` is `NULL`; otherwise `as.integer(x)`.
+#' @return `as.integer(x)` invisibly on success; otherwise aborts.
 #' @keywords internal
 #' @noRd
-check_rows_per_page <- function(
+check_pos_int <- function(
   x,
   arg = rlang::caller_arg(x),
   call = rlang::caller_env()
 ) {
-  if (is.null(x)) {
-    return(NA_integer_)
-  }
   ok <- is.numeric(x) &&
     length(x) == 1L &&
     !is.na(x) &&
     is.finite(x) &&
     x == trunc(x) &&
-    x > 0
+    x >= 1
   if (ok) {
-    return(as.integer(x))
+    return(invisible(as.integer(x)))
   }
   cli::cli_abort(
     c(
-      "{.arg {arg}} must be a single positive whole number or {.code NULL}.",
+      "{.arg {arg}} must be a single positive whole number.",
       "x" = "You supplied {.obj_type_friendly {x}} of length {length(x)}."
     ),
     class = "tabular_error_input",

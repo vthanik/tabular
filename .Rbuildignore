@@ -16,6 +16,7 @@
 ^LICENSE\.md$
 ^\.local$
 ^\.DS_Store$
+^air\.toml$
 ^README\.qmd$
 ^vignettes/\.quarto$
 ^vignettes/.*_files$

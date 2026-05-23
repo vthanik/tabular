@@ -82,11 +82,29 @@ test_that("print shows sort spec when non-empty", {
   expect_match(out, "Sort: x, y")
 })
 
-test_that("print shows pagination when rows_per_page set", {
+test_that("print shows pagination with keep_with_next", {
   s <- S7::set_props(
     tabular_spec(data = data.frame(x = 1L)),
-    pagination = pagination_spec(rows_per_page = 40L)
+    pagination = pagination_spec(keep_with_next = "x")
   )
   out <- print_lines(s)
-  expect_match(out, "Pagination: every 40 rows")
+  expect_match(out, "Pagination: keep_with_next=x")
+})
+
+test_that("print shows pagination with panels", {
+  s <- S7::set_props(
+    tabular_spec(data = data.frame(x = 1L)),
+    pagination = pagination_spec(panels = 2L)
+  )
+  out <- print_lines(s)
+  expect_match(out, "Pagination:.*panels=2")
+})
+
+test_that("print shows pagination auto when all defaults", {
+  s <- S7::set_props(
+    tabular_spec(data = data.frame(x = 1L)),
+    pagination = pagination_spec()
+  )
+  out <- print_lines(s)
+  expect_match(out, "Pagination: auto")
 })

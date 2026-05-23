@@ -1,0 +1,92 @@
+# geometry.R -- internal unit-conversion and page-geometry helpers
+# shared by engine_paginate (page row-budget) and the upcoming
+# engine_decimal phase (decimal alignment via font metrics). All
+# functions are pure; no I/O, no state. Names are dot-prefixed and
+# never exported.
+#
+# The twips model is portable: 1440 twips = 1 inch, 20 twips = 1
+# point. Galley uses the same units throughout its render stack; we
+# port the small set we need rather than depending on it.
+
+# Paper sizes in twips (width x height in portrait orientation).
+# Values taken from the W3C @page reference and verified against
+# Word's page-setup dialog. landscape() swaps width and height.
+.tabular_paper_twips <- list(
+  letter = c(width = 12240L, height = 15840L),
+  a4 = c(width = 11906L, height = 16838L),
+  legal = c(width = 12240L, height = 20163L)
+)
+
+# Word's single-line spacing ratio: 1.2 x font_size. Matches LaTeX's
+# baseline_skip convention.
+.tabular_baseline_ratio <- 1.2
+
+# Inches -> twips. 1in = 1440 twips.
+.inches_to_twips <- function(inches) as.integer(round(inches * 1440))
+
+# Points -> twips. 1pt = 20 twips.
+.pt_to_twips <- function(pt) as.integer(round(pt * 20))
+
+# Paper dimensions accounting for orientation. Returns a length-2
+# named integer vector: c(width = w, height = h) in twips. Aborts
+# (internal) if the paper key is unknown -- callers gate this via
+# preset_spec validators so end users see a friendly verb error.
+.paper_dims_twips <- function(paper = "letter", orientation = "portrait") {
+  dims <- .tabular_paper_twips[[paper]]
+  if (is.null(dims)) {
+    cli::cli_abort(
+      c(
+        "Unknown paper {.val {paper}}.",
+        "i" = "Known: {.val {names(.tabular_paper_twips)}}."
+      ),
+      class = "tabular_error_input"
+    )
+  }
+  if (orientation == "landscape") {
+    c(width = unname(dims[["height"]]), height = unname(dims[["width"]]))
+  } else {
+    dims
+  }
+}
+
+# Row height in twips for body text at the given point size. Uses
+# the LaTeX Companion formula:
+#   height = array_stretch * (extra_row_height_pt + baseline_skip_pt)
+#   baseline_skip = .tabular_baseline_ratio * font_size_pt
+# Defaults match a single-spaced regulatory body row.
+.row_height_twips <- function(
+  font_size_pt,
+  array_stretch = 1.0,
+  extra_row_height_pt = 1.0
+) {
+  baseline_pt <- .tabular_baseline_ratio * font_size_pt
+  height_pt <- array_stretch * (extra_row_height_pt + baseline_pt)
+  .pt_to_twips(height_pt)
+}
+
+# Resolve top/bottom margin twips from preset@margins. `margins` is
+# length-1 (all sides equal) or length-4 (top, right, bottom, left).
+.margin_top_bottom_twips <- function(margins) {
+  if (length(margins) == 1L) {
+    m <- .inches_to_twips(margins)
+    c(top = m, bottom = m)
+  } else {
+    c(
+      top = .inches_to_twips(margins[[1L]]),
+      bottom = .inches_to_twips(margins[[3L]])
+    )
+  }
+}
+
+# Return the effective preset_spec for `spec`: the spec's @preset if
+# one is attached, otherwise a fresh preset_spec() (which carries the
+# documented defaults). Used by every engine phase that needs paper
+# / font geometry.
+.effective_preset <- function(spec) {
+  p <- spec@preset
+  if (is_preset_spec(p)) {
+    p
+  } else {
+    preset_spec()
+  }
+}

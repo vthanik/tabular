@@ -49,6 +49,13 @@ reference:
   contents:
   - style
 
+- title: Pagination
+  desc: Configure page splits, group-run protection, and horizontal
+        panel layout for wide tables. Row budget per page is computed
+        by the engine from the active preset and the spec's chrome.
+  contents:
+  - paginate
+
 - title: Predicates
   desc: Class predicates for tabular's S7 objects.
   contents:

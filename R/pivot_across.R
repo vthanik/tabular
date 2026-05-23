@@ -416,7 +416,10 @@ pivot_across <- function(
     is_level_row <- !is.na(wide$stat_label) &
       !is.na(wide$variable) &
       wide$stat_label != wide$variable
-    wide$stat_label[is_level_row] <- paste0("  ", wide$stat_label[is_level_row])
+    wide$stat_label[is_level_row] <- paste0(
+      "  ",
+      wide$stat_label[is_level_row]
+    )
   }
 
   if (!is.null(label)) {
@@ -457,7 +460,9 @@ pivot_across <- function(
 }
 
 .resolve_statistic_arg <- function(statistic, call) {
-  if (is.character(statistic) && length(statistic) == 1L && !is.na(statistic)) {
+  if (
+    is.character(statistic) && length(statistic) == 1L && !is.na(statistic)
+  ) {
     # Single string applies to every variable regardless of context.
     # Mirror onto the three lookup keys so .resolve_ard_statistic
     # hits one of them whatever the context column says.
@@ -689,7 +694,11 @@ pivot_across <- function(
 }
 
 .normalise_shape_d <- function(data, column, call) {
-  reconstructed <- .reconstruct_renamed_ard(data, column = column, call = call)
+  reconstructed <- .reconstruct_renamed_ard(
+    data,
+    column = column,
+    call = call
+  )
   df <- reconstructed$df
   df$arm <- as.character(df[[reconstructed$column]])
   df$stat_val <- .normalise_ard_num(df$stat)
@@ -1221,7 +1230,12 @@ pivot_across <- function(
 # Per-arm cell interpolation (vectorised over arms via single split)
 # ---------------------------------------------------------------------
 
-.interpolate_cells_all_arms <- function(var_df, arm_levels, fmt_str, pct_zero) {
+.interpolate_cells_all_arms <- function(
+  var_df,
+  arm_levels,
+  fmt_str,
+  pct_zero
+) {
   refs <- .parse_glue_refs(fmt_str)
   by_arm <- split(var_df, var_df$arm)
   vapply(
@@ -1317,7 +1331,12 @@ pivot_across <- function(
       }
     } else {
       fmt_str <- fmt_spec
-      .validate_format_stats(fmt_str, unique(key_df$stat_name), var_name, call)
+      .validate_format_stats(
+        fmt_str,
+        unique(key_df$stat_name),
+        var_name,
+        call
+      )
       levels <- unique(key_df$var_level)
       if (all(is.na(levels))) {
         cells <- .interpolate_cells_all_arms(
@@ -1410,7 +1429,11 @@ pivot_across <- function(
   max_g <- 1L
   while (paste0("group", max_g + 1L, "_level") %in% names(df)) {
     g <- max_g + 1L
-    df[[gval_col(g)]] <- .normalise_ard_chr(df[[paste0("group", g, "_level")]])
+    df[[gval_col(g)]] <- .normalise_ard_chr(df[[paste0(
+      "group",
+      g,
+      "_level"
+    )]])
     max_g <- g
   }
   if ("group1_level" %in% names(df)) {

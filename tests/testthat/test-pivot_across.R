@@ -667,7 +667,11 @@ test_that("Per-variable decimals: AGE overrides mean, BMI falls back to global",
   out <- pivot_across(
     ard,
     statistic = "{mean}",
-    decimals = list(AGE = c(mean = 4), BMI = c(sd = 2), .default = c(mean = 2))
+    decimals = list(
+      AGE = c(mean = 4),
+      BMI = c(sd = 2),
+      .default = c(mean = 2)
+    )
   )
   # AGE -> per_var mean=4 -> 4 decimals
   # BMI -> per_var has only sd, mean falls to global (.default) mean=2 -> 2 decimals
@@ -712,7 +716,9 @@ test_that("Per-variable decimals fall through to built-in default for unrelated 
   )
   out <- pivot_across(
     ard,
-    statistic = list(continuous = c("Mean" = "{mean}", "Median" = "{median}")),
+    statistic = list(
+      continuous = c("Mean" = "{mean}", "Median" = "{median}")
+    ),
     decimals = list(AGE = c(mean = 3))
   )
   # median uses built-in default (1 decimal)
@@ -1038,7 +1044,11 @@ test_that("Custom fmt + per-variable decimals interact (fmt wins)", {
 
 test_that(".check_fmt_arg rejects unnamed list", {
   expect_error(
-    pivot_across(saf_demo_card, statistic = "{n} ({p}%)", fmt = list(identity)),
+    pivot_across(
+      saf_demo_card,
+      statistic = "{n} ({p}%)",
+      fmt = list(identity)
+    ),
     class = "tabular_error_input"
   )
 })

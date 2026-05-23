@@ -7,8 +7,14 @@ test_that("check_tabular_spec accepts a tabular_spec", {
 
 test_that("check_tabular_spec rejects non-spec input", {
   expect_error(check_tabular_spec(NULL), class = "tabular_error_input")
-  expect_error(check_tabular_spec(data.frame()), class = "tabular_error_input")
-  expect_error(check_tabular_spec("not a spec"), class = "tabular_error_input")
+  expect_error(
+    check_tabular_spec(data.frame()),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    check_tabular_spec("not a spec"),
+    class = "tabular_error_input"
+  )
 })
 
 test_that("check_data_frame accepts a data.frame", {
@@ -49,24 +55,19 @@ test_that("check_lgl rejects NA / non-logical", {
   expect_error(check_lgl("yes"), class = "tabular_error_input")
 })
 
-test_that("check_rows_per_page returns NA_integer_ for NULL", {
-  expect_identical(check_rows_per_page(NULL), NA_integer_)
+test_that("check_pos_int accepts a positive whole number", {
+  expect_invisible(check_pos_int(3))
+  expect_identical(check_pos_int(40L), 40L)
 })
 
-test_that("check_rows_per_page accepts positive whole numbers", {
-  expect_identical(check_rows_per_page(40), 40L)
-  expect_identical(check_rows_per_page(1L), 1L)
-})
-
-test_that("check_rows_per_page rejects zero / negative / fractional / Inf / NaN / multi / NA", {
-  expect_error(check_rows_per_page(0), class = "tabular_error_input")
-  expect_error(check_rows_per_page(-1), class = "tabular_error_input")
-  expect_error(check_rows_per_page(2.5), class = "tabular_error_input")
-  expect_error(check_rows_per_page(Inf), class = "tabular_error_input")
-  expect_error(check_rows_per_page(NaN), class = "tabular_error_input")
-  expect_error(check_rows_per_page(c(1, 2)), class = "tabular_error_input")
-  expect_error(check_rows_per_page(NA_integer_), class = "tabular_error_input")
-  expect_error(check_rows_per_page("40"), class = "tabular_error_input")
+test_that("check_pos_int rejects zero / negative / fractional / Inf / multi / NA / non-numeric", {
+  expect_error(check_pos_int(0), class = "tabular_error_input")
+  expect_error(check_pos_int(-1), class = "tabular_error_input")
+  expect_error(check_pos_int(2.5), class = "tabular_error_input")
+  expect_error(check_pos_int(Inf), class = "tabular_error_input")
+  expect_error(check_pos_int(c(1, 2)), class = "tabular_error_input")
+  expect_error(check_pos_int(NA_integer_), class = "tabular_error_input")
+  expect_error(check_pos_int("3"), class = "tabular_error_input")
 })
 
 test_that("check_enum accepts values in choices", {
@@ -81,7 +82,10 @@ test_that("check_enum rejects values outside choices", {
 })
 
 test_that("check_enum rejects non-character / multi / NA", {
-  expect_error(check_enum(1L, choices = "left"), class = "tabular_error_input")
+  expect_error(
+    check_enum(1L, choices = "left"),
+    class = "tabular_error_input"
+  )
   expect_error(
     check_enum(c("left", "right"), choices = c("left", "right")),
     class = "tabular_error_input"

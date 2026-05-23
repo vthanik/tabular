@@ -69,11 +69,26 @@ NULL
   if (is_sort_spec(x@sort) && length(x@sort@by) > 0L) {
     cli::cli_text("Sort: {paste(x@sort@by, collapse = ', ')}")
   }
-  if (
-    is_pagination_spec(x@pagination) &&
-      !is.na(x@pagination@rows_per_page)
-  ) {
-    cli::cli_text("Pagination: every {x@pagination@rows_per_page} row{?s}")
+  if (is_pagination_spec(x@pagination)) {
+    pag <- x@pagination
+    bits <- character()
+    if (length(pag@keep_with_next) > 0L) {
+      bits <- c(
+        bits,
+        paste0(
+          "keep_with_next=",
+          paste(pag@keep_with_next, collapse = ",")
+        )
+      )
+    }
+    if (!identical(pag@panels, 1L)) {
+      bits <- c(bits, paste0("panels=", pag@panels))
+    }
+    if (length(bits) > 0L) {
+      cli::cli_text("Pagination: {paste(bits, collapse = '; ')}")
+    } else {
+      cli::cli_text("Pagination: auto")
+    }
   }
 
   invisible(x)
