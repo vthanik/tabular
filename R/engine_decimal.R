@@ -103,11 +103,19 @@
 #' @param cols A named list of `col_spec` objects, keyed by data
 #'   column name. Columns whose `col_spec@align` is `"decimal"` are
 #'   re-rendered; other columns pass through unchanged.
+#' @param sections Optional length-`nrow(cells_text)` vector identifying
+#'   the row group each row belongs to. Within each section the
+#'   decimal-alignment widths are computed independently, so a stats
+#'   section (integer N + float Mean / SD) and an n_pct section in the
+#'   same arm column don't pollute each other's slot widths.
+#'   `NULL` (default) means the entire column is one section.
+#'   Typically derived from the `usage="group"` row-label column's
+#'   run-length encoding by the caller.
 #' @return A character matrix with `nrow(cells_text)` rows and
 #'   `ncol(cells_text)` columns. Same dimensions, dimnames preserved.
 #' @keywords internal
 #' @noRd
-engine_decimal <- function(cells_text, cols) {
+engine_decimal <- function(cells_text, cols, sections = NULL) {
   col_names <- colnames(cells_text)
   for (nm in col_names) {
     cs <- cols[[nm]]
@@ -117,7 +125,10 @@ engine_decimal <- function(cells_text, cols) {
     if (!isTRUE(cs@align == "decimal")) {
       next
     }
-    cells_text[, nm] <- .align_decimal_column(cells_text[, nm])
+    cells_text[, nm] <- .align_decimal_column(
+      cells_text[, nm],
+      sections = sections
+    )
   }
   cells_text
 }
@@ -138,16 +149,17 @@ engine_decimal <- function(cells_text, cols) {
 # (engine_format) is responsible for substituting NA with na_text
 # before invoking this; we still guard against accidental NA passage.
 #
-# Alignment is COLUMN-WIDE: when a column carries both a "stats"
-# section (integer N + floats) and an "n (%)" section (integer N +
-# n_pct cells), the float rows force a slot-1 decimal slot that the
-# n_pct rows must space-fill. Real clinical tables typically split
-# such mixes into discrete sections each with its own alignment.
-# To do per-section alignment, call `.align_decimal_column()` once
-# per section's row indices and re-stitch the column. A future
-# `engine_decimal()` enhancement may take a `section` index vector
-# and run the per-section split internally.
-.align_decimal_column <- function(values) {
+# `sections` is an optional length-n vector identifying the row group
+# each row belongs to. When provided, rows in different sections do
+# not share slot widths -- "Age (years)" stats rows compute their own
+# int_w / dec_w, "Age Group, n (%)" rows compute their own, etc. This
+# matches the clinical-table convention where each `variable` block
+# is its own alignment unit. When `sections = NULL` the entire column
+# is treated as one section (the v0.1.0 default).
+#
+# After per-section rendering, every non-NA row is right-padded to
+# the column-wide max nchar so the final output is a uniform block.
+.align_decimal_column <- function(values, sections = NULL) {
   n <- length(values)
   if (n == 0L) {
     return(values)
@@ -160,29 +172,32 @@ engine_decimal <- function(cells_text, cols) {
   v <- character(n)
   v[!na_mask] <- trimws(values[!na_mask], which = "both")
 
-  # Tokenise every cell.
-  tokens <- lapply(v, .tokenize_cell)
-
-  # Determine the dominant signature for the column.
-  sigs <- vapply(tokens, .signature_key, character(1))
-  dominant <- .pick_dominant(sigs, tokens)
-
-  # Compute per-slot widths and remainder width across the column.
-  widths <- .compute_widths(tokens, dominant)
-
-  # Render every cell.
-  out <- character(n)
-  for (i in seq_len(n)) {
-    if (na_mask[[i]]) {
-      out[[i]] <- NA_character_
-      next
+  if (is.null(sections)) {
+    out <- .render_section(v, na_mask)
+  } else {
+    if (length(sections) != n) {
+      cli::cli_abort(
+        c(
+          "{.arg sections} must be the same length as {.arg values}.",
+          "x" = "Got length {length(sections)}, expected {n}."
+        ),
+        class = "tabular_error_input"
+      )
     }
-    out[[i]] <- .render_cell(
-      tok = tokens[[i]],
-      sig_key = sigs[[i]],
-      dominant = dominant,
-      widths = widths
-    )
+    # Use rleid-style grouping: consecutive identical section values
+    # form a section. This preserves row order without needing the
+    # caller to pre-sort.
+    sec_ids <- .runs(sections)
+    out <- character(n)
+    out[na_mask] <- NA_character_
+    for (sid in unique(sec_ids)) {
+      idx <- which(sec_ids == sid)
+      keep <- idx[!na_mask[idx]]
+      if (length(keep) == 0L) {
+        next
+      }
+      out[keep] <- .render_section(v[keep], rep(FALSE, length(keep)))
+    }
   }
 
   # Final pass: right-pad every non-NA cell to the same width so the
@@ -193,6 +208,49 @@ engine_decimal <- function(cells_text, cols) {
   }
 
   out
+}
+
+# Render one section: tokenise, pick dominant, compute slot widths,
+# render every cell. Assumes `v` is already trimmed and NA-stripped
+# (any NA positions are passed via `na_mask` and bypassed).
+.render_section <- function(v, na_mask) {
+  n <- length(v)
+  out <- character(n)
+
+  active <- which(!na_mask)
+  if (length(active) == 0L) {
+    out[na_mask] <- NA_character_
+    return(out)
+  }
+
+  tokens <- lapply(v[active], .tokenize_cell)
+  sigs <- vapply(tokens, .signature_key, character(1))
+  dominant <- .pick_dominant(sigs, tokens)
+  widths <- .compute_widths(tokens, dominant)
+
+  for (k in seq_along(active)) {
+    out[[active[[k]]]] <- .render_cell(
+      tok = tokens[[k]],
+      sig_key = sigs[[k]],
+      dominant = dominant,
+      widths = widths
+    )
+  }
+  out[na_mask] <- NA_character_
+  out
+}
+
+# Run-length encoder: returns a length-n integer vector where each
+# entry identifies the run of identical adjacent values containing
+# that row. `c("A","A","B","A")` -> `c(1, 1, 2, 3)`.
+# Caller (`.align_decimal_column`) early-returns on length-0 input,
+# so `x` always has at least one element here.
+.runs <- function(x) {
+  changed <- c(
+    TRUE,
+    x[-1L] != x[-length(x)] | is.na(x[-1L]) != is.na(x[-length(x)])
+  )
+  cumsum(changed)
 }
 
 # ---------------------------------------------------------------------

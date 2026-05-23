@@ -15,7 +15,9 @@
 
 # Helper: the per-column workhorse is internal; call it through
 # triple-colon. The top-level `engine_decimal()` is also internal.
-align <- function(values) tabular:::.align_decimal_column(values)
+align <- function(values, sections = NULL) {
+  tabular:::.align_decimal_column(values, sections = sections)
+}
 
 # ---------------------------------------------------------------------
 # Layer 1 — single-shape columns
@@ -481,4 +483,305 @@ test_that("snapshot: full saf_demo Placebo column end-to-end", {
   v <- saf_demo$placebo
   out <- align(v)
   expect_snapshot(cat(out, sep = "\n"))
+})
+
+# ---------------------------------------------------------------------
+# Layer 6 -- per-section alignment
+# ---------------------------------------------------------------------
+
+test_that("sections vector splits a column into independent alignment units", {
+  # Two sections in one column: a stats block (integer N + float
+  # Mean / SD) and an n_pct block (integer N + n_pct cells). Without
+  # sections, the float rows force a slot-1 decimal slot that the
+  # n_pct rows must space-fill. With sections, each block aligns
+  # independently and the n_pct rows render tight.
+  v <- c("86", "75.2 (8.59)", "76.0", "14 (16.3)", "72 (83.7)")
+  sec <- c("stats", "stats", "stats", "n_pct", "n_pct")
+  out <- align(v, sections = sec)
+  # Stats section: int_w=2, dec_w=1; "86" is right-padded with the
+  # decimal-slot space; floats render tight.
+  expect_match(out[[2L]], "75\\.2 \\(8\\.59\\)")
+  # n_pct section renders tight (no slot-1 dec slot reservation):
+  expect_match(out[[4L]], "^14 \\(16\\.3\\)")
+  expect_match(out[[5L]], "^72 \\(83\\.7\\)")
+  # All rows share the same nchar after column-wide right-pad.
+  expect_true(all(nchar(out) == nchar(out[[1L]])))
+})
+
+test_that("sections vector preserves row order across sections", {
+  v <- c("86", "75.2", "14 (16.3)", "147", "9.5")
+  sec <- c("A", "A", "B", "A", "A")
+  out <- align(v, sections = sec)
+  # Row 4 ("147") belongs to section A even though section B
+  # intervenes; A-section widths must include "147" in int_w.
+  expect_match(out[[4L]], "147")
+  # Section B has only one row -- renders with its own minimal width.
+  expect_match(out[[3L]], "14 \\(16\\.3\\)")
+})
+
+test_that("sections vector rejects length mismatch", {
+  v <- c("1", "2", "3")
+  expect_error(
+    align(v, sections = c("A", "B")),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("sections vector tolerates a section consisting entirely of NAs", {
+  v <- c("86", "147.8", NA_character_, NA_character_, "9.5")
+  sec <- c("A", "A", "B", "B", "A")
+  out <- align(v, sections = sec)
+  # NA rows pass through; section B has no numeric content to align.
+  expect_true(is.na(out[[3L]]))
+  expect_true(is.na(out[[4L]]))
+  expect_false(is.na(out[[1L]]))
+})
+
+test_that("engine_decimal() forwards sections to the per-column workhorse", {
+  m <- matrix(
+    c(
+      "86",
+      "75.2 (8.59)",
+      "14 (16.3)",
+      "72 (83.7)"
+    ),
+    nrow = 4L,
+    dimnames = list(NULL, "placebo")
+  )
+  cols <- list(placebo = col_spec(align = "decimal"))
+  sec <- c("Age", "Age", "AgeGrp", "AgeGrp")
+  out <- tabular:::engine_decimal(m, cols, sections = sec)
+  # Section "Age" int_w = 2, slot1 dec_w = 1; stats render tight.
+  expect_match(out[2L, "placebo"], "75\\.2 \\(8\\.59\\)")
+  # Section "AgeGrp" is its own n_pct block; render tight.
+  expect_match(out[3L, "placebo"], "^14 \\(16\\.3\\)")
+})
+
+# ---------------------------------------------------------------------
+# Layer 7 -- snapshot pinning the user's "DM expectation" image
+# ---------------------------------------------------------------------
+
+test_that("snapshot: per-section saf_demo Placebo column (Demographics image)", {
+  # The user-reported expectation for "Summary of Demographic and
+  # Baseline Characteristics" Placebo column. Sections derive from
+  # the `variable` row-label column: Age (years), Age Group n (%),
+  # Sex n (%), Race n (%), Ethnicity n (%). Each section aligns
+  # independently; the column-wide right-pad makes the final block
+  # uniform.
+  v <- saf_demo$placebo
+  sec <- saf_demo$variable
+  out <- align(v, sections = sec)
+  expect_snapshot(cat(out, sep = "\n"))
+})
+
+test_that("snapshot: per-section all four arm columns (full saf_demo)", {
+  # Same Demographics scenario for every arm column. Confirms cross-
+  # arm consistency.
+  sec <- saf_demo$variable
+  for (arm in c("placebo", "drug_100", "drug_50", "Total")) {
+    out <- align(saf_demo[[arm]], sections = sec)
+    expect_snapshot(
+      cat(sprintf("=== %s ===\n", arm), out, sep = "\n"),
+      variant = arm
+    )
+  }
+})
+
+# ---------------------------------------------------------------------
+# Layer 8 -- 18 format families reference (galley decimal-formats.txt)
+# ---------------------------------------------------------------------
+
+# Pin every input/expected pair from galley's published decimal-
+# formats.txt. The snapshot captures BOTH my engine's output AND
+# galley's expected output side-by-side; divergences are visible as
+# the snapshot file's "actual" vs "expected" markers. Several galley
+# features (missing-token NR/BLQ handling, zero-suppression in
+# n_pct, sibling type sharing across literal-different signatures,
+# compound-shape gap padding) are deferred to v0.2.0+; the snapshot
+# documents the current gap.
+
+test_that("snapshot: 18 format families vs galley reference", {
+  cases <- list(
+    list(
+      name = "01 missing",
+      input = c("", "-", "NR", "BLQ", "INF", "-INF"),
+      galley = c("", "", "", "", "", "")
+    ),
+    list(
+      name = "02 n_only",
+      input = c("0", "42", "135"),
+      galley = c("  0", " 42", "135")
+    ),
+    list(
+      name = "03 scalar_float",
+      input = c("12.3", "135.20", "-2.5", "0.07"),
+      galley = c(" 12.3 ", "135.20", " -2.5 ", "  0.07")
+    ),
+    list(
+      name = "04 pvalue",
+      input = c("<0.001", "=0.500", ">0.999"),
+      galley = c("<0.001", "=0.500", ">0.999")
+    ),
+    list(
+      name = "05 n_pct",
+      input = c("0", "1 (2.2)", "42 (50.0%)", "100 (100.0%)"),
+      galley = c(
+        "  0         ",
+        "  1 (  2.2 )",
+        " 42 ( 50.0%)",
+        "100 (100.0%)"
+      )
+    ),
+    list(
+      name = "06 n_over_N_pct",
+      input = c("3/45 (6.7)", "42/84 (50.0%)", "120/120 (100.0)"),
+      galley = c(
+        "  3/45  (  6.7 )",
+        " 42/84  ( 50.0%)",
+        "120/120 (100.0 )"
+      )
+    ),
+    list(
+      name = "07 n_over_N",
+      input = c("0/120", "1/120", "108/120"),
+      galley = c("  0/120", "  1/120", "108/120")
+    ),
+    list(
+      name = "08 n_over_float",
+      input = c("0/234.6", "12/234.6", "108/234.6"),
+      galley = c("  0/234.6", " 12/234.6", "108/234.6")
+    ),
+    list(
+      name = "09 est_spread",
+      input = c("75.0 (6.75)", "136.8 (17.61)", "-0.0 (1.47)"),
+      galley = c(" 75.0 ( 6.75)", "136.8 (17.61)", " -0.0 ( 1.47)")
+    ),
+    list(
+      name = "10 est_spread_pct",
+      input = c("0.10 (8.7%)", "52.43 (23.4%)", "1240.40 (23.4%)"),
+      galley = c(
+        "   0.10 ( 8.7%)",
+        "  52.43 (23.4%)",
+        "1240.40 (23.4%)"
+      )
+    ),
+    list(
+      name = "11 est_ci",
+      input = c(
+        "168.0 (152.4, 183.6)",
+        "14.3 (11.2, NR)",
+        "0.087 (0.034, NR)",
+        "NR (NR, NR)"
+      ),
+      galley = c(
+        "168.0   (152.4  , 183.6)",
+        " 14.3   ( 11.2  ,  NR  )",
+        "  0.087 (  0.034,  NR  )",
+        " NR     ( NR    ,  NR  )"
+      )
+    ),
+    list(
+      name = "12 est_ci_bracket",
+      input = c(
+        "0.0 [0.0, 0.0]",
+        "53.0 [45.0, 60.0]",
+        "102.0 [88.4, 116.2]"
+      ),
+      galley = c(
+        "  0.0 [ 0.0,   0.0]",
+        " 53.0 [45.0,  60.0]",
+        "102.0 [88.4, 116.2]"
+      )
+    ),
+    list(
+      name = "13 range_pair",
+      input = c("2.0, 45.0", "65.0, 88.0", "-5.3, 12.1"),
+      galley = c(" 2.0, 45.0", "65.0, 88.0", "-5.3, 12.1")
+    ),
+    list(
+      name = "14 int_range",
+      input = c("1 - 180", "10 - 365"),
+      galley = c(" 1 - 180", "10 - 365")
+    ),
+    list(
+      name = "15 est_ci_pval",
+      input = c(
+        "-0.08 (-0.21, 0.05) 0.194",
+        "12.40 (9.80, 15.00) <0.001"
+      ),
+      galley = c(
+        "-0.08 (-0.21,  0.05)     0.194",
+        "12.40 ( 9.80, 15.00)    <0.001"
+      )
+    ),
+    list(
+      name = "16 n_pct_rate",
+      input = c("0 (0.0) 0.00", "3 (2.5) 1.28", "42 (35.0) 17.94"),
+      galley = c(
+        " 0                ",
+        " 3 ( 2.5)     1.28",
+        "42 (35.0)    17.94"
+      )
+    ),
+    list(
+      name = "17 n_over_N_pct_ci",
+      input = c(
+        "0/120 (0.0) [0.0, 3.0]",
+        "12/120 (10.0) [5.6, 16.9]",
+        "120/120 (100.0) [97.0, 100.0]"
+      ),
+      galley = c(
+        "  0/120 (  0.0) [ 0.0,   3.0]",
+        " 12/120 ( 10.0) [ 5.6,  16.9]",
+        "120/120 (100.0) [97.0, 100.0]"
+      )
+    ),
+    list(
+      name = "18 est_spread_pct_ci",
+      input = c(
+        "8.1 (24.2%) (7.3, 8.9)",
+        "1240.4 (23.4%) (1124.2, 1368.8)"
+      ),
+      galley = c(
+        "   8.1 (24.2%)    (   7.3,    8.9)",
+        "1240.4 (23.4%)    (1124.2, 1368.8)"
+      )
+    )
+  )
+
+  out_lines <- character()
+  match_count <- 0L
+  total_count <- 0L
+  for (case in cases) {
+    mine <- align(case$input)
+    out_lines <- c(out_lines, sprintf("=== %s ===", case$name))
+    for (i in seq_along(case$input)) {
+      total_count <- total_count + 1L
+      same <- identical(mine[[i]], case$galley[[i]])
+      if (same) {
+        match_count <- match_count + 1L
+      }
+      out_lines <- c(
+        out_lines,
+        sprintf("  input:  %s", case$input[[i]]),
+        sprintf("  mine:   |%s|", mine[[i]]),
+        sprintf(
+          "  galley: |%s|%s",
+          case$galley[[i]],
+          if (same) "  [match]" else "  [GAP]"
+        )
+      )
+    }
+    out_lines <- c(out_lines, "")
+  }
+  out_lines <- c(
+    out_lines,
+    sprintf(
+      "=== summary: %d / %d match galley (%.1f%%) ===",
+      match_count,
+      total_count,
+      100 * match_count / total_count
+    )
+  )
+  expect_snapshot(cat(out_lines, sep = "\n"))
 })
