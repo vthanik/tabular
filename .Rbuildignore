@@ -1,6 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^plan\.md$
+^handoff\.md$
 ^build\.md$
 ^debugging\.md$
 ^MEMORY\.md$
