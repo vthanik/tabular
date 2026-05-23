@@ -292,3 +292,25 @@
       
       === summary: 36 / 57 match galley (63.2%) ===
 
+# snapshot: per-section + zero-suppress + edge-trim on saf_demo Total
+
+    Code
+      cat(out, sep = "\n")
+    Output
+      254         
+       75.1 (8.25)
+       77.0       
+       70.0, 81.0 
+       51  , 89   
+       33 (13.0)  
+      221 (87.0)  
+      143 (56.3)  
+      111 (43.7)  
+      230 (90.6)  
+       23 ( 9.1)  
+        0         
+        1 ( 0.4)  
+       12 ( 4.7)  
+      242 (95.3)  
+        0         
+

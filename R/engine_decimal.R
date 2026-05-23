@@ -12,15 +12,7 @@
 #   decimal point, and the float's decimal point must sit on the same
 #   column as every other float's decimal point.
 #
-#   Galley's decimal engine had cross-shape alignment bugs: standalone
-#   integer rows (the "n =" row at the top of a stats block, the
-#   denominator-only row at the top of an n (%) block) sat at the
-#   wrong column position, breaking visual scan. The fix is to treat
-#   the entire column as one alignment unit with a uniform "primary
-#   anchor" (the leftmost float's decimal mark, including the
-#   "implicit decimal" of integer-only rows).
-#
-# Design (one-pass, two-tier alignment):
+# Design (one-pass alignment with per-section refinement):
 #
 #   1. TOKENIZE — each cell decomposes into:
 #        floats   : an ordered character vector of float tokens
@@ -29,48 +21,65 @@
 #      A cell with no floats (e.g., "Yes", "Total", "") yields
 #      floats = character(), literals = c(text).
 #
-#   2. SIGNATURE — each cell's signature is (n_floats, literals). The
-#      column's DOMINANT signature is the signature with:
-#        a. the highest float count, then
-#        b. the highest row count among signatures tied at (a), then
-#        c. the first-appearance among signatures tied at (a, b).
-#      The dominant signature drives the canonical layout: its
-#      literals are the column's canonical literals; its float count
-#      sets the number of aligned slots.
+#   2. OPAQUE — cells whose trimmed value matches `not_considered`
+#      (e.g. "NR", "BLQ", "NE", "--") are flagged opaque BEFORE
+#      width computation; they contribute nothing to slot widths and
+#      render as raw text right-padded to column width. Closes the
+#      missing-token class that galley / aligngen.sas both treat as
+#      a first-class concept.
 #
-#   3. WIDTHS — per slot k = 1..K_dominant, compute:
-#        int_w[k]    : max nchar(sign+int) across ALL cells whose own
-#                      slot-k float exists.
-#        has_dec[k]  : any cell has a non-empty decimal at slot k.
-#        dec_w[k]    : max nchar(dec) across cells with non-empty dec
-#                      at slot k.
-#      Including non-dominant cells in the width computation lets
-#      e.g. an integer N=86 row contribute to int_w[1] alongside the
-#      float rows. tail_w is computed as max nchar of the post-
-#      primary-float remainder, including all signatures.
+#   3. COLUMN FLOOR — when `sections` is non-NULL, a single pre-pass
+#      across every non-opaque cell sets the floor for slot-1
+#      sign+int width and comparator-prefix width. Each section's
+#      `.compute_widths()` then uses `max(section_w, floor_w)` for
+#      slot 1, so the leftmost integer column is uniform PAGE-WIDE
+#      (within the arm column) while everything to its right stays
+#      section-scoped. Matches the user's "86 75 14 69 align based
+#      on page, after-the-integer goes per-section" rule.
 #
-#   4. RENDER — for each cell:
-#        - DOMINANT signature  -> full slot-by-slot assembly using
-#          all K_dom slots, padding within each slot.
-#        - OTHER signature with >= 1 float -> align slot 1 (primary
-#          decimal anchor) to the column's slot-1 widths, then
-#          concatenate the raw remainder. The remainder is padded
-#          on the right to the column's remainder-width.
-#        - NO floats -> right-pad the raw cell to the column width.
+#   4. SIGNATURE — each cell's signature is (n_floats, literals).
+#      The section's DOMINANT signature is the most-floats,
+#      most-frequent, first-appearing signature. The dominant
+#      signature drives the canonical layout: its literals are the
+#      section's canonical literals; its float count sets the
+#      number of aligned slots.
 #
-#   5. NORMALISE — every rendered string is right-padded with spaces
-#      to the column's full width, so the column reads as a uniform
-#      block in monospace.
+#   5. WIDTHS — per slot k = 1..K_dominant compute:
+#        int_w[k]    : max nchar(sign+int) across cells whose own
+#                      slot-k float exists. Slot 1 is also floored
+#                      by the column-wide value when sections-mode
+#                      is active.
+#        has_dec[k]  : any cell has a non-empty dec at slot k.
+#        dec_w[k]    : max nchar(dec) across cells with non-empty
+#                      dec at slot k.
+#        prefix_w[k] : max comparator-prefix width at slot k.
 #
-# Output is a character vector of the same length as the input, with
-# every string aligned for monospace rendering. Backends that emit to
-# proportional fonts (HTML, LaTeX) convert the literal-space padding
-# to font-metric padding using the active preset's
-# `decimal_metrics` knob — but the canonical column-level alignment
-# is the monospace string. The character-count alignment is a
-# necessary condition for the metric-based alignment to look right
-# at every body font size, since the rebuilt string has visually
-# consistent decimal positions even before metric scaling.
+#   6. RENDER — for each cell, one of:
+#        OPAQUE          -> raw text (will be right-padded later).
+#        ZERO-SUPPRESS   -> when n=0 in an n_pct-style shape, render
+#                           only the n portion and blank-pad the
+#                           parenthesised tail. Galley + aligngen
+#                           both do this.
+#        DOMINANT        -> full slot-by-slot assembly.
+#        PRIMARY-ONLY    -> non-dominant signature; align slot 1,
+#                           concatenate raw remainder.
+#
+#   7. NORMALISE — every rendered string is right-padded with the
+#      configured `pad` character to the column-wide max nchar, so
+#      the column reads as a uniform block.
+#
+#   8. EDGE-TRIM — if every non-NA cell starts (or ends) with the
+#      pad character, strip one column-wide. Iterate until at least
+#      one cell has a non-pad edge. Removes phantom-padding
+#      artifacts.
+#
+# Output is a character vector of the same length as the input. The
+# pad character defaults to U+00A0 NBSP at the public API so the
+# spacing survives proportional-font RTF / HTML / DOCX cells; the
+# internal workhorse accepts an explicit `pad = " "` for ASCII
+# debugging. The character-count alignment is the canonical
+# invariant; backends translate the pad runs to font-metric padding
+# (RTF dec-tabs, LaTeX \phantom, HTML width-set spans) at emit time.
 
 # ---------------------------------------------------------------------
 # Constants
@@ -81,10 +90,17 @@
 # non-capturing groups parse cleanly.
 .float_token_re <- "(?:[<>=]?)(?:-?)\\d+(?:\\.\\d+)?"
 
-# Capturing version for parsing one token into components. Group 1 is
-# the comparator prefix; group 2 is the sign; group 3 is the integer
-# part; group 4 is the optional decimal part.
+# Capturing version for parsing one token into components. Group 1
+# is the comparator prefix; group 2 is the sign; group 3 is the
+# integer part; group 4 is the optional decimal part.
 .float_parse_re <- "^([<>=]?)(-?)(\\d+)(?:\\.(\\d+))?$"
+
+# Default pad character for the public API: Unicode NBSP (U+00A0).
+# Survives RTF / HTML / DOCX cell rendering where ASCII space gets
+# collapsed by the proportional-font layout. The internal pipeline
+# accepts an explicit `pad` arg so callers (and tests) can swap in
+# ASCII space for terminal-friendly output.
+.nbsp <- "\u00a0"
 
 # ---------------------------------------------------------------------
 # Public entry — engine_decimal
@@ -103,19 +119,39 @@
 #' @param cols A named list of `col_spec` objects, keyed by data
 #'   column name. Columns whose `col_spec@align` is `"decimal"` are
 #'   re-rendered; other columns pass through unchanged.
-#' @param sections Optional length-`nrow(cells_text)` vector identifying
-#'   the row group each row belongs to. Within each section the
-#'   decimal-alignment widths are computed independently, so a stats
-#'   section (integer N + float Mean / SD) and an n_pct section in the
-#'   same arm column don't pollute each other's slot widths.
+#' @param sections Optional length-`nrow(cells_text)` vector
+#'   identifying the row group each row belongs to. Slot-1 sign+int
+#'   width is still computed column-wide so the leftmost integer
+#'   column aligns across sections; everything to its right (slot-1
+#'   decimal portion and slots 2..K) is computed inside each section.
 #'   `NULL` (default) means the entire column is one section.
-#'   Typically derived from the `usage="group"` row-label column's
-#'   run-length encoding by the caller.
+#' @param not_considered Character vector of opaque tokens. Cells
+#'   whose trimmed value matches any entry bypass alignment and
+#'   contribute no slot widths. Use for clinical missing markers
+#'   like `c("NR", "BLQ", "NE", "--")`.
+#' @param pad Single-character padding string used between slot
+#'   components and at the column-wide right-pad. Defaults to U+00A0
+#'   non-breaking space so the spacing survives proportional-font
+#'   rendering. Pass `" "` for terminal-friendly ASCII output.
+#' @param zero_suppress When `TRUE` (default), cells whose primary
+#'   float parses to integer 0 in an n_pct-style shape render only
+#'   the n portion blank-padded to the dominant width.
+#' @param edge_trim When `TRUE` (default), strip column-wide leading
+#'   or trailing pad characters that every cell shares, until at
+#'   least one cell has a non-pad edge.
 #' @return A character matrix with `nrow(cells_text)` rows and
 #'   `ncol(cells_text)` columns. Same dimensions, dimnames preserved.
 #' @keywords internal
 #' @noRd
-engine_decimal <- function(cells_text, cols, sections = NULL) {
+engine_decimal <- function(
+  cells_text,
+  cols,
+  sections = NULL,
+  not_considered = character(),
+  pad = .nbsp,
+  zero_suppress = TRUE,
+  edge_trim = TRUE
+) {
   col_names <- colnames(cells_text)
   for (nm in col_names) {
     cs <- cols[[nm]]
@@ -127,7 +163,11 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
     }
     cells_text[, nm] <- .align_decimal_column(
       cells_text[, nm],
-      sections = sections
+      sections = sections,
+      not_considered = not_considered,
+      pad = pad,
+      zero_suppress = zero_suppress,
+      edge_trim = edge_trim
     )
   }
   cells_text
@@ -140,26 +180,33 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
 # Align one column of pre-formatted strings on the decimal mark.
 #
 # Pure function. Takes a character vector, returns a character vector
-# of the same length with embedded space padding so the leftmost
+# of the same length with embedded `pad` padding so the leftmost
 # decimal mark is at the same column position in every cell, and
 # cells of matching signature are fully slot-aligned. Cells with no
-# numeric content are right-padded to the column width.
+# numeric content (or matching `not_considered`) are right-padded
+# to the column width with raw text preserved.
 #
-# NA values pass through as NA (no alignment work). The caller
-# (engine_format) is responsible for substituting NA with na_text
-# before invoking this; we still guard against accidental NA passage.
+# NA values pass through as NA (no alignment work). Caller is
+# responsible for substituting NA with the desired display token
+# before invoking this; we still guard against accidental NA
+# passage.
 #
-# `sections` is an optional length-n vector identifying the row group
-# each row belongs to. When provided, rows in different sections do
-# not share slot widths -- "Age (years)" stats rows compute their own
-# int_w / dec_w, "Age Group, n (%)" rows compute their own, etc. This
-# matches the clinical-table convention where each `variable` block
-# is its own alignment unit. When `sections = NULL` the entire column
-# is treated as one section (the v0.1.0 default).
-#
-# After per-section rendering, every non-NA row is right-padded to
-# the column-wide max nchar so the final output is a uniform block.
-.align_decimal_column <- function(values, sections = NULL) {
+# `sections` is an optional length-n vector identifying the row
+# group each row belongs to. When provided:
+#   * slot-1 sign+int width and comparator-prefix width are
+#     computed COLUMN-WIDE (across all sections) so the leftmost
+#     integer column aligns page-wide;
+#   * every other slot width (slot-1 dec_w / has_dec, slots 2..K)
+#     is computed INSIDE each section independently.
+# When `sections = NULL` the entire column is one section.
+.align_decimal_column <- function(
+  values,
+  sections = NULL,
+  not_considered = character(),
+  pad = " ",
+  zero_suppress = TRUE,
+  edge_trim = TRUE
+) {
   n <- length(values)
   if (n == 0L) {
     return(values)
@@ -172,9 +219,19 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
   v <- character(n)
   v[!na_mask] <- trimws(values[!na_mask], which = "both")
 
-  if (is.null(sections)) {
-    out <- .render_section(v, na_mask)
-  } else {
+  # Identify opaque cells -- those whose trimmed value matches any
+  # token in `not_considered`. Opaque cells bypass alignment and do
+  # not contribute to any slot width.
+  opaque_mask <- logical(n)
+  if (length(not_considered) > 0L) {
+    opaque_mask[!na_mask] <- v[!na_mask] %in% not_considered
+  }
+
+  # Compute the column-wide slot-1 floor across every non-NA,
+  # non-opaque cell. Only needed in sections-mode; in single-section
+  # mode the section's own slot-1 widths already span the column.
+  column_floor <- NULL
+  if (!is.null(sections)) {
     if (length(sections) != n) {
       cli::cli_abort(
         c(
@@ -184,59 +241,112 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
         class = "tabular_error_input"
       )
     }
-    # Use rleid-style grouping: consecutive identical section values
-    # form a section. This preserves row order without needing the
-    # caller to pre-sort.
+    contrib <- which(!na_mask & !opaque_mask)
+    if (length(contrib) > 0L) {
+      column_floor <- .compute_column_floor(v[contrib])
+    }
+  }
+
+  out <- character(n)
+  out[na_mask] <- NA_character_
+
+  if (is.null(sections)) {
+    out <- .render_section(
+      v = v,
+      na_mask = na_mask,
+      opaque_mask = opaque_mask,
+      column_floor = NULL,
+      pad = pad,
+      zero_suppress = zero_suppress
+    )
+  } else {
     sec_ids <- .runs(sections)
-    out <- character(n)
-    out[na_mask] <- NA_character_
     for (sid in unique(sec_ids)) {
       idx <- which(sec_ids == sid)
       keep <- idx[!na_mask[idx]]
       if (length(keep) == 0L) {
         next
       }
-      out[keep] <- .render_section(v[keep], rep(FALSE, length(keep)))
+      rendered <- .render_section(
+        v = v[keep],
+        na_mask = rep(FALSE, length(keep)),
+        opaque_mask = opaque_mask[keep],
+        column_floor = column_floor,
+        pad = pad,
+        zero_suppress = zero_suppress
+      )
+      out[keep] <- rendered
     }
   }
 
-  # Final pass: right-pad every non-NA cell to the same width so the
-  # column reads as a clean block.
+  # Final pass: right-pad every non-NA cell to the column max nchar.
   if (any(!na_mask)) {
-    max_w <- max(nchar(out[!na_mask]))
-    out[!na_mask] <- .pad_right(out[!na_mask], max_w)
+    max_w <- max(nchar(out[!na_mask], type = "chars"))
+    out[!na_mask] <- .pad_right(out[!na_mask], max_w, pad = pad)
+  }
+
+  # Symmetric edge-trim: strip column-wide leading / trailing pad
+  # characters that every cell shares.
+  if (edge_trim) {
+    out <- .trim_symmetric(out, pad = pad)
   }
 
   out
 }
 
 # Render one section: tokenise, pick dominant, compute slot widths,
-# render every cell. Assumes `v` is already trimmed and NA-stripped
-# (any NA positions are passed via `na_mask` and bypassed).
-.render_section <- function(v, na_mask) {
+# render every cell. Assumes `v` is already trimmed.
+#
+# Opaque cells (those with `opaque_mask[i] == TRUE`) are skipped
+# during tokenisation and rendered as their raw `v[i]` value.
+.render_section <- function(
+  v,
+  na_mask,
+  opaque_mask,
+  column_floor,
+  pad,
+  zero_suppress
+) {
   n <- length(v)
   out <- character(n)
+  out[na_mask] <- NA_character_
 
   active <- which(!na_mask)
   if (length(active) == 0L) {
-    out[na_mask] <- NA_character_
     return(out)
   }
 
-  tokens <- lapply(v[active], .tokenize_cell)
+  # Tokenise non-opaque cells; opaque cells get a dummy "0 floats"
+  # token so they bypass slot-width contribution and the render
+  # path returns their raw text.
+  tokens <- vector("list", length(active))
+  for (k in seq_along(active)) {
+    i <- active[[k]]
+    if (opaque_mask[[i]]) {
+      tokens[[k]] <- list(
+        floats = character(),
+        literals = v[[i]],
+        parsed = list()
+      )
+    } else {
+      tokens[[k]] <- .tokenize_cell(v[[i]])
+    }
+  }
+
   sigs <- vapply(tokens, .signature_key, character(1))
   dominant <- .pick_dominant(sigs, tokens)
-  widths <- .compute_widths(tokens, dominant)
+  widths <- .compute_widths(tokens, dominant, column_floor = column_floor)
 
   for (k in seq_along(active)) {
     out[[active[[k]]]] <- .render_cell(
       tok = tokens[[k]],
       sig_key = sigs[[k]],
       dominant = dominant,
-      widths = widths
+      widths = widths,
+      pad = pad,
+      zero_suppress = zero_suppress
     )
   }
-  out[na_mask] <- NA_character_
   out
 }
 
@@ -254,6 +364,38 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
 }
 
 # ---------------------------------------------------------------------
+# Column floor (page-wide slot 1 widths)
+# ---------------------------------------------------------------------
+
+# Compute the column-wide slot-1 floor across every contributing
+# (non-NA, non-opaque) cell. Returns a list with:
+#   int_w    : max nchar(sign + int) of the FIRST float token
+#   prefix_w : max nchar(comparator prefix) of the FIRST float token
+# Returns NULL if no cell has any float token.
+.compute_column_floor <- function(values) {
+  int_w <- 0L
+  prefix_w <- 0L
+  any_float <- FALSE
+  for (val in values) {
+    tok <- .tokenize_cell(val)
+    if (length(tok$floats) == 0L) {
+      next
+    }
+    any_float <- TRUE
+    p <- tok$parsed[[1L]]
+    prefix_w <- max(prefix_w, nchar(p$prefix, type = "chars"))
+    int_w <- max(
+      int_w,
+      nchar(p$sign, type = "chars") + nchar(p$int, type = "chars")
+    )
+  }
+  if (!any_float) {
+    return(NULL)
+  }
+  list(int_w = int_w, prefix_w = prefix_w)
+}
+
+# ---------------------------------------------------------------------
 # Tokenisation
 # ---------------------------------------------------------------------
 
@@ -267,11 +409,7 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
 #              leading literal; literals[[K + 1]] is the trailing
 #              literal).
 #   parsed   : list of K named lists with (prefix, sign, int, dec)
-#              components per float token. Convenience cache so the
-#              render path doesn't reparse.
-#
-# An empty / whitespace-trimmed string yields floats = character()
-# and literals = "" (length 1, blank).
+#              components per float token.
 .tokenize_cell <- function(text) {
   if (!nzchar(text)) {
     return(list(
@@ -332,9 +470,7 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
 
 # Compute a stable string key for one cell's signature. Two cells
 # share a signature iff they have the same float count AND identical
-# literal segments. The key encodes float-count and the literal
-# vector joined by a control-character separator (so no clinical text
-# can collide). Cells with no floats share the signature "0|".
+# literal segments. Cells with no floats share the signature "0|".
 .signature_key <- function(tok) {
   k <- length(tok$floats)
   if (k == 0L) {
@@ -343,45 +479,33 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
   paste0(k, "|", paste(tok$literals, collapse = "\x1f"))
 }
 
-# Pick the dominant signature for the column. Tie-break order:
+# Pick the dominant signature for a section. Tie-break order:
 #   1. highest float count
 #   2. highest row count among ties
 #   3. earliest first-appearance
 # Returns a list with the dominant signature's key, k (float count),
-# and literals vector. Returns NULL when the column has no numeric
-# cells at all (signature is "0|" universally).
+# and literals vector. Returns NULL when the section has no numeric
+# cells.
 .pick_dominant <- function(sigs, tokens) {
-  # Counts per signature.
   uniq <- unique(sigs)
   if (identical(uniq, "0|")) {
     return(NULL)
   }
 
-  # First-appearance index per signature (for stable tie-break).
   first_idx <- match(uniq, sigs)
-
-  # Float count per signature key (derived from key prefix before "|").
   k_per_sig <- vapply(
     uniq,
     function(s) as.integer(sub("\\|.*$", "", s)),
     integer(1L)
   )
-
-  # Row count per signature.
   count_per_sig <- vapply(uniq, function(s) sum(sigs == s), integer(1L))
 
-  # Drop the empty signature (no floats) from dominance consideration —
-  # a column of mostly text with one number row should still anchor on
-  # that number row. After the `identical(uniq, "0|")` early-return
-  # above, `uniq` contains at least one non-empty signature, so at
-  # least one entry in `has_floats` is TRUE.
   has_floats <- k_per_sig > 0L
   uniq <- uniq[has_floats]
   first_idx <- first_idx[has_floats]
   k_per_sig <- k_per_sig[has_floats]
   count_per_sig <- count_per_sig[has_floats]
 
-  # Order by (k desc, count desc, first_idx asc).
   ord <- order(-k_per_sig, -count_per_sig, first_idx)
   dom_key <- uniq[[ord[[1L]]]]
   dom_idx <- first_idx[[ord[[1L]]]]
@@ -405,14 +529,14 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
 #   has_dec[k]  TRUE if any cell has a non-empty dec at slot k.
 #   dec_w[k]    max width of the dec span at slot k (0 if none).
 #   prefix_w[k] width of the comparator-prefix span at slot k.
-#                 (Almost always 0 unless slot k holds p-values.)
 #
-# When no dominant signature exists (column is text-only), returns
-# NULL. The final right-pad in `.align_decimal_column` brings every
-# rendered cell to the column-wide max width, so no explicit tail
-# width is tracked here — the natural width of the dominant render
-# is what every other cell pads up to.
-.compute_widths <- function(tokens, dominant) {
+# When `column_floor` is non-NULL, slot 1's `int_w` and `prefix_w`
+# are floored by the column-wide values, so the leftmost integer
+# column aligns across all sections in the column.
+#
+# When no dominant signature exists (section is text-only), returns
+# NULL.
+.compute_widths <- function(tokens, dominant, column_floor = NULL) {
   if (is.null(dominant)) {
     return(NULL)
   }
@@ -438,13 +562,22 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
     k_contrib <- min(k_contrib, k_dom)
     for (k in seq_len(k_contrib)) {
       p <- tok$parsed[[k]]
-      prefix_w[[k]] <- max(prefix_w[[k]], nchar(p$prefix))
-      int_w[[k]] <- max(int_w[[k]], nchar(p$sign) + nchar(p$int))
+      prefix_w[[k]] <- max(prefix_w[[k]], nchar(p$prefix, type = "chars"))
+      int_w[[k]] <- max(
+        int_w[[k]],
+        nchar(p$sign, type = "chars") + nchar(p$int, type = "chars")
+      )
       if (nzchar(p$dec)) {
         has_dec[[k]] <- TRUE
-        dec_w[[k]] <- max(dec_w[[k]], nchar(p$dec))
+        dec_w[[k]] <- max(dec_w[[k]], nchar(p$dec, type = "chars"))
       }
     }
+  }
+
+  # Apply the column-wide floor for slot 1 only.
+  if (!is.null(column_floor) && k_dom >= 1L) {
+    int_w[[1L]] <- max(int_w[[1L]], column_floor$int_w)
+    prefix_w[[1L]] <- max(prefix_w[[1L]], column_floor$prefix_w)
   }
 
   list(
@@ -477,29 +610,73 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
 # Render
 # ---------------------------------------------------------------------
 
-# Render one cell. Branches on whether the cell shares the dominant
-# signature; non-dominant cells get the slot-1-only render path.
-# When `dominant` is NULL the column has no numeric cells, in which
-# case every cell hits the no-floats short-circuit (dominant being
-# NULL implies every cell carries `floats = character()`).
-.render_cell <- function(tok, sig_key, dominant, widths) {
+# Render one cell. Branches:
+#   no floats             -> raw text (will be right-padded later)
+#   zero-suppressed n_pct -> n portion + blank-padded tail
+#   dominant signature    -> full structured assembly
+#   else (>=1 float)      -> primary-only with raw remainder
+.render_cell <- function(
+  tok,
+  sig_key,
+  dominant,
+  widths,
+  pad,
+  zero_suppress
+) {
   k_row <- length(tok$floats)
 
-  # No floats at all -> right-pad raw text to the column width.
   if (k_row == 0L) {
     return(tok$literals[[1L]])
   }
 
-  if (identical(sig_key, dominant$key)) {
-    return(.render_cell_dominant(tok, dominant, widths))
+  is_dominant <- identical(sig_key, dominant$key)
+
+  if (
+    zero_suppress &&
+      is_dominant &&
+      .is_n_pct_shape(dominant) &&
+      .is_zero_n(tok$parsed[[1L]])
+  ) {
+    return(.render_cell_zero_suppress(tok, dominant, widths, pad))
   }
 
-  .render_cell_primary_only(tok, dominant, widths)
+  if (is_dominant) {
+    return(.render_cell_dominant(tok, dominant, widths, pad))
+  }
+
+  .render_cell_primary_only(tok, dominant, widths, pad)
 }
 
-# Full structured render — cell matches the dominant signature. Walks
-# literal[1] -> slot[1] -> literal[2] -> slot[2] -> ... -> literal[K+1].
-.render_cell_dominant <- function(tok, dominant, widths) {
+# Detect "n (pct)" / "n (pct, lo, hi)" / "n/N (pct)" family shapes:
+# the dominant signature has at least 2 floats, literals[[2]]
+# contains "(" (possibly with whitespace or "/" prefix), and
+# literals[[K+1]] contains ")". This is the family galley +
+# aligngen zero-suppress.
+.is_n_pct_shape <- function(dominant) {
+  k <- dominant$k
+  if (k < 2L) {
+    return(FALSE)
+  }
+  open_lit <- dominant$literals[[2L]]
+  close_lit <- dominant$literals[[k + 1L]]
+  grepl("(", open_lit, fixed = TRUE) &&
+    grepl(")", close_lit, fixed = TRUE)
+}
+
+# Detect "this float represents an integer zero": sign is empty, int
+# is "0" (or repeated zeros), dec is empty or all zeros. Matches
+# galley / aligngen zero-suppression semantics.
+.is_zero_n <- function(parsed) {
+  if (nzchar(parsed$prefix) || nzchar(parsed$sign)) {
+    return(FALSE)
+  }
+  int_is_zero <- nzchar(parsed$int) && !grepl("[^0]", parsed$int)
+  dec_is_zero <- !nzchar(parsed$dec) || !grepl("[^0]", parsed$dec)
+  int_is_zero && dec_is_zero
+}
+
+# Full structured render -- cell matches the dominant signature.
+.render_cell_dominant <- function(tok, dominant, widths, pad) {
   k <- dominant$k
   parts <- character(2L * k + 1L)
   parts[[1L]] <- dominant$literals[[1L]]
@@ -513,18 +690,53 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
       prefix_w = widths$prefix_w[[j]],
       int_w = widths$int_w[[j]],
       has_dec = widths$has_dec[[j]],
-      dec_w = widths$dec_w[[j]]
+      dec_w = widths$dec_w[[j]],
+      pad = pad
     )
     parts[[2L * j + 1L]] <- dominant$literals[[j + 1L]]
   }
   paste0(parts, collapse = "")
 }
 
-# Slot-1-only render — cell has at least one float but does not match
-# the dominant signature. Align slot 1 to the column's slot-1 widths,
-# then concatenate the cell's raw remainder. The trailing right-pad
-# in `.align_decimal_column` brings every cell to the same width.
-.render_cell_primary_only <- function(tok, dominant, widths) {
+# Zero-suppress render: emit the n slot, then blank-pad the rest of
+# the line to the dominant width using `pad`. Result has the same
+# nchar as a full dominant render, so column-width invariants hold.
+.render_cell_zero_suppress <- function(tok, dominant, widths, pad) {
+  k <- dominant$k
+  p <- tok$parsed[[1L]]
+  n_slot <- .render_slot(
+    prefix = p$prefix,
+    sign = p$sign,
+    int = p$int,
+    dec = p$dec,
+    prefix_w = widths$prefix_w[[1L]],
+    int_w = widths$int_w[[1L]],
+    has_dec = widths$has_dec[[1L]],
+    dec_w = widths$dec_w[[1L]],
+    pad = pad
+  )
+  # Width of the dominant render's post-slot-1 portion:
+  # literals[2..k+1] + slots[2..k].
+  remaining_w <- 0L
+  for (j in seq.int(2L, k)) {
+    remaining_w <- remaining_w +
+      nchar(dominant$literals[[j]], type = "chars") +
+      widths$prefix_w[[j]] +
+      widths$int_w[[j]] +
+      (if (widths$has_dec[[j]]) 1L + widths$dec_w[[j]] else 0L)
+  }
+  remaining_w <- remaining_w +
+    nchar(dominant$literals[[k + 1L]], type = "chars")
+  paste0(
+    dominant$literals[[1L]],
+    n_slot,
+    strrep(pad, max(0L, remaining_w))
+  )
+}
+
+# Slot-1-only render -- cell has at least one float but does not
+# match the dominant signature.
+.render_cell_primary_only <- function(tok, dominant, widths, pad) {
   p <- tok$parsed[[1L]]
   rendered_slot <- .render_slot(
     prefix = p$prefix,
@@ -534,7 +746,8 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
     prefix_w = widths$prefix_w[[1L]],
     int_w = widths$int_w[[1L]],
     has_dec = widths$has_dec[[1L]],
-    dec_w = widths$dec_w[[1L]]
+    dec_w = widths$dec_w[[1L]],
+    pad = pad
   )
   paste0(
     dominant$literals[[1L]],
@@ -543,14 +756,9 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
   )
 }
 
-# Render one slot: [pad-left(prefix+sign+int, prefix_w + int_w)] +
-# [dot or space, only if column has decimals at this slot] +
+# Render one slot: [pad-left(prefix, prefix_w)] + [pad-left(sign+int,
+# int_w)] + [dot or pad, only if column has decimals at this slot] +
 # [pad-right(dec, dec_w)].
-#
-# When the slot has decimals in the column but this cell has no own
-# dec, the dot position is filled with a space so the implicit
-# decimal of an integer-only cell ("86") sits at the same column as
-# the explicit decimal of a float cell ("147.8").
 .render_slot <- function(
   prefix,
   sign,
@@ -559,21 +767,19 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
   prefix_w,
   int_w,
   has_dec,
-  dec_w
+  dec_w,
+  pad
 ) {
-  # Combined sign+int span, left-padded to int_w.
   si_str <- paste0(sign, int)
-  si_padded <- .pad_left(si_str, int_w)
-
-  # Prefix (comparator) padded separately to keep p-values aligned.
-  pre_padded <- .pad_left(prefix, prefix_w)
+  si_padded <- .pad_left(si_str, int_w, pad = pad)
+  pre_padded <- .pad_left(prefix, prefix_w, pad = pad)
 
   if (has_dec) {
     if (nzchar(dec)) {
-      dec_padded <- .pad_right(dec, dec_w)
+      dec_padded <- .pad_right(dec, dec_w, pad = pad)
       paste0(pre_padded, si_padded, ".", dec_padded)
     } else {
-      paste0(pre_padded, si_padded, " ", strrep(" ", dec_w))
+      paste0(pre_padded, si_padded, pad, strrep(pad, dec_w))
     }
   } else {
     paste0(pre_padded, si_padded)
@@ -581,23 +787,77 @@ engine_decimal <- function(cells_text, cols, sections = NULL) {
 }
 
 # ---------------------------------------------------------------------
-# Padding helpers — pure base R, vectorised
+# Padding helpers
 # ---------------------------------------------------------------------
 
-# Left-pad `x` to `width` characters using spaces. Shorter values are
-# padded; longer values pass through unchanged.
-.pad_left <- function(x, width) {
+# Left-pad `x` to `width` characters using `pad`. Shorter values are
+# padded; longer values pass through unchanged. UTF-8 safe via
+# `nchar(x, type = "chars")`.
+.pad_left <- function(x, width, pad = " ") {
   if (width <= 0L) {
     return(x)
   }
-  formatC(x, width = width, flag = " ")
+  n <- nchar(x, type = "chars")
+  need <- pmax(0L, width - n)
+  paste0(vapply(need, function(k) strrep(pad, k), character(1L)), x)
 }
 
-# Right-pad `x` to `width` characters using spaces. Shorter values are
-# padded; longer values pass through unchanged.
-.pad_right <- function(x, width) {
+# Right-pad `x` to `width` characters using `pad`. Shorter values
+# are padded; longer values pass through unchanged.
+.pad_right <- function(x, width, pad = " ") {
   if (width <= 0L) {
     return(x)
   }
-  formatC(x, width = -width, flag = "-")
+  n <- nchar(x, type = "chars")
+  need <- pmax(0L, width - n)
+  paste0(x, vapply(need, function(k) strrep(pad, k), character(1L)))
+}
+
+# ---------------------------------------------------------------------
+# Symmetric edge-trim
+# ---------------------------------------------------------------------
+
+# If every non-NA cell starts with `pad`, strip ONE column-wide.
+# Symmetric for trailing. Conservative single-strip per side to
+# match aligngen.sas's allign_chk1 / allign_chk2 post-process
+# (lines 1462-1480 of `aligngen.sas`). Caps at "do not shrink any
+# cell below 1 character" so a NA-only / single-cell-of-pad column
+# passes through.
+.trim_symmetric <- function(out, pad) {
+  active <- !is.na(out)
+  if (!any(active)) {
+    return(out)
+  }
+  pad_n <- nchar(pad, type = "chars")
+  if (pad_n != 1L) {
+    return(out)
+  }
+
+  cur <- out[active]
+  n <- nchar(cur, type = "chars")
+  # Don't strip anything if any row would shrink below 1 char.
+  if (any(n <= 1L)) {
+    return(out)
+  }
+
+  # Left strip: if every cell's first char is pad, drop it.
+  leads <- substr(cur, 1L, 1L)
+  if (all(leads == pad)) {
+    cur <- substr(cur, 2L, n)
+    n <- n - 1L
+  }
+
+  if (any(n <= 1L)) {
+    out[active] <- cur
+    return(out)
+  }
+
+  # Right strip: if every cell's last char is pad, drop it.
+  trails <- substr(cur, n, n)
+  if (all(trails == pad)) {
+    cur <- substr(cur, 1L, n - 1L)
+  }
+
+  out[active] <- cur
+  out
 }

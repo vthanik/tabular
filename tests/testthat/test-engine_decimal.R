@@ -15,8 +15,29 @@
 
 # Helper: the per-column workhorse is internal; call it through
 # triple-colon. The top-level `engine_decimal()` is also internal.
-align <- function(values, sections = NULL) {
-  tabular:::.align_decimal_column(values, sections = sections)
+#
+# The helper defaults `pad = " "` (ASCII space) so existing
+# `expect_equal()` assertions stay readable; the public
+# `engine_decimal()` defaults to U+00A0 NBSP for production
+# rendering. Likewise `zero_suppress` and `edge_trim` default OFF
+# in the helper so Layer 1 - 7 tests are byte-stable; Layer 10
+# tests opt them in explicitly.
+align <- function(
+  values,
+  sections = NULL,
+  not_considered = character(),
+  pad = " ",
+  zero_suppress = FALSE,
+  edge_trim = FALSE
+) {
+  tabular:::.align_decimal_column(
+    values,
+    sections = sections,
+    not_considered = not_considered,
+    pad = pad,
+    zero_suppress = zero_suppress,
+    edge_trim = edge_trim
+  )
 }
 
 # ---------------------------------------------------------------------
@@ -784,4 +805,293 @@ test_that("snapshot: 18 format families vs galley reference", {
     )
   )
   expect_snapshot(cat(out_lines, sep = "\n"))
+})
+
+# ---------------------------------------------------------------------
+# Layer 9 -- column-wide slot-1 floor with section-scoped tail
+# ---------------------------------------------------------------------
+
+test_that("slot-1 sign+int width is column-wide across sections", {
+  # Section A has single-digit ints; section B has three-digit ints.
+  # Without the column-wide floor, A's "1" would pad-left to 1 char
+  # (its own section's int_w) and B's "100" would pad to 3 -- so the
+  # units-digit columns wouldn't align. With the floor, A's "1" pads
+  # to 3 chars too.
+  v <- c("1", "2", "3", "100", "200")
+  sec <- c("A", "A", "A", "B", "B")
+  out <- align(v, sections = sec)
+  expect_equal(out, c("  1", "  2", "  3", "100", "200"))
+})
+
+test_that("slot-1 has_dec / dec_w stays section-scoped", {
+  # Section A has decimals at slot 1 (the floats are 75.2 / 76.0);
+  # section B is integer-only n_pct cells with NO slot-1 decimal.
+  # Section A reserves a dot-slot; section B does not.
+  v <- c("86", "75.2", "76.0", "14 (16.3)", "72 (83.7)")
+  sec <- c("A", "A", "A", "B", "B")
+  out <- align(v, sections = sec)
+  # Section A's "86" has a reserved dot-slot space (no own dec).
+  # Section B's "14 (16.3)" should NOT have a reserved dot-slot.
+  expect_true(grepl("86", out[[1L]]))
+  # Verify section B rows render their n portion tight (no phantom
+  # space between "14" and " (").
+  expect_match(out[[4L]], "^14 \\(16\\.3\\)")
+  expect_match(out[[5L]], "^72 \\(83\\.7\\)")
+})
+
+test_that("comparator prefix aligns column-wide across sections", {
+  # Section A has p-values "<0.001" / "0.045"; section B has plain
+  # floats. The comparator slot should be reserved across both
+  # sections so the comparator column is consistent.
+  v <- c("<0.001", "0.045", "1.5", "2.5")
+  sec <- c("A", "A", "B", "B")
+  out <- align(v, sections = sec)
+  # The "<" of row 1 sits at the same column as the leading space
+  # of row 2 (the empty comparator).
+  expect_equal(substr(out[[1L]], 1L, 1L), "<")
+  # Row 2 has no comparator; the prefix slot is a leading space.
+  expect_equal(substr(out[[2L]], 1L, 1L), " ")
+})
+
+# ---------------------------------------------------------------------
+# Layer 10 -- aligngen-inspired enhancements
+# ---------------------------------------------------------------------
+
+test_that("engine_decimal() defaults to NBSP padding", {
+  m <- matrix(c("86", "147.8"), nrow = 2L, dimnames = list(NULL, "x"))
+  cols <- list(x = col_spec(align = "decimal"))
+  out <- tabular:::engine_decimal(m, cols)
+  # The padding character on the integer row is U+00A0 NBSP, not
+  # ASCII space.
+  nbsp <- " "
+  # Inspect code points directly rather than grepl, whose
+  # fixed-pattern matching has encoding-dependent behaviour on
+  # multi-byte characters across locales.
+  chars <- strsplit(out[1L, "x"], "")[[1L]]
+  codes <- vapply(chars, utf8ToInt, integer(1L))
+  expect_true(0xA0 %in% codes)
+  expect_false(0x20 %in% codes)
+})
+
+test_that("engine_decimal() pad arg overrides to ASCII space", {
+  m <- matrix(c("86", "147.8"), nrow = 2L, dimnames = list(NULL, "x"))
+  cols <- list(x = col_spec(align = "decimal"))
+  out <- tabular:::engine_decimal(m, cols, pad = " ")
+  chars <- strsplit(out[1L, "x"], "")[[1L]]
+  codes <- vapply(chars, utf8ToInt, integer(1L))
+  expect_true(0x20 %in% codes)
+  expect_false(0xA0 %in% codes)
+})
+
+test_that("not_considered cells bypass alignment and contribute no slot width", {
+  # "NR" and "BLQ" should pass through as raw text; they should not
+  # widen int_w or dec_w. With them removed from the width
+  # computation, "86" and "147.8" align normally.
+  v <- c("86", "NR", "147.8", "BLQ", "0.0")
+  out <- align(v, not_considered = c("NR", "BLQ"))
+  # All cells share the same column-wide nchar.
+  expect_true(all(nchar(out) == nchar(out[[1L]])))
+  # The opaque cells contain only their raw token + right-pad.
+  expect_match(out[[2L]], "^NR")
+  expect_match(out[[4L]], "^BLQ")
+  # Numeric cells decimal-align among themselves.
+  num_idx <- c(1L, 3L, 5L)
+  dot_pos <- regexpr("\\.", out[num_idx])
+  # Rows with own dec ("147.8", "0.0") share dot position.
+  has_dot <- dot_pos > 0
+  expect_true(all(dot_pos[has_dot] == dot_pos[has_dot][[1L]]))
+})
+
+test_that("not_considered is empty by default and nothing is treated opaque", {
+  v <- c("86", "NR", "147.8")
+  out <- align(v)
+  # "NR" with no `not_considered` is just a non-numeric cell; its
+  # raw text is preserved but no special opacity.
+  expect_match(out[[2L]], "NR")
+})
+
+test_that("zero_suppress=TRUE collapses 0 in an n_pct column", {
+  v <- c("85 (98.8)", "0 (0.0)", "42 (50.0)")
+  out <- align(v, zero_suppress = TRUE)
+  # Row 2 renders only the "0" portion; the paren tail is replaced
+  # by pad characters of equal width so column nchar stays uniform.
+  expect_match(out[[2L]], "^ 0\\s+$")
+  expect_true(all(nchar(out) == nchar(out[[1L]])))
+})
+
+test_that("zero_suppress=FALSE keeps the (0.0) paren rendered", {
+  v <- c("85 (98.8)", "0 (0.0)", "42 (50.0)")
+  out <- align(v, zero_suppress = FALSE)
+  # Row 2 keeps its parenthesised tail.
+  expect_match(out[[2L]], "0.*\\(.*0\\.0.*\\)")
+})
+
+test_that("zero_suppress ignores non-paren shapes", {
+  # The dominant shape here is "F" (single float), not an n_pct.
+  # Even though "0.0" parses as zero, no suppression should fire.
+  v <- c("0.0", "12.3", "100.5")
+  out <- align(v, zero_suppress = TRUE)
+  expect_match(out[[1L]], "0\\.0")
+})
+
+test_that("edge_trim preserves output when no shared edge pad exists", {
+  # Real rendering rarely produces column-wide leading / trailing
+  # pad because at least one row in any non-trivial column has its
+  # full int_w used at the left and a non-pad rightmost char. The
+  # trim is a defensive cleanup; here we confirm it does NOT
+  # mangle a valid column.
+  v <- c("86", "147.8")
+  out_no <- align(v, edge_trim = FALSE)
+  out_trim <- align(v, edge_trim = TRUE)
+  # Output unchanged because leading chars (" ", "1") and trailing
+  # chars (" ", "8") differ across rows.
+  expect_identical(out_no, out_trim)
+})
+
+test_that(".trim_symmetric strips a column-wide leading pad", {
+  # Direct exercise of the helper. Input where every cell shares a
+  # leading and trailing pad character.
+  out <- c("  abc ", "  def ", "  ghi ")
+  trimmed <- tabular:::.trim_symmetric(out, pad = " ")
+  expect_equal(trimmed, c(" abc", " def", " ghi"))
+})
+
+test_that(".trim_symmetric stops when one cell breaks the shared edge", {
+  out <- c("  abc", " xdef", "  ghi")
+  trimmed <- tabular:::.trim_symmetric(out, pad = " ")
+  # All cells share one leading pad; second has "x" at col 2 so
+  # only one column of leading pad gets stripped.
+  expect_equal(trimmed, c(" abc", "xdef", " ghi"))
+})
+
+test_that(".trim_symmetric is a no-op when no shared edge exists", {
+  out <- c("abc", "def", "ghi")
+  trimmed <- tabular:::.trim_symmetric(out, pad = " ")
+  expect_identical(trimmed, out)
+})
+
+test_that(".trim_symmetric tolerates NA rows", {
+  out <- c("  abc", NA_character_, "  def")
+  trimmed <- tabular:::.trim_symmetric(out, pad = " ")
+  expect_true(is.na(trimmed[[2L]]))
+  expect_equal(trimmed[c(1L, 3L)], c(" abc", " def"))
+})
+
+test_that(".trim_symmetric won't shrink any cell below 1 character", {
+  out <- c(" ", " ", " ")
+  trimmed <- tabular:::.trim_symmetric(out, pad = " ")
+  # All cells are 1-char pad; can't trim further.
+  expect_equal(trimmed, out)
+})
+
+test_that(".trim_symmetric accepts a multi-character pad as a no-op", {
+  # Defensive: if the caller passes a non-single-character pad,
+  # leave the input untouched rather than risking partial
+  # truncation.
+  out <- c("ab abc", "ab def")
+  trimmed <- tabular:::.trim_symmetric(out, pad = "ab")
+  expect_identical(trimmed, out)
+})
+
+test_that(".trim_symmetric early-returns on all-NA input", {
+  out <- c(NA_character_, NA_character_)
+  trimmed <- tabular:::.trim_symmetric(out, pad = " ")
+  expect_true(all(is.na(trimmed)))
+})
+
+test_that(".trim_symmetric stops between left and right when row becomes single char", {
+  # 2-char rows where every cell starts with pad. After one left
+  # strip, every cell is 1-char -- function returns early before
+  # the right-strip pass.
+  out <- c(" a", " b", " c")
+  trimmed <- tabular:::.trim_symmetric(out, pad = " ")
+  expect_equal(trimmed, c("a", "b", "c"))
+})
+
+test_that(".is_zero_n returns FALSE when float has prefix or sign", {
+  # Prefix present -> never zero-suppressed.
+  expect_false(tabular:::.is_zero_n(
+    list(prefix = "<", sign = "", int = "0", dec = "001")
+  ))
+  # Sign present -> never zero-suppressed.
+  expect_false(tabular:::.is_zero_n(
+    list(prefix = "", sign = "-", int = "0", dec = "0")
+  ))
+})
+
+test_that(".compute_column_floor returns NULL when no cells have floats", {
+  # All cells are non-numeric text.
+  floor <- tabular:::.compute_column_floor(c("Total", "Yes", "No"))
+  expect_null(floor)
+})
+
+test_that("column floor is NULL doesn't break section render in sections mode", {
+  # Sections mode with all-text section A and a numeric section B.
+  # The column floor should account only for section B.
+  v <- c("Total", "Yes", "86", "147.8")
+  sec <- c("A", "A", "B", "B")
+  out <- align(v, sections = sec)
+  # Section A rows pass through as text right-padded.
+  expect_match(out[[1L]], "Total")
+  expect_match(out[[2L]], "Yes")
+  # Section B aligns its numbers.
+  expect_true(grepl("147\\.8", out[[4L]]))
+})
+
+test_that("edge_trim runs both passes (left + right) via the trim helper", {
+  # Direct exercise: input where every cell has leading AND
+  # trailing pad. Both passes fire.
+  out <- c("  abc  ", "  def  ", "  ghi  ")
+  trimmed <- tabular:::.trim_symmetric(out, pad = " ")
+  expect_equal(trimmed, c(" abc ", " def ", " ghi "))
+})
+
+test_that("engine_decimal() threads not_considered through to columns", {
+  m <- matrix(c("86", "NR", "147.8"), nrow = 3L, dimnames = list(NULL, "x"))
+  cols <- list(x = col_spec(align = "decimal"))
+  out <- tabular:::engine_decimal(
+    m,
+    cols,
+    not_considered = c("NR"),
+    pad = " "
+  )
+  expect_match(out[2L, "x"], "^NR")
+})
+
+test_that("engine_decimal() threads zero_suppress + edge_trim", {
+  m <- matrix(
+    c("85 (98.8)", "0 (0.0)", "42 (50.0)"),
+    nrow = 3L,
+    dimnames = list(NULL, "x")
+  )
+  cols <- list(x = col_spec(align = "decimal"))
+  out <- tabular:::engine_decimal(
+    m,
+    cols,
+    zero_suppress = TRUE,
+    edge_trim = TRUE,
+    pad = " "
+  )
+  # Row 2 is zero-suppressed; trim removed any column-wide leading
+  # / trailing pads.
+  expect_match(out[2L, "x"], "^0|^ 0")
+})
+
+# ---------------------------------------------------------------------
+# Layer 11 -- combined: sections + opaque + zero-suppress on the
+# saf_demo Total column. The Total column has "0 (0.0)" rows in
+# Race / Ethnicity that should now zero-suppress, and "NR" -- though
+# absent here -- could be opaque in a future fixture.
+# ---------------------------------------------------------------------
+
+test_that("snapshot: per-section + zero-suppress + edge-trim on saf_demo Total", {
+  v <- saf_demo$Total
+  sec <- saf_demo$variable
+  out <- align(
+    v,
+    sections = sec,
+    zero_suppress = TRUE,
+    edge_trim = TRUE
+  )
+  expect_snapshot(cat(out, sep = "\n"))
 })
