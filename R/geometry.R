@@ -78,15 +78,22 @@
   }
 }
 
-# Return the effective preset_spec for `spec`: the spec's @preset if
-# one is attached, otherwise a fresh preset_spec() (which carries the
-# documented defaults). Used by every engine phase that needs paper
-# / font geometry.
+# Return the effective preset_spec for `spec` using the documented
+# cascade:
+#   1. spec@preset (attached via `preset()`),
+#   2. .tabular_session$preset (attached via `set_preset()`),
+#   3. fresh `preset_spec()` defaults.
+# The first non-NULL layer wins; layers are not field-merged across
+# the cascade. Used by every engine phase that needs paper / font
+# geometry.
 .effective_preset <- function(spec) {
   p <- spec@preset
   if (is_preset_spec(p)) {
-    p
-  } else {
-    preset_spec()
+    return(p)
   }
+  s <- .tabular_session$preset
+  if (is_preset_spec(s)) {
+    return(s)
+  }
+  preset_spec()
 }

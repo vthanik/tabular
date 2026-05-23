@@ -91,7 +91,34 @@ NULL
     }
   }
 
+  if (is_preset_spec(x@preset)) {
+    bits <- .preset_diff_summary(x@preset)
+    if (length(bits) > 0L) {
+      cli::cli_text("Preset: {paste(bits, collapse = '; ')}")
+    } else {
+      cli::cli_text("Preset: defaults")
+    }
+  }
+
   invisible(x)
+}
+
+# Summarise a preset_spec by listing knobs that differ from the
+# preset_spec() factory defaults. Used by .tabular_spec_print so the
+# `Preset:` line stays short for the common case (one or two knobs
+# overridden) and silent for the all-defaults case.
+.preset_diff_summary <- function(p) {
+  defaults <- preset_spec()
+  fields <- c("font_size", "font_family", "orientation", "paper_size")
+  bits <- character()
+  for (f in fields) {
+    cur <- S7::prop(p, f)
+    def <- S7::prop(defaults, f)
+    if (!identical(cur, def)) {
+      bits <- c(bits, paste0(f, "=", cur))
+    }
+  }
+  bits
 }
 
 # nocov start — S7::method<- assignments are not instrumented by

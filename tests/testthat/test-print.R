@@ -108,3 +108,28 @@ test_that("print shows pagination auto when all defaults", {
   out <- print_lines(s)
   expect_match(out, "Pagination: auto")
 })
+
+test_that("print shows preset diff when knobs differ from defaults", {
+  s <- S7::set_props(
+    tabular_spec(data = data.frame(x = 1L)),
+    preset = preset_spec(font_size = 8, orientation = "landscape")
+  )
+  out <- print_lines(s)
+  expect_match(out, "Preset:.*font_size=8")
+  expect_match(out, "orientation=landscape")
+})
+
+test_that("print shows preset defaults when no knobs differ", {
+  s <- S7::set_props(
+    tabular_spec(data = data.frame(x = 1L)),
+    preset = preset_spec()
+  )
+  out <- print_lines(s)
+  expect_match(out, "Preset: defaults")
+})
+
+test_that("print omits preset section when no preset attached", {
+  s <- tabular_spec(data = data.frame(x = 1L))
+  out <- print_lines(s)
+  expect_false(grepl("Preset:", out))
+})
