@@ -109,7 +109,7 @@ test_that("style_spec() builds with empty containers", {
 test_that("pagination_spec() defaults", {
   p <- pagination_spec()
   expect_true(is_pagination_spec(p))
-  expect_identical(p@keep_with_next, character())
+  expect_identical(p@keep_together, character())
   expect_identical(p@panels, 1L)
   expect_identical(p@orphan_floor, 3L)
   expect_identical(p@widow_floor, 2L)

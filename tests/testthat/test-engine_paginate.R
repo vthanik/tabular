@@ -115,12 +115,12 @@ test_that("engine_paginate() marks continuation pages correctly", {
   }
 })
 
-test_that("engine_paginate() respects keep_with_next on group runs", {
+test_that("engine_paginate() respects keep_together on group runs", {
   # Group runs of length 2 each (A,A,B,B,C,C,...). Tight budget
   # forces multiple pages. Every page's last row should match the
   # next page's first row only if a group spans the break -- which
   # we expect engine_paginate to prevent.
-  spec <- make_paginated_spec(20L, font_size = 36, keep_with_next = "soc")
+  spec <- make_paginated_spec(20L, font_size = 36, keep_together = "soc")
   plan <- tabular:::engine_paginate(spec)
   if (length(plan$pages) >= 2L) {
     for (i in seq.int(1L, length(plan$pages) - 1L)) {
@@ -144,7 +144,7 @@ test_that("engine_paginate() honours orphan_floor escape on tall groups", {
   )
   spec <- tabular(df) |>
     cols(soc = col_spec(usage = "group", label = "SOC")) |>
-    paginate(keep_with_next = "soc", orphan_floor = 3L)
+    paginate(keep_together = "soc", orphan_floor = 3L)
   preset <- preset_spec(font_size = 60)
   spec <- S7::set_props(spec, preset = preset)
   plan <- tabular:::engine_paginate(spec)

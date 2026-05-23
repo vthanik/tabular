@@ -72,12 +72,12 @@ NULL
   if (is_pagination_spec(x@pagination)) {
     pag <- x@pagination
     bits <- character()
-    if (length(pag@keep_with_next) > 0L) {
+    if (length(pag@keep_together) > 0L) {
       bits <- c(
         bits,
         paste0(
-          "keep_with_next=",
-          paste(pag@keep_with_next, collapse = ",")
+          "keep_together=",
+          paste(pag@keep_together, collapse = ",")
         )
       )
     }

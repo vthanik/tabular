@@ -1,6 +1,6 @@
 # paginate() -- verb that attaches a pagination_spec to a tabular_spec.
 # Tests cover argument validation, replacement semantics, group-column
-# enforcement on keep_with_next, and edge cases on the floors / scalars.
+# enforcement on keep_together, and edge cases on the floors / scalars.
 # The verb does NOT take a rows_per_page argument; the engine computes
 # the row budget from preset + chrome lines.
 
@@ -18,17 +18,17 @@ make_spec <- function(n = 10L, with_group = TRUE) {
 
 test_that("paginate() returns a tabular_spec with pagination_spec attached", {
   spec <- make_spec(10L)
-  out <- paginate(spec, keep_with_next = "soc")
+  out <- paginate(spec, keep_together = "soc")
   expect_true(is_tabular_spec(out))
   expect_true(is_pagination_spec(out@pagination))
-  expect_identical(out@pagination@keep_with_next, "soc")
+  expect_identical(out@pagination@keep_together, "soc")
 })
 
 test_that("paginate() with all defaults stores defaults", {
   spec <- make_spec(10L)
   out <- paginate(spec)
   pag <- out@pagination
-  expect_identical(pag@keep_with_next, character())
+  expect_identical(pag@keep_together, character())
   expect_identical(pag@panels, 1L)
   expect_identical(pag@orphan_floor, 3L)
   expect_identical(pag@widow_floor, 2L)
@@ -43,26 +43,26 @@ test_that("paginate() replaces a prior pagination_spec (single-slot)", {
   expect_identical(spec@pagination@panels, 3L)
 })
 
-test_that("paginate() rejects keep_with_next referencing missing columns", {
+test_that("paginate() rejects keep_together referencing missing columns", {
   spec <- make_spec(10L)
   expect_error(
-    paginate(spec, keep_with_next = "nope"),
+    paginate(spec, keep_together = "nope"),
     class = "tabular_error_input"
   )
 })
 
-test_that("paginate() rejects keep_with_next referencing non-group columns", {
+test_that("paginate() rejects keep_together referencing non-group columns", {
   spec <- make_spec(10L)
   expect_error(
-    paginate(spec, keep_with_next = "val"),
+    paginate(spec, keep_together = "val"),
     class = "tabular_error_input"
   )
 })
 
-test_that("paginate() accepts keep_with_next referencing a group column", {
+test_that("paginate() accepts keep_together referencing a group column", {
   spec <- make_spec(10L)
-  out <- paginate(spec, keep_with_next = "soc")
-  expect_identical(out@pagination@keep_with_next, "soc")
+  out <- paginate(spec, keep_together = "soc")
+  expect_identical(out@pagination@keep_together, "soc")
 })
 
 test_that('paginate() accepts panels = "auto"', {
@@ -166,7 +166,7 @@ test_that("paginate() snapshot errors", {
   spec <- make_spec(10L)
   expect_snapshot(
     error = TRUE,
-    paginate(spec, keep_with_next = "val")
+    paginate(spec, keep_together = "val")
   )
   expect_snapshot(
     error = TRUE,

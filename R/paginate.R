@@ -41,9 +41,9 @@
 #' carry fewer rows than portrait at the same paper size; smaller
 #' fonts carry more.
 #'
-#' **`keep_with_next` protects group runs.** When a page break would
+#' **`keep_together` protects group runs.** When a page break would
 #' fall in the middle of a contiguous run of identical values in a
-#' `usage = "group"` column listed in `keep_with_next`, the engine
+#' `usage = "group"` column listed in `keep_together`, the engine
 #' moves the break BACK to the start of the run so the whole run
 #' rides on the next page. Single rule of escape: if moving the
 #' break back would leave fewer than `orphan_floor` rows on the
@@ -60,7 +60,7 @@
 #' @param spec *The `tabular_spec` to attach pagination to.*
 #'   `<tabular_spec>: required`.
 #'
-#' @param keep_with_next *Group columns whose runs of identical values
+#' @param keep_together *Group columns whose runs of identical values
 #'   must not be split across a page break.*
 #'   `<character>: default character()`. Every entry must be a
 #'   `usage = "group"` column declared in [`cols()`].
@@ -71,7 +71,7 @@
 #'
 #'   ```r
 #'   # Protect the SOC-level grouping in an AE-by-SOC/PT table.
-#'   paginate(keep_with_next = "soc")
+#'   paginate(keep_together = "soc")
 #'   ```
 #'
 #' @param panels *Number of horizontal panels for wide tables.*
@@ -86,7 +86,7 @@
 #'   area.
 #'
 #' @param orphan_floor *Minimum rows on a continued-from page.*
-#'   `<integer(1)>: default 3`. When `keep_with_next` would move a
+#'   `<integer(1)>: default 3`. When `keep_together` would move a
 #'   page break back so far that fewer than `orphan_floor` rows would
 #'   ride on the current page, the engine splits the protected run
 #'   anyway. Acts as the escape valve for groups too tall to fit.
@@ -116,7 +116,7 @@
 #' # ---- Example 1: AE table paginated by SOC ----
 #' #
 #' # AE-by-SOC/PT table that may run several pages. The SOC column is
-#' # protected by `keep_with_next` so a page break never lands in the
+#' # protected by `keep_together` so a page break never lands in the
 #' # middle of one SOC's PT rows. The engine derives the row budget
 #' # from the preset's orientation + font_size + paper size and from
 #' # the title / footnote / header line counts on the spec -- no
@@ -148,7 +148,7 @@
 #'   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
 #'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
 #'   paginate(
-#'     keep_with_next = "soc",
+#'     keep_together = "soc",
 #'     repeat_headers = TRUE,
 #'     continuation = "(continued)"
 #'   )
@@ -197,7 +197,7 @@
 #' @export
 paginate <- function(
   spec,
-  keep_with_next = character(),
+  keep_together = character(),
   panels = 1,
   orphan_floor = 3,
   widow_floor = 2,
@@ -207,7 +207,7 @@ paginate <- function(
   call <- rlang::caller_env()
   check_tabular_spec(spec, call = call)
 
-  check_chr(keep_with_next, arg = "keep_with_next", call = call)
+  check_chr(keep_together, arg = "keep_together", call = call)
   panels_val <- .check_panels(panels, call = call)
   of <- check_pos_int(orphan_floor, arg = "orphan_floor", call = call)
   wf <- check_pos_int(widow_floor, arg = "widow_floor", call = call)
@@ -218,13 +218,13 @@ paginate <- function(
   )
   cont <- .check_continuation(continuation, call = call)
 
-  if (length(keep_with_next) > 0L) {
+  if (length(keep_together) > 0L) {
     data_cols <- names(spec@data)
-    missing <- setdiff(keep_with_next, data_cols)
+    missing <- setdiff(keep_together, data_cols)
     if (length(missing) > 0L) {
       cli::cli_abort(
         c(
-          "{.arg keep_with_next} references {length(missing)} column{?s} not in {.arg data}.",
+          "{.arg keep_together} references {length(missing)} column{?s} not in {.arg data}.",
           "x" = "Missing: {.val {missing}}.",
           "i" = "Available: {.val {data_cols}}."
         ),
@@ -233,11 +233,11 @@ paginate <- function(
       )
     }
     group_cols <- .group_col_names(spec@cols)
-    not_group <- setdiff(keep_with_next, group_cols)
+    not_group <- setdiff(keep_together, group_cols)
     if (length(not_group) > 0L) {
       cli::cli_abort(
         c(
-          "{.arg keep_with_next} entries must be {.code usage = \"group\"} columns.",
+          "{.arg keep_together} entries must be {.code usage = \"group\"} columns.",
           "x" = "Not declared as group: {.val {not_group}}.",
           "i" = "Set {.code usage = \"group\"} in {.fn cols} for the protected column(s)."
         ),
@@ -248,7 +248,7 @@ paginate <- function(
   }
 
   new_pag <- pagination_spec(
-    keep_with_next = keep_with_next,
+    keep_together = keep_together,
     panels = panels_val,
     orphan_floor = of,
     widow_floor = wf,

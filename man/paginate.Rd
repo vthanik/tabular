@@ -6,7 +6,7 @@
 \usage{
 paginate(
   spec,
-  keep_with_next = character(),
+  keep_together = character(),
   panels = 1,
   orphan_floor = 3,
   widow_floor = 2,
@@ -18,7 +18,7 @@ paginate(
 \item{spec}{\emph{The \code{tabular_spec} to attach pagination to.}
 \verb{<tabular_spec>: required}.}
 
-\item{keep_with_next}{\emph{Group columns whose runs of identical values
+\item{keep_together}{\emph{Group columns whose runs of identical values
 must not be split across a page break.}
 \verb{<character>: default character()}. Every entry must be a
 \code{usage = "group"} column declared in \code{\link[=cols]{cols()}}.
@@ -28,7 +28,7 @@ budget less \code{orphan_floor} is split anyway; pagination is
 best-effort, not a hard contract.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Protect the SOC-level grouping in an AE-by-SOC/PT table.
-paginate(keep_with_next = "soc")
+paginate(keep_together = "soc")
 }\if{html}{\out{</div>}}}
 
 \item{panels}{\emph{Number of horizontal panels for wide tables.}
@@ -43,7 +43,7 @@ will split when the total table width exceeds the printable
 area.}
 
 \item{orphan_floor}{\emph{Minimum rows on a continued-from page.}
-\verb{<integer(1)>: default 3}. When \code{keep_with_next} would move a
+\verb{<integer(1)>: default 3}. When \code{keep_together} would move a
 page break back so far that fewer than \code{orphan_floor} rows would
 ride on the current page, the engine splits the protected run
 anyway. Acts as the escape valve for groups too tall to fit.}
@@ -97,9 +97,9 @@ gives the body-row budget per page. Landscape pages naturally
 carry fewer rows than portrait at the same paper size; smaller
 fonts carry more.
 
-\strong{\code{keep_with_next} protects group runs.} When a page break would
+\strong{\code{keep_together} protects group runs.} When a page break would
 fall in the middle of a contiguous run of identical values in a
-\code{usage = "group"} column listed in \code{keep_with_next}, the engine
+\code{usage = "group"} column listed in \code{keep_together}, the engine
 moves the break BACK to the start of the run so the whole run
 rides on the next page. Single rule of escape: if moving the
 break back would leave fewer than \code{orphan_floor} rows on the
@@ -117,7 +117,7 @@ engine treats \code{"auto"} as \code{1}.
 # ---- Example 1: AE table paginated by SOC ----
 #
 # AE-by-SOC/PT table that may run several pages. The SOC column is
-# protected by `keep_with_next` so a page break never lands in the
+# protected by `keep_together` so a page break never lands in the
 # middle of one SOC's PT rows. The engine derives the row budget
 # from the preset's orientation + font_size + paper size and from
 # the title / footnote / header line counts on the spec -- no
@@ -149,7 +149,7 @@ tabular(
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
   paginate(
-    keep_with_next = "soc",
+    keep_together = "soc",
     repeat_headers = TRUE,
     continuation = "(continued)"
   )

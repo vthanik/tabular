@@ -264,7 +264,7 @@ pagination_spec <- S7::new_class(
   "pagination_spec",
   package = "tabular",
   properties = list(
-    keep_with_next = S7::new_property(
+    keep_together = S7::new_property(
       S7::class_character,
       default = character()
     ),

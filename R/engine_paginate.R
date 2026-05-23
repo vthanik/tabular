@@ -15,7 +15,7 @@
 #
 # Vertical split: divide rows into chunks of the computed budget,
 # adjusting break points so that contiguous runs of identical
-# values in `keep_with_next` group columns are not split. The
+# values in `keep_together` group columns are not split. The
 # `widow_floor` rule merges a tiny final page back onto the
 # previous one. The `orphan_floor` rule is the escape valve when
 # a group run is taller than one page.
@@ -74,16 +74,16 @@ engine_paginate <- function(spec) {
   panels <- if (pag_set) pag@panels else 1L
   repeat_h <- if (pag_set) pag@repeat_headers else TRUE
   cont <- if (pag_set) pag@continuation else character()
-  kwn <- if (pag_set) pag@keep_with_next else character()
+  kt <- if (pag_set) pag@keep_together else character()
 
   rpp <- .compute_rows_per_page(spec)
 
-  kwn_idx <- if (length(kwn) > 0L) match(kwn, col_names) else integer()
+  kt_idx <- if (length(kt) > 0L) match(kt, col_names) else integer()
 
   row_pages <- .compute_vertical_pages(
     nrow_data = nrow_data,
     rpp = rpp,
-    kwn_idx = kwn_idx,
+    kt_idx = kt_idx,
     data = data,
     orphan_floor = orphan,
     widow_floor = widow
@@ -242,13 +242,13 @@ engine_paginate <- function(spec) {
 }
 
 # Vertical pagination: return a list of integer vectors, each
-# vector the row indices for one page. Honours `keep_with_next`
+# vector the row indices for one page. Honours `keep_together`
 # (move break back to start of straddling group) and `widow_floor`
 # (merge a tiny final page into the previous one).
 .compute_vertical_pages <- function(
   nrow_data,
   rpp,
-  kwn_idx,
+  kt_idx,
   data,
   orphan_floor,
   widow_floor
@@ -265,11 +265,11 @@ engine_paginate <- function(spec) {
   while (start <= nrow_data) {
     tentative_end <- min(start + rpp - 1L, nrow_data)
 
-    if (length(kwn_idx) > 0L && tentative_end < nrow_data) {
-      adjusted_end <- .respect_keep_with_next(
+    if (length(kt_idx) > 0L && tentative_end < nrow_data) {
+      adjusted_end <- .respect_keep_together(
         start = start,
         tentative_end = tentative_end,
-        kwn_idx = kwn_idx,
+        kt_idx = kt_idx,
         data = data
       )
       if (adjusted_end >= start + orphan_floor - 1L) {
@@ -291,18 +291,18 @@ engine_paginate <- function(spec) {
 }
 
 # Move the tentative page break back if it would split a contiguous
-# run of identical values in `keep_with_next` columns. Returns the
+# run of identical values in `keep_together` columns. Returns the
 # adjusted page-end row index. If the run extends back past `start`
 # (the entire page is one big run), returns the original
 # `tentative_end` so the caller's orphan-floor escape can trigger.
-.respect_keep_with_next <- function(start, tentative_end, kwn_idx, data) {
+.respect_keep_together <- function(start, tentative_end, kt_idx, data) {
   if (tentative_end + 1L > nrow(data)) {
     return(tentative_end)
   }
 
   key_at <- function(i) {
     parts <- vapply(
-      kwn_idx,
+      kt_idx,
       function(j) as.character(data[i, j]),
       character(1)
     )
