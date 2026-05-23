@@ -5,12 +5,13 @@
 \alias{saf_aeoverall_card}
 \title{Cards ARD for the AE-overall summary}
 \format{
-A \code{card}-classed tibble.
+A \code{card}-classed tibble with the standard ARD columns
+plus per-arm and overall rows.
 }
 \source{
 Derived in \code{data-raw/bundle-demo.R} via
 \code{cards::ard_stack()} over a per-subject flag table built from
-\code{pharmaverseadam::adsl} and \code{pharmaverseadam::adae}.
+\code{pharmaverseadam::adsl} joined to \code{pharmaverseadam::adae}.
 }
 \usage{
 saf_aeoverall_card
@@ -20,6 +21,23 @@ Long-format companion to \code{saf_aeoverall}. Per-subject AE flags
 (\code{ANY_TEAE}, \code{ANY_SAE}, \code{ANY_REL}) and maximum severity (\code{MAX_SEV})
 summarised by treatment arm via \code{cards::ard_stack()}. Denominators
 are adsl-level so subjects with zero TEAEs are still counted in
-the "N" row.
+the \code{N} row — matching the standard safety-table convention where
+\verb{0/254 (0.0\%)} rows are kept rather than dropped.
+}
+\examples{
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+saf_aeoverall_card |>
+  pivot_across(statistic = "{n} ({p}\%)") |>
+  tabular(
+    titles = c(
+      "Table 14.3.0",
+      "Adverse Event Overview",
+      sprintf("Safety Population (N=\%d)", n["Total"])
+    )
+  )
+}
+\seealso{
+\code{\link[=pivot_across]{pivot_across()}} for the long-to-wide bridge;
+\link{saf_aeoverall} for the wide companion.
 }
 \keyword{datasets}

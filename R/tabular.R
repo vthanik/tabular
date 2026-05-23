@@ -12,7 +12,9 @@
 #' `data` is expected to be already pre-summarised: one row per
 #' display row of the final table. tabular does NOT aggregate,
 #' filter, weight, or generate subtotal rows — do that upstream
-#' with your data-prep tool of choice.
+#' with `cards`, `dplyr`, SAS, or any pre-processing tool. If your
+#' upstream is `cards::ard_stack()`, pipe through `pivot_across()`
+#' to land in the wide shape `tabular()` accepts.
 #'
 #' @param data A data frame. Tibbles / data.tables / arrow tables are
 #'   coerced via `as.data.frame()`. Must have at least one column;
@@ -21,27 +23,108 @@
 #' @param titles Character vector; one element per displayed title
 #'   line. Embedded `\n` inside an element is allowed. `NULL`
 #'   (default) is equivalent to no titles.
+#'
+#'   Titles are multi-line by contract — clinical tables routinely
+#'   carry two to four title rows (table number, description,
+#'   population qualifier with BigN, optional subgroup). Pass them
+#'   as one element per line; the backend renders each element
+#'   centred on its own row, collapsing unused rows so the column-
+#'   header band sits flush against the lowest used title.
+#'
+#'   ```r
+#'   titles = c(
+#'     "Table 14.3.1",
+#'     "Adverse Events by System Organ Class and Preferred Term",
+#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'   )
+#'   ```
 #' @param footnotes Character vector; one element per displayed
 #'   footnote line. `NULL` (default) is equivalent to no footnotes.
+#'
+#'   Footnotes are also multi-line by contract; clinical tables
+#'   commonly carry one to four user footnote rows (denominator
+#'   note, qualifier, abbreviation key) followed by an automated
+#'   program-path / program-name / timestamp band the rendering
+#'   backend will append. The user supplies only the prose rows;
+#'   the backend handles the trailing rule and the program band.
+#'
+#'   ```r
+#'   footnotes = c(
+#'     "Subjects are counted once per SOC and once per PT.",
+#'     "Percentages based on N per treatment group.",
+#'     "TEAE = treatment-emergent adverse event."
+#'   )
+#'   ```
 #' @return A `tabular_spec` S7 object.
 #'
 #' @examples
-#' # Realistic entry: wrap the demographics demo with title block
-#' # and footnote. Use the safety-pop BigN table for the title row.
-#' n_total <- saf_n$n[saf_n$arm_short == "Total"]
-#' tabular(
-#'   saf_demo,
-#'   titles = c(
-#'     "Table 14.1.1",
-#'     "Demographics and Baseline Characteristics",
-#'     sprintf("Safety Population (N=%d)", n_total)
-#'   ),
-#'   footnotes = "Percentages based on N per treatment group."
-#' )
+#' # 95% safety pattern: AE-by-SOC/PT table — the regulatory work
+#' # horse. Wrap the pre-summarised saf_aesocpt frame with the
+#' # canonical 4-line title block (table number, description,
+#' # population qualifier with BigN from saf_n) and a footnote
+#' # block explaining the denominator. Hierarchy markers and the
+#' # rank column ride along for sort_rows() downstream.
+#' ae <- saf_aesocpt
+#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
+#' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
+#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
 #'
-#' # Minimal call — a zero-row data frame is allowed (rendered as
-#' # a stub with titles and footnotes only).
-#' tabular(data.frame(x = integer(), y = character()))
+#' tabular(
+#'   ae,
+#'   titles = c(
+#'     "Table 14.3.1",
+#'     "Adverse Events by System Organ Class and Preferred Term",
+#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'   ),
+#'   footnotes = c(
+#'     "Subjects are counted once per SOC and once per PT.",
+#'     "Percentages based on N per treatment group."
+#'   )
+#' ) |>
+#'   cols(
+#'     soc      = col_spec(usage = "group", label = "System Organ Class /\nPreferred Term"),
+#'     pt       = col_spec(visible = FALSE),
+#'     row_type = col_spec(visible = FALSE),
+#'     n_total  = col_spec(visible = FALSE),
+#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
+#'   ) |>
+#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+#'
+#' # 95% efficacy pattern: best overall response with CDISC factor
+#' # ordering. Demographics-style entry, decimal-aligned columns,
+#' # BigN denominator drawn from eff_n.
+#' bor_levels <- c(
+#'   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
+#'   "Objective Response Rate (CR + PR)",
+#'   "Disease Control Rate (CR + PR + SD)"
+#' )
+#' eff <- eff_resp
+#' eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
+#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+#'
+#' tabular(
+#'   eff,
+#'   titles = c(
+#'     "Table 14.2.1",
+#'     "Best Overall Response and Response Rates",
+#'     sprintf("Efficacy Evaluable Population (N=%d)", ne["Total"])
+#'   ),
+#'   footnotes = c(
+#'     "Response per RECIST 1.1, investigator assessment.",
+#'     "Percentages based on number of subjects in the analysis population."
+#'   )
+#' ) |>
+#'   cols(
+#'     stat_label = col_spec(usage = "group", label = "Response"),
+#'     row_type   = col_spec(visible = FALSE),
+#'     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  ne["placebo"]),  align = "decimal"),
+#'     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  ne["drug_50"]),  align = "decimal"),
+#'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", ne["drug_100"]), align = "decimal")
+#'   ) |>
+#'   sort_rows(by = "stat_label")
 #'
 #' @export
 tabular <- function(data, titles = NULL, footnotes = NULL) {

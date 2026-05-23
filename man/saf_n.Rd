@@ -5,17 +5,18 @@
 \alias{saf_n}
 \title{Safety-population BigN per arm}
 \format{
-A data frame with one row per arm plus a \code{Total} row.
-Columns:
-\itemize{
-\item \code{arm} — raw pharmaverseadam arm label
+A data frame with 4 rows and 3 columns:
+\describe{
+\item{\code{arm}}{Raw pharmaverseadam arm label
 (\code{"Placebo"}, \code{"Xanomeline Low Dose"},
-\code{"Xanomeline High Dose"}, \code{"Total"}); matches \code{group1_level}
-in the \verb{_card} ARDs.
-\item \code{arm_short} — renamed label
-(\code{"placebo"}, \code{"drug_50"}, \code{"drug_100"}, \code{"Total"}); matches
-the column names of \code{saf_demo} / \code{saf_aeoverall} / etc.
-\item \code{n} — integer subject count.
+\code{"Xanomeline High Dose"}, \code{"Total"}). Matches \code{group1_level}
+in the \verb{_card} ARDs (so the pivot output's column names
+match a \code{setNames(saf_n$n, saf_n$arm)} lookup).}
+\item{\code{arm_short}}{Renamed label
+(\code{"placebo"}, \code{"drug_50"}, \code{"drug_100"}, \code{"Total"}). Matches
+the column names of \code{saf_demo}, \code{saf_aeoverall},
+\code{saf_aesocpt}, and \code{saf_vital}.}
+\item{\code{n}}{Integer subject count.}
 }
 }
 \source{
@@ -28,12 +29,27 @@ saf_n
 }
 \description{
 Per-arm subject counts (BigN) for the safety population, plus a
-\code{Total} row. Use this when joining BigN into a column header or
-embedding it inline via \code{sprintf} / \code{paste} —
-\code{paste0("Drug A\\nN=", saf_n$n[saf_n$arm_short == "drug_50"])}.
+\code{Total} row. Use this table to embed BigN inline in column headers
+via \code{sprintf()} / \code{paste()} against \code{cols(col_spec(label = ...))};
+there is no dedicated BigN field on \code{col_spec} because the
+denominator already lives here in a discoverable, joinable form.
+}
+\details{
 Two arm-naming columns are shipped side by side so the same table
-can serve both the \verb{_card} ARDs (raw pharmaverseadam labels) and
-the renamed wide datasets.
+can serve both the \verb{_card} ARDs (raw pharmaverseadam labels in
+\code{group1_level}) and the renamed wide datasets (snake-cased arm
+column names).
+}
+\examples{
+# Use saf_n$arm_short when joining into the wide datasets
+# (saf_demo, saf_aeoverall, saf_aesocpt, saf_vital).
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+sprintf("Placebo\nN=\%d", n["placebo"])
+
+# Use saf_n$arm when joining into pivot_across() output
+# (column names match the raw pharmaverseadam arm labels).
+n_arm <- stats::setNames(saf_n$n, saf_n$arm)
+sprintf("Placebo\nN=\%d", n_arm["Placebo"])
 }
 \seealso{
 \link{eff_n} for the efficacy-population counterpart.

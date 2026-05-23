@@ -5,8 +5,8 @@
 \alias{eff_n}
 \title{Efficacy-population BigN per arm}
 \format{
-A data frame with one row per arm plus a \code{Total} row.
-Columns: \code{arm}, \code{arm_short}, \code{n} — same schema as \code{saf_n}.
+A data frame with 4 rows and 3 columns; same schema as
+\link{saf_n} (\code{arm}, \code{arm_short}, \code{n}).
 }
 \source{
 Derived in \code{data-raw/bundle-demo.R} from the per-arm BOR
@@ -21,6 +21,11 @@ Per-arm subject counts (BigN) for the efficacy population used by
 \code{pharmaverseadam::adrs_onco}. Same two-column naming convention
 as \code{saf_n}; the totals differ from \code{saf_n} because not every
 safety-pop subject contributes a best-overall-response record.
+}
+\examples{
+# Efficacy BigN joined into column headers.
+ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+sprintf("Placebo\nN=\%d", ne["placebo"])
 }
 \seealso{
 \link{saf_n} for the safety-population counterpart.

@@ -5,12 +5,14 @@
 \alias{saf_aesocpt_card}
 \title{Cards hierarchical ARD for AEs by SOC and PT}
 \format{
-A \code{card}-classed tibble.
+A \code{card}-classed tibble. Carries an
+\code{..ard_hierarchical_overall..} sentinel row that
+\code{\link[=pivot_across]{pivot_across()}} passes through as the table's "overall" row.
 }
 \source{
 Derived in \code{data-raw/bundle-demo.R} via
 \code{cards::ard_stack_hierarchical()} over
-\code{pharmaverseadam::adae}.
+\code{pharmaverseadam::adae} filtered to the top SOC / PT subset.
 }
 \usage{
 saf_aesocpt_card
@@ -19,8 +21,26 @@ saf_aesocpt_card
 Long-format companion to \code{saf_aesocpt}. Produced by
 \code{cards::ard_stack_hierarchical()} over \verb{(AEBODSYS, AEDECOD)} with
 adsl-level denominators, sorted by descending overall incidence
-via \code{sort_ard_hierarchical()}. Limited to the same top-5 SOC,
-top-3 PT subset as \code{saf_aesocpt} so the two datasets describe
+via \code{cards::sort_ard_hierarchical()}. Limited to the same top-5
+SOC, top-3 PT subset as \code{saf_aesocpt} so the two datasets describe
 the same slice of the data.
+}
+\examples{
+# Hierarchical ARD pivot. pivot_across() recognises the
+# ard_stack_hierarchical shape and emits soc / pt / row_type.
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+saf_aesocpt_card |>
+  pivot_across(statistic = "{n} ({p}\%)") |>
+  tabular(
+    titles = c(
+      "Table 14.3.1",
+      "Adverse Events by SOC and PT",
+      sprintf("Safety Population (N=\%d)", n["Total"])
+    )
+  )
+}
+\seealso{
+\code{\link[=pivot_across]{pivot_across()}} for the long-to-wide bridge;
+\link{saf_aesocpt} for the wide companion.
 }
 \keyword{datasets}

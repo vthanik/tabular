@@ -3,19 +3,64 @@
 \docType{data}
 \name{saf_vital}
 \alias{saf_vital}
-\title{Vital signs summary}
+\title{Vital-signs summary}
 \format{
-A data frame.
+A data frame with 32 rows and 7 columns:
+\describe{
+\item{\code{paramcd}}{CDISC parameter code (\code{SYSBP} / \code{DIABP} /
+\code{PULSE} / \code{TEMP}). Repeats across visit and statistic; use
+\code{col_spec(usage = "group")} to collapse.}
+\item{\code{param}}{Decoded parameter name.}
+\item{\code{visit}}{Analysis visit label (\code{"Baseline"} /
+\code{"End of Treatment"}).}
+\item{\code{stat_label}}{Statistic label.}
+\item{\code{placebo}, \code{drug_50}, \code{drug_100}}{Per-arm cell text.}
+}
 }
 \source{
-Derived in \code{data-raw/bundle-demo.R} from \code{pharmaverseadam}.
+Derived in \code{data-raw/bundle-demo.R} from
+\code{pharmaverseadam::advs}.
 }
 \usage{
 saf_vital
 }
 \description{
-Pre-summarised vital-signs results — systolic / diastolic BP,
-pulse, weight, height, BMI — one row per stat label per
-parameter.
+Pre-summarised vital-signs stats. Four parameters (SYSBP, DIABP,
+PULSE, TEMP) at two visits (Baseline, End of Treatment), each
+producing four statistic rows (\code{n}, \code{Mean (SD)}, \code{Median},
+\verb{Min, Max}).
+}
+\examples{
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+tabular(
+  saf_vital,
+  titles = c(
+    "Table 14.4.1",
+    "Vital Signs Summary at Baseline and End of Treatment",
+    sprintf("Safety Population (N=\%d)", n["Total"])
+  )
+) |>
+  cols(
+    paramcd    = col_spec(visible = FALSE),
+    param      = col_spec(usage = "group", label = "Parameter"),
+    visit      = col_spec(usage = "group", label = "Visit"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(
+      label = sprintf("Placebo\nN=\%d", n["placebo"]),
+      align = "decimal"
+    ),
+    drug_50    = col_spec(
+      label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
+      align = "decimal"
+    ),
+    drug_100   = col_spec(
+      label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
+      align = "decimal"
+    )
+  )
+}
+\seealso{
+\link{saf_vital_card} for the long-format ARD companion;
+\link{saf_n} for BigN denominators.
 }
 \keyword{datasets}

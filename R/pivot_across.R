@@ -213,38 +213,95 @@
 #'       `variable`.
 #'
 #' @examples
-#' # Demographics ARD -> wide. Context-keyed statistic: continuous
-#' # variables (AGE) get a mean / SD format, categorical (SEX / RACE)
-#' # get a count / percent format.
-#' pivot_across(
-#'   saf_demo_card,
-#'   statistic = list(
-#'     continuous  = "{mean} ({sd})",
-#'     categorical = "{n} ({p}%)"
-#'   )
-#' )
+#' # 95% demographics pattern: cards ARD -> wide -> rendered table.
+#' # The multi-row continuous block ("N / Mean (SD) / Median / Min,
+#' # Max") sits above each categorical block; decimals are set
+#' # per-stat (mean 1, sd 2, p 1) to match the CDISC convention.
+#' # Complete pipeline from the long ARD all the way to a sorted
+#' # tabular_spec ready for emit().
+#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
 #'
-#' # Multi-row continuous spec: 2 rows per continuous variable
-#' # (N, Mean (SD)), 1 row per categorical level.
-#' pivot_across(
-#'   saf_demo_card,
-#'   statistic = list(
-#'     continuous  = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})"),
-#'     categorical = "{n} ({p}%)"
-#'   ),
-#'   decimals = c(mean = 1, sd = 2, p = 1),
-#'   label    = c(AGE = "Age (years)", SEX = "Sex", RACE = "Race")
-#' )
-#'
-#' # Pipe straight into tabular():
 #' saf_demo_card |>
 #'   pivot_across(
 #'     statistic = list(
-#'       continuous  = "{mean} ({sd})",
+#'       continuous = c(
+#'         N           = "{N}",
+#'         "Mean (SD)" = "{mean} ({sd})",
+#'         Median      = "{median}",
+#'         "Min, Max"  = "{min}, {max}"
+#'       ),
 #'       categorical = "{n} ({p}%)"
+#'     ),
+#'     decimals = c(mean = 1, sd = 2, p = 1, median = 1, min = 0, max = 0),
+#'     label    = c(AGE = "Age (years)", SEX = "Sex", RACE = "Race")
+#'   ) |>
+#'   tabular(
+#'     titles = c(
+#'       "Table 14.1.1",
+#'       "Demographics and Baseline Characteristics",
+#'       sprintf("Safety Population (N=%d)", n["Total"])
+#'     ),
+#'     footnotes = "Percentages based on N per treatment group."
+#'   ) |>
+#'   cols(
+#'     variable   = col_spec(usage = "group", label = "Parameter"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     Placebo = col_spec(
+#'       label = sprintf("Placebo\nN=%d", n["placebo"]),
+#'       align = "decimal"
+#'     ),
+#'     `Xanomeline Low Dose` = col_spec(
+#'       label = sprintf("Drug 50\nN=%d", n["drug_50"]),
+#'       align = "decimal"
+#'     ),
+#'     `Xanomeline High Dose` = col_spec(
+#'       label = sprintf("Drug 100\nN=%d", n["drug_100"]),
+#'       align = "decimal"
+#'     ),
+#'     Total = col_spec(
+#'       label = sprintf("Total\nN=%d", n["Total"]),
+#'       align = "decimal"
+#'     )
+#'   )
+#'
+#' # 95% AE pattern: hierarchical SOC/PT ARD from
+#' # cards::ard_stack_hierarchical() -> wide -> rendered table.
+#' # ard_stack_hierarchical emits a soc / pt / row_type triple plus
+#' # one stat row per (arm, SOC, PT); pivot_across() folds the arm
+#' # dimension to columns and threads the hierarchy through. The
+#' # wide output already carries n / N / p stats interpolated as
+#' # "n (p%)" cells; sort_rows() puts the highest-frequency SOC and
+#' # PT at the top.
+#' saf_aesocpt_card |>
+#'   pivot_across(statistic = "{n} ({p}%)") |>
+#'   tabular(
+#'     titles = c(
+#'       "Table 14.3.1",
+#'       "Adverse Events by System Organ Class and Preferred Term",
+#'       sprintf("Safety Population (N=%d)", n["Total"])
+#'     ),
+#'     footnotes = c(
+#'       "Subjects are counted once per SOC and once per PT.",
+#'       "Percentages based on N per treatment group."
 #'     )
 #'   ) |>
-#'   tabular(titles = c("Table 14.1.1", "Demographics"))
+#'   cols(
+#'     soc      = col_spec(usage = "group", label = "System Organ Class /\nPreferred Term"),
+#'     pt       = col_spec(visible = FALSE),
+#'     row_type = col_spec(visible = FALSE),
+#'     Placebo = col_spec(
+#'       label = sprintf("Placebo\nN=%d", n["placebo"]),
+#'       align = "decimal"
+#'     ),
+#'     `Xanomeline Low Dose` = col_spec(
+#'       label = sprintf("Drug 50\nN=%d", n["drug_50"]),
+#'       align = "decimal"
+#'     ),
+#'     `Xanomeline High Dose` = col_spec(
+#'       label = sprintf("Drug 100\nN=%d", n["drug_100"]),
+#'       align = "decimal"
+#'     )
+#'   )
 #'
 #' @export
 pivot_across <- function(

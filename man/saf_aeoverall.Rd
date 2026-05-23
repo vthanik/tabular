@@ -5,17 +5,68 @@
 \alias{saf_aeoverall}
 \title{Overall adverse-event summary, Safety Population}
 \format{
-A data frame.
+A data frame with 6 rows and 5 columns:
+\describe{
+\item{\code{stat_label}}{Row label
+(\code{"Any TEAE"}, \code{"Any Serious AE (SAE)"},
+\code{"Any AE Related to Study Drug"},
+\code{"  Maximum severity: Mild"}, \code{"  Maximum severity: Moderate"},
+\code{"  Maximum severity: Severe"}).}
+\item{\code{placebo}}{Placebo arm cell text (\code{"n (pct)"}).}
+\item{\code{drug_50}}{Drug 50 arm cell text.}
+\item{\code{drug_100}}{Drug 100 arm cell text.}
+\item{\code{Total}}{Pooled-across-arms cell text.}
+}
 }
 \source{
-Derived in \code{data-raw/bundle-demo.R} from \code{pharmaverseadam}.
+Derived in \code{data-raw/bundle-demo.R} from
+\code{pharmaverseadam::adae} filtered to \code{SAFFL == "Y"} and
+\code{TRTEMFL == "Y"}.
 }
 \usage{
 saf_aeoverall
 }
 \description{
-One row per top-level AE summary statistic
-(any AE, related AE, serious AE, leading-to-discontinuation),
-columns per treatment arm.
+Pre-summarised wide-format AE overview. Two clinical blocks:
+high-level flag rows (any TEAE, any SAE, any treatment-related)
+and maximum-severity rows (mild / moderate / severe). Severity
+rows are indented with two leading spaces so a single
+\code{cols(stat_label = col_spec(usage = "group"))} declaration drives
+both the block-header rows and the indented detail rows.
+}
+\examples{
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+tabular(
+  saf_aeoverall,
+  titles = c(
+    "Table 14.3.0",
+    "Adverse Event Overview",
+    sprintf("Safety Population (N=\%d)", n["Total"])
+  )
+) |>
+  cols(
+    stat_label = col_spec(usage = "group", label = ""),
+    placebo    = col_spec(
+      label = sprintf("Placebo\nN=\%d", n["placebo"]),
+      align = "decimal"
+    ),
+    drug_50    = col_spec(
+      label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
+      align = "decimal"
+    ),
+    drug_100   = col_spec(
+      label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
+      align = "decimal"
+    ),
+    Total      = col_spec(
+      label = sprintf("Total\nN=\%d", n["Total"]),
+      align = "decimal"
+    )
+  )
+}
+\seealso{
+\link{saf_aeoverall_card} for the long-format ARD companion;
+\link{saf_n} for BigN denominators; \link{saf_aesocpt} for the
+SOC / PT detail companion.
 }
 \keyword{datasets}

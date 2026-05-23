@@ -5,17 +5,86 @@
 \alias{saf_aesocpt}
 \title{Adverse events by System Organ Class and Preferred Term}
 \format{
-A data frame.
+A data frame with 21 rows and 7 columns:
+\describe{
+\item{\code{soc}}{System Organ Class label. Repeats across the SOC's
+PT rows so \code{cols(usage = "group")} collapses the run at
+render.}
+\item{\code{pt}}{Preferred Term label. Equal to \code{soc} on SOC-summary
+rows; the displayed value to render on PT detail rows.}
+\item{\code{row_type}}{One of \code{"overall"}, \code{"soc"}, \code{"pt"}. Use it
+as a sort key and / or hide it via
+\code{col_spec(visible = FALSE)}. Coerce to a factor with levels
+\code{c("overall", "soc", "pt")} to preserve the canonical
+interleaved order under sort.}
+\item{\code{placebo}}{Placebo arm cell text (\code{"n (pct)"}).}
+\item{\code{drug_100}, \code{drug_50}}{Drug arms cell text.}
+\item{\code{Total}}{Pooled-across-arms cell text.}
+}
 }
 \source{
-Derived in \code{data-raw/bundle-demo.R} from \code{pharmaverseadam}.
+Derived in \code{data-raw/bundle-demo.R} from
+\code{pharmaverseadam::adae}. Filtered to the top 5 SOCs by total
+incidence and the top 3 PTs per SOC to keep the bundled \code{.rda}
+under 50 KB.
 }
 \usage{
 saf_aesocpt
 }
 \description{
-One row per (SOC, PT) combination plus SOC-level total rows
-and overall any-AE row. Columns: row labels + one column per
-treatment arm (count, percentage).
+Pre-summarised AE-by-SOC/PT table. Interleaved row order: overall
+"any TEAE" row first, then per-SOC blocks where each SOC row is
+followed by its preferred-term detail rows. Top 5 SOCs and top 3
+PTs per SOC are kept (size guard); \code{row_type} marks the role of
+each row so a downstream pipeline can sort, indent, or hide
+selectively.
+}
+\examples{
+# 95\% safety pattern: SOC/PT table sorted by descending subject
+# count, hierarchy preserved. `Total` cells are formatted text
+# ("171 (67.3)"), so attach a numeric rank column for sort_rows().
+ae <- saf_aesocpt
+ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
+ae$n_total <- as.integer(sub(" .*", "", ae$Total))
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+
+tabular(
+  ae,
+  titles = c(
+    "Table 14.3.1",
+    "Adverse Events by SOC and Preferred Term",
+    sprintf("Safety Population (N=\%d)", n["Total"])
+  )
+) |>
+  cols(
+    soc      = col_spec(usage = "group", label = "SOC / PT"),
+    pt       = col_spec(visible = FALSE),
+    row_type = col_spec(visible = FALSE),
+    n_total  = col_spec(visible = FALSE),
+    placebo  = col_spec(
+      label = sprintf("Placebo\nN=\%d", n["placebo"]),
+      align = "decimal"
+    ),
+    drug_50  = col_spec(
+      label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
+      align = "decimal"
+    ),
+    drug_100 = col_spec(
+      label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
+      align = "decimal"
+    ),
+    Total    = col_spec(
+      label = sprintf("Total\nN=\%d", n["Total"]),
+      align = "decimal"
+    )
+  ) |>
+  sort_rows(
+    by = c("row_type", "n_total"),
+    descending = c(FALSE, TRUE)
+  )
+}
+\seealso{
+\link{saf_aesocpt_card} for the hierarchical long ARD;
+\link{saf_n} for BigN denominators.
 }
 \keyword{datasets}

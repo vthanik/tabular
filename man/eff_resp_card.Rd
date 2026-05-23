@@ -9,7 +9,8 @@ A \code{card}-classed tibble.
 }
 \source{
 Derived in \code{data-raw/bundle-demo.R} via
-\code{cards::ard_stack()} over \code{pharmaverseadam::adrs_onco}.
+\code{cards::ard_stack(.by = "ARM")} over
+\code{pharmaverseadam::adrs_onco} filtered to \code{PARAMCD == "BOR"}.
 }
 \usage{
 eff_resp_card
@@ -18,6 +19,24 @@ eff_resp_card
 Long-format companion to \code{eff_resp}. Categorical counts of \code{AVALC}
 (CR, PR, SD, NON-CR/NON-PD, PD, NE, MISSING) by treatment arm via
 \code{cards::ard_stack()}. The wide \code{eff_resp} adds derived ORR and DCR
-rows on top of these category counts.
+rate rows on top of these category counts — those derived rows do
+not appear in this ARD and must be computed downstream.
+}
+\examples{
+ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+eff_resp_card |>
+  pivot_across(statistic = "{n} ({p}\%)") |>
+  tabular(
+    titles = c(
+      "Table 14.2.1",
+      "Best Overall Response",
+      sprintf("Efficacy Evaluable Population (N=\%d)", ne["Total"])
+    )
+  )
+}
+\seealso{
+\code{\link[=pivot_across]{pivot_across()}} for the long-to-wide bridge;
+\link{eff_resp} for the wide companion (which adds derived rate
+rows on top of the categorical counts).
 }
 \keyword{datasets}

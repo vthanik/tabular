@@ -5,7 +5,8 @@
 \alias{saf_vital_card}
 \title{Cards ARD for vital signs}
 \format{
-A \code{card}-classed tibble.
+A \code{card}-classed tibble. Multi-group (\code{.by = c(PARAMCD, AVISIT, TRT01A)}) so \code{\link[=pivot_across]{pivot_across()}} keeps PARAMCD and AVISIT
+as output columns and pivots only the arm dimension.
 }
 \source{
 Derived in \code{data-raw/bundle-demo.R} via
@@ -19,5 +20,29 @@ Long-format companion to \code{saf_vital}. Continuous statistics on
 \code{AVAL} grouped by \verb{(PARAMCD, AVISIT, TRT01A)} from
 \code{cards::ard_stack()}. Parameters: SYSBP, DIABP, PULSE, TEMP at
 Baseline and End of Treatment.
+}
+\examples{
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+saf_vital_card |>
+  pivot_across(
+    statistic = list(
+      continuous = c(
+        N           = "{N}",
+        "Mean (SD)" = "{mean} ({sd})"
+      )
+    ),
+    decimals = c(mean = 1, sd = 2)
+  ) |>
+  tabular(
+    titles = c(
+      "Table 14.4.1",
+      "Vital Signs Summary",
+      sprintf("Safety Population (N=\%d)", n["Total"])
+    )
+  )
+}
+\seealso{
+\code{\link[=pivot_across]{pivot_across()}} for the long-to-wide bridge;
+\link{saf_vital} for the wide companion.
 }
 \keyword{datasets}

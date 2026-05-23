@@ -7,11 +7,17 @@
 \format{
 A \code{card}-classed tibble with columns \code{group1},
 \code{group1_level}, \code{variable}, \code{variable_level}, \code{context},
-\code{stat_name}, \code{stat_label}, \code{stat}.
+\code{stat_name}, \code{stat_label}, \code{stat}. \code{group1 == "TRT01A"} and
+\code{group1_level} carries the original pharmaverseadam arm labels
+(\code{"Placebo"}, \code{"Xanomeline Low Dose"}, \code{"Xanomeline High Dose"}).
+\code{cards::ard_stack(.overall = TRUE)} adds overall rows with
+\code{group1_level = NA}; \code{\link[=pivot_across]{pivot_across()}} renders those into a
+\code{Total} column.
 }
 \source{
 Derived in \code{data-raw/bundle-demo.R} via
-\code{cards::ard_stack()} over \code{pharmaverseadam::adsl}.
+\code{cards::ard_stack(.by = "TRT01A", .overall = TRUE)} over
+\code{pharmaverseadam::adsl}.
 }
 \usage{
 saf_demo_card
@@ -20,11 +26,33 @@ saf_demo_card
 The same demographics summary as \code{saf_demo}, but in the long
 Analysis Results Data (ARD) format produced by
 \code{cards::ard_stack()}. One row per (treatment arm, variable,
-statistic). Shipped as a teaching dataset: it shows the upstream
+statistic). Shipped as a teaching dataset that shows the upstream
 shape users typically have when they start from \code{cards}. Convert
-it to wide (via \code{cards::pivot_wider_ard()} or a custom pivot)
-before passing to \code{tabular()} — tabular itself does \strong{not} accept
-the long ARD format; pre-summarised wide data is the package
-boundary.
+it to the wide form \code{tabular()} accepts via \code{\link[=pivot_across]{pivot_across()}} —
+tabular itself does \strong{not} consume the long ARD format, since
+pre-summarised wide data is the package boundary.
+}
+\examples{
+# 95\% demographics pattern: cards ARD -> wide -> rendered table.
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+saf_demo_card |>
+  pivot_across(
+    statistic = list(
+      continuous  = "{mean} ({sd})",
+      categorical = "{n} ({p}\%)"
+    ),
+    label = c(AGE = "Age (years)", SEX = "Sex", RACE = "Race")
+  ) |>
+  tabular(
+    titles = c(
+      "Table 14.1.1",
+      "Demographics",
+      sprintf("Safety Population (N=\%d)", n["Total"])
+    )
+  )
+}
+\seealso{
+\code{\link[=pivot_across]{pivot_across()}} for the long-to-wide bridge;
+\link{saf_demo} for the wide companion.
 }
 \keyword{datasets}

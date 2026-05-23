@@ -5,20 +5,72 @@
 \alias{saf_demo}
 \title{Demographics summary, Safety Population}
 \format{
-A data frame. Columns: row-label columns plus one column
-per treatment arm.
+A data frame with 21 rows and 6 columns:
+\describe{
+\item{\code{variable}}{Display-block label (\code{"Age (years)"},
+\code{"Age Group, n (\%)"}, \code{"Sex, n (\%)"}, \code{"Race, n (\%)"},
+\code{"Ethnicity, n (\%)"}). Driven by \code{cols(usage = "group")} to
+collapse repeat values at render.}
+\item{\code{stat_label}}{Statistic or level label
+(\code{"n"}, \code{"Mean (SD)"}, \code{"Median"}, \code{"M"}, \code{"WHITE"}, ...).}
+\item{\code{placebo}}{Placebo arm cell text.}
+\item{\code{drug_50}}{Xanomeline Low Dose (50 mg) arm cell text.}
+\item{\code{drug_100}}{Xanomeline High Dose (100 mg) arm cell text.}
+\item{\code{Total}}{Pooled-across-arms cell text.}
+}
 }
 \source{
-Derived in \code{data-raw/bundle-demo.R} from \code{pharmaverseadam}.
+Derived in \code{data-raw/bundle-demo.R} from
+\code{pharmaverseadam::adsl} filtered to \code{SAFFL == "Y"} and the three
+CDISCPILOT01 treatment arms.
 }
 \usage{
 saf_demo
 }
 \description{
-Pre-summarised wide-format demographics. One row per displayed
-statistic (continuous: \code{n}, \code{Mean (SD)}, \code{Median}, \verb{Q1, Q3},
-\verb{Min, Max}; categorical: \verb{n (\%)} per level). Shaped for the
+Pre-summarised wide-format demographics suitable for direct
+passing into \code{\link[=tabular]{tabular()}}. One row per displayed statistic, with
+both continuous variables (AGE → \code{n}, \code{Mean (SD)}, \code{Median},
+\verb{Q1, Q3}, \verb{Min, Max}) and categorical variables (AGEGR1 / SEX /
+RACE / ETHNIC, each level rendered as \verb{n (\%)}). Shaped for the
 display-only contract: every cell is the final string that will
 appear in the rendered table.
+}
+\examples{
+# 95\% safety pattern: demographics table with BigN-embedded
+# column labels and CDISC-canonical statistic order.
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+tabular(
+  saf_demo,
+  titles = c(
+    "Table 14.1.1",
+    "Demographics and Baseline Characteristics",
+    sprintf("Safety Population (N=\%d)", n["Total"])
+  )
+) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Parameter"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(
+      label = sprintf("Placebo\nN=\%d", n["placebo"]),
+      align = "decimal"
+    ),
+    drug_50    = col_spec(
+      label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
+      align = "decimal"
+    ),
+    drug_100   = col_spec(
+      label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
+      align = "decimal"
+    ),
+    Total      = col_spec(
+      label = sprintf("Total\nN=\%d", n["Total"]),
+      align = "decimal"
+    )
+  )
+}
+\seealso{
+\link{saf_demo_card} for the long-format ARD companion;
+\link{saf_n} for the matching BigN denominators.
 }
 \keyword{datasets}

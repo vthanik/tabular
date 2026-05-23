@@ -9,54 +9,115 @@
 #' name must match a column in `spec@data` (or have `usage =
 #' "computed"` if it is a derived column added later by `derive()`).
 #'
+#' Columns not mentioned in any `cols()` call get default
+#' `col_spec(usage = "display")` at engine-validate time, so a sparse
+#' `cols()` call is fine — only declare the columns whose attributes
+#' (label, alignment, BigN denominator, hidden status, derived
+#' source) differ from defaults.
+#'
+#' @section Repeat-call merge semantics:
+#'
 #' Repeated `cols()` calls **merge** field-by-field on existing
 #' col_specs: a non-default value in the new spec overrides the
-#' existing field; a default-valued field (NA / NULL) leaves the
-#' existing field alone. This lets you build a column's spec in
-#' stages.
+#' existing field; a default-valued field (NA / NULL / "" / `TRUE`)
+#' leaves the existing field unchanged. The merge happens per
+#' column; columns not mentioned in the second call are left alone.
 #'
-#' Columns not mentioned in any `cols()` call get default
-#' `col_spec(usage = "display")` at engine-validate time.
+#' This lets you build a column's spec in stages — declare the
+#' label-and-alignment block up front, then add the width once you
+#' know it fits, then attach a sort key, all without re-stating the
+#' earlier attributes. The pattern is essential when generating
+#' specs programmatically (looping over arms, applying a house-style
+#' helper, layering sponsor overrides).
+#'
+#' Default values that *do not* override:
+#'
+#' | field | default that does not override |
+#' |---|---|
+#' | `usage`   | `NA_character_` |
+#' | `label`   | `NA_character_` |
+#' | `format`  | `NULL` |
+#' | `visible` | `TRUE` |
+#' | `width`   | `NA_real_` |
+#' | `align`   | `NA_character_` |
+#' | `na_text` | `""` |
+#'
+#' ```r
+#' # Three-stage build: label/usage first, alignment second, width
+#' # third. Each stage leaves earlier fields intact.
+#' tabular(saf_demo) |>
+#'   cols(variable = col_spec(usage = "group", label = "Parameter")) |>
+#'   cols(variable = col_spec(align = "left")) |>
+#'   cols(variable = col_spec(width = 2.0))
+#' # Result: variable has usage = "group", label = "Parameter",
+#' #         align = "left", width = 2.0 -- all four fields set.
+#' ```
 #'
 #' @param spec A `tabular_spec` built by `tabular()`.
 #' @param ... Named `col_spec` objects. Each name is the input column
 #'   name in `spec@data`. For `usage = "computed"` the name does not
 #'   need to exist in `data` — it will be supplied by a later
-#'   `derive()` call.
+#'   `derive()` call. Names must be unique within a single `cols()`
+#'   call (a duplicate within one call warns; "last value wins"); to
+#'   intentionally override an attribute, use a second `cols()` call
+#'   downstream and let the merge rule apply.
 #' @return The updated `tabular_spec`.
 #'
 #' @examples
-#' # Realistic per-column spec on the demographics demo:
-#' # row labels on the left, decimal-aligned treatment columns with
-#' # BigN joined inline from `saf_n`.
-#' n <- setNames(saf_n$n, saf_n$arm_short)
-#' tabular(saf_demo) |>
+#' # 95% safety pattern: demographics with row-label cols on the
+#' # left and decimal-aligned treatment cols carrying BigN inline.
+#' # Complete pipeline through every landed verb so the example is
+#' # paste-ready into a Quarto vignette.
+#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#'
+#' tabular(
+#'   saf_demo,
+#'   titles = c(
+#'     "Table 14.1.1",
+#'     "Demographics and Baseline Characteristics",
+#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'   ),
+#'   footnotes = "Percentages based on N per treatment group."
+#' ) |>
 #'   cols(
 #'     variable   = col_spec(usage = "group", label = "Parameter"),
 #'     stat_label = col_spec(label = "Statistic"),
-#'     placebo    = col_spec(
-#'       label = sprintf("Placebo\nN=%d", n["placebo"]),
-#'       align = "decimal"
-#'     ),
-#'     drug_50    = col_spec(
-#'       label = sprintf("Drug 50\nN=%d", n["drug_50"]),
-#'       align = "decimal"
-#'     ),
-#'     drug_100   = col_spec(
-#'       label = sprintf("Drug 100\nN=%d", n["drug_100"]),
-#'       align = "decimal"
-#'     ),
-#'     Total      = col_spec(
-#'       label = sprintf("Total\nN=%d", n["Total"]),
-#'       align = "decimal"
-#'     )
-#'   )
+#'     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+#'     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+#'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+#'     Total      = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
+#'   ) |>
+#'   sort_rows(by = c("variable", "stat_label"))
 #'
-#' # Repeated cols() calls merge field-by-field; the second call adds
-#' # a width without erasing the label set on the first call.
-#' tabular(saf_demo) |>
-#'   cols(variable = col_spec(usage = "group", label = "Parameter")) |>
-#'   cols(variable = col_spec(width = 2))
+#' # 95% efficacy pattern: BOR table with CDISC factor ordering.
+#' # row_type is hidden (sort-helper only) and stat_label uses the
+#' # group usage so consecutive runs collapse in render.
+#' bor_levels <- c(
+#'   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
+#'   "Objective Response Rate (CR + PR)",
+#'   "Disease Control Rate (CR + PR + SD)"
+#' )
+#' eff <- eff_resp
+#' eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
+#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+#'
+#' tabular(
+#'   eff,
+#'   titles = c(
+#'     "Table 14.2.1",
+#'     "Best Overall Response and Response Rates",
+#'     sprintf("Efficacy Evaluable Population (N=%d)", ne["Total"])
+#'   ),
+#'   footnotes = "Response per RECIST 1.1, investigator assessment."
+#' ) |>
+#'   cols(
+#'     stat_label = col_spec(usage = "group", label = "Response"),
+#'     row_type   = col_spec(visible = FALSE),
+#'     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  ne["placebo"]),  align = "decimal"),
+#'     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  ne["drug_50"]),  align = "decimal"),
+#'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", ne["drug_100"]), align = "decimal")
+#'   ) |>
+#'   sort_rows(by = "stat_label")
 #'
 #' @export
 cols <- function(spec, ...) {
