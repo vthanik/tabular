@@ -15,55 +15,44 @@ col_spec(
 )
 }
 \arguments{
-\item{usage}{One of \code{"display"}, \code{"group"}, \code{"across"},
-\code{"computed"}, or \code{NULL} (auto-default in \code{cols()}). Drives how
-the engine treats the column: pass-through, row-label with
-repeat-suppression, pivot source, or derived display column.
-
-Accepts:
+\item{usage}{\emph{Engine role.}
+\verb{<character(1) | NULL>: default NULL}. One of:
 \itemize{
-\item \strong{\code{"display"}} — pass-through column; rendered as-is.
-\item \strong{\code{"group"}} — row-label column; repeat-suppression at
-render time and continuation-page repeat keys to this
-column. Use for \code{variable}, \code{soc}, \code{stat_label}, and any
-column whose value spans multiple consecutive rows.
-\item \strong{\code{"across"}} — column whose unique values pivot into new
-output columns. The pivot happens upstream of \code{tabular()}
-via \code{pivot_across()}; the \code{"across"} tag marks the source
-column so the engine knows not to render it directly.
-\item \strong{\code{"computed"}} — derived display column produced by a
-later \code{derive_spec}. The column name does not need to
-exist in \code{spec@data} at \code{cols()} time.
-\item \strong{\code{NULL}} (default) — inferred in \code{cols()} (always
-\code{"display"}). Pass \code{NULL} when you only want to override
-label / align / width and accept the default usage.
+\item \strong{\code{"display"}} (default in \code{\link[=cols]{cols()}}) — pass-through.
+\item \strong{\code{"group"}} — row-label with repeat-suppression and
+continuation-page repeat keys. Use for \code{variable}, \code{soc},
+\code{stat_label}.
+\item \strong{\code{"across"}} — pivot source. Pair with \code{\link[=pivot_across]{pivot_across()}}.
+\item \strong{\code{"computed"}} — derived column; pair with a \code{\link[=derive]{derive()}}
+entry. The column need not exist in \code{data} yet at
+\code{\link[=cols]{cols()}} time.
+\item \strong{\code{NULL}} — inferred as \code{"display"} in \code{\link[=cols]{cols()}}.
 }
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# The four canonical roles, each on the demographics frame.
-tabular(saf_demo) |>
-  cols(
-    variable   = col_spec(usage = "group"),     # row-label
-    stat_label = col_spec(usage = "group"),     # second-level row-label
-    placebo    = col_spec(),                    # display (default)
-    drug_50    = col_spec(),
-    drug_100   = col_spec(),
-    Total      = col_spec()
-  )
+\strong{Interaction:} \code{"computed"} requires a matching \code{\link[=derive]{derive()}}
+entry by engine_validate time. \code{"across"} requires the pivot
+to have happened upstream via \code{\link[=pivot_across]{pivot_across()}}.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two row-label columns and four arm columns.
+cols(
+  variable   = col_spec(usage = "group"),
+  stat_label = col_spec(usage = "group"),
+  placebo    = col_spec(),
+  drug_50    = col_spec()
+)
 }\if{html}{\out{</div>}}}
 
-\item{label}{Display label for the column header. Single character
-string; \code{NA_character_} (default) means use the input column
-name verbatim.
+\item{label}{\emph{Display label for the column header.}
+\verb{<character(1)>: default NA_character_}. Embed \verb{\\n} for
+multi-line headers (arm name on row 1, BigN denominator on
+row 2 is the clinical convention). \code{NA_character_} means use
+the input column name verbatim.
 
-Embed \verb{\\n} for line breaks (multi-line headers are clinical
-convention — the arm name on row 1, the BigN denominator on
-row 2). Embed BigN inline via \code{paste()} / \code{sprintf()} against
-the bundled \code{saf_n} / \code{eff_n} data frames; there is no
-dedicated BigN field on the col_spec because the denominator
-already lives in a discoverable data frame upstream.
+\strong{Restriction:} Empty string and whitespace-only labels are
+accepted here, unlike \code{\link[=headers]{headers()}} band labels which are
+strict.
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two-line header with arm name and BigN; matches the BMS /
-# GSK convention of placing N=xx on a dedicated second row.
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two-line header with arm name and BigN from saf_n.
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 col_spec(
   label = sprintf("Placebo\\nN=\%d", n["placebo"]),
@@ -71,115 +60,101 @@ col_spec(
 )
 }\if{html}{\out{</div>}}}
 
-\item{format}{Post-cell formatter applied at \code{engine_format} time.
-Three accepted shapes:
-\itemize{
-\item \strong{character} — a single \code{sprintf()} template applied to
-each cell of the column. Validated at construction time
-with a probe call (\code{sprintf(x, 0)}), so a malformed
-template fails fast rather than at render.
-\item \strong{function} — a unary function taking one column of
-values and returning a character vector of the same
-length. Use for non-\code{sprintf} formatting (locale-aware
-numbers, thousand separators, conditional symbols).
-\item \strong{\code{NULL}} (default) — backend-default formatting.
-Character columns are passed through; numeric columns
-are rendered with the preset's default precision.
-}
+\item{format}{\emph{Post-cell formatter.}
+\verb{<character(1) | function | NULL>: default NULL}. A \code{sprintf}
+template applied per cell, OR a unary \verb{function(x) -> character}
+of the same length, OR \code{NULL} for backend default.
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# sprintf template: one-decimal numerics.
+\strong{Restriction:} Character templates are probed with
+\code{sprintf(format, 0)} at construction; malformed templates fail
+fast.
+\strong{Tip:} Use a function for non-\code{sprintf} formatting (locale-
+aware numbers, thousand separators, conditional symbols).
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# sprintf template vs. function form.
 col_spec(format = "\%.1f")
-
-# Function: thousands separator + dynamic precision.
-col_spec(format = function(x) \{
-  formatC(x, format = "f", digits = 1, big.mark = ",")
-\})
+col_spec(format = function(x) formatC(x, format = "f", digits = 1, big.mark = ","))
 }\if{html}{\out{</div>}}}
 
-\item{visible}{Logical, length 1, non-NA. \code{FALSE} hides the column
-from rendered output but keeps it in \code{spec@data} so the engine
-can read it for sort keys, derive expressions, group breaks,
-and style predicates. Default \code{TRUE}.
+\item{visible}{\emph{Whether the column renders.}
+\verb{<logical(1)>: default TRUE}. \code{FALSE} hides the column from
+output but keeps it in \code{spec@data} so \code{\link[=sort_rows]{sort_rows()}},
+\code{\link[=derive]{derive()}}, and \code{\link[=style]{style()}} predicates can still reference it.
 
-Use this when your pre-summarised input carries auxiliary
-columns (numeric rank, hierarchy markers, raw counts behind
-formatted percentages) that drive the engine but should not
-appear in the final table.
+\strong{Interaction:} Hidden columns are the standard pattern for
+sort-key helpers (\code{row_type}, \code{n_total}) and for the numeric
+counts behind formatted-text percentage cells.}
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Hide the integer rank column used as a sort key.
-col_spec(visible = FALSE)
-}\if{html}{\out{</div>}}}
+\item{width}{\emph{Column width in inches.}
+\verb{<numeric(1) | NA_real_>: default NA_real_}. \code{NA} leaves widths
+to the backend's auto-fit; a numeric value pins the column.
 
-\item{width}{Column width in inches. \code{NA_real_} (default) leaves
-widths to backend auto-fit. Must be positive and finite when set.
+\strong{Restriction:} Must be positive and finite when set.
+\strong{Interaction:} Sum of pinned widths drives whether horizontal
+pagination kicks in.}
 
-Use to fix the width of a wide row-label column (e.g. SOC /
-PT spans two lines) so the table fits inside a landscape
-submission page without horizontal pagination kicking in.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Pin the SOC / PT label column to 2.5 inches.
-col_spec(usage = "group", width = 2.5, label = "SOC / PT")
-}\if{html}{\out{</div>}}}
-
-\item{align}{One of \code{"left"}, \code{"center"}, \code{"right"}, \code{"decimal"},
-or \code{NULL} (backend default).
+\item{align}{\emph{Cell alignment within the column.}
+\verb{<character(1) | NULL>: default NULL}. One of:
 \itemize{
 \item \strong{\code{"left"}} — character columns; row labels.
-\item \strong{\code{"center"}} — column headers band; rarely on data cells.
+\item \strong{\code{"center"}} — column-header band; rarely on data cells.
 \item \strong{\code{"right"}} — numeric content without decimals.
-\item \strong{\code{"decimal"}} — numeric content with mixed decimal
-widths. The engine aligns each cell on its decimal mark
-via the active preset's \code{decimal_metrics}. This is the
-clinical convention for any column carrying mixed-format
-cells like \code{"5 (3.2\%)"} next to \code{"54 (32.1\%)"}.
-\item \strong{\code{NULL}} (default) — backend default (right for numeric,
-left for character).
+\item \strong{\code{"decimal"}} — numeric or mixed-format cells aligned on
+the decimal mark. Use for \code{"5 (3.2\%)"} next to
+\code{"54 (32.1\%)"}.
+\item \strong{\code{NULL}} (default) — backend default: right for numeric,
+left for character.
 }
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Decimal alignment on every treatment column; row label left.
-tabular(saf_demo) |>
-  cols(
-    variable = col_spec(usage = "group", align = "left"),
-    placebo  = col_spec(align = "decimal"),
-    drug_50  = col_spec(align = "decimal"),
-    drug_100 = col_spec(align = "decimal")
-  )
-}\if{html}{\out{</div>}}}
+\strong{Tip:} \code{"decimal"} uses the active preset's \code{decimal_metrics}
+knob (AFM Core 14 fonts or systemfonts) to compute the
+alignment anchor.}
 
-\item{na_text}{Single non-NA character string substituted for \code{NA}
-cells before the \code{format} step. Default \code{""} (empty cell).
+\item{na_text}{\emph{Text substituted for \code{NA} cells.}
+\verb{<character(1)>: default ""}. Substituted BEFORE the \code{format}
+step, so \code{format} does not need to anticipate \code{NA}.
 
-Use to render \code{NA} as a non-blank token when blank would be
-ambiguous (\code{"-"}, \code{"NR"} for not-reported, \code{"."} for SAS-style
-missing).
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Render NA as "NR" (not reported) — typical for safety tables
-# where blank means "not applicable" but NR means "applicable
-# but unavailable".
-col_spec(na_text = "NR")
-}\if{html}{\out{</div>}}}
+\strong{Tip:} Use a sentinel (\code{"-"}, \code{"NR"}, \code{"."}) when blank cells
+would be ambiguous, e.g. when "not applicable" and "not
+reported" both render blank.}
 }
 \value{
-A \code{col_spec} S7 object. Use it inside \code{cols()}; the
-constructor itself does not stamp a column name onto the spec
-(that happens inside \code{cols()} from the named-argument position).
+\emph{A \code{col_spec} S7 object.} Pass it to \code{\link[=cols]{cols()}} keyed by
+the input column name; the constructor itself does not stamp
+a name.
 }
 \description{
-Build a column specification used inside \code{cols()}. Each col_spec
-carries the seven display attributes for one column of the input
-data frame; \code{cols()} then attaches it to a \code{tabular_spec} keyed by
-the input column name.
+Build a single column's display attributes — usage, label, format,
+visibility, width, alignment, NA text. The result feeds \code{\link[=cols]{cols()}},
+which stamps the input column name onto the spec from its named-
+argument position and attaches it to the parent \code{tabular_spec}.
 }
 \details{
-\code{col_spec()} is a constructor only — it does not know which input
-column it belongs to until \code{cols()} stamps the name via its
-named-argument position. That separation lets you build a library
-of reusable column specs (e.g. \code{arm_col <- col_spec(align = "decimal")})
-and apply them to multiple inputs without restating the name.
+\strong{Constructor-only.} \code{col_spec()} does not know which input
+column it belongs to until \code{\link[=cols]{cols()}} stamps the name. Build
+reusable specs as ordinary R objects (e.g.
+\code{arm_col <- col_spec(align = "decimal")}) and apply them to
+multiple inputs without restating the name.
+
+\strong{Merge semantics across repeated \code{cols()} calls.} When
+\code{\link[=cols]{cols()}} is called twice for the same column, the engine merges
+field-by-field: a non-default value on the new spec overrides;
+a default-valued field (NA / NULL / "" / \code{TRUE}) leaves the
+existing field intact. Build a column's spec in stages without
+re-stating earlier attributes.
+
+\strong{Validation timing.} Argument shapes are validated eagerly —
+a malformed \code{sprintf} template is probed at construction
+(\code{sprintf(format, 0)}) and fails fast at write time, not at
+render time.
 }
 \examples{
-# 95\% safety pattern: demographics table with every col_spec
-# field exercised in a single complete pipeline.
+# ---- Example 1: Demographics with every col_spec field exercised ----
+#
+# Demographics table where every `col_spec` field is in play:
+# the row-label columns are pinned to a fixed width and aligned
+# left, the four arm columns embed BigN inline in the header,
+# decimal-align numeric content, and render `NA` cells as "-".
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 
 tabular(
@@ -192,29 +167,37 @@ tabular(
   footnotes = "Percentages based on N per treatment group."
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Parameter", width = 2.0, align = "left"),
+    variable   = col_spec(
+      usage = "group", label = "Parameter",
+      width = 2.0,     align = "left"
+    ),
     stat_label = col_spec(label = "Statistic", align = "left"),
-    placebo    = col_spec(
+    placebo  = col_spec(
       label = sprintf("Placebo\nN=\%d", n["placebo"]),
       align = "decimal", na_text = "-"
     ),
-    drug_50    = col_spec(
+    drug_50  = col_spec(
       label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
       align = "decimal", na_text = "-"
     ),
-    drug_100   = col_spec(
+    drug_100 = col_spec(
       label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
       align = "decimal", na_text = "-"
     ),
-    Total      = col_spec(
+    Total    = col_spec(
       label = sprintf("Total\nN=\%d", n["Total"]),
       align = "decimal", na_text = "-"
     )
   ) |>
   sort_rows(by = c("variable", "stat_label"))
 
-# 95\% AE pattern: hidden helper columns (row_type, n_total)
-# drive the sort while staying off the rendered page.
+# ---- Example 2: AE table with hidden helper columns ----
+#
+# AE-by-SOC/PT table where hidden helper columns (`row_type`,
+# `n_total`) drive the sort while staying off the rendered page.
+# Demonstrates `visible = FALSE` for sort-only columns, fixed
+# width on the wide SOC label column, and decimal alignment on
+# all four arm columns.
 ae <- saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -232,23 +215,20 @@ tabular(
     pt       = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
-    placebo  = col_spec(
-      label = sprintf("Placebo\nN=\%d", n["placebo"]),
-      align = "decimal"
-    ),
-    drug_50  = col_spec(
-      label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
-      align = "decimal"
-    ),
-    drug_100 = col_spec(
-      label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
-      align = "decimal"
-    ),
-    Total    = col_spec(
-      label = sprintf("Total\nN=\%d", n["Total"]),
-      align = "decimal"
-    )
+    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"]),  align = "decimal"),
+    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"]),  align = "decimal"),
+    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"]), align = "decimal"),
+    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]),    align = "decimal")
   ) |>
   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 
+}
+\seealso{
+\code{\link[=cols]{cols()}} for the verb that attaches \code{col_spec} entries to a
+\code{tabular_spec}.
+
+\strong{Sibling build verbs:} \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
+\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
+
+\strong{Entry verb:} \code{\link[=tabular]{tabular()}}.
 }

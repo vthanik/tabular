@@ -216,12 +216,13 @@ branch only fires inside the built-in \code{p} formatter and the
 }
 }
 \examples{
-# 95\% demographics pattern: cards ARD -> wide -> rendered table.
-# The multi-row continuous block ("N / Mean (SD) / Median / Min,
-# Max") sits above each categorical block; decimals are set
-# per-stat (mean 1, sd 2, p 1) to match the CDISC convention.
-# Complete pipeline from the long ARD all the way to a sorted
-# tabular_spec ready for emit().
+# ---- Example 1: Demographics -- long ARD to rendered spec ----
+#
+# Full pipeline from a `cards::ard_stack()`-style long ARD to a
+# sorted `tabular_spec`. The multi-row continuous block (N /
+# Mean (SD) / Median / Min, Max) sits above each categorical
+# block; decimals are set per-stat (mean 1, sd 2, p 1) to match
+# the CDISC convention.
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 
 saf_demo_card |>
@@ -249,7 +250,7 @@ saf_demo_card |>
   cols(
     variable   = col_spec(usage = "group", label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
-    Placebo = col_spec(
+    Placebo    = col_spec(
       label = sprintf("Placebo\nN=\%d", n["placebo"]),
       align = "decimal"
     ),
@@ -267,14 +268,14 @@ saf_demo_card |>
     )
   )
 
-# 95\% AE pattern: hierarchical SOC/PT ARD from
-# cards::ard_stack_hierarchical() -> wide -> rendered table.
-# ard_stack_hierarchical emits a soc / pt / row_type triple plus
-# one stat row per (arm, SOC, PT); pivot_across() folds the arm
-# dimension to columns and threads the hierarchy through. The
-# wide output already carries n / N / p stats interpolated as
-# "n (p\%)" cells; sort_rows() puts the highest-frequency SOC and
-# PT at the top.
+# ---- Example 2: Hierarchical SOC/PT AE table ----
+#
+# Hierarchical `cards::ard_stack_hierarchical()` output threaded
+# through `pivot_across()`. The hierarchical ARD emits a
+# (soc, pt, row_type) triple plus one stat row per (arm, SOC, PT);
+# `pivot_across()` folds the arm dimension to columns and
+# preserves the hierarchy markers for downstream sorting and
+# visibility control.
 saf_aesocpt_card |>
   pivot_across(statistic = "{n} ({p}\%)") |>
   tabular(
@@ -289,10 +290,10 @@ saf_aesocpt_card |>
     )
   ) |>
   cols(
-    soc      = col_spec(usage = "group", label = "System Organ Class /\nPreferred Term"),
+    soc      = col_spec(usage = "group", label = "SOC / PT"),
     pt       = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
-    Placebo = col_spec(
+    Placebo  = col_spec(
       label = sprintf("Placebo\nN=\%d", n["placebo"]),
       align = "decimal"
     ),
@@ -306,4 +307,10 @@ saf_aesocpt_card |>
     )
   )
 
+}
+\seealso{
+\code{\link[=tabular]{tabular()}} consumes the wide data frame this helper returns.
+
+\strong{Downstream spec-build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
 }

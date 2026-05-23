@@ -6,43 +6,66 @@
 #' Sort the display rows
 #'
 #' Attach a `sort_spec` to a `tabular_spec`. The engine applies the
-#' sort after `derive()` runs and before pagination, so `by` may
-#' reference any column in `spec@data` (or a column added later via
-#' `derive()`), regardless of whether it appears in `cols()`.
+#' sort after [`derive()`] runs and before pagination, so `by` may
+#' reference any column in `spec@data` (including derived columns)
+#' whether or not the column is declared in [`cols()`].
 #'
-#' A second `sort_rows()` call REPLACES the prior sort — sort is a
-#' single spec on the parent `tabular_spec`, not a stackable list.
-#' Pass length-1 `descending` to apply one direction to every key;
-#' pass length `length(by)` to set per-key directions.
+#' @details
 #'
-#' NA values in a sort key are placed at the end regardless of
-#' direction. Factor columns sort by factor levels, not by the
-#' character label — this is how clinical conventions like the
-#' BOR ordering (`CR < PR < SD < NON-CR/NON-PD < PD < NE < MISSING`)
-#' survive a tabular pipeline without an explicit `mutate()`.
+#' **Replace, not stack.** A second `sort_rows()` call REPLACES the
+#' prior sort — sort is a single spec, not a stackable list. Call
+#' with no arguments to clear.
 #'
-#' @param spec A `tabular_spec` built by `tabular()`.
-#' @param by Character vector of column names to sort by, in order
-#'   of precedence. May reference columns not present in `cols()`
-#'   (sort-only columns ride along through the engine for ordering
-#'   even when they will not be displayed). Length 0 is accepted
-#'   and produces a no-op sort.
-#' @param descending Logical. Length 1 (recycled to `length(by)`)
-#'   or length equal to `by`. `TRUE` sorts the corresponding key
-#'   in descending order. Defaults to `FALSE` (ascending on all
-#'   keys).
-#' @return The updated `tabular_spec`.
+#' **NA last, regardless of direction.** NA values in a sort key are
+#' placed at the end whether the key is ascending or descending
+#' (matching `order(..., na.last = TRUE)`).
+#'
+#' **Factor levels drive the order.** Factor columns sort by factor
+#' levels, not by the character label. The CDISC BOR ordering
+#' (`CR < PR < SD < NON-CR/NON-PD < PD < NE < MISSING`) survives a
+#' tabular pipeline without an explicit `mutate()` — coerce
+#' `stat_label` to a factor with the levels in clinical order
+#' upstream, then `sort_rows(by = "stat_label")` does the rest.
+#'
+#' @param spec *The `tabular_spec` to attach the sort to.*
+#'   `<tabular_spec>: required`.
+#'
+#' @param by *Ordered column names to sort by, in precedence order.*
+#'   `<character>: default character()`. Length 0 is accepted (no-op
+#'   sort). May reference columns not declared in [`cols()`] —
+#'   sort-only helper columns ride along through the engine.
+#'
+#'   **Restriction:** Every entry must be a column in `spec@data` (or
+#'   one that will be added by [`derive()`]). Cannot reference
+#'   `usage = "across"` columns; pivot upstream of the sort instead.
+#'
+#'   ```r
+#'   # Two-key clinical sort: row_type ascending, n_total descending.
+#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+#'   ```
+#'
+#' @param descending *Per-key sort direction.*
+#'   `<logical(1) | logical(length(by))>: default FALSE`. `TRUE`
+#'   sorts the corresponding key descending; length 1 recycles to
+#'   every key.
+#'
+#'   **Restriction:** No NAs. Length must be 1 or `length(by)`.
+#'   **Tip:** For mixed-direction multi-key sorts, pass `length(by)`
+#'   values; the engine inverts the `xtfrm` rank of each descending
+#'   key and calls `order()` once on all keys.
+#'
+#' @return *The updated `tabular_spec`.* Continue chaining with
+#'   [`derive()`], [`style()`], or hand off to the eventual `emit()`.
 #'
 #' @examples
-#' # 95% clinical pattern: AE-by-SOC/PT table arranged so the
-#' # SOCs and PTs with the highest subject counts appear first,
-#' # with the SOC → PT hierarchy preserved. saf_aesocpt$Total
-#' # cells are formatted text ("171 (67.3)"), so a lexical sort
-#' # on Total would be wrong ("14" < "171" < "29") — attach a
-#' # numeric rank column upstream and sort on (row_type, n_total).
-#' # Complete pipeline through every landed verb: tabular() entry
-#' # with TFL number and population qualifier, cols() with BigN
-#' # joined inline from saf_n, sort_rows() as the focal verb.
+#' # ---- Example 1: AE table sorted by SOC, then by descending subject count ----
+#' #
+#' # AE-by-SOC/PT table where the SOCs and PTs appear in descending
+#' # order of subject count within the row-type hierarchy (overall
+#' # first, then SOCs, then PTs). `saf_aesocpt$Total` cells are
+#' # formatted text ("171 (67.3)"), so a lexical sort on `Total`
+#' # would be wrong ("14" < "171" < "29") -- attach a numeric rank
+#' # column upstream and sort on (row_type, n_total).
 #' ae <- saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -55,33 +78,27 @@
 #'     "Adverse Events by System Organ Class and Preferred Term",
 #'     sprintf("Safety Population (N=%d)", n["Total"])
 #'   ),
-#'   footnotes = c(
-#'     "Subjects are counted once per SOC and once per PT.",
-#'     "Percentages based on N per treatment group."
-#'   )
+#'   footnotes = "Subjects are counted once per SOC and once per PT."
 #' ) |>
 #'   cols(
-#'     soc      = col_spec(usage = "group", label = "System Organ Class /\nPreferred Term"),
+#'     soc      = col_spec(usage = "group", label = "SOC / PT"),
 #'     pt       = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
-#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
-#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
-#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
-#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
+#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"])),
+#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"])),
+#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"])),
+#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]))
 #'   ) |>
-#'   sort_rows(
-#'     by = c("row_type", "n_total"),
-#'     descending = c(FALSE, TRUE)
-#'   )
+#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 #'
-#' # 95% clinical pattern: efficacy BOR table in CDISC response
-#' # order (CR < PR < SD < NON-CR/NON-PD < PD < NE < MISSING,
-#' # with derived ORR / DCR rows after). eff_resp$stat_label
-#' # arrives as character, so coerce it to a factor carrying the
-#' # canonical level order; sort_rows() then uses those levels
-#' # instead of alphabetic order. Complete pipeline with the
-#' # efficacy BigN denominator joined inline from eff_n.
+#' # ---- Example 2: BOR table in CDISC factor order ----
+#' #
+#' # Efficacy BOR table that must appear in CDISC clinical order
+#' # (CR < PR < SD < NON-CR/NON-PD < PD < NE < MISSING < ORR < DCR),
+#' # not alphabetical. `eff_resp$stat_label` arrives as character, so
+#' # coerce to a factor with the canonical levels upstream and
+#' # `sort_rows()` uses those levels directly.
 #' bor_levels <- c(
 #'   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
 #'   "Objective Response Rate (CR + PR)",
@@ -103,11 +120,17 @@
 #'   cols(
 #'     stat_label = col_spec(usage = "group", label = "Response"),
 #'     row_type   = col_spec(visible = FALSE),
-#'     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  ne["placebo"]),  align = "decimal"),
-#'     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  ne["drug_50"]),  align = "decimal"),
-#'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", ne["drug_100"]), align = "decimal")
+#'     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  ne["placebo"])),
+#'     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  ne["drug_50"])),
+#'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", ne["drug_100"]))
 #'   ) |>
 #'   sort_rows(by = "stat_label")
+#'
+#' @seealso
+#' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
+#' [`headers()`], [`derive()`], [`style()`].
+#'
+#' **Entry verb:** [`tabular()`].
 #'
 #' @export
 sort_rows <- function(spec, by = character(), descending = FALSE) {

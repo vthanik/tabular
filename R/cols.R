@@ -5,32 +5,37 @@
 
 #' Attach per-column specifications
 #'
-#' Adds `col_spec` entries to a `tabular_spec`. Each named argument's
-#' name must match a column in `spec@data` (or have `usage =
-#' "computed"` if it is a derived column added later by `derive()`).
+#' Add [`col_spec()`] entries to a `tabular_spec`. Each named argument
+#' is one column: the name is the input column in `.spec@data` and the
+#' value is the `col_spec` carrying that column's display attributes
+#' (usage, label, format, alignment, width, visibility, NA text).
+#' Columns not mentioned get a default `col_spec(usage = "display")`
+#' at engine-validate time.
 #'
-#' Columns not mentioned in any `cols()` call get default
-#' `col_spec(usage = "display")` at engine-validate time, so a sparse
-#' `cols()` call is fine — only declare the columns whose attributes
-#' (label, alignment, BigN denominator, hidden status, derived
-#' source) differ from defaults.
+#' @details
+#'
+#' **Sparse declaration.** Declare only the columns whose attributes
+#' differ from the default — a typical pipeline uses one `cols()`
+#' call with one entry per non-default column.
+#'
+#' **Within-call duplicates warn.** A duplicate name inside one
+#' `cols()` call warns and "last value wins". To intentionally
+#' override an attribute, use a second `cols()` call downstream and
+#' let the merge rule below apply.
 #'
 #' @section Repeat-call merge semantics:
 #'
-#' Repeated `cols()` calls **merge** field-by-field on existing
-#' col_specs: a non-default value in the new spec overrides the
-#' existing field; a default-valued field (NA / NULL / "" / `TRUE`)
-#' leaves the existing field unchanged. The merge happens per
-#' column; columns not mentioned in the second call are left alone.
+#' When `cols()` is called more than once for the same column, the
+#' engine merges the new `col_spec` into the existing one field-by-
+#' field. A non-default value on the new spec overrides; a default-
+#' valued field leaves the existing field intact. This lets you
+#' build a column's spec in stages — declare the label-and-alignment
+#' block up front, add the width once you know it fits, then attach
+#' a sort key, all without re-stating earlier attributes. Essential
+#' when generating specs programmatically (looping over arms,
+#' layering a house-style helper).
 #'
-#' This lets you build a column's spec in stages — declare the
-#' label-and-alignment block up front, then add the width once you
-#' know it fits, then attach a sort key, all without re-stating the
-#' earlier attributes. The pattern is essential when generating
-#' specs programmatically (looping over arms, applying a house-style
-#' helper, layering sponsor overrides).
-#'
-#' Default values that *do not* override:
+#' Default values that do NOT override the existing field:
 #'
 #' | field | default that does not override |
 #' |---|---|
@@ -49,25 +54,39 @@
 #'   cols(variable = col_spec(usage = "group", label = "Parameter")) |>
 #'   cols(variable = col_spec(align = "left")) |>
 #'   cols(variable = col_spec(width = 2.0))
-#' # Result: variable has usage = "group", label = "Parameter",
-#' #         align = "left", width = 2.0 -- all four fields set.
+#' # Result: variable has usage="group", label="Parameter",
+#' #         align="left", width=2.0 -- all four fields set.
 #' ```
 #'
-#' @param spec A `tabular_spec` built by `tabular()`.
-#' @param ... Named `col_spec` objects. Each name is the input column
-#'   name in `spec@data`. For `usage = "computed"` the name does not
-#'   need to exist in `data` — it will be supplied by a later
-#'   `derive()` call. Names must be unique within a single `cols()`
-#'   call (a duplicate within one call warns; "last value wins"); to
-#'   intentionally override an attribute, use a second `cols()` call
-#'   downstream and let the merge rule apply.
-#' @return The updated `tabular_spec`.
+#' @param .spec *The `tabular_spec` to extend.*
+#'   `<tabular_spec>: required`. Dot-prefixed so R's partial argument
+#'   matching cannot accidentally bind a short user-supplied name
+#'   (e.g. `s`, `sp`) in `...` to the spec slot. Pipe input
+#'   (`tabular(...) |> cols(...)`) works the normal way — the spec
+#'   is supplied positionally.
+#'
+#' @param ... *Named `col_spec` objects, one per column.* Each name
+#'   is the input column name in `.spec@data`; each value is a
+#'   [`col_spec()`].
+#'
+#'   **Restriction:** Each name must match a column in `.spec@data`,
+#'   OR carry `usage = "computed"` (column supplied by a later
+#'   [`derive()`] call). Names must be unique within a single
+#'   `cols()` call (duplicates warn; "last value wins").
+#'   **Tip:** To override an attribute already declared, use a
+#'   second `cols()` call downstream and let the merge rule apply.
+#'
+#' @return *The updated `tabular_spec`.* Continue chaining with
+#'   [`headers()`], [`sort_rows()`], [`derive()`], [`style()`].
 #'
 #' @examples
-#' # 95% safety pattern: demographics with row-label cols on the
-#' # left and decimal-aligned treatment cols carrying BigN inline.
-#' # Complete pipeline through every landed verb so the example is
-#' # paste-ready into a Quarto vignette.
+#' # ---- Example 1: Demographics with arm BigN inline in headers ----
+#' #
+#' # Demographics table where the row-label columns sit on the left
+#' # and the four treatment-arm columns embed BigN in the header
+#' # label (drawn inline from the bundled `saf_n` data frame). Every
+#' # arm column is decimal-aligned so mixed-format cells like
+#' # "5 (3.2%)" line up on the decimal mark.
 #' n <- stats::setNames(saf_n$n, saf_n$arm_short)
 #'
 #' tabular(
@@ -89,9 +108,12 @@
 #'   ) |>
 #'   sort_rows(by = c("variable", "stat_label"))
 #'
-#' # 95% efficacy pattern: BOR table with CDISC factor ordering.
-#' # row_type is hidden (sort-helper only) and stat_label uses the
-#' # group usage so consecutive runs collapse in render.
+#' # ---- Example 2: BOR table with CDISC factor ordering and hidden helper ----
+#' #
+#' # Best Overall Response table where `stat_label` carries the
+#' # canonical CDISC factor levels (driving the sort) and `row_type`
+#' # is hidden -- present in the data for the sort, absent from the
+#' # rendered output via `col_spec(visible = FALSE)`.
 #' bor_levels <- c(
 #'   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
 #'   "Objective Response Rate (CR + PR)",
@@ -119,14 +141,23 @@
 #'   ) |>
 #'   sort_rows(by = "stat_label")
 #'
+#' @seealso
+#' [`col_spec()`] for the per-column DSL constructor used inside this
+#' verb.
+#'
+#' **Sibling build verbs:** [`headers()`], [`sort_rows()`],
+#' [`derive()`], [`style()`].
+#'
+#' **Entry verb:** [`tabular()`].
+#'
 #' @export
-cols <- function(spec, ...) {
+cols <- function(.spec, ...) {
   call <- rlang::caller_env()
-  check_tabular_spec(spec, call = call)
+  check_tabular_spec(.spec, call = call)
 
   args <- list(...)
   if (length(args) == 0L) {
-    return(spec)
+    return(.spec)
   }
 
   arg_names <- names(args)
@@ -170,7 +201,7 @@ cols <- function(spec, ...) {
     arg_names <- arg_names[keep]
   }
 
-  data_cols <- names(spec@data)
+  data_cols <- names(.spec@data)
   for (i in seq_along(args)) {
     nm <- arg_names[[i]]
     cs <- args[[i]]
@@ -187,7 +218,7 @@ cols <- function(spec, ...) {
     }
   }
 
-  new_cols <- spec@cols
+  new_cols <- .spec@cols
   for (i in seq_along(args)) {
     nm <- arg_names[[i]]
     incoming <- S7::set_props(args[[i]], name = nm)
@@ -198,7 +229,7 @@ cols <- function(spec, ...) {
     }
   }
 
-  S7::set_props(spec, cols = new_cols)
+  S7::set_props(.spec, cols = new_cols)
 }
 
 # ---------------------------------------------------------------------

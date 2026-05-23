@@ -7,40 +7,44 @@
 tabular(data, titles = NULL, footnotes = NULL)
 }
 \arguments{
-\item{data}{A data frame. Tibbles / data.tables / arrow tables are
-coerced via \code{as.data.frame()}. Must have at least one column;
-column names must be unique. Zero rows is allowed (engine emits
-a stub with title + footnote + "No data").}
+\item{data}{\emph{The display rows.}
+\verb{<data.frame>: required}. Pre-summarised wide-format data;
+tibbles, data.tables, and arrow tables are coerced via
+\code{as.data.frame()}. Factor columns are preserved (their levels
+drive \code{\link[=sort_rows]{sort_rows()}}).
 
-\item{titles}{Character vector; one element per displayed title
-line. Embedded \verb{\\n} inside an element is allowed. \code{NULL}
-(default) is equivalent to no titles.
+\strong{Restriction:} At least one column; column names must be
+unique. Zero rows is accepted (engine renders a "No data" stub).
+\strong{Interaction:} The \code{cards}-format counterparts
+(\code{saf_demo_card}, \code{eff_resp_card}, ...) are NOT accepted
+directly; pipe through \code{\link[=pivot_across]{pivot_across()}} first.}
 
-Titles are multi-line by contract — clinical tables routinely
-carry two to four title rows (table number, description,
-population qualifier with BigN, optional subgroup). Pass them
-as one element per line; the backend renders each element
-centred on its own row, collapsing unused rows so the column-
-header band sits flush against the lowest used title.
+\item{titles}{\emph{Page-title block, one element per row.}
+\verb{<character> | NULL: default NULL}. Each element renders on
+its own centred line; embedded \verb{\\n} wraps within that row. The
+backend collapses unused rows so the column-header band sits
+flush against the lowest used title.
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{titles = c(
+\strong{Restriction:} No NAs.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Canonical 3-line title block with BigN-qualified population.
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+titles = c(
   "Table 14.3.1",
   "Adverse Events by System Organ Class and Preferred Term",
   sprintf("Safety Population (N=\%d)", n["Total"])
 )
 }\if{html}{\out{</div>}}}
 
-\item{footnotes}{Character vector; one element per displayed
-footnote line. \code{NULL} (default) is equivalent to no footnotes.
+\item{footnotes}{\emph{Page-footnote block, one element per row.}
+\verb{<character> | NULL: default NULL}. User-supplied prose rows
+only; the backend appends its own program-path / program-name /
+timestamp band below them at render time.
 
-Footnotes are also multi-line by contract; clinical tables
-commonly carry one to four user footnote rows (denominator
-note, qualifier, abbreviation key) followed by an automated
-program-path / program-name / timestamp band the rendering
-backend will append. The user supplies only the prose rows;
-the backend handles the trailing rule and the program band.
+\strong{Restriction:} No NAs.
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{footnotes = c(
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Canonical 3-line footnote block.
+footnotes = c(
   "Subjects are counted once per SOC and once per PT.",
   "Percentages based on N per treatment group.",
   "TEAE = treatment-emergent adverse event."
@@ -48,29 +52,42 @@ the backend handles the trailing rule and the program band.
 }\if{html}{\out{</div>}}}
 }
 \value{
-A \code{tabular_spec} S7 object.
+\emph{A \code{tabular_spec} S7 object.} Pipe it into \code{\link[=cols]{cols()}},
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, and \code{\link[=style]{style()}} to
+build the display; the eventual \code{emit()} verb resolves the spec
+and writes the rendered file.
 }
 \description{
 Wrap a pre-summarised data frame into a \code{tabular_spec} ready for
-the rest of the verb chain. \code{tabular()} is the entry point of the
-pipeline; it owns \code{data}, \code{titles}, and \code{footnotes}. Every other
-verb returns an updated \code{tabular_spec} via \code{S7::set_props()}.
+the verb chain. \code{tabular()} is the entry verb — it owns the
+\code{data}, \code{titles}, and \code{footnotes} slots; every downstream verb
+(\code{\link[=cols]{cols()}}, \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}},
+\code{\link[=style]{style()}}) returns an updated spec for further chaining.
 }
 \details{
-\code{data} is expected to be already pre-summarised: one row per
-display row of the final table. tabular does NOT aggregate,
-filter, weight, or generate subtotal rows — do that upstream
-with \code{cards}, \code{dplyr}, SAS, or any pre-processing tool. If your
-upstream is \code{cards::ard_stack()}, pipe through \code{pivot_across()}
+\strong{Pre-summarised input contract.} \code{data} is one row per displayed
+row of the final table. \code{tabular()} does not aggregate, filter,
+weight, or generate subtotal rows — those happen upstream in
+\code{cards}, \code{dplyr}, or SAS. If the upstream is a long
+\code{cards::ard_stack()} ARD, pipe through \code{\link[=pivot_across]{pivot_across()}} first
 to land in the wide shape \code{tabular()} accepts.
+
+\strong{Multi-line titles and footnotes by contract.} Clinical tables
+routinely carry 2-4 title rows and 1-4 user footnote rows. Pass
+each row as one element of the character vector; the backend
+renders each element on its own line, collapsing unused rows so
+the column-header band sits flush against the lowest used title.
 }
 \examples{
-# 95\% safety pattern: AE-by-SOC/PT table — the regulatory work
-# horse. Wrap the pre-summarised saf_aesocpt frame with the
-# canonical 4-line title block (table number, description,
-# population qualifier with BigN from saf_n) and a footnote
-# block explaining the denominator. Hierarchy markers and the
-# rank column ride along for sort_rows() downstream.
+# ---- Example 1: Adverse-event table by SOC and Preferred Term ----
+#
+# The regulatory work-horse layout: AE-by-SOC/PT with the
+# canonical 3-line title block (table number, description,
+# population qualifier with BigN drawn inline from `saf_n`) and a
+# two-line footnote block explaining the denominator. The
+# downstream pipeline hides the hierarchy markers (`row_type`,
+# `n_total`) but keeps them in the data so `sort_rows()` can
+# arrange SOCs and PTs in descending order of subject count.
 ae <- saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -89,20 +106,24 @@ tabular(
   )
 ) |>
   cols(
-    soc      = col_spec(usage = "group", label = "System Organ Class /\nPreferred Term"),
+    soc      = col_spec(usage = "group", label = "SOC / PT"),
     pt       = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
-    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"]),  align = "decimal"),
-    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"]),  align = "decimal"),
-    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"]), align = "decimal"),
-    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]),    align = "decimal")
+    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"])),
+    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"])),
+    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"])),
+    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]))
   ) |>
   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 
-# 95\% efficacy pattern: best overall response with CDISC factor
-# ordering. Demographics-style entry, decimal-aligned columns,
-# BigN denominator drawn from eff_n.
+# ---- Example 2: Best overall response with CDISC factor ordering ----
+#
+# Efficacy table where response categories must appear in CDISC
+# clinical order (CR < PR < SD < NON-CR/NON-PD < PD < NE <
+# MISSING < ORR < DCR), not alphabetical. Coerce `stat_label` to
+# a factor with the canonical levels upstream and `sort_rows()`
+# picks up the order for free.
 bor_levels <- c(
   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
   "Objective Response Rate (CR + PR)",
@@ -119,18 +140,24 @@ tabular(
     "Best Overall Response and Response Rates",
     sprintf("Efficacy Evaluable Population (N=\%d)", ne["Total"])
   ),
-  footnotes = c(
-    "Response per RECIST 1.1, investigator assessment.",
-    "Percentages based on number of subjects in the analysis population."
-  )
+  footnotes = "Response per RECIST 1.1, investigator assessment."
 ) |>
   cols(
     stat_label = col_spec(usage = "group", label = "Response"),
     row_type   = col_spec(visible = FALSE),
-    placebo    = col_spec(label = sprintf("Placebo\nN=\%d",  ne["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\nN=\%d",  ne["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\nN=\%d", ne["drug_100"]), align = "decimal")
+    placebo    = col_spec(label = sprintf("Placebo\nN=\%d",  ne["placebo"])),
+    drug_50    = col_spec(label = sprintf("Drug 50\nN=\%d",  ne["drug_50"])),
+    drug_100   = col_spec(label = sprintf("Drug 100\nN=\%d", ne["drug_100"]))
   ) |>
   sort_rows(by = "stat_label")
 
+}
+\seealso{
+\strong{Downstream build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
+
+\strong{Input helper:} \code{\link[=pivot_across]{pivot_across()}}.
+
+\strong{Demo data:} \code{saf_demo}, \code{saf_aesocpt}, \code{eff_resp}, \code{saf_n},
+\code{eff_n}.
 }

@@ -165,3 +165,18 @@ test_that("col_spec(visible = c(TRUE, FALSE)) raises tabular_error_input", {
 test_that("col_spec(visible = 'TRUE') rejects non-logical", {
   expect_error(col_spec(visible = "TRUE"), class = "tabular_error_input")
 })
+
+# ---- empty / whitespace labels are ALLOWED on col_spec --------------
+# This is the asymmetry with headers(): a band must always carry
+# visible text, but a column header may be intentionally blank (row-
+# label columns in some clinical layouts render no header text).
+
+test_that("col_spec(label = '') is accepted", {
+  cs <- col_spec(label = "")
+  expect_identical(cs@label, "")
+})
+
+test_that("col_spec(label = '   ') (whitespace-only) is accepted", {
+  cs <- col_spec(label = "   ")
+  expect_identical(cs@label, "   ")
+})

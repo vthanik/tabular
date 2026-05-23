@@ -4,11 +4,12 @@ Version: 0.0.0.9000
 Authors@R:
     person("Vignesh", "Thanikachalam", email = "about.vignesh@gmail.com",
            role = c("aut", "cre"))
-Description: Native emission of clinical tables, figures, and listings to
-    RTF, LaTeX, HTML, PDF, and DOCX from a single dplyr-style API. Handles
-    decimal alignment via font metrics, group-aware pagination, page-field
-    tokens, and inline markup that survives string operations. Designed
-    for CDISC ADaM workflows and FDA/EMA regulatory submissions.
+Description: Native emission of clinical submission tables to RTF,
+    LaTeX, HTML, PDF, and DOCX. Handles decimal alignment via font
+    metrics, multi-level column headers with passthrough leaves,
+    predicate-targeted styling, and group-aware pagination. Designed
+    for CDISC ADaM workflows and FDA / EMA / PMDA regulatory
+    submissions.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

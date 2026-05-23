@@ -23,14 +23,11 @@ knitr::opts_chunk$set(
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-Native emission of clinical tables, figures, and listings to RTF,
-LaTeX, HTML, PDF, and DOCX from a single dplyr-style API. Designed
-for CDISC ADaM workflows and FDA / EMA regulatory submissions.
-
-`tabular` replaces the `tfrmt` + `r2rtf` + `flextable` + `gt`
-stitched-together stack with one package per format — decimal
-alignment, group-aware pagination, page-field tokens, and inline
-markup that survives string operations all handled natively.
+Native emission of clinical submission tables to RTF, LaTeX, HTML,
+PDF, and DOCX. Decimal alignment via real font metrics, multi-level
+column headers with passthrough leaves, predicate-targeted styling,
+and group-aware pagination — all from one short pipeline. Designed
+for CDISC ADaM workflows and FDA / EMA / PMDA regulatory submissions.
 
 ## Installation
 
@@ -43,52 +40,78 @@ pak::pak("vthanik/tabular")
 
 ## Status
 
-`tabular` is in **pre-CRAN** development. The package skeleton, S7
-classes, and bundled demo datasets are in place; backends land
-incrementally per `plan.md`. Break-anything-anytime until v0.1.0.
+`tabular` is in **pre-CRAN** development. The spec-building and
+resolve-engine surface (`tabular()`, `cols()`, `headers()`,
+`sort_rows()`, `derive()`, `style()`) is in place; backends
+(`emit()` to RTF / LaTeX / PDF / HTML / DOCX) land incrementally per
+`plan.md`. Break-anything-anytime until v0.1.0.
 
-## Example — 95% case (planned)
+## Example
 
-Pre-summarised wide data flows through five verbs to a regulatory
-submission file:
+The pipeline starts from a pre-summarised wide data frame and chains
+through one verb per concern. Each verb returns an updated
+`tabular_spec`; the engine resolves the spec at render time:
 
 ``` r
 library(tabular)
 
-saf_demo |>
-  tb_table(
-    titles    = c("Table 14.1.1", "Demographics", "Safety Population"),
-    footnotes = "Percentages based on N per treatment group."
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+
+tabular(
+  saf_demo,
+  titles = c(
+    "Table 14.1.1",
+    "Demographics and Baseline Characteristics",
+    sprintf("Safety Population (N=%d)", n["Total"])
+  ),
+  footnotes = "Percentages based on N per treatment group."
+) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Parameter"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+    drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+    drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+    Total      = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
   ) |>
-  tb_cols(
-    labels  = c(stat_label = "", placebo = "Placebo",
-                drug_50 = "Drug 50mg", drug_100 = "Drug 100mg",
-                Total = "Total"),
-    align   = c(stat_label = "left", "*" = "decimal"),
-    visible = c(variable = FALSE),
-    n       = attr(saf_demo, "n")
+  headers(
+    "Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")
   ) |>
-  tb_rows(group_by = "variable", indent_by = "stat_label") |>
-  tb_render("t_14_1_1.rtf")
+  sort_rows(by = c("variable", "stat_label"))
 ```
+
+When the render backends land, the final verb in the chain will
+emit to a file:
+
+``` r
+# Pending implementation:
+... |> emit("t_14_1_1.rtf")
+```
+
+## Verb surface (as of this snapshot)
+
+| Verb | Tier | Role |
+|---|---|---|
+| `tabular()` | Entry | Wrap a pre-summarised data frame into a `tabular_spec` |
+| `pivot_across()` | Input helper | Bridge `cards` long ARD to a wide display data frame |
+| `col_spec()` | Build | Per-column display attributes (usage / label / align / format) |
+| `cols()` | Build | Attach `col_spec` entries to the spec, keyed by data column |
+| `headers()` | Build | Multi-level column-header bands; passthrough leaves supported |
+| `sort_rows()` | Build | Output row order; factor-level-aware, NA-last |
+| `derive()` | Build | Display-time row-arithmetic; topo-sorted; references prior derives |
+| `style()` | Style | Predicate-targeted bold / colour / borders for cells and rows |
 
 ## Demo datasets
 
-Five pre-summarised wide-format tables ship with the package to
-power examples, vignettes, and tests:
-
-```{r}
-#| eval: false
-library(tabular)
-head(saf_demo)
-attr(saf_demo, "n")
-```
+Pre-summarised wide-format tables and their upstream `cards`-format
+counterparts ship with the package to power examples, vignettes, and
+tests:
 
 | Dataset | Content |
-|---------|---------|
-| `saf_demo` | Demographics, Safety Population |
-| `saf_aeoverall` | High-level AE flags |
-| `saf_aesocpt` | AEs by SOC and PT |
-| `saf_vital` | Vital signs at Baseline / End of Treatment |
-| `eff_resp` | Best Overall Response + ORR / DCR |
-
+|---|---|
+| `saf_demo` / `saf_demo_card` | Demographics, Safety Population |
+| `saf_aeoverall` / `saf_aeoverall_card` | High-level AE flags |
+| `saf_aesocpt` / `saf_aesocpt_card` | AEs by SOC and Preferred Term |
+| `saf_vital` / `saf_vital_card` | Vital signs at Baseline / End of Treatment |
+| `eff_resp` / `eff_resp_card` | Best Overall Response and Response Rates |
+| `saf_n` / `eff_n` | BigN denominators per arm |

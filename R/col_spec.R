@@ -7,165 +7,146 @@
 
 #' Per-column display specification
 #'
-#' Build a column specification used inside `cols()`. Each col_spec
-#' carries the seven display attributes for one column of the input
-#' data frame; `cols()` then attaches it to a `tabular_spec` keyed by
-#' the input column name.
+#' Build a single column's display attributes — usage, label, format,
+#' visibility, width, alignment, NA text. The result feeds [`cols()`],
+#' which stamps the input column name onto the spec from its named-
+#' argument position and attaches it to the parent `tabular_spec`.
 #'
-#' `col_spec()` is a constructor only — it does not know which input
-#' column it belongs to until `cols()` stamps the name via its
-#' named-argument position. That separation lets you build a library
-#' of reusable column specs (e.g. `arm_col <- col_spec(align = "decimal")`)
-#' and apply them to multiple inputs without restating the name.
+#' @details
 #'
-#' @param usage One of `"display"`, `"group"`, `"across"`,
-#'   `"computed"`, or `NULL` (auto-default in `cols()`). Drives how
-#'   the engine treats the column: pass-through, row-label with
-#'   repeat-suppression, pivot source, or derived display column.
+#' **Constructor-only.** `col_spec()` does not know which input
+#' column it belongs to until [`cols()`] stamps the name. Build
+#' reusable specs as ordinary R objects (e.g.
+#' `arm_col <- col_spec(align = "decimal")`) and apply them to
+#' multiple inputs without restating the name.
 #'
-#'   Accepts:
+#' **Merge semantics across repeated `cols()` calls.** When
+#' [`cols()`] is called twice for the same column, the engine merges
+#' field-by-field: a non-default value on the new spec overrides;
+#' a default-valued field (NA / NULL / "" / `TRUE`) leaves the
+#' existing field intact. Build a column's spec in stages without
+#' re-stating earlier attributes.
 #'
-#'   *   **`"display"`** — pass-through column; rendered as-is.
-#'   *   **`"group"`** — row-label column; repeat-suppression at
-#'       render time and continuation-page repeat keys to this
-#'       column. Use for `variable`, `soc`, `stat_label`, and any
-#'       column whose value spans multiple consecutive rows.
-#'   *   **`"across"`** — column whose unique values pivot into new
-#'       output columns. The pivot happens upstream of `tabular()`
-#'       via `pivot_across()`; the `"across"` tag marks the source
-#'       column so the engine knows not to render it directly.
-#'   *   **`"computed"`** — derived display column produced by a
-#'       later `derive_spec`. The column name does not need to
-#'       exist in `spec@data` at `cols()` time.
-#'   *   **`NULL`** (default) — inferred in `cols()` (always
-#'       `"display"`). Pass `NULL` when you only want to override
-#'       label / align / width and accept the default usage.
+#' **Validation timing.** Argument shapes are validated eagerly —
+#' a malformed `sprintf` template is probed at construction
+#' (`sprintf(format, 0)`) and fails fast at write time, not at
+#' render time.
+#'
+#' @param usage *Engine role.*
+#'   `<character(1) | NULL>: default NULL`. One of:
+#'
+#'   *   **`"display"`** (default in [`cols()`]) — pass-through.
+#'   *   **`"group"`** — row-label with repeat-suppression and
+#'       continuation-page repeat keys. Use for `variable`, `soc`,
+#'       `stat_label`.
+#'   *   **`"across"`** — pivot source. Pair with [`pivot_across()`].
+#'   *   **`"computed"`** — derived column; pair with a [`derive()`]
+#'       entry. The column need not exist in `data` yet at
+#'       [`cols()`] time.
+#'   *   **`NULL`** — inferred as `"display"` in [`cols()`].
+#'
+#'   **Interaction:** `"computed"` requires a matching [`derive()`]
+#'   entry by engine_validate time. `"across"` requires the pivot
+#'   to have happened upstream via [`pivot_across()`].
 #'
 #'   ```r
-#'   # The four canonical roles, each on the demographics frame.
-#'   tabular(saf_demo) |>
-#'     cols(
-#'       variable   = col_spec(usage = "group"),     # row-label
-#'       stat_label = col_spec(usage = "group"),     # second-level row-label
-#'       placebo    = col_spec(),                    # display (default)
-#'       drug_50    = col_spec(),
-#'       drug_100   = col_spec(),
-#'       Total      = col_spec()
-#'     )
+#'   # Two row-label columns and four arm columns.
+#'   cols(
+#'     variable   = col_spec(usage = "group"),
+#'     stat_label = col_spec(usage = "group"),
+#'     placebo    = col_spec(),
+#'     drug_50    = col_spec()
+#'   )
 #'   ```
-#' @param label Display label for the column header. Single character
-#'   string; `NA_character_` (default) means use the input column
-#'   name verbatim.
 #'
-#'   Embed `\n` for line breaks (multi-line headers are clinical
-#'   convention — the arm name on row 1, the BigN denominator on
-#'   row 2). Embed BigN inline via `paste()` / `sprintf()` against
-#'   the bundled `saf_n` / `eff_n` data frames; there is no
-#'   dedicated BigN field on the col_spec because the denominator
-#'   already lives in a discoverable data frame upstream.
+#' @param label *Display label for the column header.*
+#'   `<character(1)>: default NA_character_`. Embed `\n` for
+#'   multi-line headers (arm name on row 1, BigN denominator on
+#'   row 2 is the clinical convention). `NA_character_` means use
+#'   the input column name verbatim.
+#'
+#'   **Restriction:** Empty string and whitespace-only labels are
+#'   accepted here, unlike [`headers()`] band labels which are
+#'   strict.
 #'
 #'   ```r
-#'   # Two-line header with arm name and BigN; matches the BMS /
-#'   # GSK convention of placing N=xx on a dedicated second row.
+#'   # Two-line header with arm name and BigN from saf_n.
 #'   n <- stats::setNames(saf_n$n, saf_n$arm_short)
 #'   col_spec(
 #'     label = sprintf("Placebo\nN=%d", n["placebo"]),
 #'     align = "decimal"
 #'   )
 #'   ```
-#' @param format Post-cell formatter applied at `engine_format` time.
-#'   Three accepted shapes:
 #'
-#'   *   **character** — a single `sprintf()` template applied to
-#'       each cell of the column. Validated at construction time
-#'       with a probe call (`sprintf(x, 0)`), so a malformed
-#'       template fails fast rather than at render.
-#'   *   **function** — a unary function taking one column of
-#'       values and returning a character vector of the same
-#'       length. Use for non-`sprintf` formatting (locale-aware
-#'       numbers, thousand separators, conditional symbols).
-#'   *   **`NULL`** (default) — backend-default formatting.
-#'       Character columns are passed through; numeric columns
-#'       are rendered with the preset's default precision.
+#' @param format *Post-cell formatter.*
+#'   `<character(1) | function | NULL>: default NULL`. A `sprintf`
+#'   template applied per cell, OR a unary `function(x) -> character`
+#'   of the same length, OR `NULL` for backend default.
+#'
+#'   **Restriction:** Character templates are probed with
+#'   `sprintf(format, 0)` at construction; malformed templates fail
+#'   fast.
+#'   **Tip:** Use a function for non-`sprintf` formatting (locale-
+#'   aware numbers, thousand separators, conditional symbols).
 #'
 #'   ```r
-#'   # sprintf template: one-decimal numerics.
+#'   # sprintf template vs. function form.
 #'   col_spec(format = "%.1f")
-#'
-#'   # Function: thousands separator + dynamic precision.
-#'   col_spec(format = function(x) {
-#'     formatC(x, format = "f", digits = 1, big.mark = ",")
-#'   })
+#'   col_spec(format = function(x) formatC(x, format = "f", digits = 1, big.mark = ","))
 #'   ```
-#' @param visible Logical, length 1, non-NA. `FALSE` hides the column
-#'   from rendered output but keeps it in `spec@data` so the engine
-#'   can read it for sort keys, derive expressions, group breaks,
-#'   and style predicates. Default `TRUE`.
 #'
-#'   Use this when your pre-summarised input carries auxiliary
-#'   columns (numeric rank, hierarchy markers, raw counts behind
-#'   formatted percentages) that drive the engine but should not
-#'   appear in the final table.
+#' @param visible *Whether the column renders.*
+#'   `<logical(1)>: default TRUE`. `FALSE` hides the column from
+#'   output but keeps it in `spec@data` so [`sort_rows()`],
+#'   [`derive()`], and [`style()`] predicates can still reference it.
 #'
-#'   ```r
-#'   # Hide the integer rank column used as a sort key.
-#'   col_spec(visible = FALSE)
-#'   ```
-#' @param width Column width in inches. `NA_real_` (default) leaves
-#'   widths to backend auto-fit. Must be positive and finite when set.
+#'   **Interaction:** Hidden columns are the standard pattern for
+#'   sort-key helpers (`row_type`, `n_total`) and for the numeric
+#'   counts behind formatted-text percentage cells.
 #'
-#'   Use to fix the width of a wide row-label column (e.g. SOC /
-#'   PT spans two lines) so the table fits inside a landscape
-#'   submission page without horizontal pagination kicking in.
+#' @param width *Column width in inches.*
+#'   `<numeric(1) | NA_real_>: default NA_real_`. `NA` leaves widths
+#'   to the backend's auto-fit; a numeric value pins the column.
 #'
-#'   ```r
-#'   # Pin the SOC / PT label column to 2.5 inches.
-#'   col_spec(usage = "group", width = 2.5, label = "SOC / PT")
-#'   ```
-#' @param align One of `"left"`, `"center"`, `"right"`, `"decimal"`,
-#'   or `NULL` (backend default).
+#'   **Restriction:** Must be positive and finite when set.
+#'   **Interaction:** Sum of pinned widths drives whether horizontal
+#'   pagination kicks in.
+#'
+#' @param align *Cell alignment within the column.*
+#'   `<character(1) | NULL>: default NULL`. One of:
 #'
 #'   *   **`"left"`** — character columns; row labels.
-#'   *   **`"center"`** — column headers band; rarely on data cells.
+#'   *   **`"center"`** — column-header band; rarely on data cells.
 #'   *   **`"right"`** — numeric content without decimals.
-#'   *   **`"decimal"`** — numeric content with mixed decimal
-#'       widths. The engine aligns each cell on its decimal mark
-#'       via the active preset's `decimal_metrics`. This is the
-#'       clinical convention for any column carrying mixed-format
-#'       cells like `"5 (3.2%)"` next to `"54 (32.1%)"`.
-#'   *   **`NULL`** (default) — backend default (right for numeric,
-#'       left for character).
+#'   *   **`"decimal"`** — numeric or mixed-format cells aligned on
+#'       the decimal mark. Use for `"5 (3.2%)"` next to
+#'       `"54 (32.1%)"`.
+#'   *   **`NULL`** (default) — backend default: right for numeric,
+#'       left for character.
 #'
-#'   ```r
-#'   # Decimal alignment on every treatment column; row label left.
-#'   tabular(saf_demo) |>
-#'     cols(
-#'       variable = col_spec(usage = "group", align = "left"),
-#'       placebo  = col_spec(align = "decimal"),
-#'       drug_50  = col_spec(align = "decimal"),
-#'       drug_100 = col_spec(align = "decimal")
-#'     )
-#'   ```
-#' @param na_text Single non-NA character string substituted for `NA`
-#'   cells before the `format` step. Default `""` (empty cell).
+#'   **Tip:** `"decimal"` uses the active preset's `decimal_metrics`
+#'   knob (AFM Core 14 fonts or systemfonts) to compute the
+#'   alignment anchor.
 #'
-#'   Use to render `NA` as a non-blank token when blank would be
-#'   ambiguous (`"-"`, `"NR"` for not-reported, `"."` for SAS-style
-#'   missing).
+#' @param na_text *Text substituted for `NA` cells.*
+#'   `<character(1)>: default ""`. Substituted BEFORE the `format`
+#'   step, so `format` does not need to anticipate `NA`.
 #'
-#'   ```r
-#'   # Render NA as "NR" (not reported) — typical for safety tables
-#'   # where blank means "not applicable" but NR means "applicable
-#'   # but unavailable".
-#'   col_spec(na_text = "NR")
-#'   ```
-#' @return A `col_spec` S7 object. Use it inside `cols()`; the
-#'   constructor itself does not stamp a column name onto the spec
-#'   (that happens inside `cols()` from the named-argument position).
+#'   **Tip:** Use a sentinel (`"-"`, `"NR"`, `"."`) when blank cells
+#'   would be ambiguous, e.g. when "not applicable" and "not
+#'   reported" both render blank.
+#'
+#' @return *A `col_spec` S7 object.* Pass it to [`cols()`] keyed by
+#'   the input column name; the constructor itself does not stamp
+#'   a name.
 #'
 #' @examples
-#' # 95% safety pattern: demographics table with every col_spec
-#' # field exercised in a single complete pipeline.
+#' # ---- Example 1: Demographics with every col_spec field exercised ----
+#' #
+#' # Demographics table where every `col_spec` field is in play:
+#' # the row-label columns are pinned to a fixed width and aligned
+#' # left, the four arm columns embed BigN inline in the header,
+#' # decimal-align numeric content, and render `NA` cells as "-".
 #' n <- stats::setNames(saf_n$n, saf_n$arm_short)
 #'
 #' tabular(
@@ -178,29 +159,37 @@
 #'   footnotes = "Percentages based on N per treatment group."
 #' ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Parameter", width = 2.0, align = "left"),
+#'     variable   = col_spec(
+#'       usage = "group", label = "Parameter",
+#'       width = 2.0,     align = "left"
+#'     ),
 #'     stat_label = col_spec(label = "Statistic", align = "left"),
-#'     placebo    = col_spec(
+#'     placebo  = col_spec(
 #'       label = sprintf("Placebo\nN=%d", n["placebo"]),
 #'       align = "decimal", na_text = "-"
 #'     ),
-#'     drug_50    = col_spec(
+#'     drug_50  = col_spec(
 #'       label = sprintf("Drug 50\nN=%d", n["drug_50"]),
 #'       align = "decimal", na_text = "-"
 #'     ),
-#'     drug_100   = col_spec(
+#'     drug_100 = col_spec(
 #'       label = sprintf("Drug 100\nN=%d", n["drug_100"]),
 #'       align = "decimal", na_text = "-"
 #'     ),
-#'     Total      = col_spec(
+#'     Total    = col_spec(
 #'       label = sprintf("Total\nN=%d", n["Total"]),
 #'       align = "decimal", na_text = "-"
 #'     )
 #'   ) |>
 #'   sort_rows(by = c("variable", "stat_label"))
 #'
-#' # 95% AE pattern: hidden helper columns (row_type, n_total)
-#' # drive the sort while staying off the rendered page.
+#' # ---- Example 2: AE table with hidden helper columns ----
+#' #
+#' # AE-by-SOC/PT table where hidden helper columns (`row_type`,
+#' # `n_total`) drive the sort while staying off the rendered page.
+#' # Demonstrates `visible = FALSE` for sort-only columns, fixed
+#' # width on the wide SOC label column, and decimal alignment on
+#' # all four arm columns.
 #' ae <- saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -218,24 +207,21 @@
 #'     pt       = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
-#'     placebo  = col_spec(
-#'       label = sprintf("Placebo\nN=%d", n["placebo"]),
-#'       align = "decimal"
-#'     ),
-#'     drug_50  = col_spec(
-#'       label = sprintf("Drug 50\nN=%d", n["drug_50"]),
-#'       align = "decimal"
-#'     ),
-#'     drug_100 = col_spec(
-#'       label = sprintf("Drug 100\nN=%d", n["drug_100"]),
-#'       align = "decimal"
-#'     ),
-#'     Total    = col_spec(
-#'       label = sprintf("Total\nN=%d", n["Total"]),
-#'       align = "decimal"
-#'     )
+#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
 #'   ) |>
 #'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+#'
+#' @seealso
+#' [`cols()`] for the verb that attaches `col_spec` entries to a
+#' `tabular_spec`.
+#'
+#' **Sibling build verbs:** [`headers()`], [`sort_rows()`],
+#' [`derive()`], [`style()`].
+#'
+#' **Entry verb:** [`tabular()`].
 #'
 #' @export
 col_spec <- function(

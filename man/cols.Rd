@@ -4,50 +4,63 @@
 \alias{cols}
 \title{Attach per-column specifications}
 \usage{
-cols(spec, ...)
+cols(.spec, ...)
 }
 \arguments{
-\item{spec}{A \code{tabular_spec} built by \code{tabular()}.}
+\item{.spec}{\emph{The \code{tabular_spec} to extend.}
+\verb{<tabular_spec>: required}. Dot-prefixed so R's partial argument
+matching cannot accidentally bind a short user-supplied name
+(e.g. \code{s}, \code{sp}) in \code{...} to the spec slot. Pipe input
+(\code{tabular(...) |> cols(...)}) works the normal way — the spec
+is supplied positionally.}
 
-\item{...}{Named \code{col_spec} objects. Each name is the input column
-name in \code{spec@data}. For \code{usage = "computed"} the name does not
-need to exist in \code{data} — it will be supplied by a later
-\code{derive()} call. Names must be unique within a single \code{cols()}
-call (a duplicate within one call warns; "last value wins"); to
-intentionally override an attribute, use a second \code{cols()} call
-downstream and let the merge rule apply.}
+\item{...}{\emph{Named \code{col_spec} objects, one per column.} Each name
+is the input column name in \code{.spec@data}; each value is a
+\code{\link[=col_spec]{col_spec()}}.
+
+\strong{Restriction:} Each name must match a column in \code{.spec@data},
+OR carry \code{usage = "computed"} (column supplied by a later
+\code{\link[=derive]{derive()}} call). Names must be unique within a single
+\code{cols()} call (duplicates warn; "last value wins").
+\strong{Tip:} To override an attribute already declared, use a
+second \code{cols()} call downstream and let the merge rule apply.}
 }
 \value{
-The updated \code{tabular_spec}.
+\emph{The updated \code{tabular_spec}.} Continue chaining with
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
 }
 \description{
-Adds \code{col_spec} entries to a \code{tabular_spec}. Each named argument's
-name must match a column in \code{spec@data} (or have \code{usage = "computed"} if it is a derived column added later by \code{derive()}).
+Add \code{\link[=col_spec]{col_spec()}} entries to a \code{tabular_spec}. Each named argument
+is one column: the name is the input column in \code{.spec@data} and the
+value is the \code{col_spec} carrying that column's display attributes
+(usage, label, format, alignment, width, visibility, NA text).
+Columns not mentioned get a default \code{col_spec(usage = "display")}
+at engine-validate time.
 }
 \details{
-Columns not mentioned in any \code{cols()} call get default
-\code{col_spec(usage = "display")} at engine-validate time, so a sparse
-\code{cols()} call is fine — only declare the columns whose attributes
-(label, alignment, BigN denominator, hidden status, derived
-source) differ from defaults.
+\strong{Sparse declaration.} Declare only the columns whose attributes
+differ from the default — a typical pipeline uses one \code{cols()}
+call with one entry per non-default column.
+
+\strong{Within-call duplicates warn.} A duplicate name inside one
+\code{cols()} call warns and "last value wins". To intentionally
+override an attribute, use a second \code{cols()} call downstream and
+let the merge rule below apply.
 }
 \section{Repeat-call merge semantics}{
 
 
-Repeated \code{cols()} calls \strong{merge} field-by-field on existing
-col_specs: a non-default value in the new spec overrides the
-existing field; a default-valued field (NA / NULL / "" / \code{TRUE})
-leaves the existing field unchanged. The merge happens per
-column; columns not mentioned in the second call are left alone.
+When \code{cols()} is called more than once for the same column, the
+engine merges the new \code{col_spec} into the existing one field-by-
+field. A non-default value on the new spec overrides; a default-
+valued field leaves the existing field intact. This lets you
+build a column's spec in stages — declare the label-and-alignment
+block up front, add the width once you know it fits, then attach
+a sort key, all without re-stating earlier attributes. Essential
+when generating specs programmatically (looping over arms,
+layering a house-style helper).
 
-This lets you build a column's spec in stages — declare the
-label-and-alignment block up front, then add the width once you
-know it fits, then attach a sort key, all without re-stating the
-earlier attributes. The pattern is essential when generating
-specs programmatically (looping over arms, applying a house-style
-helper, layering sponsor overrides).
-
-Default values that \emph{do not} override:\tabular{ll}{
+Default values that do NOT override the existing field:\tabular{ll}{
    field \tab default that does not override \cr
    \code{usage} \tab \code{NA_character_} \cr
    \code{label} \tab \code{NA_character_} \cr
@@ -65,16 +78,19 @@ tabular(saf_demo) |>
   cols(variable = col_spec(usage = "group", label = "Parameter")) |>
   cols(variable = col_spec(align = "left")) |>
   cols(variable = col_spec(width = 2.0))
-# Result: variable has usage = "group", label = "Parameter",
-#         align = "left", width = 2.0 -- all four fields set.
+# Result: variable has usage="group", label="Parameter",
+#         align="left", width=2.0 -- all four fields set.
 }\if{html}{\out{</div>}}
 }
 
 \examples{
-# 95\% safety pattern: demographics with row-label cols on the
-# left and decimal-aligned treatment cols carrying BigN inline.
-# Complete pipeline through every landed verb so the example is
-# paste-ready into a Quarto vignette.
+# ---- Example 1: Demographics with arm BigN inline in headers ----
+#
+# Demographics table where the row-label columns sit on the left
+# and the four treatment-arm columns embed BigN in the header
+# label (drawn inline from the bundled `saf_n` data frame). Every
+# arm column is decimal-aligned so mixed-format cells like
+# "5 (3.2\%)" line up on the decimal mark.
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 
 tabular(
@@ -96,9 +112,12 @@ tabular(
   ) |>
   sort_rows(by = c("variable", "stat_label"))
 
-# 95\% efficacy pattern: BOR table with CDISC factor ordering.
-# row_type is hidden (sort-helper only) and stat_label uses the
-# group usage so consecutive runs collapse in render.
+# ---- Example 2: BOR table with CDISC factor ordering and hidden helper ----
+#
+# Best Overall Response table where `stat_label` carries the
+# canonical CDISC factor levels (driving the sort) and `row_type`
+# is hidden -- present in the data for the sort, absent from the
+# rendered output via `col_spec(visible = FALSE)`.
 bor_levels <- c(
   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
   "Objective Response Rate (CR + PR)",
@@ -126,4 +145,13 @@ tabular(
   ) |>
   sort_rows(by = "stat_label")
 
+}
+\seealso{
+\code{\link[=col_spec]{col_spec()}} for the per-column DSL constructor used inside this
+verb.
+
+\strong{Sibling build verbs:} \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
+\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
+
+\strong{Entry verb:} \code{\link[=tabular]{tabular()}}.
 }

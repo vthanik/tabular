@@ -22,46 +22,43 @@ navbar:
 home:
   title: Clinical TFL rendering for R
   description: >
-    Native emission of clinical tables, figures, and listings to RTF,
-    LaTeX, HTML, PDF, and DOCX from a single dplyr-style API. Decimal
-    alignment, group-aware pagination, page tokens.
+    Native emission of clinical submission tables to RTF, LaTeX, HTML,
+    PDF, and DOCX. Decimal alignment, multi-level column headers,
+    group-aware pagination.
 
 reference:
-- title: Entry points
-  desc: Construct the spec.
+- title: Entry verbs
+  desc: Wrap a pre-summarised wide data frame into a `tabular_spec`.
   contents:
-  - tb_table
-  - tb_figure
+  - tabular
+  - pivot_across
 
-- title: Structure
-  desc: Configure columns, rows, and spanning headers.
+- title: Spec building
+  desc: Configure per-column display, header bands, sort order, and
+        computed columns. Each verb attaches one slot onto the spec
+        and returns the updated spec for chaining.
   contents:
-  - tb_cols
-  - tb_rows
-  - tb_spans
+  - cols
+  - col_spec
+  - headers
+  - sort_rows
+  - derive
 
 - title: Styling
-  desc: Conditional formatting.
+  desc: Predicate-targeted styling and formatting rules.
   contents:
-  - tb_styles
+  - style
 
-- title: Defaults
-  desc: Study-wide rendering presets.
+- title: Predicates
+  desc: Class predicates for tabular's S7 objects.
   contents:
-  - tb_preset
-
-- title: Markup
-  desc: Inline markup that survives string concat.
-  contents:
-  - tb_mark
-
-- title: Rendering
-  desc: Terminal verb -- emit to file.
-  contents:
-  - tb_render
+  - has_keyword("internal")
+  - -starts_with(".col_spec_class")
 
 - title: Demo datasets
-  desc: Pre-summarised wide-format tables used by examples and tests.
+  desc: Pre-summarised wide-format tables and their upstream
+        `cards`-format counterparts. Power every `@examples` block,
+        every vignette, and every smoke test.
   contents:
   - has_keyword("demo-data")
 
