@@ -27,6 +27,22 @@
 .derive_type_values <- c("numeric", "character")
 .decimal_metrics_values <- c("afm", "systemfonts")
 
+# Recognised inline-formatting run types. Each element of an
+# `inline_ast@runs` list is a named-list record with a `type` field
+# drawn from this set. Backends iterate the runs and emit
+# destination-specific markup.
+.inline_run_types <- c(
+  "plain",
+  "bold",
+  "italic",
+  "sup",
+  "sub",
+  "code",
+  "link",
+  "span",
+  "newline"
+)
+
 # ---------------------------------------------------------------------
 # col_spec — 7-field per-column DSL
 # ---------------------------------------------------------------------
@@ -390,6 +406,61 @@ tabular_spec <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
+# inline_ast — parsed inline-formatting AST consumed by backends
+# ---------------------------------------------------------------------
+#
+# Holds a list of typed text "runs" produced by `parse_inline()` (in
+# R/inline_format.R) from plain strings, `md()`-wrapped Markdown, or
+# `html()`-wrapped HTML. Backends iterate `@runs` and emit
+# destination-specific markup. Each run is a plain R named-list
+# record:
+#   list(type = "plain",    text = "Hello")
+#   list(type = "bold",     children = <list of runs>)
+#   list(type = "italic",   children = <list of runs>)
+#   list(type = "sup",      children = <list of runs>)
+#   list(type = "sub",      children = <list of runs>)
+#   list(type = "code",     children = <list of runs>)
+#   list(type = "link",     href = ..., title = ..., children = ...)
+#   list(type = "span",     style = <named char>, children = <list of runs>)
+#   list(type = "newline")
+
+#' @rdname tabular_classes
+#' @format NULL
+#' @usage NULL
+inline_ast <- S7::new_class(
+  "inline_ast",
+  package = "tabular",
+  properties = list(
+    runs = S7::new_property(S7::class_list, default = list())
+  ),
+  validator = function(self) {
+    if (length(self@runs) == 0L) {
+      return(NULL)
+    }
+    types <- vapply(
+      self@runs,
+      function(r) {
+        if (!is.list(r) || is.null(r$type)) {
+          return(NA_character_)
+        }
+        as.character(r$type)
+      },
+      character(1)
+    )
+    bad <- is.na(types) | !types %in% .inline_run_types
+    if (any(bad)) {
+      return(paste0(
+        "@runs contain unknown type(s): ",
+        paste(unique(types[bad]), collapse = ", "),
+        "; recognised: ",
+        paste(.inline_run_types, collapse = ", ")
+      ))
+    }
+    NULL
+  }
+)
+
+# ---------------------------------------------------------------------
 # tabular_grid — resolved IR (post-engine, pre-backend)
 # ---------------------------------------------------------------------
 
@@ -463,3 +534,7 @@ is_pagination_spec <- function(x) S7::S7_inherits(x, pagination_spec)
 #' @rdname tabular_predicates
 #' @export
 is_preset_spec <- function(x) S7::S7_inherits(x, preset_spec)
+
+#' @rdname tabular_predicates
+#' @export
+is_inline_ast <- function(x) S7::S7_inherits(x, inline_ast)

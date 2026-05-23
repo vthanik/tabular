@@ -19,7 +19,9 @@ Depends:
 Imports:
     S7,
     cli,
-    rlang
+    commonmark,
+    rlang,
+    xml2
 Suggests:
     testthat (>= 3.0.0),
     withr,

@@ -42,7 +42,7 @@ NULL
   if (n_titles > 0L) {
     cli::cli_text("Titles ({n_titles}):")
     for (i in seq_len(n_titles)) {
-      t <- x@titles[[i]]
+      t <- .strip_inline_marker(x@titles[[i]])
       if (nchar(t) > 60L) {
         t <- paste0(substr(t, 1L, 57L), "...")
       }

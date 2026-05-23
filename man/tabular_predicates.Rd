@@ -13,6 +13,7 @@
 \alias{is_style_spec}
 \alias{is_pagination_spec}
 \alias{is_preset_spec}
+\alias{is_inline_ast}
 \title{Test for tabular S7 objects}
 \usage{
 is_tabular_spec(x)
@@ -36,6 +37,8 @@ is_style_spec(x)
 is_pagination_spec(x)
 
 is_preset_spec(x)
+
+is_inline_ast(x)
 }
 \arguments{
 \item{x}{Any R object.}

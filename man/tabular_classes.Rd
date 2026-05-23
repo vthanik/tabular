@@ -12,6 +12,7 @@
 \alias{pagination_spec}
 \alias{preset_spec}
 \alias{tabular_spec}
+\alias{inline_ast}
 \alias{tabular_grid}
 \title{tabular S7 classes}
 \description{
