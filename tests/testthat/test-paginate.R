@@ -1,4 +1,4 @@
-# paginate() -- verb that attaches a pagination_spec to a tabular_spec.
+# paginate() — verb that attaches a pagination_spec to a tabular_spec.
 # Tests cover argument validation, replacement semantics, group-column
 # enforcement on keep_together, and edge cases on the floors / scalars.
 # The verb does NOT take a rows_per_page argument; the engine computes

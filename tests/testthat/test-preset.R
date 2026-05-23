@@ -1,4 +1,4 @@
-# preset() -- per-spec preset override. Tests cover argument
+# preset() — per-spec preset override. Tests cover argument
 # validation, merge vs reset semantics, unknown-knob rejection, the
 # cascade integration with engine_paginate (the verb's downstream
 # effect), and the NULL-clear behaviour when reset = TRUE with no

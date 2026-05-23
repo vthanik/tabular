@@ -75,7 +75,7 @@
 #' # AE-by-SOC/PT table with one flat band labelled "Treatment Group"
 #' # spanning the four arm columns and the Total column. The
 #' # row-label column (`soc`) sits to the left of the band with no
-#' # header covering it -- the canonical clinical layout.
+#' # header covering it — the canonical clinical layout.
 #' ae <- saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -105,7 +105,7 @@
 #'   ) |>
 #'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 #'
-#' # ---- Example 2: Two-level nested band -- Control vs Active arms ----
+#' # ---- Example 2: Two-level nested band — Control vs Active arms ----
 #' #
 #' # Efficacy BOR table where the active arms are grouped under an
 #' # "Active" sub-band and the placebo arm under a "Control"
@@ -292,7 +292,7 @@ headers <- function(.spec, ...) {
 }
 
 # Blank-label predicate. A band label is blank when it is "", NA, or
-# only whitespace. Rejected at every nesting level -- a band with no
+# only whitespace. Rejected at every nesting level — a band with no
 # rendered text is a silent layout artefact, never intentional.
 .is_blank_label <- function(x) {
   is.na(x) | !nzchar(trimws(x))

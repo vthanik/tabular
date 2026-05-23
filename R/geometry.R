@@ -1,4 +1,4 @@
-# geometry.R -- internal unit-conversion and page-geometry helpers
+# geometry.R — internal unit-conversion and page-geometry helpers
 # shared by engine_paginate (page row-budget) and the upcoming
 # engine_decimal phase (decimal alignment via font metrics). All
 # functions are pure; no I/O, no state. Names are dot-prefixed and
@@ -29,7 +29,7 @@
 
 # Paper dimensions accounting for orientation. Returns a length-2
 # named integer vector: c(width = w, height = h) in twips. Aborts
-# (internal) if the paper key is unknown -- callers gate this via
+# (internal) if the paper key is unknown — callers gate this via
 # preset_spec validators so end users see a friendly verb error.
 .paper_dims_twips <- function(paper = "letter", orientation = "portrait") {
   dims <- .tabular_paper_twips[[paper]]

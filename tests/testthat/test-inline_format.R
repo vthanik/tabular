@@ -56,7 +56,7 @@ test_that("md() / html() accept empty string", {
 })
 
 # ---------------------------------------------------------------------
-# parse_inline() -- dispatcher
+# parse_inline() — dispatcher
 # ---------------------------------------------------------------------
 
 test_that("parse_inline() returns an inline_ast", {
@@ -420,7 +420,7 @@ test_that(".parse_css_inline returns empty for whitespace-only style", {
 })
 
 test_that(".parse_css_inline returns empty when all declarations malformed", {
-  # No colons at all -- every "declaration" is rejected by the
+  # No colons at all — every "declaration" is rejected by the
   # `length(parts) >= 2` filter; the result is empty.
   ast <- parse_inline(html('<span style="bad1; bad2; bad3">x</span>'))
   expect_identical(length(ast@runs[[1L]]$style), 0L)

@@ -1,4 +1,4 @@
-# paginate.R -- attach a pagination_spec to a tabular_spec. The verb
+# paginate.R — attach a pagination_spec to a tabular_spec. The verb
 # stores ONLY policy knobs (which groups stay together, how many
 # horizontal panels, orphan / widow floors, continuation marker). It
 # does NOT take a rows-per-page argument. The engine computes the
@@ -20,12 +20,12 @@
 #' (if any) prints on continued pages. The row budget per page is
 #' computed by the engine from the active preset (paper, orientation,
 #' margins, font size) and the chrome rows consumed by titles, column
-#' headers, and footnotes -- you do not set rows-per-page directly.
+#' headers, and footnotes — you do not set rows-per-page directly.
 #'
 #' @details
 #'
 #' **Replace, not stack.** A second `paginate()` call REPLACES the
-#' prior spec -- pagination is a single configuration block, not a
+#' prior spec — pagination is a single configuration block, not a
 #' stackable list. Call with all defaults to clear back to the
 #' engine's auto behaviour.
 #'
@@ -105,7 +105,7 @@
 #'
 #' @param continuation *Marker text appended after a continuing
 #'   table's title block.* `<character(1) | NULL>: default NULL`.
-#'   `NULL` (the default) renders no marker -- pick the wording your
+#'   `NULL` (the default) renders no marker — pick the wording your
 #'   submission style guide expects (e.g. `"(continued)"`,
 #'   `"(Cont'd)"`, `"Page %d of %d"`) and pass it explicitly.
 #'
@@ -119,7 +119,7 @@
 #' # protected by `keep_together` so a page break never lands in the
 #' # middle of one SOC's PT rows. The engine derives the row budget
 #' # from the preset's orientation + font_size + paper size and from
-#' # the title / footnote / header line counts on the spec -- no
+#' # the title / footnote / header line counts on the spec — no
 #' # manual rows-per-page knob to keep in sync.
 #' ae <- saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))

@@ -64,7 +64,7 @@
 #' # order of subject count within the row-type hierarchy (overall
 #' # first, then SOCs, then PTs). `saf_aesocpt$Total` cells are
 #' # formatted text ("171 (67.3)"), so a lexical sort on `Total`
-#' # would be wrong ("14" < "171" < "29") -- attach a numeric rank
+#' # would be wrong ("14" < "171" < "29") — attach a numeric rank
 #' # column upstream and sort on (row_type, n_total).
 #' ae <- saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))

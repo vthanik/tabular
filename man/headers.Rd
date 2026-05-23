@@ -79,7 +79,7 @@ column."
 # AE-by-SOC/PT table with one flat band labelled "Treatment Group"
 # spanning the four arm columns and the Total column. The
 # row-label column (`soc`) sits to the left of the band with no
-# header covering it -- the canonical clinical layout.
+# header covering it — the canonical clinical layout.
 ae <- saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -109,7 +109,7 @@ tabular(
   ) |>
   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 
-# ---- Example 2: Two-level nested band -- Control vs Active arms ----
+# ---- Example 2: Two-level nested band — Control vs Active arms ----
 #
 # Efficacy BOR table where the active arms are grouped under an
 # "Active" sub-band and the placebo arm under a "Control"

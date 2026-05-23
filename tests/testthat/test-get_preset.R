@@ -1,4 +1,4 @@
-# get_preset() -- introspect the session-default preset. Tests cover
+# get_preset() — introspect the session-default preset. Tests cover
 # the NULL-when-unset baseline, the preset_spec-when-set behaviour,
 # and the read-tweak-attach pattern (copying the session default into
 # a per-spec preset() override).

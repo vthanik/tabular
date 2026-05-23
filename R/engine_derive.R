@@ -63,7 +63,7 @@ engine_derive <- function(spec) {
 # Derives can reference earlier derives by name. Build the dependency
 # graph (edges = "this derive references another derive"), then
 # Kahn-sort. A cycle leaves nonzero in-degree on every node in the
-# cycle when the queue empties -- detect and abort.
+# cycle when the queue empties — detect and abort.
 .topo_sort_derives <- function(derives, data_cols, call) {
   names_set <- names(derives)
   if (length(names_set) <= 1L) {
@@ -124,7 +124,7 @@ engine_derive <- function(spec) {
   # `.c` is the special list-of-columns accessor; never flagged.
   unknown <- setdiff(refs, c(available, ".c"))
   # Symbols that look like function/operator names are silently ignored
-  # here -- they resolve via the quosure environment at eval time.
+  # here — they resolve via the quosure environment at eval time.
   # Only flag identifiers whose dotted suffix matches a known stat.
   stat_pattern <- "\\.(n|mean|sd|median|min|max|sum|q1|q3|pct|p)$"
   agg_like <- unknown[grepl(stat_pattern, unknown)]

@@ -1,4 +1,4 @@
-# engine_format.R -- resolve-engine phase that converts a
+# engine_format.R — resolve-engine phase that converts a
 # tabular_spec's data + string slots into formatted text + parsed
 # inline_ast. Runs between engine_derive / engine_sort (which finalize
 # the data frame and row order) and engine_decimal (which space-pads
@@ -51,7 +51,7 @@
 #     list. Backends consume the AST directly.
 
 # ---------------------------------------------------------------------
-# Public entry -- engine_format
+# Public entry — engine_format
 # ---------------------------------------------------------------------
 
 #' Apply column formats, substitute NA tokens, and parse inline ASTs
@@ -64,14 +64,14 @@
 #'
 #' @param spec A `tabular_spec`.
 #' @return A named list with five entries:
-#'   * `cells_text` -- character matrix (`nrow(spec@data)` rows,
+#'   * `cells_text` — character matrix (`nrow(spec@data)` rows,
 #'     `ncol(spec@data)` cols).
-#'   * `cells_ast` -- list-matrix of `inline_ast` with the same
+#'   * `cells_ast` — list-matrix of `inline_ast` with the same
 #'     shape as `cells_text`.
-#'   * `titles_ast` -- list of `inline_ast`, one per title line.
-#'   * `footnotes_ast` -- list of `inline_ast`, one per footnote
+#'   * `titles_ast` — list of `inline_ast`, one per title line.
+#'   * `footnotes_ast` — list of `inline_ast`, one per footnote
 #'     line.
-#'   * `col_labels_ast` -- named list of `inline_ast`, one per data
+#'   * `col_labels_ast` — named list of `inline_ast`, one per data
 #'     column.
 #' @keywords internal
 #' @noRd

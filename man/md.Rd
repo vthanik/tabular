@@ -27,7 +27,7 @@ through to the constrained tag set documented under \code{\link[=html]{html()}}.
 \details{
 \strong{Convention adopted from gt.} Marking strings with \code{md()} and
 \code{html()} mirrors the well-tested gt convention. Plain
-(unwrapped) strings render as plain text -- a stray \verb{**} will
+(unwrapped) strings render as plain text — a stray \verb{**} will
 NOT silently bold the surrounding span. Wrap explicitly to opt
 in.
 

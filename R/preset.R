@@ -1,4 +1,4 @@
-# preset.R -- attach a per-spec `preset_spec` (override) or stash a
+# preset.R — attach a per-spec `preset_spec` (override) or stash a
 # session-default `preset_spec` consulted by every subsequent
 # `tabular()` chain. The preset carries page geometry: paper size,
 # orientation, margins, body font_size + family, header / footer rows,
@@ -11,7 +11,7 @@
 # analogue). `set_preset()` is session-scoped (ggplot2 `theme_set()`
 # analogue) and is stored in `.tabular_session$preset`. The env is
 # initialised once at namespace load and emptied when the namespace
-# unloads -- there is no on-disk persistence.
+# unloads — there is no on-disk persistence.
 
 # Package-internal env holding the session default. NULL means "no
 # session default attached"; engine_paginate / .effective_preset
@@ -20,7 +20,7 @@
 .tabular_session <- new.env(parent = emptyenv())
 .tabular_session$preset <- NULL
 
-# Knob list -- mirrors the `preset_spec` S7 properties declared in
+# Knob list — mirrors the `preset_spec` S7 properties declared in
 # R/aaa_class.R. Kept as a constant so the verb and the class agree
 # on which knobs are first-class without a runtime introspection
 # call. Matches the `.style_node_fields` pattern in R/style.R.
@@ -51,7 +51,7 @@
 #'
 #' @details
 #'
-#' **Per-spec, chained.** `preset()` is the per-spec override -- a
+#' **Per-spec, chained.** `preset()` is the per-spec override — a
 #' verb that returns a modified spec, composable on the pipe alongside
 #' [`cols()`] / [`headers()`] / [`paginate()`]. Use it when a single
 #' table needs a one-off geometry (e.g. landscape A4 for one wide
@@ -84,28 +84,28 @@
 #'
 #'   Recognised knobs:
 #'
-#'   *   **`font_size`** -- body point size. `<numeric(1)>`.
-#'   *   **`font_family`** -- body font family.
+#'   *   **`font_size`** — body point size. `<numeric(1)>`.
+#'   *   **`font_family`** — body font family.
 #'       `<character(1)>`. Default `"Times New Roman"`.
-#'   *   **`orientation`** -- page orientation.
+#'   *   **`orientation`** — page orientation.
 #'       `<character(1)>`. One of `"portrait"` (default),
 #'       `"landscape"`.
-#'   *   **`paper_size`** -- paper key.
+#'   *   **`paper_size`** — paper key.
 #'       `<character(1)>`. One of `"letter"` (default), `"a4"`.
-#'   *   **`margins`** -- page margins in inches.
+#'   *   **`margins`** — page margins in inches.
 #'       `<numeric(1) | numeric(4)>`. Length 1 = all four sides;
 #'       length 4 = top, right, bottom, left.
-#'   *   **`pagehead`**, **`pagefoot`** -- list of named lists for
+#'   *   **`pagehead`**, **`pagefoot`** — list of named lists for
 #'       header / footer row content. `<list>`.
-#'   *   **`hlines`** -- horizontal-rule policy.
+#'   *   **`hlines`** — horizontal-rule policy.
 #'       `<character(1)>`. One of `"header"` (default), `"none"`,
 #'       `"all"`.
-#'   *   **`indent_chars`** -- row-label indent prefix.
+#'   *   **`indent_chars`** — row-label indent prefix.
 #'       `<character(1)>`. Default `"  "`.
-#'   *   **`title_align`**, **`footnote_align`** -- block alignment.
+#'   *   **`title_align`**, **`footnote_align`** — block alignment.
 #'       `<character(1)>`. One of `"left"`, `"center"`, `"right"`.
-#'   *   **`na_text`** -- global NA fallback. `<character(1)>`.
-#'   *   **`decimal_metrics`** -- font-metric source for decimal
+#'   *   **`na_text`** — global NA fallback. `<character(1)>`.
+#'   *   **`decimal_metrics`** — font-metric source for decimal
 #'       alignment. `<character(1)>`. One of `"afm"` (PDF Core 14,
 #'       public domain) or `"systemfonts"`.
 #'
@@ -281,7 +281,7 @@ preset <- function(.spec, ..., reset = FALSE) {
 #' #
 #' # The submission's safety tables all use portrait letter, 9pt
 #' # Times New Roman with 1-inch margins. Set once at the top of the
-#' # analysis script and every `tabular()` chain inherits it -- no
+#' # analysis script and every `tabular()` chain inherits it — no
 #' # per-table `preset()` call needed unless one table deviates.
 #' set_preset(
 #'   font_size   = 9,

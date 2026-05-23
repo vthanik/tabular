@@ -1,4 +1,4 @@
-# geometry.R -- internal twips / inches / row-height helpers shared
+# geometry.R — internal twips / inches / row-height helpers shared
 # by engine_paginate (and the upcoming engine_decimal). Helpers are
 # dot-prefixed and unexported; tests reach them via tabular:::.
 

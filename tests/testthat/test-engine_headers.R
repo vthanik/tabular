@@ -25,7 +25,7 @@ test_that("engine_headers() flattens a single flat band", {
   expect_equal(out$depth, 1L)
   expect_equal(out$label, "Arms")
   # saf_demo column order: variable, stat_label, placebo, drug_100, drug_50, Total
-  # placebo at 3, drug_100 at 4, drug_50 at 5, Total at 6 -- but our span lists
+  # placebo at 3, drug_100 at 4, drug_50 at 5, Total at 6 — but our span lists
   # them in declaration order which doesn't have to be data order. After sort,
   # positions are 3..6 contiguous.
   expect_equal(out$col_start, 3L)

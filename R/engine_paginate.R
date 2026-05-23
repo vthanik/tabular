@@ -1,4 +1,4 @@
-# engine_paginate.R -- resolve-engine phase that turns a
+# engine_paginate.R — resolve-engine phase that turns a
 # pagination_spec into a flat list of page descriptors. Each
 # descriptor names the rows and columns that ride on one display
 # page. The downstream emit / backend layer iterates over the list
@@ -130,7 +130,7 @@ engine_paginate <- function(spec) {
 # ---------------------------------------------------------------------
 
 # Floor for the computed rows-per-page. Below 5, pagination is more
-# noise than signal -- one big chrome-heavy spec on a tiny font
+# noise than signal — one big chrome-heavy spec on a tiny font
 # could mathematically yield 0; we floor it instead. Matches
 # galley's minimum-row constraint.
 .min_rows_per_page <- 5L
@@ -327,7 +327,7 @@ engine_paginate <- function(spec) {
 
 # Horizontal pagination: split non-group columns into approximately
 # equal slices; repeat group columns on every panel. Returns a list
-# of integer column-index vectors -- one per panel.
+# of integer column-index vectors — one per panel.
 .compute_horizontal_panels <- function(col_names, group_col_names, panels) {
   ncol_data <- length(col_names)
   if (ncol_data == 0L) {

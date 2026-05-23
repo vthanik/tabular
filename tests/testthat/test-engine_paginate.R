@@ -1,4 +1,4 @@
-# engine_paginate() -- resolves pagination_spec into a list of page
+# engine_paginate() — resolves pagination_spec into a list of page
 # descriptors. The row budget per page is auto-computed (paper height
 # for active orientation, less margins, less chrome rows for titles /
 # headers / footnotes, divided by row height at active font size).
@@ -118,7 +118,7 @@ test_that("engine_paginate() marks continuation pages correctly", {
 test_that("engine_paginate() respects keep_together on group runs", {
   # Group runs of length 2 each (A,A,B,B,C,C,...). Tight budget
   # forces multiple pages. Every page's last row should match the
-  # next page's first row only if a group spans the break -- which
+  # next page's first row only if a group spans the break — which
   # we expect engine_paginate to prevent.
   spec <- make_paginated_spec(20L, font_size = 36, keep_together = "soc")
   plan <- tabular:::engine_paginate(spec)

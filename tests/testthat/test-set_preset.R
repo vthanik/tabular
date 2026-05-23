@@ -1,11 +1,11 @@
-# set_preset() -- session-default preset. Tests cover storage in the
+# set_preset() — session-default preset. Tests cover storage in the
 # package-internal env, merge / reset semantics, NULL-clear with
 # `reset = TRUE` and no knobs, knob-name validation, and the cascade
 # integration with engine_paginate (session preset visible when the
 # spec carries no per-spec override).
 #
 # Every test uses withr::defer to clear the session env so tests are
-# self-contained -- otherwise an early set_preset() would leak into
+# self-contained — otherwise an early set_preset() would leak into
 # every subsequent test in the file.
 
 clear_session_preset <- function(env = parent.frame()) {

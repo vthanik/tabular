@@ -222,7 +222,7 @@ test_that("headers() accepts an unnamed character vector as passthrough leaves",
   # Child 1: declared sub-band
   expect_identical(top@children[[1]]@label, "Treatment Low")
   expect_identical(top@children[[1]]@span, c("placebo", "drug_100"))
-  # Child 2: passthrough leaf -- label = NA, span = the unnamed vector
+  # Child 2: passthrough leaf — label = NA, span = the unnamed vector
   expect_true(is.na(top@children[[2]]@label))
   expect_identical(top@children[[2]]@span, "drug_50")
 })

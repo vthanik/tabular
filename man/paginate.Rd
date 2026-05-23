@@ -62,7 +62,7 @@ always want \code{TRUE}.}
 
 \item{continuation}{\emph{Marker text appended after a continuing
 table's title block.} \verb{<character(1) | NULL>: default NULL}.
-\code{NULL} (the default) renders no marker -- pick the wording your
+\code{NULL} (the default) renders no marker — pick the wording your
 submission style guide expects (e.g. \code{"(continued)"},
 \code{"(Cont'd)"}, \code{"Page \%d of \%d"}) and pass it explicitly.}
 }
@@ -77,11 +77,11 @@ tables split into horizontal panels, and what continuation marker
 (if any) prints on continued pages. The row budget per page is
 computed by the engine from the active preset (paper, orientation,
 margins, font size) and the chrome rows consumed by titles, column
-headers, and footnotes -- you do not set rows-per-page directly.
+headers, and footnotes — you do not set rows-per-page directly.
 }
 \details{
 \strong{Replace, not stack.} A second \code{paginate()} call REPLACES the
-prior spec -- pagination is a single configuration block, not a
+prior spec — pagination is a single configuration block, not a
 stackable list. Call with all defaults to clear back to the
 engine's auto behaviour.
 
@@ -120,7 +120,7 @@ engine treats \code{"auto"} as \code{1}.
 # protected by `keep_together` so a page break never lands in the
 # middle of one SOC's PT rows. The engine derives the row budget
 # from the preset's orientation + font_size + paper size and from
-# the title / footnote / header line counts on the spec -- no
+# the title / footnote / header line counts on the spec — no
 # manual rows-per-page knob to keep in sync.
 ae <- saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))

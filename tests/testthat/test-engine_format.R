@@ -1,4 +1,4 @@
-# engine_format() -- per-column format application, NA
+# engine_format() — per-column format application, NA
 # substitution, and inline_ast parsing across cells / titles /
 # footnotes / col labels.
 

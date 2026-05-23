@@ -20,28 +20,28 @@ the class's enum / length / type rules; bad values raise
 
 Recognised knobs:
 \itemize{
-\item \strong{\code{font_size}} -- body point size. \verb{<numeric(1)>}.
-\item \strong{\code{font_family}} -- body font family.
+\item \strong{\code{font_size}} — body point size. \verb{<numeric(1)>}.
+\item \strong{\code{font_family}} — body font family.
 \verb{<character(1)>}. Default \code{"Times New Roman"}.
-\item \strong{\code{orientation}} -- page orientation.
+\item \strong{\code{orientation}} — page orientation.
 \verb{<character(1)>}. One of \code{"portrait"} (default),
 \code{"landscape"}.
-\item \strong{\code{paper_size}} -- paper key.
+\item \strong{\code{paper_size}} — paper key.
 \verb{<character(1)>}. One of \code{"letter"} (default), \code{"a4"}.
-\item \strong{\code{margins}} -- page margins in inches.
+\item \strong{\code{margins}} — page margins in inches.
 \verb{<numeric(1) | numeric(4)>}. Length 1 = all four sides;
 length 4 = top, right, bottom, left.
-\item \strong{\code{pagehead}}, \strong{\code{pagefoot}} -- list of named lists for
+\item \strong{\code{pagehead}}, \strong{\code{pagefoot}} — list of named lists for
 header / footer row content. \verb{<list>}.
-\item \strong{\code{hlines}} -- horizontal-rule policy.
+\item \strong{\code{hlines}} — horizontal-rule policy.
 \verb{<character(1)>}. One of \code{"header"} (default), \code{"none"},
 \code{"all"}.
-\item \strong{\code{indent_chars}} -- row-label indent prefix.
+\item \strong{\code{indent_chars}} — row-label indent prefix.
 \verb{<character(1)>}. Default \code{"  "}.
-\item \strong{\code{title_align}}, \strong{\code{footnote_align}} -- block alignment.
+\item \strong{\code{title_align}}, \strong{\code{footnote_align}} — block alignment.
 \verb{<character(1)>}. One of \code{"left"}, \code{"center"}, \code{"right"}.
-\item \strong{\code{na_text}} -- global NA fallback. \verb{<character(1)>}.
-\item \strong{\code{decimal_metrics}} -- font-metric source for decimal
+\item \strong{\code{na_text}} — global NA fallback. \verb{<character(1)>}.
+\item \strong{\code{decimal_metrics}} — font-metric source for decimal
 alignment. \verb{<character(1)>}. One of \code{"afm"} (PDF Core 14,
 public domain) or \code{"systemfonts"}.
 }
@@ -75,7 +75,7 @@ decimal-aligned column widths, and the chrome that the backend
 renders around the body grid.
 }
 \details{
-\strong{Per-spec, chained.} \code{preset()} is the per-spec override -- a
+\strong{Per-spec, chained.} \code{preset()} is the per-spec override — a
 verb that returns a modified spec, composable on the pipe alongside
 \code{\link[=cols]{cols()}} / \code{\link[=headers]{headers()}} / \code{\link[=paginate]{paginate()}}. Use it when a single
 table needs a one-off geometry (e.g. landscape A4 for one wide

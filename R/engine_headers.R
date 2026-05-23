@@ -17,7 +17,7 @@
 #
 # Backends iterate this frame by depth ascending to draw band rows;
 # each row of cells is positioned by (col_start, col_end). An empty
-# header tree yields an empty data.frame with the same schema -- no
+# header tree yields an empty data.frame with the same schema — no
 # header band rendered.
 
 #' Flatten the header tree into a band-grid data.frame
@@ -118,7 +118,7 @@ engine_headers <- function(spec) {
   rbind(this_row, child_rows)
 }
 
-# Empty header-grid skeleton -- matches the populated frame's schema
+# Empty header-grid skeleton — matches the populated frame's schema
 # so backends can iterate uniformly when no header tree is set.
 .empty_header_grid <- function() {
   out <- data.frame(

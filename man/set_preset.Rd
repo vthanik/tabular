@@ -48,7 +48,7 @@ the spec carries no preset of its own.
 #
 # The submission's safety tables all use portrait letter, 9pt
 # Times New Roman with 1-inch margins. Set once at the top of the
-# analysis script and every `tabular()` chain inherits it -- no
+# analysis script and every `tabular()` chain inherits it — no
 # per-table `preset()` call needed unless one table deviates.
 set_preset(
   font_size   = 9,

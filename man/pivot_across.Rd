@@ -216,7 +216,7 @@ branch only fires inside the built-in \code{p} formatter and the
 }
 }
 \examples{
-# ---- Example 1: Demographics -- long ARD to rendered spec ----
+# ---- Example 1: Demographics — long ARD to rendered spec ----
 #
 # Full pipeline from a `cards::ard_stack()`-style long ARD to a
 # sorted `tabular_spec`. The multi-row continuous block (N /

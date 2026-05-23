@@ -1,12 +1,12 @@
-# inline_format.R -- Markdown / HTML inline formatting for titles,
+# inline_format.R — Markdown / HTML inline formatting for titles,
 # footnotes, column labels, and cell text.
 #
 # Design (per plan.md design decision D1):
 #
 # Two public helpers, gt-aligned:
-#   md(text)    -- mark a string as Markdown (CommonMark + GFM +
+#   md(text)    — mark a string as Markdown (CommonMark + GFM +
 #                   Pandoc-style ^sup^ and ~sub~).
-#   html(text)  -- mark a string as HTML (constrained subset:
+#   html(text)  — mark a string as HTML (constrained subset:
 #                   <b>, <i>, <strong>, <em>, <sup>, <sub>, <code>,
 #                   <a href>, <span style>, <br>).
 #
@@ -32,9 +32,9 @@
 # output is the canonical reference rendering.
 #
 # References:
-#   * gt::md() / gt::html() -- the established R-table convention
+#   * gt::md() / gt::html() — the established R-table convention
 #     this module follows.
-#   * CommonMark spec -- the Markdown grammar commonmark::markdown_html
+#   * CommonMark spec — the Markdown grammar commonmark::markdown_html
 #     parses.
 
 # Recognised HTML tags. Anything outside this set passes through
@@ -62,7 +62,7 @@
 #     and survives).
 #   * Plain strings (no prefix) parse as plain text.
 #   * Pretty-printing helpers strip the prefix for display.
-# Chosen: U+0001 (Start of Heading) -- a control character with no
+# Chosen: U+0001 (Start of Heading) — a control character with no
 # meaningful presence in user prose or clinical text. The marker is
 # never embedded inside Markdown / HTML payloads we parse because
 # `.parse_md` / `.parse_html` strip it first.
@@ -106,7 +106,7 @@
 #'
 #' **Convention adopted from gt.** Marking strings with `md()` and
 #' `html()` mirrors the well-tested gt convention. Plain
-#' (unwrapped) strings render as plain text -- a stray `**` will
+#' (unwrapped) strings render as plain text — a stray `**` will
 #' NOT silently bold the surrounding span. Wrap explicitly to opt
 #' in.
 #'
@@ -283,7 +283,7 @@ html <- function(text) {
 }
 
 # ---------------------------------------------------------------------
-# parse_inline -- dispatcher
+# parse_inline — dispatcher
 # ---------------------------------------------------------------------
 
 # Convert a string (plain, `md()`-wrapped, or `html()`-wrapped) into

@@ -227,7 +227,7 @@ style <- function(.spec, where, ..., .scope = "cell") {
 # Internal helpers
 # ---------------------------------------------------------------------
 
-# Known style_node field set -- matches the S7 properties declared
+# Known style_node field set — matches the S7 properties declared
 # on `style_node` in R/aaa_class.R. Maintained as a constant so the
 # verb and engine agree on which attributes are first-class.
 .style_node_fields <- c(

@@ -44,13 +44,13 @@ test_that("engine_style() cell-scope applies only to columns referenced in where
   spec <- tabular(resp) |>
     style(where = pvalue < 0.05, color = "red", .scope = "cell")
   grid <- tabular:::engine_style(spec)
-  # Row 1 pvalue cell -- red
+  # Row 1 pvalue cell — red
   expect_identical(grid[[1L, 2L]]@color, "red")
-  # Row 1 other cell -- not red (predicate referenced only pvalue)
+  # Row 1 other cell — not red (predicate referenced only pvalue)
   expect_true(is.na(grid[[1L, 3L]]@color))
-  # Row 1 stat_label -- not red
+  # Row 1 stat_label — not red
   expect_true(is.na(grid[[1L, 1L]]@color))
-  # Row 2 -- not red anywhere
+  # Row 2 — not red anywhere
   expect_true(is.na(grid[[2L, 2L]]@color))
 })
 

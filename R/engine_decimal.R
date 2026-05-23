@@ -219,7 +219,7 @@ engine_decimal <- function(
   v <- character(n)
   v[!na_mask] <- trimws(values[!na_mask], which = "both")
 
-  # Identify opaque cells -- those whose trimmed value matches any
+  # Identify opaque cells — those whose trimmed value matches any
   # token in `not_considered`. Opaque cells bypass alignment and do
   # not contribute to any slot width.
   opaque_mask <- logical(n)
@@ -675,7 +675,7 @@ engine_decimal <- function(
   int_is_zero && dec_is_zero
 }
 
-# Full structured render -- cell matches the dominant signature.
+# Full structured render — cell matches the dominant signature.
 .render_cell_dominant <- function(tok, dominant, widths, pad) {
   k <- dominant$k
   parts <- character(2L * k + 1L)
@@ -734,7 +734,7 @@ engine_decimal <- function(
   )
 }
 
-# Slot-1-only render -- cell has at least one float but does not
+# Slot-1-only render — cell has at least one float but does not
 # match the dominant signature.
 .render_cell_primary_only <- function(tok, dominant, widths, pad) {
   p <- tok$parsed[[1L]]

@@ -55,7 +55,7 @@
 #'   cols(variable = col_spec(align = "left")) |>
 #'   cols(variable = col_spec(width = 2.0))
 #' # Result: variable has usage="group", label="Parameter",
-#' #         align="left", width=2.0 -- all four fields set.
+#' #         align="left", width=2.0 — all four fields set.
 #' ```
 #'
 #' @param .spec *The `tabular_spec` to extend.*
@@ -112,7 +112,7 @@
 #' #
 #' # Best Overall Response table where `stat_label` carries the
 #' # canonical CDISC factor levels (driving the sort) and `row_type`
-#' # is hidden -- present in the data for the sort, absent from the
+#' # is hidden — present in the data for the sort, absent from the
 #' # rendered output via `col_spec(visible = FALSE)`.
 #' bor_levels <- c(
 #'   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",

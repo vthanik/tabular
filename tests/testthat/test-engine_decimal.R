@@ -507,7 +507,7 @@ test_that("snapshot: full saf_demo Placebo column end-to-end", {
 })
 
 # ---------------------------------------------------------------------
-# Layer 6 -- per-section alignment
+# Layer 6 — per-section alignment
 # ---------------------------------------------------------------------
 
 test_that("sections vector splits a column into independent alignment units", {
@@ -536,7 +536,7 @@ test_that("sections vector preserves row order across sections", {
   # Row 4 ("147") belongs to section A even though section B
   # intervenes; A-section widths must include "147" in int_w.
   expect_match(out[[4L]], "147")
-  # Section B has only one row -- renders with its own minimal width.
+  # Section B has only one row — renders with its own minimal width.
   expect_match(out[[3L]], "14 \\(16\\.3\\)")
 })
 
@@ -579,7 +579,7 @@ test_that("engine_decimal() forwards sections to the per-column workhorse", {
 })
 
 # ---------------------------------------------------------------------
-# Layer 7 -- snapshot pinning the user's "DM expectation" image
+# Layer 7 — snapshot pinning the user's "DM expectation" image
 # ---------------------------------------------------------------------
 
 test_that("snapshot: per-section saf_demo Placebo column (Demographics image)", {
@@ -609,7 +609,7 @@ test_that("snapshot: per-section all four arm columns (full saf_demo)", {
 })
 
 # ---------------------------------------------------------------------
-# Layer 8 -- 18 format families reference (galley decimal-formats.txt)
+# Layer 8 — 18 format families reference (galley decimal-formats.txt)
 # ---------------------------------------------------------------------
 
 # Pin every input/expected pair from galley's published decimal-
@@ -808,13 +808,13 @@ test_that("snapshot: 18 format families vs galley reference", {
 })
 
 # ---------------------------------------------------------------------
-# Layer 9 -- column-wide slot-1 floor with section-scoped tail
+# Layer 9 — column-wide slot-1 floor with section-scoped tail
 # ---------------------------------------------------------------------
 
 test_that("slot-1 sign+int width is column-wide across sections", {
   # Section A has single-digit ints; section B has three-digit ints.
   # Without the column-wide floor, A's "1" would pad-left to 1 char
-  # (its own section's int_w) and B's "100" would pad to 3 -- so the
+  # (its own section's int_w) and B's "100" would pad to 3 — so the
   # units-digit columns wouldn't align. With the floor, A's "1" pads
   # to 3 chars too.
   v <- c("1", "2", "3", "100", "200")
@@ -854,7 +854,7 @@ test_that("comparator prefix aligns column-wide across sections", {
 })
 
 # ---------------------------------------------------------------------
-# Layer 10 -- aligngen-inspired enhancements
+# Layer 10 — aligngen-inspired enhancements
 # ---------------------------------------------------------------------
 
 test_that("engine_decimal() defaults to NBSP padding", {
@@ -1001,7 +1001,7 @@ test_that(".trim_symmetric early-returns on all-NA input", {
 
 test_that(".trim_symmetric stops between left and right when row becomes single char", {
   # 2-char rows where every cell starts with pad. After one left
-  # strip, every cell is 1-char -- function returns early before
+  # strip, every cell is 1-char — function returns early before
   # the right-strip pass.
   out <- c(" a", " b", " c")
   trimmed <- tabular:::.trim_symmetric(out, pad = " ")
@@ -1078,10 +1078,10 @@ test_that("engine_decimal() threads zero_suppress + edge_trim", {
 })
 
 # ---------------------------------------------------------------------
-# Layer 11 -- combined: sections + opaque + zero-suppress on the
+# Layer 11 — combined: sections + opaque + zero-suppress on the
 # saf_demo Total column. The Total column has "0 (0.0)" rows in
-# Race / Ethnicity that should now zero-suppress, and "NR" -- though
-# absent here -- could be opaque in a future fixture.
+# Race / Ethnicity that should now zero-suppress, and "NR" — though
+# absent here — could be opaque in a future fixture.
 # ---------------------------------------------------------------------
 
 test_that("snapshot: per-section + zero-suppress + edge-trim on saf_demo Total", {
