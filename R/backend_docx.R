@@ -146,6 +146,8 @@ backend_docx <- function(grid, file) {
 # Commits 4-5 wire page chrome refs and per-cell styling.
 .docx_document_xml <- function(grid, preset, hyperlinks) {
   meta <- grid@metadata
+  has_ph <- .page_band_is_populated(meta$pagehead_ast)
+  has_pf <- .page_band_is_populated(meta$pagefoot_ast)
   titles_block <- .docx_title_block(
     meta$titles_ast %||% list(),
     hyperlinks
@@ -157,8 +159,8 @@ backend_docx <- function(grid, file) {
   )
   sect_pr <- .docx_section_pr(
     preset,
-    has_pagehead = FALSE,
-    has_pagefoot = FALSE
+    has_pagehead = has_ph,
+    has_pagefoot = has_pf
   )
 
   body <- paste0(
@@ -636,35 +638,191 @@ backend_docx <- function(grid, file) {
 }
 
 # ---------------------------------------------------------------------
-# Page chrome — placeholder for v0.1 (commit 4 wires real chrome)
+# Page chrome — header1.xml / footer1.xml with L/C/R slot tables +
+# PAGE / NUMPAGES dynamic fields
 # ---------------------------------------------------------------------
 
-# Render `word/header1.xml`. v0.1 emits an empty header skeleton;
-# commit 4 implements real L/C/R-slot chrome rows + PAGE / NUMPAGES
-# field codes.
+# Render `word/header1.xml`. Each populated page-band row emits as
+# a one-row borderless `<w:tbl>` with up to three cells (Left /
+# Center / Right slots; empty slots collapse). Rows emit in
+# REVERSE index order so row 1 (body edge) ends up at the bottom of
+# the header zone, closest to the table body — matches the RTF
+# header convention.
 .docx_header_xml <- function(pagehead_ast, preset) {
+  nrow_band <- .page_band_nrow(pagehead_ast)
+  rows <- character()
+  for (i in rev(seq_len(nrow_band))) {
+    row_ast <- .page_band_row(pagehead_ast, i)
+    rows <- c(rows, .docx_chrome_row(row_ast, preset))
+  }
   paste0(
     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
     "<w:hdr ",
     .docx_ns_w,
     " ",
     .docx_ns_r,
-    "><w:p/></w:hdr>"
+    ">",
+    paste(rows, collapse = ""),
+    "</w:hdr>"
   )
 }
 
-# Render `word/footer1.xml`. v0.1 emits an empty footer skeleton;
-# commit 4 implements real L/C/R-slot chrome rows + PAGE / NUMPAGES
-# field codes.
+# Render `word/footer1.xml`. Each populated page-band row emits as
+# a one-row borderless `<w:tbl>` with up to three cells (Left /
+# Center / Right slots; empty slots collapse). Rows emit in
+# FORWARD index order so row 1 (body edge) ends up at the top of
+# the footer zone — matches the RTF footer convention.
 .docx_footer_xml <- function(pagefoot_ast, preset) {
+  nrow_band <- .page_band_nrow(pagefoot_ast)
+  rows <- character()
+  for (i in seq_len(nrow_band)) {
+    row_ast <- .page_band_row(pagefoot_ast, i)
+    rows <- c(rows, .docx_chrome_row(row_ast, preset))
+  }
   paste0(
     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
     "<w:ftr ",
     .docx_ns_w,
     " ",
     .docx_ns_r,
-    "><w:p/></w:ftr>"
+    ">",
+    paste(rows, collapse = ""),
+    "</w:ftr>"
   )
+}
+
+# Render one band row as a borderless 3-cell table. Cells COLLAPSE
+# for NULL / empty slot ASTs — no blank-padded cells. Each cell
+# alignment matches its slot (L = left, C = center, R = right).
+# Page tokens (`{page}` / `{npages}`) inside any cell's inline AST
+# resolve to Word `<w:fldSimple>` PAGE / NUMPAGES fields at view
+# time. No borders, no shading; chrome cells stay visually
+# transparent against the page background.
+.docx_chrome_row <- function(row_slots_ast, preset) {
+  slots <- c("left", "center", "right")
+  alignments <- c(left = "left", center = "center", right = "right")
+  cells_data <- list()
+  for (s in slots) {
+    ast <- row_slots_ast[[s]]
+    if (is_inline_ast(ast) && length(ast@runs) > 0L) {
+      runs_xml <- .render_docx_inline(ast, hyperlinks = character())
+      runs_with_fields <- .docx_resolve_page_tokens(runs_xml)
+      cells_data[[length(cells_data) + 1L]] <- list(
+        align = alignments[[s]],
+        body = runs_with_fields
+      )
+    }
+  }
+  if (length(cells_data) == 0L) {
+    return(character())
+  }
+
+  paper <- .docx_paper_twips(preset@paper_size, preset@orientation)
+  margins <- .docx_margins_twips(preset@margins)
+  printable <- paper$width - margins$left - margins$right
+  per_cell <- as.integer(printable %/% length(cells_data))
+
+  # Borderless cell prelude: <w:tcBorders> with nil on all four
+  # sides. Inserted as a constant so every chrome cell uses the
+  # same scaffold.
+  nil_borders <- paste0(
+    "<w:tcBorders>",
+    "<w:top w:val=\"nil\"/><w:left w:val=\"nil\"/>",
+    "<w:bottom w:val=\"nil\"/><w:right w:val=\"nil\"/>",
+    "</w:tcBorders>"
+  )
+
+  cells_xml <- vapply(
+    seq_along(cells_data),
+    function(i) {
+      c <- cells_data[[i]]
+      width <- if (i == length(cells_data)) {
+        printable - per_cell * (length(cells_data) - 1L)
+      } else {
+        per_cell
+      }
+      tc_pr <- paste0(
+        "<w:tcPr>",
+        sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", width),
+        nil_borders,
+        "</w:tcPr>"
+      )
+      paste0(
+        "<w:tc>",
+        tc_pr,
+        sprintf(
+          "<w:p><w:pPr><w:jc w:val=\"%s\"/></w:pPr>%s</w:p>",
+          c$align,
+          c$body
+        ),
+        "</w:tc>"
+      )
+    },
+    character(1L)
+  )
+
+  grid_cols <- paste0(
+    rep(
+      sprintf("<w:gridCol w:w=\"%d\"/>", per_cell),
+      length(cells_data) - 1L
+    ),
+    collapse = ""
+  )
+  last_w <- printable - per_cell * (length(cells_data) - 1L)
+  grid_cols <- paste0(
+    grid_cols,
+    sprintf("<w:gridCol w:w=\"%d\"/>", last_w)
+  )
+
+  tbl_pr <- paste0(
+    "<w:tblPr>",
+    sprintf("<w:tblW w:w=\"%d\" w:type=\"dxa\"/>", printable),
+    "<w:tblLayout w:type=\"fixed\"/>",
+    "<w:tblBorders>",
+    "<w:top w:val=\"nil\"/><w:left w:val=\"nil\"/>",
+    "<w:bottom w:val=\"nil\"/><w:right w:val=\"nil\"/>",
+    "<w:insideH w:val=\"nil\"/><w:insideV w:val=\"nil\"/>",
+    "</w:tblBorders>",
+    "</w:tblPr>"
+  )
+
+  paste0(
+    "<w:tbl>",
+    tbl_pr,
+    "<w:tblGrid>",
+    grid_cols,
+    "</w:tblGrid>",
+    "<w:tr>",
+    paste(cells_xml, collapse = ""),
+    "</w:tr></w:tbl>"
+  )
+}
+
+# Substitute the user-typed `{page}` / `{npages}` tokens in a
+# rendered OOXML chrome fragment for Word `<w:fldSimple>` field
+# codes. The tokens live verbatim inside `<w:t xml:space="preserve">`
+# elements after `.render_docx_inline()` runs. We split the
+# enclosing `<w:r>` / `<w:t>` so the field element lands at the
+# correct paragraph level (fields are not legal inside `<w:t>`).
+# Word and LibreOffice both auto-update the placeholder digit
+# ("1") on view / print, so the value shown matches the real page
+# number even though the static fallback is "1".
+.docx_resolve_page_tokens <- function(xml) {
+  page_repl <- paste0(
+    "</w:t></w:r>",
+    "<w:fldSimple w:instr=\"PAGE \\* MERGEFORMAT\">",
+    "<w:r><w:t>1</w:t></w:r></w:fldSimple>",
+    "<w:r><w:t xml:space=\"preserve\">"
+  )
+  npages_repl <- paste0(
+    "</w:t></w:r>",
+    "<w:fldSimple w:instr=\"NUMPAGES \\* MERGEFORMAT\">",
+    "<w:r><w:t>1</w:t></w:r></w:fldSimple>",
+    "<w:r><w:t xml:space=\"preserve\">"
+  )
+  xml <- gsub("{page}", page_repl, xml, fixed = TRUE)
+  xml <- gsub("{npages}", npages_repl, xml, fixed = TRUE)
+  xml
 }
 
 # ---------------------------------------------------------------------

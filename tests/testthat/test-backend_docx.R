@@ -281,7 +281,7 @@ test_that("emit(.docx) writes header1.xml + footer1.xml when pagehead / pagefoot
   expect_match(doc_rels, "Target=\"footer1.xml\"", fixed = TRUE)
 })
 
-test_that(".docx_header_xml / .docx_footer_xml emit well-formed skeletons", {
+test_that(".docx_header_xml / .docx_footer_xml emit well-formed empty roots when band ASTs unpopulated", {
   preset <- preset_spec()
   band_ast <- list(left = list(), center = list(), right = list())
   hdr <- tabular:::.docx_header_xml(band_ast, preset)
@@ -290,6 +290,126 @@ test_that(".docx_header_xml / .docx_footer_xml emit well-formed skeletons", {
   expect_match(ftr, "<w:ftr ", fixed = TRUE)
   expect_no_error(xml2::read_xml(hdr))
   expect_no_error(xml2::read_xml(ftr))
+})
+
+test_that("populated pagehead renders L/C/R cells in REVERSE row order (body edge at bottom)", {
+  # Two-row pagehead: row 1 (body-edge) bottom; row 2 top. We assert
+  # the second-emitted <w:tbl> contains the row-1 (body-edge) text.
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(
+      pagehead = list(
+        left = c("Body-edge L1", "Top-edge L2"),
+        right = "Body-edge R1"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  hdr <- paste(
+    readLines(file.path(unzipped, "word/header1.xml")),
+    collapse = ""
+  )
+  # Top-edge appears FIRST in the file (closer to top of header zone)
+  top_pos <- regexpr("Top-edge L2", hdr, fixed = TRUE)
+  bot_pos <- regexpr("Body-edge L1", hdr, fixed = TRUE)
+  expect_lt(top_pos, bot_pos)
+  expect_match(hdr, "Body-edge R1", fixed = TRUE)
+})
+
+test_that("populated pagefoot renders rows in FORWARD order (body edge at top)", {
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(
+      pagefoot = list(
+        left = c("Body-edge L1", "Bottom-edge L2"),
+        right = "Body-edge R1"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  ftr <- paste(
+    readLines(file.path(unzipped, "word/footer1.xml")),
+    collapse = ""
+  )
+  top_pos <- regexpr("Body-edge L1", ftr, fixed = TRUE)
+  bot_pos <- regexpr("Bottom-edge L2", ftr, fixed = TRUE)
+  expect_lt(top_pos, bot_pos)
+})
+
+test_that("empty L/C/R slots collapse (no blank cells)", {
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(pagehead = list(right = "Only Right"))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  hdr <- paste(
+    readLines(file.path(unzipped, "word/header1.xml")),
+    collapse = ""
+  )
+  # One row, one cell — only "right" populated.
+  tc_count <- length(gregexpr("<w:tc>", hdr, fixed = TRUE)[[1L]])
+  expect_identical(tc_count, 1L)
+})
+
+test_that("{page} / {npages} resolve to <w:fldSimple> PAGE / NUMPAGES inside chrome", {
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(pagehead = list(right = "Page {page} of {npages}"))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  hdr <- paste(
+    readLines(file.path(unzipped, "word/header1.xml")),
+    collapse = ""
+  )
+  expect_match(hdr, "<w:fldSimple w:instr=\"PAGE ", fixed = TRUE)
+  expect_match(hdr, "<w:fldSimple w:instr=\"NUMPAGES ", fixed = TRUE)
+})
+
+test_that("<w:sectPr> wires headerReference / footerReference when chrome populated", {
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(
+      pagehead = list(left = "header"),
+      pagefoot = list(left = "footer")
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  expect_match(
+    doc,
+    "<w:headerReference r:id=\"rIdH\" w:type=\"default\"/>",
+    fixed = TRUE
+  )
+  expect_match(
+    doc,
+    "<w:footerReference r:id=\"rIdF\" w:type=\"default\"/>",
+    fixed = TRUE
+  )
+})
+
+test_that("header / footer XML is well-formed when chrome populated", {
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(
+      pagehead = list(
+        left = "Protocol",
+        center = "Draft",
+        right = "Page {page} of {npages}"
+      ),
+      pagefoot = list(left = "Source: ADSL")
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  expect_no_error(xml2::read_xml(file.path(unzipped, "word/header1.xml")))
+  expect_no_error(xml2::read_xml(file.path(unzipped, "word/footer1.xml")))
+})
+
+test_that(".docx_resolve_page_tokens does nothing when no tokens present", {
+  raw <- "<w:r><w:t xml:space=\"preserve\">plain</w:t></w:r>"
+  expect_identical(tabular:::.docx_resolve_page_tokens(raw), raw)
 })
 
 # ---------------------------------------------------------------------
