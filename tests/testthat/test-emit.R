@@ -8,11 +8,26 @@
 # file. Returns invisibly so the caller can chain with `withr::defer`
 # for automatic cleanup.
 .register_stub <- function(format, payload = "stub", envir = parent.frame()) {
+  # Snapshot any previously-registered backend so we can restore
+  # it on test exit. Without this, registering a stub for "md" /
+  # "html" wipes the real backend for subsequent tests in the
+  # session (test order matters: print tests need a real html
+  # backend).
+  prior <- tabular:::.tabular_backends[[format]]
   tabular:::.register_backend(format, function(grid, file) {
     writeLines(payload, file)
     invisible(file)
   })
-  withr::defer(tabular:::.unregister_backend(format), envir = envir)
+  withr::defer(
+    {
+      if (is.null(prior)) {
+        tabular:::.unregister_backend(format)
+      } else {
+        tabular:::.register_backend(format, prior)
+      }
+    },
+    envir = envir
+  )
   invisible()
 }
 
@@ -156,6 +171,13 @@ test_that("emit() aborts when extension cannot be resolved", {
 
 test_that("emit() aborts when no backend is registered", {
   # Ensure md is NOT registered for the duration of this test.
+  # Snapshot the real backend so we can restore it after the test.
+  real_md <- tabular:::.tabular_backends[["md"]]
+  withr::defer(
+    if (!is.null(real_md)) {
+      tabular:::.register_backend("md", real_md)
+    }
+  )
   tabular:::.unregister_backend("md")
   spec <- .simple_spec()
   expect_error(

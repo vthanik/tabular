@@ -10,11 +10,24 @@ skip_if_not_installed("digest")
 # ---------------------------------------------------------------------
 
 .register_stub <- function(format, payload = "stub", envir = parent.frame()) {
+  # Snapshot any previously-registered backend so we can restore
+  # it on test exit. Without this, registering a stub for "md" /
+  # "html" wipes the real backend for subsequent tests.
+  prior <- tabular:::.tabular_backends[[format]]
   tabular:::.register_backend(format, function(grid, file) {
     writeLines(payload, file)
     invisible(file)
   })
-  withr::defer(tabular:::.unregister_backend(format), envir = envir)
+  withr::defer(
+    {
+      if (is.null(prior)) {
+        tabular:::.unregister_backend(format)
+      } else {
+        tabular:::.register_backend(format, prior)
+      }
+    },
+    envir = envir
+  )
   invisible()
 }
 

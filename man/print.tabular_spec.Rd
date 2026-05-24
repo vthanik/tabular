@@ -4,33 +4,117 @@
 \alias{print.tabular_spec}
 \title{Print a \code{tabular_spec}}
 \arguments{
-\item{x}{A \code{tabular_spec} object.}
+\item{x}{\emph{The \code{tabular_spec} to render.}
+\verb{<tabular_spec>: required}. The same object you'd hand to
+\code{\link[=emit]{emit()}}.}
 
-\item{...}{Ignored.}
+\item{output}{\emph{Preview format.} \verb{<character(1) | NULL>: default }NULL\code{ (auto)}. One of:
+\itemize{
+\item \code{NULL} (default) — auto-resolved per the rules above.
+\item \code{"html"} — viewer pane (or \code{cat()} if no viewer).
+\item \code{"md"} / \code{"markdown"} — markdown source to console.
+\item \code{"latex"} — LaTeX source to console.
+\item \code{"rtf"} / \code{"docx"} — HTML preview + cli note.
+\item \code{"pdf"} — HTML preview (PDF compile only on \code{emit()}).
+\item \code{"cli"} — structural cli-tree summary.
+}
+
+\strong{Tip:} set \code{options(tabular_print_output = "md")} to
+force markdown source at the console even when a viewer
+pane is available (handy when you want the raw text for
+copy / diff).}
+
+\item{...}{\emph{Reserved.} Ignored.}
 }
 \value{
-Invisibly returns \code{x}.
+\emph{Invisibly returns \code{x}.} Side effect: opens the
+viewer or \code{cat()}s output.
 }
 \description{
-Pretty-prints a \code{tabular_spec} as a structured cli tree showing
-data dimensions, titles, footnotes, and any column / header /
-sort / pivot / derive / style / pagination configuration the spec
-carries.
+Renders a \code{tabular_spec} interactively. Default behaviour
+mirrors \code{tinytable::tt()} and \code{gt::gt()}: when an IDE viewer
+pane is available (RStudio, Positron, \code{htmlwidgets}'s
+standalone shim) the spec is rendered to a self-contained
+HTML tempfile and opened in the pane; at a plain console the
+markdown source is \code{cat()}-printed; in non-interactive
+contexts (Rscript, R CMD check, CI) the structural cli-tree
+summary is printed instead.
 }
 \details{
-Phase 1b upgrade: once the HTML backend lands, this method will
-render the spec to a tempfile via \code{emit()} and open it in the
-active viewer (\code{getOption("viewer")}) when called interactively --
-mirroring \code{gt::gt()} and \code{tinytable::tt()}. Until then, the cli
-tree view is the print output.
+\strong{Output resolution.} The router considers, in order:
+\enumerate{
+\item An explicit \verb{output =} argument (always wins).
+\item An active \code{knit_print()} pass — handled by the
+\code{knit_print} S3 method, not here.
+\item An RStudio notebook context (active .qmd / .Rmd buffer) —
+HTML wrapped in \code{htmltools::browsable()} so it inlines
+under the chunk instead of opening the viewer pane.
+\item An interactive session with a viewer pane installed
+(\code{interactive() && !is.null(getOption("viewer"))}) — HTML
+in the pane.
+\item An interactive session with no viewer pane — markdown
+source \code{cat()}-ed to the console.
+\item Everything else (non-interactive) — the structural cli-tree
+summary.
+}
+
+\strong{Format support.} Tabular has five backends; not all of
+them preview natively in the IDE pane:
+\itemize{
+\item \code{"html"} — viewer pane (native).
+\item \code{"md"} — markdown source \code{cat()} to console.
+\item \code{"latex"} — LaTeX source \code{cat()} to console (preview when
+\code{backend_latex} lands).
+\item \code{"rtf"} / \code{"docx"} — \emph{fall back to an HTML preview} + a
+cli note pointing at \code{emit(spec, "out.rtf")} /
+\code{emit(spec, "out.docx")} for the real artefact. The viewer
+pane cannot render RTF / OOXML; we render HTML so the user
+still sees the table.
+\item \code{"pdf"} — \emph{falls back to HTML preview}. We deliberately do
+NOT compile through tinytex on every autoprint (would burn
+seconds per print); \code{emit(spec, "out.pdf")} does the real
+compile.
+\item \code{"cli"} — force the structural cli-tree summary (handy when
+you want a quick prop / header / derive overview at the
+console even with the viewer pane available).
+}
+
+\strong{Temp-file location.} Preview HTML files are written under
+\code{getOption("tabular_preview_dir", default = tempdir())}.
+Override the option to keep them in a stable location (handy
+when Linux browsers don't have read access to \verb{/tmp/}).
 }
 \examples{
-# Build a spec and print it — the cli tree shows data dims,
-# titles, footnotes, and any verb-state attached so far.
+# ---- Example 1: Build + autoprint ----
+#
+# Build a spec and print it. Inside RStudio / Positron the
+# rendered HTML lands in the viewer pane; at a plain console
+# the markdown source is `cat()`-ed.
 tabular(
   saf_demo,
   titles = c("Table 14.1.1", "Demographics"),
   footnotes = "Safety Population."
 )
 
+# ---- Example 2: Force the cli-tree structural view ----
+#
+# The cli-tree summary shows props (cols, headers, derives,
+# sort, pagination, preset) at a glance. Useful for
+# debugging spec composition without paying the HTML render
+# cost.
+spec <- tabular(
+  saf_demo,
+  titles = "Demographics"
+) |>
+  cols(variable = col_spec(usage = "group", label = "Characteristic"))
+
+print(spec, output = "cli")
+
+}
+\seealso{
+\strong{Terminal verb:} \code{\link[=emit]{emit()}} writes the resolved artefact to
+disk; \code{print()} is for in-session preview only.
+
+\strong{Pipeline shape:} \code{\link[=as_grid]{as_grid()}} resolves the engine pipeline
+to a \code{tabular_grid} without I/O.
 }

@@ -27,9 +27,11 @@ Suggests:
     withr,
     digest,
     ggplot2,
+    htmltools,
     knitr,
     quarto,
     pkgdown,
+    rstudioapi,
     tibble,
     tinytex,
     yaml
