@@ -36,6 +36,58 @@ test_that("as_grid() metadata carries spec shape", {
   expect_named(meta$col_labels_ast, c("x", "y"))
 })
 
+test_that("as_grid() leaves pagehead_ast / pagefoot_ast NULL when preset omits them", {
+  spec <- tabular(data.frame(x = 1:3))
+  g <- as_grid(spec)
+  expect_null(g@metadata$pagehead_ast)
+  expect_null(g@metadata$pagefoot_ast)
+})
+
+test_that("as_grid() populates pagehead_ast for single-row pagehead", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(
+        left = "Protocol: ABC-123",
+        right = "Page {page} of {npages}"
+      )
+    )
+  g <- as_grid(spec)
+  band <- g@metadata$pagehead_ast
+  expect_true(is.list(band))
+  expect_named(band, c("left", "center", "right"))
+  expect_length(band$left, 1L)
+  expect_true(is_inline_ast(band$left[[1L]]))
+  expect_true(is_inline_ast(band$right[[1L]]))
+})
+
+test_that("as_grid() populates pagefoot_ast multi-row with index 1 at body edge", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagefoot = list(
+        left = c("Body edge row", "Far from body row"),
+        right = "{datetime}"
+      )
+    )
+  g <- as_grid(spec)
+  band <- g@metadata$pagefoot_ast
+  expect_length(band$left, 2L)
+  expect_length(band$right, 2L)
+  # Index 1 has user content; index 2 of right is padding (empty AST)
+  expect_gt(length(band$left[[1L]]@runs), 0L)
+  expect_gt(length(band$left[[2L]]@runs), 0L)
+  expect_gt(length(band$right[[1L]]@runs), 0L)
+  expect_length(band$right[[2L]]@runs, 0L)
+})
+
+test_that("as_grid() honours session-default pagehead via cascade", {
+  withr::defer(set_preset(reset = TRUE))
+  set_preset(pagehead = list(left = "Session protocol"))
+  spec <- tabular(data.frame(x = 1:3)) # no per-spec preset
+  g <- as_grid(spec)
+  expect_false(is.null(g@metadata$pagehead_ast))
+  expect_length(g@metadata$pagehead_ast$left, 1L)
+})
+
 # ---------------------------------------------------------------------
 # Page descriptors
 # ---------------------------------------------------------------------

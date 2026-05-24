@@ -461,6 +461,17 @@ preset_spec <- S7::new_class(
         return(conditionMessage(parsed))
       }
     }
+    # Page bands — named list with slots from left / center / right.
+    # `.page_band_shape_error` returns NULL or a message string,
+    # which is exactly what an S7 validator returns.
+    ph_err <- .page_band_shape_error(self@pagehead)
+    if (!is.null(ph_err)) {
+      return(paste0("@pagehead ", ph_err))
+    }
+    pf_err <- .page_band_shape_error(self@pagefoot)
+    if (!is.null(pf_err)) {
+      return(paste0("@pagefoot ", pf_err))
+    }
     NULL
   }
 )

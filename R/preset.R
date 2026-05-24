@@ -95,8 +95,59 @@
 #'   *   **`margins`** — page margins in inches.
 #'       `<numeric(1) | numeric(4)>`. Length 1 = all four sides;
 #'       length 4 = top, right, bottom, left.
-#'   *   **`pagehead`**, **`pagefoot`** — list of named lists for
-#'       header / footer row content. `<list>`.
+#'   *   **`pagehead`**, **`pagefoot`** — per-page header / footer
+#'       band content. `<list>`. Each band is a named list with
+#'       slots from `left` / `center` / `right`; every other slot
+#'       name is rejected. Each slot accepts `NULL` (omit), a
+#'       character scalar, a character vector (multi-row content),
+#'       or an [`inline_ast`]. Empty `list()` (the default) -> no
+#'       band emitted.
+#'
+#'       **Single-row form** (scalar slots):
+#'
+#'       ```r
+#'       pagehead = list(
+#'         left   = "Protocol: ABC-123",
+#'         center = "Draft",
+#'         right  = "Page {page} of {npages}"
+#'       )
+#'       ```
+#'
+#'       **Multi-row form** (vector slots, index-aligned):
+#'
+#'       ```r
+#'       pagehead = list(
+#'         left  = c("Protocol: ABC-123", "Analysis Set: Safety"),
+#'         right = "Page {page} of {npages}"   # scalar -> body-edge row
+#'       )
+#'       ```
+#'
+#'       **Growth direction.** Vector index 1 = body edge; index N
+#'       = far from body. `pagehead` rows stack **upward** away
+#'       from the table (the row closest to the table is index 1).
+#'       `pagefoot` rows stack **downward** away from the table
+#'       (the row closest to the table is index 1). Shorter slots
+#'       pad with `""` at the FAR end (high index), so a scalar
+#'       slot naturally lands on the body-edge row.
+#'
+#'       **Token vocabulary** — substituted into slot text:
+#'
+#'       | Token            | Phase   | Expansion                              |
+#'       |------------------|---------|----------------------------------------|
+#'       | `{page}`         | backend | current page number (field code)       |
+#'       | `{npages}`       | backend | total page count (field code)          |
+#'       | `{program}`      | engine  | calling script's base name             |
+#'       | `{program_path}` | engine  | calling script's full path             |
+#'       | `{datetime}`     | engine  | `DDMMMYYYY HH:MM:SS` UTC (render time) |
+#'
+#'       `{program}`, `{program_path}`, and `{datetime}` resolve
+#'       once per render (at [`as_grid()`] / [`emit()`]); `{page}`
+#'       and `{npages}` resolve per page (filled in by Word /
+#'       xelatex / the browser's print engine at view time). The
+#'       program tokens walk a 5-mode detection chain — RStudio
+#'       API, `source()` frame, Rscript / R CMD BATCH commandArgs
+#'       (covers Domino + Linux batch + CI), knitr current_input,
+#'       fallback `"<interactive>"`.
 #'   *   **`hlines`** — horizontal-rule policy.
 #'       `<character(1)>`. One of `"header"` (default), `"none"`,
 #'       `"all"`.
@@ -170,12 +221,16 @@
 #'   ) |>
 #'   paginate()
 #'
-#' # ---- Example 2: Per-spec override on top of a session default ----
+#' # ---- Example 2: Per-spec override with per-page chrome ----
 #' #
 #' # The submission session sets a portrait letter 9pt default (typical
 #' # safety-table geometry). One particular AE table needs landscape
 #' # for a long PT label band; the per-spec `preset()` overrides only
-#' # orientation, leaving font / paper untouched via merge semantics.
+#' # orientation. The same per-spec call wires the BMS Appendix I
+#' # per-page header band (protocol on the left, page X of Y on the
+#' # right) and a footer band that auto-resolves the calling
+#' # script's name and the current render timestamp via the
+#' # `{program}` and `{datetime}` tokens.
 #' set_preset(font_size = 9, paper_size = "letter")
 #'
 #' ae <- saf_aesocpt
@@ -204,7 +259,17 @@
 #'   ) |>
 #'   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
 #'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
-#'   preset(orientation = "landscape") |>
+#'   preset(
+#'     orientation = "landscape",
+#'     pagehead = list(
+#'       left  = "Protocol: ABC-123",
+#'       right = "Page {page} of {npages}"
+#'     ),
+#'     pagefoot = list(
+#'       left  = "{program}",
+#'       right = "{datetime}"
+#'     )
+#'   ) |>
 #'   paginate(keep_together = "soc")
 #'
 #' # Reset the session default so subsequent examples / R sessions

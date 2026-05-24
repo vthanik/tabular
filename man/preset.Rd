@@ -31,8 +31,57 @@ Recognised knobs:
 \item \strong{\code{margins}} — page margins in inches.
 \verb{<numeric(1) | numeric(4)>}. Length 1 = all four sides;
 length 4 = top, right, bottom, left.
-\item \strong{\code{pagehead}}, \strong{\code{pagefoot}} — list of named lists for
-header / footer row content. \verb{<list>}.
+\item \strong{\code{pagehead}}, \strong{\code{pagefoot}} — per-page header / footer
+band content. \verb{<list>}. Each band is a named list with
+slots from \code{left} / \code{center} / \code{right}; every other slot
+name is rejected. Each slot accepts \code{NULL} (omit), a
+character scalar, a character vector (multi-row content),
+or an \code{\link{inline_ast}}. Empty \code{list()} (the default) -> no
+band emitted.
+
+\strong{Single-row form} (scalar slots):
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{pagehead = list(
+  left   = "Protocol: ABC-123",
+  center = "Draft",
+  right  = "Page \{page\} of \{npages\}"
+)
+}\if{html}{\out{</div>}}
+
+\strong{Multi-row form} (vector slots, index-aligned):
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{pagehead = list(
+  left  = c("Protocol: ABC-123", "Analysis Set: Safety"),
+  right = "Page \{page\} of \{npages\}"   # scalar -> body-edge row
+)
+}\if{html}{\out{</div>}}
+
+\strong{Growth direction.} Vector index 1 = body edge; index N
+= far from body. \code{pagehead} rows stack \strong{upward} away
+from the table (the row closest to the table is index 1).
+\code{pagefoot} rows stack \strong{downward} away from the table
+(the row closest to the table is index 1). Shorter slots
+pad with \code{""} at the FAR end (high index), so a scalar
+slot naturally lands on the body-edge row.
+
+\strong{Token vocabulary} — substituted into slot text:\tabular{lll}{
+   Token \tab Phase \tab Expansion \cr
+   \code{{page}} \tab backend \tab current page number (field code) \cr
+   \code{{npages}} \tab backend \tab total page count (field code) \cr
+   \code{{program}} \tab engine \tab calling script's base name \cr
+   \code{{program_path}} \tab engine \tab calling script's full path \cr
+   \code{{datetime}} \tab engine \tab \verb{DDMMMYYYY HH:MM:SS} UTC (render time) \cr
+}
+
+
+\code{{program}}, \code{{program_path}}, and \code{{datetime}} resolve
+once per render (at \code{\link[=as_grid]{as_grid()}} / \code{\link[=emit]{emit()}}); \code{{page}}
+and \code{{npages}} resolve per page (filled in by Word /
+xelatex / the browser's print engine at view time). The
+program tokens walk a 5-mode detection chain — RStudio
+API, \code{source()} frame, Rscript / R CMD BATCH commandArgs
+(covers Domino + Linux batch + CI), knitr current_input,
+fallback \code{"<interactive>"}.
 \item \strong{\code{hlines}} — horizontal-rule policy.
 \verb{<character(1)>}. One of \code{"header"} (default), \code{"none"},
 \code{"all"}.
@@ -136,12 +185,16 @@ tabular(
   ) |>
   paginate()
 
-# ---- Example 2: Per-spec override on top of a session default ----
+# ---- Example 2: Per-spec override with per-page chrome ----
 #
 # The submission session sets a portrait letter 9pt default (typical
 # safety-table geometry). One particular AE table needs landscape
 # for a long PT label band; the per-spec `preset()` overrides only
-# orientation, leaving font / paper untouched via merge semantics.
+# orientation. The same per-spec call wires the BMS Appendix I
+# per-page header band (protocol on the left, page X of Y on the
+# right) and a footer band that auto-resolves the calling
+# script's name and the current render timestamp via the
+# `{program}` and `{datetime}` tokens.
 set_preset(font_size = 9, paper_size = "letter")
 
 ae <- saf_aesocpt
@@ -170,7 +223,17 @@ tabular(
   ) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
-  preset(orientation = "landscape") |>
+  preset(
+    orientation = "landscape",
+    pagehead = list(
+      left  = "Protocol: ABC-123",
+      right = "Page {page} of {npages}"
+    ),
+    pagefoot = list(
+      left  = "{program}",
+      right = "{datetime}"
+    )
+  ) |>
   paginate(keep_together = "soc")
 
 # Reset the session default so subsequent examples / R sessions

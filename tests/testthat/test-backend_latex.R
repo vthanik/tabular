@@ -602,3 +602,75 @@ test_that("saf_demo golden pipeline matches the pinned .tex snapshot", {
   emit(spec, out)
   expect_snapshot_file(out, "saf_demo_golden.tex")
 })
+
+# ---------------------------------------------------------------------
+# Page bands — fancyhdr + lastpage
+# ---------------------------------------------------------------------
+
+test_that("empty pagehead / pagefoot does not load fancyhdr", {
+  spec <- tabular(data.frame(x = 1:3))
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_false(grepl("fancyhdr", tex, fixed = TRUE))
+  expect_false(grepl("pagestyle{fancy}", tex, fixed = TRUE))
+})
+
+test_that("populated pagehead loads fancyhdr + lastpage and sets \\fancyhead[L/C/R]", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(
+        left = "Protocol: ABC-123",
+        right = "Page {page} of {npages}"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("\\usepackage{fancyhdr}", tex, fixed = TRUE))
+  expect_true(grepl("\\usepackage{lastpage}", tex, fixed = TRUE))
+  expect_true(grepl("\\pagestyle{fancy}", tex, fixed = TRUE))
+  expect_true(grepl("\\fancyhead[L]{", tex, fixed = TRUE))
+  expect_true(grepl("\\fancyhead[R]{", tex, fixed = TRUE))
+  # {page} / {npages} resolved to LaTeX field equivalents
+  expect_true(grepl("\\thepage", tex, fixed = TRUE))
+  expect_true(grepl("\\pageref{LastPage}", tex, fixed = TRUE))
+  # {page} as a literal must be gone
+  expect_false(grepl("{page}", tex, fixed = TRUE))
+})
+
+test_that("multi-row pagehead REVERSES order (body-edge row last) inside slot text", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(left = c("Body edge", "Far row"))
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("Far row\\\\Body edge", tex, fixed = TRUE))
+})
+
+test_that("multi-row pagefoot keeps FORWARD order (body-edge row first)", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagefoot = list(left = c("Body edge", "Far row"))
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("Body edge\\\\Far row", tex, fixed = TRUE))
+})
+
+test_that("headheight bumps when multi-row pagehead is present", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(
+        left = c("Row 1", "Row 2", "Row 3"),
+        right = "Page {page} of {npages}"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("\\setlength{\\headheight}", tex, fixed = TRUE))
+})

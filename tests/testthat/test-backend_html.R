@@ -485,3 +485,74 @@ test_that("saf_demo golden pipeline matches the pinned .html snapshot", {
   emit(spec, out)
   expect_snapshot_file(out, "saf_demo_golden.html")
 })
+
+# ---------------------------------------------------------------------
+# Page bands — @page margin-box rules
+# ---------------------------------------------------------------------
+
+test_that("empty pagehead / pagefoot emits no @page rules", {
+  spec <- tabular(data.frame(x = 1:3))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_false(grepl("@page", html, fixed = TRUE))
+})
+
+test_that("populated pagehead emits @page top-* rules in REVERSE row order", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(
+        left = c("Body edge", "Far row"),
+        right = "Page {page} of {npages}"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("@page", html, fixed = TRUE))
+  expect_true(grepl("@top-left", html, fixed = TRUE))
+  expect_true(grepl("@top-right", html, fixed = TRUE))
+  # Reverse order: "Far row" appears before "Body edge" in the
+  # @top-left content string (so visually "Body edge" ends up at
+  # the bottom of the header zone, closest to the table).
+  m <- regmatches(
+    html,
+    regexpr(
+      "@top-left \\{ content: [^;]+; \\}",
+      html
+    )
+  )
+  expect_true(grepl("Far row", m, fixed = TRUE))
+  expect_true(grepl("Body edge", m, fixed = TRUE))
+  expect_lt(regexpr("Far row", m), regexpr("Body edge", m))
+})
+
+test_that("populated pagefoot emits @page bottom-* rules in FORWARD row order", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagefoot = list(left = c("Body edge", "Far row"))
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("@bottom-left", html, fixed = TRUE))
+  m <- regmatches(
+    html,
+    regexpr(
+      "@bottom-left \\{ content: [^;]+; \\}",
+      html
+    )
+  )
+  # Forward order: "Body edge" first, "Far row" second.
+  expect_lt(regexpr("Body edge", m), regexpr("Far row", m))
+})
+
+test_that("{page} / {npages} become counter(page) / counter(pages)", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(pagehead = list(right = "Page {page} of {npages}"))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("counter(page)", html, fixed = TRUE))
+  expect_true(grepl("counter(pages)", html, fixed = TRUE))
+})

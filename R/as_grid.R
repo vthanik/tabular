@@ -107,7 +107,11 @@
 #'     `total_panels`, `nrow_data`, `ncol_data`, `col_names`, `cols`
 #'     (the original [`col_spec()`] entries keyed by column name),
 #'     `headers` (the flattened header band grid), `titles`,
-#'     `footnotes`, `titles_ast`, `footnotes_ast`, `col_labels_ast`.
+#'     `footnotes`, `titles_ast`, `footnotes_ast`, `col_labels_ast`,
+#'     `pagehead_ast` / `pagefoot_ast` (resolved page-band content —
+#'     `NULL` when the active preset declares no band, otherwise
+#'     `list(left, center, right)` of length-N lists of [`inline_ast`]
+#'     where N = row count and index 1 is the body-edge row).
 #'
 #' @examples
 #' # ---- Example 1: Demographics — inspect the resolved grid ----
@@ -230,6 +234,24 @@ as_grid <- function(spec) {
     col_names = names(spec@data)
   )
 
+  # Page chrome (header / footer bands) — resolved against the
+  # cascade-effective preset so the session default's pagehead /
+  # pagefoot wins when the spec carries no per-call preset. Token
+  # substitution for {program} / {datetime} happens inside
+  # `.resolve_page_band` before parse_inline runs. {page} /
+  # {npages} are deferred to backend emission.
+  eff_preset <- .effective_preset(spec)
+  pagehead_ast <- .resolve_page_band(
+    eff_preset@pagehead,
+    arg = "pagehead",
+    call = call
+  )
+  pagefoot_ast <- .resolve_page_band(
+    eff_preset@pagefoot,
+    arg = "pagefoot",
+    call = call
+  )
+
   tabular_grid(
     pages = pages,
     metadata = list(
@@ -247,6 +269,8 @@ as_grid <- function(spec) {
       titles_ast = fmt$titles_ast,
       footnotes_ast = fmt$footnotes_ast,
       col_labels_ast = fmt$col_labels_ast,
+      pagehead_ast = pagehead_ast,
+      pagefoot_ast = pagefoot_ast,
       preset = spec@preset
     )
   )

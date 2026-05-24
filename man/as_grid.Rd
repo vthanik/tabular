@@ -31,7 +31,11 @@ for \code{as_grid()} calls), \code{rows_per_page}, \code{total_pages},
 \code{total_panels}, \code{nrow_data}, \code{ncol_data}, \code{col_names}, \code{cols}
 (the original \code{\link[=col_spec]{col_spec()}} entries keyed by column name),
 \code{headers} (the flattened header band grid), \code{titles},
-\code{footnotes}, \code{titles_ast}, \code{footnotes_ast}, \code{col_labels_ast}.
+\code{footnotes}, \code{titles_ast}, \code{footnotes_ast}, \code{col_labels_ast},
+\code{pagehead_ast} / \code{pagefoot_ast} (resolved page-band content —
+\code{NULL} when the active preset declares no band, otherwise
+\code{list(left, center, right)} of length-N lists of \code{\link{inline_ast}}
+where N = row count and index 1 is the body-edge row).
 }
 }
 \description{

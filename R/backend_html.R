@@ -74,7 +74,11 @@ backend_html <- function(grid, file) {
     "<head>",
     "<meta charset=\"utf-8\">",
     paste0("<title>", .html_escape(doc_title), "</title>"),
-    .html_inline_style(meta$preset),
+    .html_inline_style(
+      preset = meta$preset,
+      pagehead_ast = meta$pagehead_ast,
+      pagefoot_ast = meta$pagefoot_ast
+    ),
     "</head>",
     "<body>"
   )
@@ -559,9 +563,21 @@ backend_html <- function(grid, file) {
 # The body `font-family` stack is derived from the spec's preset
 # (see `.resolve_font_stack` in `R/fonts.R`); falls back to the
 # `serif` generic chain when no preset is attached.
-.html_inline_style <- function(preset = NULL) {
-  c(
-    "<style>",
+#
+# Page bands — when `pagehead_ast` / `pagefoot_ast` are populated,
+# emit CSS `@page` margin-box rules so browsers that print to PDF
+# (Chrome, Edge, Firefox) render the band per page with live
+# `counter(page)` / `counter(pages)` substitution for `{page}` /
+# `{npages}` tokens. Note: `@page` margin boxes are PRINT-ONLY —
+# on-screen browser viewing does not render them. Inline AST
+# formatting (bold / italic) is flattened to plain text since CSS
+# `content` does not support inline tags.
+.html_inline_style <- function(
+  preset = NULL,
+  pagehead_ast = NULL,
+  pagefoot_ast = NULL
+) {
+  body_css <- c(
     sprintf(
       "body { font-family: %s; color: #212529; margin: 1.5rem; }",
       .html_font_family_css(preset)
@@ -582,9 +598,184 @@ backend_html <- function(grid, file) {
     ".tabular-footnote { font-size: .85rem; color: #495057; margin: .25rem 0; }",
     ".tabular-empty { font-style: italic; color: #6c757d; }",
     ".tabular-page-break { border: none; border-top: 1px dashed #adb5bd; margin: 1.5rem 0; }",
-    "@media print { .tabular-page { page-break-after: always; } .tabular-page-break { display: none; } }",
-    "</style>"
+    "@media print { .tabular-page { page-break-after: always; } .tabular-page-break { display: none; } }"
   )
+  page_rules <- .html_render_page_band_rules(pagehead_ast, pagefoot_ast)
+  c("<style>", body_css, page_rules, "</style>")
+}
+
+# Render the CSS `@page { @top-* / @bottom-* }` margin-box rules
+# from resolved page bands. Returns an empty character vector when
+# both bands are empty (so the surrounding stylesheet stays
+# unchanged for the common case). pagehead rows emit in REVERSE
+# order (index 1 = body edge; visually closest to the table) so
+# the rendered header reads bottom-up; pagefoot rows emit in
+# FORWARD order so the rendered footer reads top-down.
+.html_render_page_band_rules <- function(pagehead_ast, pagefoot_ast) {
+  ph_pop <- .page_band_is_populated(pagehead_ast)
+  pf_pop <- .page_band_is_populated(pagefoot_ast)
+  if (!ph_pop && !pf_pop) {
+    return(character())
+  }
+  rules <- character()
+  if (ph_pop) {
+    rules <- c(rules, .html_one_page_band_rules(pagehead_ast, zone = "top"))
+  }
+  if (pf_pop) {
+    rules <- c(
+      rules,
+      .html_one_page_band_rules(pagefoot_ast, zone = "bottom")
+    )
+  }
+  c("@page {", "  white-space: pre-line;", rules, "}")
+}
+
+# Render one band's three slot rules (@top-left / @top-center /
+# @top-right OR @bottom-left / etc.). `zone` is "top" (pagehead)
+# or "bottom" (pagefoot). Multi-row content collapses to a single
+# `content:` string with `\A` (CSS newline escape) between rows;
+# pagehead reverses index order so index 1 (body-edge) ends up
+# last (closest to the body), pagefoot keeps index order so
+# index 1 ends up first (closest to the body).
+.html_one_page_band_rules <- function(band, zone) {
+  reverse <- identical(zone, "top")
+  c(
+    sprintf(
+      "  @%s-left { content: %s; }",
+      zone,
+      .html_band_slot_content(band$left, reverse = reverse)
+    ),
+    sprintf(
+      "  @%s-center { content: %s; }",
+      zone,
+      .html_band_slot_content(band$center, reverse = reverse)
+    ),
+    sprintf(
+      "  @%s-right { content: %s; }",
+      zone,
+      .html_band_slot_content(band$right, reverse = reverse)
+    )
+  )
+}
+
+# Compose the CSS `content:` value for one slot column (N rows
+# stacked vertically). Each row's inline_ast is flattened to plain
+# text; `{page}` and `{npages}` tokens become `counter(page)` /
+# `counter(pages)` counter calls in the concatenation. Empty rows
+# collapse to "". Multi-row content joins with `\A` (CSS escape for
+# newline). When `reverse = TRUE`, the row order flips so the
+# index-1 row ends up at the bottom of the band zone (matches the
+# growth-direction contract for pageheaders).
+.html_band_slot_content <- function(slot_asts, reverse) {
+  if (length(slot_asts) == 0L) {
+    return("\"\"")
+  }
+  order <- if (reverse) rev(seq_along(slot_asts)) else seq_along(slot_asts)
+  parts <- vapply(
+    order,
+    function(i) .html_band_row_content(slot_asts[[i]]),
+    character(1L)
+  )
+  # Sentinel "" for rows that flattened to nothing.
+  parts[!nzchar(parts)] <- "\"\""
+  if (length(parts) == 1L) {
+    return(parts)
+  }
+  # Join rows with " \"\\A\" " — a CSS newline literal between
+  # adjacent string fragments. Browsers with `white-space: pre-line`
+  # turn that into a hard line break.
+  paste(parts, collapse = " \"\\A\" ")
+}
+
+# Flatten one cell's inline_ast to a CSS content fragment string.
+# Returns "" for an empty AST. `{page}` and `{npages}` plain-text
+# runs split the string and splice in `counter(page)` /
+# `counter(pages)` keywords (CSS concatenation: string + counter +
+# string). Inline formatting (bold / italic) is flattened to plain
+# text because CSS content does not accept tags.
+.html_band_row_content <- function(ast) {
+  if (!is_inline_ast(ast) || length(ast@runs) == 0L) {
+    return("")
+  }
+  text <- .html_flatten_ast_to_text(ast)
+  if (!nzchar(text)) {
+    return("")
+  }
+  .html_content_with_page_counters(text)
+}
+
+# Walk an inline_ast and concatenate plain text, ignoring tag
+# semantics. Newline runs become literal "\n" (so the CSS
+# fragment writer can `\A`-split if it wants); other run types
+# recurse through children.
+.html_flatten_ast_to_text <- function(ast) {
+  out <- character()
+  walk <- function(runs) {
+    for (r in runs) {
+      type <- r$type
+      if (identical(type, "plain")) {
+        out[length(out) + 1L] <<- r$text %||% ""
+      } else if (identical(type, "newline")) {
+        out[length(out) + 1L] <<- "\n"
+      } else if (identical(type, "link")) {
+        # Render the link text, not the href (CSS content can't
+        # carry hyperlinks anyway).
+        walk(r$children %||% list())
+      } else if (!is.null(r$children)) {
+        walk(r$children)
+      } else if (!is.null(r$text)) {
+        out[length(out) + 1L] <<- r$text
+      }
+    }
+  }
+  walk(ast@runs)
+  paste(out, collapse = "")
+}
+
+# Convert a flat text string into a CSS content concatenation,
+# splitting on `{page}` and `{npages}` tokens and splicing in
+# `counter(page)` / `counter(pages)` keywords. Returns a single
+# string like `"Page " counter(page) " of " counter(pages)`.
+.html_content_with_page_counters <- function(text) {
+  parts <- character()
+  remaining <- text
+  pattern <- "\\{(page|npages)\\}"
+  repeat {
+    m <- regexpr(pattern, remaining, perl = TRUE)
+    if (m == -1L) {
+      if (nzchar(remaining)) {
+        parts <- c(parts, .html_css_quote(remaining))
+      }
+      break
+    }
+    start <- as.integer(m)
+    len <- attr(m, "match.length")
+    before <- substr(remaining, 1L, start - 1L)
+    token <- substr(remaining, start, start + len - 1L)
+    if (nzchar(before)) {
+      parts <- c(parts, .html_css_quote(before))
+    }
+    parts <- c(
+      parts,
+      if (token == "{page}") "counter(page)" else "counter(pages)"
+    )
+    remaining <- substr(remaining, start + len, nchar(remaining))
+  }
+  if (length(parts) == 0L) {
+    return("\"\"")
+  }
+  paste(parts, collapse = " ")
+}
+
+# Escape a literal string for safe insertion as a CSS `content`
+# quoted-string. Doubles backslashes and quotes; newlines become
+# `\A` escapes; control characters use the `\NN ` form. Wraps the
+# whole thing in double quotes.
+.html_css_quote <- function(text) {
+  text <- gsub("\\", "\\\\", text, fixed = TRUE)
+  text <- gsub("\"", "\\\"", text, fixed = TRUE)
+  text <- gsub("\n", "\\A ", text, fixed = TRUE)
+  paste0("\"", text, "\"")
 }
 
 # Compose the CSS `font-family` value from the spec's preset.

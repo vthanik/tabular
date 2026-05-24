@@ -66,7 +66,11 @@ backend_latex <- function(grid, file) {
   total <- length(pages)
   meta <- grid@metadata
 
-  preamble <- .latex_preamble(meta$preset)
+  preamble <- .latex_preamble(
+    preset = meta$preset,
+    pagehead_ast = meta$pagehead_ast,
+    pagefoot_ast = meta$pagefoot_ast
+  )
   begin <- "\\begin{document}"
   end <- "\\end{document}"
 
@@ -601,13 +605,18 @@ backend_latex <- function(grid, file) {
 # * `orientation`  -> `geometry`'s `landscape` option.
 # * `paper_size`   -> `geometry`'s paper-size option
 #                     (`letterpaper` / `a4paper` / etc.).
-.latex_preamble <- function(preset = NULL) {
+.latex_preamble <- function(
+  preset = NULL,
+  pagehead_ast = NULL,
+  pagefoot_ast = NULL
+) {
   if (is.null(preset) || !is_preset_spec(preset)) {
     preset <- preset_spec()
   }
   geo <- .latex_geometry_opts(preset)
   class_opt <- .latex_class_size(preset@font_size)
   font_lines <- .latex_font_lines(preset@font_family, preset@font_size)
+  chrome <- .latex_pagestyle_block(pagehead_ast, pagefoot_ast, preset)
 
   c(
     sprintf("\\documentclass[%s]{article}", class_opt),
@@ -619,9 +628,124 @@ backend_latex <- function(grid, file) {
     "\\usepackage{graphicx}",
     "\\usepackage{hyperref}",
     "\\UseTblrLibrary{siunitx}",
+    chrome$packages,
     font_lines,
-    "\\setlength{\\parindent}{0pt}"
+    "\\setlength{\\parindent}{0pt}",
+    chrome$style
   )
+}
+
+# Compose the fancyhdr + lastpage scaffolding from resolved page
+# bands. Returns `list(packages, style)`:
+#   - `packages` is the extra `\usepackage` lines (only when at
+#     least one band is populated).
+#   - `style` is the `\pagestyle{fancy}` + `\fancyhf{}` +
+#     `\fancyhead[L/C/R]{}` / `\fancyfoot[L/C/R]{}` block (only
+#     when populated). Multi-row bands collapse to multi-line via
+#     `\\` line joins; pagehead reverses index order (so index 1
+#     ends up at the bottom of the header zone, body edge);
+#     pagefoot keeps forward order (index 1 at the top, body edge).
+#   - When both bands are empty, both fields are empty character
+#     vectors — the document keeps the LaTeX-default `plain` page
+#     style.
+.latex_pagestyle_block <- function(pagehead_ast, pagefoot_ast, preset) {
+  ph_pop <- .page_band_is_populated(pagehead_ast)
+  pf_pop <- .page_band_is_populated(pagefoot_ast)
+  if (!ph_pop && !pf_pop) {
+    return(list(packages = character(), style = character()))
+  }
+  packages <- c(
+    "\\usepackage{fancyhdr}",
+    "\\usepackage{lastpage}"
+  )
+  body <- "\\pagestyle{fancy}"
+  body <- c(body, "\\fancyhf{}")
+  # Bump headheight per row count so multi-row pagehead doesn't
+  # overflow the default header zone.
+  if (ph_pop) {
+    nrow_h <- .page_band_nrow(pagehead_ast)
+    headheight_pt <- max(12, (preset@font_size + 4) * nrow_h)
+    body <- c(
+      body,
+      sprintf("\\setlength{\\headheight}{%dpt}", as.integer(headheight_pt))
+    )
+  }
+  if (ph_pop) {
+    body <- c(
+      body,
+      .latex_band_directives(pagehead_ast, head = TRUE)
+    )
+  }
+  if (pf_pop) {
+    body <- c(
+      body,
+      .latex_band_directives(pagefoot_ast, head = FALSE)
+    )
+  }
+  # Suppress the default head- and footrule lines (fancyhdr draws
+  # a 0.4pt rule by default). Backends own border policy via
+  # preset@hlines; the page bands are unruled.
+  body <- c(
+    body,
+    "\\renewcommand{\\headrulewidth}{0pt}",
+    "\\renewcommand{\\footrulewidth}{0pt}"
+  )
+  list(packages = packages, style = body)
+}
+
+# Emit the three `\fancyhead[L/C/R]{}` (when head = TRUE) or
+# `\fancyfoot[L/C/R]{}` (head = FALSE) directives for one band.
+# Empty slots emit `\fancyhead[L]{}` (or equivalent) so any prior
+# default for that slot is cleared.
+.latex_band_directives <- function(band, head) {
+  cmd <- if (head) "\\fancyhead" else "\\fancyfoot"
+  c(
+    sprintf("%s[L]{%s}", cmd, .latex_band_slot_text(band$left, head = head)),
+    sprintf(
+      "%s[C]{%s}",
+      cmd,
+      .latex_band_slot_text(band$center, head = head)
+    ),
+    sprintf("%s[R]{%s}", cmd, .latex_band_slot_text(band$right, head = head))
+  )
+}
+
+# Collapse N rows of one slot's inline_asts to a single LaTeX
+# fragment suitable for the inside of `\fancyhead[L]{...}`. Rows
+# join with `\\` (a LaTeX line break that works inside fancyhdr
+# slot content). Empty cells contribute empty strings (`""` ->
+# `""`). Token substitution (`{page}` -> `\thepage`, `{npages}`
+# -> `\pageref{LastPage}`) runs per-cell after `.render_latex_inline`.
+.latex_band_slot_text <- function(slot_asts, head) {
+  if (length(slot_asts) == 0L) {
+    return("")
+  }
+  order <- if (head) rev(seq_along(slot_asts)) else seq_along(slot_asts)
+  parts <- vapply(
+    order,
+    function(i) {
+      ast <- slot_asts[[i]]
+      if (!is_inline_ast(ast) || length(ast@runs) == 0L) {
+        return("")
+      }
+      .latex_resolve_page_tokens(.render_latex_inline(ast))
+    },
+    character(1L)
+  )
+  paste(parts, collapse = "\\\\")
+}
+
+# Substitute the backend-phase `{page}` and `{npages}` tokens
+# inside a flat LaTeX fragment string. `.render_latex_inline`
+# escapes braces in plain text, so the tokens arrive here as
+# `\{page\}` / `\{npages\}`; we match the escaped form and swap in
+# the LaTeX field commands. fancyhdr expands `\thepage` /
+# `\pageref{LastPage}` at compile time. Idempotent on text that
+# contains neither token.
+.latex_resolve_page_tokens <- function(text) {
+  text <- gsub("\\{npages\\}", "\\pageref{LastPage}", text, fixed = TRUE)
+  text <- gsub("\\{page\\}", "\\thepage{}", text, fixed = TRUE)
+  text
 }
 
 # Compose the `geometry` package option list from a preset_spec.
