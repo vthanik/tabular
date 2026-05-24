@@ -59,14 +59,22 @@ test_that(".row_height_twips honours array_stretch", {
 
 test_that(".margin_top_bottom_twips handles scalar margin", {
   m <- tabular:::.margin_top_bottom_twips(1)
-  expect_identical(m[["top"]], 1440L)
-  expect_identical(m[["bottom"]], 1440L)
+  expect_equal(m[["top"]], 1440)
+  expect_equal(m[["bottom"]], 1440)
 })
 
 test_that(".margin_top_bottom_twips handles length-4 margin", {
   m <- tabular:::.margin_top_bottom_twips(c(1, 0.5, 0.75, 0.5))
-  expect_identical(m[["top"]], 1440L)
-  expect_identical(m[["bottom"]], 1080L)
+  expect_equal(m[["top"]], 1440)
+  expect_equal(m[["bottom"]], 1080)
+})
+
+test_that(".margin_top_bottom_twips handles character cm + mm units", {
+  m <- tabular:::.margin_top_bottom_twips(c("2.54cm", "1cm"))
+  # 2.54cm == 1in == 1440 twips (both top and bottom use the
+  # vertical value in length-2 shorthand).
+  expect_equal(m[["top"]], 1440, tolerance = 0.5)
+  expect_equal(m[["bottom"]], 1440, tolerance = 0.5)
 })
 
 test_that(".effective_preset returns the spec's preset when set", {

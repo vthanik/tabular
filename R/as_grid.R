@@ -246,7 +246,8 @@ as_grid <- function(spec) {
       footnotes = spec@footnotes,
       titles_ast = fmt$titles_ast,
       footnotes_ast = fmt$footnotes_ast,
-      col_labels_ast = fmt$col_labels_ast
+      col_labels_ast = fmt$col_labels_ast,
+      preset = spec@preset
     )
   )
 }

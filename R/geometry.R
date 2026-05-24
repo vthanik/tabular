@@ -64,18 +64,33 @@
   .pt_to_twips(height_pt)
 }
 
-# Resolve top/bottom margin twips from preset@margins. `margins` is
-# length-1 (all sides equal) or length-4 (top, right, bottom, left).
+# Resolve top/bottom margin twips from preset@margins. `margins`
+# follows CSS shorthand:
+#
+# * length 1: all four sides equal
+# * length 2: vertical (top+bottom), horizontal (left+right)
+# * length 4: top, right, bottom, left
+#
+# Each element may be numeric (interpreted as inches, back-compat)
+# or character with a TeX unit suffix (in / cm / mm / pt / pc).
+# Routes through `.parse_dim` so the unit semantics are shared
+# with backend_latex's `\geometry{}` composer.
 .margin_top_bottom_twips <- function(margins) {
-  if (length(margins) == 1L) {
-    m <- .inches_to_twips(margins)
-    c(top = m, bottom = m)
-  } else {
-    c(
-      top = .inches_to_twips(margins[[1L]]),
-      bottom = .inches_to_twips(margins[[3L]])
-    )
+  parsed <- lapply(seq_along(margins), function(i) {
+    .parse_dim(margins[[i]], allow_percent = FALSE)
+  })
+  if (length(parsed) == 1L) {
+    m <- .dim_to_twips(parsed[[1L]])
+    return(c(top = m, bottom = m))
   }
+  if (length(parsed) == 2L) {
+    m <- .dim_to_twips(parsed[[1L]])
+    return(c(top = m, bottom = m))
+  }
+  c(
+    top = .dim_to_twips(parsed[[1L]]),
+    bottom = .dim_to_twips(parsed[[3L]])
+  )
 }
 
 # Return the effective preset_spec for `spec` using the documented

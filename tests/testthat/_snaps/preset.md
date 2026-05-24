@@ -23,5 +23,5 @@
     Condition
       Error:
       ! Invalid preset knob value.
-      x <tabular::preset_spec> object is invalid: - @margins must be length 1 (all sides) or length 4 (top right bottom left)
+      x <tabular::preset_spec> object is invalid: - @margins must be length 1 (all sides), 2 (vertical horizontal), or 4 (top right bottom left)
 

@@ -89,7 +89,7 @@ test_that("col_spec(format = integer) rejects non-string non-function", {
 
 test_that("col_spec(width = 0) raises tabular_error_input", {
   expect_error(col_spec(width = 0), class = "tabular_error_input")
-  expect_error(col_spec(width = 0), "positive finite")
+  expect_error(col_spec(width = 0), "positive")
 })
 
 test_that("col_spec(width = -1) raises tabular_error_input", {

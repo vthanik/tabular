@@ -104,13 +104,26 @@
 #'   sort-key helpers (`row_type`, `n_total`) and for the numeric
 #'   counts behind formatted-text percentage cells.
 #'
-#' @param width *Column width in inches.*
-#'   `<numeric(1) | NA_real_>: default NA_real_`. `NA` leaves widths
-#'   to the backend's auto-fit; a numeric value pins the column.
+#' @param width *Column width — fixed dimension or percent.*
+#'   `<numeric(1) | character(1) | NA_real_>: default NA_real_`.
+#'   `NA` leaves widths to the backend's auto-fit. A bare number
+#'   is interpreted as inches (back-compat). A character value
+#'   carries an explicit unit:
 #'
-#'   **Restriction:** Must be positive and finite when set.
-#'   **Interaction:** Sum of pinned widths drives whether horizontal
-#'   pagination kicks in.
+#'   *   **`"2.5in"` / `"60mm"` / `"4cm"` / `"30pt"` / `"5pc"`** —
+#'       fixed dimensions. Pass through to every backend
+#'       verbatim (tabularray `Q[wd=...]`, HTML `style="width:..."`,
+#'       RTF / DOCX after twips conversion).
+#'   *   **`"30%"`** — proportional width, percent of available
+#'       content width. Maps to tabularray's `X[N]` column
+#'       (proportional) under LaTeX, native percent under HTML.
+#'
+#'   **Restriction:** Must be non-negative. Percent values must
+#'   fall in `[0, 100]`. Font-relative units (`em`, `ex`, `rem`)
+#'   and screen-relative `px` are rejected — column widths live
+#'   in print geometry, not text flow.
+#'   **Interaction:** Sum of pinned widths drives whether
+#'   horizontal pagination kicks in.
 #'
 #' @param align *Cell alignment within the column.*
 #'   `<character(1) | NULL>: default NULL`. One of:
@@ -335,21 +348,39 @@ col_spec <- function(
 }
 
 .check_col_width <- function(x, call) {
-  if (
-    is.numeric(x) &&
-      length(x) == 1L &&
-      (is.na(x) || (is.finite(x) && x > 0))
-  ) {
+  if (.is_na_width(x)) {
     return(invisible(x))
   }
-  cli::cli_abort(
-    c(
-      "{.arg width} must be a positive finite number or {.code NA}.",
-      "x" = "You supplied {.obj_type_friendly {x}} of length {length(x)}."
-    ),
-    class = "tabular_error_input",
-    call = call
+  # Delegate to the units parser so error semantics match
+  # `preset(margins = ...)`. Numeric (inches), character with
+  # TeX unit suffix (in/cm/mm/pt/pc), or percent are all accepted.
+  parsed <- tryCatch(
+    .parse_dim(x, allow_percent = TRUE, call = call),
+    tabular_error_input = function(e) e
   )
+  if (inherits(parsed, "tabular_error_input")) {
+    cli::cli_abort(
+      c(
+        "{.arg width} is not a valid dimension.",
+        "i" = conditionMessage(parsed)
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # Column widths must be strictly positive — a zero-width column
+  # is nonsensical (use `visible = FALSE` to hide instead).
+  if (parsed$value <= 0) {
+    cli::cli_abort(
+      c(
+        "{.arg width} must be positive when set.",
+        "i" = "Use {.code visible = FALSE} to hide a column."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  invisible(x)
 }
 
 .check_col_na_text <- function(x, call) {

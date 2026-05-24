@@ -85,13 +85,27 @@ output but keeps it in \code{spec@data} so \code{\link[=sort_rows]{sort_rows()}}
 sort-key helpers (\code{row_type}, \code{n_total}) and for the numeric
 counts behind formatted-text percentage cells.}
 
-\item{width}{\emph{Column width in inches.}
-\verb{<numeric(1) | NA_real_>: default NA_real_}. \code{NA} leaves widths
-to the backend's auto-fit; a numeric value pins the column.
+\item{width}{\emph{Column width — fixed dimension or percent.}
+\verb{<numeric(1) | character(1) | NA_real_>: default NA_real_}.
+\code{NA} leaves widths to the backend's auto-fit. A bare number
+is interpreted as inches (back-compat). A character value
+carries an explicit unit:
+\itemize{
+\item \strong{\code{"2.5in"} / \code{"60mm"} / \code{"4cm"} / \code{"30pt"} / \code{"5pc"}} —
+fixed dimensions. Pass through to every backend
+verbatim (tabularray \code{Q[wd=...]}, HTML \code{style="width:..."},
+RTF / DOCX after twips conversion).
+\item \strong{\code{"30\%"}} — proportional width, percent of available
+content width. Maps to tabularray's \code{X[N]} column
+(proportional) under LaTeX, native percent under HTML.
+}
 
-\strong{Restriction:} Must be positive and finite when set.
-\strong{Interaction:} Sum of pinned widths drives whether horizontal
-pagination kicks in.}
+\strong{Restriction:} Must be non-negative. Percent values must
+fall in \verb{[0, 100]}. Font-relative units (\code{em}, \code{ex}, \code{rem})
+and screen-relative \code{px} are rejected — column widths live
+in print geometry, not text flow.
+\strong{Interaction:} Sum of pinned widths drives whether
+horizontal pagination kicks in.}
 
 \item{align}{\emph{Cell alignment within the column.}
 \verb{<character(1) | NULL>: default NULL}. One of:

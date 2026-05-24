@@ -26,9 +26,9 @@ test_that(".col_spec_class rejects unknown align", {
 })
 
 test_that(".col_spec_class rejects zero / negative / infinite width", {
-  expect_error(tabular:::.col_spec_class(width = 0), "positive finite")
-  expect_error(tabular:::.col_spec_class(width = -1), "positive finite")
-  expect_error(tabular:::.col_spec_class(width = Inf), "positive finite")
+  expect_error(tabular:::.col_spec_class(width = 0), "positive")
+  expect_error(tabular:::.col_spec_class(width = -1), "non-negative")
+  expect_error(tabular:::.col_spec_class(width = Inf), "finite")
 })
 
 test_that(".col_spec_class rejects multi-element na_text", {
@@ -144,13 +144,20 @@ test_that("preset_spec() rejects unknown decimal_metrics", {
   expect_error(preset_spec(decimal_metrics = "truetype"), "afm")
 })
 
-test_that("preset_spec() rejects margin length other than 1 or 4", {
-  expect_error(preset_spec(margins = c(1, 2)), "length 1")
+test_that("preset_spec() rejects margin length other than 1, 2, or 4", {
   expect_error(preset_spec(margins = c(1, 2, 3)), "length 1")
+  expect_error(preset_spec(margins = c(1, 2, 3, 4, 5)), "length 1")
 })
 
-test_that("preset_spec() accepts length-4 margins", {
-  expect_true(is_preset_spec(preset_spec(margins = c(1, 1, 1, 1))))
+test_that("preset_spec() accepts margins of length 1, 2, and 4", {
+  expect_true(is_preset_spec(preset_spec(margins = 0.75)))
+  expect_true(is_preset_spec(preset_spec(margins = c(1, 0.5))))
+  expect_true(is_preset_spec(preset_spec(margins = c(1, 0.5, 1.25, 0.75))))
+})
+
+test_that("preset_spec() rejects negative or NA margins", {
+  expect_error(preset_spec(margins = -1), "non-negative")
+  expect_error(preset_spec(margins = NA_real_), "non-negative")
 })
 
 test_that("preset_spec() rejects bad title_align / footnote_align", {

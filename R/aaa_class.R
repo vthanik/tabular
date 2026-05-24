@@ -19,6 +19,26 @@
 
 .col_usage_values <- c("display", "group", "across", "computed")
 .align_values <- c("left", "center", "right", "decimal")
+
+# NA-aware predicate for col_spec@width. `width` is now polymorphic
+# (numeric inches OR character with TeX unit suffix OR percent OR
+# NA), so the standard `is.na()` check needs to short-circuit on
+# the non-character / non-numeric path that `is.na()` can't handle.
+.is_na_width <- function(x) {
+  if (is.null(x)) {
+    return(TRUE)
+  }
+  if (length(x) != 1L) {
+    return(FALSE)
+  }
+  if (is.numeric(x)) {
+    return(is.na(x))
+  }
+  if (is.character(x)) {
+    return(is.na(x))
+  }
+  FALSE
+}
 .scope_values <- c("cell", "row", "col")
 .orientation_values <- c("portrait", "landscape")
 .paper_size_values <- c("letter", "a4")
@@ -123,7 +143,7 @@ NULL
       default = TRUE
     ),
     width = S7::new_property(
-      S7::class_numeric,
+      S7::class_any,
       default = NA_real_
     ),
     align = S7::new_property(
@@ -152,8 +172,24 @@ NULL
         shQuote(self@align)
       ))
     }
-    if (!is.na(self@width) && (!is.finite(self@width) || self@width <= 0)) {
-      return("@width must be a positive finite number or NA")
+    if (!.is_na_width(self@width)) {
+      # `.parse_dim` validates type + bounds + unit; if it doesn't
+      # error, the value is well-formed. Catch its cli_abort and
+      # surface a validator-flavoured message so S7's wrapper says
+      # "object is invalid" instead of a raw cli error.
+      parsed <- tryCatch(
+        .parse_dim(self@width, allow_percent = TRUE),
+        tabular_error_input = function(e) e
+      )
+      if (inherits(parsed, "tabular_error_input")) {
+        return(conditionMessage(parsed))
+      }
+      # Column widths must be strictly positive.
+      if (parsed$value <= 0) {
+        return(
+          "@width must be positive when set; use visible = FALSE to hide"
+        )
+      }
     }
     if (length(self@na_text) != 1L) {
       return("@na_text must be length 1")
@@ -355,7 +391,7 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "letter"
     ),
-    margins = S7::new_property(S7::class_numeric, default = 1),
+    margins = S7::new_property(S7::class_any, default = 1),
     pagehead = S7::new_property(S7::class_list, default = list()),
     pagefoot = S7::new_property(S7::class_list, default = list()),
     hlines = S7::new_property(S7::class_character, default = "header"),
@@ -402,10 +438,23 @@ preset_spec <- S7::new_class(
     if (!(self@decimal_metrics %in% .decimal_metrics_values)) {
       return("@decimal_metrics must be afm or systemfonts")
     }
-    if (length(self@margins) != 1L && length(self@margins) != 4L) {
-      return(
-        "@margins must be length 1 (all sides) or length 4 (top right bottom left)"
+    if (!(length(self@margins) %in% c(1L, 2L, 4L))) {
+      return(paste0(
+        "@margins must be length 1 (all sides), 2 (vertical horizontal), ",
+        "or 4 (top right bottom left)"
+      ))
+    }
+    # Each element must parse as a dimension (numeric inches or
+    # character with TeX unit suffix). Percent is rejected for
+    # margins — it has no defined denominator on a print page.
+    for (i in seq_along(self@margins)) {
+      parsed <- tryCatch(
+        .parse_dim(self@margins[[i]], allow_percent = FALSE),
+        tabular_error_input = function(e) e
       )
+      if (inherits(parsed, "tabular_error_input")) {
+        return(conditionMessage(parsed))
+      }
     }
     NULL
   }
