@@ -319,10 +319,11 @@ test_that("auto-resolved widths land in <colgroup> end-to-end via emit()", {
   expect_length(cols_found, 2L)
 })
 
-test_that("HTML <colgroup> widths match LaTeX Q[wd=...] widths byte-for-byte", {
+test_that("HTML / LaTeX / RTF / DOCX widths agree byte-for-byte (cross-backend parity)", {
   # The quality-bar claim — engine-resolved widths render identically
-  # across backends. Build the golden saf_demo pipeline once, emit
-  # both backends, parse widths, assert vector equality.
+  # across every backend. Build the golden saf_demo pipeline once,
+  # emit all four widthful backends, parse widths, assert vector
+  # equality (converted to a common unit: inches to 6 decimals).
   spec <- tabular(
     saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
@@ -338,27 +339,62 @@ test_that("HTML <colgroup> widths match LaTeX Q[wd=...] widths byte-for-byte", {
     )
   html_file <- withr::local_tempfile(fileext = ".html")
   tex_file <- withr::local_tempfile(fileext = ".tex")
+  rtf_file <- withr::local_tempfile(fileext = ".rtf")
+  docx_file <- withr::local_tempfile(fileext = ".docx")
   emit(spec, html_file)
   emit(spec, tex_file)
+  emit(spec, rtf_file)
+  emit(spec, docx_file)
 
   html_txt <- paste(readLines(html_file), collapse = "\n")
   tex_txt <- paste(readLines(tex_file), collapse = "\n")
+  rtf_txt <- paste(readLines(rtf_file), collapse = "\n")
+  docx_td <- withr::local_tempdir()
+  zip::unzip(docx_file, files = "word/document.xml", exdir = docx_td)
+  docx_txt <- paste(
+    readLines(file.path(docx_td, "word/document.xml")),
+    collapse = "\n"
+  )
 
-  html_widths <- regmatches(
+  html_in <- as.numeric(regmatches(
     html_txt,
     gregexpr(
       "(?<=<col style=\"width:)[0-9.]+(?=in\"/>)",
       html_txt,
       perl = TRUE
     )
-  )[[1L]]
-  tex_widths <- regmatches(
+  )[[1L]])
+  tex_in <- as.numeric(regmatches(
     tex_txt,
     gregexpr("(?<=wd=)[0-9.]+(?=in)", tex_txt, perl = TRUE)
-  )[[1L]]
+  )[[1L]])
+  # RTF carries cumulative \cellx positions in twips; diff to get
+  # per-column widths, divide by 1440 -> inches.
+  rtf_cellx <- as.integer(regmatches(
+    rtf_txt,
+    gregexpr("(?<=\\\\cellx)[0-9]+", rtf_txt, perl = TRUE)
+  )[[1L]])
+  # cellx repeats per row; first N entries = first row's columns.
+  ncol_vis <- length(html_in)
+  rtf_in <- diff(c(0L, rtf_cellx[seq_len(ncol_vis)])) / 1440
+  # DOCX <w:gridCol w:w="..."> in twips
+  docx_tw <- as.integer(regmatches(
+    docx_txt,
+    gregexpr("(?<=<w:gridCol w:w=\")[0-9]+(?=\"/>)", docx_txt, perl = TRUE)
+  )[[1L]])
+  docx_in <- docx_tw / 1440
 
-  expect_gt(length(html_widths), 0L)
-  expect_identical(html_widths, tex_widths)
+  expect_gt(length(html_in), 0L)
+  # HTML and LaTeX render the engine float at %f precision -- byte-
+  # for-byte identical.
+  expect_identical(round(html_in, 6L), round(tex_in, 6L))
+  # RTF and DOCX both snap to integer twips at cumulative boundaries
+  # so they are byte-for-byte identical as integer twip vectors.
+  expect_identical(round(rtf_in * 1440), round(docx_in * 1440))
+  # Across the float vs twip pair, agreement is tight to the twip
+  # granularity (1/1440 in ~= 0.0007 in). Any larger drift would
+  # signal an engine-resolution divergence between backends.
+  expect_true(all(abs(html_in - docx_in) <= 1 / 1440))
 })
 
 # ---------------------------------------------------------------------

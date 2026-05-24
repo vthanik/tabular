@@ -126,15 +126,18 @@ backend_docx <- function(grid, file) {
   if (is.null(preset) || !is_preset_spec(preset)) preset_spec() else preset
 }
 
-# Compose `word/document.xml`. v0.1 scaffolding emits a body
-# containing titles + a placeholder paragraph for the table area +
-# footnotes. Commit 2 replaces the placeholder with a real
-# `<w:tbl>`; commit 3 wires inline AST through the title /
-# footnote paragraphs; commits 4-5 add chrome refs and styles.
+# Compose `word/document.xml`. Body is: title block (page-1
+# centred + bold) -> table (one `<w:tbl>` containing header bands +
+# column labels + all body rows from grid@pages, with `<w:tblHeader/>`
+# on header rows so Word naturally repeats them on page-break) ->
+# footnote block -> trailing `<w:sectPr>` carrying page geometry.
+# Commit 3 wires the inline AST renderer through titles / footnotes
+# / col labels / cell text; commits 4-5 wire page chrome refs and
+# per-cell styling.
 .docx_document_xml <- function(grid, preset) {
   meta <- grid@metadata
   titles_block <- .docx_title_block(meta$titles_ast %||% list())
-  table_block <- "<w:p><w:r><w:t>[table placeholder]</w:t></w:r></w:p>"
+  table_block <- .render_docx_table(grid, preset)
   footnotes_block <- .docx_footnote_block(meta$footnotes_ast %||% list())
   sect_pr <- .docx_section_pr(
     preset,
@@ -203,6 +206,312 @@ backend_docx <- function(grid, file) {
       )
     },
     character(1L)
+  )
+}
+
+# ---------------------------------------------------------------------
+# Table emission
+# ---------------------------------------------------------------------
+
+# Compose the `<w:tbl>` for this grid. Renders one table containing:
+# multi-level header bands -> column-labels row -> body rows
+# concatenated across all `grid@pages` entries. Header rows carry
+# `<w:tblHeader/>` so Word repeats them after every page break it
+# computes on its own.
+#
+# Width consumption: every visible col_spec@width (numeric inches,
+# engine-resolved) -> twips via `.tabular_unit_twips[["in"]] = 1440`.
+# Fallback for any column lacking a resolved width: equal share of
+# the printable area (so the document still renders rather than
+# emitting `<w:gridCol w:w="0">`).
+#
+# Empty grid (zero pages): emit a left-aligned "(no rows)" paragraph
+# instead of an empty table. Matches the RTF backend's `\plain\qc`
+# behaviour and avoids Word's empty-table-row glitch.
+.render_docx_table <- function(grid, preset) {
+  meta <- grid@metadata
+  pages <- grid@pages
+  if (length(pages) == 0L) {
+    return("<w:p><w:r><w:rPr><w:i/></w:rPr><w:t>(no rows)</w:t></w:r></w:p>")
+  }
+  col_names_vis <- pages[[1L]]$col_names
+  cols <- meta$cols %||% list()
+  widths <- .docx_col_widths_twips(col_names_vis, cols, preset)
+
+  band_rows <- .render_docx_header_bands(
+    meta$headers,
+    col_names_vis,
+    widths
+  )
+  label_row <- .render_docx_col_labels_row(
+    meta$col_labels_ast,
+    col_names_vis,
+    cols,
+    widths
+  )
+  body_rows <- .render_docx_body_rows(pages, col_names_vis, cols, widths)
+
+  paste0(
+    "<w:tbl>",
+    .docx_tbl_pr(sum(widths)),
+    .docx_tbl_grid(widths),
+    paste(band_rows, collapse = ""),
+    label_row,
+    paste(body_rows, collapse = ""),
+    "</w:tbl>"
+  )
+}
+
+# Resolve every visible column to a positive integer twips width.
+# Engine pre-resolves `col_spec@width` to numeric inches; we
+# convert to twips here. Fallback (column without a resolved
+# col_spec or width): equal share of printable area, floored at
+# 720 twips (0.5 in) so the column doesn't collapse to a sliver.
+#
+# **Boundary-snapping for cross-backend parity.** Each column's
+# final twip width is the diff of cumulative-then-rounded boundary
+# positions, NOT a per-column round. This matches RTF's
+# `.rtf_cellx_positions()` exactly, so the same engine inches
+# produce byte-for-byte equal widths across RTF (\cellx) and DOCX
+# (<w:gridCol>). Per-column rounding would diverge by +/- 1 twip on
+# any column whose cumulative boundary crosses a 0.5-twip mark.
+.docx_col_widths_twips <- function(col_names_vis, cols, preset) {
+  paper <- .docx_paper_twips(preset@paper_size, preset@orientation)
+  margins <- .docx_margins_twips(preset@margins)
+  printable <- paper$width - margins$left - margins$right
+  n <- length(col_names_vis)
+  if (n == 0L) {
+    return(integer(0L))
+  }
+  widths <- vapply(
+    col_names_vis,
+    function(nm) {
+      cs <- cols[[nm]]
+      if (!is_col_spec(cs)) {
+        return(NA_real_)
+      }
+      w <- cs@width
+      if (is.numeric(w) && length(w) == 1L && !is.na(w)) {
+        return(w * .tabular_unit_twips[["in"]])
+      }
+      NA_real_
+    },
+    numeric(1L)
+  )
+  declared <- !is.na(widths)
+  remaining <- printable - sum(widths[declared])
+  share <- if (any(!declared)) {
+    max(remaining %/% sum(!declared), 720L)
+  } else {
+    0L
+  }
+  widths[!declared] <- share
+  # Boundary-snap to match RTF: cumsum -> round -> diff yields each
+  # column's twip width as the difference of integer boundary
+  # positions, so cumulative drift never exceeds 0.5 twips.
+  positions <- as.integer(round(cumsum(widths)))
+  as.integer(diff(c(0L, positions)))
+}
+
+# Compose the `<w:tblPr>` block: fixed-width layout (so engine
+# widths are honoured verbatim, not auto-resized by Word) + table
+# total width in twips. `<w:tblBorders>` is omitted; rules live on
+# individual cells (commit 5 wires per-cell rule_above / rule_below).
+.docx_tbl_pr <- function(total_twips) {
+  paste0(
+    "<w:tblPr>",
+    sprintf("<w:tblW w:w=\"%d\" w:type=\"dxa\"/>", total_twips),
+    "<w:tblLayout w:type=\"fixed\"/>",
+    "</w:tblPr>"
+  )
+}
+
+# Compose the `<w:tblGrid>` block carrying one `<w:gridCol>` per
+# visible column. Widths are twips integers (engine-resolved).
+.docx_tbl_grid <- function(widths_twips) {
+  cols <- vapply(
+    widths_twips,
+    function(w) sprintf("<w:gridCol w:w=\"%d\"/>", w),
+    character(1L)
+  )
+  paste0("<w:tblGrid>", paste(cols, collapse = ""), "</w:tblGrid>")
+}
+
+# Render multi-level header bands. For each band depth we walk
+# visible columns left-to-right, group contiguous runs sharing the
+# same band label (or no band), and emit one `<w:tc>` per run with
+# `<w:gridSpan w:val="N"/>` for runs wider than one column. Returns
+# a character vector of `<w:tr>` strings (one per depth).
+.render_docx_header_bands <- function(headers, col_names_vis, widths_twips) {
+  if (!is.data.frame(headers) || nrow(headers) == 0L) {
+    return(character())
+  }
+  depths <- sort(unique(headers$depth))
+  out <- character()
+  for (d in depths) {
+    band_at_depth <- headers[headers$depth == d, , drop = FALSE]
+    labels <- vapply(
+      col_names_vis,
+      function(nm) {
+        hit <- vapply(
+          seq_len(nrow(band_at_depth)),
+          function(i) nm %in% band_at_depth$span_cols[[i]],
+          logical(1L)
+        )
+        if (any(hit)) {
+          band_at_depth$label[which(hit)[1L]]
+        } else {
+          NA_character_
+        }
+      },
+      character(1L)
+    )
+    runs <- .group_contiguous_runs(labels)
+    cells <- character(length(runs))
+    cursor <- 1L
+    for (i in seq_along(runs)) {
+      run <- runs[[i]]
+      span <- run$length
+      end <- cursor + span - 1L
+      cell_w <- sum(widths_twips[cursor:end])
+      label <- run$value
+      tc_pr <- paste0(
+        "<w:tcPr>",
+        sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", cell_w),
+        if (span > 1L) sprintf("<w:gridSpan w:val=\"%d\"/>", span) else "",
+        "</w:tcPr>"
+      )
+      content <- if (is.na(label)) {
+        "<w:p/>"
+      } else {
+        paste0(
+          "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr>",
+          "<w:r><w:rPr><w:b/></w:rPr>",
+          "<w:t xml:space=\"preserve\">",
+          .docx_escape(label),
+          "</w:t></w:r></w:p>"
+        )
+      }
+      cells[[i]] <- paste0("<w:tc>", tc_pr, content, "</w:tc>")
+      cursor <- end + 1L
+    }
+    out <- c(
+      out,
+      paste0(
+        "<w:tr><w:trPr><w:tblHeader/></w:trPr>",
+        paste(cells, collapse = ""),
+        "</w:tr>"
+      )
+    )
+  }
+  out
+}
+
+# Render the column-labels row: one `<w:tc>` per visible column,
+# alignment from `col_spec@align`, label text flattened from the
+# inline AST. Header row carries `<w:tblHeader/>` for Word's auto-
+# repeat across pagination.
+.render_docx_col_labels_row <- function(
+  col_labels_ast,
+  col_names_vis,
+  cols,
+  widths_twips
+) {
+  cells <- vapply(
+    seq_along(col_names_vis),
+    function(j) {
+      nm <- col_names_vis[[j]]
+      ast <- col_labels_ast[[nm]]
+      label <- if (is.null(ast)) nm else .ast_flatten_text(ast)
+      cs <- cols[[nm]]
+      align <- if (is_col_spec(cs)) cs@align else NA_character_
+      jc <- .docx_align_token(align)
+      tc_pr <- sprintf(
+        "<w:tcPr><w:tcW w:w=\"%d\" w:type=\"dxa\"/></w:tcPr>",
+        widths_twips[[j]]
+      )
+      paste0(
+        "<w:tc>",
+        tc_pr,
+        "<w:p><w:pPr>",
+        jc,
+        "</w:pPr><w:r><w:rPr><w:b/></w:rPr>",
+        "<w:t xml:space=\"preserve\">",
+        .docx_escape(label),
+        "</w:t></w:r></w:p></w:tc>"
+      )
+    },
+    character(1L)
+  )
+  paste0(
+    "<w:tr><w:trPr><w:tblHeader/></w:trPr>",
+    paste(cells, collapse = ""),
+    "</w:tr>"
+  )
+}
+
+# Render the body rows for every page in `grid@pages`. Returns a
+# character vector of `<w:tr>` strings. Cell text is the post-
+# engine_decimal flat string (`cells_text`); commit 3 swaps in the
+# inline-AST renderer where appropriate. Per-cell alignment comes
+# from `col_spec@align`.
+.render_docx_body_rows <- function(pages, col_names_vis, cols, widths_twips) {
+  align_tokens <- vapply(
+    col_names_vis,
+    function(nm) {
+      cs <- cols[[nm]]
+      .docx_align_token(if (is_col_spec(cs)) cs@align else NA_character_)
+    },
+    character(1L)
+  )
+  out <- character()
+  for (page in pages) {
+    ct <- page$cells_text
+    nrows <- nrow(ct)
+    if (is.null(nrows) || nrows == 0L) {
+      next
+    }
+    for (i in seq_len(nrows)) {
+      cells <- vapply(
+        seq_along(col_names_vis),
+        function(j) {
+          tc_pr <- sprintf(
+            "<w:tcPr><w:tcW w:w=\"%d\" w:type=\"dxa\"/></w:tcPr>",
+            widths_twips[[j]]
+          )
+          paste0(
+            "<w:tc>",
+            tc_pr,
+            "<w:p><w:pPr>",
+            align_tokens[[j]],
+            "</w:pPr><w:r>",
+            "<w:t xml:space=\"preserve\">",
+            .docx_escape(ct[i, j]),
+            "</w:t></w:r></w:p></w:tc>"
+          )
+        },
+        character(1L)
+      )
+      out <- c(out, paste0("<w:tr>", paste(cells, collapse = ""), "</w:tr>"))
+    }
+  }
+  out
+}
+
+# Map an `align` value to a `<w:pPr><w:jc w:val="...">` token.
+# Defaults to left when align is unset / NA. `decimal` -> right
+# (engine_decimal has already padded with NBSP for visual alignment).
+.docx_align_token <- function(align) {
+  if (is.null(align) || length(align) == 0L || is.na(align)) {
+    return("<w:jc w:val=\"left\"/>")
+  }
+  switch(
+    align,
+    left = "<w:jc w:val=\"left\"/>",
+    center = "<w:jc w:val=\"center\"/>",
+    right = "<w:jc w:val=\"right\"/>",
+    decimal = "<w:jc w:val=\"right\"/>",
+    "<w:jc w:val=\"left\"/>"
   )
 }
 

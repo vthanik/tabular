@@ -316,6 +316,165 @@ test_that(".docx_resolve_preset returns factory defaults for non-preset_spec inp
 })
 
 # ---------------------------------------------------------------------
+# Table emission — <w:tbl>, <w:tblGrid>, <w:gridCol>, <w:tr>, <w:tc>
+# ---------------------------------------------------------------------
+
+test_that("emit(.docx) writes <w:tbl> with <w:tblGrid>, <w:tr>, <w:tc> for data rows", {
+  spec <- tabular(data.frame(x = c("a", "b"), y = c("1", "2")))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  expect_match(doc, "<w:tbl>", fixed = TRUE)
+  expect_match(doc, "<w:tblGrid>", fixed = TRUE)
+  expect_match(doc, "<w:gridCol", fixed = TRUE)
+  # Header row + 2 data rows + col-labels row at least
+  expect_gte(length(gregexpr("<w:tr>", doc, fixed = TRUE)[[1L]]), 3L)
+  # Data cells render
+  expect_match(doc, ">a<", fixed = TRUE)
+  expect_match(doc, ">b<", fixed = TRUE)
+  expect_match(doc, ">1<", fixed = TRUE)
+  expect_match(doc, ">2<", fixed = TRUE)
+})
+
+test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (boundary-snapped)", {
+  # Saf_demo widths under the golden pipeline (engine-resolved):
+  # 1.045325, 2.491345, 0.733194, 0.733194, 0.733194, 0.763747 in.
+  # Cumulative-rounded boundaries land at:
+  # 1505, 5093, 6149, 7204, 8260, 9360 twips
+  # whose diffs are: 1505, 3588, 1056, 1055, 1056, 1100 twips.
+  # Per-column rounding would yield 1056 on col 4; boundary-snapping
+  # gives 1055 to keep the cumulative sum exact (matches RTF \cellx).
+  spec <- tabular(
+    saf_demo,
+    titles = c("Table 14.1.1", "Demographics", "Safety Population"),
+    footnotes = "Source: ADSL."
+  ) |>
+    cols(
+      variable = col_spec(usage = "group", label = "Characteristic"),
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
+      drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
+      drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
+      Total = col_spec(label = "Total\nN=254", align = "decimal")
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  widths_twips <- as.integer(regmatches(
+    doc,
+    gregexpr("(?<=<w:gridCol w:w=\")[0-9]+(?=\"/>)", doc, perl = TRUE)
+  )[[1L]])
+  expect_identical(widths_twips, c(1505L, 3588L, 1056L, 1055L, 1056L, 1100L))
+})
+
+test_that("col_spec@align surfaces as <w:jc> on data cells", {
+  spec <- tabular(
+    data.frame(L = "x", C = "x", R = "x", D = "1.5")
+  ) |>
+    cols(
+      L = col_spec(align = "left"),
+      C = col_spec(align = "center"),
+      R = col_spec(align = "right"),
+      D = col_spec(align = "decimal")
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  expect_match(doc, "<w:jc w:val=\"left\"/>", fixed = TRUE)
+  expect_match(doc, "<w:jc w:val=\"center\"/>", fixed = TRUE)
+  expect_match(doc, "<w:jc w:val=\"right\"/>", fixed = TRUE)
+  # decimal collapses to right at the <w:jc> level
+})
+
+test_that("multi-level header bands render as <w:tr> with <w:gridSpan>", {
+  spec <- tabular(
+    data.frame(
+      grp = "x",
+      placebo = "1",
+      active_low = "2",
+      active_high = "3"
+    )
+  ) |>
+    headers("Treatment Arm" = c("placebo", "active_low", "active_high"))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  expect_match(doc, "<w:gridSpan w:val=\"3\"/>", fixed = TRUE)
+  expect_match(doc, "Treatment Arm", fixed = TRUE)
+})
+
+test_that(".render_docx_table emits the no-rows marker when the grid has zero pages", {
+  # The engine always produces >=1 page even for empty data, so
+  # exercise the empty-pages branch by handing the renderer a grid
+  # with pages = list().
+  empty_grid <- tabular:::tabular_grid(
+    pages = list(),
+    metadata = list()
+  )
+  out <- tabular:::.render_docx_table(empty_grid, preset_spec())
+  expect_match(out, "(no rows)", fixed = TRUE)
+})
+
+test_that(".docx_align_token covers every align value plus the unset fallback", {
+  expect_identical(
+    tabular:::.docx_align_token("left"),
+    "<w:jc w:val=\"left\"/>"
+  )
+  expect_identical(
+    tabular:::.docx_align_token("center"),
+    "<w:jc w:val=\"center\"/>"
+  )
+  expect_identical(
+    tabular:::.docx_align_token("right"),
+    "<w:jc w:val=\"right\"/>"
+  )
+  expect_identical(
+    tabular:::.docx_align_token("decimal"),
+    "<w:jc w:val=\"right\"/>"
+  )
+  expect_identical(
+    tabular:::.docx_align_token(NA_character_),
+    "<w:jc w:val=\"left\"/>"
+  )
+  expect_identical(
+    tabular:::.docx_align_token(NULL),
+    "<w:jc w:val=\"left\"/>"
+  )
+  expect_identical(
+    tabular:::.docx_align_token("garbage"),
+    "<w:jc w:val=\"left\"/>"
+  )
+})
+
+test_that(".docx_col_widths_twips falls back to equal share when no col_spec declared", {
+  preset <- preset_spec()
+  widths <- tabular:::.docx_col_widths_twips(c("a", "b", "c"), list(), preset)
+  expect_length(widths, 3L)
+  expect_true(all(widths > 0L))
+  # Cumulative-rounding gives each column the same twip width when
+  # the input is equal-share, since boundaries land at exact integer
+  # multiples of the share value. Total matches printable.
+  expect_identical(widths[[1L]], widths[[2L]])
+  expect_identical(widths[[2L]], widths[[3L]])
+})
+
+# ---------------------------------------------------------------------
 # Self-registration via direct call
 # ---------------------------------------------------------------------
 
