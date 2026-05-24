@@ -66,6 +66,37 @@ servers, so leading with it walks through 2-3 missing
 names before resolving. Users who installed Source Pro
 can opt in via the explicit-stack form
 (\code{c("Source Serif Pro", "serif")}).
+
+\strong{What you see in Word's font dropdown vs. what renders.}
+When you open a tabular-generated \code{.rtf} in Word on
+macOS or Windows, the font dropdown displays the file's
+\emph{requested} face — \code{"Liberation Serif"} by default
+(the Linux-server-installed face). The rendered text on
+screen is whatever Word's \verb{\\\\*\\\\falt} substitution
+resolved to — typically Times New Roman on macOS /
+Windows. This is correct: Liberation Serif and Times
+New Roman are metric-compatible by design, so the
+rendered layout (line breaks, decimal alignment, page
+breaks) is identical regardless of which face Word
+actually used to render. The same \verb{\\\\*\\\\falt}
+substitution model applies to sans (Liberation Sans -> Arial)
+and mono (Liberation Mono -> Courier New).
+
+\strong{How to force Office names as the primary.} If
+reviewers will be confused by seeing \code{"Liberation Serif"}
+in the Word font dropdown (cosmetic concern; doesn't
+affect rendering), pass an explicit length>1 stack with
+the Office name first. The resolver returns the vector
+verbatim — no alias lookup, no chain expansion — so the
+RTF file then names the Office face as primary and your
+chosen alternate as \verb{\\\\*\\\\falt}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{preset(font_family = c("Times New Roman", "Times", "Liberation Serif"))
+}\if{html}{\out{</div>}}
+
+This is the canonical escape hatch for authors who know
+their consumer audience is Mac / Windows Word users and
+want the dropdown to show the Office face directly.
 \item \strong{\code{orientation}} — page orientation.
 \verb{<character(1)>}. One of \code{"portrait"} (default),
 \code{"landscape"}.
