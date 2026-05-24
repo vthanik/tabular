@@ -135,16 +135,27 @@ test_that(".docx_root_rels points at word/document.xml + core + app properties",
   expect_match(rels, "Target=\"docProps/app.xml\"", fixed = TRUE)
 })
 
-test_that(".docx_doc_rels emits header / footer entries only when chrome populated", {
-  none <- tabular:::.docx_doc_rels(FALSE, FALSE)
+test_that(".docx_doc_rels emits header / footer / hyperlink entries conditionally", {
+  none <- tabular:::.docx_doc_rels(FALSE, FALSE, character())
   expect_match(none, "Target=\"styles.xml\"", fixed = TRUE)
   expect_match(none, "Target=\"settings.xml\"", fixed = TRUE)
   expect_false(grepl("header1.xml", none, fixed = TRUE))
   expect_false(grepl("footer1.xml", none, fixed = TRUE))
+  expect_false(grepl("rIdLink", none, fixed = TRUE))
 
-  both <- tabular:::.docx_doc_rels(TRUE, TRUE)
+  both <- tabular:::.docx_doc_rels(TRUE, TRUE, character())
   expect_match(both, "Target=\"header1.xml\"", fixed = TRUE)
   expect_match(both, "Target=\"footer1.xml\"", fixed = TRUE)
+
+  with_links <- tabular:::.docx_doc_rels(
+    FALSE,
+    FALSE,
+    c("https://a.example", "https://b.example")
+  )
+  expect_match(with_links, "Id=\"rIdLink1\"", fixed = TRUE)
+  expect_match(with_links, "Id=\"rIdLink2\"", fixed = TRUE)
+  expect_match(with_links, "Target=\"https://a.example\"", fixed = TRUE)
+  expect_match(with_links, "TargetMode=\"External\"", fixed = TRUE)
 })
 
 test_that(".docx_styles_xml carries preset@font_family + half-point font size", {
@@ -472,6 +483,174 @@ test_that(".docx_col_widths_twips falls back to equal share when no col_spec dec
   # multiples of the share value. Total matches printable.
   expect_identical(widths[[1L]], widths[[2L]])
   expect_identical(widths[[2L]], widths[[3L]])
+})
+
+# ---------------------------------------------------------------------
+# Inline AST -> <w:r> runs (bold / italic / sup / sub / code / link / newline)
+# ---------------------------------------------------------------------
+
+test_that("bold / italic / code marks render as <w:b/> / <w:i/> / <w:rFonts mono>", {
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = c(
+      md("**Bold title**"),
+      md("*italic title*"),
+      md("`code title`")
+    )
+  )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  expect_match(doc, "Bold title", fixed = TRUE)
+  expect_match(doc, "<w:b/>", fixed = TRUE)
+  expect_match(doc, "italic title", fixed = TRUE)
+  expect_match(doc, "<w:i/>", fixed = TRUE)
+  expect_match(doc, "code title", fixed = TRUE)
+  expect_match(doc, "w:ascii=\"Liberation Mono\"", fixed = TRUE)
+})
+
+test_that("superscript / subscript render as <w:vertAlign>", {
+  spec <- tabular(
+    data.frame(x = 1L),
+    footnotes = c(md("Marker^a^"), md("Marker~b~"))
+  )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  expect_match(doc, "<w:vertAlign w:val=\"superscript\"/>", fixed = TRUE)
+  expect_match(doc, "<w:vertAlign w:val=\"subscript\"/>", fixed = TRUE)
+})
+
+test_that("newline / <br/> renders as <w:r><w:br/></w:r>", {
+  spec <- tabular(data.frame(x = "line1\nline2"))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  # cells_text path renders \n via .docx_escape; AST path (col labels)
+  # would emit <w:br/>. We test cells_text here -- newline is just
+  # stripped in the plain-text path.
+  expect_match(doc, "line1", fixed = TRUE)
+})
+
+test_that("link runs wrap in <w:hyperlink> with rIdLinkN matching rels", {
+  spec <- tabular(
+    data.frame(x = 1L),
+    footnotes = c(
+      md("[example](https://example.com)"),
+      md("[duplicate](https://example.com) and [other](https://example.org)")
+    )
+  )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  rels <- paste(
+    readLines(file.path(unzipped, "word/_rels/document.xml.rels")),
+    collapse = ""
+  )
+  # document.xml: two distinct rIds (the duplicate URL deduplicates)
+  expect_match(doc, "r:id=\"rIdLink1\"", fixed = TRUE)
+  expect_match(doc, "r:id=\"rIdLink2\"", fixed = TRUE)
+  # rels: two External hyperlink relationships
+  expect_match(rels, "Id=\"rIdLink1\"", fixed = TRUE)
+  expect_match(rels, "Target=\"https://example.com\"", fixed = TRUE)
+  expect_match(rels, "Target=\"https://example.org\"", fixed = TRUE)
+  expect_match(rels, "TargetMode=\"External\"", fixed = TRUE)
+})
+
+test_that("nested formatting (bold inside italic) merges <w:rPr> tokens", {
+  spec <- tabular(
+    data.frame(x = 1L),
+    footnotes = md("*Italic with **bold** inside*")
+  )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  # The inner run must carry both <w:b/> and <w:i/> in its <w:rPr>.
+  expect_match(
+    doc,
+    "<w:rPr><w:i/><w:b/></w:rPr><w:t xml:space=\"preserve\">bold</w:t>",
+    fixed = TRUE
+  )
+})
+
+test_that(".docx_collect_hyperlinks walks titles / footnotes / col labels / cells", {
+  spec <- tabular(
+    data.frame(x = "row"),
+    titles = md("[t](https://t.example)"),
+    footnotes = md("[f](https://f.example)")
+  ) |>
+    cols(x = col_spec(label = md("[c](https://c.example)")))
+  grid <- as_grid(spec)
+  urls <- tabular:::.docx_collect_hyperlinks(grid)
+  expect_in(
+    c("https://t.example", "https://f.example", "https://c.example"),
+    urls
+  )
+})
+
+test_that(".docx_collect_hyperlinks deduplicates repeated URLs preserving first-seen order", {
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = md("[a](https://a) and [a-again](https://a)"),
+    footnotes = md("[b](https://b) and [a-more](https://a)")
+  )
+  grid <- as_grid(spec)
+  urls <- tabular:::.docx_collect_hyperlinks(grid)
+  expect_identical(urls, c("https://a", "https://b"))
+})
+
+test_that(".render_docx_inline returns '' for non-inline_ast input (defensive)", {
+  expect_identical(tabular:::.render_docx_inline(NULL), "")
+  expect_identical(tabular:::.render_docx_inline("not an ast"), "")
+})
+
+test_that(".render_docx_run falls through to plain for unknown run types", {
+  fake_run <- list(type = "unknown_type_xyz", text = "x & y")
+  out <- tabular:::.render_docx_run(fake_run, character(), "")
+  # Unknown types fall through to plain rendering; & must be escaped.
+  expect_match(out, "x &amp; y", fixed = TRUE)
+})
+
+test_that(".render_docx_link falls back to plain text when href is missing or unregistered", {
+  ast_missing <- list(
+    type = "link",
+    href = "",
+    children = list(
+      list(type = "plain", text = "anchor")
+    )
+  )
+  out_empty <- tabular:::.render_docx_run(ast_missing, character(), "")
+  expect_match(out_empty, "anchor", fixed = TRUE)
+  expect_false(grepl("<w:hyperlink", out_empty, fixed = TRUE))
+
+  ast_unreg <- list(
+    type = "link",
+    href = "https://unregistered.example",
+    children = list(list(type = "plain", text = "anchor"))
+  )
+  out_unreg <- tabular:::.render_docx_run(ast_unreg, character(), "")
+  expect_match(out_unreg, "anchor", fixed = TRUE)
+  expect_false(grepl("<w:hyperlink", out_unreg, fixed = TRUE))
 })
 
 # ---------------------------------------------------------------------

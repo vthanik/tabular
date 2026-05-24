@@ -94,13 +94,23 @@ backend_docx <- function(grid, file) {
   has_ph <- .page_band_is_populated(meta$pagehead_ast)
   has_pf <- .page_band_is_populated(meta$pagefoot_ast)
 
+  # One-pass hyperlink walk over every AST surface so the rels file
+  # and the inline renderer agree on rId numbering. First-encounter
+  # order is deterministic given the walk order in
+  # `.docx_collect_hyperlinks()`.
+  hyperlinks <- .docx_collect_hyperlinks(grid)
+
   entries <- c(
     "[Content_Types].xml" = .docx_content_types(has_ph, has_pf),
     "_rels/.rels" = .docx_root_rels(),
     "docProps/app.xml" = .docx_app_xml(),
     "docProps/core.xml" = .docx_core_xml(meta),
-    "word/_rels/document.xml.rels" = .docx_doc_rels(has_ph, has_pf),
-    "word/document.xml" = .docx_document_xml(grid, preset),
+    "word/_rels/document.xml.rels" = .docx_doc_rels(
+      has_ph,
+      has_pf,
+      hyperlinks
+    ),
+    "word/document.xml" = .docx_document_xml(grid, preset, hyperlinks),
     "word/settings.xml" = .docx_settings_xml(),
     "word/styles.xml" = .docx_styles_xml(preset)
   )
@@ -131,14 +141,20 @@ backend_docx <- function(grid, file) {
 # column labels + all body rows from grid@pages, with `<w:tblHeader/>`
 # on header rows so Word naturally repeats them on page-break) ->
 # footnote block -> trailing `<w:sectPr>` carrying page geometry.
-# Commit 3 wires the inline AST renderer through titles / footnotes
-# / col labels / cell text; commits 4-5 wire page chrome refs and
-# per-cell styling.
-.docx_document_xml <- function(grid, preset) {
+# Inline AST runs through `.render_docx_inline()` everywhere user
+# content appears (titles, footnotes, col labels, body cells).
+# Commits 4-5 wire page chrome refs and per-cell styling.
+.docx_document_xml <- function(grid, preset, hyperlinks) {
   meta <- grid@metadata
-  titles_block <- .docx_title_block(meta$titles_ast %||% list())
-  table_block <- .render_docx_table(grid, preset)
-  footnotes_block <- .docx_footnote_block(meta$footnotes_ast %||% list())
+  titles_block <- .docx_title_block(
+    meta$titles_ast %||% list(),
+    hyperlinks
+  )
+  table_block <- .render_docx_table(grid, preset, hyperlinks)
+  footnotes_block <- .docx_footnote_block(
+    meta$footnotes_ast %||% list(),
+    hyperlinks
+  )
   sect_pr <- .docx_section_pr(
     preset,
     has_pagehead = FALSE,
@@ -163,23 +179,23 @@ backend_docx <- function(grid, file) {
   )
 }
 
-# Render the title block: one centred bold paragraph per title.
-# v0.1 emits plain text; commit 3 swaps in the inline AST renderer.
-.docx_title_block <- function(titles_ast) {
+# Render the title block: one centred paragraph per title with
+# the title's inline AST rendered through `.render_docx_inline()`.
+# An outer bold wrap (commit-2 default) is applied via the
+# paragraph's run defaults inherited from word/styles.xml — we
+# only set bold here when the AST has no explicit run styling.
+.docx_title_block <- function(titles_ast, hyperlinks) {
   if (length(titles_ast) == 0L) {
     return(character())
   }
   vapply(
     titles_ast,
     function(ast) {
-      text <- .ast_flatten_text(ast)
-      sprintf(
-        paste0(
-          "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr>",
-          "<w:r><w:rPr><w:b/></w:rPr>",
-          "<w:t xml:space=\"preserve\">%s</w:t></w:r></w:p>"
-        ),
-        .docx_escape(text)
+      runs <- .render_docx_inline(ast, hyperlinks, default_rpr = "<w:b/>")
+      paste0(
+        "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr>",
+        runs,
+        "</w:p>"
       )
     },
     character(1L)
@@ -187,22 +203,20 @@ backend_docx <- function(grid, file) {
 }
 
 # Render the footnote block: one left-aligned paragraph per
-# footnote. v0.1 emits plain text; commit 3 swaps in the inline
-# AST renderer.
-.docx_footnote_block <- function(footnotes_ast) {
+# footnote. Inline AST flows through `.render_docx_inline()` so
+# bold / italic / sup / link markup all surface in the .docx.
+.docx_footnote_block <- function(footnotes_ast, hyperlinks) {
   if (length(footnotes_ast) == 0L) {
     return(character())
   }
   vapply(
     footnotes_ast,
     function(ast) {
-      text <- .ast_flatten_text(ast)
-      sprintf(
-        paste0(
-          "<w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr>",
-          "<w:r><w:t xml:space=\"preserve\">%s</w:t></w:r></w:p>"
-        ),
-        .docx_escape(text)
+      runs <- .render_docx_inline(ast, hyperlinks)
+      paste0(
+        "<w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr>",
+        runs,
+        "</w:p>"
       )
     },
     character(1L)
@@ -228,7 +242,7 @@ backend_docx <- function(grid, file) {
 # Empty grid (zero pages): emit a left-aligned "(no rows)" paragraph
 # instead of an empty table. Matches the RTF backend's `\plain\qc`
 # behaviour and avoids Word's empty-table-row glitch.
-.render_docx_table <- function(grid, preset) {
+.render_docx_table <- function(grid, preset, hyperlinks = character()) {
   meta <- grid@metadata
   pages <- grid@pages
   if (length(pages) == 0L) {
@@ -247,7 +261,8 @@ backend_docx <- function(grid, file) {
     meta$col_labels_ast,
     col_names_vis,
     cols,
-    widths
+    widths,
+    hyperlinks
   )
   body_rows <- .render_docx_body_rows(pages, col_names_vis, cols, widths)
 
@@ -408,21 +423,32 @@ backend_docx <- function(grid, file) {
 }
 
 # Render the column-labels row: one `<w:tc>` per visible column,
-# alignment from `col_spec@align`, label text flattened from the
-# inline AST. Header row carries `<w:tblHeader/>` for Word's auto-
-# repeat across pagination.
+# alignment from `col_spec@align`, label flow from the inline AST
+# through `.render_docx_inline()`. Default run formatting is bold
+# (clinical header convention). Header row carries `<w:tblHeader/>`
+# for Word's auto-repeat across pagination.
 .render_docx_col_labels_row <- function(
   col_labels_ast,
   col_names_vis,
   cols,
-  widths_twips
+  widths_twips,
+  hyperlinks
 ) {
   cells <- vapply(
     seq_along(col_names_vis),
     function(j) {
       nm <- col_names_vis[[j]]
       ast <- col_labels_ast[[nm]]
-      label <- if (is.null(ast)) nm else .ast_flatten_text(ast)
+      runs <- if (is_inline_ast(ast)) {
+        .render_docx_inline(ast, hyperlinks, default_rpr = "<w:b/>")
+      } else {
+        paste0(
+          "<w:r><w:rPr><w:b/></w:rPr>",
+          "<w:t xml:space=\"preserve\">",
+          .docx_escape(nm),
+          "</w:t></w:r>"
+        )
+      }
       cs <- cols[[nm]]
       align <- if (is_col_spec(cs)) cs@align else NA_character_
       jc <- .docx_align_token(align)
@@ -435,10 +461,9 @@ backend_docx <- function(grid, file) {
         tc_pr,
         "<w:p><w:pPr>",
         jc,
-        "</w:pPr><w:r><w:rPr><w:b/></w:rPr>",
-        "<w:t xml:space=\"preserve\">",
-        .docx_escape(label),
-        "</w:t></w:r></w:p></w:tc>"
+        "</w:pPr>",
+        runs,
+        "</w:p></w:tc>"
       )
     },
     character(1L)
@@ -693,9 +718,15 @@ backend_docx <- function(grid, file) {
 }
 
 # `word/_rels/document.xml.rels` — document-level relationships:
-# styles + settings always; header / footer conditionally; commit
-# 3 adds hyperlink relationships dynamically.
-.docx_doc_rels <- function(has_pagehead, has_pagefoot) {
+# styles + settings always; header / footer conditionally; one
+# hyperlink relationship per unique URL collected from the grid's
+# inline ASTs (rId = `rIdLinkN`, 1-indexed, first-encounter order).
+# `TargetMode="External"` is mandatory on every hyperlink rel.
+.docx_doc_rels <- function(
+  has_pagehead,
+  has_pagefoot,
+  hyperlinks = character()
+) {
   rels <- c(
     "<Relationship Id=\"rIdS\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>",
     "<Relationship Id=\"rIdT\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>"
@@ -710,6 +741,16 @@ backend_docx <- function(grid, file) {
     rels <- c(
       rels,
       "<Relationship Id=\"rIdF\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer\" Target=\"footer1.xml\"/>"
+    )
+  }
+  for (i in seq_along(hyperlinks)) {
+    rels <- c(
+      rels,
+      sprintf(
+        "<Relationship Id=\"rIdLink%d\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink\" Target=\"%s\" TargetMode=\"External\"/>",
+        i,
+        .docx_escape_attr(hyperlinks[[i]])
+      )
     )
   }
   paste0(
@@ -854,6 +895,209 @@ backend_docx <- function(grid, file) {
     include_directories = FALSE
   )
   invisible(file)
+}
+
+# ---------------------------------------------------------------------
+# Inline AST -> <w:r> runs
+# ---------------------------------------------------------------------
+
+# Render an inline_ast to an OOXML run sequence (zero or more
+# `<w:r>` elements, possibly wrapped by `<w:hyperlink>` for links).
+# Returns "" when `ast` is not an inline_ast (defensive — keeps
+# callers terse).
+#
+# `default_rpr` is an `<w:rPr>` fragment applied to every otherwise-
+# unstyled plain run. Callers use this to set a paragraph-wide
+# default (e.g. bold for titles + column labels).
+.render_docx_inline <- function(
+  ast,
+  hyperlinks = character(),
+  default_rpr = ""
+) {
+  if (!is_inline_ast(ast)) {
+    return("")
+  }
+  paste0(
+    vapply(
+      ast@runs,
+      function(run) .render_docx_run(run, hyperlinks, default_rpr),
+      character(1L)
+    ),
+    collapse = ""
+  )
+}
+
+# Render one inline_ast run record to its OOXML markup. Recurses
+# through `children` for wrapping types via `.render_docx_children()`.
+# The dispatch table mirrors `.render_rtf_run()` 1:1 so AST behaviour
+# is consistent across backends — only the markup differs.
+.render_docx_run <- function(run, hyperlinks, default_rpr = "") {
+  type <- run$type
+  switch(
+    type,
+    plain = .docx_run_plain(run$text %||% "", default_rpr),
+    bold = .docx_run_wrap(
+      run$children,
+      hyperlinks,
+      "<w:b/>",
+      default_rpr
+    ),
+    italic = .docx_run_wrap(
+      run$children,
+      hyperlinks,
+      "<w:i/>",
+      default_rpr
+    ),
+    sup = .docx_run_wrap(
+      run$children,
+      hyperlinks,
+      "<w:vertAlign w:val=\"superscript\"/>",
+      default_rpr
+    ),
+    sub = .docx_run_wrap(
+      run$children,
+      hyperlinks,
+      "<w:vertAlign w:val=\"subscript\"/>",
+      default_rpr
+    ),
+    code = .docx_run_wrap(
+      run$children,
+      hyperlinks,
+      "<w:rFonts w:ascii=\"Liberation Mono\" w:hAnsi=\"Liberation Mono\" w:cs=\"Liberation Mono\"/>",
+      default_rpr
+    ),
+    link = .render_docx_link(run, hyperlinks, default_rpr),
+    span = .render_docx_children(run$children, hyperlinks, default_rpr),
+    newline = "<w:r><w:br/></w:r>",
+    .docx_run_plain(run$text %||% "", default_rpr)
+  )
+}
+
+# Render a plain text run with an optional `<w:rPr>` block. The
+# `xml:space="preserve"` attribute is non-negotiable: cell text
+# arrives with leading / trailing NBSP padding from engine_decimal,
+# and Word collapses unprotected whitespace at render time.
+.docx_run_plain <- function(text, default_rpr) {
+  rpr <- if (nzchar(default_rpr)) {
+    paste0("<w:rPr>", default_rpr, "</w:rPr>")
+  } else {
+    ""
+  }
+  paste0(
+    "<w:r>",
+    rpr,
+    "<w:t xml:space=\"preserve\">",
+    .docx_escape(text),
+    "</w:t></w:r>"
+  )
+}
+
+# Render a wrapping run (`bold` / `italic` / `sup` / `sub` / `code`).
+# Each child is rendered with the wrap's `<w:rPr>` token MERGED with
+# the inherited `default_rpr` so nested formatting compounds
+# correctly (e.g. bold inside italic -> both `<w:b/>` and `<w:i/>`
+# inside the same `<w:rPr>`).
+.docx_run_wrap <- function(children, hyperlinks, rpr_token, default_rpr) {
+  inherited <- paste0(default_rpr, rpr_token)
+  .render_docx_children(children, hyperlinks, inherited)
+}
+
+# Render the children of a wrapping run.
+.render_docx_children <- function(children, hyperlinks, default_rpr) {
+  if (length(children) == 0L) {
+    return("")
+  }
+  paste0(
+    vapply(
+      children,
+      function(run) .render_docx_run(run, hyperlinks, default_rpr),
+      character(1L)
+    ),
+    collapse = ""
+  )
+}
+
+# Render a link run as `<w:hyperlink r:id="rIdLinkN">...</w:hyperlink>`,
+# where N is the 1-indexed position of the link's URL in the
+# pre-walked `hyperlinks` registry. The link's child runs render
+# inside the wrapper with hyperlink visual styling
+# (`<w:rStyle w:val="Hyperlink"/>` plus inherited default_rpr).
+# Unknown / missing URL falls back to plain rendering with the
+# link text so the document never carries a dangling `r:id`.
+.render_docx_link <- function(run, hyperlinks, default_rpr) {
+  href <- run$href %||% ""
+  if (!nzchar(href)) {
+    return(.render_docx_children(run$children, hyperlinks, default_rpr))
+  }
+  idx <- match(href, hyperlinks)
+  if (is.na(idx)) {
+    # Defensive — shouldn't happen since the registry was built by
+    # walking the same AST. Fall back to plain text rendering.
+    return(.render_docx_children(run$children, hyperlinks, default_rpr))
+  }
+  link_rpr <- paste0(
+    default_rpr,
+    "<w:rStyle w:val=\"Hyperlink\"/>"
+  )
+  inner <- .render_docx_children(run$children, hyperlinks, link_rpr)
+  sprintf(
+    "<w:hyperlink r:id=\"rIdLink%d\">%s</w:hyperlink>",
+    idx,
+    inner
+  )
+}
+
+# Walk every inline_ast in the grid that may carry hyperlinks
+# (titles, footnotes, column labels, body cell ASTs from any page)
+# and return a deduplicated, first-encounter-ordered character
+# vector of URLs. Used by `.docx_zip_entries()` to assign rIds
+# once, before either the document XML or the rels file is built.
+.docx_collect_hyperlinks <- function(grid) {
+  meta <- grid@metadata
+  urls <- character()
+  walk <- function(ast) {
+    if (!is_inline_ast(ast)) {
+      return(invisible(NULL))
+    }
+    for (run in ast@runs) {
+      urls <<- c(urls, .docx_link_urls_in_run(run))
+    }
+  }
+  for (ast in (meta$titles_ast %||% list())) {
+    walk(ast)
+  }
+  for (ast in (meta$footnotes_ast %||% list())) {
+    walk(ast)
+  }
+  for (ast in (meta$col_labels_ast %||% list())) {
+    walk(ast)
+  }
+  for (page in grid@pages) {
+    cells_ast <- page$cells_ast
+    if (is.list(cells_ast)) {
+      for (ast in cells_ast) {
+        walk(ast)
+      }
+    }
+  }
+  unique(urls[nzchar(urls)])
+}
+
+# Recursive helper: return every `href` reachable from one run,
+# walking through `children` for wrapping runs. Returns
+# `character(0)` when no link is present.
+.docx_link_urls_in_run <- function(run) {
+  if (!is.list(run) || is.null(run$type)) {
+    return(character())
+  }
+  if (identical(run$type, "link")) {
+    href <- run$href %||% ""
+    return(c(
+      href,
+      unlist(lapply(run$children %||% list(), .docx_link_urls_in_run))
+    ))
+  }
+  unlist(lapply(run$children %||% list(), .docx_link_urls_in_run))
 }
 
 # ---------------------------------------------------------------------
