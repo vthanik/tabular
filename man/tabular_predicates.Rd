@@ -13,6 +13,7 @@
 \alias{is_style_spec}
 \alias{is_pagination_spec}
 \alias{is_preset_spec}
+\alias{is_subgroup_spec}
 \alias{is_inline_ast}
 \title{Test for tabular S7 class instances}
 \usage{
@@ -37,6 +38,8 @@ is_style_spec(x)
 is_pagination_spec(x)
 
 is_preset_spec(x)
+
+is_subgroup_spec(x)
 
 is_inline_ast(x)
 }
@@ -70,6 +73,7 @@ Eleven predicates cover the full S7 surface:\tabular{lll}{
    \code{is_style_spec()} \tab \code{style_spec} \tab \code{\link[=style]{style()}} (the cascade root) \cr
    \code{is_pagination_spec()} \tab \code{pagination_spec} \tab \code{\link[=paginate]{paginate()}} \cr
    \code{is_preset_spec()} \tab \code{preset_spec} \tab \code{\link[=preset]{preset()}}, \code{\link[=set_preset]{set_preset()}} \cr
+   \code{is_subgroup_spec()} \tab \code{subgroup_spec} \tab \code{\link[=subgroup]{subgroup()}} \cr
    \code{is_inline_ast()} \tab \code{inline_ast} \tab \code{parse_inline()} (post-format) \cr
 }
 

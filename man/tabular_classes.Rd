@@ -5,6 +5,7 @@
 \alias{.col_spec_class}
 \alias{header_node}
 \alias{sort_spec}
+\alias{subgroup_spec}
 \alias{derive_spec}
 \alias{style_node}
 \alias{style_predicate}

@@ -209,7 +209,40 @@ as_grid <- function(spec) {
 # `tabular_grid`. `format` is stamped into metadata so emit() can
 # carry the resolved backend tag through to the manifest layer;
 # `as_grid()` (no I/O) passes NA_character_.
+#
+# When `spec@subgroup` is set, the partition phase splits @data and
+# this function runs the rest of the pipeline per sub-spec, then
+# merges the resulting page sets into a single `tabular_grid` with
+# per-page subgroup runtime annotations. Page numbers reset per
+# group; a hard page break between groups falls out naturally from
+# the per-spec pagination plans.
 .resolve_spec_to_grid <- function(spec, format, call) {
+  groups <- engine_subgroup_split(spec)
+  if (length(groups) == 1L && is.null(groups[[1L]]$runtime)) {
+    return(.resolve_single_to_grid(
+      groups[[1L]]$spec,
+      format = format,
+      call = call,
+      runtime = NULL
+    ))
+  }
+  sub_grids <- lapply(groups, function(g) {
+    .resolve_single_to_grid(
+      g$spec,
+      format = format,
+      call = call,
+      runtime = g$runtime
+    )
+  })
+  .merge_subgroup_grids(sub_grids, format = format, spec = spec)
+}
+
+# Resolve a single (sub-)spec into a tabular_grid. `runtime` is the
+# per-group annotation from engine_subgroup_split (NULL when the
+# parent spec carries no subgroup); when set, every page descriptor
+# is stamped with subgroup_* fields and a pre-rendered
+# subgroup_line_ast banner.
+.resolve_single_to_grid <- function(spec, format, call, runtime) {
   spec <- engine_derive(spec)
   spec <- engine_sort(spec)
 
@@ -245,6 +278,11 @@ as_grid <- function(spec) {
     col_labels_ast = fmt$col_labels_ast,
     col_names = names(spec@data)
   )
+
+  # Stamp per-group subgroup metadata onto every page descriptor.
+  # Backends key on `page$subgroup_line_ast` to decide whether to
+  # emit the centred banner row above the column-header rule.
+  pages <- .stamp_subgroup_runtime(pages, runtime = runtime, call = call)
 
   # Page chrome (header / footer bands) — resolved against the
   # cascade-effective preset so the session default's pagehead /
@@ -283,8 +321,78 @@ as_grid <- function(spec) {
       col_labels_ast = fmt$col_labels_ast,
       pagehead_ast = pagehead_ast,
       pagefoot_ast = pagefoot_ast,
-      preset = spec@preset
+      preset = spec@preset,
+      subgroup_runtime = runtime
     )
+  )
+}
+
+# Stamp per-group subgroup runtime onto every page in `pages` and
+# parse the pre-rendered banner text (produced by
+# `.subgroup_render_label()` against the group's first row) into an
+# inline_ast every backend can consume directly. When `runtime` is
+# NULL, pages pass through unchanged.
+.stamp_subgroup_runtime <- function(pages, runtime, call) {
+  if (is.null(runtime)) {
+    return(pages)
+  }
+  banner_ast <- parse_inline(runtime$banner_text, call = call)
+  lapply(pages, function(p) {
+    p$subgroup_by <- runtime$by
+    p$subgroup_values <- runtime$values
+    p$subgroup_index <- runtime$index
+    p$subgroup_total <- runtime$total
+    p$subgroup_banner_text <- runtime$banner_text
+    p$subgroup_line_ast <- banner_ast
+    p
+  })
+}
+
+# Merge per-group sub-grids into one tabular_grid. Pages
+# concatenate in group order; each page keeps its per-group
+# page_index (1..rows_per_page) so {page} / {npages} tokens resolve
+# to per-group numbering at backend time. Aggregate metadata
+# (total_pages, nrow_data) sums across groups; the per-group
+# runtime list is published at `metadata$subgroup_groups` for
+# backends or downstream tooling that wants to enumerate groups.
+.merge_subgroup_grids <- function(sub_grids, format, spec) {
+  pages <- unlist(
+    lapply(sub_grids, function(g) g@pages),
+    recursive = FALSE,
+    use.names = FALSE
+  )
+  first <- sub_grids[[1L]]@metadata
+  total_pages <- sum(vapply(
+    sub_grids,
+    function(g) g@metadata$total_pages,
+    integer(1L)
+  ))
+  nrow_data <- sum(vapply(
+    sub_grids,
+    function(g) g@metadata$nrow_data,
+    integer(1L)
+  ))
+  subgroup_groups <- lapply(
+    sub_grids,
+    function(g) g@metadata$subgroup_runtime
+  )
+
+  meta <- first
+  meta$format <- format
+  meta$total_pages <- as.integer(total_pages)
+  meta$nrow_data <- as.integer(nrow_data)
+  meta$subgroup_runtime <- NULL
+  meta$subgroup_groups <- subgroup_groups
+
+  # Restore aggregate ncol_data + col_names from the parent spec so
+  # the merged grid reports the unfiltered shape (each sub-spec has
+  # the same columns; either is fine, but the parent is canonical).
+  meta$ncol_data <- ncol(spec@data)
+  meta$col_names <- names(spec@data)
+
+  tabular_grid(
+    pages = pages,
+    metadata = meta
   )
 }
 

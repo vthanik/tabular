@@ -232,6 +232,49 @@ sort_spec <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
+# subgroup_spec — partition the report by one or more variables
+# ---------------------------------------------------------------------
+#
+# When set on a tabular_spec, the engine partitions @data by the
+# crossing of `@vars`, runs the full pipeline per group, and
+# concatenates the resulting page sets with a hard page break
+# between groups. Each page descriptor of the merged grid carries
+# the per-group subgroup_value_str / subgroup_label_str so backends
+# can emit the centred banner row above the column-header rule.
+
+#' @rdname tabular_classes
+#' @format NULL
+#' @usage NULL
+subgroup_spec <- S7::new_class(
+  "subgroup_spec",
+  package = "tabular",
+  properties = list(
+    by = S7::new_property(S7::class_character, default = character()),
+    label = S7::class_any
+  ),
+  validator = function(self) {
+    if (anyNA(self@by)) {
+      return("@by must not contain NA")
+    }
+    if (length(self@by) > 0L && any(!nzchar(self@by))) {
+      return("@by must not contain empty strings")
+    }
+    if (!is.null(self@label)) {
+      if (
+        !is.character(self@label) ||
+          length(self@label) != 1L ||
+          is.na(self@label)
+      ) {
+        return(
+          "@label must be NULL or a length-1 non-NA character (glue-style template)"
+        )
+      }
+    }
+    NULL
+  }
+)
+
+# ---------------------------------------------------------------------
 # derive_spec
 # ---------------------------------------------------------------------
 
@@ -501,7 +544,8 @@ tabular_spec <- S7::new_class(
     footnotes = S7::new_property(
       S7::class_character,
       default = character()
-    )
+    ),
+    subgroup = S7::class_any
   )
 )
 
@@ -605,6 +649,7 @@ tabular_grid <- S7::new_class(
 #' | `is_style_spec()`      | `style_spec`       | [`style()`] (the cascade root)    |
 #' | `is_pagination_spec()` | `pagination_spec`  | [`paginate()`]                    |
 #' | `is_preset_spec()`     | `preset_spec`      | [`preset()`], [`set_preset()`]    |
+#' | `is_subgroup_spec()`   | `subgroup_spec`    | [`subgroup()`]                    |
 #' | `is_inline_ast()`      | `inline_ast`       | `parse_inline()` (post-format)    |
 #'
 #' Predicates never error — they return `FALSE` for `NULL`, vectors,
@@ -724,6 +769,10 @@ is_pagination_spec <- function(x) S7::S7_inherits(x, pagination_spec)
 #' @rdname tabular_predicates
 #' @export
 is_preset_spec <- function(x) S7::S7_inherits(x, preset_spec)
+
+#' @rdname tabular_predicates
+#' @export
+is_subgroup_spec <- function(x) S7::S7_inherits(x, subgroup_spec)
 
 #' @rdname tabular_predicates
 #' @export

@@ -205,6 +205,16 @@ backend_latex <- function(grid, file) {
   body_rows <- .render_latex_body_rows(page$cells_text)
   footer_rule <- "\\hline"
 
+  # Subgroup banner row — `\SetCell[c=N]{c}` spanning every visible
+  # column. Inserted between the header rule and the first body row
+  # so it sits directly under the column-header band on every page
+  # of the group. Returns character(0) when the page has no
+  # subgroup runtime.
+  banner_row <- .render_latex_subgroup_banner_row(
+    page$subgroup_line_ast,
+    n_cols = length(col_names_vis)
+  )
+
   c(
     sprintf(
       "\\begin{longtblr}[caption={}, label={}]{colspec={%s}, rowhead=%d, rows={valign=t}}",
@@ -212,10 +222,37 @@ backend_latex <- function(grid, file) {
       rowhead
     ),
     header_rules,
+    banner_row,
     body_rows,
     footer_rule,
     "\\end{longtblr}"
   )
+}
+
+# Render the subgroup banner row inside a longtblr environment.
+# `\SetCell[c=N]{c}` spans every visible column; trailing empty
+# cells (`&`-separated) keep tabularray's column count consistent.
+# Returns character(0) when the page has no subgroup runtime.
+.render_latex_subgroup_banner_row <- function(subgroup_line_ast, n_cols) {
+  if (
+    is.null(subgroup_line_ast) ||
+      !is_inline_ast(subgroup_line_ast) ||
+      length(subgroup_line_ast@runs) == 0L ||
+      n_cols < 1L
+  ) {
+    return(character())
+  }
+  inner <- .render_latex_inline(subgroup_line_ast)
+  row <- if (n_cols == 1L) {
+    sprintf("\\textbf{%s} \\\\", inner)
+  } else {
+    paste0(
+      sprintf("\\SetCell[c=%d]{c} \\textbf{%s}", n_cols, inner),
+      paste(rep(" &", n_cols - 1L), collapse = ""),
+      " \\\\"
+    )
+  }
+  row
 }
 
 # Compose the `colspec={...}` portion of the longtblr arg list.

@@ -135,6 +135,16 @@ backend_md <- function(grid, file) {
     out <- c(out, paste0("*", as.character(page$continuation), "*"), "")
   }
 
+  # Subgroup banner row — emitted on every page of a subgroup (page
+  # 1 AND every continuation), between titles/continuation and the
+  # column-header band. GFM has no native centring; bold + blank-line
+  # padding is the best-effort approximation. Banner falls through
+  # untouched when the page carries no subgroup runtime.
+  banner <- .render_md_subgroup_banner(page)
+  if (length(banner) > 0L) {
+    out <- c(out, banner, "")
+  }
+
   show_header <- page_number == 1L || isTRUE(page$repeat_headers)
   if (show_header) {
     out <- c(
@@ -158,6 +168,17 @@ backend_md <- function(grid, file) {
     }
   }
   out
+}
+
+# Render the subgroup banner (e.g. "Treatment Arm: Placebo") as one
+# bold line. Returns character(0) when the page has no subgroup
+# runtime, so callers can collapse cleanly.
+.render_md_subgroup_banner <- function(page) {
+  ast <- page$subgroup_line_ast
+  if (is.null(ast) || !is_inline_ast(ast) || length(ast@runs) == 0L) {
+    return(character())
+  }
+  paste0("**", .render_md_inline(ast), "**")
 }
 
 # ---------------------------------------------------------------------

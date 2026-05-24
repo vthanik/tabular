@@ -581,8 +581,30 @@ backend_docx <- function(grid, file) {
     },
     character(1L)
   )
+  n_cols_vis <- length(col_names_vis)
   out <- character()
+  # Subgroup tracking — banner row emitted once per group at the
+  # first page of each group; hard page break inserted before every
+  # non-initial group so each subgroup value starts on a fresh page
+  # (BMS Appendix I hard contract). Word continues to auto-repeat
+  # the column-header band (via `<w:tblHeader/>`) within a group;
+  # the banner itself does NOT repeat per Word page in Phase 1.
+  prev_subgroup_index <- NULL
   for (page in pages) {
+    sg_index <- page$subgroup_index
+    if (!is.null(sg_index) && !identical(sg_index, prev_subgroup_index)) {
+      page_break_before <- !is.null(prev_subgroup_index)
+      banner_row <- .render_docx_subgroup_banner_row(
+        page$subgroup_line_ast,
+        n_cols = n_cols_vis,
+        widths_twips = widths_twips,
+        page_break_before = page_break_before
+      )
+      if (length(banner_row) > 0L) {
+        out <- c(out, banner_row)
+      }
+      prev_subgroup_index <- sg_index
+    }
     ct <- page$cells_text
     cs_mat <- page$cells_style
     nrows <- nrow(ct)
@@ -623,6 +645,53 @@ backend_docx <- function(grid, file) {
     }
   }
   out
+}
+
+# Subgroup banner row — a single `<w:tc>` with `<w:gridSpan w:val="N"/>`
+# spanning every visible column, centred + bold. `<w:trPr>` carries
+# `<w:tblHeader/>` so Word repeats the banner if the table spills
+# inside the group, and `<w:pageBreakBefore/>` on the paragraph
+# when transitioning into a non-initial group so each subgroup
+# value starts on a fresh page (BMS Appendix I contract). Returns
+# character(0) when the page has no subgroup runtime.
+.render_docx_subgroup_banner_row <- function(
+  subgroup_line_ast,
+  n_cols,
+  widths_twips,
+  page_break_before
+) {
+  if (
+    is.null(subgroup_line_ast) ||
+      !is_inline_ast(subgroup_line_ast) ||
+      length(subgroup_line_ast@runs) == 0L ||
+      n_cols < 1L
+  ) {
+    return(character())
+  }
+  span_w <- sum(as.integer(widths_twips))
+  inner_runs <- .render_docx_inline(
+    subgroup_line_ast,
+    default_rpr = "<w:b/>"
+  )
+  page_break <- if (isTRUE(page_break_before)) {
+    "<w:pageBreakBefore/>"
+  } else {
+    ""
+  }
+  paste0(
+    "<w:tr><w:trPr><w:tblHeader/></w:trPr>",
+    "<w:tc><w:tcPr>",
+    sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_w),
+    sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols),
+    "</w:tcPr>",
+    "<w:p><w:pPr>",
+    page_break,
+    "<w:jc w:val=\"center\"/>",
+    "</w:pPr>",
+    inner_runs,
+    "</w:p>",
+    "</w:tc></w:tr>"
+  )
 }
 
 # Map an `align` value to a `<w:pPr><w:jc w:val="...">` token.

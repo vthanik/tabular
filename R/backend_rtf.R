@@ -422,6 +422,16 @@ backend_rtf <- function(grid, file) {
     cellx,
     preset
   )
+  # Subgroup banner row — single merged cell spanning every visible
+  # column, centred and bold, with a top + bottom rule for visual
+  # separation from the column-header band above and the body rows
+  # below. Inserted between the column-labels row and the first
+  # body row. Empty when the page carries no subgroup runtime.
+  banner_row <- .render_rtf_subgroup_banner_row(
+    page$subgroup_line_ast,
+    cellx = cellx
+  )
+
   body_rows <- .render_rtf_body_rows(
     page$cells_text,
     col_names_vis,
@@ -429,7 +439,39 @@ backend_rtf <- function(grid, file) {
     cellx
   )
 
-  c(band_rows, label_row, body_rows)
+  c(band_rows, label_row, banner_row, body_rows)
+}
+
+# Render the subgroup banner as a single merged-cell RTF row. Right
+# edge sits at the table's final `\cellx` so the cell spans every
+# visible column. Returns character(0) when the page carries no
+# subgroup runtime.
+.render_rtf_subgroup_banner_row <- function(subgroup_line_ast, cellx) {
+  if (
+    is.null(subgroup_line_ast) ||
+      !is_inline_ast(subgroup_line_ast) ||
+      length(subgroup_line_ast@runs) == 0L ||
+      length(cellx) == 0L
+  ) {
+    return(character())
+  }
+  inner <- .render_rtf_inline(subgroup_line_ast)
+  cellx_line <- paste0(
+    "\\clbrdrt\\brdrs\\clbrdrb\\brdrs",
+    "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
+    sprintf("\\cellx%d", as.integer(cellx[[length(cellx)]]))
+  )
+  cell_body <- paste0(
+    "\\pard\\plain\\intbl\\qc {\\b ",
+    inner,
+    "}\\cell"
+  )
+  c(
+    "\\trowd\\trgaph108",
+    cellx_line,
+    cell_body,
+    "\\row"
+  )
 }
 
 # Compute cumulative `\cellx` positions for the visible columns.

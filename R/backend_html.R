@@ -226,7 +226,8 @@ backend_html <- function(grid, file) {
     .render_html_tbody(
       cells_text = page$cells_text,
       col_names_visible = page$col_names,
-      cols = meta$cols %||% list()
+      cols = meta$cols %||% list(),
+      subgroup_line_ast = page$subgroup_line_ast
     )
   )
   c(out, "</table>")
@@ -341,8 +342,23 @@ backend_html <- function(grid, file) {
 # `col_spec@align`. Cell text comes from `cells_text` (post-
 # engine_decimal); we HTML-escape verbatim so NBSP padding
 # survives.
-.render_html_tbody <- function(cells_text, col_names_visible, cols) {
+.render_html_tbody <- function(
+  cells_text,
+  col_names_visible,
+  cols,
+  subgroup_line_ast = NULL
+) {
   out <- "<tbody>"
+  # Subgroup banner row — emitted as the first body row when the
+  # page carries subgroup runtime. Centred, bold, spans every
+  # visible column. Mirrors gt's `.gt_group_heading_row` pattern.
+  banner_row <- .render_html_subgroup_banner_row(
+    subgroup_line_ast,
+    n_cols = length(col_names_visible)
+  )
+  if (length(banner_row) > 0L) {
+    out <- c(out, banner_row)
+  }
   nrow_data <- nrow(cells_text)
   if (nrow_data == 0L) {
     return(c(out, "</tbody>"))
@@ -377,6 +393,30 @@ backend_html <- function(grid, file) {
     character(1L)
   )
   c(out, rows, "</tbody>")
+}
+
+# Render the subgroup banner `<tr>` — one centred bold cell spanning
+# every visible column. Returns character(0) when the page has no
+# subgroup runtime, so the caller can skip cleanly.
+.render_html_subgroup_banner_row <- function(subgroup_line_ast, n_cols) {
+  if (
+    is.null(subgroup_line_ast) ||
+      !is_inline_ast(subgroup_line_ast) ||
+      length(subgroup_line_ast@runs) == 0L
+  ) {
+    return(character())
+  }
+  inner <- .render_html_inline(subgroup_line_ast)
+  sprintf(
+    paste0(
+      "<tr class=\"tabular-subgroup\">",
+      "<td colspan=\"%d\" class=\"tabular-subgroup-label\">",
+      "<strong>%s</strong>",
+      "</td></tr>"
+    ),
+    n_cols,
+    inner
+  )
 }
 
 # Emit a `<colgroup>` block carrying the engine-resolved column
@@ -640,6 +680,8 @@ backend_html <- function(grid, file) {
     ".tabular-table tbody tr td { border-top: none; }",
     ".tabular-table tbody tr:last-child td { border-bottom: 1px solid #212529; }",
     ".tabular-band { text-align: center; }",
+    ".tabular-subgroup td { text-align: center; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }",
+    ".tabular-subgroup-label { font-weight: 600; }",
     ".text-left { text-align: left; }",
     ".text-center { text-align: center; }",
     ".text-right { text-align: right; }",
