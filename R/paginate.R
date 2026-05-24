@@ -54,8 +54,8 @@
 #' splits the NON-group columns into approximately equal slices and
 #' repeats every `usage = "group"` column on every panel for row
 #' context. `panels = "auto"` defers the decision to preset-aware
-#' width computation; until column-width metrics land (Step 13) the
-#' engine treats `"auto"` as `1`.
+#' column-width metrics; until those metrics land in a future
+#' release the engine treats `"auto"` as `1`.
 #'
 #' @param spec *The `tabular_spec` to attach pagination to.*
 #'   `<tabular_spec>: required`.
@@ -110,7 +110,8 @@
 #'   `"(Cont'd)"`, `"Page %d of %d"`) and pass it explicitly.
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
-#'   [`style()`] or hand off to the eventual `emit()`.
+#'   [`style()`], [`preset()`], then render via [`emit()`] (or
+#'   resolve without I/O via [`as_grid()`]).
 #'
 #' @examples
 #' # ---- Example 1: AE table paginated by SOC ----
@@ -189,10 +190,15 @@
 #'   paginate(panels = 2, repeat_headers = TRUE)
 #'
 #' @seealso
+#' **Render-geometry partner:** [`preset()`] / [`set_preset()`]
+#' — the preset's paper, orientation, margins, and font size feed
+#' the per-page row budget this verb depends on.
+#'
 #' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
 #' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`].
 #'
-#' **Entry verb:** [`tabular()`].
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
 #'
 #' @export
 paginate <- function(

@@ -142,13 +142,14 @@
 #'   sort_rows(by = "stat_label")
 #'
 #' @seealso
-#' [`col_spec()`] for the per-column DSL constructor used inside this
-#' verb.
+#' **Companion constructor:** [`col_spec()`] builds the per-column
+#' DSL object that `cols()` attaches.
 #'
 #' **Sibling build verbs:** [`headers()`], [`sort_rows()`],
-#' [`derive()`], [`style()`].
+#' [`derive()`], [`style()`], [`paginate()`], [`preset()`].
 #'
-#' **Entry verb:** [`tabular()`].
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
 #'
 #' @export
 cols <- function(.spec, ...) {

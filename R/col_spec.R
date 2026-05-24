@@ -215,13 +215,16 @@
 #'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 #'
 #' @seealso
-#' [`cols()`] for the verb that attaches `col_spec` entries to a
-#' `tabular_spec`.
+#' **Companion verb:** [`cols()`] attaches `col_spec` entries to a
+#' `tabular_spec` keyed by input column name.
 #'
 #' **Sibling build verbs:** [`headers()`], [`sort_rows()`],
-#' [`derive()`], [`style()`].
+#' [`derive()`], [`style()`], [`paginate()`], [`preset()`].
 #'
-#' **Entry verb:** [`tabular()`].
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
+#'
+#' **Inline label formatting:** [`md()`], [`html()`].
 #'
 #' @export
 col_spec <- function(

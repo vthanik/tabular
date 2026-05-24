@@ -127,7 +127,8 @@
 #'   to [`set_preset()`] or `preset_spec()` defaults).
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
-#'   [`paginate()`], [`style()`], or hand off to the eventual `emit()`.
+#'   [`paginate()`], [`style()`], then render via [`emit()`] (or
+#'   resolve without I/O via [`as_grid()`]).
 #'
 #' @examples
 #' # ---- Example 1: Landscape A4 for a wide efficacy table ----
@@ -176,7 +177,6 @@
 #' # for a long PT label band; the per-spec `preset()` overrides only
 #' # orientation, leaving font / paper untouched via merge semantics.
 #' set_preset(font_size = 9, paper_size = "letter")
-#' on.exit(set_preset(reset = TRUE), add = TRUE)
 #'
 #' ae <- saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
@@ -207,14 +207,22 @@
 #'   preset(orientation = "landscape") |>
 #'   paginate(keep_together = "soc")
 #'
+#' # Reset the session default so subsequent examples / R sessions
+#' # are not affected.
+#' set_preset(reset = TRUE)
+#'
 #' @seealso
-#' **Session-scope partner:** [`set_preset()`], [`get_preset()`].
+#' **Session-scope partners:** [`set_preset()`], [`get_preset()`].
+#'
+#' **Render-geometry consumer:** [`paginate()`] derives the per-page
+#' row budget from the active preset's paper, orientation, margins,
+#' and font size.
 #'
 #' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`],
-#' [`paginate()`].
+#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`].
 #'
-#' **Entry verb:** [`tabular()`].
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
 #'
 #' @export
 preset <- function(.spec, ..., reset = FALSE) {
@@ -290,7 +298,6 @@ preset <- function(.spec, ..., reset = FALSE) {
 #'   paper_size  = "letter",
 #'   margins     = 1
 #' )
-#' on.exit(set_preset(reset = TRUE), add = TRUE)
 #'
 #' # Subsequent tabular() chains pick up the session preset at render.
 #' demo_n <- stats::setNames(saf_n$n, saf_n$arm_short)
@@ -326,13 +333,20 @@ preset <- function(.spec, ..., reset = FALSE) {
 #'   orientation = "landscape",
 #'   paper_size  = "a4"
 #' )
-#' on.exit(set_preset(reset = TRUE), add = TRUE)
 #' get_preset()@orientation  # "landscape"
 #'
+#' # Reset the session default so subsequent examples / R sessions
+#' # are not affected.
+#' set_preset(reset = TRUE)
+#'
 #' @seealso
-#' **Per-spec partner:** [`preset()`].
+#' **Per-spec partner:** [`preset()`] — overrides the session
+#' default on one chain.
 #'
 #' **Inspect:** [`get_preset()`].
+#'
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
 #'
 #' @export
 set_preset <- function(..., reset = FALSE) {
@@ -374,7 +388,6 @@ set_preset <- function(..., reset = FALSE) {
 #' get_preset()  # NULL
 #'
 #' set_preset(font_size = 8, orientation = "landscape")
-#' on.exit(set_preset(reset = TRUE), add = TRUE)
 #'
 #' active <- get_preset()
 #' is_preset_spec(active)     # TRUE
@@ -386,7 +399,6 @@ set_preset <- function(..., reset = FALSE) {
 #' # Read the session preset, tweak one knob for a single table, and
 #' # attach as a per-spec override without disturbing the session.
 #' set_preset(font_size = 9, paper_size = "letter")
-#' on.exit(set_preset(reset = TRUE), add = TRUE)
 #'
 #' # Read-tweak-attach without mutating the session default.
 #' base_knobs <- get_preset()
@@ -397,10 +409,17 @@ set_preset <- function(..., reset = FALSE) {
 #'     orientation = "landscape"
 #'   )
 #'
+#' # Reset the session default so subsequent examples / R sessions
+#' # are not affected.
+#' set_preset(reset = TRUE)
+#'
 #' @seealso
 #' **Session-scope setter:** [`set_preset()`].
 #'
 #' **Per-spec partner:** [`preset()`].
+#'
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
 #'
 #' @export
 get_preset <- function() {

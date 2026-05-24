@@ -12,9 +12,12 @@ Length-1 character vector. \code{NA} is rejected; the empty string
 \code{""} renders as no content.}
 }
 \value{
-A length-1 character vector with class
-\code{c("from_markdown", "character")}. Backends consume via
-\code{parse_inline()}.
+\emph{A length-1 character vector classed
+\code{c("from_markdown", "character")}.} Pass it directly into any
+string-bearing slot (\code{\link[=tabular]{tabular()}} titles / footnotes,
+\code{\link[=col_spec]{col_spec()}} label, \code{\link[=style]{style()}} pretext / posttext); the
+resolve engine calls \code{parse_inline()} internally and backends
+walk the resulting \code{inline_ast}.
 }
 \description{
 Wrap a length-1 character vector so \code{\link[=tabular]{tabular()}}, \code{\link[=col_spec]{col_spec()}},
@@ -103,7 +106,13 @@ tabular(
 
 }
 \seealso{
-\strong{Sibling helper:} \code{\link[=html]{html()}}.
+\strong{Sibling helper:} \code{\link[=html]{html()}} — same wrapper pattern for raw
+HTML when Markdown cannot express the formatting.
 
-\strong{Entry verb:} \code{\link[=tabular]{tabular()}}.
+\strong{String slots that consume the wrapper:} \code{\link[=tabular]{tabular()}}
+(\code{titles}, \code{footnotes}), \code{\link[=col_spec]{col_spec()}} (\code{label}), \code{\link[=style]{style()}}
+(\code{pretext}, \code{posttext}).
+
+\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
+\code{\link[=as_grid]{as_grid()}}.
 }

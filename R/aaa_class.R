@@ -53,10 +53,46 @@
 
 #' tabular S7 classes
 #'
-#' Internal S7 class definitions for tabular's display-side IR. Users
-#' do not construct these directly except via `col_spec()`;
-#' everything else is built by the verb chain
-#' (`tabular()` -> `cols()` -> ... -> `emit()`).
+#' S7 class definitions backing tabular's display-side IR. Users do
+#' not construct these directly except for [`col_spec()`]; every
+#' other class is built and chained by the verb pipeline
+#' ([`tabular()`] -> [`cols()`] -> [`headers()`] -> [`sort_rows()`]
+#' -> [`derive()`] -> [`style()`] -> [`paginate()`] -> [`preset()`]
+#' -> [`as_grid()`] / [`emit()`]).
+#'
+#' @details
+#'
+#' The class set is intentionally small (~11 concepts) so the IR
+#' fits in one mental model:
+#'
+#' | class               | role                                                  | constructor                       |
+#' |---------------------|-------------------------------------------------------|-----------------------------------|
+#' | `tabular_spec`      | root container; carries data + every other spec slot  | [`tabular()`]                     |
+#' | `col_spec`          | per-column DSL (usage, label, format, align, ...)     | [`col_spec()`]                    |
+#' | `header_node`       | one node in the multi-level header tree               | internal — built by [`headers()`] |
+#' | `sort_spec`         | sort keys + per-key direction                         | internal — built by [`sort_rows()`]|
+#' | `derive_spec`       | one computed-column expression (quosure-captured)     | internal — built by [`derive()`]  |
+#' | `style_node`        | one resolved style attribute set (per-cell)           | internal — built by [`style()`]   |
+#' | `style_predicate`   | one `where` quosure + scope + style_node              | internal — built by [`style()`]   |
+#' | `style_spec`        | the cascade root (defaults + cols + headers + preds)  | internal — built by [`style()`]   |
+#' | `pagination_spec`   | page-split policy (keep_together, panels, floors)     | internal — built by [`paginate()`]|
+#' | `preset_spec`       | render geometry (paper, orientation, font, margins)   | internal — built by [`preset()`]  |
+#' | `inline_ast`        | parsed inline-formatting AST (runs of bold / sup / …) | internal — built by `parse_inline()`|
+#' | `tabular_grid`      | resolved per-page cells + ASTs + styles + headers     | [`as_grid()`]                     |
+#'
+#' Every spec slot is typed: a verb that would mutate a slot to an
+#' invalid value fails at construction time (the S7 validator runs
+#' as a last-line defense behind the cli-friendly verb-level
+#' validators).
+#'
+#' **Class predicates.** Each class has a matching `is_<name>()`
+#' predicate; see [`tabular_predicates`] for the full list.
+#'
+#' @seealso
+#' **Class predicates:** [`tabular_predicates`].
+#'
+#' **Pipeline entry verbs:** [`tabular()`], [`as_grid()`],
+#' [`emit()`].
 #'
 #' @keywords internal
 #' @name tabular_classes
@@ -480,13 +516,103 @@ tabular_grid <- S7::new_class(
 # Predicates
 # ---------------------------------------------------------------------
 
-#' Test for tabular S7 objects
+#' Test for tabular S7 class instances
 #'
-#' Predicates returning a single logical indicating whether `x`
-#' inherits from the corresponding tabular S7 class.
+#' Class predicates returning a single logical indicating whether
+#' `x` inherits from the corresponding tabular S7 class. Use them
+#' to gate user-side code that branches on what a verb has
+#' returned, to write defensive helpers that wrap tabular pipelines,
+#' or to assert intermediate shapes during pipeline debugging.
 #'
-#' @param x Any R object.
-#' @return Single logical. Never errors.
+#' @details
+#'
+#' Eleven predicates cover the full S7 surface:
+#'
+#' | predicate              | tests for          | produced by                       |
+#' |------------------------|--------------------|-----------------------------------|
+#' | `is_tabular_spec()`    | `tabular_spec`     | [`tabular()`] and every build verb|
+#' | `is_tabular_grid()`    | `tabular_grid`     | [`as_grid()`]                     |
+#' | `is_col_spec()`        | `col_spec`         | [`col_spec()`]                    |
+#' | `is_header_node()`     | `header_node`      | [`headers()`] (internal nodes)    |
+#' | `is_sort_spec()`       | `sort_spec`        | [`sort_rows()`]                   |
+#' | `is_derive_spec()`     | `derive_spec`      | [`derive()`]                      |
+#' | `is_style_node()`      | `style_node`       | [`style()`] (per-cell style)      |
+#' | `is_style_predicate()` | `style_predicate`  | [`style()`] (one per call)        |
+#' | `is_style_spec()`      | `style_spec`       | [`style()`] (the cascade root)    |
+#' | `is_pagination_spec()` | `pagination_spec`  | [`paginate()`]                    |
+#' | `is_preset_spec()`     | `preset_spec`      | [`preset()`], [`set_preset()`]    |
+#' | `is_inline_ast()`      | `inline_ast`       | `parse_inline()` (post-format)    |
+#'
+#' Predicates never error — they return `FALSE` for `NULL`, vectors,
+#' objects of any other class, and S7 objects from other packages.
+#' Use them at any layer of a user's pipeline without a defensive
+#' `tryCatch()`.
+#'
+#' @param x *Any R object.* The predicate inspects the S7 class
+#'   chain via [`S7::S7_inherits()`]; no other introspection is
+#'   performed.
+#'
+#' @return *A single `TRUE` / `FALSE`.* Use in `if` / `stopifnot`
+#'   guards, or chain into validation helpers.
+#'
+#' @examples
+#' # ---- Example 1: Gate user-side code on the spec class ----
+#' #
+#' # A user-side helper that pre-validates its input before piping
+#' # into a downstream tabular chain. The predicate returns FALSE
+#' # for any non-spec input without raising, so the helper can emit
+#' # a friendlier error than tabular's own S7 validator would.
+#' add_safety_footnote <- function(spec) {
+#'   if (!is_tabular_spec(spec)) {
+#'     stop("`spec` must be a tabular_spec; build one with tabular().")
+#'   }
+#'   spec
+#' }
+#'
+#' demo <- tabular(saf_demo, titles = "Demographics")
+#' is_tabular_spec(demo)         # TRUE
+#' is_tabular_spec("not a spec") # FALSE — does not raise
+#' add_safety_footnote(demo)
+#'
+#' # ---- Example 2: Assert intermediate shapes during debugging ----
+#' #
+#' # When chaining many verbs, dropping `stopifnot()` between verbs
+#' # gives a clear stack trace if a verb silently returns the wrong
+#' # type. Predicates are cheap (single S7 dispatch each) and never
+#' # error, so they are safe to leave in pipelines during dev.
+#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#'
+#' spec <- tabular(
+#'   saf_demo,
+#'   titles = c("Table 14.1.1", "Demographics",
+#'              sprintf("Safety Population (N=%d)", n["Total"]))
+#' ) |>
+#'   cols(
+#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
+#'   ) |>
+#'   sort_rows(by = c("variable", "stat_label"))
+#'
+#' stopifnot(
+#'   is_tabular_spec(spec),
+#'   is_col_spec(spec@cols[["placebo"]]),
+#'   is_sort_spec(spec@sort)
+#' )
+#'
+#' grid <- as_grid(spec)
+#' stopifnot(is_tabular_grid(grid))
+#'
+#' @seealso
+#' **Class definitions:** [`tabular_classes`].
+#'
+#' **Verbs producing each class:** [`tabular()`], [`col_spec()`],
+#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`],
+#' [`paginate()`], [`preset()`], [`as_grid()`].
+#'
 #' @keywords internal
 #' @name tabular_predicates
 NULL

@@ -14,7 +14,7 @@
 \alias{is_pagination_spec}
 \alias{is_preset_spec}
 \alias{is_inline_ast}
-\title{Test for tabular S7 objects}
+\title{Test for tabular S7 class instances}
 \usage{
 is_tabular_spec(x)
 
@@ -41,13 +41,101 @@ is_preset_spec(x)
 is_inline_ast(x)
 }
 \arguments{
-\item{x}{Any R object.}
+\item{x}{\emph{Any R object.} The predicate inspects the S7 class
+chain via \code{\link[S7:S7_inherits]{S7::S7_inherits()}}; no other introspection is
+performed.}
 }
 \value{
-Single logical. Never errors.
+\emph{A single \code{TRUE} / \code{FALSE}.} Use in \code{if} / \code{stopifnot}
+guards, or chain into validation helpers.
 }
 \description{
-Predicates returning a single logical indicating whether \code{x}
-inherits from the corresponding tabular S7 class.
+Class predicates returning a single logical indicating whether
+\code{x} inherits from the corresponding tabular S7 class. Use them
+to gate user-side code that branches on what a verb has
+returned, to write defensive helpers that wrap tabular pipelines,
+or to assert intermediate shapes during pipeline debugging.
+}
+\details{
+Eleven predicates cover the full S7 surface:\tabular{lll}{
+   predicate \tab tests for \tab produced by \cr
+   \code{is_tabular_spec()} \tab \code{tabular_spec} \tab \code{\link[=tabular]{tabular()}} and every build verb \cr
+   \code{is_tabular_grid()} \tab \code{tabular_grid} \tab \code{\link[=as_grid]{as_grid()}} \cr
+   \code{is_col_spec()} \tab \code{col_spec} \tab \code{\link[=col_spec]{col_spec()}} \cr
+   \code{is_header_node()} \tab \code{header_node} \tab \code{\link[=headers]{headers()}} (internal nodes) \cr
+   \code{is_sort_spec()} \tab \code{sort_spec} \tab \code{\link[=sort_rows]{sort_rows()}} \cr
+   \code{is_derive_spec()} \tab \code{derive_spec} \tab \code{\link[=derive]{derive()}} \cr
+   \code{is_style_node()} \tab \code{style_node} \tab \code{\link[=style]{style()}} (per-cell style) \cr
+   \code{is_style_predicate()} \tab \code{style_predicate} \tab \code{\link[=style]{style()}} (one per call) \cr
+   \code{is_style_spec()} \tab \code{style_spec} \tab \code{\link[=style]{style()}} (the cascade root) \cr
+   \code{is_pagination_spec()} \tab \code{pagination_spec} \tab \code{\link[=paginate]{paginate()}} \cr
+   \code{is_preset_spec()} \tab \code{preset_spec} \tab \code{\link[=preset]{preset()}}, \code{\link[=set_preset]{set_preset()}} \cr
+   \code{is_inline_ast()} \tab \code{inline_ast} \tab \code{parse_inline()} (post-format) \cr
+}
+
+
+Predicates never error — they return \code{FALSE} for \code{NULL}, vectors,
+objects of any other class, and S7 objects from other packages.
+Use them at any layer of a user's pipeline without a defensive
+\code{tryCatch()}.
+}
+\examples{
+# ---- Example 1: Gate user-side code on the spec class ----
+#
+# A user-side helper that pre-validates its input before piping
+# into a downstream tabular chain. The predicate returns FALSE
+# for any non-spec input without raising, so the helper can emit
+# a friendlier error than tabular's own S7 validator would.
+add_safety_footnote <- function(spec) {
+  if (!is_tabular_spec(spec)) {
+    stop("`spec` must be a tabular_spec; build one with tabular().")
+  }
+  spec
+}
+
+demo <- tabular(saf_demo, titles = "Demographics")
+is_tabular_spec(demo)         # TRUE
+is_tabular_spec("not a spec") # FALSE — does not raise
+add_safety_footnote(demo)
+
+# ---- Example 2: Assert intermediate shapes during debugging ----
+#
+# When chaining many verbs, dropping `stopifnot()` between verbs
+# gives a clear stack trace if a verb silently returns the wrong
+# type. Predicates are cheap (single S7 dispatch each) and never
+# error, so they are safe to leave in pipelines during dev.
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+
+spec <- tabular(
+  saf_demo,
+  titles = c("Table 14.1.1", "Demographics",
+             sprintf("Safety Population (N=\%d)", n["Total"]))
+) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"]),  align = "decimal"),
+    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"]),  align = "decimal"),
+    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"]), align = "decimal"),
+    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]),    align = "decimal")
+  ) |>
+  sort_rows(by = c("variable", "stat_label"))
+
+stopifnot(
+  is_tabular_spec(spec),
+  is_col_spec(spec@cols[["placebo"]]),
+  is_sort_spec(spec@sort)
+)
+
+grid <- as_grid(spec)
+stopifnot(is_tabular_grid(grid))
+
+}
+\seealso{
+\strong{Class definitions:} \code{\link{tabular_classes}}.
+
+\strong{Verbs producing each class:} \code{\link[=tabular]{tabular()}}, \code{\link[=col_spec]{col_spec()}},
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}},
+\code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}, \code{\link[=as_grid]{as_grid()}}.
 }
 \keyword{internal}

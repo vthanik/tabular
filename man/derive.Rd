@@ -27,7 +27,9 @@ matter.}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with
-\code{\link[=sort_rows]{sort_rows()}}, \code{\link[=style]{style()}}.
+\code{\link[=sort_rows]{sort_rows()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}},
+then render via \code{\link[=emit]{emit()}} (or resolve without I/O via
+\code{\link[=as_grid]{as_grid()}}).
 }
 \description{
 Attach one or more \code{derive_spec} entries to a \code{tabular_spec}. Each
@@ -193,11 +195,13 @@ tabular(
 
 }
 \seealso{
-\code{\link[=cols]{cols()}} to declare \code{col_spec(usage = "computed")} upfront with
-a label and format that \code{derive()} then fills.
+\strong{Companion verb:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}} — declare
+\code{col_spec(usage = "computed")} upfront with a label, format,
+and alignment; \code{derive()} then just supplies the values.
 
 \strong{Sibling build verbs:} \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
-\code{\link[=style]{style()}}.
+\code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
-\strong{Entry verb:} \code{\link[=tabular]{tabular()}}.
+\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
+\code{\link[=as_grid]{as_grid()}}.
 }

@@ -40,8 +40,9 @@ Recognised attributes: \code{bold}, \code{italic}, \code{underline}, \code{color
 current release; planned post-v0.1.0.}
 }
 \value{
-\emph{The updated \code{tabular_spec}.} Continue chaining with the
-eventual \code{emit()} verb.
+\emph{The updated \code{tabular_spec}.} Continue chaining with
+\code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}, then render via \code{\link[=emit]{emit()}} (or
+resolve without I/O via \code{\link[=as_grid]{as_grid()}}).
 }
 \description{
 Attach a \code{style_predicate} to a \code{tabular_spec}. The predicate
@@ -161,7 +162,11 @@ tabular(
 }
 \seealso{
 \strong{Sibling build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
-\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}.
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=paginate]{paginate()}},
+\code{\link[=preset]{preset()}}.
 
-\strong{Entry verb:} \code{\link[=tabular]{tabular()}}.
+\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
+\code{\link[=as_grid]{as_grid()}}.
+
+\strong{Inline pretext / posttext formatting:} \code{\link[=md]{md()}}, \code{\link[=html]{html()}}.
 }

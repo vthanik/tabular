@@ -65,7 +65,9 @@
 #'   matter.
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
-#'   [`sort_rows()`], [`style()`].
+#'   [`sort_rows()`], [`style()`], [`paginate()`], [`preset()`],
+#'   then render via [`emit()`] (or resolve without I/O via
+#'   [`as_grid()`]).
 #'
 #' @examples
 #' # ---- Example 1: Response rates and risk difference ----
@@ -191,13 +193,15 @@
 #'   sort_rows(by = "soc")
 #'
 #' @seealso
-#' [`cols()`] to declare `col_spec(usage = "computed")` upfront with
-#' a label and format that `derive()` then fills.
+#' **Companion verb:** [`cols()`] / [`col_spec()`] — declare
+#' `col_spec(usage = "computed")` upfront with a label, format,
+#' and alignment; `derive()` then just supplies the values.
 #'
 #' **Sibling build verbs:** [`headers()`], [`sort_rows()`],
-#' [`style()`].
+#' [`style()`], [`paginate()`], [`preset()`].
 #'
-#' **Entry verb:** [`tabular()`].
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
 #'
 #' @export
 derive <- function(.spec, ...) {

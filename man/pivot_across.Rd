@@ -328,8 +328,12 @@ saf_aesocpt_card |>
 
 }
 \seealso{
-\code{\link[=tabular]{tabular()}} consumes the wide data frame this helper returns.
+\strong{Pipeline entry consumer:} \code{\link[=tabular]{tabular()}} — wraps the wide data
+frame this helper returns.
 
 \strong{Downstream spec-build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
-\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}},
+\code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
+
+\strong{Terminal verbs:} \code{\link[=emit]{emit()}}, \code{\link[=as_grid]{as_grid()}}.
 }

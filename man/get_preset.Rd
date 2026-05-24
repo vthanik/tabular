@@ -25,7 +25,6 @@ per-spec override via \code{\link[=preset]{preset()}}.
 get_preset()  # NULL
 
 set_preset(font_size = 8, orientation = "landscape")
-on.exit(set_preset(reset = TRUE), add = TRUE)
 
 active <- get_preset()
 is_preset_spec(active)     # TRUE
@@ -37,7 +36,6 @@ active@orientation          # "landscape"
 # Read the session preset, tweak one knob for a single table, and
 # attach as a per-spec override without disturbing the session.
 set_preset(font_size = 9, paper_size = "letter")
-on.exit(set_preset(reset = TRUE), add = TRUE)
 
 # Read-tweak-attach without mutating the session default.
 base_knobs <- get_preset()
@@ -48,9 +46,16 @@ tabular(data.frame(x = 1:3)) |>
     orientation = "landscape"
   )
 
+# Reset the session default so subsequent examples / R sessions
+# are not affected.
+set_preset(reset = TRUE)
+
 }
 \seealso{
 \strong{Session-scope setter:} \code{\link[=set_preset]{set_preset()}}.
 
 \strong{Per-spec partner:} \code{\link[=preset]{preset()}}.
+
+\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
+\code{\link[=as_grid]{as_grid()}}.
 }

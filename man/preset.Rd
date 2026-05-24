@@ -64,7 +64,8 @@ to \code{\link[=set_preset]{set_preset()}} or \code{preset_spec()} defaults).}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with
-\code{\link[=paginate]{paginate()}}, \code{\link[=style]{style()}}, or hand off to the eventual \code{emit()}.
+\code{\link[=paginate]{paginate()}}, \code{\link[=style]{style()}}, then render via \code{\link[=emit]{emit()}} (or
+resolve without I/O via \code{\link[=as_grid]{as_grid()}}).
 }
 \description{
 Attach a \code{preset_spec} to a \code{tabular_spec}, carrying page-geometry
@@ -142,7 +143,6 @@ tabular(
 # for a long PT label band; the per-spec `preset()` overrides only
 # orientation, leaving font / paper untouched via merge semantics.
 set_preset(font_size = 9, paper_size = "letter")
-on.exit(set_preset(reset = TRUE), add = TRUE)
 
 ae <- saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
@@ -173,13 +173,21 @@ tabular(
   preset(orientation = "landscape") |>
   paginate(keep_together = "soc")
 
+# Reset the session default so subsequent examples / R sessions
+# are not affected.
+set_preset(reset = TRUE)
+
 }
 \seealso{
-\strong{Session-scope partner:} \code{\link[=set_preset]{set_preset()}}, \code{\link[=get_preset]{get_preset()}}.
+\strong{Session-scope partners:} \code{\link[=set_preset]{set_preset()}}, \code{\link[=get_preset]{get_preset()}}.
+
+\strong{Render-geometry consumer:} \code{\link[=paginate]{paginate()}} derives the per-page
+row budget from the active preset's paper, orientation, margins,
+and font size.
 
 \strong{Sibling build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
-\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}},
-\code{\link[=paginate]{paginate()}}.
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
 
-\strong{Entry verb:} \code{\link[=tabular]{tabular()}}.
+\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
+\code{\link[=as_grid]{as_grid()}}.
 }

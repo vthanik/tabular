@@ -16,9 +16,44 @@
 \alias{tabular_grid}
 \title{tabular S7 classes}
 \description{
-Internal S7 class definitions for tabular's display-side IR. Users
-do not construct these directly except via \code{col_spec()};
-everything else is built by the verb chain
-(\code{tabular()} -> \code{cols()} -> ... -> \code{emit()}).
+S7 class definitions backing tabular's display-side IR. Users do
+not construct these directly except for \code{\link[=col_spec]{col_spec()}}; every
+other class is built and chained by the verb pipeline
+(\code{\link[=tabular]{tabular()}} -> \code{\link[=cols]{cols()}} -> \code{\link[=headers]{headers()}} -> \code{\link[=sort_rows]{sort_rows()}}
+-> \code{\link[=derive]{derive()}} -> \code{\link[=style]{style()}} -> \code{\link[=paginate]{paginate()}} -> \code{\link[=preset]{preset()}}
+-> \code{\link[=as_grid]{as_grid()}} / \code{\link[=emit]{emit()}}).
+}
+\details{
+The class set is intentionally small (~11 concepts) so the IR
+fits in one mental model:\tabular{lll}{
+   class \tab role \tab constructor \cr
+   \code{tabular_spec} \tab root container; carries data + every other spec slot \tab \code{\link[=tabular]{tabular()}} \cr
+   \code{col_spec} \tab per-column DSL (usage, label, format, align, ...) \tab \code{\link[=col_spec]{col_spec()}} \cr
+   \code{header_node} \tab one node in the multi-level header tree \tab internal — built by \code{\link[=headers]{headers()}} \cr
+   \code{sort_spec} \tab sort keys + per-key direction \tab internal — built by \code{\link[=sort_rows]{sort_rows()}} \cr
+   \code{derive_spec} \tab one computed-column expression (quosure-captured) \tab internal — built by \code{\link[=derive]{derive()}} \cr
+   \code{style_node} \tab one resolved style attribute set (per-cell) \tab internal — built by \code{\link[=style]{style()}} \cr
+   \code{style_predicate} \tab one \code{where} quosure + scope + style_node \tab internal — built by \code{\link[=style]{style()}} \cr
+   \code{style_spec} \tab the cascade root (defaults + cols + headers + preds) \tab internal — built by \code{\link[=style]{style()}} \cr
+   \code{pagination_spec} \tab page-split policy (keep_together, panels, floors) \tab internal — built by \code{\link[=paginate]{paginate()}} \cr
+   \code{preset_spec} \tab render geometry (paper, orientation, font, margins) \tab internal — built by \code{\link[=preset]{preset()}} \cr
+   \code{inline_ast} \tab parsed inline-formatting AST (runs of bold / sup / …) \tab internal — built by \code{parse_inline()} \cr
+   \code{tabular_grid} \tab resolved per-page cells + ASTs + styles + headers \tab \code{\link[=as_grid]{as_grid()}} \cr
+}
+
+
+Every spec slot is typed: a verb that would mutate a slot to an
+invalid value fails at construction time (the S7 validator runs
+as a last-line defense behind the cli-friendly verb-level
+validators).
+
+\strong{Class predicates.} Each class has a matching \verb{is_<name>()}
+predicate; see \code{\link{tabular_predicates}} for the full list.
+}
+\seealso{
+\strong{Class predicates:} \code{\link{tabular_predicates}}.
+
+\strong{Pipeline entry verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=as_grid]{as_grid()}},
+\code{\link[=emit]{emit()}}.
 }
 \keyword{internal}

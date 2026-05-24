@@ -330,10 +330,14 @@
 #'   )
 #'
 #' @seealso
-#' [`tabular()`] consumes the wide data frame this helper returns.
+#' **Pipeline entry consumer:** [`tabular()`] — wraps the wide data
+#' frame this helper returns.
 #'
 #' **Downstream spec-build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`].
+#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`],
+#' [`paginate()`], [`preset()`].
+#'
+#' **Terminal verbs:** [`emit()`], [`as_grid()`].
 #'
 #' @export
 pivot_across <- function(

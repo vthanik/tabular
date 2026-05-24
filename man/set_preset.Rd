@@ -57,7 +57,6 @@ set_preset(
   paper_size  = "letter",
   margins     = 1
 )
-on.exit(set_preset(reset = TRUE), add = TRUE)
 
 # Subsequent tabular() chains pick up the session preset at render.
 demo_n <- stats::setNames(saf_n$n, saf_n$arm_short)
@@ -93,12 +92,19 @@ set_preset(
   orientation = "landscape",
   paper_size  = "a4"
 )
-on.exit(set_preset(reset = TRUE), add = TRUE)
 get_preset()@orientation  # "landscape"
+
+# Reset the session default so subsequent examples / R sessions
+# are not affected.
+set_preset(reset = TRUE)
 
 }
 \seealso{
-\strong{Per-spec partner:} \code{\link[=preset]{preset()}}.
+\strong{Per-spec partner:} \code{\link[=preset]{preset()}} — overrides the session
+default on one chain.
 
 \strong{Inspect:} \code{\link[=get_preset]{get_preset()}}.
+
+\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
+\code{\link[=as_grid]{as_grid()}}.
 }

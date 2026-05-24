@@ -55,7 +55,8 @@
 #'   key and calls `order()` once on all keys.
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
-#'   [`derive()`], [`style()`], or hand off to the eventual `emit()`.
+#'   [`derive()`], [`style()`], [`paginate()`], [`preset()`], then
+#'   render via [`emit()`] (or resolve without I/O via [`as_grid()`]).
 #'
 #' @examples
 #' # ---- Example 1: AE table sorted by SOC, then by descending subject count ----
@@ -128,9 +129,11 @@
 #'
 #' @seealso
 #' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`derive()`], [`style()`].
+#' [`headers()`], [`derive()`], [`style()`], [`paginate()`],
+#' [`preset()`].
 #'
-#' **Entry verb:** [`tabular()`].
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
 #'
 #' @export
 sort_rows <- function(spec, by = character(), descending = FALSE) {

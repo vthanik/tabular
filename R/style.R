@@ -81,8 +81,9 @@
 #'   **Restriction:** `"col"` raises `tabular_error_input` in the
 #'   current release; planned post-v0.1.0.
 #'
-#' @return *The updated `tabular_spec`.* Continue chaining with the
-#'   eventual `emit()` verb.
+#' @return *The updated `tabular_spec`.* Continue chaining with
+#'   [`paginate()`], [`preset()`], then render via [`emit()`] (or
+#'   resolve without I/O via [`as_grid()`]).
 #'
 #' @examples
 #' # ---- Example 1: Subtotal rows bolded and ruled, overall row shaded ----
@@ -156,9 +157,13 @@
 #'
 #' @seealso
 #' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`derive()`].
+#' [`headers()`], [`sort_rows()`], [`derive()`], [`paginate()`],
+#' [`preset()`].
 #'
-#' **Entry verb:** [`tabular()`].
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
+#'
+#' **Inline pretext / posttext formatting:** [`md()`], [`html()`].
 #'
 #' @export
 style <- function(.spec, where, ..., .scope = "cell") {

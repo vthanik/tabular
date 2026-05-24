@@ -146,12 +146,17 @@
 #'   sort_rows(by = "stat_label")
 #'
 #' @seealso
-#' [`cols()`] for per-column labels (the leaf-row header text that
-#' sits below the band rows).
+#' **Companion verb:** [`cols()`] / [`col_spec()`] sets per-column
+#' labels — the leaf-row header text that sits below the band rows
+#' this verb builds.
 #'
-#' **Sibling build verbs:** [`sort_rows()`], [`derive()`], [`style()`].
+#' **Sibling build verbs:** [`sort_rows()`], [`derive()`],
+#' [`style()`], [`paginate()`], [`preset()`].
 #'
-#' **Entry verb:** [`tabular()`].
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
+#'
+#' **Inline label formatting:** [`md()`], [`html()`].
 #'
 #' @export
 headers <- function(.spec, ...) {

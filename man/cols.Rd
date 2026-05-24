@@ -147,11 +147,12 @@ tabular(
 
 }
 \seealso{
-\code{\link[=col_spec]{col_spec()}} for the per-column DSL constructor used inside this
-verb.
+\strong{Companion constructor:} \code{\link[=col_spec]{col_spec()}} builds the per-column
+DSL object that \code{cols()} attaches.
 
 \strong{Sibling build verbs:} \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
-\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
+\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
-\strong{Entry verb:} \code{\link[=tabular]{tabular()}}.
+\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
+\code{\link[=as_grid]{as_grid()}}.
 }

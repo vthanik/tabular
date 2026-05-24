@@ -133,9 +133,12 @@
 #'   Length-1 character vector. `NA` is rejected; the empty string
 #'   `""` renders as no content.
 #'
-#' @return A length-1 character vector with class
-#'   `c("from_markdown", "character")`. Backends consume via
-#'   `parse_inline()`.
+#' @return *A length-1 character vector classed
+#'   `c("from_markdown", "character")`.* Pass it directly into any
+#'   string-bearing slot ([`tabular()`] titles / footnotes,
+#'   [`col_spec()`] label, [`style()`] pretext / posttext); the
+#'   resolve engine calls `parse_inline()` internally and backends
+#'   walk the resulting `inline_ast`.
 #'
 #' @examples
 #' # ---- Example 1: Bold title with Pandoc-style footnote marker ----
@@ -189,9 +192,15 @@
 #'   )
 #'
 #' @seealso
-#' **Sibling helper:** [`html()`].
+#' **Sibling helper:** [`html()`] — same wrapper pattern for raw
+#' HTML when Markdown cannot express the formatting.
 #'
-#' **Entry verb:** [`tabular()`].
+#' **String slots that consume the wrapper:** [`tabular()`]
+#' (`titles`, `footnotes`), [`col_spec()`] (`label`), [`style()`]
+#' (`pretext`, `posttext`).
+#'
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
 #'
 #' @export
 md <- function(text) {
@@ -233,9 +242,12 @@ md <- function(text) {
 #' @param text *The HTML fragment.* `<character(1)>: required`.
 #'   Length-1 character vector. `NA` is rejected.
 #'
-#' @return A length-1 character vector with class
-#'   `c("from_html", "character")`. Backends consume via
-#'   `parse_inline()`.
+#' @return *A length-1 character vector classed
+#'   `c("from_html", "character")`.* Pass it directly into any
+#'   string-bearing slot ([`tabular()`] titles / footnotes,
+#'   [`col_spec()`] label, [`style()`] pretext / posttext); the
+#'   resolve engine calls `parse_inline()` internally and backends
+#'   walk the resulting `inline_ast`.
 #'
 #' @examples
 #' # ---- Example 1: Colour-styled span in a title ----
@@ -270,9 +282,15 @@ md <- function(text) {
 #'   cols(stat_label = col_spec(usage = "group", label = "Category"))
 #'
 #' @seealso
-#' **Sibling helper:** [`md()`].
+#' **Sibling helper:** [`md()`] — Markdown wrapper for the common
+#' case.
 #'
-#' **Entry verb:** [`tabular()`].
+#' **String slots that consume the wrapper:** [`tabular()`]
+#' (`titles`, `footnotes`), [`col_spec()`] (`label`), [`style()`]
+#' (`pretext`, `posttext`).
+#'
+#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
+#' [`as_grid()`].
 #'
 #' @export
 html <- function(text) {

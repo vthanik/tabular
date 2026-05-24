@@ -151,10 +151,15 @@ tabular(
 
 }
 \seealso{
-\code{\link[=cols]{cols()}} for per-column labels (the leaf-row header text that
-sits below the band rows).
+\strong{Companion verb:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}} sets per-column
+labels — the leaf-row header text that sits below the band rows
+this verb builds.
 
-\strong{Sibling build verbs:} \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
+\strong{Sibling build verbs:} \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}},
+\code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
-\strong{Entry verb:} \code{\link[=tabular]{tabular()}}.
+\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
+\code{\link[=as_grid]{as_grid()}}.
+
+\strong{Inline label formatting:} \code{\link[=md]{md()}}, \code{\link[=html]{html()}}.
 }

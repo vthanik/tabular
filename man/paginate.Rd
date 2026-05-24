@@ -68,7 +68,8 @@ submission style guide expects (e.g. \code{"(continued)"},
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with
-\code{\link[=style]{style()}} or hand off to the eventual \code{emit()}.
+\code{\link[=style]{style()}}, \code{\link[=preset]{preset()}}, then render via \code{\link[=emit]{emit()}} (or
+resolve without I/O via \code{\link[=as_grid]{as_grid()}}).
 }
 \description{
 Attach a \code{pagination_spec} to a \code{tabular_spec}. The engine uses the
@@ -110,8 +111,8 @@ too tall to fit on one page cannot be kept together).
 splits the NON-group columns into approximately equal slices and
 repeats every \code{usage = "group"} column on every panel for row
 context. \code{panels = "auto"} defers the decision to preset-aware
-width computation; until column-width metrics land (Step 13) the
-engine treats \code{"auto"} as \code{1}.
+column-width metrics; until those metrics land in a future
+release the engine treats \code{"auto"} as \code{1}.
 }
 \examples{
 # ---- Example 1: AE table paginated by SOC ----
@@ -191,8 +192,13 @@ tabular(
 
 }
 \seealso{
+\strong{Render-geometry partner:} \code{\link[=preset]{preset()}} / \code{\link[=set_preset]{set_preset()}}
+— the preset's paper, orientation, margins, and font size feed
+the per-page row budget this verb depends on.
+
 \strong{Sibling build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
 \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
 
-\strong{Entry verb:} \code{\link[=tabular]{tabular()}}.
+\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
+\code{\link[=as_grid]{as_grid()}}.
 }

@@ -224,11 +224,14 @@ tabular(
 
 }
 \seealso{
-\code{\link[=cols]{cols()}} for the verb that attaches \code{col_spec} entries to a
-\code{tabular_spec}.
+\strong{Companion verb:} \code{\link[=cols]{cols()}} attaches \code{col_spec} entries to a
+\code{tabular_spec} keyed by input column name.
 
 \strong{Sibling build verbs:} \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
-\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
+\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
-\strong{Entry verb:} \code{\link[=tabular]{tabular()}}.
+\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
+\code{\link[=as_grid]{as_grid()}}.
+
+\strong{Inline label formatting:} \code{\link[=md]{md()}}, \code{\link[=html]{html()}}.
 }

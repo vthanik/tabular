@@ -8,7 +8,9 @@
 #' the verb chain. `tabular()` is the entry verb — it owns the
 #' `data`, `titles`, and `footnotes` slots; every downstream verb
 #' ([`cols()`], [`headers()`], [`sort_rows()`], [`derive()`],
-#' [`style()`]) returns an updated spec for further chaining.
+#' [`style()`], [`paginate()`], [`preset()`]) returns an updated
+#' spec for further chaining, terminating in [`emit()`] (write to
+#' file) or [`as_grid()`] (resolve without writing).
 #'
 #' @details
 #'
@@ -72,9 +74,10 @@
 #'   ```
 #'
 #' @return *A `tabular_spec` S7 object.* Pipe it into [`cols()`],
-#'   [`headers()`], [`sort_rows()`], [`derive()`], and [`style()`] to
-#'   build the display; the eventual `emit()` verb resolves the spec
-#'   and writes the rendered file.
+#'   [`headers()`], [`sort_rows()`], [`derive()`], [`style()`],
+#'   [`paginate()`], and [`preset()`] to build the display, then
+#'   into [`emit()`] to render or [`as_grid()`] to resolve without
+#'   writing.
 #'
 #' @examples
 #' # ---- Example 1: Adverse-event table by SOC and Preferred Term ----
@@ -151,9 +154,13 @@
 #'
 #' @seealso
 #' **Downstream build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`].
+#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`],
+#' [`paginate()`], [`preset()`].
 #'
-#' **Input helper:** [`pivot_across()`].
+#' **Terminal verbs:** [`emit()`] (write), [`as_grid()`] (resolve
+#' without I/O).
+#'
+#' **Input helper:** [`pivot_across()`] (cards ARD -> wide).
 #'
 #' **Demo data:** `saf_demo`, `saf_aesocpt`, `eff_resp`, `saf_n`,
 #' `eff_n`.
