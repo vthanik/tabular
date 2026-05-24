@@ -179,6 +179,95 @@
 }
 
 # ---------------------------------------------------------------------
+# .resolve_col_widths — engine entry point
+# ---------------------------------------------------------------------
+
+# Build the resolved cols map for a spec at engine time. Walks
+# every visible data column, resolves each width to numeric
+# inches (auto -> AFM-measured; percent -> share of available;
+# dim string -> parsed; numeric -> pass-through), then distributes
+# against the printable area via `.distribute_widths()`.
+#
+# Returns a name-keyed list of col_spec entries covering every
+# data column. Hidden columns retain their input width verbatim
+# (their resolved width is not consumed by backends).
+#
+# Args:
+#   spec        the `tabular_spec` (post-engine_format).
+#   cells_text  decimal-aligned cells matrix (post-engine_decimal).
+#               Column names = data column names; used to drive
+#               measurement.
+#   col_labels_ast  named list of `inline_ast` per data column;
+#                   header text is the AST flattened.
+.resolve_col_widths <- function(spec, cells_text, col_labels_ast) {
+  col_names <- names(spec@data)
+  full_cols <- .cols_by_name(spec@cols, col_names)
+  if (length(full_cols) == 0L) {
+    return(full_cols)
+  }
+  preset <- .effective_preset(spec)
+  available <- .available_content_width(preset)
+
+  visible <- vapply(
+    full_cols,
+    function(cs) isTRUE(cs@visible),
+    logical(1L)
+  )
+  vis_names <- col_names[visible]
+  if (length(vis_names) == 0L) {
+    return(full_cols)
+  }
+
+  widths <- vector("list", length(vis_names))
+  names(widths) <- vis_names
+  for (nm in vis_names) {
+    w <- full_cols[[nm]]@width
+    widths[[nm]] <- .classify_width(w, cells_text, col_labels_ast, nm, preset)
+  }
+
+  resolved <- .distribute_widths(widths, available)
+
+  for (nm in vis_names) {
+    full_cols[[nm]] <- S7::set_props(
+      full_cols[[nm]],
+      width = unname(resolved[[nm]])
+    )
+  }
+  full_cols
+}
+
+# Classify a raw col_spec@width value into the (kind, value)
+# record `.distribute_widths()` consumes. Auto values are
+# resolved to numeric inches via `.compute_col_width()` here so
+# the distributor sees a numeric for every entry.
+.classify_width <- function(w, cells_text, col_labels_ast, col_name, preset) {
+  if (.is_auto_width(w)) {
+    cells <- if (col_name %in% colnames(cells_text)) {
+      cells_text[, col_name]
+    } else {
+      character(0L)
+    }
+    header <- .ast_flatten_text(col_labels_ast[[col_name]])
+    list(
+      kind = "auto",
+      value = .compute_col_width(cells, header, preset)
+    )
+  } else if (is.numeric(w)) {
+    list(kind = "pin", value = as.numeric(w))
+  } else {
+    parsed <- .parse_dim(w, allow_percent = TRUE)
+    if (identical(parsed$unit, "%")) {
+      list(kind = "pct", value = parsed$value)
+    } else {
+      list(
+        kind = "pin",
+        value = parsed$value * .tabular_unit_inches[[parsed$unit]]
+      )
+    }
+  }
+}
+
+# ---------------------------------------------------------------------
 # .distribute_widths
 # ---------------------------------------------------------------------
 

@@ -164,9 +164,13 @@ fallback \code{"<interactive>"}.
 \item \strong{\code{title_align}}, \strong{\code{footnote_align}} — block alignment.
 \verb{<character(1)>}. One of \code{"left"}, \code{"center"}, \code{"right"}.
 \item \strong{\code{na_text}} — global NA fallback. \verb{<character(1)>}.
-\item \strong{\code{decimal_metrics}} — font-metric source for decimal
-alignment. \verb{<character(1)>}. One of \code{"afm"} (PDF Core 14,
-public domain) or \code{"systemfonts"}.
+\item \strong{\code{decimal_metrics}} \emph{(experimental)} — reserved knob
+for future em-aware decimal-padding refinement.
+\verb{<character(1)>}. One of \code{"afm"} \emph{(default)} or
+\code{"systemfonts"}. Currently neither value affects
+rendering; the engine pads decimal columns by character
+count regardless. Roadmapped for em-unit prefix
+measurement in a later release.
 }
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Landscape A4, 8pt body, slim margins for one wide table.

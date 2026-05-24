@@ -233,9 +233,13 @@
 #'   *   **`title_align`**, **`footnote_align`** — block alignment.
 #'       `<character(1)>`. One of `"left"`, `"center"`, `"right"`.
 #'   *   **`na_text`** — global NA fallback. `<character(1)>`.
-#'   *   **`decimal_metrics`** — font-metric source for decimal
-#'       alignment. `<character(1)>`. One of `"afm"` (PDF Core 14,
-#'       public domain) or `"systemfonts"`.
+#'   *   **`decimal_metrics`** *(experimental)* — reserved knob
+#'       for future em-aware decimal-padding refinement.
+#'       `<character(1)>`. One of `"afm"` *(default)* or
+#'       `"systemfonts"`. Currently neither value affects
+#'       rendering; the engine pads decimal columns by character
+#'       count regardless. Roadmapped for em-unit prefix
+#'       measurement in a later release.
 #'
 #'   ```r
 #'   # Landscape A4, 8pt body, slim margins for one wide table.

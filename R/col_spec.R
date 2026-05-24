@@ -104,26 +104,40 @@
 #'   sort-key helpers (`row_type`, `n_total`) and for the numeric
 #'   counts behind formatted-text percentage cells.
 #'
-#' @param width *Column width — fixed dimension or percent.*
-#'   `<numeric(1) | character(1) | NA_real_>: default NA_real_`.
-#'   `NA` leaves widths to the backend's auto-fit. A bare number
-#'   is interpreted as inches (back-compat). A character value
-#'   carries an explicit unit:
+#' @param width *Column width — auto-sized, pinned, or proportional.*
+#'   `<character(1) | numeric(1)>: default "auto"`.
 #'
+#'   *   **`"auto"`** *(default)* — engine measures the widest
+#'       cell (header + body) using bundled Adobe AFM Core 13
+#'       glyph metrics and distributes against the available
+#'       content width. No wrapping: a wide cell produces a wide
+#'       column. Pin a numeric width to force wrap inside.
+#'   *   **`<number>`** — pinned in inches. Backends wrap content
+#'       inside the pinned width (tabularray `Q[wd=...]`, HTML
+#'       `style="width:..."`, RTF / DOCX after twips conversion).
 #'   *   **`"2.5in"` / `"60mm"` / `"4cm"` / `"30pt"` / `"5pc"`** —
-#'       fixed dimensions. Pass through to every backend
-#'       verbatim (tabularray `Q[wd=...]`, HTML `style="width:..."`,
-#'       RTF / DOCX after twips conversion).
+#'       pinned dimension with an explicit TeX unit. Same
+#'       behaviour as a bare numeric.
 #'   *   **`"30%"`** — proportional width, percent of available
-#'       content width. Maps to tabularray's `X[N]` column
-#'       (proportional) under LaTeX, native percent under HTML.
+#'       content width. Resolved at engine time against the
+#'       printable area.
 #'
-#'   **Restriction:** Must be non-negative. Percent values must
-#'   fall in `[0, 100]`. Font-relative units (`em`, `ex`, `rem`)
-#'   and screen-relative `px` are rejected — column widths live
-#'   in print geometry, not text flow.
-#'   **Interaction:** Sum of pinned widths drives whether
-#'   horizontal pagination kicks in.
+#'   **Tip:** Mix freely. Pinned and percent widths take priority;
+#'   `"auto"` columns distribute whatever space remains. If pinned
+#'   widths together exceed the available content width, the
+#'   engine warns and leaves `"auto"` columns at their natural fit
+#'   (layout may overflow).
+#'
+#'   **Restriction:** Must be positive. Percent values must fall
+#'   in `[0, 100]`. Font-relative units (`em`, `ex`, `rem`) and
+#'   screen-relative `px` are rejected — column widths live in
+#'   print geometry, not text flow.
+#'
+#'   **Note:** `NA` and `NULL` are rejected. In pre-v0.1.0
+#'   tabular `NA` deferred to backend auto-fit; that path was
+#'   inconsistent across backends and is replaced by the `"auto"`
+#'   default, which produces identical widths across RTF / LaTeX
+#'   / HTML.
 #'
 #' @param align *Cell alignment within the column.*
 #'   `<character(1) | NULL>: default NULL`. One of:
@@ -137,9 +151,11 @@
 #'   *   **`NULL`** (default) — backend default: right for numeric,
 #'       left for character.
 #'
-#'   **Tip:** `"decimal"` uses the active preset's `decimal_metrics`
-#'   knob (AFM Core 14 fonts or systemfonts) to compute the
-#'   alignment anchor.
+#'   **Tip:** `"decimal"` pads numerics with non-breaking spaces
+#'   so the decimal mark falls on a single column-wide anchor.
+#'   The active preset's `decimal_metrics` knob is reserved for
+#'   future em-aware padding refinement (see [`preset()`]); the
+#'   current engine pads by character count.
 #'
 #' @param na_text *Text substituted for `NA` cells.*
 #'   `<character(1)>: default ""`. Substituted BEFORE the `format`
@@ -245,7 +261,7 @@ col_spec <- function(
   label = NA_character_,
   format = NULL,
   visible = TRUE,
-  width = NA_real_,
+  width = "auto",
   align = NULL,
   na_text = ""
 ) {
@@ -348,8 +364,23 @@ col_spec <- function(
 }
 
 .check_col_width <- function(x, call) {
-  if (.is_na_width(x)) {
+  # The "auto" sentinel is the default. Engine resolves it at
+  # render time via .compute_col_width() / .distribute_widths().
+  if (identical(x, "auto")) {
     return(invisible(x))
+  }
+  # NA / NULL: rejected. Pre-v0.1.0 these meant "defer to backend
+  # auto-fit", which is what "auto" now does consistently.
+  if (is.null(x) || (length(x) == 1L && is.na(x))) {
+    cli::cli_abort(
+      c(
+        "{.arg width} cannot be {.code NA} or {.code NULL}.",
+        "i" = "Use {.val auto} (default) for engine-measured width.",
+        "i" = "Use a numeric like {.code 2.5} or a dim string like {.val 2.5in} to pin."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
   }
   # Delegate to the units parser so error semantics match
   # `preset(margins = ...)`. Numeric (inches), character with

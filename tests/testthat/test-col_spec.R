@@ -100,8 +100,35 @@ test_that("col_spec(width = Inf) raises tabular_error_input", {
   expect_error(col_spec(width = Inf), class = "tabular_error_input")
 })
 
-test_that("col_spec(width = NA_real_) is allowed", {
-  expect_silent(col_spec(width = NA_real_))
+test_that("col_spec() default width is 'auto'", {
+  cs <- col_spec()
+  expect_identical(cs@width, "auto")
+})
+
+test_that("col_spec(width = NA_real_) rejects with a hint", {
+  expect_error(
+    col_spec(width = NA_real_),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("col_spec(width = NA) rejects with a hint", {
+  expect_error(
+    col_spec(width = NA),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("col_spec(width = NULL) rejects with a hint", {
+  expect_error(
+    col_spec(width = NULL),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("col_spec(width = 'auto') round-trips", {
+  cs <- col_spec(width = "auto")
+  expect_identical(cs@width, "auto")
 })
 
 test_that("col_spec(width = c(1, 2)) rejects length > 1", {

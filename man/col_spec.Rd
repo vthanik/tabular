@@ -9,7 +9,7 @@ col_spec(
   label = NA_character_,
   format = NULL,
   visible = TRUE,
-  width = NA_real_,
+  width = "auto",
   align = NULL,
   na_text = ""
 )
@@ -85,27 +85,41 @@ output but keeps it in \code{spec@data} so \code{\link[=sort_rows]{sort_rows()}}
 sort-key helpers (\code{row_type}, \code{n_total}) and for the numeric
 counts behind formatted-text percentage cells.}
 
-\item{width}{\emph{Column width — fixed dimension or percent.}
-\verb{<numeric(1) | character(1) | NA_real_>: default NA_real_}.
-\code{NA} leaves widths to the backend's auto-fit. A bare number
-is interpreted as inches (back-compat). A character value
-carries an explicit unit:
+\item{width}{\emph{Column width — auto-sized, pinned, or proportional.}
+\verb{<character(1) | numeric(1)>: default "auto"}.
 \itemize{
+\item \strong{\code{"auto"}} \emph{(default)} — engine measures the widest
+cell (header + body) using bundled Adobe AFM Core 13
+glyph metrics and distributes against the available
+content width. No wrapping: a wide cell produces a wide
+column. Pin a numeric width to force wrap inside.
+\item \strong{\verb{<number>}} — pinned in inches. Backends wrap content
+inside the pinned width (tabularray \code{Q[wd=...]}, HTML
+\code{style="width:..."}, RTF / DOCX after twips conversion).
 \item \strong{\code{"2.5in"} / \code{"60mm"} / \code{"4cm"} / \code{"30pt"} / \code{"5pc"}} —
-fixed dimensions. Pass through to every backend
-verbatim (tabularray \code{Q[wd=...]}, HTML \code{style="width:..."},
-RTF / DOCX after twips conversion).
+pinned dimension with an explicit TeX unit. Same
+behaviour as a bare numeric.
 \item \strong{\code{"30\%"}} — proportional width, percent of available
-content width. Maps to tabularray's \code{X[N]} column
-(proportional) under LaTeX, native percent under HTML.
+content width. Resolved at engine time against the
+printable area.
 }
 
-\strong{Restriction:} Must be non-negative. Percent values must
-fall in \verb{[0, 100]}. Font-relative units (\code{em}, \code{ex}, \code{rem})
-and screen-relative \code{px} are rejected — column widths live
-in print geometry, not text flow.
-\strong{Interaction:} Sum of pinned widths drives whether
-horizontal pagination kicks in.}
+\strong{Tip:} Mix freely. Pinned and percent widths take priority;
+\code{"auto"} columns distribute whatever space remains. If pinned
+widths together exceed the available content width, the
+engine warns and leaves \code{"auto"} columns at their natural fit
+(layout may overflow).
+
+\strong{Restriction:} Must be positive. Percent values must fall
+in \verb{[0, 100]}. Font-relative units (\code{em}, \code{ex}, \code{rem}) and
+screen-relative \code{px} are rejected — column widths live in
+print geometry, not text flow.
+
+\strong{Note:} \code{NA} and \code{NULL} are rejected. In pre-v0.1.0
+tabular \code{NA} deferred to backend auto-fit; that path was
+inconsistent across backends and is replaced by the \code{"auto"}
+default, which produces identical widths across RTF / LaTeX
+/ HTML.}
 
 \item{align}{\emph{Cell alignment within the column.}
 \verb{<character(1) | NULL>: default NULL}. One of:
@@ -120,9 +134,11 @@ the decimal mark. Use for \code{"5 (3.2\%)"} next to
 left for character.
 }
 
-\strong{Tip:} \code{"decimal"} uses the active preset's \code{decimal_metrics}
-knob (AFM Core 14 fonts or systemfonts) to compute the
-alignment anchor.}
+\strong{Tip:} \code{"decimal"} pads numerics with non-breaking spaces
+so the decimal mark falls on a single column-wide anchor.
+The active preset's \code{decimal_metrics} knob is reserved for
+future em-aware padding refinement (see \code{\link[=preset]{preset()}}); the
+current engine pads by character count.}
 
 \item{na_text}{\emph{Text substituted for \code{NA} cells.}
 \verb{<character(1)>: default ""}. Substituted BEFORE the \code{format}

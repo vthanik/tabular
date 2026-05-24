@@ -445,6 +445,10 @@ backend_rtf <- function(grid, file) {
     return(integer(0L))
   }
 
+  # Engine resolves every visible col_spec@width to numeric inches
+  # before backends see the grid. Fallback for the rare case of a
+  # synthesised column (or a backend invoked without the engine
+  # pass): equal share of the printable area.
   widths <- vapply(
     col_names_vis,
     function(nm) {
@@ -453,20 +457,10 @@ backend_rtf <- function(grid, file) {
         return(NA_real_)
       }
       w <- cs@width
-      if (is.null(w) || (is.numeric(w) && (length(w) == 0L || anyNA(w)))) {
-        return(NA_real_)
+      if (is.numeric(w) && length(w) == 1L && !is.na(w)) {
+        return(w * .tabular_unit_twips[["in"]])
       }
-      parsed <- tryCatch(
-        .parse_dim(w, allow_percent = TRUE),
-        tabular_error_input = function(e) NULL
-      )
-      if (is.null(parsed)) {
-        return(NA_real_)
-      }
-      if (identical(parsed$unit, "%")) {
-        return(printable * parsed$value / 100)
-      }
-      .dim_to_twips(parsed)
+      NA_real_
     },
     numeric(1L)
   )

@@ -250,22 +250,14 @@ backend_latex <- function(grid, file) {
 # column type and fixed dimensions to `Q[<align>,wd=<dim>]`.
 .latex_col_token <- function(align, width) {
   align_letter <- .latex_align_letter(align)
-  if (.is_na_width(width)) {
+  # Engine resolves every width to numeric inches (auto / pct /
+  # dim string -> inches). Defensive fallback for the rare case
+  # of a synthesised column without engine resolution: drop to
+  # tabularray's natural-fit Q-column.
+  if (!is.numeric(width) || length(width) != 1L || is.na(width)) {
     return(sprintf("Q[%s]", align_letter))
   }
-  parsed <- .parse_dim(width, allow_percent = TRUE)
-  if (.is_percent_dim(parsed)) {
-    # tabularray proportional width: `X[<weight>,<align>]`. The
-    # weight is the percent / 100 (tabularray treats X-column
-    # weights as relative; absolute values don't matter, only
-    # ratios).
-    return(sprintf(
-      "X[%g,%s]",
-      parsed$value / 100,
-      align_letter
-    ))
-  }
-  sprintf("Q[%s,wd=%s]", align_letter, .dim_format(parsed))
+  sprintf("Q[%s,wd=%fin]", align_letter, width)
 }
 
 # Map an align value to the single-letter tabularray code.

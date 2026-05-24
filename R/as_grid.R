@@ -223,6 +223,18 @@ as_grid <- function(spec) {
     cols = cols_named
   )
 
+  # Resolve col widths via AFM Core 13 metrics (auto sizing).
+  # Runs AFTER engine_decimal so prefix-padded values contribute
+  # their actual rendered width. `resolved_cols` is the full
+  # name-keyed col_spec map (one entry per data column) with every
+  # visible width resolved to numeric inches. Backends read this
+  # via `grid@metadata$cols`.
+  resolved_cols <- .resolve_col_widths(
+    spec,
+    cells_text = cells_text,
+    col_labels_ast = fmt$col_labels_ast
+  )
+
   pag <- engine_paginate(spec)
 
   pages <- .build_pages(
@@ -262,7 +274,7 @@ as_grid <- function(spec) {
       nrow_data = nrow(spec@data),
       ncol_data = ncol(spec@data),
       col_names = names(spec@data),
-      cols = spec@cols,
+      cols = resolved_cols,
       headers = headers,
       titles = spec@titles,
       footnotes = spec@footnotes,

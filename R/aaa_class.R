@@ -20,24 +20,13 @@
 .col_usage_values <- c("display", "group", "across", "computed")
 .align_values <- c("left", "center", "right", "decimal")
 
-# NA-aware predicate for col_spec@width. `width` is now polymorphic
-# (numeric inches OR character with TeX unit suffix OR percent OR
-# NA), so the standard `is.na()` check needs to short-circuit on
-# the non-character / non-numeric path that `is.na()` can't handle.
-.is_na_width <- function(x) {
-  if (is.null(x)) {
-    return(TRUE)
-  }
-  if (length(x) != 1L) {
-    return(FALSE)
-  }
-  if (is.numeric(x)) {
-    return(is.na(x))
-  }
-  if (is.character(x)) {
-    return(is.na(x))
-  }
-  FALSE
+# Predicate for the "auto" width sentinel. `col_spec@width` is
+# polymorphic: literal "auto" (default), positive numeric (inches),
+# parseable dim string ("2.5in" / "60mm"), or percent string ("30%").
+# NA / NULL are rejected by the validator — there is no NA-aware
+# path anymore.
+.is_auto_width <- function(x) {
+  identical(x, "auto")
 }
 .scope_values <- c("cell", "row", "col")
 .orientation_values <- c("portrait", "landscape")
@@ -144,7 +133,7 @@ NULL
     ),
     width = S7::new_property(
       S7::class_any,
-      default = NA_real_
+      default = "auto"
     ),
     align = S7::new_property(
       S7::class_character,
@@ -172,7 +161,17 @@ NULL
         shQuote(self@align)
       ))
     }
-    if (!.is_na_width(self@width)) {
+    if (!.is_auto_width(self@width)) {
+      # Reject the dropped NA / NULL escape hatches up front so
+      # S7's coercion path doesn't try to feed a wrong-type value
+      # into `.parse_dim`.
+      if (
+        is.null(self@width) || (length(self@width) == 1L && is.na(self@width))
+      ) {
+        return(
+          "@width cannot be NA or NULL; use \"auto\" (default) or pin a value"
+        )
+      }
       # `.parse_dim` validates type + bounds + unit; if it doesn't
       # error, the value is well-formed. Catch its cli_abort and
       # surface a validator-flavoured message so S7's wrapper says

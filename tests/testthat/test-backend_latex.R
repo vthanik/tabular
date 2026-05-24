@@ -379,6 +379,10 @@ test_that(".latex_align_token maps every align value", {
 })
 
 test_that("col_spec align surfaces in the colspec={...} arg", {
+  # Auto-default widths now emit Q[<align>,wd=Xin], so we check
+  # the align letters individually rather than against a bare
+  # `Q[l] Q[c] Q[r] Q[r]` pattern (which only held when widths
+  # deferred to backend natural).
   spec <- tabular(data.frame(L = "x", C = "x", R = "x", D = "x")) |>
     cols(
       L = col_spec(align = "left"),
@@ -387,17 +391,27 @@ test_that("col_spec align surfaces in the colspec={...} arg", {
       D = col_spec(align = "decimal")
     )
   txt <- render_tex(spec)
-  expect_match(txt, "colspec={Q[l] Q[c] Q[r] Q[r]}", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=", fixed = TRUE)
+  expect_match(txt, "Q[c,wd=", fixed = TRUE)
+  # right + decimal both render as Q[r,wd=...].
+  expect_match(txt, "Q[r,wd=", fixed = TRUE)
 })
 
 test_that("col_spec width numeric -> Q[align,wd=Nin]", {
   spec <- tabular(data.frame(x = "a", y = "b")) |>
     cols(x = col_spec(width = 2.5), y = col_spec(width = 1))
   txt <- render_tex(spec)
-  expect_match(txt, "Q[l,wd=2.5in] Q[l,wd=1in]", fixed = TRUE)
+  # Pinned widths pass through verbatim as inches.
+  expect_match(txt, "Q[l,wd=2.500000in]", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=1.000000in]", fixed = TRUE)
 })
 
-test_that("col_spec width character with unit -> Q[align,wd=Xunit]", {
+test_that("col_spec width character with unit -> resolved inches", {
+  # Pre-v0.1.0 backend preserved input units (`wd=2cm`). The
+  # engine now resolves all widths to numeric inches before the
+  # backend sees them, so character-with-unit converts via
+  # `.tabular_unit_inches`: 2cm = 2/2.54 = 0.787402in, 60mm =
+  # 60/25.4 = 2.362205in, 30pt = 30/72 = 0.416667in.
   spec <- tabular(data.frame(x = "a", y = "b", z = "c")) |>
     cols(
       x = col_spec(width = "2cm"),
@@ -405,16 +419,22 @@ test_that("col_spec width character with unit -> Q[align,wd=Xunit]", {
       z = col_spec(width = "30pt")
     )
   txt <- render_tex(spec)
-  expect_match(txt, "Q[l,wd=2cm]", fixed = TRUE)
-  expect_match(txt, "Q[l,wd=60mm]", fixed = TRUE)
-  expect_match(txt, "Q[l,wd=30pt]", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=0.787402in]", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=2.362205in]", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=0.416667in]", fixed = TRUE)
 })
 
-test_that("col_spec width percent -> X[weight,align] proportional", {
+test_that("col_spec width percent -> resolved against available content width", {
+  # Pre-v0.1.0 percent emitted tabularray X[weight,align]
+  # proportional columns. The engine now resolves percent at
+  # render time (30% of available content width = 30% of
+  # 6.5in printable area on letter portrait, 1in margins = 1.95in).
+  # Backend sees the resolved numeric inches.
   spec <- tabular(data.frame(x = "a", y = "b")) |>
     cols(x = col_spec(width = "30%"), y = col_spec(width = "70%"))
   txt <- render_tex(spec)
-  expect_match(txt, "X[0.3,l] X[0.7,l]", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=1.950000in]", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=4.550000in]", fixed = TRUE)
 })
 
 test_that("col_spec width respects align letter", {
@@ -424,8 +444,45 @@ test_that("col_spec width respects align letter", {
       y = col_spec(align = "center", width = "20%")
     )
   txt <- render_tex(spec)
-  expect_match(txt, "Q[r,wd=1in]", fixed = TRUE)
-  expect_match(txt, "X[0.2,c]", fixed = TRUE)
+  expect_match(txt, "Q[r,wd=1.000000in]", fixed = TRUE)
+  expect_match(txt, "Q[c,wd=1.300000in]", fixed = TRUE)
+})
+
+test_that("col_spec width = 'auto' default produces engine-measured widths", {
+  # Long-label column gets noticeably wider than short-label
+  # column when both default to auto. soc cell text is much
+  # longer than the n column.
+  spec <- tabular(
+    data.frame(
+      soc = c("Cardiac disorders", "Skin disorders"),
+      n = c("12 (4.7%)", "5 (2.0%)")
+    )
+  ) |>
+    cols(soc = col_spec(), n = col_spec())
+  txt <- render_tex(spec)
+  # Both columns have a numeric wd= directive.
+  expect_match(txt, "Q\\[l,wd=[0-9.]+in\\]")
+  # Extract and compare the two widths.
+  widths <- as.numeric(regmatches(
+    txt,
+    gregexpr("(?<=wd=)[0-9.]+(?=in)", txt, perl = TRUE)
+  )[[1L]])
+  expect_length(widths, 2L)
+  # First (soc) wider than second (n).
+  expect_true(widths[[1L]] > widths[[2L]])
+})
+
+test_that("auto + pinned mix: pinned wins, auto distributes remainder", {
+  spec <- tabular(
+    data.frame(
+      a = "long content here",
+      b = "short",
+      c = "x"
+    )
+  ) |>
+    cols(b = col_spec(width = 1.5))
+  txt <- render_tex(spec)
+  expect_match(txt, "Q[l,wd=1.500000in]", fixed = TRUE)
 })
 
 test_that("col_spec width rejects bad units / negative / >100%", {
@@ -436,11 +493,16 @@ test_that("col_spec width rejects bad units / negative / >100%", {
   expect_error(col_spec(width = "nonsense"), class = "tabular_error_input")
 })
 
-test_that("col_spec width NA -> bare Q[align] (auto-fit)", {
+test_that("default col_spec auto-sizes via AFM (no bare Q[align])", {
+  # Pre-v0.1.0: NA width emitted a bare `Q[l]` (backend natural
+  # auto-fit). Now the default is `"auto"`, the engine measures
+  # via AFM Core 13, and emits a resolved numeric width via
+  # `Q[l,wd=Xin]`. Confirm at least one wd= directive appears
+  # for a two-column auto-sized spec.
   spec <- tabular(data.frame(x = "a", y = "b")) |>
-    cols(x = col_spec(width = NA_real_), y = col_spec())
+    cols(x = col_spec(), y = col_spec())
   txt <- render_tex(spec)
-  expect_match(txt, "Q[l] Q[l]", fixed = TRUE)
+  expect_match(txt, "wd=", fixed = TRUE)
 })
 
 # ---------------------------------------------------------------------
