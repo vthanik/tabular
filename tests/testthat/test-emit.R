@@ -204,8 +204,11 @@ test_that(".unregister_backend() is a no-op on missing key", {
 test_that(".resolve_backend() surfaces registered backends in errors", {
   .register_stub("html", "HTML")
   spec <- .simple_spec()
+  # `rtf` is in the extension map but no `rtf` backend is registered
+  # yet (Step 18); resolution should surface a tabular_error_input
+  # listing the currently-registered backends.
   err <- tryCatch(
-    emit(spec, tempfile(fileext = ".pdf")),
+    emit(spec, tempfile(fileext = ".tex"), format = "rtf"),
     tabular_error_input = function(e) e
   )
   expect_s3_class(err, "tabular_error_input")

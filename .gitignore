@@ -23,3 +23,14 @@ data-raw/cache/
 
 # macOS
 .DS_Store
+
+# Latex compile artefacts (from smoke tests / examples that
+# shell out to xelatex)
+*.log
+*.aux
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
