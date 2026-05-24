@@ -115,7 +115,7 @@ backend_pdf <- function(grid, file) {
     "[Ff]ile [`'\"]([^`'\".]+)\\.sty['\"]? not found",
     # ! I can't find file `tabularray'.
     "can't find file [`']([^`']+)[`']",
-    # ! Package fontspec Error: The font "Source Serif Pro" cannot be found.
+    # ! Package fontspec Error: The font "Liberation Serif" cannot be found.
     "Package ([a-zA-Z0-9_-]+) Error"
   )
   hits <- character()

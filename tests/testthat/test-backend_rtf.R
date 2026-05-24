@@ -84,6 +84,70 @@ test_that("font_family explicit-stack falls back to \\froman class", {
   expect_true(grepl("Courier New", rtf, fixed = TRUE))
 })
 
+# ---------------------------------------------------------------------
+# Font table — Liberation-first chain + \*\falt fallback for Word
+# ---------------------------------------------------------------------
+
+test_that("default serif leads with Liberation Serif as \\f0 body", {
+  rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
+  expect_true(grepl(
+    "{\\f0\\froman\\fprq2 Liberation Serif",
+    rtf,
+    fixed = TRUE
+  ))
+})
+
+test_that("default serif emits {\\*\\falt Times New Roman} in body font definition", {
+  rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
+  expect_true(grepl(
+    "Liberation Serif{\\*\\falt Times New Roman}",
+    rtf,
+    fixed = TRUE
+  ))
+})
+
+test_that("sans family emits {\\*\\falt Arial} in body font definition", {
+  spec <- tabular(data.frame(x = 1:3)) |> preset(font_family = "sans")
+  rtf <- .rtf_emit_text(spec)
+  expect_true(grepl(
+    "Liberation Sans{\\*\\falt Arial}",
+    rtf,
+    fixed = TRUE
+  ))
+})
+
+test_that("mono \\f1 carries {\\*\\falt Courier New} on every render", {
+  rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
+  expect_true(grepl(
+    "{\\f1\\fmodern\\fprq1 Liberation Mono{\\*\\falt Courier New}",
+    rtf,
+    fixed = TRUE
+  ))
+})
+
+test_that("single-entry chain (non-aliased named font) emits NO \\*\\falt", {
+  spec <- tabular(data.frame(x = 1:3)) |> preset(font_family = "Inter")
+  rtf <- .rtf_emit_text(spec)
+  # Body font is "Inter" with no fallback
+  expect_true(grepl("\\f0\\froman\\fprq2 Inter;", rtf, fixed = TRUE))
+  # No \*\falt for the Inter line specifically — check via regex
+  inter_line <- regmatches(
+    rtf,
+    regexpr("\\{\\\\f0\\\\froman\\\\fprq2 Inter[^;]*;\\}", rtf, perl = TRUE)
+  )
+  expect_false(grepl("\\*\\falt", inter_line, fixed = TRUE))
+})
+
+test_that("PS-era alias 'Times' renders as Liberation Serif body with Times fallback", {
+  spec <- tabular(data.frame(x = 1:3)) |> preset(font_family = "Times")
+  rtf <- .rtf_emit_text(spec)
+  expect_true(grepl(
+    "Liberation Serif{\\*\\falt Times New Roman}",
+    rtf,
+    fixed = TRUE
+  ))
+})
+
 test_that("font_size emits \\fsN at body where N = 2*points", {
   spec <- tabular(data.frame(x = 1:3)) |> preset(font_size = 10)
   rtf <- .rtf_emit_text(spec)

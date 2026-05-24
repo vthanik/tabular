@@ -53,94 +53,114 @@
 }
 
 # ---------------------------------------------------------------------
-# Per-backend canonical stacks for the three generic families
+# Shared per-generic chains (production-Linux-first)
 # ---------------------------------------------------------------------
 
-# HTML — CSS `font-family` stack. First entry is the modern Adobe
-# Source Pro family (Phase 2 install helper makes it ubiquitous);
-# next are the per-platform native faces (macOS / Windows / Linux);
-# the chain always ends in the bare CSS generic so the browser
-# falls through to its own default of the right category.
-.html_stack_serif <- c(
-  "Source Serif Pro",
-  "Liberation Serif",
-  "Georgia",
-  "Times New Roman",
-  "Times",
-  "serif"
-)
-.html_stack_sans <- c(
-  "Source Sans Pro",
-  "Inter",
-  "Liberation Sans",
-  "system-ui",
-  "-apple-system",
-  "Segoe UI",
-  "Roboto",
-  "Helvetica Neue",
-  "Helvetica",
-  "Arial",
-  "sans-serif"
-)
-.html_stack_mono <- c(
-  "Source Code Pro",
-  "JetBrains Mono",
-  "Liberation Mono",
-  "ui-monospace",
-  "Consolas",
-  "Menlo",
-  "Monaco",
-  "Courier New",
-  "monospace"
+# Chain priority for every generic family: lead with the Liberation
+# face (the Red Hat metric-compatible set that ships on Linux
+# servers — Posit Workbench, Domino, Citrix, RStudio Server, every
+# major Linux distro), then the Microsoft Office face for desktop
+# Win / Mac consumers, then the bundled macOS-only legacy face.
+# Liberation Serif / Sans / Mono are metric-compatible with Times
+# New Roman / Arial / Courier New by design, so a document rendered
+# with the Liberation face has the same layout (line breaks, decimal
+# alignment, page breaks) as the same document rendered with the
+# Office face. This is the right default for cross-OS regulatory-
+# submission output where the server emits on Linux and the
+# consumer opens on Windows / macOS.
+#
+# Per-backend tails are appended in `.resolve_font_stack`:
+#   * HTML adds the CSS generic family (`serif` / `sans-serif` /
+#     `monospace`) so the browser closes the chain with its own
+#     class-appropriate default.
+#   * LaTeX adds TeX Gyre (every TeX distribution ships it) and
+#     Latin Modern (LaTeX always has it as the ultimate fallback).
+#     The xelatex `\IfFontExistsTF` cascade walks the chain at
+#     compile time.
+#   * RTF appends nothing — the consuming app handles substitution
+#     when the named face is missing (and we emit `\*\falt` so it
+#     can pick the next chain entry explicitly).
+.stack_serif <- c("Liberation Serif", "Times New Roman", "Times")
+.stack_sans <- c("Liberation Sans", "Arial", "Helvetica")
+.stack_mono <- c("Liberation Mono", "Courier New", "Courier")
+
+# Backend tails — appended after the shared chain so the backend's
+# native fallback layer always closes the chain. The LaTeX tail
+# leads with TeX Gyre (ships with every TeX distribution including
+# the minimal tinytex bundle) and ends with Latin Modern (LaTeX's
+# guaranteed default — compile cannot fail with this leaf).
+.latex_tail_serif <- c("TeX Gyre Termes", "Latin Modern Roman")
+.latex_tail_sans <- c("TeX Gyre Heros", "Latin Modern Sans")
+.latex_tail_mono <- c("TeX Gyre Cursor", "Latin Modern Mono")
+.html_tail_serif <- "serif"
+.html_tail_sans <- "sans-serif"
+.html_tail_mono <- "monospace"
+
+# ---------------------------------------------------------------------
+# Named-font alias table for the PS-era four
+# ---------------------------------------------------------------------
+
+# The four PostScript-era font names (Times / Arial / Helvetica /
+# Courier) and their Microsoft `_New` variants are intent aliases
+# for the corresponding generic family. When the user writes
+# `font_family = "Times"` they mean "Times-like rendering" — and on
+# a Linux server with no Times installed, the only way to honour
+# that intent is to expand to the serif chain (Liberation Serif is
+# metric-compatible, so the rendering is layout-identical).
+#
+# The alias path triggers ONLY for length-1 inputs. Users who
+# genuinely mean "Times only, fail if absent" pass an explicit
+# length>1 vector — `c("Times", "Times")` — which the resolver
+# returns verbatim without consulting the alias table.
+.font_name_aliases <- list(
+  "Times" = "serif",
+  "Times New Roman" = "serif",
+  "Arial" = "sans",
+  "Helvetica" = "sans",
+  "Courier" = "mono",
+  "Courier New" = "mono"
 )
 
-# LaTeX — used for diagnostic reporting via check_fonts(). The
-# actual preamble emission is done by backend_latex's
-# .latex_pdftex_font_pkg() (one TeX bundle per generic). Listing
-# the chain here lets check_fonts() walk the same priority order
-# the LaTeX engine will try.
-.latex_stack_serif <- c(
-  "Source Serif Pro",
-  "TeX Gyre Termes",
-  "Latin Modern Roman"
-)
-.latex_stack_sans <- c(
-  "Source Sans Pro",
-  "TeX Gyre Heros",
-  "Latin Modern Sans"
-)
-.latex_stack_mono <- c(
-  "Source Code Pro",
-  "TeX Gyre Cursor",
-  "Latin Modern Mono"
-)
+# Look up the generic family for a named font, or return NULL when
+# the name has no alias entry.
+.resolve_font_alias <- function(name) {
+  if (length(name) != 1L) {
+    return(NULL)
+  }
+  .font_name_aliases[[name]]
+}
 
-# RTF — fonts are name-referenced in the `{\fonttbl}` group; Word
-# and LibreOffice walk the list at open time and substitute the
-# first installed face. The chain leads with the modern Adobe
-# Source Pro family (Phase 2 install helper), then per-platform
-# native faces (Liberation set ships on Linux, TNR / Helvetica /
-# Courier ship with Word everywhere). No bare generic at the end
-# (RTF has no equivalent of CSS `serif`); the consuming app picks
-# its own default if the entire chain misses.
-.rtf_stack_serif <- c(
-  "Source Serif Pro",
-  "Liberation Serif",
-  "Times New Roman",
-  "Times"
-)
-.rtf_stack_sans <- c(
-  "Source Sans Pro",
-  "Liberation Sans",
-  "Helvetica",
-  "Arial"
-)
-.rtf_stack_mono <- c(
-  "Source Code Pro",
-  "Liberation Mono",
-  "Courier New",
-  "Courier"
-)
+# Compose the resolved chain for a generic family + backend. Shared
+# core + per-backend tail. Used by `.resolve_font_stack` for both
+# the generic-family path and the alias-hit path.
+.compose_generic_chain <- function(fam, backend) {
+  core <- switch(
+    fam,
+    serif = .stack_serif,
+    sans = .stack_sans,
+    mono = .stack_mono
+  )
+  tail <- switch(
+    backend,
+    latex = switch(
+      fam,
+      serif = .latex_tail_serif,
+      sans = .latex_tail_sans,
+      mono = .latex_tail_mono
+    ),
+    html = switch(
+      fam,
+      serif = .html_tail_serif,
+      sans = .html_tail_sans,
+      mono = .html_tail_mono
+    ),
+    # RTF + unknown backends: no tail (consuming app handles
+    # substitution; RTF also gets explicit \*\falt in the font
+    # table).
+    character()
+  )
+  c(core, tail)
+}
 
 # ---------------------------------------------------------------------
 # Public resolver
@@ -148,47 +168,37 @@
 
 # Resolve a `font_family` input to the per-backend fallback chain.
 # Returns a character vector of font names in priority order.
+#
+# Five branches, in dispatch order:
+#   1. Empty / NULL  -> normalise to `"serif"`.
+#   2. Length > 1    -> explicit stack, verbatim; alias table is
+#                       NOT consulted (escape hatch for users who
+#                       want exact-name semantics).
+#   3. Generic family (`serif` / `sans` / `mono` + CSS aliases) ->
+#                       shared chain + backend tail.
+#   4. Aliased name (Times / Arial / Helvetica / Courier and the
+#      `_New` variants) -> resolve via alias to the generic chain
+#      (same path as 3).
+#   5. Non-aliased named font (Inter / JetBrains Mono / Source Pro
+#      / sponsor-specific face) -> emit verbatim, no fallback.
 .resolve_font_stack <- function(font_family, backend) {
   if (length(font_family) == 0L) {
     font_family <- "serif"
   }
-  # Explicit stack: emit verbatim, no fabrication.
+  # Explicit stack: emit verbatim, no fabrication, no alias lookup.
   if (length(font_family) > 1L) {
     return(as.character(font_family))
   }
-  # Single value: generic OR named font.
+  # Single value path.
   if (.is_generic_family(font_family)) {
     fam <- .normalize_generic(font_family)
-    return(switch(
-      backend,
-      html = switch(
-        fam,
-        serif = .html_stack_serif,
-        sans = .html_stack_sans,
-        mono = .html_stack_mono
-      ),
-      latex = switch(
-        fam,
-        serif = .latex_stack_serif,
-        sans = .latex_stack_sans,
-        mono = .latex_stack_mono
-      ),
-      rtf = switch(
-        fam,
-        serif = .rtf_stack_serif,
-        sans = .rtf_stack_sans,
-        mono = .rtf_stack_mono
-      ),
-      # Unknown backend: best-effort, return the HTML chain.
-      switch(
-        fam,
-        serif = .html_stack_serif,
-        sans = .html_stack_sans,
-        mono = .html_stack_mono
-      )
-    ))
+    return(.compose_generic_chain(fam, backend))
   }
-  # Named font, no fallback fabricated.
+  alias <- .resolve_font_alias(font_family)
+  if (!is.null(alias)) {
+    return(.compose_generic_chain(alias, backend))
+  }
+  # Named font, no alias, no fallback fabricated.
   as.character(font_family)
 }
 

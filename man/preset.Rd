@@ -21,8 +21,51 @@ the class's enum / length / type rules; bad values raise
 Recognised knobs:
 \itemize{
 \item \strong{\code{font_size}} — body point size. \verb{<numeric(1)>}.
-\item \strong{\code{font_family}} — body font family.
-\verb{<character(1)>}. Default \code{"Times New Roman"}.
+\item \strong{\code{font_family}} — body font family. \verb{<character | character(1)>}.
+Default \code{"serif"}. Three accepted shapes:
+\enumerate{
+\item \strong{Generic family} — \code{"serif"} (default), \code{"sans"},
+\code{"mono"} (CSS aliases \code{"sans-serif"} / \code{"monospace"}
+also recognised). The resolver expands to a per-backend
+chain that leads with the Linux-installed
+\strong{Liberation} face (Posit Workbench / Domino / Citrix
+/ RStudio Server), then the Microsoft Office face
+(Times New Roman / Arial / Courier New) for desktop
+Win / Mac consumers, then TeX Gyre for LaTeX compile,
+then the CSS generic for HTML. Liberation Serif /
+Sans / Mono are metric-compatible with TNR / Arial /
+Courier New, so layout, line breaks, and decimal
+alignment hold across every render context.
+\item \strong{Named alias} — \code{"Times"}, \code{"Times New Roman"},
+\code{"Arial"}, \code{"Helvetica"}, \code{"Courier"}, \code{"Courier New"}.
+These PostScript-era names alias to the appropriate
+generic family (Times -> serif, Arial / Helvetica ->
+sans, Courier -> mono) and emit the same expanded chain.
+Honours the user's intent ("I want Times-like
+rendering") on every OS instead of hard-erroring on
+a Linux server with no TNR installed.
+\item \strong{Named font} — \code{"Inter"}, \code{"JetBrains Mono"},
+\code{"Source Serif Pro"}, sponsor-specific face, etc.
+Emitted verbatim with no fallback fabricated. The
+consuming app (browser, xelatex, Word, LibreOffice)
+resolves the name against its own font matcher. RTF
+and DOCX fall back to the consuming app's substitution
+table when the name is missing; xelatex hard-errors at
+compile time; HTML browsers fall through to the
+browser's default font (not necessarily class-matched).
+\item \strong{Explicit stack} — \code{c("Inter", "Helvetica", "sans")}.
+User owns the chain. Returned verbatim — alias lookup
+is \strong{bypassed}, so \code{c("Times", "Times")} honours the
+exact name with no chain expansion (escape hatch for
+users who genuinely want exact-name semantics).
+}
+
+\strong{Note:} Adobe Source Pro is no longer the default lead.
+Source Pro is not pre-installed on production Linux
+servers, so leading with it walks through 2-3 missing
+names before resolving. Users who installed Source Pro
+can opt in via the explicit-stack form
+(\code{c("Source Serif Pro", "serif")}).
 \item \strong{\code{orientation}} — page orientation.
 \verb{<character(1)>}. One of \code{"portrait"} (default),
 \code{"landscape"}.

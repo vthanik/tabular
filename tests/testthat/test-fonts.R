@@ -4,17 +4,17 @@
 # .resolve_font_stack — three input shapes
 # ---------------------------------------------------------------------
 
-test_that("generic family resolves to per-backend canonical stack", {
+test_that("generic family leads with the Liberation face and ends with the CSS generic", {
   html_serif <- tabular:::.resolve_font_stack("serif", "html")
-  expect_true("Source Serif Pro" %in% html_serif)
+  expect_identical(html_serif[[1L]], "Liberation Serif")
   expect_identical(html_serif[length(html_serif)], "serif")
 
   html_sans <- tabular:::.resolve_font_stack("sans", "html")
-  expect_true("Source Sans Pro" %in% html_sans)
+  expect_identical(html_sans[[1L]], "Liberation Sans")
   expect_identical(html_sans[length(html_sans)], "sans-serif")
 
   html_mono <- tabular:::.resolve_font_stack("mono", "html")
-  expect_true("Source Code Pro" %in% html_mono)
+  expect_identical(html_mono[[1L]], "Liberation Mono")
   expect_identical(html_mono[length(html_mono)], "monospace")
 })
 
@@ -29,25 +29,115 @@ test_that("CSS aliases sans-serif and monospace normalise to the same chains", {
   )
 })
 
-test_that("LaTeX backend returns TeX-specific stack for generics", {
+test_that("LaTeX backend appends TeX Gyre + Latin Modern tail after the shared core", {
   expect_identical(
     tabular:::.resolve_font_stack("serif", "latex"),
-    c("Source Serif Pro", "TeX Gyre Termes", "Latin Modern Roman")
+    c(
+      "Liberation Serif",
+      "Times New Roman",
+      "Times",
+      "TeX Gyre Termes",
+      "Latin Modern Roman"
+    )
   )
   expect_identical(
     tabular:::.resolve_font_stack("sans", "latex"),
-    c("Source Sans Pro", "TeX Gyre Heros", "Latin Modern Sans")
+    c(
+      "Liberation Sans",
+      "Arial",
+      "Helvetica",
+      "TeX Gyre Heros",
+      "Latin Modern Sans"
+    )
   )
   expect_identical(
     tabular:::.resolve_font_stack("mono", "latex"),
-    c("Source Code Pro", "TeX Gyre Cursor", "Latin Modern Mono")
+    c(
+      "Liberation Mono",
+      "Courier New",
+      "Courier",
+      "TeX Gyre Cursor",
+      "Latin Modern Mono"
+    )
   )
 })
 
-test_that("single named font emits verbatim with no fabricated fallback", {
+test_that("RTF backend returns the shared core only (no tail)", {
   expect_identical(
-    tabular:::.resolve_font_stack("Courier New", "html"),
-    "Courier New"
+    tabular:::.resolve_font_stack("serif", "rtf"),
+    c("Liberation Serif", "Times New Roman", "Times")
+  )
+  expect_identical(
+    tabular:::.resolve_font_stack("sans", "rtf"),
+    c("Liberation Sans", "Arial", "Helvetica")
+  )
+  expect_identical(
+    tabular:::.resolve_font_stack("mono", "rtf"),
+    c("Liberation Mono", "Courier New", "Courier")
+  )
+})
+
+test_that("PS-era named aliases expand to the corresponding generic chain", {
+  # Times -> serif chain
+  expect_identical(
+    tabular:::.resolve_font_stack("Times", "rtf"),
+    tabular:::.resolve_font_stack("serif", "rtf")
+  )
+  expect_identical(
+    tabular:::.resolve_font_stack("Times New Roman", "html"),
+    tabular:::.resolve_font_stack("serif", "html")
+  )
+  # Arial / Helvetica -> sans chain
+  expect_identical(
+    tabular:::.resolve_font_stack("Arial", "latex"),
+    tabular:::.resolve_font_stack("sans", "latex")
+  )
+  expect_identical(
+    tabular:::.resolve_font_stack("Helvetica", "html"),
+    tabular:::.resolve_font_stack("sans", "html")
+  )
+  # Courier / Courier New -> mono chain
+  expect_identical(
+    tabular:::.resolve_font_stack("Courier", "rtf"),
+    tabular:::.resolve_font_stack("mono", "rtf")
+  )
+  expect_identical(
+    tabular:::.resolve_font_stack("Courier New", "latex"),
+    tabular:::.resolve_font_stack("mono", "latex")
+  )
+})
+
+test_that("non-aliased single named font still returns verbatim", {
+  expect_identical(
+    tabular:::.resolve_font_stack("Inter", "html"),
+    "Inter"
+  )
+  expect_identical(
+    tabular:::.resolve_font_stack("Source Serif Pro", "rtf"),
+    "Source Serif Pro"
+  )
+})
+
+test_that("explicit length-2 vector bypasses the alias table (escape hatch)", {
+  # Without escape hatch, "Times" -> serif chain. With the
+  # length>1 form, the user gets exactly what they typed.
+  expect_identical(
+    tabular:::.resolve_font_stack(c("Times", "Times"), "rtf"),
+    c("Times", "Times")
+  )
+  expect_identical(
+    tabular:::.resolve_font_stack(c("Courier New", "mono"), "latex"),
+    c("Courier New", "mono")
+  )
+})
+
+test_that("single non-aliased named font emits verbatim with no fabricated fallback", {
+  # PS-era aliases (Times / Arial / Courier and _New variants) DO
+  # expand to the generic chain — see the alias-expansion tests
+  # below. This test pins the non-aliased path.
+  expect_identical(
+    tabular:::.resolve_font_stack("JetBrains Mono", "html"),
+    "JetBrains Mono"
   )
   expect_identical(
     tabular:::.resolve_font_stack("Inter", "latex"),

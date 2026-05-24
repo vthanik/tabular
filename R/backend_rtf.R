@@ -874,6 +874,15 @@ backend_rtf <- function(grid, file) {
 # the user requested; for an explicit stack or a single named
 # font, we default to `\froman` (the safest fallback class for
 # Word's font matcher).
+#
+# When the resolved chain has >=2 entries, the body and mono font
+# definitions carry a `{\*\falt <second>}` token — RTF 1.5+ font-
+# alternate syntax that Word and LibreOffice honour when the
+# primary face is not installed. This is what closes the cross-OS
+# rendering gap: the file NAMES "Liberation Serif" (the Linux
+# server emits what it has), and Word on a Mac / Windows consumer
+# without Liberation reads the `\*\falt` -> "Times New Roman" ->
+# match. Result: same metric-compatible rendering on every OS.
 .rtf_font_table <- function(font_family) {
   body_chain <- .resolve_font_stack(font_family, "rtf")
   mono_chain <- .resolve_font_stack("mono", "rtf")
@@ -881,16 +890,30 @@ backend_rtf <- function(grid, file) {
   c(
     "{\\fonttbl",
     sprintf(
-      "{\\f0\\%s\\fprq2 %s;}",
+      "{\\f0\\%s\\fprq2 %s%s;}",
       body_class,
-      .rtf_escape(body_chain[[1L]])
+      .rtf_escape(body_chain[[1L]]),
+      .rtf_falt(body_chain)
     ),
     sprintf(
-      "{\\f1\\fmodern\\fprq1 %s;}",
-      .rtf_escape(mono_chain[[1L]])
+      "{\\f1\\fmodern\\fprq1 %s%s;}",
+      .rtf_escape(mono_chain[[1L]]),
+      .rtf_falt(mono_chain)
     ),
     "}"
   )
+}
+
+# Compose the optional `{\*\falt <second>}` fragment from a
+# resolved font chain. Empty when the chain has only one entry
+# (no alternate to suggest). Word and LibreOffice substitute the
+# alternate name when the primary face is missing on the
+# consumer's machine.
+.rtf_falt <- function(chain) {
+  if (length(chain) < 2L) {
+    return("")
+  }
+  sprintf("{\\*\\falt %s}", .rtf_escape(chain[[2L]]))
 }
 
 # Map a `font_family` input to its RTF family-class keyword. Only

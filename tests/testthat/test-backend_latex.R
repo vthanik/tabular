@@ -186,26 +186,45 @@ test_that(".latex_pdftex_font_pkg routes generics to TeX Gyre bundles", {
   expect_identical(tabular:::.latex_pdftex_font_pkg("monospace"), "tgcursor")
 })
 
-test_that("default preset (font_family = 'serif') -> tgtermes + Source Serif Pro", {
+test_that("default preset (font_family = 'serif') -> tgtermes + Liberation Serif cascade lead", {
   txt <- render_tex(tabular(data.frame(x = 1L)))
   expect_match(txt, "\\usepackage{tgtermes}", fixed = TRUE)
-  expect_match(txt, "\\setmainfont{Source Serif Pro}", fixed = TRUE)
+  # Liberation Serif is the outermost branch of the fontspec cascade
+  # (compile-time \IfFontExistsTF picks it first on Linux servers).
+  expect_match(
+    txt,
+    "\\IfFontExistsTF{Liberation Serif}{\\setmainfont{Liberation Serif}}",
+    fixed = TRUE
+  )
+  # Latin Modern Roman is the unconditional inner-most leaf —
+  # guaranteed to be present in every LaTeX distribution.
+  expect_match(txt, "\\setmainfont{Latin Modern Roman}", fixed = TRUE)
 })
 
-test_that("preset(font_family = 'sans') -> tgheros + Source Sans Pro", {
+test_that("preset(font_family = 'sans') -> tgheros + Liberation Sans cascade lead", {
   txt <- render_tex(
     tabular(data.frame(x = 1L)) |> preset(font_family = "sans")
   )
   expect_match(txt, "\\usepackage{tgheros}", fixed = TRUE)
-  expect_match(txt, "\\setmainfont{Source Sans Pro}", fixed = TRUE)
+  expect_match(
+    txt,
+    "\\IfFontExistsTF{Liberation Sans}{\\setmainfont{Liberation Sans}}",
+    fixed = TRUE
+  )
+  expect_match(txt, "\\setmainfont{Latin Modern Sans}", fixed = TRUE)
 })
 
-test_that("preset(font_family = 'mono') -> tgcursor + Source Code Pro", {
+test_that("preset(font_family = 'mono') -> tgcursor + Liberation Mono cascade lead", {
   txt <- render_tex(
     tabular(data.frame(x = 1L)) |> preset(font_family = "mono")
   )
   expect_match(txt, "\\usepackage{tgcursor}", fixed = TRUE)
-  expect_match(txt, "\\setmainfont{Source Code Pro}", fixed = TRUE)
+  expect_match(
+    txt,
+    "\\IfFontExistsTF{Liberation Mono}{\\setmainfont{Liberation Mono}}",
+    fixed = TRUE
+  )
+  expect_match(txt, "\\setmainfont{Latin Modern Mono}", fixed = TRUE)
 })
 
 test_that("preset(font_family = c('Courier New', 'mono')) takes head for xelatex", {

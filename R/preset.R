@@ -85,8 +85,53 @@
 #'   Recognised knobs:
 #'
 #'   *   **`font_size`** — body point size. `<numeric(1)>`.
-#'   *   **`font_family`** — body font family.
-#'       `<character(1)>`. Default `"Times New Roman"`.
+#'   *   **`font_family`** — body font family. `<character | character(1)>`.
+#'       Default `"serif"`. Three accepted shapes:
+#'
+#'       1. **Generic family** — `"serif"` (default), `"sans"`,
+#'          `"mono"` (CSS aliases `"sans-serif"` / `"monospace"`
+#'          also recognised). The resolver expands to a per-backend
+#'          chain that leads with the Linux-installed
+#'          **Liberation** face (Posit Workbench / Domino / Citrix
+#'          / RStudio Server), then the Microsoft Office face
+#'          (Times New Roman / Arial / Courier New) for desktop
+#'          Win / Mac consumers, then TeX Gyre for LaTeX compile,
+#'          then the CSS generic for HTML. Liberation Serif /
+#'          Sans / Mono are metric-compatible with TNR / Arial /
+#'          Courier New, so layout, line breaks, and decimal
+#'          alignment hold across every render context.
+#'
+#'       2. **Named alias** — `"Times"`, `"Times New Roman"`,
+#'          `"Arial"`, `"Helvetica"`, `"Courier"`, `"Courier New"`.
+#'          These PostScript-era names alias to the appropriate
+#'          generic family (Times -> serif, Arial / Helvetica ->
+#'          sans, Courier -> mono) and emit the same expanded chain.
+#'          Honours the user's intent ("I want Times-like
+#'          rendering") on every OS instead of hard-erroring on
+#'          a Linux server with no TNR installed.
+#'
+#'       3. **Named font** — `"Inter"`, `"JetBrains Mono"`,
+#'          `"Source Serif Pro"`, sponsor-specific face, etc.
+#'          Emitted verbatim with no fallback fabricated. The
+#'          consuming app (browser, xelatex, Word, LibreOffice)
+#'          resolves the name against its own font matcher. RTF
+#'          and DOCX fall back to the consuming app's substitution
+#'          table when the name is missing; xelatex hard-errors at
+#'          compile time; HTML browsers fall through to the
+#'          browser's default font (not necessarily class-matched).
+#'
+#'       4. **Explicit stack** — `c("Inter", "Helvetica", "sans")`.
+#'          User owns the chain. Returned verbatim — alias lookup
+#'          is **bypassed**, so `c("Times", "Times")` honours the
+#'          exact name with no chain expansion (escape hatch for
+#'          users who genuinely want exact-name semantics).
+#'
+#'       **Note:** Adobe Source Pro is no longer the default lead.
+#'       Source Pro is not pre-installed on production Linux
+#'       servers, so leading with it walks through 2-3 missing
+#'       names before resolving. Users who installed Source Pro
+#'       can opt in via the explicit-stack form
+#'       (`c("Source Serif Pro", "serif")`).
 #'   *   **`orientation`** — page orientation.
 #'       `<character(1)>`. One of `"portrait"` (default),
 #'       `"landscape"`.

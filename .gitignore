@@ -24,6 +24,10 @@ data-raw/cache/
 # macOS
 .DS_Store
 
+# Microsoft Word / LibreOffice lockfiles — created when an editor
+# opens a .rtf / .docx snapshot for inspection; never commit.
+~$*
+
 # Latex compile artefacts (from smoke tests / examples that
 # shell out to xelatex)
 *.log
