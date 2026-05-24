@@ -1,88 +1,90 @@
 #' Print a `tabular_spec`
 #'
-#' Renders a `tabular_spec` interactively. Default behaviour
-#' mirrors `tinytable::tt()` and `gt::gt()`: when an IDE viewer
-#' pane is available (RStudio, Positron, `htmlwidgets`'s
-#' standalone shim) the spec is rendered to a self-contained
-#' HTML tempfile and opened in the pane; at a plain console the
-#' markdown source is `cat()`-printed; in non-interactive
-#' contexts (Rscript, R CMD check, CI) the structural cli-tree
-#' summary is printed instead.
+#' Renders a `tabular_spec` interactively. The default behaviour
+#' mirrors `gt::gt()`: convert the spec to an `htmltools` tag
+#' list and let htmltools dispatch — RStudio + Positron viewer
+#' panes, Quarto / Rmd notebook inline, Databricks `displayHTML`,
+#' and plain-console `cat()` are all handled without any IDE-
+#' specific branching.
 #'
 #' @details
 #'
-#' **Output resolution.** The router considers, in order:
+#' **Dispatch.** `print()` delegates to [`as.tags.tabular_spec()`]
+#' which returns an `htmltools::tagList`. That tag list is handed
+#' to `htmltools`'s own print method with `browse = view`:
+#' htmltools opens the IDE viewer when one is registered,
+#' inlines under a Quarto / Rmd chunk when running inside one,
+#' or `cat()`s the HTML when neither applies. No `is_rstudio()`
+#' / `is_positron()` / `is_notebook()` heuristics — htmltools
+#' already knows.
 #'
-#' 1. An explicit `output =` argument (always wins).
-#' 2. An active `knit_print()` pass — handled by the
-#'    `knit_print` S3 method, not here.
-#' 3. An RStudio notebook context (active .qmd / .Rmd buffer) —
-#'    HTML wrapped in `htmltools::browsable()` so it inlines
-#'    under the chunk instead of opening the viewer pane.
-#' 4. An interactive session with a viewer pane installed
-#'    (`interactive() && !is.null(getOption("viewer"))`) — HTML
-#'    in the pane.
-#' 5. An interactive session with no viewer pane — markdown
-#'    source `cat()`-ed to the console.
-#' 6. Everything else (non-interactive) — the structural cli-tree
-#'    summary.
+#' **`view` argument.** Defaults to `interactive()`, the same
+#' universal off-switch `gt::gt()` uses. Non-interactive
+#' contexts (`Rscript`, `R CMD check`, CI, devtools::test)
+#' bypass the viewer automatically. Pass `view = FALSE`
+#' explicitly at an interactive prompt to suppress the viewer
+#' for a single call.
 #'
-#' **Format support.** Tabular has five backends; not all of
-#' them preview natively in the IDE pane:
+#' **`output` argument.** Forces a specific preview format
+#' instead of the default HTML-via-htmltools path. One of:
 #'
-#' * `"html"` — viewer pane (native).
-#' * `"md"` — markdown source `cat()` to console.
-#' * `"latex"` — LaTeX source `cat()` to console (preview when
-#'   `backend_latex` lands).
-#' * `"rtf"` / `"docx"` — *fall back to an HTML preview* + a
-#'   cli note pointing at `emit(spec, "out.rtf")` /
-#'   `emit(spec, "out.docx")` for the real artefact. The viewer
-#'   pane cannot render RTF / OOXML; we render HTML so the user
-#'   still sees the table.
-#' * `"pdf"` — *falls back to HTML preview*. We deliberately do
-#'   NOT compile through tinytex on every autoprint (would burn
-#'   seconds per print); `emit(spec, "out.pdf")` does the real
-#'   compile.
-#' * `"cli"` — force the structural cli-tree summary (handy when
-#'   you want a quick prop / header / derive overview at the
-#'   console even with the viewer pane available).
+#' * `"html"` — same as the default, but explicit.
+#' * `"md"` / `"markdown"` — `cat()` the markdown source to the
+#'   console (round-trips through `backend_md`).
+#' * `"latex"` — `cat()` the markdown source as a temporary
+#'   placeholder (real LaTeX preview lands with `backend_latex`).
+#' * `"rtf"` / `"docx"` / `"pdf"` — render an HTML preview and
+#'   emit a cli note pointing at [`emit()`] for the real
+#'   artefact. The viewer pane cannot render RTF / OOXML, and
+#'   we deliberately do *not* compile through tinytex on every
+#'   autoprint.
+#' * `"cli"` — print the structural cli-tree summary (props,
+#'   headers, derives, sort, pagination, preset). Useful for
+#'   debugging spec composition without paying the HTML render
+#'   cost.
 #'
-#' **Temp-file location.** Preview HTML files are written under
+#' **Robustness.** The HTML render is wrapped in `tryCatch`; if
+#' rendering fails for any reason the printer falls back to the
+#' cli-tree summary and a `cli::cli_warn()` describing the
+#' failure, so a broken spec never crashes the REPL.
+#'
+#' **Tempdir.** Preview HTML files live under
 #' `getOption("tabular_preview_dir", default = tempdir())`.
 #' Override the option to keep them in a stable location (handy
-#' when Linux browsers don't have read access to `/tmp/`).
+#' on Linux distros where browsers don't have read access to
+#' `/tmp/`).
 #'
 #' @param x *The `tabular_spec` to render.*
 #'   `<tabular_spec>: required`. The same object you'd hand to
 #'   [`emit()`].
 #'
-#' @param output *Preview format.* `<character(1) | NULL>:
-#'   default `NULL` (auto)`. One of:
+#' @param ... *Forwarded to `htmltools::print` / `as.tags()`.*
+#'   Use this to pass `id`, `style`, `class` overrides to the
+#'   wrapping `<div>`.
 #'
-#'   * `NULL` (default) — auto-resolved per the rules above.
-#'   * `"html"` — viewer pane (or `cat()` if no viewer).
-#'   * `"md"` / `"markdown"` — markdown source to console.
-#'   * `"latex"` — LaTeX source to console.
-#'   * `"rtf"` / `"docx"` — HTML preview + cli note.
-#'   * `"pdf"` — HTML preview (PDF compile only on `emit()`).
-#'   * `"cli"` — structural cli-tree summary.
+#' @param view *Open the viewer?* `<logical(1)>: default
+#'   `interactive()``. Same role as `gt::gt`'s `view` argument:
+#'   passes through to htmltools as `browse = view`. Set
+#'   `view = FALSE` to suppress the viewer for one call (e.g.
+#'   to capture the HTML string without launching a window).
 #'
-#'   **Tip:** set `options(tabular_print_output = "md")` to
-#'   force markdown source at the console even when a viewer
-#'   pane is available (handy when you want the raw text for
-#'   copy / diff).
-#'
-#' @param ... *Reserved.* Ignored.
+#' @param output *Force a specific preview format.* `<character(1)
+#'   | NULL>: default `NULL` (auto)`. See the **`output`
+#'   argument** section above for the full list. The session
+#'   default can be set via `options(tabular_print_output =
+#'   "cli")` for users who prefer the structural summary over
+#'   the HTML preview.
 #'
 #' @return *Invisibly returns `x`.* Side effect: opens the
-#'   viewer or `cat()`s output.
+#'   viewer, inlines under a chunk, or `cat()`s output.
 #'
 #' @examples
-#' # ---- Example 1: Build + autoprint ----
+#' # ---- Example 1: Build + autoprint (HTML preview) ----
 #' #
-#' # Build a spec and print it. Inside RStudio / Positron the
-#' # rendered HTML lands in the viewer pane; at a plain console
-#' # the markdown source is `cat()`-ed.
+#' # Build a spec and let autoprint render it. Inside RStudio /
+#' # Positron the HTML lands in the viewer pane; inside a
+#' # Quarto / Rmd chunk it inlines under the chunk; at a plain
+#' # console the HTML source is `cat()`-ed.
 #' tabular(
 #'   saf_demo,
 #'   titles = c("Table 14.1.1", "Demographics"),
@@ -91,19 +93,20 @@
 #'
 #' # ---- Example 2: Force the cli-tree structural view ----
 #' #
-#' # The cli-tree summary shows props (cols, headers, derives,
-#' # sort, pagination, preset) at a glance. Useful for
+#' # The cli-tree summary shows props at a glance. Useful for
 #' # debugging spec composition without paying the HTML render
 #' # cost.
-#' spec <- tabular(
-#'   saf_demo,
-#'   titles = "Demographics"
-#' ) |>
+#' spec <- tabular(saf_demo, titles = "Demographics") |>
 #'   cols(variable = col_spec(usage = "group", label = "Characteristic"))
 #'
 #' print(spec, output = "cli")
 #'
 #' @seealso
+#' **Tag conversion:** `as.tags.tabular_spec()` — the
+#' htmltools tag list that `print()` delegates to. Call it
+#' directly to embed the table in a custom `htmltools::tagList`
+#' or Shiny UI.
+#'
 #' **Terminal verb:** [`emit()`] writes the resolved artefact to
 #' disk; `print()` is for in-session preview only.
 #'
@@ -123,84 +126,94 @@ NULL
 # not follow the dispatch path).
 .tabular_spec_print <- function(
   x,
-  output = getOption("tabular_print_output", default = NULL),
-  ...
+  ...,
+  view = interactive(),
+  output = getOption("tabular_print_output", default = NULL)
 ) {
-  resolved <- .resolve_print_output(output, x)
-  switch(
-    resolved,
-    cli = .tabular_spec_print_cli(x),
-    html = .tabular_spec_print_html(x),
-    md = .tabular_spec_print_source(x, "md"),
-    markdown = .tabular_spec_print_source(x, "md"),
-    latex = .tabular_spec_print_source(x, "md"), # backend_latex pending
-    rtf = .tabular_spec_print_fallback(x, "rtf"),
-    docx = .tabular_spec_print_fallback(x, "docx"),
-    pdf = .tabular_spec_print_fallback(x, "pdf"),
-    .tabular_spec_print_cli(x)
+  # Databricks notebook: bypass htmltools and call the runtime's
+  # `displayHTML` directly. The runtime registers no `viewer`
+  # option, so htmltools would otherwise just `cat()` raw HTML.
+  if (.is_databricks()) {
+    html <- tryCatch(
+      as.character(htmltools::as.tags(x)),
+      error = function(e) NULL
+    )
+    if (!is.null(html)) {
+      return(rlang::exec("displayHTML", html))
+    }
+  }
+
+  # Explicit `output =` override walks a separate router (cli /
+  # md source / latex source / rtf-docx-pdf HTML fallback).
+  if (!is.null(output)) {
+    .check_output_format(output)
+    .print_with_output(x, output, view = view)
+    return(invisible(x))
+  }
+
+  # Default: HTML via htmltools. The render is wrapped in
+  # tryCatch so a broken spec never crashes the REPL — we fall
+  # back to the cli-tree summary with a warning.
+  tryCatch(
+    {
+      print(htmltools::as.tags(x, ...), browse = view, ...)
+    },
+    error = function(e) {
+      cli::cli_warn(
+        c(
+          "!" = "HTML preview failed; showing the structural summary instead.",
+          "i" = conditionMessage(e)
+        )
+      )
+      .tabular_spec_print_cli(x)
+    }
   )
   invisible(x)
 }
 
-# Decide the effective output format. Explicit `output =`
-# always wins; otherwise the router walks the precedence rules
-# from the @details block.
-.resolve_print_output <- function(output, x) {
-  if (!is.null(output)) {
-    if (!is.character(output) || length(output) != 1L || is.na(output)) {
-      cli::cli_abort(
-        c(
-          "{.arg output} must be a length-1 character.",
-          "i" = "Pass one of: {.val html}, {.val md}, {.val latex}, {.val rtf}, {.val docx}, {.val pdf}, {.val cli}."
-        ),
-        class = "tabular_error_input",
-        call = rlang::caller_env(2L)
-      )
-    }
-    return(output)
+# Validate an explicit `output =` argument. cli_abort with the
+# input class so callers can catch it as `tabular_error_input`.
+.check_output_format <- function(output) {
+  if (!is.character(output) || length(output) != 1L || is.na(output)) {
+    cli::cli_abort(
+      c(
+        "{.arg output} must be a length-1 character.",
+        "i" = "Pass one of: {.val html}, {.val md}, {.val latex}, {.val rtf}, {.val docx}, {.val pdf}, {.val cli}."
+      ),
+      class = "tabular_error_input",
+      call = rlang::caller_env(2L)
+    )
   }
-  if (.is_rstudio_notebook()) {
-    return("html")
-  }
-  if (.has_viewer()) {
-    return("html")
-  }
-  if (interactive()) {
-    return("md")
-  }
-  "cli"
 }
 
-# ---------------------------------------------------------------------
-# Branch handlers
-# ---------------------------------------------------------------------
-
-# HTML preview branch. Inside an RStudio notebook context the
-# rendered string is wrapped in `htmltools::browsable()` so it
-# inlines under the chunk; everywhere else it's written to a
-# tempfile and handed to the viewer / fallback URL opener.
-.tabular_spec_print_html <- function(x) {
-  dir <- getOption("tabular_preview_dir", default = tempdir())
-  file <- tempfile(tmpdir = dir, fileext = ".html")
-  emit(x, file, format = "html")
-
-  if (
-    .is_rstudio_notebook() && requireNamespace("htmltools", quietly = TRUE)
-  ) {
-    payload <- paste(readLines(file, warn = FALSE), collapse = "\n")
-    return(htmltools::browsable(htmltools::HTML(payload)))
-  }
-
-  viewer <- getOption("viewer", utils::browseURL)
-  viewer(file)
-  invisible(file)
+# Dispatch the explicit-format branch.
+.print_with_output <- function(x, output, view) {
+  switch(
+    output,
+    cli = .tabular_spec_print_cli(x),
+    html = .print_html(x, view = view),
+    md = .print_source(x, "md"),
+    markdown = .print_source(x, "md"),
+    latex = .print_source(x, "md"), # backend_latex pending
+    rtf = .print_fallback(x, "rtf", view = view),
+    docx = .print_fallback(x, "docx", view = view),
+    pdf = .print_fallback(x, "pdf", view = view),
+    .tabular_spec_print_cli(x)
+  )
 }
 
-# Markdown / LaTeX source branch. We render through the
-# matching backend, read the file back, and `cat()` it so the
-# user sees the raw source at the console. Tempfile is written
-# under the same dir as the HTML preview for symmetry.
-.tabular_spec_print_source <- function(x, fmt) {
+# Explicit HTML branch — same as the default path but reachable
+# via `output = "html"`. Kept separate so the cli / source /
+# fallback branches all read the same.
+.print_html <- function(x, view = TRUE) {
+  print(htmltools::as.tags(x), browse = view)
+  invisible(x)
+}
+
+# Markdown / LaTeX source branch — render through the matching
+# backend and cat() the source to the console. Tempfile lives
+# under `tabular_preview_dir` for symmetry with the HTML path.
+.print_source <- function(x, fmt) {
   dir <- getOption("tabular_preview_dir", default = tempdir())
   file <- tempfile(tmpdir = dir, fileext = paste0(".", fmt))
   emit(x, file, format = fmt)
@@ -209,12 +222,11 @@ NULL
   invisible(file)
 }
 
-# RTF / DOCX / PDF preview fallback. The viewer pane can't
-# render these formats natively, so we render HTML instead and
-# `cat()` a one-line cli note pointing at `emit()` for the real
-# artefact. Keeps the user in the IDE without a wrong-format
-# error.
-.tabular_spec_print_fallback <- function(x, fmt) {
+# RTF / DOCX / PDF fallback — render HTML preview + cli note.
+# The viewer pane can't render these formats; we render HTML so
+# the user still sees the table, and cli_inform points them at
+# emit() for the real artefact.
+.print_fallback <- function(x, fmt, view = TRUE) {
   msg <- switch(
     fmt,
     rtf = c(
@@ -228,49 +240,185 @@ NULL
     )
   )
   cli::cli_inform(msg)
-  .tabular_spec_print_html(x)
+  .print_html(x, view = view)
 }
 
 # ---------------------------------------------------------------------
-# Quarto / Rmd autoprint (knit_print)
+# as.tags S3 method — the SINGLE delegation point
+# ---------------------------------------------------------------------
+
+#' Convert a `tabular_spec` to an `htmltools` `tagList`
+#'
+#' Renders the spec to a self-contained HTML fragment and wraps
+#' it in an `htmltools::tagList` suitable for inline embedding in
+#' Quarto / Rmd chunks, RStudio / Positron viewer panes,
+#' pkgdown reference pages, and Shiny UIs.
+#'
+#' @details
+#'
+#' **Fragment extraction.** Tabular's HTML backend emits a full
+#' `<!DOCTYPE html>` document with a `<style>` block in the head
+#' and the table inside `<body>`. For inline embedding we
+#' extract the `<style>` and `<body>` content separately and re-
+#' wrap them in an `htmltools::tagList`:
+#'
+#' ```
+#' <style>...table CSS...</style>
+#' <div id="..." style="overflow-x:auto;max-width:100%;">
+#'   ...table content...
+#' </div>
+#' ```
+#'
+#' The wrapping `<div>` gets a random unique `id` (so multiple
+#' tables on the same page have CSS-scopable hooks) and
+#' `overflow-x: auto` so wide tables get a horizontal scrollbar
+#' instead of overflowing their container.
+#'
+#' @param x *The `tabular_spec` to convert.*
+#'   `<tabular_spec>: required`.
+#'
+#' @param ... *Reserved.* Ignored.
+#'
+#' @param id *Wrapping div id.* `<character(1) | NULL>: default
+#'   NULL (auto-generate)`. Pass an explicit id when you need to
+#'   target the table from external CSS or JavaScript.
+#'
+#' @return *An `htmltools::tagList`* containing a `<style>`
+#'   block plus a wrapping `<div>` containing the table. Knitr,
+#'   htmltools, and RStudio / Positron viewer panes all know how
+#'   to render it.
+#'
+#' @examples
+#' # ---- Example 1: Embed in a custom htmltools page ----
+#' #
+#' # Compose two tabular tables side-by-side in a parent div.
+#' # `as.tags(spec)` is the entry point used by `print()` and
+#' # `knit_print()` under the hood.
+#' s1 <- tabular(saf_demo, titles = "Demographics")
+#' s2 <- tabular(saf_aeoverall, titles = "AE overall")
+#'
+#' if (requireNamespace("htmltools", quietly = TRUE)) {
+#'   htmltools::tagList(
+#'     htmltools::as.tags(s1),
+#'     htmltools::as.tags(s2)
+#'   )
+#' }
+#'
+#' @seealso
+#' **Renders via:** [`print.tabular_spec`], `knit_print()`.
+#'
+#' **Terminal verb:** [`emit()`].
+#'
+#' @exportS3Method htmltools::as.tags
+as.tags.tabular_spec <- function(x, ..., id = NULL) {
+  dir <- getOption("tabular_preview_dir", default = tempdir())
+  file <- tempfile(tmpdir = dir, fileext = ".html")
+  emit(x, file, format = "html")
+
+  payload <- paste(readLines(file, warn = FALSE), collapse = "\n")
+  frag <- .extract_html_fragment(payload)
+  if (is.null(id)) {
+    id <- .random_id("tabular_")
+  }
+
+  htmltools::tagList(
+    if (nzchar(frag$style)) htmltools::HTML(frag$style) else NULL,
+    htmltools::tags$div(
+      id = id,
+      style = htmltools::css(
+        `overflow-x` = "auto",
+        `max-width` = "100%"
+      ),
+      htmltools::HTML(frag$body)
+    )
+  )
+}
+
+# Extract the `<style>` block and the `<body>` inner contents
+# from a full HTML document string. Returns `list(style, body)`;
+# either element may be the empty string when not present.
+.extract_html_fragment <- function(html_str) {
+  style <- ""
+  body <- ""
+
+  style_match <- regmatches(
+    html_str,
+    regexpr("<style[^>]*>(?s).*?</style>", html_str, perl = TRUE)
+  )
+  if (length(style_match) > 0L) {
+    style <- style_match
+  }
+
+  body_match <- regmatches(
+    html_str,
+    regexpr("<body[^>]*>(?s).*?</body>", html_str, perl = TRUE)
+  )
+  if (length(body_match) > 0L) {
+    body <- sub("<body[^>]*>\\s*", "", body_match, perl = TRUE)
+    body <- sub("\\s*</body>\\s*$", "", body, perl = TRUE)
+  } else {
+    body <- html_str
+  }
+
+  list(style = style, body = body)
+}
+
+# Generate a short random identifier with the given prefix.
+# Used by `as.tags.tabular_spec()` for the wrapping div so
+# multiple tables on the same page have distinct CSS hooks.
+.random_id <- function(prefix = "id_") {
+  paste0(
+    prefix,
+    paste(
+      sample(c(letters, LETTERS, 0:9), 10L, replace = TRUE),
+      collapse = ""
+    )
+  )
+}
+
+# ---------------------------------------------------------------------
+# knit_print — defers to as.tags for HTML; raw blocks for other targets
 # ---------------------------------------------------------------------
 
 #' @rawNamespace S3method(knitr::knit_print, tabular_spec)
-knit_print.tabular_spec <- function(x, ...) {
+knit_print.tabular_spec <- function(x, ..., inline = FALSE) {
   pandoc_to <- tryCatch(knitr::pandoc_to(), error = function(e) NULL)
-  fmt <- if (isTRUE(pandoc_to %in% c("latex", "beamer"))) {
-    "latex"
-  } else if (isTRUE(pandoc_to %in% c("html", "revealjs"))) {
-    "html"
-  } else {
-    "md"
+
+  if (isTRUE(pandoc_to %in% c("latex", "beamer"))) {
+    # backend_latex pending — render markdown source as a
+    # transitional pandoc fallback. Quarto / Rmd will compile it
+    # back into LaTeX before TeX-engine ingestion.
+    return(.knit_print_md(x))
+  }
+  if (isTRUE(pandoc_to == "docx")) {
+    return(.knit_print_md(x))
+  }
+  if (isTRUE(pandoc_to == "rtf")) {
+    return(.knit_print_md(x))
   }
 
-  dir <- getOption("tabular_preview_dir", default = tempdir())
-  file <- tempfile(tmpdir = dir, fileext = paste0(".", fmt))
-  emit(x, file, format = fmt)
-  payload <- paste(readLines(file, warn = FALSE), collapse = "\n")
+  # Default (html / revealjs / typst / unknown / interactive
+  # autoprint) routes through as.tags so knitr's tag handler
+  # renders inline.
+  knitr::knit_print(htmltools::as.tags(x, ...), ..., inline = inline)
+}
 
-  out <- switch(
-    fmt,
-    html = sprintf("\n```{=html}\n%s\n```\n", payload),
-    latex = sprintf("\n```{=latex}\n%s\n```\n", payload),
-    payload
-  )
-  class(out) <- "knit_asis"
-  out
+# Knit-print fallback for non-HTML targets pending their real
+# backends — emits the markdown source through a `knit_asis`
+# wrapper so pandoc swallows it directly.
+.knit_print_md <- function(x) {
+  file <- tempfile(fileext = ".md")
+  emit(x, file, format = "md")
+  payload <- paste(readLines(file, warn = FALSE), collapse = "\n")
+  class(payload) <- "knit_asis"
+  payload
 }
 
 # ---------------------------------------------------------------------
-# cli-tree structural summary (kept as the non-interactive
-# default + the explicit `output = "cli"` branch)
+# Structural cli-tree summary (the `output = "cli"` branch + the
+# fallback when an HTML render fails).
 # ---------------------------------------------------------------------
 
-# Structural cli-tree summary. Shows data dims, titles,
-# footnotes, and any prop set on the spec so far. Useful for
-# debugging spec composition without rendering — and the
-# default in non-interactive contexts (Rscript, R CMD check, CI)
-# where neither a viewer pane nor a console preview makes sense.
 .tabular_spec_print_cli <- function(x) {
   cli::cli_h3("{.cls tabular_spec}")
 
@@ -343,10 +491,6 @@ knit_print.tabular_spec <- function(x, ...) {
   invisible(x)
 }
 
-# Summarise a preset_spec by listing knobs that differ from the
-# preset_spec() factory defaults. Keeps the `Preset:` line short
-# for the common case (one or two knobs overridden) and silent
-# for the all-defaults case.
 .preset_diff_summary <- function(p) {
   defaults <- preset_spec()
   fields <- c("font_size", "font_family", "orientation", "paper_size")

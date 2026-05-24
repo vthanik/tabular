@@ -8,88 +8,86 @@
 \verb{<tabular_spec>: required}. The same object you'd hand to
 \code{\link[=emit]{emit()}}.}
 
-\item{output}{\emph{Preview format.} \verb{<character(1) | NULL>: default }NULL\code{ (auto)}. One of:
-\itemize{
-\item \code{NULL} (default) — auto-resolved per the rules above.
-\item \code{"html"} — viewer pane (or \code{cat()} if no viewer).
-\item \code{"md"} / \code{"markdown"} — markdown source to console.
-\item \code{"latex"} — LaTeX source to console.
-\item \code{"rtf"} / \code{"docx"} — HTML preview + cli note.
-\item \code{"pdf"} — HTML preview (PDF compile only on \code{emit()}).
-\item \code{"cli"} — structural cli-tree summary.
-}
+\item{...}{\emph{Forwarded to \code{htmltools::print} / \code{as.tags()}.}
+Use this to pass \code{id}, \code{style}, \code{class} overrides to the
+wrapping \verb{<div>}.}
 
-\strong{Tip:} set \code{options(tabular_print_output = "md")} to
-force markdown source at the console even when a viewer
-pane is available (handy when you want the raw text for
-copy / diff).}
+\item{view}{\emph{Open the viewer?} \verb{<logical(1)>: default }interactive()``. Same role as \code{gt::gt}'s `view` argument:
+passes through to htmltools as `browse = view`. Set
+`view = FALSE` to suppress the viewer for one call (e.g.
+to capture the HTML string without launching a window).}
 
-\item{...}{\emph{Reserved.} Ignored.}
+\item{output}{\emph{Force a specific preview format.} \verb{<character(1) | NULL>: default }NULL\code{ (auto)}. See the \strong{\code{output}
+argument} section above for the full list. The session
+default can be set via \code{options(tabular_print_output = "cli")} for users who prefer the structural summary over
+the HTML preview.}
 }
 \value{
 \emph{Invisibly returns \code{x}.} Side effect: opens the
-viewer or \code{cat()}s output.
+viewer, inlines under a chunk, or \code{cat()}s output.
 }
 \description{
-Renders a \code{tabular_spec} interactively. Default behaviour
-mirrors \code{tinytable::tt()} and \code{gt::gt()}: when an IDE viewer
-pane is available (RStudio, Positron, \code{htmlwidgets}'s
-standalone shim) the spec is rendered to a self-contained
-HTML tempfile and opened in the pane; at a plain console the
-markdown source is \code{cat()}-printed; in non-interactive
-contexts (Rscript, R CMD check, CI) the structural cli-tree
-summary is printed instead.
+Renders a \code{tabular_spec} interactively. The default behaviour
+mirrors \code{gt::gt()}: convert the spec to an \code{htmltools} tag
+list and let htmltools dispatch — RStudio + Positron viewer
+panes, Quarto / Rmd notebook inline, Databricks \code{displayHTML},
+and plain-console \code{cat()} are all handled without any IDE-
+specific branching.
 }
 \details{
-\strong{Output resolution.} The router considers, in order:
-\enumerate{
-\item An explicit \verb{output =} argument (always wins).
-\item An active \code{knit_print()} pass — handled by the
-\code{knit_print} S3 method, not here.
-\item An RStudio notebook context (active .qmd / .Rmd buffer) —
-HTML wrapped in \code{htmltools::browsable()} so it inlines
-under the chunk instead of opening the viewer pane.
-\item An interactive session with a viewer pane installed
-(\code{interactive() && !is.null(getOption("viewer"))}) — HTML
-in the pane.
-\item An interactive session with no viewer pane — markdown
-source \code{cat()}-ed to the console.
-\item Everything else (non-interactive) — the structural cli-tree
-summary.
-}
+\strong{Dispatch.} \code{print()} delegates to \code{\link[=as.tags.tabular_spec]{as.tags.tabular_spec()}}
+which returns an \code{htmltools::tagList}. That tag list is handed
+to \code{htmltools}'s own print method with \code{browse = view}:
+htmltools opens the IDE viewer when one is registered,
+inlines under a Quarto / Rmd chunk when running inside one,
+or \code{cat()}s the HTML when neither applies. No \code{is_rstudio()}
+/ \code{is_positron()} / \code{is_notebook()} heuristics — htmltools
+already knows.
 
-\strong{Format support.} Tabular has five backends; not all of
-them preview natively in the IDE pane:
+\strong{\code{view} argument.} Defaults to \code{interactive()}, the same
+universal off-switch \code{gt::gt()} uses. Non-interactive
+contexts (\code{Rscript}, \verb{R CMD check}, CI, devtools::test)
+bypass the viewer automatically. Pass \code{view = FALSE}
+explicitly at an interactive prompt to suppress the viewer
+for a single call.
+
+\strong{\code{output} argument.} Forces a specific preview format
+instead of the default HTML-via-htmltools path. One of:
 \itemize{
-\item \code{"html"} — viewer pane (native).
-\item \code{"md"} — markdown source \code{cat()} to console.
-\item \code{"latex"} — LaTeX source \code{cat()} to console (preview when
-\code{backend_latex} lands).
-\item \code{"rtf"} / \code{"docx"} — \emph{fall back to an HTML preview} + a
-cli note pointing at \code{emit(spec, "out.rtf")} /
-\code{emit(spec, "out.docx")} for the real artefact. The viewer
-pane cannot render RTF / OOXML; we render HTML so the user
-still sees the table.
-\item \code{"pdf"} — \emph{falls back to HTML preview}. We deliberately do
-NOT compile through tinytex on every autoprint (would burn
-seconds per print); \code{emit(spec, "out.pdf")} does the real
-compile.
-\item \code{"cli"} — force the structural cli-tree summary (handy when
-you want a quick prop / header / derive overview at the
-console even with the viewer pane available).
+\item \code{"html"} — same as the default, but explicit.
+\item \code{"md"} / \code{"markdown"} — \code{cat()} the markdown source to the
+console (round-trips through \code{backend_md}).
+\item \code{"latex"} — \code{cat()} the markdown source as a temporary
+placeholder (real LaTeX preview lands with \code{backend_latex}).
+\item \code{"rtf"} / \code{"docx"} / \code{"pdf"} — render an HTML preview and
+emit a cli note pointing at \code{\link[=emit]{emit()}} for the real
+artefact. The viewer pane cannot render RTF / OOXML, and
+we deliberately do \emph{not} compile through tinytex on every
+autoprint.
+\item \code{"cli"} — print the structural cli-tree summary (props,
+headers, derives, sort, pagination, preset). Useful for
+debugging spec composition without paying the HTML render
+cost.
 }
 
-\strong{Temp-file location.} Preview HTML files are written under
+\strong{Robustness.} The HTML render is wrapped in \code{tryCatch}; if
+rendering fails for any reason the printer falls back to the
+cli-tree summary and a \code{cli::cli_warn()} describing the
+failure, so a broken spec never crashes the REPL.
+
+\strong{Tempdir.} Preview HTML files live under
 \code{getOption("tabular_preview_dir", default = tempdir())}.
 Override the option to keep them in a stable location (handy
-when Linux browsers don't have read access to \verb{/tmp/}).
+on Linux distros where browsers don't have read access to
+\verb{/tmp/}).
 }
 \examples{
-# ---- Example 1: Build + autoprint ----
+# ---- Example 1: Build + autoprint (HTML preview) ----
 #
-# Build a spec and print it. Inside RStudio / Positron the
-# rendered HTML lands in the viewer pane; at a plain console
-# the markdown source is `cat()`-ed.
+# Build a spec and let autoprint render it. Inside RStudio /
+# Positron the HTML lands in the viewer pane; inside a
+# Quarto / Rmd chunk it inlines under the chunk; at a plain
+# console the HTML source is `cat()`-ed.
 tabular(
   saf_demo,
   titles = c("Table 14.1.1", "Demographics"),
@@ -98,20 +96,21 @@ tabular(
 
 # ---- Example 2: Force the cli-tree structural view ----
 #
-# The cli-tree summary shows props (cols, headers, derives,
-# sort, pagination, preset) at a glance. Useful for
+# The cli-tree summary shows props at a glance. Useful for
 # debugging spec composition without paying the HTML render
 # cost.
-spec <- tabular(
-  saf_demo,
-  titles = "Demographics"
-) |>
+spec <- tabular(saf_demo, titles = "Demographics") |>
   cols(variable = col_spec(usage = "group", label = "Characteristic"))
 
 print(spec, output = "cli")
 
 }
 \seealso{
+\strong{Tag conversion:} \code{as.tags.tabular_spec()} — the
+htmltools tag list that \code{print()} delegates to. Call it
+directly to embed the table in a custom \code{htmltools::tagList}
+or Shiny UI.
+
 \strong{Terminal verb:} \code{\link[=emit]{emit()}} writes the resolved artefact to
 disk; \code{print()} is for in-session preview only.
 
