@@ -1508,29 +1508,32 @@ backend_docx <- function(grid, file) {
     parts <- c(parts, sprintf("<w:gridSpan w:val=\"%d\"/>", gridspan))
   }
   if (is_style_node(style)) {
+    # Per-side border resolution via the shared cascade helper —
+    # explicit border_<side>_style/width/color win over the legacy
+    # Boolean knobs (rule_above / rule_below / border_left /
+    # border_right), which map to ("solid", 0.5pt, default) when
+    # TRUE. The helper returns NULL when the side carries no
+    # border; the corresponding `<w:top>` / `<w:left>` etc. is then
+    # omitted. OOXML cell-border emission order is top -> left ->
+    # bottom -> right (stable for byte determinism).
     border_inners <- character()
-    if (isTRUE(style@rule_above)) {
+    border_entries <- list(
+      list(side = "top", tag = "w:top"),
+      list(side = "left", tag = "w:left"),
+      list(side = "bottom", tag = "w:bottom"),
+      list(side = "right", tag = "w:right")
+    )
+    for (entry in border_entries) {
+      brd <- .effective_border(entry$side, style)
+      # NULL: no override (DOCX has no per-cell default border, so
+      # we simply emit nothing). list(style = "none", ...): explicit
+      # clear sentinel; same result here (suppress emission).
+      if (is.null(brd) || identical(brd$style, "none")) {
+        next
+      }
       border_inners <- c(
         border_inners,
-        "<w:top w:val=\"single\" w:sz=\"4\"/>"
-      )
-    }
-    if (isTRUE(style@border_left)) {
-      border_inners <- c(
-        border_inners,
-        "<w:left w:val=\"single\" w:sz=\"4\"/>"
-      )
-    }
-    if (isTRUE(style@rule_below)) {
-      border_inners <- c(
-        border_inners,
-        "<w:bottom w:val=\"single\" w:sz=\"4\"/>"
-      )
-    }
-    if (isTRUE(style@border_right)) {
-      border_inners <- c(
-        border_inners,
-        "<w:right w:val=\"single\" w:sz=\"4\"/>"
+        sprintf("<%s %s/>", entry$tag, .docx_border_attrs(brd))
       )
     }
     if (length(border_inners) > 0L) {
@@ -1556,6 +1559,37 @@ backend_docx <- function(grid, file) {
     }
   }
   paste0("<w:tcPr>", paste(parts, collapse = ""), "</w:tcPr>")
+}
+
+# Map one resolved border triple (style, width pt, color) to the
+# OOXML `<w:top|left|bottom|right>` attribute string. Width emits
+# in eighths-of-a-point (w:sz unit), capped to >= 2 so very thin
+# values still render in Word. Color "currentColor" surfaces as
+# w:color="auto" (the OOXML "inherit from theme" sentinel).
+.docx_border_attrs <- function(brd) {
+  val <- switch(
+    brd$style,
+    solid = "single",
+    dashed = "dashed",
+    dotted = "dotted",
+    double = "double",
+    dashdot = "dotDash",
+    "single"
+  )
+  sz <- max(2L, as.integer(round(brd$width * 8)))
+  color_attr <- if (
+    identical(brd$color, "currentColor") || is.na(brd$color)
+  ) {
+    "auto"
+  } else {
+    .docx_normalize_color(brd$color)
+  }
+  sprintf(
+    "w:val=\"%s\" w:sz=\"%d\" w:color=\"%s\"",
+    val,
+    sz,
+    color_attr
+  )
 }
 
 # Translate a `style_node` to a `<w:rPr>` XML fragment carrying

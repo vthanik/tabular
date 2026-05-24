@@ -538,12 +538,22 @@ backend_latex <- function(grid, file) {
   )
 }
 
-# Build a `\SetCell{halign=l/c/r,valign=t/m/b}` prefix for one
-# body cell, but only when the style_node carries an explicit
-# halign / valign override (predicate layer). Column-level
-# alignment is carried by the colspec; emitting `\SetCell` for
-# every cell would waste source and break tabularray's per-column
-# wrapping. Returns "" when the style is silent.
+# Build a `\SetCell{halign=l/c/r,valign=t/m/b}` prefix for one body
+# cell, but only when the style_node carries explicit halign /
+# valign overrides (predicate layer). Column-level alignment is
+# carried by the colspec; emitting `\SetCell` for every cell would
+# waste source and break tabularray's per-column wrapping. Returns
+# "" when the style is silent.
+#
+# Per-side cell border emission via tabularray is deferred to
+# Phase 6's brdr() integration: tabularray's per-cell border
+# surface (`hlines={...}`/`vlines={...}` at table level keyed by
+# row/col index) does not compose with a per-cell `\SetCell{}` and
+# would require building a richer table-level border manifest.
+# Phase 5 lands the cross-cutting surface (style_node scalars,
+# resolver, DOCX/RTF/HTML emission); LaTeX gains border emission
+# in Phase 6 when the `brdr()` constructor lets the table-level
+# manifest accumulate per-cell entries cleanly.
 .latex_setcell_alignment <- function(style) {
   if (!is_style_node(style)) {
     return("")

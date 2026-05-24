@@ -570,8 +570,9 @@ backend_html <- function(grid, file) {
           sn <- .cell_style_at(cells_style, i, col_names_visible[[j]])
           halign <- .effective_body_halign(sn, cs, preset)
           valign <- .effective_body_valign(sn, cs, preset)
-          attr <- .html_cell_class_attr(halign, valign)
-          paste0("<td", attr, ">", text, "</td>")
+          class_attr <- .html_cell_class_attr(halign, valign)
+          border_attr <- .html_cell_border_style_attr(sn)
+          paste0("<td", class_attr, border_attr, ">", text, "</td>")
         },
         character(1L)
       )
@@ -722,6 +723,60 @@ backend_html <- function(grid, file) {
     bottom = "valign-bottom",
     ""
   )
+}
+
+# Map one resolved border triple to the CSS `border-<side>: ...`
+# declaration text. `currentColor` is left as the CSS keyword so
+# the cell inherits the surrounding text color; explicit colours
+# pass through verbatim (hex or CSS name). `solid` / `dashed` /
+# `dotted` / `double` map 1:1 to CSS; `dashdot` falls back to
+# `dashed` (CSS has no native dash-dot stroke).
+.html_border_decl <- function(side, brd) {
+  if (is.null(brd) || identical(brd$style, "none")) {
+    return(NULL)
+  }
+  css_style <- switch(
+    brd$style,
+    solid = "solid",
+    dashed = "dashed",
+    dotted = "dotted",
+    double = "double",
+    dashdot = "dashed",
+    "solid"
+  )
+  sprintf("border-%s: %gpt %s %s;", side, brd$width, css_style, brd$color)
+}
+
+# Compose an inline `style="..."` fragment for one cell covering
+# any explicit borders set on the cascade. Returns `""` when no
+# side carries an override. Used in addition to the class attribute
+# so the CSS baseline still drives non-overridden cells.
+.html_cell_border_style_attr <- function(cell_style) {
+  if (!is_style_node(cell_style)) {
+    return("")
+  }
+  decls <- character()
+  for (side in c("top", "right", "bottom", "left")) {
+    brd <- .effective_border(side, cell_style)
+    if (is.null(brd)) {
+      next
+    }
+    if (identical(brd$style, "none")) {
+      # Explicit clear -> CSS `border-<side>: none` overrides any
+      # inherited baseline so the user's intent wins over the
+      # stylesheet's default rule.
+      decls <- c(decls, sprintf("border-%s: none;", side))
+      next
+    }
+    decl <- .html_border_decl(side, brd)
+    if (!is.null(decl)) {
+      decls <- c(decls, decl)
+    }
+  }
+  if (length(decls) == 0L) {
+    return("")
+  }
+  sprintf(" style=\"%s\"", paste(decls, collapse = " "))
 }
 
 # Compose a combined `class="..."` attribute for one cell. Emits

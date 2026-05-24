@@ -27,12 +27,24 @@ only the \code{pvalue} column's cells in matching rows.}
 Recognised attributes: \code{bold}, \code{italic}, \code{underline}, \code{color},
 \code{background}, \code{font_family}, \code{font_size}, \code{rule_above},
 \code{rule_below}, \code{border_left}, \code{border_right}, \code{padding},
-\code{blank_after}, \code{pretext}, \code{posttext}, \code{halign}, \code{valign}.
+\code{blank_after}, \code{pretext}, \code{posttext}, \code{halign}, \code{valign},
+and the per-side border triple
+\verb{border_\{top,bottom,left,right\}_\{style,width,color\}} (12
+scalars).
 
 \code{halign} is one of \code{"left"}, \code{"center"}, \code{"right"}. \code{valign}
 is one of \code{"top"}, \code{"middle"}, \code{"bottom"}. Per-cell alignment
 overrides win over \code{\link[=col_spec]{col_spec()}} column defaults, which in
 turn override \code{\link[=preset]{preset()}} body defaults.
+
+\verb{border_<side>_style} is one of \code{"solid"}, \code{"dashed"},
+\code{"dotted"}, \code{"double"}, \code{"dashdot"}, \code{"none"}.
+\verb{border_<side>_width} is a non-negative numeric in points
+(typical clinical values: 0.25, 0.5, 1, 1.5).
+\verb{border_<side>_color} is a hex \code{"#RRGGBB"}, a CSS colour name,
+or \code{"currentColor"}. The Boolean knobs (\code{rule_above},
+\code{rule_below}, \code{border_left}, \code{border_right}) remain available
+as a shorthand for \verb{("solid", 0.5pt, default colour)}.
 
 \strong{Note:} Unknown attribute names warn and are silently dropped
 (they do NOT pass through to the backend).}

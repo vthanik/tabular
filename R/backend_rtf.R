@@ -492,9 +492,16 @@ backend_rtf <- function(grid, file) {
   valign <- .effective_subgroup_valign(preset)
   align_tok <- .rtf_align_token(halign)
   valign_tok <- .rtf_valign_token(valign)
+  # Subgroup banner backend defaults: solid top + solid bottom
+  # (visual frame around the centred label row); left + right
+  # clear. No cell_style attaches to the banner today, so the
+  # cascade resolver is a no-op until Phase 6 wires
+  # preset@borders$subgroup as a theme-side override.
   cellx_line <- paste0(
-    "\\clbrdrt\\brdrs\\clbrdrb\\brdrs",
-    "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
+    .rtf_border_seg("top", NULL, "solid"),
+    .rtf_border_seg("bottom", NULL, "solid"),
+    .rtf_border_seg("left", NULL, "none"),
+    .rtf_border_seg("right", NULL, "none"),
     valign_tok,
     sprintf("\\cellx%d", as.integer(cellx[[length(cellx)]]))
   )
@@ -661,9 +668,15 @@ backend_rtf <- function(grid, file) {
     valign <- .effective_header_valign(cs, preset)
     align_tok <- .rtf_align_token(halign)
     valign_tok <- .rtf_valign_token(valign)
+    # Header band backend defaults: solid top + solid bottom (BMS
+    # Appendix I); left and right are clear. Header cells do not
+    # carry per-cell style_nodes today so the cascade only fires
+    # when callers extend the header-style surface (post-Phase 6).
     cellx_lines[[i]] <- paste0(
-      "\\clbrdrt\\brdrs\\clbrdrb\\brdrs",
-      "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
+      .rtf_border_seg("top", NULL, "solid"),
+      .rtf_border_seg("bottom", NULL, "solid"),
+      .rtf_border_seg("left", NULL, "none"),
+      .rtf_border_seg("right", NULL, "none"),
       valign_tok,
       sprintf("\\cellx%d", as.integer(cellx[[i]]))
     )
@@ -719,11 +732,17 @@ backend_rtf <- function(grid, file) {
       valign <- .effective_body_valign(sn, cs, preset)
       align_tok <- .rtf_align_token(halign)
       valign_tok <- .rtf_valign_token(valign)
-      bottom <- if (is_last_row) "\\clbrdrb\\brdrs" else "\\clbrdrb\\brdrnone"
+      # Backend default per-side borders for a body cell: top and
+      # left and right are clear; bottom carries the solid rule only
+      # on the final body row of the page (matches BMS Appendix I's
+      # closing rule). The cascade resolver overrides these defaults
+      # when the user has set explicit border_<side>_style / etc.
+      bottom_default <- if (is_last_row) "solid" else "none"
       cellx_lines[[i]] <- paste0(
-        "\\clbrdrt\\brdrnone",
-        bottom,
-        "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
+        .rtf_border_seg("top", sn, "none"),
+        .rtf_border_seg("bottom", sn, bottom_default),
+        .rtf_border_seg("left", sn, "none"),
+        .rtf_border_seg("right", sn, "none"),
         valign_tok,
         sprintf("\\cellx%d", as.integer(cellx[[i]]))
       )
@@ -781,6 +800,43 @@ backend_rtf <- function(grid, file) {
     bottom = "\\clvertalb",
     ""
   )
+}
+
+# Per-side border segment for the cell prelude. `side` is one of
+# "top", "bottom", "left", "right". `cell_style` may be NULL or a
+# `style_node`; `backend_default` is the backend's intrinsic per-
+# row choice ("solid" or "none") and applies only when the cascade
+# does not return an override.
+#
+# Returns a fragment like `\clbrdrt\brdrs\brdrw10` (solid 0.5pt) or
+# `\clbrdrt\brdrnone` for the cleared case.
+.rtf_border_seg <- function(side, cell_style, backend_default = "none") {
+  brd <- .effective_border(side, cell_style)
+  letter <- substr(side, 1, 1)
+  prefix <- paste0("\\clbrdr", letter)
+  if (is.null(brd)) {
+    # No cascade override; fall back to the backend's per-row default.
+    if (identical(backend_default, "solid")) {
+      return(paste0(prefix, "\\brdrs\\brdrw10"))
+    }
+    return(paste0(prefix, "\\brdrnone"))
+  }
+  if (identical(brd$style, "none")) {
+    # Explicit clear -> suppress the backend default and emit
+    # \brdrnone unconditionally.
+    return(paste0(prefix, "\\brdrnone"))
+  }
+  style_tok <- switch(
+    brd$style,
+    solid = "\\brdrs",
+    dashed = "\\brdrdash",
+    dotted = "\\brdrdot",
+    double = "\\brdrdb",
+    dashdot = "\\brdrdashd",
+    "\\brdrs"
+  )
+  twips <- max(1L, as.integer(round(brd$width * 20)))
+  paste0(prefix, style_tok, sprintf("\\brdrw%d", twips))
 }
 
 # Group a vector into runs of consecutive equal values, including

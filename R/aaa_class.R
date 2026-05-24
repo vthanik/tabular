@@ -38,6 +38,19 @@
 .decimal_metrics_values <- c("afm", "systemfonts")
 .chrome_onscreen_values <- c("auto", "off")
 
+# Recognised line styles on the new border_{side}_style scalars.
+# "none" is the explicit clear-this-border sentinel; the back-compat
+# Boolean knobs (rule_above / border_left / etc.) map to "solid"
+# when TRUE. "dashdot" is the SAS-ODS extension we lift verbatim.
+.border_style_values <- c(
+  "solid",
+  "dashed",
+  "dotted",
+  "double",
+  "dashdot",
+  "none"
+)
+
 # Recognised keys on `preset_spec@alignment`. Each entry pairs with
 # a value-set drawn from `.align_anchor_values` (left/center/right)
 # for `_halign` and `.valign_values` (top/middle/bottom) for
@@ -380,7 +393,61 @@ style_node <- S7::new_class(
     pretext = S7::new_property(S7::class_character, default = NA_character_),
     posttext = S7::new_property(S7::class_character, default = NA_character_),
     halign = S7::new_property(S7::class_character, default = NA_character_),
-    valign = S7::new_property(S7::class_character, default = NA_character_)
+    valign = S7::new_property(S7::class_character, default = NA_character_),
+    # Per-side line style / width / color for the four cell borders.
+    # Default NA on every scalar; the legacy Boolean knobs
+    # (rule_above / rule_below / border_left / border_right) remain
+    # back-compat and map to ("solid", 0.5pt, default colour) when TRUE.
+    # Width is numeric points (0.25 / 0.5 / 1 / 1.5 are typical
+    # clinical settings); color is hex / CSS-name / "currentColor".
+    border_top_style = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    ),
+    border_top_width = S7::new_property(
+      S7::class_numeric,
+      default = NA_real_
+    ),
+    border_top_color = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    ),
+    border_bottom_style = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    ),
+    border_bottom_width = S7::new_property(
+      S7::class_numeric,
+      default = NA_real_
+    ),
+    border_bottom_color = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    ),
+    border_left_style = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    ),
+    border_left_width = S7::new_property(
+      S7::class_numeric,
+      default = NA_real_
+    ),
+    border_left_color = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    ),
+    border_right_style = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    ),
+    border_right_width = S7::new_property(
+      S7::class_numeric,
+      default = NA_real_
+    ),
+    border_right_color = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    )
   ),
   validator = function(self) {
     if (
@@ -406,6 +473,32 @@ style_node <- S7::new_class(
         "; got ",
         shQuote(self@valign)
       ))
+    }
+    for (side in c("top", "bottom", "left", "right")) {
+      sty <- S7::prop(self, paste0("border_", side, "_style"))
+      if (
+        length(sty) == 1L &&
+          !is.na(sty) &&
+          !(sty %in% .border_style_values)
+      ) {
+        return(paste0(
+          "@border_",
+          side,
+          "_style must be one of ",
+          paste(shQuote(.border_style_values), collapse = ", "),
+          "; got ",
+          shQuote(sty)
+        ))
+      }
+      wid <- S7::prop(self, paste0("border_", side, "_width"))
+      if (length(wid) == 1L && !is.na(wid) && wid < 0) {
+        return(paste0(
+          "@border_",
+          side,
+          "_width must be non-negative; got ",
+          wid
+        ))
+      }
     }
     NULL
   }

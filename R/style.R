@@ -69,12 +69,24 @@
 #'   Recognised attributes: `bold`, `italic`, `underline`, `color`,
 #'   `background`, `font_family`, `font_size`, `rule_above`,
 #'   `rule_below`, `border_left`, `border_right`, `padding`,
-#'   `blank_after`, `pretext`, `posttext`, `halign`, `valign`.
+#'   `blank_after`, `pretext`, `posttext`, `halign`, `valign`,
+#'   and the per-side border triple
+#'   `border_{top,bottom,left,right}_{style,width,color}` (12
+#'   scalars).
 #'
 #'   `halign` is one of `"left"`, `"center"`, `"right"`. `valign`
 #'   is one of `"top"`, `"middle"`, `"bottom"`. Per-cell alignment
 #'   overrides win over [`col_spec()`] column defaults, which in
 #'   turn override [`preset()`] body defaults.
+#'
+#'   `border_<side>_style` is one of `"solid"`, `"dashed"`,
+#'   `"dotted"`, `"double"`, `"dashdot"`, `"none"`.
+#'   `border_<side>_width` is a non-negative numeric in points
+#'   (typical clinical values: 0.25, 0.5, 1, 1.5).
+#'   `border_<side>_color` is a hex `"#RRGGBB"`, a CSS colour name,
+#'   or `"currentColor"`. The Boolean knobs (`rule_above`,
+#'   `rule_below`, `border_left`, `border_right`) remain available
+#'   as a shorthand for `("solid", 0.5pt, default colour)`.
 #'
 #'   **Note:** Unknown attribute names warn and are silently dropped
 #'   (they do NOT pass through to the backend).
@@ -257,7 +269,19 @@ style <- function(.spec, where, ..., .scope = "cell") {
   "pretext",
   "posttext",
   "halign",
-  "valign"
+  "valign",
+  "border_top_style",
+  "border_top_width",
+  "border_top_color",
+  "border_bottom_style",
+  "border_bottom_width",
+  "border_bottom_color",
+  "border_left_style",
+  "border_left_width",
+  "border_left_color",
+  "border_right_style",
+  "border_right_width",
+  "border_right_color"
 )
 
 # Build a style_node from a list of named attributes. Unknown
