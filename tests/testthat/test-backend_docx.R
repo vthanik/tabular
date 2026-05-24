@@ -7,7 +7,7 @@
 # Each test that needs to inspect inner XML calls this once.
 .unzip_docx <- function(docx_path) {
   out <- withr::local_tempdir(.local_envir = parent.frame())
-  zip::unzip(docx_path, exdir = out)
+  utils::unzip(docx_path, exdir = out)
   out
 }
 
@@ -34,11 +34,11 @@ test_that("emit(.docx) writes a non-empty .docx file at every OOXML-mandated pat
   expect_true(file.exists(out))
   expect_gt(file.size(out), 0L)
 
-  # Use `zip::zip_list()` so HIDDEN entries like `_rels/.rels` show
-  # up — `list.files()` would silently drop them. The path
-  # structure is load-bearing: Word and LibreOffice refuse to open
-  # a `.docx` with the OOXML scaffolding under wrong paths.
-  z <- zip::zip_list(out)
+  # Use `utils::unzip(list = TRUE)` so HIDDEN entries like
+  # `_rels/.rels` show up — `list.files()` would silently drop them.
+  # The path structure is load-bearing: Word and LibreOffice refuse
+  # to open a `.docx` with the OOXML scaffolding under wrong paths.
+  z <- utils::unzip(out, list = TRUE)
   expect_in(
     c(
       "[Content_Types].xml",
@@ -50,7 +50,7 @@ test_that("emit(.docx) writes a non-empty .docx file at every OOXML-mandated pat
       "word/settings.xml",
       "word/styles.xml"
     ),
-    z$filename
+    z$Name
   )
 })
 
@@ -135,35 +135,65 @@ test_that(".docx_root_rels points at word/document.xml + core + app properties",
   expect_match(rels, "Target=\"docProps/app.xml\"", fixed = TRUE)
 })
 
-test_that(".docx_doc_rels emits header / footer / hyperlink entries conditionally", {
-  none <- tabular:::.docx_doc_rels(FALSE, FALSE, character())
+test_that(".docx_doc_rels emits numeric rIds, conditional chrome, and hyperlink rels", {
+  rmap_none <- tabular:::.docx_rid_map(FALSE, FALSE, 0L)
+  none <- tabular:::.docx_doc_rels(character(), rmap_none)
   expect_match(none, "Target=\"styles.xml\"", fixed = TRUE)
   expect_match(none, "Target=\"settings.xml\"", fixed = TRUE)
+  expect_match(none, "Id=\"rId1\"", fixed = TRUE)
+  expect_match(none, "Id=\"rId5\"", fixed = TRUE)
   expect_false(grepl("header1.xml", none, fixed = TRUE))
   expect_false(grepl("footer1.xml", none, fixed = TRUE))
-  expect_false(grepl("rIdLink", none, fixed = TRUE))
 
-  both <- tabular:::.docx_doc_rels(TRUE, TRUE, character())
+  rmap_both <- tabular:::.docx_rid_map(TRUE, TRUE, 0L)
+  both <- tabular:::.docx_doc_rels(character(), rmap_both)
   expect_match(both, "Target=\"header1.xml\"", fixed = TRUE)
   expect_match(both, "Target=\"footer1.xml\"", fixed = TRUE)
+  # Header gets rId6, footer rId7 (with chrome present, hyperlinks
+  # start at rId8).
+  expect_match(both, "Id=\"rId6\"[^>]*Target=\"header1.xml\"")
+  expect_match(both, "Id=\"rId7\"[^>]*Target=\"footer1.xml\"")
 
+  rmap_links <- tabular:::.docx_rid_map(FALSE, FALSE, 2L)
   with_links <- tabular:::.docx_doc_rels(
-    FALSE,
-    FALSE,
-    c("https://a.example", "https://b.example")
+    c("https://a.example", "https://b.example"),
+    rmap_links
   )
-  expect_match(with_links, "Id=\"rIdLink1\"", fixed = TRUE)
-  expect_match(with_links, "Id=\"rIdLink2\"", fixed = TRUE)
-  expect_match(with_links, "Target=\"https://a.example\"", fixed = TRUE)
+  # No chrome -> hyperlinks start at rId6.
+  expect_match(with_links, "Id=\"rId6\"[^>]*Target=\"https://a.example\"")
+  expect_match(with_links, "Id=\"rId7\"[^>]*Target=\"https://b.example\"")
   expect_match(with_links, "TargetMode=\"External\"", fixed = TRUE)
 })
 
-test_that(".docx_styles_xml carries preset@font_family + half-point font size", {
+test_that(".docx_rid_map produces numeric rIds and shifts hyperlinks past chrome", {
+  m0 <- tabular:::.docx_rid_map(FALSE, FALSE, 0L)
+  expect_identical(m0$styles, "rId1")
+  expect_identical(m0$webSettings, "rId5")
+  expect_null(m0$header)
+  expect_null(m0$footer)
+  expect_identical(m0$hyperlinks, character())
+
+  m_both_links <- tabular:::.docx_rid_map(TRUE, TRUE, 2L)
+  expect_identical(m_both_links$header, "rId6")
+  expect_identical(m_both_links$footer, "rId7")
+  expect_identical(m_both_links$hyperlinks, c("rId8", "rId9"))
+})
+
+test_that(".docx_styles_xml uses theme-resolved font references and emits named styles", {
   preset <- preset_spec(font_family = "Arial", font_size = 11)
   styles <- tabular:::.docx_styles_xml(preset)
-  expect_match(styles, "w:ascii=\"Arial\"", fixed = TRUE)
+  # Default rFonts MUST reference the theme (minorHAnsi), not a
+  # CSS-generic family name. Embedding "serif" / "Arial" / etc.
+  # directly into w:ascii is the bug that makes Word reject the
+  # whole document — only theme-resolved or installed font names
+  # work universally.
+  expect_match(styles, "w:asciiTheme=\"minorHAnsi\"", fixed = TRUE)
   # 11pt -> 22 half-points
   expect_match(styles, "w:sz w:val=\"22\"", fixed = TRUE)
+  # Named styles for the title and footnote blocks.
+  expect_match(styles, "w:styleId=\"TabularTitle\"", fixed = TRUE)
+  expect_match(styles, "w:styleId=\"TabularFoot\"", fixed = TRUE)
+  expect_match(styles, "w:styleId=\"Hyperlink\"", fixed = TRUE)
 })
 
 test_that(".docx_core_xml carries the first title and fixed timestamps for determinism", {
@@ -179,7 +209,7 @@ test_that(".docx_core_xml carries the first title and fixed timestamps for deter
 
 test_that(".docx_section_pr emits letter portrait twips by default", {
   preset <- preset_spec()
-  sp <- tabular:::.docx_section_pr(preset, FALSE, FALSE)
+  sp <- tabular:::.docx_section_pr(preset)
   # Letter portrait: 8.5 x 11 in -> 12240 x 15840 twips
   expect_match(sp, "w:w=\"12240\" w:h=\"15840\"", fixed = TRUE)
   expect_false(grepl("w:orient=\"landscape\"", sp, fixed = TRUE))
@@ -187,18 +217,19 @@ test_that(".docx_section_pr emits letter portrait twips by default", {
 
 test_that(".docx_section_pr swaps width / height and tags orient for landscape", {
   preset <- preset_spec(orientation = "landscape")
-  sp <- tabular:::.docx_section_pr(preset, FALSE, FALSE)
+  sp <- tabular:::.docx_section_pr(preset)
   expect_match(sp, "w:w=\"15840\" w:h=\"12240\"", fixed = TRUE)
   expect_match(sp, "w:orient=\"landscape\"", fixed = TRUE)
 })
 
 test_that(".docx_section_pr inserts headerReference / footerReference only when chrome populated", {
   preset <- preset_spec()
-  no_chrome <- tabular:::.docx_section_pr(preset, FALSE, FALSE)
+  no_chrome <- tabular:::.docx_section_pr(preset, NULL)
   expect_false(grepl("w:headerReference", no_chrome, fixed = TRUE))
   expect_false(grepl("w:footerReference", no_chrome, fixed = TRUE))
 
-  both <- tabular:::.docx_section_pr(preset, TRUE, TRUE)
+  rmap <- tabular:::.docx_rid_map(TRUE, TRUE, 0L)
+  both <- tabular:::.docx_section_pr(preset, rmap)
   expect_match(both, "w:headerReference", fixed = TRUE)
   expect_match(both, "w:footerReference", fixed = TRUE)
 })
@@ -263,8 +294,8 @@ test_that("emit(.docx) writes header1.xml + footer1.xml when pagehead / pagefoot
     )
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
-  z <- zip::zip_list(out)
-  expect_in(c("word/header1.xml", "word/footer1.xml"), z$filename)
+  z <- utils::unzip(out, list = TRUE)
+  expect_in(c("word/header1.xml", "word/footer1.xml"), z$Name)
 
   unzipped <- .unzip_docx(out)
   ct <- paste(
@@ -378,14 +409,16 @@ test_that("<w:sectPr> wires headerReference / footerReference when chrome popula
     readLines(file.path(unzipped, "word/document.xml")),
     collapse = ""
   )
+  # Numeric rIds: rId6 = header, rId7 = footer when both chrome
+  # parts are populated and no hyperlinks are present.
   expect_match(
     doc,
-    "<w:headerReference r:id=\"rIdH\" w:type=\"default\"/>",
+    "<w:headerReference r:id=\"rId6\" w:type=\"default\"/>",
     fixed = TRUE
   )
   expect_match(
     doc,
-    "<w:footerReference r:id=\"rIdF\" w:type=\"default\"/>",
+    "<w:footerReference r:id=\"rId7\" w:type=\"default\"/>",
     fixed = TRUE
   )
 })
@@ -664,7 +697,7 @@ test_that("newline / <br/> renders as <w:r><w:br/></w:r>", {
   expect_match(doc, "line1", fixed = TRUE)
 })
 
-test_that("link runs wrap in <w:hyperlink> with rIdLinkN matching rels", {
+test_that("link runs wrap in <w:hyperlink> with numeric rIds matching rels", {
   spec <- tabular(
     data.frame(x = 1L),
     footnotes = c(
@@ -683,13 +716,12 @@ test_that("link runs wrap in <w:hyperlink> with rIdLinkN matching rels", {
     readLines(file.path(unzipped, "word/_rels/document.xml.rels")),
     collapse = ""
   )
-  # document.xml: two distinct rIds (the duplicate URL deduplicates)
-  expect_match(doc, "r:id=\"rIdLink1\"", fixed = TRUE)
-  expect_match(doc, "r:id=\"rIdLink2\"", fixed = TRUE)
+  # No chrome -> hyperlinks start at rId6 (post the 5 static rels).
+  expect_match(doc, "r:id=\"rId6\"", fixed = TRUE)
+  expect_match(doc, "r:id=\"rId7\"", fixed = TRUE)
   # rels: two External hyperlink relationships
-  expect_match(rels, "Id=\"rIdLink1\"", fixed = TRUE)
-  expect_match(rels, "Target=\"https://example.com\"", fixed = TRUE)
-  expect_match(rels, "Target=\"https://example.org\"", fixed = TRUE)
+  expect_match(rels, "Id=\"rId6\"[^>]*Target=\"https://example.com\"")
+  expect_match(rels, "Id=\"rId7\"[^>]*Target=\"https://example.org\"")
   expect_match(rels, "TargetMode=\"External\"", fixed = TRUE)
 })
 

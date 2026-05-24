@@ -350,7 +350,7 @@ test_that("HTML / LaTeX / RTF / DOCX widths agree byte-for-byte (cross-backend p
   tex_txt <- paste(readLines(tex_file), collapse = "\n")
   rtf_txt <- paste(readLines(rtf_file), collapse = "\n")
   docx_td <- withr::local_tempdir()
-  zip::unzip(docx_file, files = "word/document.xml", exdir = docx_td)
+  utils::unzip(docx_file, files = "word/document.xml", exdir = docx_td)
   docx_txt <- paste(
     readLines(file.path(docx_td, "word/document.xml")),
     collapse = "\n"

@@ -23,11 +23,11 @@
 # Byte-determinism. Two `emit()` calls with the same input produce
 # byte-identical .docx output (FDA reproducibility requirement).
 # Two guarantees:
-#   (1) Fixed mtime per zip entry — `zip::zip()` is called with
-#       `mtime = .docx_fixed_mtime` (the FAT epoch floor,
-#       1980-01-01 00:00:00 UTC).
-#   (2) Sorted entry order — files passed to `zip::zip()` are sorted
-#       alphabetically; no iteration-order randomness.
+#   (1) Fixed mtime per zip entry — every file is `Sys.setFileTime()`d
+#       to `.docx_fixed_mtime` (1980-01-01 00:00:00 UTC, the FAT
+#       epoch floor) before zipping.
+#   (2) Stable entry order — `[Content_Types].xml` pinned first per
+#       OPC §11, remainder sorted alphabetically. No randomness.
 #
 # Width consumption. DOCX uses twips (1/1440 inch) for table grids.
 # `<w:tblGrid><w:gridCol w:w="...">` reads `meta$cols` numeric
@@ -58,11 +58,31 @@
 # Constants
 # ---------------------------------------------------------------------
 
-# OOXML namespace declarations needed on every <w:document> /
-# <w:hdr> / <w:ftr> root. Kept in one place so all roots emit the
-# same prologue and byte-determinism stays trivial.
-.docx_ns_w <- "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\""
-.docx_ns_r <- "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\""
+# OOXML namespace declarations needed on every `<w:document>` /
+# `<w:hdr>` / `<w:ftr>` root. Pandoc and officer both declare the
+# full nine-namespace prologue (w / m / r / o / v / w10 / a / pic /
+# wp) even when the document body uses only `w:` elements; Word
+# on macOS schema-validates the prologue and rejects documents
+# that omit any of them. Kept in one place so all roots emit the
+# identical prologue and byte-determinism stays trivial.
+.docx_ns_decls <- paste(
+  "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"",
+  "xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\"",
+  "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"",
+  "xmlns:o=\"urn:schemas-microsoft-com:office:office\"",
+  "xmlns:v=\"urn:schemas-microsoft-com:vml\"",
+  "xmlns:w10=\"urn:schemas-microsoft-com:office:word\"",
+  "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"",
+  "xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"",
+  "xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\"",
+  sep = " "
+)
+
+# Bare XML prologue. Pandoc omits `standalone="yes"`; Word on macOS
+# rejects standalone-declared OOXML when the package references
+# external relationships (which every OOXML doc does). Match
+# pandoc's prologue exactly.
+.docx_xml_prologue <- "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 
 # Fixed mtime for every zip entry. The FAT filesystem epoch floor
 # (1980-01-01 00:00:00 UTC) — anything earlier is invalid in a zip
@@ -99,6 +119,7 @@ backend_docx <- function(grid, file) {
   # order is deterministic given the walk order in
   # `.docx_collect_hyperlinks()`.
   hyperlinks <- .docx_collect_hyperlinks(grid)
+  rid_map <- .docx_rid_map(has_ph, has_pf, length(hyperlinks))
 
   entries <- c(
     "[Content_Types].xml" = .docx_content_types(has_ph, has_pf),
@@ -106,13 +127,20 @@ backend_docx <- function(grid, file) {
     "docProps/app.xml" = .docx_app_xml(),
     "docProps/core.xml" = .docx_core_xml(meta),
     "word/_rels/document.xml.rels" = .docx_doc_rels(
-      has_ph,
-      has_pf,
-      hyperlinks
+      hyperlinks,
+      rid_map
     ),
-    "word/document.xml" = .docx_document_xml(grid, preset, hyperlinks),
+    "word/document.xml" = .docx_document_xml(
+      grid,
+      preset,
+      hyperlinks,
+      rid_map
+    ),
+    "word/fontTable.xml" = .docx_font_table(preset),
     "word/settings.xml" = .docx_settings_xml(),
-    "word/styles.xml" = .docx_styles_xml(preset)
+    "word/styles.xml" = .docx_styles_xml(preset),
+    "word/theme/theme1.xml" = .docx_theme_xml(preset),
+    "word/webSettings.xml" = .docx_web_settings_xml()
   )
   if (has_ph) {
     entries[["word/header1.xml"]] <- .docx_header_xml(
@@ -126,7 +154,15 @@ backend_docx <- function(grid, file) {
       preset
     )
   }
-  entries[sort(names(entries))]
+  # OPC (Open Packaging Conventions) MANDATES that `[Content_Types].xml`
+  # is the FIRST part in the ZIP central directory. Word and many
+  # OOXML parsers reject the archive otherwise. We pin it first
+  # explicitly, then sort the remainder alphabetically for
+  # determinism.
+  ct_name <- "[Content_Types].xml"
+  rest <- setdiff(names(entries), ct_name)
+  ordered <- c(ct_name, sort(rest))
+  entries[ordered]
 }
 
 # Resolve the active preset, falling back to factory defaults when
@@ -134,6 +170,51 @@ backend_docx <- function(grid, file) {
 # backend's pattern).
 .docx_resolve_preset <- function(preset) {
   if (is.null(preset) || !is_preset_spec(preset)) preset_spec() else preset
+}
+
+# Compute the per-document rId registry. Word on macOS schema-
+# validates relationship IDs against the conventional `rId<N>`
+# (1-indexed integers) pattern; semantic IDs like `rIdH` /
+# `rIdLink1` parse-fail. Numeric rIds are assigned in a fixed
+# order:
+#
+#   rId1 styles | rId2 settings | rId3 theme | rId4 fontTable | rId5 webSettings
+#   rId6  header   (only when pagehead populated)
+#   rId7  footer   (only when pagefoot populated; rId6 if header absent)
+#   rId(next..)    one per unique external hyperlink, in first-
+#                  encounter order from `.docx_collect_hyperlinks()`.
+#
+# Returns a list:
+#   $styles / $settings / $theme / $fontTable / $webSettings  one rId each
+#   $header / $footer    one rId each (NULL when absent)
+#   $hyperlinks          character() of rIds, parallel to the URL vector
+.docx_rid_map <- function(has_pagehead, has_pagefoot, n_hyperlinks) {
+  m <- list(
+    styles = "rId1",
+    settings = "rId2",
+    theme = "rId3",
+    fontTable = "rId4",
+    webSettings = "rId5",
+    header = NULL,
+    footer = NULL,
+    hyperlinks = character()
+  )
+  next_id <- 6L
+  if (has_pagehead) {
+    m$header <- sprintf("rId%d", next_id)
+    next_id <- next_id + 1L
+  }
+  if (has_pagefoot) {
+    m$footer <- sprintf("rId%d", next_id)
+    next_id <- next_id + 1L
+  }
+  if (n_hyperlinks > 0L) {
+    m$hyperlinks <- sprintf(
+      "rId%d",
+      seq.int(next_id, length.out = n_hyperlinks)
+    )
+  }
+  m
 }
 
 # Compose `word/document.xml`. Body is: title block (page-1
@@ -144,24 +225,20 @@ backend_docx <- function(grid, file) {
 # Inline AST runs through `.render_docx_inline()` everywhere user
 # content appears (titles, footnotes, col labels, body cells).
 # Commits 4-5 wire page chrome refs and per-cell styling.
-.docx_document_xml <- function(grid, preset, hyperlinks) {
+.docx_document_xml <- function(grid, preset, hyperlinks, rid_map) {
   meta <- grid@metadata
-  has_ph <- .page_band_is_populated(meta$pagehead_ast)
-  has_pf <- .page_band_is_populated(meta$pagefoot_ast)
   titles_block <- .docx_title_block(
     meta$titles_ast %||% list(),
-    hyperlinks
+    hyperlinks,
+    rid_map
   )
-  table_block <- .render_docx_table(grid, preset, hyperlinks)
+  table_block <- .render_docx_table(grid, preset, hyperlinks, rid_map)
   footnotes_block <- .docx_footnote_block(
     meta$footnotes_ast %||% list(),
-    hyperlinks
+    hyperlinks,
+    rid_map
   )
-  sect_pr <- .docx_section_pr(
-    preset,
-    has_pagehead = has_ph,
-    has_pagefoot = has_pf
-  )
+  sect_pr <- .docx_section_pr(preset, rid_map)
 
   body <- paste0(
     paste(titles_block, collapse = ""),
@@ -170,32 +247,30 @@ backend_docx <- function(grid, file) {
     sect_pr
   )
   paste0(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+    .docx_xml_prologue,
     "<w:document ",
-    .docx_ns_w,
-    " ",
-    .docx_ns_r,
+    .docx_ns_decls,
     "><w:body>",
     body,
     "</w:body></w:document>"
   )
 }
 
-# Render the title block: one centred paragraph per title with
-# the title's inline AST rendered through `.render_docx_inline()`.
-# An outer bold wrap (commit-2 default) is applied via the
-# paragraph's run defaults inherited from word/styles.xml — we
-# only set bold here when the AST has no explicit run styling.
-.docx_title_block <- function(titles_ast, hyperlinks) {
+# Render the title block: one paragraph per title, each tagged
+# with the `TabularTitle` named style (centred + bold; defined in
+# styles.xml). Inline AST flows through `.render_docx_inline()`.
+# The style supplies bold so we don't need a `default_rpr`; nested
+# bold/italic/sup runs still compound via inline `<w:rPr>` tokens.
+.docx_title_block <- function(titles_ast, hyperlinks, rid_map = NULL) {
   if (length(titles_ast) == 0L) {
     return(character())
   }
   vapply(
     titles_ast,
     function(ast) {
-      runs <- .render_docx_inline(ast, hyperlinks, default_rpr = "<w:b/>")
+      runs <- .render_docx_inline(ast, hyperlinks, rid_map = rid_map)
       paste0(
-        "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr>",
+        "<w:p><w:pPr><w:pStyle w:val=\"TabularTitle\"/></w:pPr>",
         runs,
         "</w:p>"
       )
@@ -204,19 +279,20 @@ backend_docx <- function(grid, file) {
   )
 }
 
-# Render the footnote block: one left-aligned paragraph per
-# footnote. Inline AST flows through `.render_docx_inline()` so
-# bold / italic / sup / link markup all surface in the .docx.
-.docx_footnote_block <- function(footnotes_ast, hyperlinks) {
+# Render the footnote block: one paragraph per footnote, each
+# tagged with the `TabularFoot` named style (left-aligned; defined
+# in styles.xml). Inline AST flows through `.render_docx_inline()`
+# so bold / italic / sup / link markup all surface in the .docx.
+.docx_footnote_block <- function(footnotes_ast, hyperlinks, rid_map = NULL) {
   if (length(footnotes_ast) == 0L) {
     return(character())
   }
   vapply(
     footnotes_ast,
     function(ast) {
-      runs <- .render_docx_inline(ast, hyperlinks)
+      runs <- .render_docx_inline(ast, hyperlinks, rid_map = rid_map)
       paste0(
-        "<w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr>",
+        "<w:p><w:pPr><w:pStyle w:val=\"TabularFoot\"/></w:pPr>",
         runs,
         "</w:p>"
       )
@@ -244,7 +320,12 @@ backend_docx <- function(grid, file) {
 # Empty grid (zero pages): emit a left-aligned "(no rows)" paragraph
 # instead of an empty table. Matches the RTF backend's `\plain\qc`
 # behaviour and avoids Word's empty-table-row glitch.
-.render_docx_table <- function(grid, preset, hyperlinks = character()) {
+.render_docx_table <- function(
+  grid,
+  preset,
+  hyperlinks = character(),
+  rid_map = NULL
+) {
   meta <- grid@metadata
   pages <- grid@pages
   if (length(pages) == 0L) {
@@ -264,7 +345,8 @@ backend_docx <- function(grid, file) {
     col_names_vis,
     cols,
     widths,
-    hyperlinks
+    hyperlinks,
+    rid_map
   )
   body_rows <- .render_docx_body_rows(pages, col_names_vis, cols, widths)
 
@@ -434,7 +516,8 @@ backend_docx <- function(grid, file) {
   col_names_vis,
   cols,
   widths_twips,
-  hyperlinks
+  hyperlinks,
+  rid_map = NULL
 ) {
   cells <- vapply(
     seq_along(col_names_vis),
@@ -442,7 +525,12 @@ backend_docx <- function(grid, file) {
       nm <- col_names_vis[[j]]
       ast <- col_labels_ast[[nm]]
       runs <- if (is_inline_ast(ast)) {
-        .render_docx_inline(ast, hyperlinks, default_rpr = "<w:b/>")
+        .render_docx_inline(
+          ast,
+          hyperlinks,
+          default_rpr = "<w:b/>",
+          rid_map = rid_map
+        )
       } else {
         paste0(
           "<w:r><w:rPr><w:b/></w:rPr>",
@@ -561,7 +649,7 @@ backend_docx <- function(grid, file) {
 # Compose the trailing `<w:sectPr>` carrying paper size, orientation,
 # margins, and (when chrome is populated) header / footer references.
 # Lives at the end of `<w:body>` so it applies to the document body.
-.docx_section_pr <- function(preset, has_pagehead, has_pagefoot) {
+.docx_section_pr <- function(preset, rid_map = NULL) {
   paper <- .docx_paper_twips(preset@paper_size, preset@orientation)
   margins <- .docx_margins_twips(preset@margins)
 
@@ -583,16 +671,22 @@ backend_docx <- function(grid, file) {
     margins$left
   )
   refs <- character()
-  if (has_pagehead) {
+  if (!is.null(rid_map) && !is.null(rid_map$header)) {
     refs <- c(
       refs,
-      "<w:headerReference r:id=\"rIdH\" w:type=\"default\"/>"
+      sprintf(
+        "<w:headerReference r:id=\"%s\" w:type=\"default\"/>",
+        rid_map$header
+      )
     )
   }
-  if (has_pagefoot) {
+  if (!is.null(rid_map) && !is.null(rid_map$footer)) {
     refs <- c(
       refs,
-      "<w:footerReference r:id=\"rIdF\" w:type=\"default\"/>"
+      sprintf(
+        "<w:footerReference r:id=\"%s\" w:type=\"default\"/>",
+        rid_map$footer
+      )
     )
   }
   paste0(
@@ -668,11 +762,9 @@ backend_docx <- function(grid, file) {
     rows <- c(rows, .docx_chrome_row(row_ast, preset))
   }
   paste0(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+    .docx_xml_prologue,
     "<w:hdr ",
-    .docx_ns_w,
-    " ",
-    .docx_ns_r,
+    .docx_ns_decls,
     ">",
     paste(rows, collapse = ""),
     "</w:hdr>"
@@ -692,11 +784,9 @@ backend_docx <- function(grid, file) {
     rows <- c(rows, .docx_chrome_row(row_ast, preset))
   }
   paste0(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+    .docx_xml_prologue,
     "<w:ftr ",
-    .docx_ns_w,
-    " ",
-    .docx_ns_r,
+    .docx_ns_decls,
     ">",
     paste(rows, collapse = ""),
     "</w:ftr>"
@@ -849,8 +939,11 @@ backend_docx <- function(grid, file) {
     "<Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>",
     "<Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>",
     "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>",
+    "<Override PartName=\"/word/fontTable.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml\"/>",
     "<Override PartName=\"/word/settings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/>",
-    "<Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>"
+    "<Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>",
+    "<Override PartName=\"/word/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>",
+    "<Override PartName=\"/word/webSettings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.webSettings+xml\"/>"
   )
   if (has_pagehead) {
     overrides <- c(
@@ -865,7 +958,7 @@ backend_docx <- function(grid, file) {
     )
   }
   paste0(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+    .docx_xml_prologue,
     "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">",
     "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>",
     "<Default Extension=\"xml\" ContentType=\"application/xml\"/>",
@@ -878,7 +971,7 @@ backend_docx <- function(grid, file) {
 # document, the core properties, and the extended properties.
 .docx_root_rels <- function() {
   paste0(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+    .docx_xml_prologue,
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
     "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>",
     "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties\" Target=\"docProps/core.xml\"/>",
@@ -888,71 +981,190 @@ backend_docx <- function(grid, file) {
 }
 
 # `word/_rels/document.xml.rels` — document-level relationships:
-# styles + settings always; header / footer conditionally; one
-# hyperlink relationship per unique URL collected from the grid's
-# inline ASTs (rId = `rIdLinkN`, 1-indexed, first-encounter order).
+# styles + settings + theme + fontTable + webSettings always;
+# header / footer conditionally; one hyperlink relationship per
+# unique URL collected from the grid's inline ASTs.
 # `TargetMode="External"` is mandatory on every hyperlink rel.
-.docx_doc_rels <- function(
-  has_pagehead,
-  has_pagefoot,
-  hyperlinks = character()
-) {
+# Numeric rIds are assigned by `.docx_rid_map()` so the format
+# matches the convention Word's relationship resolver expects.
+.docx_doc_rels <- function(hyperlinks, rid_map) {
   rels <- c(
-    "<Relationship Id=\"rIdS\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>",
-    "<Relationship Id=\"rIdT\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>"
+    sprintf(
+      "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>",
+      rid_map$styles
+    ),
+    sprintf(
+      "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>",
+      rid_map$settings
+    ),
+    sprintf(
+      "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/>",
+      rid_map$theme
+    ),
+    sprintf(
+      "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable\" Target=\"fontTable.xml\"/>",
+      rid_map$fontTable
+    ),
+    sprintf(
+      "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSettings\" Target=\"webSettings.xml\"/>",
+      rid_map$webSettings
+    )
   )
-  if (has_pagehead) {
+  if (!is.null(rid_map$header)) {
     rels <- c(
       rels,
-      "<Relationship Id=\"rIdH\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header\" Target=\"header1.xml\"/>"
+      sprintf(
+        "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header\" Target=\"header1.xml\"/>",
+        rid_map$header
+      )
     )
   }
-  if (has_pagefoot) {
+  if (!is.null(rid_map$footer)) {
     rels <- c(
       rels,
-      "<Relationship Id=\"rIdF\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer\" Target=\"footer1.xml\"/>"
+      sprintf(
+        "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer\" Target=\"footer1.xml\"/>",
+        rid_map$footer
+      )
     )
   }
   for (i in seq_along(hyperlinks)) {
     rels <- c(
       rels,
       sprintf(
-        "<Relationship Id=\"rIdLink%d\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink\" Target=\"%s\" TargetMode=\"External\"/>",
-        i,
+        "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink\" Target=\"%s\" TargetMode=\"External\"/>",
+        rid_map$hyperlinks[[i]],
         .docx_escape_attr(hyperlinks[[i]])
       )
     )
   }
   paste0(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+    .docx_xml_prologue,
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
     paste(rels, collapse = ""),
     "</Relationships>"
   )
 }
 
-# `word/styles.xml` — minimal style definitions. Default run +
-# paragraph properties are set from `preset@font_family` (resolved
-# via the cross-backend font stack) and `preset@font_size`
-# (converted to half-points). Word inherits everything else from
-# its built-in Normal style; we don't override paragraph spacing,
-# indent, or numbering.
+# `word/styles.xml` — style definitions, pandoc-shaped. Defaults
+# point at the **theme** font (`asciiTheme="minorHAnsi"`) instead of
+# a hardcoded face name; the theme cascade in `word/theme/theme1.xml`
+# resolves `minorHAnsi` -> a real installed face the consuming app
+# recognises (Word ships Aptos by default; LibreOffice substitutes
+# Liberation). This avoids the trap of embedding CSS-generic family
+# names ("serif", "sans") into `<w:rFonts w:ascii=>`, which Word
+# treats as unknown fonts and refuses to open.
+#
+# Three named styles are declared so other parts of `document.xml`
+# can reference them via `<w:pStyle>` instead of repeating inline
+# direct formatting on every paragraph:
+#
+#   Normal       — Word's default; we attach docDefaults to it.
+#   TabularTitle — centred bold, used by the title block.
+#   TabularFoot  — left-aligned, used by the footnote block.
 .docx_styles_xml <- function(preset) {
-  family <- .docx_primary_font(preset@font_family)
   half_pts <- as.integer(round(preset@font_size * 2))
   paste0(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+    .docx_xml_prologue,
     "<w:styles ",
-    .docx_ns_w,
-    "><w:docDefaults><w:rPrDefault><w:rPr>",
-    sprintf(
-      "<w:rFonts w:ascii=\"%s\" w:hAnsi=\"%s\" w:cs=\"%s\"/>",
-      .docx_escape_attr(family),
-      .docx_escape_attr(family),
-      .docx_escape_attr(family)
-    ),
+    .docx_ns_decls,
+    ">",
+    "<w:docDefaults><w:rPrDefault><w:rPr>",
+    "<w:rFonts w:asciiTheme=\"minorHAnsi\" w:hAnsiTheme=\"minorHAnsi\" w:cstheme=\"minorBidi\" w:eastAsiaTheme=\"minorEastAsia\"/>",
     sprintf("<w:sz w:val=\"%d\"/><w:szCs w:val=\"%d\"/>", half_pts, half_pts),
-    "</w:rPr></w:rPrDefault></w:docDefaults></w:styles>"
+    "<w:lang w:val=\"en-US\" w:eastAsia=\"en-US\" w:bidi=\"ar-SA\"/>",
+    "</w:rPr></w:rPrDefault>",
+    "<w:pPrDefault><w:pPr><w:spacing w:after=\"0\" w:line=\"240\" w:lineRule=\"auto\"/></w:pPr></w:pPrDefault>",
+    "</w:docDefaults>",
+    "<w:style w:type=\"paragraph\" w:default=\"1\" w:styleId=\"Normal\">",
+    "<w:name w:val=\"Normal\"/><w:qFormat/>",
+    "</w:style>",
+    "<w:style w:type=\"character\" w:default=\"1\" w:styleId=\"DefaultParagraphFont\">",
+    "<w:name w:val=\"Default Paragraph Font\"/><w:uiPriority w:val=\"1\"/>",
+    "<w:semiHidden/><w:unhideWhenUsed/>",
+    "</w:style>",
+    "<w:style w:type=\"paragraph\" w:customStyle=\"1\" w:styleId=\"TabularTitle\">",
+    "<w:name w:val=\"Tabular Title\"/><w:basedOn w:val=\"Normal\"/><w:qFormat/>",
+    "<w:pPr><w:jc w:val=\"center\"/></w:pPr>",
+    "<w:rPr><w:b/></w:rPr>",
+    "</w:style>",
+    "<w:style w:type=\"paragraph\" w:customStyle=\"1\" w:styleId=\"TabularFoot\">",
+    "<w:name w:val=\"Tabular Footnote\"/><w:basedOn w:val=\"Normal\"/><w:qFormat/>",
+    "<w:pPr><w:jc w:val=\"left\"/></w:pPr>",
+    "</w:style>",
+    "<w:style w:type=\"character\" w:styleId=\"Hyperlink\">",
+    "<w:name w:val=\"Hyperlink\"/><w:basedOn w:val=\"DefaultParagraphFont\"/>",
+    "<w:uiPriority w:val=\"99\"/><w:unhideWhenUsed/>",
+    "<w:rPr><w:color w:val=\"0563C1\"/><w:u w:val=\"single\"/></w:rPr>",
+    "</w:style>",
+    "</w:styles>"
+  )
+}
+
+# `word/theme/theme1.xml` — Office Theme bundled at
+# `inst/templates/theme1.xml`. Carries `minorHAnsi` (body font) /
+# `majorHAnsi` (heading font) plus the standard Office colour
+# scheme. We ship the verbatim pandoc-equivalent Office Theme so
+# Word / LibreOffice / Pages all resolve our `asciiTheme`
+# references identically. The user's `preset@font_family` does NOT
+# influence the theme today (theme fonts are fixed to Office
+# defaults); a future plan can swap in a user-customised theme.
+.docx_theme_xml <- function(preset) {
+  path <- system.file("templates", "theme1.xml", package = "tabular")
+  if (!nzchar(path) || !file.exists(path)) {
+    # devtools::load_all() path — inst/templates is at the repo
+    # root in that case.
+    path <- file.path("inst", "templates", "theme1.xml")
+  }
+  paste(readLines(path, warn = FALSE), collapse = "\n")
+}
+
+# `word/fontTable.xml` — declares the font faces the document may
+# reference. Word uses panose1 / charset / family / pitch / sig
+# fingerprints to find a substitute when the named face is not
+# installed. We declare the five Office defaults (Calibri / Cambria
+# / Aptos / Times New Roman / Courier New) that Word knows how to
+# substitute. Pandoc emits the same set.
+.docx_font_table <- function(preset) {
+  paste0(
+    .docx_xml_prologue,
+    "<w:fonts ",
+    .docx_ns_decls,
+    ">",
+    "<w:font w:name=\"Calibri\">",
+    "<w:panose1 w:val=\"020F0502020204030204\"/>",
+    "<w:charset w:val=\"00\"/><w:family w:val=\"swiss\"/><w:pitch w:val=\"variable\"/>",
+    "<w:sig w:usb0=\"E0002AFF\" w:usb1=\"C000247B\" w:usb2=\"00000009\" w:usb3=\"00000000\" w:csb0=\"000001FF\" w:csb1=\"00000000\"/>",
+    "</w:font>",
+    "<w:font w:name=\"Cambria\">",
+    "<w:panose1 w:val=\"02040503050406030204\"/>",
+    "<w:charset w:val=\"00\"/><w:family w:val=\"roman\"/><w:pitch w:val=\"variable\"/>",
+    "<w:sig w:usb0=\"E00002FF\" w:usb1=\"400004FF\" w:usb2=\"00000000\" w:usb3=\"00000000\" w:csb0=\"0000019F\" w:csb1=\"00000000\"/>",
+    "</w:font>",
+    "<w:font w:name=\"Times New Roman\">",
+    "<w:panose1 w:val=\"02020603050405020304\"/>",
+    "<w:charset w:val=\"00\"/><w:family w:val=\"roman\"/><w:pitch w:val=\"variable\"/>",
+    "<w:sig w:usb0=\"E0002EFF\" w:usb1=\"C000785B\" w:usb2=\"00000009\" w:usb3=\"00000000\" w:csb0=\"000001FF\" w:csb1=\"00000000\"/>",
+    "</w:font>",
+    "<w:font w:name=\"Courier New\">",
+    "<w:panose1 w:val=\"02070309020205020404\"/>",
+    "<w:charset w:val=\"00\"/><w:family w:val=\"modern\"/><w:pitch w:val=\"fixed\"/>",
+    "<w:sig w:usb0=\"E0002AFF\" w:usb1=\"C0007843\" w:usb2=\"00000009\" w:usb3=\"00000000\" w:csb0=\"000001FF\" w:csb1=\"00000000\"/>",
+    "</w:font>",
+    "</w:fonts>"
+  )
+}
+
+# `word/webSettings.xml` — minimum Word web-compatibility settings.
+# `allowPNG` lets Word save embedded images as PNG;
+# `doNotSaveAsSingleFile` keeps multi-file output. Both are
+# Office-template defaults pandoc emits verbatim.
+.docx_web_settings_xml <- function() {
+  paste0(
+    .docx_xml_prologue,
+    "<w:webSettings ",
+    .docx_ns_decls,
+    "><w:allowPNG/><w:doNotSaveAsSingleFile/></w:webSettings>"
   )
 }
 
@@ -961,9 +1173,9 @@ backend_docx <- function(grid, file) {
 # block, which would otherwise carry random revision-save IDs.
 .docx_settings_xml <- function() {
   paste0(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+    .docx_xml_prologue,
     "<w:settings ",
-    .docx_ns_w,
+    .docx_ns_decls,
     "><w:defaultTabStop w:val=\"720\"/>",
     "<w:compat><w:compatSetting w:name=\"compatibilityMode\" w:uri=\"http://schemas.microsoft.com/office/word\" w:val=\"15\"/></w:compat>",
     "</w:settings>"
@@ -971,20 +1183,20 @@ backend_docx <- function(grid, file) {
 }
 
 # `docProps/app.xml` — application metadata. Static so the output
-# stays byte-deterministic. `tabular` is the named creator; the
-# version string is read from the installed package DESCRIPTION at
-# the time of emission (and DESCRIPTION is also deterministic
-# per-release).
+# stays byte-deterministic. `Application` names the creator;
+# `AppVersion` MUST be the Office `MM.mmmm` form (major.minor4) per
+# ECMA-376 Part 1 (and Word's strict macOS parser enforces it). A
+# multi-dot version like `0.0.0.9000` (the R package version, which
+# we used originally) parses as invalid and Word refuses to open
+# the whole `.docx`. We fix the value at `16.0000` (Office 2019 +
+# 2021 + 2024 use this) — it's a tombstone for "OOXML-compliant
+# Office-compatible writer", not a literal claim of being Word.
 .docx_app_xml <- function() {
-  version <- tryCatch(
-    as.character(utils::packageVersion("tabular")),
-    error = function(e) "0.0.0"
-  )
   paste0(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+    .docx_xml_prologue,
     "<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">",
     "<Application>tabular (R package)</Application>",
-    sprintf("<AppVersion>%s</AppVersion>", .docx_escape(version)),
+    "<AppVersion>16.0000</AppVersion>",
     "</Properties>"
   )
 }
@@ -998,7 +1210,7 @@ backend_docx <- function(grid, file) {
   title <- if (length(titles) > 0L) titles[[1L]] else ""
   fixed_ts <- "1980-01-01T00:00:00Z"
   paste0(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n",
+    .docx_xml_prologue,
     "<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">",
     sprintf("<dc:title>%s</dc:title>", .docx_escape(title)),
     "<dc:creator>tabular</dc:creator>",
@@ -1033,10 +1245,23 @@ backend_docx <- function(grid, file) {
 # ---------------------------------------------------------------------
 
 # Write `entries` (a named character vector of zip-relative paths
-# -> UTF-8 string contents) to `file` as a deterministic ZIP.
-# Uses `zip::zip()` for fixed mtime control; the base R
-# `utils::zip()` would shell out to a system binary and bake in
-# the host filesystem's mtimes, which breaks reproducibility.
+# -> UTF-8 string contents) to `file` as an OPC-compliant ZIP.
+#
+# Why `utils::zip()` over `zip::zip()`: the `zip` package emits ZIP
+# entries with the **data-descriptor flag** (bit 3 of the local-file-
+# header flags). The OOXML / OPC spec allows it, but Microsoft
+# Word's parser is intolerant of it on macOS and refuses to open
+# the archive ("Word experienced an error trying to open the file").
+# The system `zip` binary used by `utils::zip(flags = "-X9q")`
+# stores pre-computed CRCs in the local header (no descriptor),
+# matching pandoc's output and what Word expects.
+#
+# Determinism is preserved by (a) writing each file with a fixed
+# mtime (`.docx_fixed_mtime`, 1980-01-01 00:00:00 UTC) BEFORE
+# zipping, and (b) passing files to `utils::zip()` in a stable
+# order (caller sorted `entries`, with `[Content_Types].xml` pinned
+# first per the OPC spec). The `-X` flag strips host metadata
+# (UID/GID/extra fields); `-9` is max compression; `-q` is quiet.
 .docx_write_zip <- function(entries, file) {
   tmp <- tempfile("tabular_docx_")
   dir.create(tmp, recursive = TRUE)
@@ -1050,20 +1275,31 @@ backend_docx <- function(grid, file) {
     Sys.setFileTime(abs_path, .docx_fixed_mtime)
   }
 
-  # zip::zip() writes the central directory in the order files are
-  # passed; we sorted alphabetically in `.docx_zip_entries()` so
-  # the order is stable. `mode = "mirror"` stores each file with
-  # its path RELATIVE TO root — critical for OOXML, where files
-  # MUST live at exact paths (_rels/.rels, word/document.xml etc).
-  # `mode = "cherry-pick"` would flatten everything to basenames
-  # and the resulting .docx would not open in Word / LibreOffice.
-  zip::zip(
+  # utils::zip writes in the order `files` is given. Caller pinned
+  # `[Content_Types].xml` first per OPC.
+  if (file.exists(file)) {
+    unlink(file)
+  }
+  old_wd <- getwd()
+  on.exit(setwd(old_wd), add = TRUE)
+  setwd(tmp)
+  status <- utils::zip(
     zipfile = file,
     files = rels,
-    root = tmp,
-    mode = "mirror",
-    include_directories = FALSE
+    flags = "-X9q"
   )
+  setwd(old_wd)
+  if (!identical(status, 0L)) {
+    cli::cli_abort(
+      c(
+        "DOCX zip write failed.",
+        "x" = "utils::zip returned status {.val {status}}.",
+        "i" = "Ensure a {.code zip} binary is on PATH or {.envvar R_ZIPCMD} is set."
+      ),
+      class = "tabular_error_backend",
+      call = rlang::caller_env()
+    )
+  }
   invisible(file)
 }
 
@@ -1237,7 +1473,8 @@ backend_docx <- function(grid, file) {
 .render_docx_inline <- function(
   ast,
   hyperlinks = character(),
-  default_rpr = ""
+  default_rpr = "",
+  rid_map = NULL
 ) {
   if (!is_inline_ast(ast)) {
     return("")
@@ -1245,7 +1482,7 @@ backend_docx <- function(grid, file) {
   paste0(
     vapply(
       ast@runs,
-      function(run) .render_docx_run(run, hyperlinks, default_rpr),
+      function(run) .render_docx_run(run, hyperlinks, default_rpr, rid_map),
       character(1L)
     ),
     collapse = ""
@@ -1256,7 +1493,12 @@ backend_docx <- function(grid, file) {
 # through `children` for wrapping types via `.render_docx_children()`.
 # The dispatch table mirrors `.render_rtf_run()` 1:1 so AST behaviour
 # is consistent across backends — only the markup differs.
-.render_docx_run <- function(run, hyperlinks, default_rpr = "") {
+.render_docx_run <- function(
+  run,
+  hyperlinks,
+  default_rpr = "",
+  rid_map = NULL
+) {
   type <- run$type
   switch(
     type,
@@ -1265,34 +1507,44 @@ backend_docx <- function(grid, file) {
       run$children,
       hyperlinks,
       "<w:b/>",
-      default_rpr
+      default_rpr,
+      rid_map
     ),
     italic = .docx_run_wrap(
       run$children,
       hyperlinks,
       "<w:i/>",
-      default_rpr
+      default_rpr,
+      rid_map
     ),
     sup = .docx_run_wrap(
       run$children,
       hyperlinks,
       "<w:vertAlign w:val=\"superscript\"/>",
-      default_rpr
+      default_rpr,
+      rid_map
     ),
     sub = .docx_run_wrap(
       run$children,
       hyperlinks,
       "<w:vertAlign w:val=\"subscript\"/>",
-      default_rpr
+      default_rpr,
+      rid_map
     ),
     code = .docx_run_wrap(
       run$children,
       hyperlinks,
       "<w:rFonts w:ascii=\"Liberation Mono\" w:hAnsi=\"Liberation Mono\" w:cs=\"Liberation Mono\"/>",
-      default_rpr
+      default_rpr,
+      rid_map
     ),
-    link = .render_docx_link(run, hyperlinks, default_rpr),
-    span = .render_docx_children(run$children, hyperlinks, default_rpr),
+    link = .render_docx_link(run, hyperlinks, default_rpr, rid_map),
+    span = .render_docx_children(
+      run$children,
+      hyperlinks,
+      default_rpr,
+      rid_map
+    ),
     newline = "<w:r><w:br/></w:r>",
     .docx_run_plain(run$text %||% "", default_rpr)
   )
@@ -1322,20 +1574,31 @@ backend_docx <- function(grid, file) {
 # the inherited `default_rpr` so nested formatting compounds
 # correctly (e.g. bold inside italic -> both `<w:b/>` and `<w:i/>`
 # inside the same `<w:rPr>`).
-.docx_run_wrap <- function(children, hyperlinks, rpr_token, default_rpr) {
+.docx_run_wrap <- function(
+  children,
+  hyperlinks,
+  rpr_token,
+  default_rpr,
+  rid_map = NULL
+) {
   inherited <- paste0(default_rpr, rpr_token)
-  .render_docx_children(children, hyperlinks, inherited)
+  .render_docx_children(children, hyperlinks, inherited, rid_map)
 }
 
 # Render the children of a wrapping run.
-.render_docx_children <- function(children, hyperlinks, default_rpr) {
+.render_docx_children <- function(
+  children,
+  hyperlinks,
+  default_rpr,
+  rid_map = NULL
+) {
   if (length(children) == 0L) {
     return("")
   }
   paste0(
     vapply(
       children,
-      function(run) .render_docx_run(run, hyperlinks, default_rpr),
+      function(run) .render_docx_run(run, hyperlinks, default_rpr, rid_map),
       character(1L)
     ),
     collapse = ""
@@ -1349,25 +1612,35 @@ backend_docx <- function(grid, file) {
 # (`<w:rStyle w:val="Hyperlink"/>` plus inherited default_rpr).
 # Unknown / missing URL falls back to plain rendering with the
 # link text so the document never carries a dangling `r:id`.
-.render_docx_link <- function(run, hyperlinks, default_rpr) {
+.render_docx_link <- function(run, hyperlinks, default_rpr, rid_map = NULL) {
   href <- run$href %||% ""
   if (!nzchar(href)) {
-    return(.render_docx_children(run$children, hyperlinks, default_rpr))
+    return(.render_docx_children(
+      run$children,
+      hyperlinks,
+      default_rpr,
+      rid_map
+    ))
   }
   idx <- match(href, hyperlinks)
-  if (is.na(idx)) {
+  if (is.na(idx) || is.null(rid_map) || length(rid_map$hyperlinks) < idx) {
     # Defensive — shouldn't happen since the registry was built by
     # walking the same AST. Fall back to plain text rendering.
-    return(.render_docx_children(run$children, hyperlinks, default_rpr))
+    return(.render_docx_children(
+      run$children,
+      hyperlinks,
+      default_rpr,
+      rid_map
+    ))
   }
   link_rpr <- paste0(
     default_rpr,
     "<w:rStyle w:val=\"Hyperlink\"/>"
   )
-  inner <- .render_docx_children(run$children, hyperlinks, link_rpr)
+  inner <- .render_docx_children(run$children, hyperlinks, link_rpr, rid_map)
   sprintf(
-    "<w:hyperlink r:id=\"rIdLink%d\">%s</w:hyperlink>",
-    idx,
+    "<w:hyperlink r:id=\"%s\">%s</w:hyperlink>",
+    rid_map$hyperlinks[[idx]],
     inner
   )
 }
