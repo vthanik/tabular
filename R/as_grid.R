@@ -40,77 +40,157 @@
 #' Resolve a `tabular_spec` into a `tabular_grid`
 #'
 #' Runs the full engine pipeline against `spec` and returns the
-#' resolved `tabular_grid` — the same intermediate object `emit()`
+#' resolved `tabular_grid` — the same intermediate object [`emit()`]
 #' hands to a backend. Pure function: no files written, no global
-#' state touched.
+#' state touched. Use this during development to inspect what
+#' [`emit()`] will pass downstream, when building a custom backend,
+#' or when piping the resolved grid into a non-file consumer (e.g. an
+#' inline preview chunk in a Quarto notebook).
 #'
-#' @param spec A `tabular_spec` built via [`tabular()`] and the
-#'   downstream verb chain.
-#' @return A `tabular_grid` whose `@pages` is a list of one entry per
-#'   display page and whose `@metadata` carries the per-table
-#'   information (headers, titles_ast, footnotes_ast, col_names,
-#'   rows_per_page, total_pages, total_panels, ...). Each page entry
-#'   is a named list:
-#'   * `page_index`, `panel_index`, `is_continuation`, `continuation`,
-#'     `repeat_headers` — pagination plan from [`paginate()`].
-#'   * `row_indices`, `col_indices` — integer indices into the
-#'     resolved data.
-#'   * `col_names` — character vector of data columns visible on
-#'     this page (subset of `metadata$col_names`).
-#'   * `cells_text` — character matrix sliced to `[row_indices,
-#'     col_indices]`.
-#'   * `cells_ast` — list-matrix of `inline_ast` sliced to the same
-#'     shape.
-#'   * `cells_style` — list-matrix of `style_node` sliced to the same
-#'     shape.
-#'   * `col_labels_ast` — named list of `inline_ast` sliced to the
-#'     visible columns.
-#' @export
+#' @details
+#'
+#' **Engine pipeline order is load-bearing.** Phases run in this
+#' fixed order; the order matters because each phase reads the post-
+#' previous-phase state of the spec:
+#'
+#' 1. `engine_derive()` — materialise computed columns onto
+#'    `spec@data`. Derived columns become first-class from this
+#'    point forward.
+#' 2. `engine_sort()` — apply the sort spec; sort keys may reference
+#'    derived columns.
+#' 3. `engine_headers()` — validate the header tree and flatten it
+#'    to a band grid.
+#' 4. `engine_style()` — evaluate every style predicate against the
+#'    post-derive, post-sort data grid. A predicate may reference
+#'    any column in `spec@data` (including derives).
+#' 5. `engine_format()` — apply per-column formats, substitute
+#'    `na_text`, and parse every cell / title / footnote / label
+#'    through `parse_inline()` to its `inline_ast`.
+#' 6. `engine_decimal()` — column-wide decimal alignment for any
+#'    column flagged `col_spec(align = "decimal")`. Operates on the
+#'    formatted text; output is the same character matrix with NBSP
+#'    padding inserted so the decimal marks line up.
+#' 7. `engine_paginate()` — split into pages (vertical row chunks +
+#'    horizontal panel chunks). The plan drives the per-page slicing
+#'    of cells / styles / ASTs below.
+#'
+#' **The grid is the backend contract.** Every backend
+#' (`backend_md`, future `backend_html`, etc.) consumes a
+#' `tabular_grid` — never a `tabular_spec`. New backends only need
+#' to walk `grid@pages` and `grid@metadata`; the engine pipeline is
+#' a fixed dependency they never re-implement.
+#'
+#' **No I/O.** `as_grid()` writes nothing to disk and touches no
+#' global state. It is safe to call repeatedly during interactive
+#' exploration; cost is roughly that of one [`emit()`] without the
+#' backend write step.
+#'
+#' @param spec *The `tabular_spec` to resolve.*
+#'   `<tabular_spec>: required`. Built by the verb chain ([`tabular()`]
+#'   -> [`cols()`] -> [`headers()`] -> [`sort_rows()`] -> [`derive()`]
+#'   -> [`style()`] -> [`paginate()`] -> [`preset()`]).
+#'
+#' @return *A `tabular_grid` S7 object.* Two slots:
+#'   * `@pages` — a list of one entry per display page. Each entry is
+#'     a named list with pagination fields (`page_index`,
+#'     `panel_index`, `is_continuation`, `continuation`,
+#'     `repeat_headers`), row + column slice indices
+#'     (`row_indices`, `col_indices`, `col_names`), the sliced
+#'     cell text (`cells_text` — character matrix), sliced inline
+#'     ASTs (`cells_ast` — list-matrix of [`inline_ast`]), sliced
+#'     style nodes (`cells_style` — list-matrix of `style_node`),
+#'     and the column-label ASTs for the visible columns
+#'     (`col_labels_ast`).
+#'   * `@metadata` — per-table information backends consume once per
+#'     render: `format` (the resolved backend tag, `NA_character_`
+#'     for `as_grid()` calls), `rows_per_page`, `total_pages`,
+#'     `total_panels`, `nrow_data`, `ncol_data`, `col_names`, `cols`
+#'     (the original [`col_spec()`] entries keyed by column name),
+#'     `headers` (the flattened header band grid), `titles`,
+#'     `footnotes`, `titles_ast`, `footnotes_ast`, `col_labels_ast`.
+#'
 #' @examples
-#' # ---- Example 1: demographics grid ----
+#' # ---- Example 1: Demographics — inspect the resolved grid ----
 #' #
-#' # Resolve the canonical safety-pop demographics table into a
-#' # grid you can inspect before emitting. The grid is what every
-#' # backend consumes; printing the first page's cell matrix shows
-#' # exactly what the table will look like.
-#' spec <- tabular(
+#' # Resolve the canonical safety-pop demographics pipeline into a
+#' # `tabular_grid` and inspect what `emit()` would hand a backend.
+#' # The first page's `cells_text` matrix is the decimal-aligned
+#' # output as the backend would render it; the metadata carries the
+#' # pagination plan + header / title / footnote ASTs.
+#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#'
+#' demo <- tabular(
 #'   saf_demo,
-#'   titles = c("Table 14.1.1", "Demographics", "Safety Population"),
+#'   titles = c(
+#'     "Table 14.1.1",
+#'     "Demographics and Baseline Characteristics",
+#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'   ),
 #'   footnotes = "Source: ADSL."
 #' ) |>
 #'   cols(
 #'     variable   = col_spec(usage = "group", label = "Characteristic"),
 #'     stat_label = col_spec(label = "Statistic"),
-#'     placebo  = col_spec(label = "Placebo\nN=86",   align = "decimal"),
-#'     drug_50  = col_spec(label = "Low Dose\nN=96",  align = "decimal"),
-#'     drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
-#'     Total    = col_spec(label = "Total\nN=254",    align = "decimal")
-#'   )
-#' grid <- as_grid(spec)
-#' grid@metadata$total_pages
-#' grid@pages[[1]]$cells_text[1:3, ]
+#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
+#'   ) |>
+#'   sort_rows(by = c("variable", "stat_label"))
 #'
-#' # ---- Example 2: paginated safety AE-by-SOC/PT grid ----
+#' demo_grid <- as_grid(demo)
+#' demo_grid@metadata$total_pages
+#' demo_grid@pages[[1]]$cells_text[1:3, c("variable", "stat_label", "placebo")]
+#'
+#' # ---- Example 2: AE-by-SOC/PT paginated grid — verify the split ----
 #' #
-#' # Same shape; with pagination the grid carries multiple page
-#' # entries, each with its own sliced cell matrix. The header band
-#' # grid lives at the grid-level metadata, not per-page.
-#' ae <- tabular(
-#'   saf_aesocpt,
-#'   titles = c("Table 14.3.1", "AE by SOC and Preferred Term"),
+#' # Same shape as Example 1 plus pagination protecting the SOC
+#' # grouping. With a tight font size the grid carries multiple page
+#' # entries; concatenating each page's `row_indices` reconstructs
+#' # the full data, and every page carries the full header band grid
+#' # at `grid@metadata$headers` so backends can re-render the header
+#' # on every continuation page.
+#' ae <- saf_aesocpt
+#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
+#' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
+#'
+#' ae_spec <- tabular(
+#'   ae,
+#'   titles = c(
+#'     "Table 14.3.1",
+#'     "Adverse Events by SOC and Preferred Term",
+#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'   ),
 #'   footnotes = "Subjects counted once per SOC and once per PT."
 #' ) |>
 #'   cols(
-#'     soc      = col_spec(usage = "group", label = "System Organ Class"),
-#'     pt       = col_spec(label = "Preferred Term"),
-#'     placebo  = col_spec(label = "Placebo\nN=86",   align = "decimal"),
-#'     drug_50  = col_spec(label = "Low Dose\nN=96",  align = "decimal"),
-#'     drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
-#'     Total    = col_spec(label = "Total\nN=254",    align = "decimal")
+#'     soc      = col_spec(usage = "group", label = "SOC / PT"),
+#'     pt       = col_spec(visible = FALSE),
+#'     row_type = col_spec(visible = FALSE),
+#'     n_total  = col_spec(visible = FALSE),
+#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
 #'   ) |>
+#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
 #'   paginate(keep_together = "soc")
-#' ae_grid <- as_grid(ae)
+#'
+#' ae_grid <- as_grid(ae_spec)
 #' length(ae_grid@pages)
+#'
+#' @seealso
+#' **I/O sibling:** [`emit()`] writes the resolved grid to a file
+#' via a registered backend; `as_grid()` is the no-I/O entry into
+#' the same pipeline.
+#'
+#' **Build verbs the pipeline feeds from:** [`tabular()`],
+#' [`cols()`] / [`col_spec()`], [`headers()`], [`sort_rows()`],
+#' [`derive()`], [`style()`], [`paginate()`], [`preset()`].
+#'
+#' **Inline formatting helpers:** [`md()`], [`html()`].
+#'
+#' @export
 as_grid <- function(spec) {
   call <- rlang::caller_env()
   check_tabular_spec(spec, call = call)

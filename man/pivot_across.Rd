@@ -15,19 +15,22 @@ pivot_across(
 )
 }
 \arguments{
-\item{data}{A data frame with the standard ARD columns. At
-minimum needs \code{stat_name} and \code{stat}. Cards-style group columns
-(\code{group1}, \code{group1_level}, ...) and \code{variable} / \code{variable_level}
-are auto-detected. Tibbles / \code{card} objects / arrow tables are
-coerced via \code{as.data.frame()}.}
+\item{data}{\emph{Long ARD input data.}
+\verb{<data.frame>: required}. At minimum needs \code{stat_name} and
+\code{stat}. Cards-style group columns (\code{group1}, \code{group1_level},
+...) and \code{variable} / \code{variable_level} are auto-detected.
+Tibbles / \code{card} objects / arrow tables are coerced via
+\code{as.data.frame()}.}
 
-\item{statistic}{How to combine ARD stats into display cells.
-Three accepted forms — each illustrated below. Inside a format
-string, \code{{stat_name}} substitutes that stat's value from the ARD
-(for example, \code{"{n} ({p}\%)"} interpolates the \code{n} and \code{p} stats
-into a \code{"53 (62\%)"} cell). The lookup order when a value is
-needed for a variable is:
-per-variable -> per-context -> \code{default} -> the literal \code{"{n}"}.
+\item{statistic}{\emph{Format spec for cell composition.}
+\verb{<character(1) | named list>: required}. Combines one or more
+ARD stats into one display cell. Three accepted forms — each
+illustrated below. Inside a format string, \code{{stat_name}}
+substitutes that stat's value from the ARD (for example,
+\code{"{n} ({p}\%)"} interpolates the \code{n} and \code{p} stats into a
+\code{"53 (62\%)"} cell). The lookup order when a value is needed
+for a variable is: per-variable -> per-context -> \code{default}
+-> the literal \code{"{n}"}.
 \subsection{Form 1: single string}{
 
 One format string applied to every variable regardless of
@@ -97,21 +100,26 @@ label. Use for \verb{N / Mean (SD) / Median / Min, Max}-style blocks.
 }\if{html}{\out{</div>}}
 }}
 
-\item{column}{Grouping variable whose unique values become
-display columns. \code{NULL} (default) auto-detects from the ARD's
-\code{group1} value or — for renamed input — picks the single non-
-standard column. Pass a string when multiple group columns
-exist.}
+\item{column}{\emph{Grouping column whose unique values become arms.}
+\verb{<character(1) | NULL>: default NULL}. \code{NULL} auto-detects
+from the ARD's \code{group1} value or — for renamed input — picks
+the single non-standard column. Pass a string when multiple
+group columns exist.}
 
-\item{label}{Named character vector mapping variable names to
-display labels. E.g. \code{c(AGE = "Age (years)", SEX = "Sex")}.
-Applies to \code{variable}, \code{soc}, and \code{pt} columns of the output.}
+\item{label}{\emph{Variable-name to display-label map.}
+\verb{<character> | NULL: default NULL}. Named character vector
+mapping variable names to display labels (e.g.
+\code{c(AGE = "Age (years)", SEX = "Sex")}). Applies to
+\code{variable}, \code{soc}, and \code{pt} columns of the output. \code{NULL}
+leaves the upstream variable names verbatim.}
 
-\item{overall}{Column name to assign to rows whose arm is \code{NA}
-(overall / total rows). Default \code{"Total"}. Pass \code{NULL} to drop
-overall rows entirely.}
+\item{overall}{\emph{Column name for \code{NA}-arm (overall / total) rows.}
+\verb{<character(1) | NULL>: default "Total"}. Pass \code{NULL} to drop
+overall rows entirely (per-arm only output).}
 
-\item{decimals}{Decimal precision. Accepts two forms:
+\item{decimals}{\emph{Per-stat decimal precision.}
+\verb{<named integer | named list>: default }c()``. Accepts two
+forms:
 \itemize{
 \item \strong{named integer vector} — global per-stat overrides
 (\code{c(mean = 1, sd = 2, p = 0)}).
@@ -121,14 +129,22 @@ overall rows entirely.}
 
 Built-in defaults apply when neither sets a stat.}
 
-\item{fmt}{Named list of custom formatter functions keyed by
-\code{stat_name}. Each function takes a numeric value and returns a
-character string. Overrides built-ins and \code{decimals} for that
-stat. E.g.
-\code{list(p.value = function(x) if (x < 0.001) "<0.001" else sprintf("\%.3f", x))}.}
+\item{fmt}{\emph{Per-stat custom formatter functions.}
+\verb{<named list of function>: default }list()``. Each function
+takes a numeric value and returns a character string;
+overrides built-ins and \code{decimals} for that stat. Useful for
+p-value styling and other domain-specific formatting.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# p-value formatter: render below-threshold values as "<0.001".
+fmt = list(
+  p.value = function(x) \{
+    ifelse(x < 0.001, "<0.001", sprintf("\%.3f", x))
+  \}
+)
+}\if{html}{\out{</div>}}}
 }
 \value{
-A wide data.frame. Schema:
+\emph{A wide \code{data.frame} ready for \code{\link[=tabular]{tabular()}}.} Schema:
 \itemize{
 \item \code{variable} — variable name (or label after \code{label = ...}).
 \item \code{stat_label} — display-row label.
@@ -138,6 +154,9 @@ values or the renamed arm column).
 \item Hierarchical ARD adds \code{soc}, \code{pt}, \code{row_type} instead of
 \code{variable}.
 }
+
+Pass the result straight into \code{\link[=tabular]{tabular()}} to start the
+render pipeline.
 }
 \description{
 \code{pivot_across()} is tabular's input-side helper: it consumes a

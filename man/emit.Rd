@@ -7,77 +7,217 @@
 emit(spec, file, format = NULL, data_file = NULL, manifest = FALSE)
 }
 \arguments{
-\item{spec}{A \code{tabular_spec} built by the verb chain.}
+\item{spec}{\emph{The \code{tabular_spec} to render.}
+\verb{<tabular_spec>: required}. The full verb chain (\code{\link[=tabular]{tabular()}}
+-> \code{\link[=cols]{cols()}} -> \code{\link[=headers]{headers()}} -> \code{\link[=sort_rows]{sort_rows()}} -> \code{\link[=derive]{derive()}}
+-> \code{\link[=style]{style()}} -> \code{\link[=paginate]{paginate()}} -> \code{\link[=preset]{preset()}}) feeds into
+\code{emit()}'s first argument by pipe.}
 
-\item{file}{\emph{Destination path.} \code{character(1)}. Extension drives
-the backend (overridable via \code{format}). Parent directory must
-exist; \code{emit()} does not create directories.}
+\item{file}{\emph{Destination path for the rendered artefact.}
+\verb{<character(1)>: required}. Extension drives the backend (see
+the dispatch table in the Details section). The parent
+directory must already exist; \code{emit()} does not auto-create
+directories.
 
-\item{format}{\emph{Optional backend override.} \code{character(1) | NULL}.
-When set, takes precedence over the file extension. Useful for
-writing \code{.txt} files that should be RTF or for round-trip
-testing.}
+\strong{Tip:} Use \code{tempfile(fileext = ".md")} inside vignettes and
+examples so the example runs in \verb{R CMD check} without
+polluting the package directory.}
 
-\item{data_file}{\emph{Optional QC artefact writer.} \verb{character(1) | function(file) -> character(1) | NULL}. When set, the resolved
-wide data frame is written alongside the render. Extension on
-the returned path determines the format: \code{.csv}, \code{.tsv}, or
-\code{.rds}. Sponsor-naming convention belongs in the lambda.
-See examples.}
+\item{format}{\emph{Explicit backend override.}
+\verb{<character(1) | NULL>: default NULL}. When set, wins over the
+file extension. Useful for writing \code{.txt} files that should
+contain RTF, for round-trip testing, or when the user has a
+custom backend registered under a non-standard name.}
 
-\item{manifest}{\emph{Whether to emit a CDISC ARS audit manifest.}
-\code{logical(1)}. When \code{TRUE}, writes \verb{<file>.audit.yml} with
-the resolved spec's titles, headers, footnotes, render
-provenance, and a sha256 of every emitted artefact.}
+\item{data_file}{\emph{QC artefact writer.}
+\verb{<character(1) | function(file) -> character(1) | NULL>:}
+\verb{default NULL}. When set, writes the resolved wide data frame
+alongside the render. A character path writes there directly;
+a lambda receives the render path and returns the data file
+path (typical for sponsor-flexible naming).
+
+\strong{Restriction:} Returned-path extension must be \code{.csv},
+\code{.tsv} / \code{.txt}, or \code{.rds}.
+\strong{Tip:} The data frame the lambda governs is pre-backend —
+the same CSV is emitted regardless of whether \code{file} is RTF,
+PDF, or DOCX.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Three canonical sponsor patterns for the lambda.
+data_file = \\(f) paste0(tools::file_path_sans_ext(f), "_qc.csv")
+data_file = \\(f) file.path(
+  "validation",
+  paste0("val_", basename(tools::file_path_sans_ext(f)), ".csv")
+)
+data_file = \\(f) file.path(
+  "rd",
+  paste0("rd_", basename(tools::file_path_sans_ext(f)), ".rds")
+)
+}\if{html}{\out{</div>}}}
+
+\item{manifest}{\emph{Emit the CDISC ARS audit manifest sidecar.}
+\verb{<logical(1)>: default FALSE}. \code{TRUE} writes
+\verb{<file>.audit.yml} with verbatim CDISC ARS LDM v1.0 Output
+keys; see the \strong{\code{manifest = TRUE}} invariant in the Details
+section for what the file contains and the determinism
+contract it satisfies.}
 }
 \value{
-\code{file}, invisibly.
+\emph{The \code{file} path, invisibly.} Use this when chaining
+\code{emit()} into a downstream consumer that needs the resolved
+path (e.g. printing the link in a Quarto chunk, copying the
+sidecar manifest into an archive, attaching the render to a
+submission folder builder).
 }
 \description{
 Resolve \code{spec} through the engine pipeline, dispatch to the
 backend registered for the chosen format, and (optionally) write
 a QC data file and a CDISC ARS audit manifest alongside the
-rendered artefact.
+rendered artefact. \code{emit()} is the package's terminal verb — it
+returns \code{file} invisibly so the call can sit at the bottom of a
+pipe without losing the path.
 }
 \details{
-\code{emit()} is the package's terminal verb. It returns \code{file}
-invisibly so the call can be chained or assigned without losing
-the path. The same engine pipeline runs whether or not a backend
-is registered; an unsupported extension surfaces a friendly
-\code{tabular_error_input} after validation but before any I/O.
+\strong{Validation before I/O.} Every argument is validated and the
+backend is resolved BEFORE the engine runs. An unsupported
+extension, a malformed \code{data_file} path, or a missing backend
+raises \code{tabular_error_input} without writing any file. A spec
+that resolves cleanly but whose backend errors mid-write may
+leave a partial file behind; this is the only failure mode that
+touches disk.
+
+\strong{Backend dispatch.} The effective backend is resolved from the
+file extension via the table below; the \code{format} argument always
+wins when both are supplied. Each backend lives in its own
+\verb{R/backend_<fmt>.R} file and self-registers at package load time.\tabular{lll}{
+   extension(s) \tab format \tab backend \cr
+   \code{.md}, \code{.markdown} \tab \code{md} \tab GFM pipe table (Step 15; shipped) \cr
+   \code{.html}, \code{.htm} \tab \code{html} \tab self-contained Bootstrap 5 (planned) \cr
+   \code{.tex}, \code{.latex} \tab \code{latex} \tab tabularray (planned) \cr
+   \code{.pdf} \tab \code{pdf} \tab tinytex compile of LaTeX (planned) \cr
+   \code{.rtf} \tab \code{rtf} \tab RTF 1.9.1, native (planned) \cr
+   \code{.docx} \tab \code{docx} \tab OOXML native, no JVM (planned) \cr
+}
+
+
+Unknown extensions, missing extensions, and formats with no
+registered backend all raise \code{tabular_error_input}. The error
+message lists the currently registered formats so the failure is
+actionable.
+
+\strong{\code{data_file} is sponsor-neutral.} Pass an explicit path
+(\code{"out/qc.csv"}) for a fixed location, or a lambda
+(\verb{function(file) -> path}) for sponsor-flexible naming. The
+lambda receives the resolved render path so it can derive the QC
+file from it (suffix, sibling folder, separate sponsor-styled
+name). Recognised extensions on the returned path are \code{.csv},
+\code{.tsv} (alias: \code{.txt}), and \code{.rds}; anything else raises
+\code{tabular_error_input}. The written data frame is the post-
+\code{\link[=derive]{derive()}} / post-\code{\link[=sort_rows]{sort_rows()}} / post-\code{engine_decimal()}
+wide grid — exactly the cell text the backend wrote.
+
+\strong{\code{manifest = TRUE} writes a sidecar.} The audit manifest is
+written to \verb{<file>.audit.yml} next to the render (e.g. \code{out.md}
+-> \code{out.audit.yml}). Keys are CDISC ARS LDM v1.0 Output verbatim:
+\code{id}, \code{name}, \code{programmingCode} (best-effort git + R + platform
+\itemize{
+\item timestamp), \code{fileSpecifications} (sha256 of every emitted
+artefact including \code{data_file}), \code{displays/displaySections}
+(Title / Header / Body / Footnote), \code{referencedAnalyses} (empty
+in v0.1; reserved for the mintverse handoff), \code{x-tabular}
+(rendering geometry, pagination, style trace, input provenance).
+Determinism contract: two consecutive \code{emit()} calls are byte-
+identical except for the \code{rendered_at} parameter timestamp; the
+YAML round-trips through \code{yaml::read_yaml()} + \code{yaml::write_yaml()}.
+}
+
+\strong{Pure dispatcher.} \code{emit()} does not do any rendering itself;
+it composes \code{\link[=as_grid]{as_grid()}} with a backend writer. To inspect the
+resolved grid without writing a file (during development, or to
+build a custom downstream consumer), call \code{\link[=as_grid]{as_grid()}} directly.
 }
 \examples{
-\dontrun{
-# ---- Example 1: render demographics to Markdown ----
+# ---- Example 1: Render demographics to Markdown ----
 #
-# The simplest emit: spec in, .md out. The backend is chosen
-# from the file extension. `as_grid()` runs internally, then
-# the registered md backend writes the file.
-spec <- tabular(
+# Smallest possible emit: spec in, .md out. The backend is chosen
+# from the file extension; the engine pipeline runs internally,
+# then the registered md backend writes a GFM pipe table you can
+# preview in any Markdown renderer. tempfile() keeps the example
+# clean for `R CMD check`.
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+
+demo <- tabular(
   saf_demo,
-  titles = c("Table 14.1.1", "Demographics", "Safety Population"),
+  titles = c(
+    "Table 14.1.1",
+    "Demographics and Baseline Characteristics",
+    sprintf("Safety Population (N=\%d)", n["Total"])
+  ),
   footnotes = "Source: ADSL."
 ) |>
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo  = col_spec(label = "Placebo\nN=86",   align = "decimal"),
-    drug_50  = col_spec(label = "Low Dose\nN=96",  align = "decimal"),
-    drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
-    Total    = col_spec(label = "Total\nN=254",    align = "decimal")
-  )
-emit(spec, tempfile(fileext = ".md"))
+    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"]),  align = "decimal"),
+    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"]),  align = "decimal"),
+    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"]), align = "decimal"),
+    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]),    align = "decimal")
+  ) |>
+  sort_rows(by = c("variable", "stat_label"))
 
-# ---- Example 2: render + QC data + audit manifest ----
+demo_md <- tempfile(fileext = ".md")
+emit(demo, demo_md)
+
+# ---- Example 2: Render + QC data + CDISC audit manifest ----
 #
 # The clinical double-programming pattern: render the table,
-# write a QC CSV alongside it, and emit the CDISC ARS manifest.
-# A second programmer reads the CSV to verify cell-for-cell.
-out <- tempfile(fileext = ".md")
+# write a QC CSV alongside it for an independent programmer to
+# verify cell-for-cell, and emit the CDISC ARS audit manifest
+# for submission packaging. The lambda derives the QC path from
+# the render path so the sponsor's naming convention lives in one
+# place.
+ae <- saf_aesocpt
+ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
+ae$n_total <- as.integer(sub(" .*", "", ae$Total))
+
+ae_spec <- tabular(
+  ae,
+  titles = c(
+    "Table 14.3.1",
+    "Adverse Events by SOC and Preferred Term",
+    sprintf("Safety Population (N=\%d)", n["Total"])
+  ),
+  footnotes = "Subjects counted once per SOC and once per PT."
+) |>
+  cols(
+    soc      = col_spec(usage = "group", label = "SOC / PT"),
+    pt       = col_spec(visible = FALSE),
+    row_type = col_spec(visible = FALSE),
+    n_total  = col_spec(visible = FALSE),
+    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"]),  align = "decimal"),
+    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"]),  align = "decimal"),
+    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"]), align = "decimal"),
+    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]),    align = "decimal")
+  ) |>
+  sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+
+ae_md <- tempfile(fileext = ".md")
 emit(
-  spec,
-  out,
+  ae_spec,
+  ae_md,
   data_file = \(f) paste0(tools::file_path_sans_ext(f), "_qc.csv"),
-  manifest = TRUE
+  manifest  = TRUE
 )
+
 }
+\seealso{
+\strong{No-I/O sibling:} \code{\link[=as_grid]{as_grid()}} returns the resolved grid
+without writing a file — use during development to inspect what
+\code{emit()} would hand a backend.
+
+\strong{Build verbs the pipeline feeds from:} \code{\link[=tabular]{tabular()}},
+\code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}}, \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
+\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
+
+\strong{Inline formatting helpers:} \code{\link[=md]{md()}}, \code{\link[=html]{html()}} (titles,
+footnotes, labels, cell text).
 }

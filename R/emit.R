@@ -73,69 +73,215 @@
 #' Resolve `spec` through the engine pipeline, dispatch to the
 #' backend registered for the chosen format, and (optionally) write
 #' a QC data file and a CDISC ARS audit manifest alongside the
-#' rendered artefact.
+#' rendered artefact. `emit()` is the package's terminal verb — it
+#' returns `file` invisibly so the call can sit at the bottom of a
+#' pipe without losing the path.
 #'
-#' `emit()` is the package's terminal verb. It returns `file`
-#' invisibly so the call can be chained or assigned without losing
-#' the path. The same engine pipeline runs whether or not a backend
-#' is registered; an unsupported extension surfaces a friendly
-#' `tabular_error_input` after validation but before any I/O.
+#' @details
 #'
-#' @param spec A `tabular_spec` built by the verb chain.
-#' @param file *Destination path.* `character(1)`. Extension drives
-#'   the backend (overridable via `format`). Parent directory must
-#'   exist; `emit()` does not create directories.
-#' @param format *Optional backend override.* `character(1) | NULL`.
-#'   When set, takes precedence over the file extension. Useful for
-#'   writing `.txt` files that should be RTF or for round-trip
-#'   testing.
-#' @param data_file *Optional QC artefact writer.* `character(1) |
-#'   function(file) -> character(1) | NULL`. When set, the resolved
-#'   wide data frame is written alongside the render. Extension on
-#'   the returned path determines the format: `.csv`, `.tsv`, or
-#'   `.rds`. Sponsor-naming convention belongs in the lambda.
-#'   See examples.
-#' @param manifest *Whether to emit a CDISC ARS audit manifest.*
-#'   `logical(1)`. When `TRUE`, writes `<file>.audit.yml` with
-#'   the resolved spec's titles, headers, footnotes, render
-#'   provenance, and a sha256 of every emitted artefact.
-#' @return `file`, invisibly.
-#' @export
+#' **Validation before I/O.** Every argument is validated and the
+#' backend is resolved BEFORE the engine runs. An unsupported
+#' extension, a malformed `data_file` path, or a missing backend
+#' raises `tabular_error_input` without writing any file. A spec
+#' that resolves cleanly but whose backend errors mid-write may
+#' leave a partial file behind; this is the only failure mode that
+#' touches disk.
+#'
+#' **Backend dispatch.** The effective backend is resolved from the
+#' file extension via the table below; the `format` argument always
+#' wins when both are supplied. Each backend lives in its own
+#' `R/backend_<fmt>.R` file and self-registers at package load time.
+#'
+#' | extension(s)       | format  | backend                              |
+#' |--------------------|---------|--------------------------------------|
+#' | `.md`, `.markdown` | `md`    | GFM pipe table (Step 15; shipped)    |
+#' | `.html`, `.htm`    | `html`  | self-contained Bootstrap 5 (planned) |
+#' | `.tex`, `.latex`   | `latex` | tabularray (planned)                 |
+#' | `.pdf`             | `pdf`   | tinytex compile of LaTeX (planned)   |
+#' | `.rtf`             | `rtf`   | RTF 1.9.1, native (planned)          |
+#' | `.docx`            | `docx`  | OOXML native, no JVM (planned)       |
+#'
+#' Unknown extensions, missing extensions, and formats with no
+#' registered backend all raise `tabular_error_input`. The error
+#' message lists the currently registered formats so the failure is
+#' actionable.
+#'
+#' **`data_file` is sponsor-neutral.** Pass an explicit path
+#' (`"out/qc.csv"`) for a fixed location, or a lambda
+#' (`function(file) -> path`) for sponsor-flexible naming. The
+#' lambda receives the resolved render path so it can derive the QC
+#' file from it (suffix, sibling folder, separate sponsor-styled
+#' name). Recognised extensions on the returned path are `.csv`,
+#' `.tsv` (alias: `.txt`), and `.rds`; anything else raises
+#' `tabular_error_input`. The written data frame is the post-
+#' [`derive()`] / post-[`sort_rows()`] / post-`engine_decimal()`
+#' wide grid — exactly the cell text the backend wrote.
+#'
+#' **`manifest = TRUE` writes a sidecar.** The audit manifest is
+#' written to `<file>.audit.yml` next to the render (e.g. `out.md`
+#' -> `out.audit.yml`). Keys are CDISC ARS LDM v1.0 Output verbatim:
+#' `id`, `name`, `programmingCode` (best-effort git + R + platform
+#' + timestamp), `fileSpecifications` (sha256 of every emitted
+#' artefact including `data_file`), `displays/displaySections`
+#' (Title / Header / Body / Footnote), `referencedAnalyses` (empty
+#' in v0.1; reserved for the mintverse handoff), `x-tabular`
+#' (rendering geometry, pagination, style trace, input provenance).
+#' Determinism contract: two consecutive `emit()` calls are byte-
+#' identical except for the `rendered_at` parameter timestamp; the
+#' YAML round-trips through `yaml::read_yaml()` + `yaml::write_yaml()`.
+#'
+#' **Pure dispatcher.** `emit()` does not do any rendering itself;
+#' it composes [`as_grid()`] with a backend writer. To inspect the
+#' resolved grid without writing a file (during development, or to
+#' build a custom downstream consumer), call [`as_grid()`] directly.
+#'
+#' @param spec *The `tabular_spec` to render.*
+#'   `<tabular_spec>: required`. The full verb chain ([`tabular()`]
+#'   -> [`cols()`] -> [`headers()`] -> [`sort_rows()`] -> [`derive()`]
+#'   -> [`style()`] -> [`paginate()`] -> [`preset()`]) feeds into
+#'   `emit()`'s first argument by pipe.
+#'
+#' @param file *Destination path for the rendered artefact.*
+#'   `<character(1)>: required`. Extension drives the backend (see
+#'   the dispatch table in the Details section). The parent
+#'   directory must already exist; `emit()` does not auto-create
+#'   directories.
+#'
+#'   **Tip:** Use `tempfile(fileext = ".md")` inside vignettes and
+#'   examples so the example runs in `R CMD check` without
+#'   polluting the package directory.
+#'
+#' @param format *Explicit backend override.*
+#'   `<character(1) | NULL>: default NULL`. When set, wins over the
+#'   file extension. Useful for writing `.txt` files that should
+#'   contain RTF, for round-trip testing, or when the user has a
+#'   custom backend registered under a non-standard name.
+#'
+#' @param data_file *QC artefact writer.*
+#'   `<character(1) | function(file) -> character(1) | NULL>:`
+#'   `default NULL`. When set, writes the resolved wide data frame
+#'   alongside the render. A character path writes there directly;
+#'   a lambda receives the render path and returns the data file
+#'   path (typical for sponsor-flexible naming).
+#'
+#'   **Restriction:** Returned-path extension must be `.csv`,
+#'   `.tsv` / `.txt`, or `.rds`.
+#'   **Tip:** The data frame the lambda governs is pre-backend —
+#'   the same CSV is emitted regardless of whether `file` is RTF,
+#'   PDF, or DOCX.
+#'
+#'   ```r
+#'   # Three canonical sponsor patterns for the lambda.
+#'   data_file = \(f) paste0(tools::file_path_sans_ext(f), "_qc.csv")
+#'   data_file = \(f) file.path(
+#'     "validation",
+#'     paste0("val_", basename(tools::file_path_sans_ext(f)), ".csv")
+#'   )
+#'   data_file = \(f) file.path(
+#'     "rd",
+#'     paste0("rd_", basename(tools::file_path_sans_ext(f)), ".rds")
+#'   )
+#'   ```
+#'
+#' @param manifest *Emit the CDISC ARS audit manifest sidecar.*
+#'   `<logical(1)>: default FALSE`. `TRUE` writes
+#'   `<file>.audit.yml` with verbatim CDISC ARS LDM v1.0 Output
+#'   keys; see the **`manifest = TRUE`** invariant in the Details
+#'   section for what the file contains and the determinism
+#'   contract it satisfies.
+#'
+#' @return *The `file` path, invisibly.* Use this when chaining
+#'   `emit()` into a downstream consumer that needs the resolved
+#'   path (e.g. printing the link in a Quarto chunk, copying the
+#'   sidecar manifest into an archive, attaching the render to a
+#'   submission folder builder).
+#'
 #' @examples
-#' \dontrun{
-#' # ---- Example 1: render demographics to Markdown ----
+#' # ---- Example 1: Render demographics to Markdown ----
 #' #
-#' # The simplest emit: spec in, .md out. The backend is chosen
-#' # from the file extension. `as_grid()` runs internally, then
-#' # the registered md backend writes the file.
-#' spec <- tabular(
+#' # Smallest possible emit: spec in, .md out. The backend is chosen
+#' # from the file extension; the engine pipeline runs internally,
+#' # then the registered md backend writes a GFM pipe table you can
+#' # preview in any Markdown renderer. tempfile() keeps the example
+#' # clean for `R CMD check`.
+#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#'
+#' demo <- tabular(
 #'   saf_demo,
-#'   titles = c("Table 14.1.1", "Demographics", "Safety Population"),
+#'   titles = c(
+#'     "Table 14.1.1",
+#'     "Demographics and Baseline Characteristics",
+#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'   ),
 #'   footnotes = "Source: ADSL."
 #' ) |>
 #'   cols(
 #'     variable   = col_spec(usage = "group", label = "Characteristic"),
 #'     stat_label = col_spec(label = "Statistic"),
-#'     placebo  = col_spec(label = "Placebo\nN=86",   align = "decimal"),
-#'     drug_50  = col_spec(label = "Low Dose\nN=96",  align = "decimal"),
-#'     drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
-#'     Total    = col_spec(label = "Total\nN=254",    align = "decimal")
-#'   )
-#' emit(spec, tempfile(fileext = ".md"))
+#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
+#'   ) |>
+#'   sort_rows(by = c("variable", "stat_label"))
 #'
-#' # ---- Example 2: render + QC data + audit manifest ----
+#' demo_md <- tempfile(fileext = ".md")
+#' emit(demo, demo_md)
+#'
+#' # ---- Example 2: Render + QC data + CDISC audit manifest ----
 #' #
 #' # The clinical double-programming pattern: render the table,
-#' # write a QC CSV alongside it, and emit the CDISC ARS manifest.
-#' # A second programmer reads the CSV to verify cell-for-cell.
-#' out <- tempfile(fileext = ".md")
+#' # write a QC CSV alongside it for an independent programmer to
+#' # verify cell-for-cell, and emit the CDISC ARS audit manifest
+#' # for submission packaging. The lambda derives the QC path from
+#' # the render path so the sponsor's naming convention lives in one
+#' # place.
+#' ae <- saf_aesocpt
+#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
+#' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
+#'
+#' ae_spec <- tabular(
+#'   ae,
+#'   titles = c(
+#'     "Table 14.3.1",
+#'     "Adverse Events by SOC and Preferred Term",
+#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'   ),
+#'   footnotes = "Subjects counted once per SOC and once per PT."
+#' ) |>
+#'   cols(
+#'     soc      = col_spec(usage = "group", label = "SOC / PT"),
+#'     pt       = col_spec(visible = FALSE),
+#'     row_type = col_spec(visible = FALSE),
+#'     n_total  = col_spec(visible = FALSE),
+#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
+#'   ) |>
+#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+#'
+#' ae_md <- tempfile(fileext = ".md")
 #' emit(
-#'   spec,
-#'   out,
+#'   ae_spec,
+#'   ae_md,
 #'   data_file = \(f) paste0(tools::file_path_sans_ext(f), "_qc.csv"),
-#'   manifest = TRUE
+#'   manifest  = TRUE
 #' )
-#' }
+#'
+#' @seealso
+#' **No-I/O sibling:** [`as_grid()`] returns the resolved grid
+#' without writing a file — use during development to inspect what
+#' `emit()` would hand a backend.
+#'
+#' **Build verbs the pipeline feeds from:** [`tabular()`],
+#' [`cols()`] / [`col_spec()`], [`headers()`], [`sort_rows()`],
+#' [`derive()`], [`style()`], [`paginate()`], [`preset()`].
+#'
+#' **Inline formatting helpers:** [`md()`], [`html()`] (titles,
+#' footnotes, labels, cell text).
+#'
+#' @export
 emit <- function(
   spec,
   file,

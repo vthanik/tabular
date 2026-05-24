@@ -34,18 +34,22 @@
 #' decimal precision. Filtering, weighting, and aggregation happen
 #' upstream in cards or your own data-prep step.
 #'
-#' @param data A data frame with the standard ARD columns. At
-#'   minimum needs `stat_name` and `stat`. Cards-style group columns
-#'   (`group1`, `group1_level`, ...) and `variable` / `variable_level`
-#'   are auto-detected. Tibbles / `card` objects / arrow tables are
-#'   coerced via `as.data.frame()`.
-#' @param statistic How to combine ARD stats into display cells.
-#'   Three accepted forms — each illustrated below. Inside a format
-#'   string, `{stat_name}` substitutes that stat's value from the ARD
-#'   (for example, `"{n} ({p}%)"` interpolates the `n` and `p` stats
-#'   into a `"53 (62%)"` cell). The lookup order when a value is
-#'   needed for a variable is:
-#'   per-variable -> per-context -> `default` -> the literal `"{n}"`.
+#' @param data *Long ARD input data.*
+#'   `<data.frame>: required`. At minimum needs `stat_name` and
+#'   `stat`. Cards-style group columns (`group1`, `group1_level`,
+#'   ...) and `variable` / `variable_level` are auto-detected.
+#'   Tibbles / `card` objects / arrow tables are coerced via
+#'   `as.data.frame()`.
+#'
+#' @param statistic *Format spec for cell composition.*
+#'   `<character(1) | named list>: required`. Combines one or more
+#'   ARD stats into one display cell. Three accepted forms — each
+#'   illustrated below. Inside a format string, `{stat_name}`
+#'   substitutes that stat's value from the ARD (for example,
+#'   `"{n} ({p}%)"` interpolates the `n` and `p` stats into a
+#'   `"53 (62%)"` cell). The lookup order when a value is needed
+#'   for a variable is: per-variable -> per-context -> `default`
+#'   -> the literal `"{n}"`.
 #'
 #'   ## Form 1: single string
 #'
@@ -115,18 +119,26 @@
 #'     )
 #'   )
 #'   ```
-#' @param column Grouping variable whose unique values become
-#'   display columns. `NULL` (default) auto-detects from the ARD's
-#'   `group1` value or — for renamed input — picks the single non-
-#'   standard column. Pass a string when multiple group columns
-#'   exist.
-#' @param label Named character vector mapping variable names to
-#'   display labels. E.g. `c(AGE = "Age (years)", SEX = "Sex")`.
-#'   Applies to `variable`, `soc`, and `pt` columns of the output.
-#' @param overall Column name to assign to rows whose arm is `NA`
-#'   (overall / total rows). Default `"Total"`. Pass `NULL` to drop
-#'   overall rows entirely.
-#' @param decimals Decimal precision. Accepts two forms:
+#' @param column *Grouping column whose unique values become arms.*
+#'   `<character(1) | NULL>: default NULL`. `NULL` auto-detects
+#'   from the ARD's `group1` value or — for renamed input — picks
+#'   the single non-standard column. Pass a string when multiple
+#'   group columns exist.
+#'
+#' @param label *Variable-name to display-label map.*
+#'   `<character> | NULL: default NULL`. Named character vector
+#'   mapping variable names to display labels (e.g.
+#'   `c(AGE = "Age (years)", SEX = "Sex")`). Applies to
+#'   `variable`, `soc`, and `pt` columns of the output. `NULL`
+#'   leaves the upstream variable names verbatim.
+#'
+#' @param overall *Column name for `NA`-arm (overall / total) rows.*
+#'   `<character(1) | NULL>: default "Total"`. Pass `NULL` to drop
+#'   overall rows entirely (per-arm only output).
+#'
+#' @param decimals *Per-stat decimal precision.*
+#'   `<named integer | named list>: default `c()``. Accepts two
+#'   forms:
 #'
 #'   *   **named integer vector** — global per-stat overrides
 #'       (`c(mean = 1, sd = 2, p = 0)`).
@@ -134,11 +146,21 @@
 #'       (`list(AGE = c(mean = 2), .default = c(p = 1))`).
 #'
 #'   Built-in defaults apply when neither sets a stat.
-#' @param fmt Named list of custom formatter functions keyed by
-#'   `stat_name`. Each function takes a numeric value and returns a
-#'   character string. Overrides built-ins and `decimals` for that
-#'   stat. E.g.
-#'   `list(p.value = function(x) if (x < 0.001) "<0.001" else sprintf("%.3f", x))`.
+#'
+#' @param fmt *Per-stat custom formatter functions.*
+#'   `<named list of function>: default `list()``. Each function
+#'   takes a numeric value and returns a character string;
+#'   overrides built-ins and `decimals` for that stat. Useful for
+#'   p-value styling and other domain-specific formatting.
+#'
+#'   ```r
+#'   # p-value formatter: render below-threshold values as "<0.001".
+#'   fmt = list(
+#'     p.value = function(x) {
+#'       ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
+#'     }
+#'   )
+#'   ```
 #' @details
 #'
 #' ## Zero-suppression (always-on default)
@@ -202,7 +224,7 @@
 #' 0 and 1) and returns the displayed string. The pharma-threshold
 #' branch only fires inside the built-in `p` formatter and the
 #' `decimals`-driven path, so any custom `fmt$p` bypasses it.
-#' @return A wide data.frame. Schema:
+#' @return *A wide `data.frame` ready for [`tabular()`].* Schema:
 #'
 #'   *   `variable` — variable name (or label after `label = ...`).
 #'   *   `stat_label` — display-row label.
@@ -211,6 +233,9 @@
 #'   *   `Total` (or whatever `overall` is set to) when applicable.
 #'   *   Hierarchical ARD adds `soc`, `pt`, `row_type` instead of
 #'       `variable`.
+#'
+#'   Pass the result straight into [`tabular()`] to start the
+#'   render pipeline.
 #'
 #' @examples
 #' # ---- Example 1: Demographics — long ARD to rendered spec ----

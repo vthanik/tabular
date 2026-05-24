@@ -7,80 +7,159 @@
 as_grid(spec)
 }
 \arguments{
-\item{spec}{A \code{tabular_spec} built via \code{\link[=tabular]{tabular()}} and the
-downstream verb chain.}
+\item{spec}{\emph{The \code{tabular_spec} to resolve.}
+\verb{<tabular_spec>: required}. Built by the verb chain (\code{\link[=tabular]{tabular()}}
+-> \code{\link[=cols]{cols()}} -> \code{\link[=headers]{headers()}} -> \code{\link[=sort_rows]{sort_rows()}} -> \code{\link[=derive]{derive()}}
+-> \code{\link[=style]{style()}} -> \code{\link[=paginate]{paginate()}} -> \code{\link[=preset]{preset()}}).}
 }
 \value{
-A \code{tabular_grid} whose \verb{@pages} is a list of one entry per
-display page and whose \verb{@metadata} carries the per-table
-information (headers, titles_ast, footnotes_ast, col_names,
-rows_per_page, total_pages, total_panels, ...). Each page entry
-is a named list:
+\emph{A \code{tabular_grid} S7 object.} Two slots:
 \itemize{
-\item \code{page_index}, \code{panel_index}, \code{is_continuation}, \code{continuation},
-\code{repeat_headers} — pagination plan from \code{\link[=paginate]{paginate()}}.
-\item \code{row_indices}, \code{col_indices} — integer indices into the
-resolved data.
-\item \code{col_names} — character vector of data columns visible on
-this page (subset of \code{metadata$col_names}).
-\item \code{cells_text} — character matrix sliced to \verb{[row_indices, col_indices]}.
-\item \code{cells_ast} — list-matrix of \code{inline_ast} sliced to the same
-shape.
-\item \code{cells_style} — list-matrix of \code{style_node} sliced to the same
-shape.
-\item \code{col_labels_ast} — named list of \code{inline_ast} sliced to the
-visible columns.
+\item \verb{@pages} — a list of one entry per display page. Each entry is
+a named list with pagination fields (\code{page_index},
+\code{panel_index}, \code{is_continuation}, \code{continuation},
+\code{repeat_headers}), row + column slice indices
+(\code{row_indices}, \code{col_indices}, \code{col_names}), the sliced
+cell text (\code{cells_text} — character matrix), sliced inline
+ASTs (\code{cells_ast} — list-matrix of \code{\link{inline_ast}}), sliced
+style nodes (\code{cells_style} — list-matrix of \code{style_node}),
+and the column-label ASTs for the visible columns
+(\code{col_labels_ast}).
+\item \verb{@metadata} — per-table information backends consume once per
+render: \code{format} (the resolved backend tag, \code{NA_character_}
+for \code{as_grid()} calls), \code{rows_per_page}, \code{total_pages},
+\code{total_panels}, \code{nrow_data}, \code{ncol_data}, \code{col_names}, \code{cols}
+(the original \code{\link[=col_spec]{col_spec()}} entries keyed by column name),
+\code{headers} (the flattened header band grid), \code{titles},
+\code{footnotes}, \code{titles_ast}, \code{footnotes_ast}, \code{col_labels_ast}.
 }
 }
 \description{
 Runs the full engine pipeline against \code{spec} and returns the
-resolved \code{tabular_grid} — the same intermediate object \code{emit()}
+resolved \code{tabular_grid} — the same intermediate object \code{\link[=emit]{emit()}}
 hands to a backend. Pure function: no files written, no global
-state touched.
+state touched. Use this during development to inspect what
+\code{\link[=emit]{emit()}} will pass downstream, when building a custom backend,
+or when piping the resolved grid into a non-file consumer (e.g. an
+inline preview chunk in a Quarto notebook).
+}
+\details{
+\strong{Engine pipeline order is load-bearing.} Phases run in this
+fixed order; the order matters because each phase reads the post-
+previous-phase state of the spec:
+\enumerate{
+\item \code{engine_derive()} — materialise computed columns onto
+\code{spec@data}. Derived columns become first-class from this
+point forward.
+\item \code{engine_sort()} — apply the sort spec; sort keys may reference
+derived columns.
+\item \code{engine_headers()} — validate the header tree and flatten it
+to a band grid.
+\item \code{engine_style()} — evaluate every style predicate against the
+post-derive, post-sort data grid. A predicate may reference
+any column in \code{spec@data} (including derives).
+\item \code{engine_format()} — apply per-column formats, substitute
+\code{na_text}, and parse every cell / title / footnote / label
+through \code{parse_inline()} to its \code{inline_ast}.
+\item \code{engine_decimal()} — column-wide decimal alignment for any
+column flagged \code{col_spec(align = "decimal")}. Operates on the
+formatted text; output is the same character matrix with NBSP
+padding inserted so the decimal marks line up.
+\item \code{engine_paginate()} — split into pages (vertical row chunks +
+horizontal panel chunks). The plan drives the per-page slicing
+of cells / styles / ASTs below.
+}
+
+\strong{The grid is the backend contract.} Every backend
+(\code{backend_md}, future \code{backend_html}, etc.) consumes a
+\code{tabular_grid} — never a \code{tabular_spec}. New backends only need
+to walk \code{grid@pages} and \code{grid@metadata}; the engine pipeline is
+a fixed dependency they never re-implement.
+
+\strong{No I/O.} \code{as_grid()} writes nothing to disk and touches no
+global state. It is safe to call repeatedly during interactive
+exploration; cost is roughly that of one \code{\link[=emit]{emit()}} without the
+backend write step.
 }
 \examples{
-# ---- Example 1: demographics grid ----
+# ---- Example 1: Demographics — inspect the resolved grid ----
 #
-# Resolve the canonical safety-pop demographics table into a
-# grid you can inspect before emitting. The grid is what every
-# backend consumes; printing the first page's cell matrix shows
-# exactly what the table will look like.
-spec <- tabular(
+# Resolve the canonical safety-pop demographics pipeline into a
+# `tabular_grid` and inspect what `emit()` would hand a backend.
+# The first page's `cells_text` matrix is the decimal-aligned
+# output as the backend would render it; the metadata carries the
+# pagination plan + header / title / footnote ASTs.
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+
+demo <- tabular(
   saf_demo,
-  titles = c("Table 14.1.1", "Demographics", "Safety Population"),
+  titles = c(
+    "Table 14.1.1",
+    "Demographics and Baseline Characteristics",
+    sprintf("Safety Population (N=\%d)", n["Total"])
+  ),
   footnotes = "Source: ADSL."
 ) |>
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo  = col_spec(label = "Placebo\nN=86",   align = "decimal"),
-    drug_50  = col_spec(label = "Low Dose\nN=96",  align = "decimal"),
-    drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
-    Total    = col_spec(label = "Total\nN=254",    align = "decimal")
-  )
-grid <- as_grid(spec)
-grid@metadata$total_pages
-grid@pages[[1]]$cells_text[1:3, ]
+    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"]),  align = "decimal"),
+    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"]),  align = "decimal"),
+    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"]), align = "decimal"),
+    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]),    align = "decimal")
+  ) |>
+  sort_rows(by = c("variable", "stat_label"))
 
-# ---- Example 2: paginated safety AE-by-SOC/PT grid ----
+demo_grid <- as_grid(demo)
+demo_grid@metadata$total_pages
+demo_grid@pages[[1]]$cells_text[1:3, c("variable", "stat_label", "placebo")]
+
+# ---- Example 2: AE-by-SOC/PT paginated grid — verify the split ----
 #
-# Same shape; with pagination the grid carries multiple page
-# entries, each with its own sliced cell matrix. The header band
-# grid lives at the grid-level metadata, not per-page.
-ae <- tabular(
-  saf_aesocpt,
-  titles = c("Table 14.3.1", "AE by SOC and Preferred Term"),
+# Same shape as Example 1 plus pagination protecting the SOC
+# grouping. With a tight font size the grid carries multiple page
+# entries; concatenating each page's `row_indices` reconstructs
+# the full data, and every page carries the full header band grid
+# at `grid@metadata$headers` so backends can re-render the header
+# on every continuation page.
+ae <- saf_aesocpt
+ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
+ae$n_total <- as.integer(sub(" .*", "", ae$Total))
+
+ae_spec <- tabular(
+  ae,
+  titles = c(
+    "Table 14.3.1",
+    "Adverse Events by SOC and Preferred Term",
+    sprintf("Safety Population (N=\%d)", n["Total"])
+  ),
   footnotes = "Subjects counted once per SOC and once per PT."
 ) |>
   cols(
-    soc      = col_spec(usage = "group", label = "System Organ Class"),
-    pt       = col_spec(label = "Preferred Term"),
-    placebo  = col_spec(label = "Placebo\nN=86",   align = "decimal"),
-    drug_50  = col_spec(label = "Low Dose\nN=96",  align = "decimal"),
-    drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
-    Total    = col_spec(label = "Total\nN=254",    align = "decimal")
+    soc      = col_spec(usage = "group", label = "SOC / PT"),
+    pt       = col_spec(visible = FALSE),
+    row_type = col_spec(visible = FALSE),
+    n_total  = col_spec(visible = FALSE),
+    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"]),  align = "decimal"),
+    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"]),  align = "decimal"),
+    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"]), align = "decimal"),
+    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]),    align = "decimal")
   ) |>
+  sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
   paginate(keep_together = "soc")
-ae_grid <- as_grid(ae)
+
+ae_grid <- as_grid(ae_spec)
 length(ae_grid@pages)
+
+}
+\seealso{
+\strong{I/O sibling:} \code{\link[=emit]{emit()}} writes the resolved grid to a file
+via a registered backend; \code{as_grid()} is the no-I/O entry into
+the same pipeline.
+
+\strong{Build verbs the pipeline feeds from:} \code{\link[=tabular]{tabular()}},
+\code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}}, \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
+\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
+
+\strong{Inline formatting helpers:} \code{\link[=md]{md()}}, \code{\link[=html]{html()}}.
 }
