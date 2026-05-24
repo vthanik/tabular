@@ -1,7 +1,10 @@
 \documentclass[10pt]{article}
 \usepackage[letterpaper, margin=1in]{geometry}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\fi
 \usepackage{tabularray}
 \usepackage{xcolor}
 \usepackage{graphicx}

@@ -613,8 +613,14 @@ backend_latex <- function(grid, file) {
   c(
     sprintf("\\documentclass[%s]{article}", class_opt),
     sprintf("\\usepackage[%s]{geometry}", geo),
-    "\\usepackage[T1]{fontenc}",
-    "\\usepackage[utf8]{inputenc}",
+    # Legacy text encoding gated behind pdftex. xelatex / lualatex
+    # are natively UTF-8 and warn ("inputenc package ignored with
+    # utf8 based engines") if these packages load unconditionally.
+    "\\usepackage{iftex}",
+    "\\ifPDFTeX",
+    "  \\usepackage[T1]{fontenc}",
+    "  \\usepackage[utf8]{inputenc}",
+    "\\fi",
     "\\usepackage{tabularray}",
     "\\usepackage{xcolor}",
     "\\usepackage{graphicx}",
