@@ -321,7 +321,7 @@ as_grid <- function(spec) {
       col_labels_ast = fmt$col_labels_ast,
       pagehead_ast = pagehead_ast,
       pagefoot_ast = pagefoot_ast,
-      preset = spec@preset,
+      preset = eff_preset,
       subgroup_runtime = runtime
     )
   )

@@ -230,13 +230,15 @@ backend_docx <- function(grid, file) {
   titles_block <- .docx_title_block(
     meta$titles_ast %||% list(),
     hyperlinks,
-    rid_map
+    rid_map,
+    preset = preset
   )
   table_block <- .render_docx_table(grid, preset, hyperlinks, rid_map)
   footnotes_block <- .docx_footnote_block(
     meta$footnotes_ast %||% list(),
     hyperlinks,
-    rid_map
+    rid_map,
+    preset = preset
   )
   sect_pr <- .docx_section_pr(preset, rid_map)
 
@@ -261,16 +263,34 @@ backend_docx <- function(grid, file) {
 # styles.xml). Inline AST flows through `.render_docx_inline()`.
 # The style supplies bold so we don't need a `default_rpr`; nested
 # bold/italic/sup runs still compound via inline `<w:rPr>` tokens.
-.docx_title_block <- function(titles_ast, hyperlinks, rid_map = NULL) {
-  if (length(titles_ast) == 0L) {
+.docx_title_block <- function(
+  titles_ast,
+  hyperlinks,
+  rid_map = NULL,
+  preset = NULL
+) {
+  n <- length(titles_ast)
+  if (n == 0L) {
     return(character())
   }
   vapply(
-    titles_ast,
-    function(ast) {
-      runs <- .render_docx_inline(ast, hyperlinks, rid_map = rid_map)
+    seq_len(n),
+    function(i) {
+      runs <- .render_docx_inline(
+        titles_ast[[i]],
+        hyperlinks,
+        rid_map = rid_map
+      )
+      halign <- .effective_title_halign(preset, line_index = i, n_lines = n)
+      jc_override <- if (length(halign) == 1L && !is.na(halign)) {
+        .docx_align_token(halign)
+      } else {
+        ""
+      }
       paste0(
-        "<w:p><w:pPr><w:pStyle w:val=\"TabularTitle\"/></w:pPr>",
+        "<w:p><w:pPr><w:pStyle w:val=\"TabularTitle\"/>",
+        jc_override,
+        "</w:pPr>",
         runs,
         "</w:p>"
       )
@@ -281,18 +301,42 @@ backend_docx <- function(grid, file) {
 
 # Render the footnote block: one paragraph per footnote, each
 # tagged with the `TabularFoot` named style (left-aligned; defined
-# in styles.xml). Inline AST flows through `.render_docx_inline()`
-# so bold / italic / sup / link markup all surface in the .docx.
-.docx_footnote_block <- function(footnotes_ast, hyperlinks, rid_map = NULL) {
-  if (length(footnotes_ast) == 0L) {
+# in styles.xml). Per-line horizontal alignment from the cascade
+# (preset@alignment$footnote_halign) overrides the style default
+# when set. Inline AST flows through `.render_docx_inline()` so
+# bold / italic / sup / link markup all surface in the .docx.
+.docx_footnote_block <- function(
+  footnotes_ast,
+  hyperlinks,
+  rid_map = NULL,
+  preset = NULL
+) {
+  n <- length(footnotes_ast)
+  if (n == 0L) {
     return(character())
   }
   vapply(
-    footnotes_ast,
-    function(ast) {
-      runs <- .render_docx_inline(ast, hyperlinks, rid_map = rid_map)
+    seq_len(n),
+    function(i) {
+      runs <- .render_docx_inline(
+        footnotes_ast[[i]],
+        hyperlinks,
+        rid_map = rid_map
+      )
+      halign <- .effective_footnote_halign(
+        preset,
+        line_index = i,
+        n_lines = n
+      )
+      jc_override <- if (length(halign) == 1L && !is.na(halign)) {
+        .docx_align_token(halign)
+      } else {
+        ""
+      }
       paste0(
-        "<w:p><w:pPr><w:pStyle w:val=\"TabularFoot\"/></w:pPr>",
+        "<w:p><w:pPr><w:pStyle w:val=\"TabularFoot\"/>",
+        jc_override,
+        "</w:pPr>",
         runs,
         "</w:p>"
       )
@@ -346,9 +390,16 @@ backend_docx <- function(grid, file) {
     cols,
     widths,
     hyperlinks,
-    rid_map
+    rid_map,
+    preset = preset
   )
-  body_rows <- .render_docx_body_rows(pages, col_names_vis, cols, widths)
+  body_rows <- .render_docx_body_rows(
+    pages,
+    col_names_vis,
+    cols,
+    widths,
+    preset = preset
+  )
 
   paste0(
     "<w:tbl>",
@@ -507,17 +558,20 @@ backend_docx <- function(grid, file) {
 }
 
 # Render the column-labels row: one `<w:tc>` per visible column,
-# alignment from `col_spec@align`, label flow from the inline AST
-# through `.render_docx_inline()`. Default run formatting is bold
-# (clinical header convention). Header row carries `<w:tblHeader/>`
-# for Word's auto-repeat across pagination.
+# alignment via the header cascade (col_spec@align / @valign >
+# preset@alignment$header_halign / header_valign > Word default).
+# Label flow from the inline AST through `.render_docx_inline()`.
+# Default run formatting is bold (clinical header convention).
+# Header row carries `<w:tblHeader/>` for Word's auto-repeat across
+# pagination.
 .render_docx_col_labels_row <- function(
   col_labels_ast,
   col_names_vis,
   cols,
   widths_twips,
   hyperlinks,
-  rid_map = NULL
+  rid_map = NULL,
+  preset = NULL
 ) {
   cells <- vapply(
     seq_along(col_names_vis),
@@ -540,11 +594,14 @@ backend_docx <- function(grid, file) {
         )
       }
       cs <- cols[[nm]]
-      align <- if (is_col_spec(cs)) cs@align else NA_character_
-      jc <- .docx_align_token(align)
+      halign <- .effective_header_halign(cs, preset)
+      valign <- .effective_header_valign(cs, preset)
+      jc <- .docx_align_token(halign)
+      valign_tok <- .docx_valign_token(valign)
       tc_pr <- sprintf(
-        "<w:tcPr><w:tcW w:w=\"%d\" w:type=\"dxa\"/></w:tcPr>",
-        widths_twips[[j]]
+        "<w:tcPr><w:tcW w:w=\"%d\" w:type=\"dxa\"/>%s</w:tcPr>",
+        widths_twips[[j]],
+        valign_tok
       )
       paste0(
         "<w:tc>",
@@ -568,27 +625,24 @@ backend_docx <- function(grid, file) {
 # Render the body rows for every page in `grid@pages`. Returns a
 # character vector of `<w:tr>` strings. Cell text is the post-
 # engine_decimal flat string (`cells_text`). Per-cell alignment
-# comes from `col_spec@align`. Per-cell style cascade
-# (`cells_style[i, j]`) drives `<w:tcPr>` (background, borders) and
-# `<w:rPr>` (bold, italic, color, font, size) — DOCX is the first
-# backend to fully consume the engine_style matrix.
-.render_docx_body_rows <- function(pages, col_names_vis, cols, widths_twips) {
-  align_tokens <- vapply(
-    col_names_vis,
-    function(nm) {
-      cs <- cols[[nm]]
-      .docx_align_token(if (is_col_spec(cs)) cs@align else NA_character_)
-    },
-    character(1L)
-  )
+# goes through the three-layer cascade:
+#
+#   style_node@halign / @valign  >  col_spec@align / @valign
+#                                  >  preset@alignment$body_halign / body_valign
+#
+# Per-cell style cascade (`cells_style[i, j]`) drives `<w:tcPr>`
+# (background, borders, vAlign) and `<w:rPr>` (bold, italic, color,
+# font, size).
+.render_docx_body_rows <- function(
+  pages,
+  col_names_vis,
+  cols,
+  widths_twips,
+  preset = NULL
+) {
+  col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
   n_cols_vis <- length(col_names_vis)
   out <- character()
-  # Subgroup tracking — banner row emitted once per group at the
-  # first page of each group; hard page break inserted before every
-  # non-initial group so each subgroup value starts on a fresh page
-  # (BMS Appendix I hard contract). Word continues to auto-repeat
-  # the column-header band (via `<w:tblHeader/>`) within a group;
-  # the banner itself does NOT repeat per Word page in Phase 1.
   prev_subgroup_index <- NULL
   for (page in pages) {
     sg_index <- page$subgroup_index
@@ -598,7 +652,8 @@ backend_docx <- function(grid, file) {
         page$subgroup_line_ast,
         n_cols = n_cols_vis,
         widths_twips = widths_twips,
-        page_break_before = page_break_before
+        page_break_before = page_break_before,
+        preset = preset
       )
       if (length(banner_row) > 0L) {
         out <- c(out, banner_row)
@@ -620,7 +675,15 @@ backend_docx <- function(grid, file) {
           } else {
             NULL
           }
-          tc_pr <- .docx_tcPr_from_style(style, widths_twips[[j]])
+          cs <- col_specs[[j]]
+          halign <- .effective_body_halign(style, cs, preset)
+          valign <- .effective_body_valign(style, cs, preset)
+          align_tok <- .docx_align_token(halign)
+          valign_tok <- .docx_valign_token(valign)
+          tc_pr <- .docx_tcPr_inject_valign(
+            .docx_tcPr_from_style(style, widths_twips[[j]]),
+            valign_tok
+          )
           r_pr_inner <- .docx_rPr_from_style(style)
           r_pr <- if (nzchar(r_pr_inner)) {
             paste0("<w:rPr>", r_pr_inner, "</w:rPr>")
@@ -631,7 +694,7 @@ backend_docx <- function(grid, file) {
             "<w:tc>",
             tc_pr,
             "<w:p><w:pPr>",
-            align_tokens[[j]],
+            align_tok,
             "</w:pPr><w:r>",
             r_pr,
             "<w:t xml:space=\"preserve\">",
@@ -647,6 +710,19 @@ backend_docx <- function(grid, file) {
   out
 }
 
+# Inject a `<w:vAlign .../>` element into an existing `<w:tcPr>...
+# </w:tcPr>` string just before the closing tag. Returns the input
+# unchanged when `valign_tok` is empty. Used by the body / header /
+# subgroup-banner row renderers so the per-cell vertical alignment
+# rides alongside the existing tcPr properties (width, borders,
+# shading, gridSpan) without churning the original helper.
+.docx_tcPr_inject_valign <- function(tcpr_xml, valign_tok) {
+  if (!nzchar(valign_tok)) {
+    return(tcpr_xml)
+  }
+  sub("</w:tcPr>$", paste0(valign_tok, "</w:tcPr>"), tcpr_xml)
+}
+
 # Subgroup banner row — a single `<w:tc>` with `<w:gridSpan w:val="N"/>`
 # spanning every visible column, centred + bold. `<w:trPr>` carries
 # `<w:tblHeader/>` so Word repeats the banner if the table spills
@@ -658,7 +734,8 @@ backend_docx <- function(grid, file) {
   subgroup_line_ast,
   n_cols,
   widths_twips,
-  page_break_before
+  page_break_before,
+  preset = NULL
 ) {
   if (
     is.null(subgroup_line_ast) ||
@@ -678,15 +755,23 @@ backend_docx <- function(grid, file) {
   } else {
     ""
   }
+  halign <- .effective_subgroup_halign(preset)
+  if (is.na(halign)) {
+    halign <- "center"
+  }
+  valign <- .effective_subgroup_valign(preset)
+  valign_tok <- .docx_valign_token(valign)
+  jc_tok <- .docx_align_token(halign)
   paste0(
     "<w:tr><w:trPr><w:tblHeader/></w:trPr>",
     "<w:tc><w:tcPr>",
     sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_w),
     sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols),
+    valign_tok,
     "</w:tcPr>",
     "<w:p><w:pPr>",
     page_break,
-    "<w:jc w:val=\"center\"/>",
+    jc_tok,
     "</w:pPr>",
     inner_runs,
     "</w:p>",
@@ -708,6 +793,23 @@ backend_docx <- function(grid, file) {
     right = "<w:jc w:val=\"right\"/>",
     decimal = "<w:jc w:val=\"right\"/>",
     "<w:jc w:val=\"left\"/>"
+  )
+}
+
+# Map a `valign` value to a `<w:tcPr><w:vAlign w:val="..."/>` token.
+# Returns "" when valign is NA / NULL so the caller can drop the
+# element (Word defaults to vertical-align: top per OOXML spec).
+# OOXML uses "center" for visual middle (not "middle"); we translate.
+.docx_valign_token <- function(valign) {
+  if (is.null(valign) || length(valign) == 0L || is.na(valign)) {
+    return("")
+  }
+  switch(
+    valign,
+    top = "<w:vAlign w:val=\"top\"/>",
+    middle = "<w:vAlign w:val=\"center\"/>",
+    bottom = "<w:vAlign w:val=\"bottom\"/>",
+    ""
   )
 }
 

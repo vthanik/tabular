@@ -139,7 +139,7 @@
 #'   default, which produces identical widths across RTF / LaTeX
 #'   / HTML.
 #'
-#' @param align *Cell alignment within the column.*
+#' @param align *Horizontal alignment within the column.*
 #'   `<character(1) | NULL>: default NULL`. One of:
 #'
 #'   *   **`"left"`** — character columns; row labels.
@@ -148,14 +148,26 @@
 #'   *   **`"decimal"`** — numeric or mixed-format cells aligned on
 #'       the decimal mark. Use for `"5 (3.2%)"` next to
 #'       `"54 (32.1%)"`.
-#'   *   **`NULL`** (default) — backend default: right for numeric,
-#'       left for character.
+#'   *   **`NULL`** (default) — falls through to
+#'       `preset(alignment = list(body_halign = ...))` and then to
+#'       the baked default `"left"`.
 #'
 #'   **Tip:** `"decimal"` pads numerics with non-breaking spaces
 #'   so the decimal mark falls on a single column-wide anchor.
 #'   The active preset's `decimal_metrics` knob is reserved for
 #'   future em-aware padding refinement (see [`preset()`]); the
 #'   current engine pads by character count.
+#'
+#' @param valign *Vertical alignment within the cell.*
+#'   `<character(1) | NULL>: default NULL`. One of `"top"`,
+#'   `"middle"`, `"bottom"`. `NULL` falls through to
+#'   `preset(alignment = list(body_valign = ...))` (baked default
+#'   `"top"`). Per-cell overrides via `style(valign = ...)` still
+#'   win over the column setting.
+#'
+#'   **Tip:** Set `"middle"` on the row-label column of a banded-
+#'   row table so the label stays centred against the multi-line
+#'   stat-block in the adjacent cell.
 #'
 #' @param na_text *Text substituted for `NA` cells.*
 #'   `<character(1)>: default ""`. Substituted BEFORE the `format`
@@ -263,12 +275,14 @@ col_spec <- function(
   visible = TRUE,
   width = "auto",
   align = NULL,
+  valign = NULL,
   na_text = ""
 ) {
   call <- rlang::caller_env()
 
   usage_val <- .check_col_usage(usage, call = call)
   align_val <- .check_col_align(align, call = call)
+  valign_val <- .check_col_valign(valign, call = call)
   .check_col_label(label, call = call)
   .check_col_visible(visible, call = call)
   .check_col_width(width, call = call)
@@ -283,6 +297,7 @@ col_spec <- function(
     visible = visible,
     width = width,
     align = align_val,
+    valign = valign_val,
     na_text = na_text
   )
 }
@@ -328,6 +343,28 @@ col_spec <- function(
   cli::cli_abort(
     c(
       "{.arg align} must be one of {.val {(.align_values)}} or {.code NULL}.",
+      "x" = "You supplied {.obj_type_friendly {x}}."
+    ),
+    class = "tabular_error_input",
+    call = call
+  )
+}
+
+.check_col_valign <- function(x, call) {
+  if (is.null(x)) {
+    return(NA_character_)
+  }
+  if (
+    is.character(x) &&
+      length(x) == 1L &&
+      !is.na(x) &&
+      x %in% .valign_values
+  ) {
+    return(x)
+  }
+  cli::cli_abort(
+    c(
+      "{.arg valign} must be one of {.val {(.valign_values)}} or {.code NULL}.",
       "x" = "You supplied {.obj_type_friendly {x}}."
     ),
     class = "tabular_error_input",

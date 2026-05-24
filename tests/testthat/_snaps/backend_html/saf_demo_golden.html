@@ -9,17 +9,21 @@ body { font-family: "Liberation Serif", "Times New Roman", Times, serif; color: 
 .tabular-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin: .2rem 0; }
 .tabular-continuation { text-align: right; color: #6c757d; margin: .25rem 0 .5rem; }
 .tabular-table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .9rem; }
-.tabular-table th, .tabular-table td { padding: .35rem .6rem; vertical-align: top; }
-.tabular-table thead th { border-top: 1px solid #212529; border-bottom: 1px solid #212529; font-weight: 600; }
+.tabular-table th, .tabular-table td { padding: .35rem .6rem; }
+.tabular-table td { text-align: left; vertical-align: top; }
+.tabular-table thead th { border-top: 1px solid #212529; border-bottom: 1px solid #212529; font-weight: 600; text-align: center; vertical-align: bottom; }
 .tabular-table thead tr:not(:last-child) th { border-bottom: 1px solid #adb5bd; }
 .tabular-table tbody tr td { border-top: none; }
 .tabular-table tbody tr:last-child td { border-bottom: 1px solid #212529; }
 .tabular-band { text-align: center; }
-.tabular-subgroup td { text-align: center; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+.tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
 .tabular-subgroup-label { font-weight: 600; }
 .text-left { text-align: left; }
 .text-center { text-align: center; }
 .text-right { text-align: right; }
+.valign-top { vertical-align: top; }
+.valign-middle { vertical-align: middle; }
+.valign-bottom { vertical-align: bottom; }
 .tabular-footnote { font-size: .85rem; color: #495057; margin: .25rem 0; }
 .tabular-empty { font-style: italic; color: #6c757d; }
 .tabular-page-break { border: none; border-top: 1px dashed #adb5bd; margin: 1.5rem 0; }

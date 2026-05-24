@@ -38,8 +38,17 @@
   "footnote_align",
   "na_text",
   "decimal_metrics",
-  "chrome_onscreen"
+  "chrome_onscreen",
+  "alignment"
 )
+
+# List-valued knobs on `preset_spec` that should SHALLOW-MERGE across
+# successive `preset()` / `set_preset()` calls (last-write-wins per
+# key), rather than the default whole-value replace. Each entry in
+# `knobs[[name]]` is merged onto `prior[[name]]` so a user can layer
+# `preset(alignment = list(title_halign = "left"))` on top of an
+# existing alignment list without erasing the other keys.
+.preset_list_merged_knobs <- c("alignment")
 
 #' Override the render preset on a spec
 #'
@@ -620,7 +629,13 @@ get_preset <- function() {
 # constructed object; any bad value (wrong enum, wrong length, wrong
 # type) raises a base R error that we re-throw as tabular_error_input
 # with the underlying message.
+#
+# List-valued knobs in `.preset_list_merged_knobs` (e.g. `alignment`)
+# shallow-merge onto the prior list rather than wholesale replace.
+# A value of NULL inside the user's list clears that one key on the
+# merged result without touching the other keys.
 .apply_preset_knobs <- function(base, knobs, call) {
+  knobs <- .preset_merge_list_knobs(base, knobs)
   tryCatch(
     do.call(S7::set_props, c(list(base), knobs)),
     error = function(e) {
@@ -634,4 +649,27 @@ get_preset <- function() {
       )
     }
   )
+}
+
+# For each list-valued knob present in `knobs`, replace the incoming
+# value with `modifyList(prior, incoming)` so the existing keys
+# survive an additive call. Passing NULL inside the user's list
+# removes that key from the merged result (modifyList drops it).
+.preset_merge_list_knobs <- function(base, knobs) {
+  for (nm in intersect(names(knobs), .preset_list_merged_knobs)) {
+    incoming <- knobs[[nm]]
+    if (is.null(incoming)) {
+      next
+    }
+    if (!is.list(incoming)) {
+      # Let S7::set_props raise the type error via the validator.
+      next
+    }
+    prior <- S7::prop(base, nm)
+    if (!is.list(prior)) {
+      prior <- list()
+    }
+    knobs[[nm]] <- utils::modifyList(prior, incoming, keep.null = FALSE)
+  }
+  knobs
 }

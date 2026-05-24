@@ -258,9 +258,9 @@ backend_html <- function(grid, file) {
   meta <- grid@metadata
   c(
     "<section class=\"tabular-page\">",
-    .render_html_title_block(meta$titles_ast),
+    .render_html_title_block(meta$titles_ast, preset = meta$preset),
     "<p class=\"tabular-empty\">(no rows)</p>",
-    .render_html_footnote_block(meta$footnotes_ast),
+    .render_html_footnote_block(meta$footnotes_ast, preset = meta$preset),
     "</section>"
   )
 }
@@ -273,7 +273,10 @@ backend_html <- function(grid, file) {
   out <- "<section class=\"tabular-page\">"
 
   if (page_number == 1L) {
-    out <- c(out, .render_html_title_block(meta$titles_ast))
+    out <- c(
+      out,
+      .render_html_title_block(meta$titles_ast, preset = meta$preset)
+    )
   } else if (length(page$continuation) > 0L) {
     out <- c(
       out,
@@ -294,7 +297,10 @@ backend_html <- function(grid, file) {
   out <- c(out, table_lines)
 
   if (page_number == 1L) {
-    out <- c(out, .render_html_footnote_block(meta$footnotes_ast))
+    out <- c(
+      out,
+      .render_html_footnote_block(meta$footnotes_ast, preset = meta$preset)
+    )
   }
   c(out, "</section>")
 }
@@ -304,19 +310,36 @@ backend_html <- function(grid, file) {
 # ---------------------------------------------------------------------
 
 # Title block: each title line becomes an `<h1 class="tabular-
-# title">`. Empty title list returns an empty character vector so
-# the caller can skip the surrounding spacing.
-.render_html_title_block <- function(titles_ast) {
-  if (length(titles_ast) == 0L) {
+# title">`. Per-line horizontal alignment from
+# `preset@alignment$title_halign` (scalar broadcasts; vector zips
+# 1:1 then pads with last). Empty title list returns an empty
+# character vector so the caller can skip the surrounding spacing.
+.render_html_title_block <- function(titles_ast, preset = NULL) {
+  n <- length(titles_ast)
+  if (n == 0L) {
     return(character())
   }
+  # Title CSS baseline: text-align: center (.tabular-title rule).
+  # The cascade resolver returns NA when no preset override is in
+  # play, so the baseline takes over with no extra class. Per-line
+  # vector form on preset@alignment$title_halign zips into per-line
+  # overrides; legacy preset@title_align scalar (factory "center")
+  # is only treated as explicit when changed away from default.
   vapply(
-    titles_ast,
-    function(ast) {
-      paste0(
-        "<h1 class=\"tabular-title\">",
-        .render_html_inline(ast),
-        "</h1>"
+    seq_len(n),
+    function(i) {
+      halign <- .effective_title_halign(preset, line_index = i, n_lines = n)
+      cls <- "tabular-title"
+      if (length(halign) == 1L && !is.na(halign)) {
+        extra <- .html_align_class(halign)
+        if (nzchar(extra)) {
+          cls <- c(cls, extra)
+        }
+      }
+      sprintf(
+        "<h1 class=\"%s\">%s</h1>",
+        paste(cls, collapse = " "),
+        .render_html_inline(titles_ast[[i]])
       )
     },
     character(1L)
@@ -324,18 +347,35 @@ backend_html <- function(grid, file) {
 }
 
 # Footnote block: each footnote line becomes a `<p class="tabular-
-# footnote">`. Empty list returns an empty character vector.
-.render_html_footnote_block <- function(footnotes_ast) {
-  if (length(footnotes_ast) == 0L) {
+# footnote">`. Per-line horizontal alignment from
+# `preset@alignment$footnote_halign` (scalar broadcasts; vector zips
+# 1:1 then pads with last). Empty list returns an empty character
+# vector. Footnote CSS baseline: text-align: left (browser default);
+# emit override class only when the cascade differs.
+.render_html_footnote_block <- function(footnotes_ast, preset = NULL) {
+  n <- length(footnotes_ast)
+  if (n == 0L) {
     return(character())
   }
   vapply(
-    footnotes_ast,
-    function(ast) {
-      paste0(
-        "<p class=\"tabular-footnote\">",
-        .render_html_inline(ast),
-        "</p>"
+    seq_len(n),
+    function(i) {
+      halign <- .effective_footnote_halign(
+        preset,
+        line_index = i,
+        n_lines = n
+      )
+      cls <- "tabular-footnote"
+      if (length(halign) == 1L && !is.na(halign)) {
+        extra <- .html_align_class(halign)
+        if (nzchar(extra)) {
+          cls <- c(cls, extra)
+        }
+      }
+      sprintf(
+        "<p class=\"%s\">%s</p>",
+        paste(cls, collapse = " "),
+        .render_html_inline(footnotes_ast[[i]])
       )
     },
     character(1L)
@@ -350,6 +390,7 @@ backend_html <- function(grid, file) {
 # engine-resolved column widths, optional `<thead>` (header bands
 # + column-labels row), then `<tbody>` (one row per data row).
 .render_html_table <- function(page, meta, show_header) {
+  preset <- meta$preset
   out <- "<table class=\"tabular-table\">"
   out <- c(
     out,
@@ -360,7 +401,8 @@ backend_html <- function(grid, file) {
       headers = meta$headers,
       col_labels_ast = meta$col_labels_ast,
       col_names_visible = page$col_names,
-      cols = meta$cols %||% list()
+      cols = meta$cols %||% list(),
+      preset = preset
     )
     out <- c(out, thead)
   }
@@ -370,6 +412,8 @@ backend_html <- function(grid, file) {
       cells_text = page$cells_text,
       col_names_visible = page$col_names,
       cols = meta$cols %||% list(),
+      cells_style = page$cells_style,
+      preset = preset,
       subgroup_line_ast = page$subgroup_line_ast
     )
   )
@@ -382,14 +426,20 @@ backend_html <- function(grid, file) {
   headers,
   col_labels_ast,
   col_names_visible,
-  cols
+  cols,
+  preset = NULL
 ) {
   out <- "<thead>"
   band_rows <- .render_html_header_bands(headers, col_names_visible)
   out <- c(out, band_rows)
   out <- c(
     out,
-    .render_html_col_labels_row(col_labels_ast, col_names_visible, cols)
+    .render_html_col_labels_row(
+      col_labels_ast,
+      col_names_visible,
+      cols,
+      preset = preset
+    )
   )
   c(out, "</thead>")
 }
@@ -449,13 +499,15 @@ backend_html <- function(grid, file) {
 }
 
 # Render the column-labels row: one `<th>` per visible column,
-# alignment class derived from `col_spec@align`. Label pulled
-# from `col_labels_ast`; falls back to the column name when the
-# spec did not set a label.
+# alignment from the header cascade (col_spec@align / @valign
+# > preset@alignment$header_halign / header_valign > baked
+# defaults). Label pulled from `col_labels_ast`; falls back to
+# the column name when the spec did not set a label.
 .render_html_col_labels_row <- function(
   col_labels_ast,
   col_names_visible,
-  cols
+  cols,
+  preset = NULL
 ) {
   cells <- vapply(
     col_names_visible,
@@ -467,13 +519,10 @@ backend_html <- function(grid, file) {
         .render_html_inline(ast)
       }
       cs <- cols[[nm]]
-      align <- if (is_col_spec(cs)) cs@align else NA_character_
-      cls <- .html_align_class(align)
-      if (nzchar(cls)) {
-        sprintf("<th class=\"%s\">%s</th>", cls, label)
-      } else {
-        paste0("<th>", label, "</th>")
-      }
+      halign <- .effective_header_halign(cs, preset)
+      valign <- .effective_header_valign(cs, preset)
+      attr <- .html_cell_class_attr(halign, valign)
+      paste0("<th", attr, ">", label, "</th>")
     },
     character(1L)
   )
@@ -481,23 +530,26 @@ backend_html <- function(grid, file) {
 }
 
 # Render the `<tbody>` block: one `<tr>` per data row, one `<td>`
-# per visible column, alignment class derived from
-# `col_spec@align`. Cell text comes from `cells_text` (post-
-# engine_decimal); we HTML-escape verbatim so NBSP padding
-# survives.
+# per visible column, alignment via the three-layer cascade
+# (style predicate > col_spec > preset). Cell text comes from
+# `cells_text` (post-engine_decimal); we HTML-escape verbatim so
+# NBSP padding survives.
 .render_html_tbody <- function(
   cells_text,
   col_names_visible,
   cols,
+  cells_style = NULL,
+  preset = NULL,
   subgroup_line_ast = NULL
 ) {
   out <- "<tbody>"
   # Subgroup banner row — emitted as the first body row when the
-  # page carries subgroup runtime. Centred, bold, spans every
-  # visible column. Mirrors gt's `.gt_group_heading_row` pattern.
+  # page carries subgroup runtime. Aligned per preset@alignment$
+  # subgroup_halign (bold). Mirrors gt's `.gt_group_heading_row`.
   banner_row <- .render_html_subgroup_banner_row(
     subgroup_line_ast,
-    n_cols = length(col_names_visible)
+    n_cols = length(col_names_visible),
+    preset = preset
   )
   if (length(banner_row) > 0L) {
     out <- c(out, banner_row)
@@ -506,15 +558,7 @@ backend_html <- function(grid, file) {
   if (nrow_data == 0L) {
     return(c(out, "</tbody>"))
   }
-  align_classes <- vapply(
-    col_names_visible,
-    function(nm) {
-      cs <- cols[[nm]]
-      align <- if (is_col_spec(cs)) cs@align else NA_character_
-      .html_align_class(align)
-    },
-    character(1L)
-  )
+  col_specs <- lapply(col_names_visible, function(nm) cols[[nm]])
   rows <- vapply(
     seq_len(nrow_data),
     function(i) {
@@ -522,12 +566,12 @@ backend_html <- function(grid, file) {
         seq_along(col_names_visible),
         function(j) {
           text <- .html_escape_cell(cells_text[i, j])
-          cls <- align_classes[[j]]
-          if (nzchar(cls)) {
-            sprintf("<td class=\"%s\">%s</td>", cls, text)
-          } else {
-            paste0("<td>", text, "</td>")
-          }
+          cs <- col_specs[[j]]
+          sn <- .cell_style_at(cells_style, i, col_names_visible[[j]])
+          halign <- .effective_body_halign(sn, cs, preset)
+          valign <- .effective_body_valign(sn, cs, preset)
+          attr <- .html_cell_class_attr(halign, valign)
+          paste0("<td", attr, ">", text, "</td>")
         },
         character(1L)
       )
@@ -538,10 +582,38 @@ backend_html <- function(grid, file) {
   c(out, rows, "</tbody>")
 }
 
-# Render the subgroup banner `<tr>` — one centred bold cell spanning
-# every visible column. Returns character(0) when the page has no
-# subgroup runtime, so the caller can skip cleanly.
-.render_html_subgroup_banner_row <- function(subgroup_line_ast, n_cols) {
+# Look up the style_node for cell (row_idx, col_name) on a
+# `cells_style` list-matrix. Returns a default `style_node()` when
+# the matrix is NULL (no style spec attached) or the column /
+# row is missing. Defensive — the resolver helpers handle NA
+# fields gracefully.
+.cell_style_at <- function(cells_style, row_idx, col_name) {
+  if (is.null(cells_style)) {
+    return(style_node())
+  }
+  cn <- colnames(cells_style)
+  if (is.null(cn) || !(col_name %in% cn)) {
+    return(style_node())
+  }
+  if (row_idx < 1L || row_idx > nrow(cells_style)) {
+    return(style_node())
+  }
+  sn <- cells_style[[row_idx, col_name]]
+  if (!is_style_node(sn)) {
+    return(style_node())
+  }
+  sn
+}
+
+# Render the subgroup banner `<tr>` — one bold cell spanning every
+# visible column, aligned per `preset@alignment$subgroup_halign`
+# (default centre). Returns character(0) when the page has no
+# subgroup runtime so the caller can skip cleanly.
+.render_html_subgroup_banner_row <- function(
+  subgroup_line_ast,
+  n_cols,
+  preset = NULL
+) {
   if (
     is.null(subgroup_line_ast) ||
       !is_inline_ast(subgroup_line_ast) ||
@@ -550,14 +622,26 @@ backend_html <- function(grid, file) {
     return(character())
   }
   inner <- .render_html_inline(subgroup_line_ast)
+  halign <- .effective_subgroup_halign(preset)
+  valign <- .effective_subgroup_valign(preset)
+  # Subgroup CSS baseline: text-align: center, vertical-align: middle
+  # (see `.tabular-subgroup td` rule). The resolver returns NA when
+  # the preset is silent on subgroup alignment, so the CSS baseline
+  # takes over with no class on the cell.
+  attr <- .html_cell_class_attr(
+    halign,
+    valign,
+    extra_classes = "tabular-subgroup-label"
+  )
   sprintf(
     paste0(
       "<tr class=\"tabular-subgroup\">",
-      "<td colspan=\"%d\" class=\"tabular-subgroup-label\">",
+      "<td colspan=\"%d\"%s>",
       "<strong>%s</strong>",
       "</td></tr>"
     ),
     n_cols,
+    attr,
     inner
   )
 }
@@ -621,6 +705,63 @@ backend_html <- function(grid, file) {
     decimal = "text-right",
     ""
   )
+}
+
+# Map a `valign` value to a CSS vertical-align class. Defaults to
+# the empty string (inherit) when unset / NA so the browser applies
+# the CSS default (baseline / `.tabular-table` `vertical-align: top`)
+# without us emitting a redundant class.
+.html_valign_class <- function(valign) {
+  if (is.null(valign) || length(valign) == 0L || is.na(valign)) {
+    return("")
+  }
+  switch(
+    valign,
+    top = "valign-top",
+    middle = "valign-middle",
+    bottom = "valign-bottom",
+    ""
+  )
+}
+
+# Compose a combined `class="..."` attribute for one cell. Emits
+# alignment classes only when the cascade resolver returned a
+# non-NA value (i.e. some layer of style / col_spec / preset
+# explicitly set the alignment); leaves the cell bare otherwise so
+# the CSS stylesheet's per-surface baseline takes over. Extra
+# `extra_classes` (e.g. "tabular-subgroup-label") are always
+# included.
+.html_cell_class_attr <- function(
+  halign,
+  valign,
+  extra_classes = character()
+) {
+  classes <- extra_classes
+  if (
+    !is.null(halign) &&
+      length(halign) == 1L &&
+      !is.na(halign)
+  ) {
+    cls <- .html_align_class(halign)
+    if (nzchar(cls)) {
+      classes <- c(classes, cls)
+    }
+  }
+  if (
+    !is.null(valign) &&
+      length(valign) == 1L &&
+      !is.na(valign)
+  ) {
+    cls <- .html_valign_class(valign)
+    if (nzchar(cls)) {
+      classes <- c(classes, cls)
+    }
+  }
+  classes <- classes[nzchar(classes)]
+  if (length(classes) == 0L) {
+    return("")
+  }
+  sprintf(" class=\"%s\"", paste(classes, collapse = " "))
 }
 
 # ---------------------------------------------------------------------
@@ -817,17 +958,21 @@ backend_html <- function(grid, file) {
     ".tabular-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin: .2rem 0; }",
     ".tabular-continuation { text-align: right; color: #6c757d; margin: .25rem 0 .5rem; }",
     ".tabular-table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .9rem; }",
-    ".tabular-table th, .tabular-table td { padding: .35rem .6rem; vertical-align: top; }",
-    ".tabular-table thead th { border-top: 1px solid #212529; border-bottom: 1px solid #212529; font-weight: 600; }",
+    ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }",
+    ".tabular-table td { text-align: left; vertical-align: top; }",
+    ".tabular-table thead th { border-top: 1px solid #212529; border-bottom: 1px solid #212529; font-weight: 600; text-align: center; vertical-align: bottom; }",
     ".tabular-table thead tr:not(:last-child) th { border-bottom: 1px solid #adb5bd; }",
     ".tabular-table tbody tr td { border-top: none; }",
     ".tabular-table tbody tr:last-child td { border-bottom: 1px solid #212529; }",
     ".tabular-band { text-align: center; }",
-    ".tabular-subgroup td { text-align: center; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }",
+    ".tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }",
     ".tabular-subgroup-label { font-weight: 600; }",
     ".text-left { text-align: left; }",
     ".text-center { text-align: center; }",
     ".text-right { text-align: right; }",
+    ".valign-top { vertical-align: top; }",
+    ".valign-middle { vertical-align: middle; }",
+    ".valign-bottom { vertical-align: bottom; }",
     ".tabular-footnote { font-size: .85rem; color: #495057; margin: .25rem 0; }",
     ".tabular-empty { font-style: italic; color: #6c757d; }",
     ".tabular-page-break { border: none; border-top: 1px dashed #adb5bd; margin: 1.5rem 0; }",

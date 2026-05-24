@@ -27,7 +27,12 @@ only the \code{pvalue} column's cells in matching rows.}
 Recognised attributes: \code{bold}, \code{italic}, \code{underline}, \code{color},
 \code{background}, \code{font_family}, \code{font_size}, \code{rule_above},
 \code{rule_below}, \code{border_left}, \code{border_right}, \code{padding},
-\code{blank_after}, \code{pretext}, \code{posttext}.
+\code{blank_after}, \code{pretext}, \code{posttext}, \code{halign}, \code{valign}.
+
+\code{halign} is one of \code{"left"}, \code{"center"}, \code{"right"}. \code{valign}
+is one of \code{"top"}, \code{"middle"}, \code{"bottom"}. Per-cell alignment
+overrides win over \code{\link[=col_spec]{col_spec()}} column defaults, which in
+turn override \code{\link[=preset]{preset()}} body defaults.
 
 \strong{Note:} Unknown attribute names warn and are silently dropped
 (they do NOT pass through to the backend).}

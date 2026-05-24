@@ -69,7 +69,12 @@
 #'   Recognised attributes: `bold`, `italic`, `underline`, `color`,
 #'   `background`, `font_family`, `font_size`, `rule_above`,
 #'   `rule_below`, `border_left`, `border_right`, `padding`,
-#'   `blank_after`, `pretext`, `posttext`.
+#'   `blank_after`, `pretext`, `posttext`, `halign`, `valign`.
+#'
+#'   `halign` is one of `"left"`, `"center"`, `"right"`. `valign`
+#'   is one of `"top"`, `"middle"`, `"bottom"`. Per-cell alignment
+#'   overrides win over [`col_spec()`] column defaults, which in
+#'   turn override [`preset()`] body defaults.
 #'
 #'   **Note:** Unknown attribute names warn and are silently dropped
 #'   (they do NOT pass through to the backend).
@@ -250,7 +255,9 @@ style <- function(.spec, where, ..., .scope = "cell") {
   "padding",
   "blank_after",
   "pretext",
-  "posttext"
+  "posttext",
+  "halign",
+  "valign"
 )
 
 # Build a style_node from a list of named attributes. Unknown

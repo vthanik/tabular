@@ -33,9 +33,41 @@
 .paper_size_values <- c("letter", "a4")
 .hlines_values <- c("header", "none", "all")
 .align_anchor_values <- c("left", "center", "right")
+.valign_values <- c("top", "middle", "bottom")
 .derive_type_values <- c("numeric", "character")
 .decimal_metrics_values <- c("afm", "systemfonts")
 .chrome_onscreen_values <- c("auto", "off")
+
+# Recognised keys on `preset_spec@alignment`. Each entry pairs with
+# a value-set drawn from `.align_anchor_values` (left/center/right)
+# for `_halign` and `.valign_values` (top/middle/bottom) for
+# `_valign`. The validator in preset_spec walks both halves.
+# Title / footnote / subgroup `_halign` accept either a length-1
+# scalar (applies to every line) OR a character vector aligning
+# 1:1 with the title / footnote vector; the other six keys are
+# scalar-only.
+.preset_alignment_keys_halign <- c(
+  "title_halign",
+  "footnote_halign",
+  "subgroup_halign",
+  "header_halign",
+  "body_halign"
+)
+.preset_alignment_keys_valign <- c(
+  "title_valign",
+  "footnote_valign",
+  "subgroup_valign",
+  "header_valign",
+  "body_valign"
+)
+.preset_alignment_keys <- c(
+  .preset_alignment_keys_halign,
+  .preset_alignment_keys_valign
+)
+.preset_alignment_keys_vector_halign <- c(
+  "title_halign",
+  "footnote_halign"
+)
 
 # Recognised inline-formatting run types. Each element of an
 # `inline_ast@runs` list is a named-list record with a `type` field
@@ -140,6 +172,10 @@ NULL
       S7::class_character,
       default = NA_character_
     ),
+    valign = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    ),
     na_text = S7::new_property(
       S7::class_character,
       default = ""
@@ -160,6 +196,14 @@ NULL
         paste(shQuote(.align_values), collapse = ", "),
         "; got ",
         shQuote(self@align)
+      ))
+    }
+    if (!is.na(self@valign) && !(self@valign %in% .valign_values)) {
+      return(paste0(
+        "@valign must be one of ",
+        paste(shQuote(.valign_values), collapse = ", "),
+        "; got ",
+        shQuote(self@valign)
       ))
     }
     if (!.is_auto_width(self@width)) {
@@ -334,8 +378,37 @@ style_node <- S7::new_class(
     padding = S7::new_property(S7::class_numeric, default = NA_real_),
     blank_after = S7::new_property(S7::class_integer, default = NA_integer_),
     pretext = S7::new_property(S7::class_character, default = NA_character_),
-    posttext = S7::new_property(S7::class_character, default = NA_character_)
-  )
+    posttext = S7::new_property(S7::class_character, default = NA_character_),
+    halign = S7::new_property(S7::class_character, default = NA_character_),
+    valign = S7::new_property(S7::class_character, default = NA_character_)
+  ),
+  validator = function(self) {
+    if (
+      length(self@halign) == 1L &&
+        !is.na(self@halign) &&
+        !(self@halign %in% .align_anchor_values)
+    ) {
+      return(paste0(
+        "@halign must be one of ",
+        paste(shQuote(.align_anchor_values), collapse = ", "),
+        "; got ",
+        shQuote(self@halign)
+      ))
+    }
+    if (
+      length(self@valign) == 1L &&
+        !is.na(self@valign) &&
+        !(self@valign %in% .valign_values)
+    ) {
+      return(paste0(
+        "@valign must be one of ",
+        paste(shQuote(.valign_values), collapse = ", "),
+        "; got ",
+        shQuote(self@valign)
+      ))
+    }
+    NULL
+  }
 )
 
 # ---------------------------------------------------------------------
@@ -460,7 +533,8 @@ preset_spec <- S7::new_class(
     chrome_onscreen = S7::new_property(
       S7::class_character,
       default = "auto"
-    )
+    ),
+    alignment = S7::new_property(S7::class_list, default = list())
   ),
   validator = function(self) {
     if (!(self@orientation %in% .orientation_values)) {
@@ -521,6 +595,14 @@ preset_spec <- S7::new_class(
     pf_err <- .page_band_shape_error(self@pagefoot)
     if (!is.null(pf_err)) {
       return(paste0("@pagefoot ", pf_err))
+    }
+    # Alignment named-list — every name in the allowed key set,
+    # every value in the appropriate enum (halign vs valign), with
+    # title / footnote _halign also accepting a character vector
+    # for per-line broadcast.
+    al_err <- .preset_alignment_shape_error(self@alignment)
+    if (!is.null(al_err)) {
+      return(paste0("@alignment ", al_err))
     }
     NULL
   }

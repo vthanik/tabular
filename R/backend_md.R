@@ -171,7 +171,8 @@ backend_md <- function(grid, file) {
       .render_md_alignment_row(
         meta$col_names,
         page$col_names,
-        meta$cols %||% list()
+        meta$cols %||% list(),
+        preset = meta$preset
       )
     )
   }
@@ -341,13 +342,19 @@ backend_md <- function(grid, file) {
 .render_md_alignment_row <- function(
   col_names_full,
   col_names_visible,
-  cols
+  cols,
+  preset = NULL
 ) {
+  # Cascade: col_spec@align > preset@alignment$body_halign > GFM left.
+  body_halign <- .preset_align(preset, "body_halign")
   vapply(
     col_names_visible,
     function(nm) {
       cs <- cols[[nm]]
       align <- if (is_col_spec(cs)) cs@align else NA_character_
+      if (is.na(align)) {
+        align <- body_halign
+      }
       .md_align_token(align)
     },
     character(1L)

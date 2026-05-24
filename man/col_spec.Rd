@@ -11,6 +11,7 @@ col_spec(
   visible = TRUE,
   width = "auto",
   align = NULL,
+  valign = NULL,
   na_text = ""
 )
 }
@@ -121,7 +122,7 @@ inconsistent across backends and is replaced by the \code{"auto"}
 default, which produces identical widths across RTF / LaTeX
 / HTML.}
 
-\item{align}{\emph{Cell alignment within the column.}
+\item{align}{\emph{Horizontal alignment within the column.}
 \verb{<character(1) | NULL>: default NULL}. One of:
 \itemize{
 \item \strong{\code{"left"}} — character columns; row labels.
@@ -130,8 +131,9 @@ default, which produces identical widths across RTF / LaTeX
 \item \strong{\code{"decimal"}} — numeric or mixed-format cells aligned on
 the decimal mark. Use for \code{"5 (3.2\%)"} next to
 \code{"54 (32.1\%)"}.
-\item \strong{\code{NULL}} (default) — backend default: right for numeric,
-left for character.
+\item \strong{\code{NULL}} (default) — falls through to
+\code{preset(alignment = list(body_halign = ...))} and then to
+the baked default \code{"left"}.
 }
 
 \strong{Tip:} \code{"decimal"} pads numerics with non-breaking spaces
@@ -139,6 +141,17 @@ so the decimal mark falls on a single column-wide anchor.
 The active preset's \code{decimal_metrics} knob is reserved for
 future em-aware padding refinement (see \code{\link[=preset]{preset()}}); the
 current engine pads by character count.}
+
+\item{valign}{\emph{Vertical alignment within the cell.}
+\verb{<character(1) | NULL>: default NULL}. One of \code{"top"},
+\code{"middle"}, \code{"bottom"}. \code{NULL} falls through to
+\code{preset(alignment = list(body_valign = ...))} (baked default
+\code{"top"}). Per-cell overrides via \code{style(valign = ...)} still
+win over the column setting.
+
+\strong{Tip:} Set \code{"middle"} on the row-label column of a banded-
+row table so the label stays centred against the multi-line
+stat-block in the adjacent cell.}
 
 \item{na_text}{\emph{Text substituted for \code{NA} cells.}
 \verb{<character(1)>: default ""}. Substituted BEFORE the \code{format}

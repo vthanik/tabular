@@ -354,19 +354,28 @@ backend_rtf <- function(grid, file) {
 # Title + footnote blocks
 # ---------------------------------------------------------------------
 
-# Title block: each title line emits as a centred bold paragraph.
-# Empty title list returns an empty character vector so the caller
-# can skip surrounding spacing.
+# Title block: each title line emits as a paragraph whose alignment
+# comes from `preset@alignment$title_halign` (scalar broadcasts;
+# vector zips per-line). Bold by default; the cascade-default is
+# centre (\qc) when nothing in the cascade overrides.
 .render_rtf_title_block <- function(titles_ast, preset) {
-  if (length(titles_ast) == 0L) {
+  n <- length(titles_ast)
+  if (n == 0L) {
     return(character())
   }
   vapply(
-    titles_ast,
-    function(ast) {
+    seq_len(n),
+    function(i) {
+      halign <- .effective_title_halign(preset, line_index = i, n_lines = n)
+      if (is.na(halign)) {
+        halign <- "center"
+      }
+      align_tok <- .rtf_align_token(halign)
       paste0(
-        "\\pard\\plain\\qc {\\b ",
-        .render_rtf_inline(ast),
+        "\\pard\\plain",
+        align_tok,
+        " {\\b ",
+        .render_rtf_inline(titles_ast[[i]]),
         "}\\par"
       )
     },
@@ -374,20 +383,33 @@ backend_rtf <- function(grid, file) {
   )
 }
 
-# Footnote block: each footnote line emits as a left-aligned
-# paragraph at slightly smaller font size. Empty list returns an
-# empty character vector.
+# Footnote block: each footnote line emits as a paragraph whose
+# alignment comes from `preset@alignment$footnote_halign` (scalar
+# broadcasts; vector zips per-line). Slightly smaller font size.
+# Cascade default is left (\ql).
 .render_rtf_footnote_block <- function(footnotes_ast, preset) {
-  if (length(footnotes_ast) == 0L) {
+  n <- length(footnotes_ast)
+  if (n == 0L) {
     return(character())
   }
   fs_half <- as.integer(round(max(preset@font_size - 1, 7) * 2))
   vapply(
-    footnotes_ast,
-    function(ast) {
+    seq_len(n),
+    function(i) {
+      halign <- .effective_footnote_halign(
+        preset,
+        line_index = i,
+        n_lines = n
+      )
+      if (is.na(halign)) {
+        halign <- "left"
+      }
+      align_tok <- .rtf_align_token(halign)
       paste0(
-        sprintf("\\pard\\plain\\ql\\fs%d ", fs_half),
-        .render_rtf_inline(ast),
+        "\\pard\\plain",
+        align_tok,
+        sprintf("\\fs%d ", fs_half),
+        .render_rtf_inline(footnotes_ast[[i]]),
         "\\par"
       )
     },
@@ -429,14 +451,17 @@ backend_rtf <- function(grid, file) {
   # body row. Empty when the page carries no subgroup runtime.
   banner_row <- .render_rtf_subgroup_banner_row(
     page$subgroup_line_ast,
-    cellx = cellx
+    cellx = cellx,
+    preset = preset
   )
 
   body_rows <- .render_rtf_body_rows(
     page$cells_text,
     col_names_vis,
     cols,
-    cellx
+    cellx,
+    cells_style = page$cells_style,
+    preset = preset
   )
 
   c(band_rows, label_row, banner_row, body_rows)
@@ -446,7 +471,11 @@ backend_rtf <- function(grid, file) {
 # edge sits at the table's final `\cellx` so the cell spans every
 # visible column. Returns character(0) when the page carries no
 # subgroup runtime.
-.render_rtf_subgroup_banner_row <- function(subgroup_line_ast, cellx) {
+.render_rtf_subgroup_banner_row <- function(
+  subgroup_line_ast,
+  cellx,
+  preset = NULL
+) {
   if (
     is.null(subgroup_line_ast) ||
       !is_inline_ast(subgroup_line_ast) ||
@@ -456,13 +485,23 @@ backend_rtf <- function(grid, file) {
     return(character())
   }
   inner <- .render_rtf_inline(subgroup_line_ast)
+  halign <- .effective_subgroup_halign(preset)
+  if (is.na(halign)) {
+    halign <- "center"
+  }
+  valign <- .effective_subgroup_valign(preset)
+  align_tok <- .rtf_align_token(halign)
+  valign_tok <- .rtf_valign_token(valign)
   cellx_line <- paste0(
     "\\clbrdrt\\brdrs\\clbrdrb\\brdrs",
     "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
+    valign_tok,
     sprintf("\\cellx%d", as.integer(cellx[[length(cellx)]]))
   )
   cell_body <- paste0(
-    "\\pard\\plain\\intbl\\qc {\\b ",
+    "\\pard\\plain\\intbl",
+    align_tok,
+    " {\\b ",
     inner,
     "}\\cell"
   )
@@ -600,10 +639,12 @@ backend_rtf <- function(grid, file) {
   )
 }
 
-# Column-labels row: one cell per visible column, alignment from
-# `col_spec@align`, label from `col_labels_ast` (the parsed AST
-# already created by engine_format). Top + bottom rules so the
-# row visually separates the head from the body.
+# Column-labels row: one cell per visible column, alignment via
+# the header cascade (col_spec@align / @valign >
+# preset@alignment$header_halign / header_valign > backend
+# default), label from `col_labels_ast` (the parsed AST already
+# created by engine_format). Top + bottom rules so the row
+# visually separates the head from the body.
 .render_rtf_col_labels_row <- function(
   col_labels_ast,
   col_names_vis,
@@ -615,15 +656,18 @@ backend_rtf <- function(grid, file) {
   cell_bodies <- character(length(col_names_vis))
   for (i in seq_along(col_names_vis)) {
     nm <- col_names_vis[[i]]
+    cs <- cols[[nm]]
+    halign <- .effective_header_halign(cs, preset)
+    valign <- .effective_header_valign(cs, preset)
+    align_tok <- .rtf_align_token(halign)
+    valign_tok <- .rtf_valign_token(valign)
     cellx_lines[[i]] <- paste0(
       "\\clbrdrt\\brdrs\\clbrdrb\\brdrs",
       "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
+      valign_tok,
       sprintf("\\cellx%d", as.integer(cellx[[i]]))
     )
     ast <- col_labels_ast[[nm]]
-    cs <- cols[[nm]]
-    align <- if (is_col_spec(cs)) cs@align else "left"
-    align_tok <- .rtf_align_token(align)
     label <- if (is.null(ast)) .rtf_escape(nm) else .render_rtf_inline(ast)
     cell_bodies[[i]] <- paste0(
       "\\pard\\plain\\intbl ",
@@ -642,25 +686,26 @@ backend_rtf <- function(grid, file) {
 }
 
 # Body rows: one `\trowd ... \row` per data row, one cell per
-# visible column, alignment from `col_spec@align`, text from
+# visible column, alignment via the three-layer cascade
+# (cells_style@halign / @valign > col_spec@align / @valign >
+# preset@alignment$body_halign / body_valign), text from
 # `cells_text` (post-engine_decimal). Cells use `\line` for
 # embedded newlines so multi-line cells render without closing the
 # cell (a `\par` would close it).
-.render_rtf_body_rows <- function(cells_text, col_names_vis, cols, cellx) {
+.render_rtf_body_rows <- function(
+  cells_text,
+  col_names_vis,
+  cols,
+  cellx,
+  cells_style = NULL,
+  preset = NULL
+) {
   nrow_data <- nrow(cells_text)
   if (nrow_data == 0L) {
     return(character())
   }
 
-  align_tokens <- vapply(
-    col_names_vis,
-    function(nm) {
-      cs <- cols[[nm]]
-      align <- if (is_col_spec(cs)) cs@align else "left"
-      .rtf_align_token(align)
-    },
-    character(1L)
-  )
+  col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
 
   out <- character()
   for (r in seq_len(nrow_data)) {
@@ -668,17 +713,24 @@ backend_rtf <- function(grid, file) {
     cell_bodies <- character(length(col_names_vis))
     is_last_row <- (r == nrow_data)
     for (i in seq_along(col_names_vis)) {
+      sn <- .cell_style_at(cells_style, r, col_names_vis[[i]])
+      cs <- col_specs[[i]]
+      halign <- .effective_body_halign(sn, cs, preset)
+      valign <- .effective_body_valign(sn, cs, preset)
+      align_tok <- .rtf_align_token(halign)
+      valign_tok <- .rtf_valign_token(valign)
       bottom <- if (is_last_row) "\\clbrdrb\\brdrs" else "\\clbrdrb\\brdrnone"
       cellx_lines[[i]] <- paste0(
         "\\clbrdrt\\brdrnone",
         bottom,
         "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
+        valign_tok,
         sprintf("\\cellx%d", as.integer(cellx[[i]]))
       )
       text <- .rtf_escape_cell(cells_text[r, i])
       cell_bodies[[i]] <- paste0(
         "\\pard\\plain\\intbl ",
-        align_tokens[[i]],
+        align_tok,
         " ",
         text,
         "\\cell"
@@ -710,6 +762,24 @@ backend_rtf <- function(grid, file) {
     right = "\\qr",
     decimal = "\\qr",
     "\\ql"
+  )
+}
+
+# Map a `valign` value to the RTF cell-level vertical-alignment
+# control (`\clvertalt`, `\clvertalc`, `\clvertalb`). Returns ""
+# when valign is NA / NULL so cells default to RTF's natural
+# top alignment (the readers Word and LibreOffice render this as
+# top).
+.rtf_valign_token <- function(valign) {
+  if (is.null(valign) || length(valign) == 0L || is.na(valign)) {
+    return("")
+  }
+  switch(
+    valign,
+    top = "\\clvertalt",
+    middle = "\\clvertalc",
+    bottom = "\\clvertalb",
+    ""
   )
 }
 

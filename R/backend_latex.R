@@ -100,11 +100,11 @@ backend_latex <- function(grid, file) {
 .render_latex_empty <- function(grid) {
   meta <- grid@metadata
   c(
-    .render_latex_title_block(meta$titles_ast),
+    .render_latex_title_block(meta$titles_ast, preset = meta$preset),
     "",
     "\\emph{(no rows)}",
     "",
-    .render_latex_footnote_block(meta$footnotes_ast)
+    .render_latex_footnote_block(meta$footnotes_ast, preset = meta$preset)
   )
 }
 
@@ -117,7 +117,7 @@ backend_latex <- function(grid, file) {
   out <- character()
 
   if (page_number == 1L) {
-    titles <- .render_latex_title_block(meta$titles_ast)
+    titles <- .render_latex_title_block(meta$titles_ast, preset = meta$preset)
     if (length(titles) > 0L) {
       out <- c(out, titles, "")
     }
@@ -135,7 +135,10 @@ backend_latex <- function(grid, file) {
   out <- c(out, .render_latex_table(page, meta))
 
   if (page_number == 1L) {
-    footnotes <- .render_latex_footnote_block(meta$footnotes_ast)
+    footnotes <- .render_latex_footnote_block(
+      meta$footnotes_ast,
+      preset = meta$preset
+    )
     if (length(footnotes) > 0L) {
       out <- c(out, "", footnotes)
     }
@@ -147,38 +150,80 @@ backend_latex <- function(grid, file) {
 # Title + footnote blocks
 # ---------------------------------------------------------------------
 
-# Title block: each title line becomes a centred `\par`. Empty
-# title list returns an empty character vector so the caller can
-# skip the surrounding spacing.
-.render_latex_title_block <- function(titles_ast) {
-  if (length(titles_ast) == 0L) {
+# Title block: each title line emits as a bold paragraph whose
+# alignment comes from `preset@alignment$title_halign` (scalar
+# broadcasts; vector zips per-line). Cascade default centre.
+.render_latex_title_block <- function(titles_ast, preset = NULL) {
+  n <- length(titles_ast)
+  if (n == 0L) {
     return(character())
   }
-  inner <- vapply(
-    titles_ast,
-    function(ast) .render_latex_inline(ast),
-    character(1L)
-  )
-  c(
-    "\\begin{center}",
-    paste0("{\\bfseries ", inner, "}\\par"),
-    "\\end{center}"
-  )
+  unlist(lapply(
+    seq_len(n),
+    function(i) {
+      halign <- .effective_title_halign(preset, line_index = i, n_lines = n)
+      if (is.na(halign)) {
+        halign <- "center"
+      }
+      .latex_aligned_paragraph(
+        body = paste0(
+          "{\\bfseries ",
+          .render_latex_inline(titles_ast[[i]]),
+          "}"
+        ),
+        halign = halign
+      )
+    }
+  ))
 }
 
-# Footnote block: each footnote line becomes a left-aligned
-# paragraph separated by `\par`. Empty list returns an empty
-# character vector.
-.render_latex_footnote_block <- function(footnotes_ast) {
-  if (length(footnotes_ast) == 0L) {
+# Footnote block: each footnote line emits as a paragraph at
+# slightly smaller font (\small ... \normalsize) whose alignment
+# comes from `preset@alignment$footnote_halign` (scalar broadcasts;
+# vector zips per-line). Cascade default left.
+.render_latex_footnote_block <- function(footnotes_ast, preset = NULL) {
+  n <- length(footnotes_ast)
+  if (n == 0L) {
     return(character())
   }
-  rendered <- vapply(
-    footnotes_ast,
-    function(ast) paste0(.render_latex_inline(ast), "\\par"),
-    character(1L)
-  )
+  rendered <- unlist(lapply(
+    seq_len(n),
+    function(i) {
+      halign <- .effective_footnote_halign(
+        preset,
+        line_index = i,
+        n_lines = n
+      )
+      if (is.na(halign)) {
+        halign <- "left"
+      }
+      .latex_aligned_paragraph(
+        body = .render_latex_inline(footnotes_ast[[i]]),
+        halign = halign
+      )
+    }
+  ))
   c("\\noindent\\small", rendered, "\\normalsize")
+}
+
+# Wrap an inline-rendered fragment in the LaTeX environment that
+# produces the requested horizontal alignment. We use the standard
+# `center` / `flushleft` / `flushright` environments rather than
+# inline `\centering` so the alignment scope is unambiguous (and
+# composes inside `\noindent\small ... \normalsize` blocks).
+.latex_aligned_paragraph <- function(body, halign) {
+  env <- switch(
+    halign,
+    left = "flushleft",
+    center = "center",
+    right = "flushright",
+    "flushleft"
+  )
+  c(
+    paste0("\\begin{", env, "}"),
+    paste0(body, "\\par"),
+    paste0("\\end{", env, "}")
+  )
 }
 
 # ---------------------------------------------------------------------
@@ -202,24 +247,38 @@ backend_latex <- function(grid, file) {
   rowhead <- length(band_rows) + 1L
 
   header_rules <- c("\\hline", band_rows, label_row, "\\hline")
-  body_rows <- .render_latex_body_rows(page$cells_text)
+  body_rows <- .render_latex_body_rows(
+    page$cells_text,
+    col_names_vis = col_names_vis,
+    cells_style = page$cells_style,
+    cols = cols,
+    preset = meta$preset
+  )
   footer_rule <- "\\hline"
 
-  # Subgroup banner row — `\SetCell[c=N]{c}` spanning every visible
-  # column. Inserted between the header rule and the first body row
-  # so it sits directly under the column-header band on every page
-  # of the group. Returns character(0) when the page has no
-  # subgroup runtime.
+  # Subgroup banner row — `\SetCell[c=N]{c|l|r}` spanning every
+  # visible column. Inserted between the header rule and the first
+  # body row so it sits directly under the column-header band on
+  # every page of the group. Returns character(0) when the page
+  # has no subgroup runtime.
   banner_row <- .render_latex_subgroup_banner_row(
     page$subgroup_line_ast,
-    n_cols = length(col_names_vis)
+    n_cols = length(col_names_vis),
+    preset = meta$preset
   )
 
+  # Table-level row baseline from preset@alignment$body_valign
+  # (cascade default top). Per-cell overrides emit `\SetCell{...}`.
+  body_valign <- .preset_align(meta$preset, "body_valign")
+  if (is.na(body_valign)) {
+    body_valign <- "top"
+  }
   c(
     sprintf(
-      "\\begin{longtblr}[caption={}, label={}]{colspec={%s}, rowhead=%d, rows={valign=t}}",
+      "\\begin{longtblr}[caption={}, label={}]{colspec={%s}, rowhead=%d, rows={valign=%s}}",
       colspec,
-      rowhead
+      rowhead,
+      .latex_valign_letter(body_valign)
     ),
     header_rules,
     banner_row,
@@ -233,7 +292,11 @@ backend_latex <- function(grid, file) {
 # `\SetCell[c=N]{c}` spans every visible column; trailing empty
 # cells (`&`-separated) keep tabularray's column count consistent.
 # Returns character(0) when the page has no subgroup runtime.
-.render_latex_subgroup_banner_row <- function(subgroup_line_ast, n_cols) {
+.render_latex_subgroup_banner_row <- function(
+  subgroup_line_ast,
+  n_cols,
+  preset = NULL
+) {
   if (
     is.null(subgroup_line_ast) ||
       !is_inline_ast(subgroup_line_ast) ||
@@ -243,11 +306,16 @@ backend_latex <- function(grid, file) {
     return(character())
   }
   inner <- .render_latex_inline(subgroup_line_ast)
+  halign <- .effective_subgroup_halign(preset)
+  if (is.na(halign)) {
+    halign <- "center"
+  }
+  letter <- .latex_halign_letter(halign)
   row <- if (n_cols == 1L) {
-    sprintf("\\textbf{%s} \\\\", inner)
+    sprintf("\\SetCell{halign=%s} \\textbf{%s} \\\\", letter, inner)
   } else {
     paste0(
-      sprintf("\\SetCell[c=%d]{c} \\textbf{%s}", n_cols, inner),
+      sprintf("\\SetCell[c=%d]{%s} \\textbf{%s}", n_cols, letter, inner),
       paste(rep(" &", n_cols - 1L), collapse = ""),
       " \\\\"
     )
@@ -426,23 +494,81 @@ backend_latex <- function(grid, file) {
 # Render one body row per data row. Cell text is the post-
 # engine_decimal `cells_text` slice; embedded `\n` becomes `\\`
 # inside the cell. `&` and other LaTeX specials are escaped.
-.render_latex_body_rows <- function(cells_text) {
+# Per-cell predicate overrides from `cells_style@halign / @valign`
+# emit `\SetCell{halign=l/c/r,valign=t/m/b}` ahead of the cell
+# content; column-level alignment from `col_spec@align` is carried
+# by the colspec at the longtblr level. The table-level row
+# baseline carries the preset's body_valign (`rows={valign=...}`)
+# so non-style cells inherit the cascade default for vertical
+# alignment without per-cell emission.
+.render_latex_body_rows <- function(
+  cells_text,
+  col_names_vis = NULL,
+  cells_style = NULL,
+  cols = NULL,
+  preset = NULL
+) {
   nrow_data <- nrow(cells_text)
   if (nrow_data == 0L) {
     return(character())
   }
+  ncol_data <- ncol(cells_text)
+  col_names_vis <- col_names_vis %||% rep(NA_character_, ncol_data)
   vapply(
     seq_len(nrow_data),
     function(i) {
       cells <- vapply(
-        seq_len(ncol(cells_text)),
-        function(j) .latex_escape_cell(cells_text[i, j]),
+        seq_len(ncol_data),
+        function(j) {
+          text <- .latex_escape_cell(cells_text[i, j])
+          nm <- col_names_vis[[j]]
+          sn <- if (is.character(nm) && !is.na(nm)) {
+            .cell_style_at(cells_style, i, nm)
+          } else {
+            style_node()
+          }
+          prefix <- .latex_setcell_alignment(sn)
+          paste0(prefix, text)
+        },
         character(1L)
       )
       paste0(paste(cells, collapse = " & "), " \\\\")
     },
     character(1L)
   )
+}
+
+# Build a `\SetCell{halign=l/c/r,valign=t/m/b}` prefix for one
+# body cell, but only when the style_node carries an explicit
+# halign / valign override (predicate layer). Column-level
+# alignment is carried by the colspec; emitting `\SetCell` for
+# every cell would waste source and break tabularray's per-column
+# wrapping. Returns "" when the style is silent.
+.latex_setcell_alignment <- function(style) {
+  if (!is_style_node(style)) {
+    return("")
+  }
+  parts <- character()
+  if (length(style@halign) == 1L && !is.na(style@halign)) {
+    parts <- c(parts, paste0("halign=", .latex_halign_letter(style@halign)))
+  }
+  if (length(style@valign) == 1L && !is.na(style@valign)) {
+    parts <- c(parts, paste0("valign=", .latex_valign_letter(style@valign)))
+  }
+  if (length(parts) == 0L) {
+    return("")
+  }
+  paste0("\\SetCell{", paste(parts, collapse = ","), "} ")
+}
+
+# halign / valign letter helpers for tabularray's `\SetCell{...}`
+# argument keys. tabularray uses single letters for both axes:
+# l/c/r for halign; t/m/b for valign.
+.latex_halign_letter <- function(halign) {
+  switch(halign, left = "l", center = "c", right = "r", "l")
+}
+.latex_valign_letter <- function(valign) {
+  switch(valign, top = "t", middle = "m", bottom = "b", "t")
 }
 
 # ---------------------------------------------------------------------
