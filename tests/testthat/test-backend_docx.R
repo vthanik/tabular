@@ -774,6 +774,157 @@ test_that(".render_docx_link falls back to plain text when href is missing or un
 })
 
 # ---------------------------------------------------------------------
+# Per-cell style cascade — cells_style -> <w:tcPr> / <w:rPr>
+# ---------------------------------------------------------------------
+
+test_that(".docx_rPr_from_style emits <w:b/> / <w:i/> / <w:u> / color / font / size", {
+  sn <- tabular:::style_node(
+    bold = TRUE,
+    italic = TRUE,
+    underline = TRUE,
+    color = "#FF0000",
+    font_family = "Arial",
+    font_size = 11
+  )
+  out <- tabular:::.docx_rPr_from_style(sn)
+  expect_match(out, "<w:b/>", fixed = TRUE)
+  expect_match(out, "<w:i/>", fixed = TRUE)
+  expect_match(out, "<w:u w:val=\"single\"/>", fixed = TRUE)
+  expect_match(out, "<w:color w:val=\"FF0000\"/>", fixed = TRUE)
+  expect_match(
+    out,
+    "<w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\"/>",
+    fixed = TRUE
+  )
+  # 11pt -> 22 half-points
+  expect_match(out, "<w:sz w:val=\"22\"/>", fixed = TRUE)
+})
+
+test_that(".docx_rPr_from_style omits properties whose style_node fields are unset", {
+  sn <- tabular:::style_node(bold = TRUE)
+  out <- tabular:::.docx_rPr_from_style(sn)
+  expect_match(out, "<w:b/>", fixed = TRUE)
+  expect_false(grepl("<w:i/>", out, fixed = TRUE))
+  expect_false(grepl("<w:u ", out, fixed = TRUE))
+  expect_false(grepl("<w:color ", out, fixed = TRUE))
+  expect_false(grepl("<w:rFonts ", out, fixed = TRUE))
+  expect_false(grepl("<w:sz ", out, fixed = TRUE))
+})
+
+test_that(".docx_rPr_from_style returns '' when input is not a style_node", {
+  expect_identical(tabular:::.docx_rPr_from_style(NULL), "")
+  expect_identical(tabular:::.docx_rPr_from_style("garbage"), "")
+})
+
+test_that(".docx_tcPr_from_style emits width + shading + borders from style_node", {
+  sn <- tabular:::style_node(
+    background = "#E0F0FF",
+    rule_above = TRUE,
+    rule_below = TRUE,
+    border_left = TRUE,
+    border_right = TRUE
+  )
+  out <- tabular:::.docx_tcPr_from_style(sn, 1440L)
+  expect_match(out, "<w:tcW w:w=\"1440\" w:type=\"dxa\"/>", fixed = TRUE)
+  expect_match(
+    out,
+    "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"E0F0FF\"/>",
+    fixed = TRUE
+  )
+  expect_match(out, "<w:tcBorders>", fixed = TRUE)
+  expect_match(out, "<w:top w:val=\"single\"", fixed = TRUE)
+  expect_match(out, "<w:bottom w:val=\"single\"", fixed = TRUE)
+  expect_match(out, "<w:left w:val=\"single\"", fixed = TRUE)
+  expect_match(out, "<w:right w:val=\"single\"", fixed = TRUE)
+})
+
+test_that(".docx_tcPr_from_style emits gridSpan only when > 1", {
+  no_span <- tabular:::.docx_tcPr_from_style(NULL, 1440L)
+  expect_false(grepl("<w:gridSpan", no_span, fixed = TRUE))
+  with_span <- tabular:::.docx_tcPr_from_style(NULL, 1440L, 3L)
+  expect_match(with_span, "<w:gridSpan w:val=\"3\"/>", fixed = TRUE)
+})
+
+test_that(".docx_normalize_color uppercases hex, strips #, defaults bad input to 000000", {
+  expect_identical(tabular:::.docx_normalize_color("#aabbcc"), "AABBCC")
+  expect_identical(tabular:::.docx_normalize_color("FF0000"), "FF0000")
+  expect_identical(tabular:::.docx_normalize_color("garbage"), "000000")
+  expect_identical(tabular:::.docx_normalize_color("#GGHHII"), "000000")
+})
+
+test_that("style(bold = TRUE, .scope = \"row\") surfaces as <w:b/> across the matched row", {
+  spec <- tabular(
+    data.frame(arm = c("A", "B", "Total"), n = c("10", "12", "22"))
+  ) |>
+    style(where = arm == "Total", bold = TRUE, .scope = "row")
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  # Row-scope predicate bolds every cell on the "Total" row.
+  expect_match(
+    doc,
+    "<w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Total",
+    fixed = TRUE
+  )
+  expect_match(
+    doc,
+    "<w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">22",
+    fixed = TRUE
+  )
+})
+
+test_that("style(background = \"#...\") surfaces as <w:shd> on the matched cells", {
+  spec <- tabular(
+    data.frame(arm = c("A", "B"), n = c("10", "12"))
+  ) |>
+    style(where = arm == "A", background = "#FFFF99")
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  expect_match(doc, "w:fill=\"FFFF99\"", fixed = TRUE)
+})
+
+# ---------------------------------------------------------------------
+# Byte-determinism — same spec produces identical bytes
+# ---------------------------------------------------------------------
+
+test_that("emit(.docx) is byte-deterministic across repeated calls", {
+  # Spec with content covering every emission path: titles,
+  # footnotes, multi-level headers, hyperlinks, page chrome, AFM-
+  # resolved widths, per-cell style cascade. Two identical emit()
+  # calls must produce bit-identical .docx bytes.
+  spec <- tabular(
+    saf_demo,
+    titles = c("Table 14.1.1", "Demographics"),
+    footnotes = md("Source: [ADSL](https://example.com)")
+  ) |>
+    preset(
+      pagehead = list(
+        left = "Protocol: ABC",
+        right = "Page {page} of {npages}"
+      ),
+      pagefoot = list(left = "Source: ADSL")
+    ) |>
+    style(where = variable == "Sex, n (%)", bold = TRUE)
+
+  a <- withr::local_tempfile(fileext = ".docx")
+  b <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, a)
+  emit(spec, b)
+  bytes_a <- readBin(a, what = "raw", n = file.size(a))
+  bytes_b <- readBin(b, what = "raw", n = file.size(b))
+  expect_identical(bytes_a, bytes_b)
+})
+
+# ---------------------------------------------------------------------
 # Self-registration via direct call
 # ---------------------------------------------------------------------
 
@@ -783,4 +934,34 @@ test_that("backend_docx() is callable directly with a grid + file", {
   out <- withr::local_tempfile(fileext = ".docx")
   tabular:::backend_docx(grid, out)
   expect_true(file.exists(out))
+})
+
+# ---------------------------------------------------------------------
+# Snapshot pin on the golden pipeline (word/document.xml)
+# ---------------------------------------------------------------------
+
+test_that("saf_demo golden pipeline matches the pinned word/document.xml snapshot", {
+  spec <- tabular(
+    saf_demo,
+    titles = c("Table 14.1.1", "Demographics", "Safety Population"),
+    footnotes = "Source: ADSL."
+  ) |>
+    cols(
+      variable = col_spec(usage = "group", label = "Characteristic"),
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
+      drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
+      drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
+      Total = col_spec(label = "Total\nN=254", align = "decimal")
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  # Snapshot the unzipped word/document.xml — per CLAUDE.local.md
+  # testing convention, never snapshot the .docx binary itself
+  # (binaries can't diff).
+  expect_snapshot_file(
+    file.path(unzipped, "word/document.xml"),
+    "saf_demo_golden.xml"
+  )
 })

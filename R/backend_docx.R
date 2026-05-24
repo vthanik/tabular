@@ -479,9 +479,11 @@ backend_docx <- function(grid, file) {
 
 # Render the body rows for every page in `grid@pages`. Returns a
 # character vector of `<w:tr>` strings. Cell text is the post-
-# engine_decimal flat string (`cells_text`); commit 3 swaps in the
-# inline-AST renderer where appropriate. Per-cell alignment comes
-# from `col_spec@align`.
+# engine_decimal flat string (`cells_text`). Per-cell alignment
+# comes from `col_spec@align`. Per-cell style cascade
+# (`cells_style[i, j]`) drives `<w:tcPr>` (background, borders) and
+# `<w:rPr>` (bold, italic, color, font, size) — DOCX is the first
+# backend to fully consume the engine_style matrix.
 .render_docx_body_rows <- function(pages, col_names_vis, cols, widths_twips) {
   align_tokens <- vapply(
     col_names_vis,
@@ -494,6 +496,7 @@ backend_docx <- function(grid, file) {
   out <- character()
   for (page in pages) {
     ct <- page$cells_text
+    cs_mat <- page$cells_style
     nrows <- nrow(ct)
     if (is.null(nrows) || nrows == 0L) {
       next
@@ -502,16 +505,25 @@ backend_docx <- function(grid, file) {
       cells <- vapply(
         seq_along(col_names_vis),
         function(j) {
-          tc_pr <- sprintf(
-            "<w:tcPr><w:tcW w:w=\"%d\" w:type=\"dxa\"/></w:tcPr>",
-            widths_twips[[j]]
-          )
+          style <- if (is.matrix(cs_mat) || is.list(cs_mat)) {
+            tryCatch(cs_mat[[i, j]], error = function(e) NULL)
+          } else {
+            NULL
+          }
+          tc_pr <- .docx_tcPr_from_style(style, widths_twips[[j]])
+          r_pr_inner <- .docx_rPr_from_style(style)
+          r_pr <- if (nzchar(r_pr_inner)) {
+            paste0("<w:rPr>", r_pr_inner, "</w:rPr>")
+          } else {
+            ""
+          }
           paste0(
             "<w:tc>",
             tc_pr,
             "<w:p><w:pPr>",
             align_tokens[[j]],
             "</w:pPr><w:r>",
+            r_pr,
             "<w:t xml:space=\"preserve\">",
             .docx_escape(ct[i, j]),
             "</w:t></w:r></w:p></w:tc>"
@@ -1053,6 +1065,161 @@ backend_docx <- function(grid, file) {
     include_directories = FALSE
   )
   invisible(file)
+}
+
+# ---------------------------------------------------------------------
+# Per-cell style cascade — style_node -> OOXML
+# ---------------------------------------------------------------------
+
+# Translate a `style_node` to a `<w:tcPr>` XML fragment carrying
+# cell-level properties: cell width, shading (background), borders
+# (rule_above / rule_below / border_left / border_right), and any
+# `<w:gridSpan>` for banded headers. Returns a complete `<w:tcPr>`
+# element ready for insertion at the head of a `<w:tc>`.
+#
+# Property mapping (style_node -> OOXML):
+#   @background = "#RRGGBB"   -> <w:shd w:val="clear" w:color="auto" w:fill="RRGGBB"/>
+#   @rule_above  = TRUE       -> <w:tcBorders><w:top w:val="single" w:sz="4"/></w:tcBorders>
+#   @rule_below  = TRUE       -> <w:tcBorders><w:bottom .../></w:tcBorders>
+#   @border_left  = TRUE      -> <w:tcBorders><w:left .../></w:tcBorders>
+#   @border_right = TRUE      -> <w:tcBorders><w:right .../></w:tcBorders>
+#
+# Border properties merge into a single `<w:tcBorders>` element.
+# Properties are emitted in stable order (alphabetical by element
+# tag) so byte-determinism is trivial.
+.docx_tcPr_from_style <- function(
+  style,
+  width_twips,
+  gridspan = NA_integer_
+) {
+  parts <- character()
+  parts <- c(
+    parts,
+    sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", width_twips)
+  )
+  if (!is.na(gridspan) && gridspan > 1L) {
+    parts <- c(parts, sprintf("<w:gridSpan w:val=\"%d\"/>", gridspan))
+  }
+  if (is_style_node(style)) {
+    border_inners <- character()
+    if (isTRUE(style@rule_above)) {
+      border_inners <- c(
+        border_inners,
+        "<w:top w:val=\"single\" w:sz=\"4\"/>"
+      )
+    }
+    if (isTRUE(style@border_left)) {
+      border_inners <- c(
+        border_inners,
+        "<w:left w:val=\"single\" w:sz=\"4\"/>"
+      )
+    }
+    if (isTRUE(style@rule_below)) {
+      border_inners <- c(
+        border_inners,
+        "<w:bottom w:val=\"single\" w:sz=\"4\"/>"
+      )
+    }
+    if (isTRUE(style@border_right)) {
+      border_inners <- c(
+        border_inners,
+        "<w:right w:val=\"single\" w:sz=\"4\"/>"
+      )
+    }
+    if (length(border_inners) > 0L) {
+      parts <- c(
+        parts,
+        paste0(
+          "<w:tcBorders>",
+          paste(border_inners, collapse = ""),
+          "</w:tcBorders>"
+        )
+      )
+    }
+    bg <- style@background
+    if (!is.na(bg) && nzchar(bg)) {
+      hex <- .docx_normalize_color(bg)
+      parts <- c(
+        parts,
+        sprintf(
+          "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"%s\"/>",
+          hex
+        )
+      )
+    }
+  }
+  paste0("<w:tcPr>", paste(parts, collapse = ""), "</w:tcPr>")
+}
+
+# Translate a `style_node` to a `<w:rPr>` XML fragment carrying
+# run-level properties: bold, italic, underline, color, font
+# family, font size. Returns the fragment WITHOUT the outer
+# `<w:rPr>` tag — callers concatenate with an inherited default
+# run-property string to build the final element.
+#
+# Property mapping:
+#   @bold = TRUE              -> <w:b/>
+#   @italic = TRUE            -> <w:i/>
+#   @underline = TRUE         -> <w:u w:val="single"/>
+#   @color = "#RRGGBB"        -> <w:color w:val="RRGGBB"/>
+#   @font_family = "Arial"    -> <w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>
+#   @font_size = 10           -> <w:sz w:val="20"/>  (half-points)
+#
+# Emission order is stable (declaration order in style_node) so
+# byte-determinism is trivial.
+.docx_rPr_from_style <- function(style) {
+  if (!is_style_node(style)) {
+    return("")
+  }
+  parts <- character()
+  if (!is.na(style@font_family) && nzchar(style@font_family)) {
+    family <- .docx_escape_attr(style@font_family)
+    parts <- c(
+      parts,
+      sprintf(
+        "<w:rFonts w:ascii=\"%s\" w:hAnsi=\"%s\"/>",
+        family,
+        family
+      )
+    )
+  }
+  if (isTRUE(style@bold)) {
+    parts <- c(parts, "<w:b/>")
+  }
+  if (isTRUE(style@italic)) {
+    parts <- c(parts, "<w:i/>")
+  }
+  if (!is.na(style@color) && nzchar(style@color)) {
+    parts <- c(
+      parts,
+      sprintf("<w:color w:val=\"%s\"/>", .docx_normalize_color(style@color))
+    )
+  }
+  if (!is.na(style@font_size) && is.numeric(style@font_size)) {
+    parts <- c(
+      parts,
+      sprintf(
+        "<w:sz w:val=\"%d\"/>",
+        as.integer(round(style@font_size * 2))
+      )
+    )
+  }
+  if (isTRUE(style@underline)) {
+    parts <- c(parts, "<w:u w:val=\"single\"/>")
+  }
+  paste(parts, collapse = "")
+}
+
+# Normalize a hex color to the OOXML `RRGGBB` form (no leading "#",
+# uppercase letters). Accepts "#RRGGBB", "#rrggbb", "RRGGBB", or
+# "rrggbb" inputs. Defaults to "000000" on malformed input so the
+# document never carries an invalid color attribute.
+.docx_normalize_color <- function(color) {
+  s <- toupper(sub("^#", "", as.character(color)))
+  if (!grepl("^[0-9A-F]{6}$", s)) {
+    return("000000")
+  }
+  s
 }
 
 # ---------------------------------------------------------------------
