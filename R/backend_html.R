@@ -203,10 +203,15 @@ backend_html <- function(grid, file) {
 # Table assembly: <table> / <thead> / <tbody>
 # ---------------------------------------------------------------------
 
-# Assemble the `<table>` block: optional `<thead>` (header bands
+# Assemble the `<table>` block: optional `<colgroup>` carrying
+# engine-resolved column widths, optional `<thead>` (header bands
 # + column-labels row), then `<tbody>` (one row per data row).
 .render_html_table <- function(page, meta, show_header) {
   out <- "<table class=\"tabular-table\">"
+  out <- c(
+    out,
+    .html_colgroup(page$col_names, meta$cols %||% list())
+  )
   if (show_header) {
     thead <- .render_html_thead(
       headers = meta$headers,
@@ -372,6 +377,49 @@ backend_html <- function(grid, file) {
     character(1L)
   )
   c(out, rows, "</tbody>")
+}
+
+# Emit a `<colgroup>` block carrying the engine-resolved column
+# widths. The engine writes numeric inches into every visible
+# `col_spec@width` (auto / pct / dim string -> inches) so the HTML
+# backend matches RTF (`\cellx`) and LaTeX (`Q[<a>,wd=...in]`)
+# byte-for-byte on the resolved widths.
+#
+# A column with no resolved width (rare — only synthesised columns
+# that bypassed engine resolution) emits a bare `<col/>` so the
+# child count still equals the visible-column count for any CSS
+# `nth-child` targeting. If no visible column has a numeric width
+# at all, return character(0) — emit no `<colgroup>`, keeping the
+# document additive-only against the natural-fit fallback.
+.html_colgroup <- function(col_names_visible, cols) {
+  widths <- vapply(
+    col_names_visible,
+    function(nm) {
+      cs <- cols[[nm]]
+      w <- if (is_col_spec(cs)) cs@width else NA_real_
+      if (is.numeric(w) && length(w) == 1L && !is.na(w)) {
+        as.numeric(w)
+      } else {
+        NA_real_
+      }
+    },
+    numeric(1L)
+  )
+  if (!any(!is.na(widths))) {
+    return(character())
+  }
+  cells <- vapply(
+    widths,
+    function(w) {
+      if (is.na(w)) {
+        "<col/>"
+      } else {
+        sprintf("<col style=\"width:%fin\"/>", w)
+      }
+    },
+    character(1L)
+  )
+  c("<colgroup>", cells, "</colgroup>")
 }
 
 # Map an `align` value to a CSS alignment class. Defaults to the

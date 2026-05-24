@@ -262,6 +262,106 @@ test_that("col_spec align surfaces as a CSS class on body cells", {
 })
 
 # ---------------------------------------------------------------------
+# Column widths (<colgroup>)
+# ---------------------------------------------------------------------
+
+test_that(".html_colgroup emits one <col> per visible column with resolved widths", {
+  cols <- list(
+    a = col_spec(width = 1.5),
+    b = col_spec(width = 2.25),
+    c = col_spec(width = 0.75)
+  )
+  out <- tabular:::.html_colgroup(c("a", "b", "c"), cols)
+  expect_identical(out[[1L]], "<colgroup>")
+  expect_identical(out[[length(out)]], "</colgroup>")
+  expect_identical(out[[2L]], "<col style=\"width:1.500000in\"/>")
+  expect_identical(out[[3L]], "<col style=\"width:2.250000in\"/>")
+  expect_identical(out[[4L]], "<col style=\"width:0.750000in\"/>")
+})
+
+test_that(".html_colgroup emits a bare <col/> for columns with no col_spec entry", {
+  # Defensive path — a visible column without an engine-resolved
+  # col_spec (e.g. backend called outside the engine pipeline)
+  # still gets a <col/> so the child count matches the visible-
+  # column count for any CSS nth-child targeting.
+  cols <- list(
+    a = col_spec(width = 1.5),
+    c = col_spec(width = 2.0)
+  )
+  out <- tabular:::.html_colgroup(c("a", "b", "c"), cols)
+  expect_length(out, 5L)
+  expect_identical(out[[2L]], "<col style=\"width:1.500000in\"/>")
+  expect_identical(out[[3L]], "<col/>")
+  expect_identical(out[[4L]], "<col style=\"width:2.000000in\"/>")
+})
+
+test_that(".html_colgroup returns character(0) when no column has a numeric width", {
+  # Empty cols (e.g. no col_specs declared and engine resolution
+  # skipped — defensive).
+  expect_identical(
+    tabular:::.html_colgroup(c("a", "b"), list()),
+    character()
+  )
+})
+
+test_that("auto-resolved widths land in <colgroup> end-to-end via emit()", {
+  spec <- tabular(data.frame(x = "x", y = "y"))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  # colgroup present, two col children with width:Xin
+  expect_match(txt, "<colgroup>", fixed = TRUE)
+  expect_match(txt, "</colgroup>", fixed = TRUE)
+  cols_found <- regmatches(
+    txt,
+    gregexpr("<col style=\"width:[0-9.]+in\"/>", txt)
+  )[[1L]]
+  expect_length(cols_found, 2L)
+})
+
+test_that("HTML <colgroup> widths match LaTeX Q[wd=...] widths byte-for-byte", {
+  # The quality-bar claim — engine-resolved widths render identically
+  # across backends. Build the golden saf_demo pipeline once, emit
+  # both backends, parse widths, assert vector equality.
+  spec <- tabular(
+    saf_demo,
+    titles = c("Table 14.1.1", "Demographics", "Safety Population"),
+    footnotes = "Source: ADSL."
+  ) |>
+    cols(
+      variable = col_spec(usage = "group", label = "Characteristic"),
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
+      drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
+      drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
+      Total = col_spec(label = "Total\nN=254", align = "decimal")
+    )
+  html_file <- withr::local_tempfile(fileext = ".html")
+  tex_file <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, html_file)
+  emit(spec, tex_file)
+
+  html_txt <- paste(readLines(html_file), collapse = "\n")
+  tex_txt <- paste(readLines(tex_file), collapse = "\n")
+
+  html_widths <- regmatches(
+    html_txt,
+    gregexpr(
+      "(?<=<col style=\"width:)[0-9.]+(?=in\"/>)",
+      html_txt,
+      perl = TRUE
+    )
+  )[[1L]]
+  tex_widths <- regmatches(
+    tex_txt,
+    gregexpr("(?<=wd=)[0-9.]+(?=in)", tex_txt, perl = TRUE)
+  )[[1L]]
+
+  expect_gt(length(html_widths), 0L)
+  expect_identical(html_widths, tex_widths)
+})
+
+# ---------------------------------------------------------------------
 # Multi-level headers (real HTML colspan)
 # ---------------------------------------------------------------------
 
