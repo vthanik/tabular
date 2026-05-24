@@ -933,10 +933,6 @@ backend_latex <- function(grid, file) {
   ""
 }
 
-# `%||%` — local fallback when rlang's is not in scope. Mirrors
-# rlang::`%||%` semantics: returns `b` when `a` is NULL.
-`%||%` <- function(a, b) if (is.null(a)) b else a
-
 # ---------------------------------------------------------------------
 # Register with the backend dispatcher
 # ---------------------------------------------------------------------

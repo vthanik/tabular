@@ -788,10 +788,6 @@ backend_html <- function(grid, file) {
   paste(vapply(chain, .html_quote_font, character(1L)), collapse = ", ")
 }
 
-# `%||%` — local fallback when rlang's is not in scope. Mirrors
-# rlang::`%||%` semantics: returns `b` when `a` is NULL.
-`%||%` <- function(a, b) if (is.null(a)) b else a
-
 # ---------------------------------------------------------------------
 # Register with the backend dispatcher
 # ---------------------------------------------------------------------

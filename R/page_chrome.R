@@ -398,7 +398,3 @@
     right = band$right[[i]]
   )
 }
-
-# `%||%` — local copy; backends and engine files keep their own
-# (matches the convention in backend_html.R / backend_latex.R).
-`%||%` <- function(a, b) if (is.null(a)) b else a

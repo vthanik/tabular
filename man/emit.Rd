@@ -94,7 +94,7 @@ wins when both are supplied. Each backend lives in its own
    \code{.html}, \code{.htm} \tab \code{html} \tab self-contained Bootstrap 5 (planned) \cr
    \code{.tex}, \code{.latex} \tab \code{latex} \tab tabularray (planned) \cr
    \code{.pdf} \tab \code{pdf} \tab tinytex compile of LaTeX (planned) \cr
-   \code{.rtf} \tab \code{rtf} \tab RTF 1.9.1, native (planned) \cr
+   \code{.rtf} \tab \code{rtf} \tab RTF 1.9.1, native (shipped) \cr
    \code{.docx} \tab \code{docx} \tab OOXML native, no JVM (planned) \cr
 }
 

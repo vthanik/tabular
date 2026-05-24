@@ -115,6 +115,33 @@
   "Latin Modern Mono"
 )
 
+# RTF — fonts are name-referenced in the `{\fonttbl}` group; Word
+# and LibreOffice walk the list at open time and substitute the
+# first installed face. The chain leads with the modern Adobe
+# Source Pro family (Phase 2 install helper), then per-platform
+# native faces (Liberation set ships on Linux, TNR / Helvetica /
+# Courier ship with Word everywhere). No bare generic at the end
+# (RTF has no equivalent of CSS `serif`); the consuming app picks
+# its own default if the entire chain misses.
+.rtf_stack_serif <- c(
+  "Source Serif Pro",
+  "Liberation Serif",
+  "Times New Roman",
+  "Times"
+)
+.rtf_stack_sans <- c(
+  "Source Sans Pro",
+  "Liberation Sans",
+  "Helvetica",
+  "Arial"
+)
+.rtf_stack_mono <- c(
+  "Source Code Pro",
+  "Liberation Mono",
+  "Courier New",
+  "Courier"
+)
+
 # ---------------------------------------------------------------------
 # Public resolver
 # ---------------------------------------------------------------------
@@ -145,6 +172,12 @@
         serif = .latex_stack_serif,
         sans = .latex_stack_sans,
         mono = .latex_stack_mono
+      ),
+      rtf = switch(
+        fam,
+        serif = .rtf_stack_serif,
+        sans = .rtf_stack_sans,
+        mono = .rtf_stack_mono
       ),
       # Unknown backend: best-effort, return the HTML chain.
       switch(
@@ -278,7 +311,7 @@ check_fonts <- function(spec) {
 
   cli::cli_h3("Font resolution for {.code font_family = {format(fam)}}")
   out <- list()
-  for (backend in c("html", "latex")) {
+  for (backend in c("html", "latex", "rtf")) {
     chain <- .resolve_font_stack(fam, backend)
     cli::cli_text("{.strong backend:} {backend}")
     for (name in chain) {
