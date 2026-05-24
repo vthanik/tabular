@@ -703,17 +703,24 @@ backend_latex <- function(grid, file) {
 # a conservative `pdflatex` fallback (mapping common family
 # names to their TeX bundle packages). The `iftex` package guard
 # keeps the file compilable under all three engines.
+#
+# `font_family` may be a single generic (`"serif"`/`"sans"`/`"mono"`),
+# a single named font (`"Times New Roman"`), or an explicit stack
+# (`c("Courier New", "mono")`). For LaTeX we resolve the chain
+# via `.resolve_font_stack("latex")` and take the first entry as
+# the primary fontspec font; the pdflatex branch picks the right
+# TeX bundle from the generic-family hint embedded in the chain.
 .latex_font_lines <- function(font_family, font_size) {
-  family <- tryCatch(as.character(font_family), error = function(e) "")
-  if (length(family) == 0L || !nzchar(family)) {
-    family <- "Times New Roman"
+  if (length(font_family) == 0L) {
+    font_family <- "serif"
   }
+  chain <- .resolve_font_stack(font_family, "latex")
   size <- tryCatch(as.numeric(font_size), error = function(e) 11)
   if (length(size) == 0L || !is.finite(size)) {
     size <- 11
   }
   leading <- size * 1.2
-  pdftex_pkg <- .latex_pdftex_font_pkg(family)
+  pdftex_pkg <- .latex_pdftex_font_pkg(font_family)
   c(
     "\\usepackage{iftex}",
     "\\ifPDFTeX",
@@ -724,19 +731,67 @@ backend_latex <- function(grid, file) {
     },
     "\\else",
     "  \\usepackage{fontspec}",
-    sprintf("  \\setmainfont{%s}", family),
+    .latex_fontspec_cascade(chain),
     "\\fi",
     sprintf("\\fontsize{%g}{%g}\\selectfont", size, leading)
   )
 }
 
-# Map a font-family name to a pdflatex package. Conservative —
-# we cover the families regulatory submissions actually use; any
-# other family falls through to default Computer Modern under
-# pdflatex (and uses the requested family verbatim under
-# xelatex / lualatex via `\setmainfont`).
+# Compose a fontspec `\IfFontExistsTF` cascade for the resolved
+# chain. xelatex / lualatex checks each candidate at compile time
+# on the consuming machine and uses the first one present —
+# analogous to how a browser walks a CSS `font-family` stack. The
+# last entry is used unconditionally as the final fallback (no
+# `\IfFontExistsTF` wrap, since by then we've exhausted the
+# chain and want SOME font to render).
+.latex_fontspec_cascade <- function(chain) {
+  if (length(chain) == 0L) {
+    return("  \\setmainfont{Latin Modern Roman}")
+  }
+  if (length(chain) == 1L) {
+    return(sprintf("  \\setmainfont{%s}", chain[[1L]]))
+  }
+  # Build nested IfFontExistsTF blocks: each tier tries one font,
+  # falls through to the next on failure. The deepest tier is the
+  # unconditional final fallback.
+  tail_entry <- chain[[length(chain)]]
+  inner <- sprintf("\\setmainfont{%s}", tail_entry)
+  for (i in seq.int(length(chain) - 1L, 1L)) {
+    inner <- sprintf(
+      "\\IfFontExistsTF{%s}{\\setmainfont{%s}}{%s}",
+      chain[[i]],
+      chain[[i]],
+      inner
+    )
+  }
+  paste0("  ", inner)
+}
+
+# Map a font-family input to a pdflatex package. Generic families
+# (`serif` / `sans` / `mono`) route to the TeX Gyre bundles that
+# ship with TeX Live — universal where LaTeX is installed. Common
+# named families (Times / Helvetica / Arial / Courier / Palatino)
+# route to their classic pdflatex bundles. Everything else falls
+# back to Computer Modern (the LaTeX default) under pdflatex; the
+# `\setmainfont` line under xelatex / lualatex uses the named
+# family verbatim.
 .latex_pdftex_font_pkg <- function(family) {
-  fam <- tolower(family)
+  if (length(family) == 0L) {
+    return("")
+  }
+  # For an explicit stack take the head; the chain semantics are
+  # CSS-style and pdflatex can only honour one bundle at a time.
+  fam <- as.character(family)[[1L]]
+  if (.is_generic_family(fam)) {
+    return(switch(
+      .normalize_generic(fam),
+      serif = "tgtermes",
+      sans = "tgheros",
+      mono = "tgcursor",
+      ""
+    ))
+  }
+  fam <- tolower(fam)
   if (grepl("times", fam, fixed = TRUE)) {
     return("mathptmx")
   }

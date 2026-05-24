@@ -9,10 +9,10 @@
 \UseTblrLibrary{siunitx}
 \usepackage{iftex}
 \ifPDFTeX
-  \usepackage{mathptmx}
+  \usepackage{tgtermes}
 \else
   \usepackage{fontspec}
-  \setmainfont{Times New Roman}
+  \IfFontExistsTF{Source Serif Pro}{\setmainfont{Source Serif Pro}}{\IfFontExistsTF{TeX Gyre Termes}{\setmainfont{TeX Gyre Termes}}{\setmainfont{Latin Modern Roman}}}
 \fi
 \fontsize{9}{10.8}\selectfont
 \setlength{\parindent}{0pt}

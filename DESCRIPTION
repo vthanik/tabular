@@ -32,6 +32,7 @@ Suggests:
     quarto,
     pkgdown,
     rstudioapi,
+    systemfonts,
     tibble,
     tinytex,
     yaml

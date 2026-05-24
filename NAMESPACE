@@ -3,6 +3,7 @@
 S3method(htmltools::as.tags,tabular_spec)
 S3method(knitr::knit_print, tabular_spec)
 export(as_grid)
+export(check_fonts)
 export(col_spec)
 export(cols)
 export(derive)

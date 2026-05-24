@@ -178,6 +178,48 @@ test_that(".latex_pdftex_font_pkg maps known families and skips unknown", {
   expect_identical(tabular:::.latex_pdftex_font_pkg("Wingdings"), "")
 })
 
+test_that(".latex_pdftex_font_pkg routes generics to TeX Gyre bundles", {
+  expect_identical(tabular:::.latex_pdftex_font_pkg("serif"), "tgtermes")
+  expect_identical(tabular:::.latex_pdftex_font_pkg("sans"), "tgheros")
+  expect_identical(tabular:::.latex_pdftex_font_pkg("sans-serif"), "tgheros")
+  expect_identical(tabular:::.latex_pdftex_font_pkg("mono"), "tgcursor")
+  expect_identical(tabular:::.latex_pdftex_font_pkg("monospace"), "tgcursor")
+})
+
+test_that("default preset (font_family = 'serif') -> tgtermes + Source Serif Pro", {
+  txt <- render_tex(tabular(data.frame(x = 1L)))
+  expect_match(txt, "\\usepackage{tgtermes}", fixed = TRUE)
+  expect_match(txt, "\\setmainfont{Source Serif Pro}", fixed = TRUE)
+})
+
+test_that("preset(font_family = 'sans') -> tgheros + Source Sans Pro", {
+  txt <- render_tex(
+    tabular(data.frame(x = 1L)) |> preset(font_family = "sans")
+  )
+  expect_match(txt, "\\usepackage{tgheros}", fixed = TRUE)
+  expect_match(txt, "\\setmainfont{Source Sans Pro}", fixed = TRUE)
+})
+
+test_that("preset(font_family = 'mono') -> tgcursor + Source Code Pro", {
+  txt <- render_tex(
+    tabular(data.frame(x = 1L)) |> preset(font_family = "mono")
+  )
+  expect_match(txt, "\\usepackage{tgcursor}", fixed = TRUE)
+  expect_match(txt, "\\setmainfont{Source Code Pro}", fixed = TRUE)
+})
+
+test_that("preset(font_family = c('Courier New', 'mono')) takes head for xelatex", {
+  txt <- render_tex(
+    tabular(data.frame(x = 1L)) |>
+      preset(font_family = c("Courier New", "mono"))
+  )
+  expect_match(txt, "\\setmainfont{Courier New}", fixed = TRUE)
+  # pdftex branch reads the head's category via .is_generic_family
+  # — "Courier New" isn't generic, so it falls through to the named
+  # mapping (Courier -> courier package).
+  expect_match(txt, "\\usepackage{courier}", fixed = TRUE)
+})
+
 # ---------------------------------------------------------------------
 # Title + footnote blocks
 # ---------------------------------------------------------------------

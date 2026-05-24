@@ -74,7 +74,7 @@ backend_html <- function(grid, file) {
     "<head>",
     "<meta charset=\"utf-8\">",
     paste0("<title>", .html_escape(doc_title), "</title>"),
-    .html_inline_style(),
+    .html_inline_style(meta$preset),
     "</head>",
     "<body>"
   )
@@ -555,10 +555,17 @@ backend_html <- function(grid, file) {
 # identically online, offline, in email, and via `file://`. Print
 # media query inserts a hard page break after each
 # `.tabular-page` so multi-page documents print 1-to-1.
-.html_inline_style <- function() {
+#
+# The body `font-family` stack is derived from the spec's preset
+# (see `.resolve_font_stack` in `R/fonts.R`); falls back to the
+# `serif` generic chain when no preset is attached.
+.html_inline_style <- function(preset = NULL) {
   c(
     "<style>",
-    "body { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif; color: #212529; margin: 1.5rem; }",
+    sprintf(
+      "body { font-family: %s; color: #212529; margin: 1.5rem; }",
+      .html_font_family_css(preset)
+    ),
     ".tabular-page { margin-bottom: 2rem; }",
     ".tabular-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin: .2rem 0; }",
     ".tabular-continuation { text-align: right; color: #6c757d; margin: .25rem 0 .5rem; }",
@@ -578,6 +585,16 @@ backend_html <- function(grid, file) {
     "@media print { .tabular-page { page-break-after: always; } .tabular-page-break { display: none; } }",
     "</style>"
   )
+}
+
+# Compose the CSS `font-family` value from the spec's preset.
+# Routes through `.resolve_font_stack` (R/fonts.R) so the chain
+# logic (generic family / single name / explicit stack) is
+# shared with every other backend.
+.html_font_family_css <- function(preset) {
+  fam <- if (is_preset_spec(preset)) preset@font_family else "serif"
+  chain <- .resolve_font_stack(fam, "html")
+  paste(vapply(chain, .html_quote_font, character(1L)), collapse = ", ")
 }
 
 # `%||%` — local fallback when rlang's is not in scope. Mirrors

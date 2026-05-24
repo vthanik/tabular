@@ -379,9 +379,14 @@ preset_spec <- S7::new_class(
   package = "tabular",
   properties = list(
     font_size = S7::new_property(S7::class_numeric, default = 9),
+    # font_family accepts three input shapes (handled by .resolve_font_stack):
+    #   * generic family   — "serif" (default) / "sans" / "mono"
+    #   * single named     — "Courier New", "Inter", ...
+    #   * explicit stack   — c("Courier New", "mono"), ...
+    # class_any so character vectors typecheck.
     font_family = S7::new_property(
-      S7::class_character,
-      default = "Times New Roman"
+      S7::class_any,
+      default = "serif"
     ),
     orientation = S7::new_property(
       S7::class_character,
