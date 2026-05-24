@@ -39,82 +39,12 @@
 #                     idiom (`\(f) paste0(tools::file_path_sans_ext(f),
 #                     "_qc.csv")`).
 
-# ---------------------------------------------------------------------
-# Backend registry
-# ---------------------------------------------------------------------
-
-# Package-internal env that backend_*.R files mutate at load time.
-# Keys are format strings ("md", "html", "latex", "pdf", "rtf",
-# "docx"); values are unary writer functions
-# `function(grid, file) -> invisible(file)`. The registry starts
-# empty; backends self-register by calling `.register_backend()`
-# from their source file.
-.tabular_backends <- new.env(parent = emptyenv())
-
-# Register a backend writer. Replaces any existing entry for the
-# same format. Internal — backends call this from R/backend_*.R
-# top-level code. Errors are intentionally bare (not cli_abort)
-# because hitting them is a package-development bug, not a user
-# error.
-.register_backend <- function(format, fn) {
-  if (!is.character(format) || length(format) != 1L || is.na(format)) {
-    stop("`.register_backend()`: `format` must be a scalar character.")
-  }
-  if (!is.function(fn)) {
-    stop("`.register_backend()`: `fn` must be a function.")
-  }
-  assign(format, fn, envir = .tabular_backends)
-  invisible()
-}
-
-# Drop a backend registration. Used primarily by tests via
-# `withr::defer()` to undo a registration inside a single test.
-.unregister_backend <- function(format) {
-  if (exists(format, envir = .tabular_backends, inherits = FALSE)) {
-    rm(list = format, envir = .tabular_backends)
-  }
-  invisible()
-}
-
-# Test whether a backend is currently registered for `format`. Used
-# by tests and by potential future external introspection; cheaper
-# than calling `.resolve_backend()` solely to check existence.
-.has_backend <- function(format) {
-  exists(format, envir = .tabular_backends, inherits = FALSE)
-}
-
-# List the format strings of every currently registered backend,
-# sorted alphabetically. Used in error messages so the user can see
-# which backends are available.
-.registered_backend_formats <- function() {
-  sort(ls(.tabular_backends))
-}
-
-# Look up the backend writer for `format`; abort with
-# `tabular_error_input` when none is registered (e.g. an extension
-# whose backend has not yet shipped, or a typoed `format` override).
-.resolve_backend <- function(format, call) {
-  fn <- .tabular_backends[[format]]
-  if (is.null(fn)) {
-    registered <- .registered_backend_formats()
-    msg <- c(
-      "No backend registered for format {.val {format}}."
-    )
-    if (length(registered) > 0L) {
-      msg <- c(
-        msg,
-        "i" = "Registered backends: {.val {registered}}."
-      )
-    } else {
-      msg <- c(
-        msg,
-        "i" = "No backends are registered. This is a package-internal state."
-      )
-    }
-    cli::cli_abort(msg, class = "tabular_error_input", call = call)
-  }
-  fn
-}
+# The backend registry helpers (`.register_backend`,
+# `.unregister_backend`, `.has_backend`, `.registered_backend_formats`,
+# `.resolve_backend`) live in `R/aaa_backend_registry.R` so they
+# load before any `R/backend_*.R` file does its top-level
+# self-registration. emit() consults them via `.resolve_backend()`
+# after the extension -> format mapping below.
 
 # Map file extension (lowercase, no leading dot) to the canonical
 # format string the backend registry uses. Keep this table small

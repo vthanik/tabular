@@ -160,6 +160,7 @@ as_grid <- function(spec) {
       nrow_data = nrow(spec@data),
       ncol_data = ncol(spec@data),
       col_names = names(spec@data),
+      cols = spec@cols,
       headers = headers,
       titles = spec@titles,
       footnotes = spec@footnotes,
