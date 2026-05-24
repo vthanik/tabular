@@ -220,6 +220,52 @@ test_that("multi-page emit includes page-marker comments + horizontal rules", {
   expect_true(any(grepl("^----$", lines)))
 })
 
+# ---- Faux page chrome (pagehead / pagefoot bands) ------------------
+
+test_that("pagehead renders as faux chrome at top of document", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(
+        left = "Protocol: XYZ",
+        center = "Draft",
+        right = "Page {page} of {npages}"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  lines <- readLines(out)
+  # First non-empty line is the chrome row.
+  expect_match(
+    lines[[1L]],
+    "Protocol: XYZ \\| Draft \\| Page 1 of 1"
+  )
+  # Followed by `----` rule before the title block.
+  expect_true(any(grepl("^----$", lines[1:5])))
+})
+
+test_that("pagefoot renders as faux chrome at bottom of document", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagefoot = list(left = "Program: tool.R", right = "24MAY2026")
+    )
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  lines <- readLines(out)
+  # Last non-empty line is the chrome row.
+  tail_lines <- tail(lines[nzchar(lines)], 2L)
+  expect_true(any(grepl("Program: tool.R", tail_lines, fixed = TRUE)))
+  expect_true(any(grepl("24MAY2026", tail_lines, fixed = TRUE)))
+})
+
+test_that("empty pagehead / pagefoot emits no chrome bands", {
+  spec <- tabular(data.frame(x = 1:3))
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_false(grepl("Protocol", txt, fixed = TRUE))
+  expect_false(grepl("Program:", txt, fixed = TRUE))
+})
+
 test_that("continuation marker renders on pages 2+ when set", {
   d <- data.frame(
     grp = rep(letters[1:6], each = 4L),

@@ -78,11 +78,23 @@ backend_md <- function(grid, file) {
   if (total == 0L) {
     return(.render_md_empty_grid(grid))
   }
+  meta <- grid@metadata
   out <- list()
+
+  # Faux page chrome — markdown has no native page-band concept,
+  # so emit pagehead at the top of the document and pagefoot at
+  # the bottom, surrounded by `----` rules. Three-slot left /
+  # center / right collapse to a single ` | `-joined line per row;
+  # multi-row bands emit one line each.
+  chrome_top <- .render_md_chrome_band(meta$pagehead_ast, total_pages = total)
+  if (length(chrome_top) > 0L) {
+    out[[length(out) + 1L]] <- c(chrome_top, "", "----", "")
+  }
+
   for (i in seq_along(pages)) {
     page_lines <- .render_md_page(
       page = pages[[i]],
-      meta = grid@metadata,
+      meta = meta,
       page_number = i,
       total_pages = total
     )
@@ -96,6 +108,11 @@ backend_md <- function(grid, file) {
       )
     }
     out[[length(out) + 1L]] <- page_lines
+  }
+
+  chrome_bot <- .render_md_chrome_band(meta$pagefoot_ast, total_pages = total)
+  if (length(chrome_bot) > 0L) {
+    out[[length(out) + 1L]] <- c("", "----", "", chrome_bot)
   }
   unlist(out, use.names = FALSE)
 }
@@ -179,6 +196,45 @@ backend_md <- function(grid, file) {
     return(character())
   }
   paste0("**", .render_md_inline(ast), "**")
+}
+
+# Render one chrome band (pagehead or pagefoot) as a character
+# vector of literal markdown lines. Each band row collapses the
+# three slots (left / center / right) to one `left | center | right`
+# line; empty slots emit "" so the visual columns stay aligned. The
+# `{page}` and `{npages}` tokens substitute statically to 1 and
+# total_pages respectively for screen-reading sanity. Returns
+# character(0) when the band has no populated rows.
+.render_md_chrome_band <- function(band, total_pages) {
+  if (!.page_band_is_populated(band)) {
+    return(character())
+  }
+  n_rows <- .page_band_nrow(band)
+  out <- character(n_rows)
+  for (i in seq_len(n_rows)) {
+    row <- .page_band_row(band, i)
+    slots <- vapply(
+      list(row$left, row$center, row$right),
+      function(ast) .render_md_chrome_slot(ast, total_pages),
+      character(1L)
+    )
+    out[[i]] <- paste(slots, collapse = " | ")
+  }
+  out
+}
+
+# Render one chrome-band slot's inline AST to plain markdown text,
+# substituting `{page}` -> 1 and `{npages}` -> total_pages along
+# the way (markdown has no live counters; static is the best we
+# can do). Empty / missing ASTs return "".
+.render_md_chrome_slot <- function(ast, total_pages) {
+  if (is.null(ast) || !is_inline_ast(ast) || length(ast@runs) == 0L) {
+    return("")
+  }
+  text <- .render_md_inline(ast)
+  text <- gsub("{page}", "1", text, fixed = TRUE)
+  text <- gsub("{npages}", as.character(total_pages), text, fixed = TRUE)
+  text
 }
 
 # ---------------------------------------------------------------------

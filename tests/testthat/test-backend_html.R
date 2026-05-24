@@ -634,6 +634,74 @@ test_that("empty pagehead / pagefoot emits no @page rules", {
   expect_false(grepl("@page", html, fixed = TRUE))
 })
 
+# ---- On-screen chrome (<header> / <footer>) ------------------------
+
+test_that("populated pagehead emits on-screen <header> band", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(
+        left = "Protocol: XYZ",
+        center = "Draft",
+        right = "Page {page} of {npages}"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl(
+    "<header class=\"tabular-page-header\">",
+    html,
+    fixed = TRUE
+  ))
+  expect_true(grepl("Protocol: XYZ", html, fixed = TRUE))
+  expect_true(grepl("Page 1 of 1", html, fixed = TRUE))
+  # @page rules still emitted for print parity.
+  expect_true(grepl("@page", html, fixed = TRUE))
+})
+
+test_that("populated pagefoot emits on-screen <footer> band", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(pagefoot = list(left = "Footer left", right = "Footer right"))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl(
+    "<footer class=\"tabular-page-footer\">",
+    html,
+    fixed = TRUE
+  ))
+  expect_true(grepl("Footer left", html, fixed = TRUE))
+  expect_true(grepl("Footer right", html, fixed = TRUE))
+})
+
+test_that("chrome_onscreen = 'off' suppresses on-screen bands but keeps @page", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(left = "Protocol: XYZ"),
+      chrome_onscreen = "off"
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_false(grepl(
+    "<header class=\"tabular-page-header\">",
+    html,
+    fixed = TRUE
+  ))
+  # @page rules still emitted for print parity.
+  expect_true(grepl("@page", html, fixed = TRUE))
+  expect_true(grepl("@top-left", html, fixed = TRUE))
+})
+
+test_that("CSS custom properties emitted in inline stylesheet", {
+  spec <- tabular(data.frame(x = 1:3))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("--tabular-border-color", html, fixed = TRUE))
+  expect_true(grepl("--tabular-border-color-muted", html, fixed = TRUE))
+})
+
 test_that("populated pagehead emits @page top-* rules in REVERSE row order", {
   spec <- tabular(data.frame(x = 1:3)) |>
     preset(

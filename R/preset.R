@@ -37,7 +37,8 @@
   "title_align",
   "footnote_align",
   "na_text",
-  "decimal_metrics"
+  "decimal_metrics",
+  "chrome_onscreen"
 )
 
 #' Override the render preset on a spec

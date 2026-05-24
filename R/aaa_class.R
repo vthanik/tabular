@@ -35,6 +35,7 @@
 .align_anchor_values <- c("left", "center", "right")
 .derive_type_values <- c("numeric", "character")
 .decimal_metrics_values <- c("afm", "systemfonts")
+.chrome_onscreen_values <- c("auto", "off")
 
 # Recognised inline-formatting run types. Each element of an
 # `inline_ast@runs` list is a named-list record with a `type` field
@@ -455,6 +456,10 @@ preset_spec <- S7::new_class(
     decimal_metrics = S7::new_property(
       S7::class_character,
       default = "afm"
+    ),
+    chrome_onscreen = S7::new_property(
+      S7::class_character,
+      default = "auto"
     )
   ),
   validator = function(self) {
@@ -484,6 +489,9 @@ preset_spec <- S7::new_class(
     }
     if (!(self@decimal_metrics %in% .decimal_metrics_values)) {
       return("@decimal_metrics must be afm or systemfonts")
+    }
+    if (!(self@chrome_onscreen %in% .chrome_onscreen_values)) {
+      return("@chrome_onscreen must be auto or off")
     }
     if (!(length(self@margins) %in% c(1L, 2L, 4L))) {
       return(paste0(

@@ -23,7 +23,14 @@ body { font-family: "Liberation Serif", "Times New Roman", Times, serif; color: 
 .tabular-footnote { font-size: .85rem; color: #495057; margin: .25rem 0; }
 .tabular-empty { font-style: italic; color: #6c757d; }
 .tabular-page-break { border: none; border-top: 1px dashed #adb5bd; margin: 1.5rem 0; }
-@media print { .tabular-page { page-break-after: always; } .tabular-page-break { display: none; } }
+:root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+.tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: .85rem; color: var(--tabular-chrome-color); }
+.tabular-page-header { border-bottom: 1px solid var(--tabular-border-color-muted); margin-bottom: 1rem; }
+.tabular-page-footer { border-top:    1px solid var(--tabular-border-color-muted); margin-top:    1rem; }
+.tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }
+.tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }
+.tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { .tabular-page { page-break-after: always; } .tabular-page-break { display: none; } .tabular-page-header, .tabular-page-footer { display: none; } }
 </style>
 </head>
 <body>

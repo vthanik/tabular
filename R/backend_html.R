@@ -88,6 +88,32 @@ backend_html <- function(grid, file) {
     return(c(head, .render_html_empty_grid(grid), tail))
   }
 
+  # On-screen chrome — semantic HTML5 `<header>` above the first
+  # page section and `<footer>` below the last. The CSS `@page`
+  # rules at `.html_inline_style()` still drive print-time chrome
+  # (so printed output continues to match BMS Appendix I per-page).
+  # `chrome_onscreen = "off"` on the preset suppresses the on-screen
+  # band (print-only behaviour, useful when the HTML is consumed
+  # exclusively via print-to-PDF).
+  preset <- meta$preset
+  chrome_mode <- if (is_preset_spec(preset)) {
+    preset@chrome_onscreen
+  } else {
+    "auto"
+  }
+  onscreen_header <- .html_render_chrome_band(
+    meta$pagehead_ast,
+    zone = "header",
+    total_pages = total,
+    chrome_mode = chrome_mode
+  )
+  onscreen_footer <- .html_render_chrome_band(
+    meta$pagefoot_ast,
+    zone = "footer",
+    total_pages = total,
+    chrome_mode = chrome_mode
+  )
+
   body <- list()
   for (i in seq_along(pages)) {
     section <- .render_html_page(
@@ -104,7 +130,124 @@ backend_html <- function(grid, file) {
     }
     body[[length(body) + 1L]] <- section
   }
-  c(head, unlist(body, use.names = FALSE), tail)
+  c(
+    head,
+    onscreen_header,
+    unlist(body, use.names = FALSE),
+    onscreen_footer,
+    tail
+  )
+}
+
+# Render a semantic HTML5 page band (`<header>` or `<footer>`) for
+# on-screen display. Mirrors the three-slot left/center/right
+# pattern the @page CSS rules already use, but produces real DOM
+# nodes that browsers paint OUTSIDE of print context. Returns
+# character(0) when the band is empty or `chrome_mode = "off"`.
+#
+# `{page}` and `{npages}` tokens are substituted statically here
+# (page = 1 for the on-screen header, total_pages for {npages}) so
+# the rendered text reads sensibly without CSS counter context.
+# Multi-row slots stack vertically inside each slot div, matching
+# the @page rule layout discipline.
+.html_render_chrome_band <- function(
+  band,
+  zone,
+  total_pages,
+  chrome_mode
+) {
+  if (identical(chrome_mode, "off") || !.page_band_is_populated(band)) {
+    return(character())
+  }
+  reverse <- identical(zone, "header")
+  cls <- sprintf("tabular-page-%s", zone)
+  tag <- if (identical(zone, "header")) "header" else "footer"
+  c(
+    sprintf("<%s class=\"%s\">", tag, cls),
+    sprintf(
+      "  <div class=\"%s-left\">%s</div>",
+      cls,
+      .html_chrome_slot_text(
+        band$left,
+        reverse = reverse,
+        total_pages = total_pages
+      )
+    ),
+    sprintf(
+      "  <div class=\"%s-center\">%s</div>",
+      cls,
+      .html_chrome_slot_text(
+        band$center,
+        reverse = reverse,
+        total_pages = total_pages
+      )
+    ),
+    sprintf(
+      "  <div class=\"%s-right\">%s</div>",
+      cls,
+      .html_chrome_slot_text(
+        band$right,
+        reverse = reverse,
+        total_pages = total_pages
+      )
+    ),
+    sprintf("</%s>", tag)
+  )
+}
+
+# Flatten one band slot (list of N inline_asts, one per row) to
+# an HTML fragment with rows joined by `<br>`. `{page}` /
+# `{npages}` tokens resolve statically (page = 1, npages = total).
+# `reverse = TRUE` flips row order to match the pagehead growth
+# convention (index 1 = body edge -> visually closest to the table).
+.html_chrome_slot_text <- function(slot_asts, reverse, total_pages) {
+  if (length(slot_asts) == 0L) {
+    return("")
+  }
+  order <- if (reverse) rev(seq_along(slot_asts)) else seq_along(slot_asts)
+  parts <- vapply(
+    order,
+    function(i) {
+      txt <- .html_band_row_content(slot_asts[[i]])
+      # `.html_band_row_content` quotes its output for CSS `content:`
+      # use (`"text"` with quotes / counter() calls). Unwrap for
+      # plain-HTML emission.
+      .html_chrome_unquote_band_text(txt, total_pages = total_pages)
+    },
+    character(1L)
+  )
+  parts[!nzchar(parts)] <- ""
+  paste(parts, collapse = "<br>")
+}
+
+# Strip the CSS-quoting that `.html_band_row_content` applies for
+# @page `content:` strings, leaving plain text suitable for DOM
+# emission. Substitutes `counter(page)` / `counter(pages)` to
+# static "1" and total-pages digits respectively (CSS counters
+# don't fire outside @page context, so on-screen we render the
+# best static approximation).
+.html_chrome_unquote_band_text <- function(s, total_pages) {
+  if (!is.character(s) || length(s) != 1L) {
+    return("")
+  }
+  # `s` is the @page-style `content:` value: a sequence of
+  # `"text"` literals and `counter(...)` calls joined by spaces.
+  # Convert counter calls to static digits first, then convert
+  # the CSS newline literal `"\\A"` to a <br>, then strip ALL
+  # double-quote and inter-fragment spaces — the only quotes in
+  # the source are the CSS delimiters around plain-text fragments
+  # (any `"` inside the user's input was already &quot;-escaped by
+  # `.html_band_row_content` -> `.html_escape`).
+  s <- gsub("counter(page)", "1", s, fixed = TRUE)
+  s <- gsub("counter(pages)", as.character(total_pages), s, fixed = TRUE)
+  s <- gsub("\"\\A\"", "<br>", s, fixed = TRUE)
+  # Collapse `" <fragment> "` -> `<fragment>` by removing the
+  # CSS string delimiters and the single space that joins
+  # adjacent CSS tokens.
+  s <- gsub("\"", "", s, fixed = TRUE)
+  # Collapse double spaces that fall out of the join.
+  s <- gsub("  +", " ", s)
+  trimws(s)
 }
 
 # Render the HTML skeleton for a spec whose grid has zero pages
@@ -688,7 +831,19 @@ backend_html <- function(grid, file) {
     ".tabular-footnote { font-size: .85rem; color: #495057; margin: .25rem 0; }",
     ".tabular-empty { font-style: italic; color: #6c757d; }",
     ".tabular-page-break { border: none; border-top: 1px dashed #adb5bd; margin: 1.5rem 0; }",
-    "@media print { .tabular-page { page-break-after: always; } .tabular-page-break { display: none; } }"
+    # On-screen chrome bands — semantic <header>/<footer> with
+    # three flex slots; matches the @page margin-box layout for
+    # visual parity between screen and print. Hidden in print so
+    # the @page rules (further below) take over without duplicate
+    # bands.
+    ":root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }",
+    ".tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: .85rem; color: var(--tabular-chrome-color); }",
+    ".tabular-page-header { border-bottom: 1px solid var(--tabular-border-color-muted); margin-bottom: 1rem; }",
+    ".tabular-page-footer { border-top:    1px solid var(--tabular-border-color-muted); margin-top:    1rem; }",
+    ".tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }",
+    ".tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }",
+    ".tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }",
+    "@media print { .tabular-page { page-break-after: always; } .tabular-page-break { display: none; } .tabular-page-header, .tabular-page-footer { display: none; } }"
   )
   page_rules <- .html_render_page_band_rules(pagehead_ast, pagefoot_ast)
   c("<style>", body_css, page_rules, "</style>")
