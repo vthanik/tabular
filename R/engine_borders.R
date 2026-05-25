@@ -54,12 +54,6 @@ engine_borders <- function(spec, cells_style) {
   if (!is.matrix(cells_style)) {
     return(cells_style)
   }
-  preset <- .effective_preset(spec)
-  borders <- preset@borders
-  if (length(borders) == 0L) {
-    return(cells_style)
-  }
-
   nrow_data <- nrow(cells_style)
   ncol_data <- ncol(cells_style)
   if (nrow_data == 0L || ncol_data == 0L) {
@@ -71,43 +65,267 @@ engine_borders <- function(spec, cells_style) {
     return(cells_style)
   }
 
-  # Region resolution: merge the umbrella `outer` triple into each
-  # per-side override (per-side wins). Body aliases collapse onto
-  # outer_top / outer_bottom.
-  resolved <- .resolve_border_regions(borders)
-
-  # Apply the resolved per-region triples to the corresponding
-  # cells. Order matters only for visual debugging — the resolver
-  # consults all 4 per-side scalars per cell anyway, so the final
-  # `style_node` carries the last-write wins for each side.
-  for (side in c("top", "bottom", "left", "right")) {
-    edge_key <- paste0("outer_", side)
-    triple <- resolved[[edge_key]]
-    if (!is.null(triple)) {
-      cells_style <- .stamp_outer_edge(
+  # ---- Legacy preset@borders path (still active until Step 7) ----
+  preset <- .effective_preset(spec)
+  borders <- preset@borders
+  if (length(borders) > 0L) {
+    resolved <- .resolve_border_regions(borders)
+    for (side in c("top", "bottom", "left", "right")) {
+      triple <- resolved[[paste0("outer_", side)]]
+      if (!is.null(triple)) {
+        cells_style <- .stamp_outer_edge(
+          cells_style,
+          visible_idx = visible_idx,
+          side = side,
+          triple = triple
+        )
+      }
+    }
+    if (!is.null(resolved$body_rows)) {
+      cells_style <- .stamp_body_rows(
         cells_style,
         visible_idx = visible_idx,
-        side = side,
-        triple = triple
+        triple = resolved$body_rows
+      )
+    }
+    if (!is.null(resolved$body_cols)) {
+      cells_style <- .stamp_body_cols(
+        cells_style,
+        visible_idx = visible_idx,
+        triple = resolved$body_cols
       )
     }
   }
 
-  if (!is.null(resolved$body_rows)) {
-    cells_style <- .stamp_body_rows(
-      cells_style,
-      visible_idx = visible_idx,
-      triple = resolved$body_rows
+  # ---- New cells_table() layer path (cascade-aware) ----
+  # Walk session preset → spec preset → per-spec layers. Each layer
+  # whose location is a `cells_table` stamps its border triple onto
+  # the matching body cells.
+  for (layer in .collect_table_layers(spec)) {
+    cells_style <- .apply_table_layer(
+      layer = layer,
+      cells_style = cells_style,
+      visible_idx = visible_idx
     )
   }
-  if (!is.null(resolved$body_cols)) {
-    cells_style <- .stamp_body_cols(
-      cells_style,
-      visible_idx = visible_idx,
-      triple = resolved$body_cols
-    )
+
+  cells_style
+}
+
+# Collect every layer in the four-tier cascade whose location is a
+# `cells_table` (border-only surface). Returns layers in cascade
+# order — session preset first, per-spec layers last — so the
+# last-write wins per side at stamp time.
+.collect_table_layers <- function(spec) {
+  sources <- list()
+  session <- get_preset()
+  if (is_preset_spec(session)) {
+    sources <- c(sources, session@style)
+  }
+  if (is_preset_spec(spec@preset)) {
+    sources <- c(sources, spec@preset@style)
+  }
+  if (is_style_spec(spec@styles)) {
+    sources <- c(sources, spec@styles@layers)
+  }
+  matches <- vapply(
+    sources,
+    function(layer) {
+      loc <- layer@location
+      !is.null(loc) && identical(loc$surface, "table")
+    },
+    logical(1L)
+  )
+  sources[matches]
+}
+
+# Stamp one cells_table layer onto the cells_style matrix. Maps the
+# location's `side` onto the existing per-side / per-row / per-col
+# stamp helpers; reads the matching border_<side>_{style,width,color}
+# triple off the layer's style_node.
+#
+# Layers always override preset@borders and previously-applied
+# layers (per-attribute last-write-wins), unlike the legacy
+# `.set_border_triple` which skips already-explicit sides. The
+# rationale: in the new layer cascade the *layer order* IS the
+# precedence; users compose layers expecting later writes to win.
+.apply_table_layer <- function(layer, cells_style, visible_idx) {
+  side <- layer@location$side
+  node <- layer@style
+  if (is.null(side) || identical(side, "outer")) {
+    for (s in c("top", "bottom", "left", "right")) {
+      triple <- .style_node_border_triple(node, s)
+      if (!is.null(triple)) {
+        cells_style <- .stamp_outer_edge_force(
+          cells_style,
+          visible_idx = visible_idx,
+          side = s,
+          triple = triple
+        )
+      }
+    }
+    return(cells_style)
+  }
+  if (side %in% c("outer_top", "outer_bottom", "outer_left", "outer_right")) {
+    s <- sub("^outer_", "", side)
+    triple <- .style_node_border_triple(node, s)
+    if (!is.null(triple)) {
+      cells_style <- .stamp_outer_edge_force(
+        cells_style,
+        visible_idx = visible_idx,
+        side = s,
+        triple = triple
+      )
+    }
+    return(cells_style)
+  }
+  if (identical(side, "rows")) {
+    triple <- .style_node_border_triple(node, "top")
+    if (!is.null(triple)) {
+      cells_style <- .stamp_body_rows_force(
+        cells_style,
+        visible_idx = visible_idx,
+        triple = triple
+      )
+    }
+    return(cells_style)
+  }
+  if (identical(side, "cols")) {
+    triple <- .style_node_border_triple(node, "left")
+    if (!is.null(triple)) {
+      cells_style <- .stamp_body_cols_force(
+        cells_style,
+        visible_idx = visible_idx,
+        triple = triple
+      )
+    }
+    return(cells_style)
   }
   cells_style
+}
+
+# Forcing variants of the stamp helpers — always write the triple,
+# bypassing the "skip if explicit" gate that `.set_border_triple`
+# applies. Used by the new layer path so later layers override
+# earlier ones / preset@borders.
+.stamp_outer_edge_force <- function(cells_style, visible_idx, side, triple) {
+  nrow_data <- nrow(cells_style)
+  ncol_visible <- length(visible_idx)
+  if (nrow_data == 0L || ncol_visible == 0L) {
+    return(cells_style)
+  }
+  if (side == "top") {
+    rows <- 1L
+    cols <- visible_idx
+  } else if (side == "bottom") {
+    rows <- nrow_data
+    cols <- visible_idx
+  } else if (side == "left") {
+    rows <- seq_len(nrow_data)
+    cols <- visible_idx[[1L]]
+  } else {
+    rows <- seq_len(nrow_data)
+    cols <- visible_idx[[length(visible_idx)]]
+  }
+  prop_style <- paste0("border_", side, "_style")
+  prop_width <- paste0("border_", side, "_width")
+  prop_color <- paste0("border_", side, "_color")
+  for (r in rows) {
+    for (c in cols) {
+      cells_style[[r, c]] <- .force_border_triple(
+        cells_style[[r, c]],
+        prop_style = prop_style,
+        prop_width = prop_width,
+        prop_color = prop_color,
+        triple = triple
+      )
+    }
+  }
+  cells_style
+}
+
+.stamp_body_rows_force <- function(cells_style, visible_idx, triple) {
+  nrow_data <- nrow(cells_style)
+  if (nrow_data < 2L) {
+    return(cells_style)
+  }
+  for (r in seq(2L, nrow_data)) {
+    for (c in visible_idx) {
+      cells_style[[r, c]] <- .force_border_triple(
+        cells_style[[r, c]],
+        prop_style = "border_top_style",
+        prop_width = "border_top_width",
+        prop_color = "border_top_color",
+        triple = triple
+      )
+    }
+  }
+  cells_style
+}
+
+.stamp_body_cols_force <- function(cells_style, visible_idx, triple) {
+  ncol_visible <- length(visible_idx)
+  if (ncol_visible < 2L) {
+    return(cells_style)
+  }
+  nrow_data <- nrow(cells_style)
+  for (r in seq_len(nrow_data)) {
+    for (c in visible_idx[-1L]) {
+      cells_style[[r, c]] <- .force_border_triple(
+        cells_style[[r, c]],
+        prop_style = "border_left_style",
+        prop_width = "border_left_width",
+        prop_color = "border_left_color",
+        triple = triple
+      )
+    }
+  }
+  cells_style
+}
+
+# Force-write variant of `.set_border_triple` — does not gate on
+# `.border_side_explicit`. Always writes the per-side scalars.
+.force_border_triple <- function(
+  node,
+  prop_style,
+  prop_width,
+  prop_color,
+  triple
+) {
+  if (!is_style_node(node)) {
+    node <- style_node()
+  }
+  args <- list(node)
+  if (!is.null(triple$style) && !is.na(triple$style)) {
+    args[[prop_style]] <- triple$style
+  }
+  if (!is.null(triple$width) && !is.na(triple$width)) {
+    args[[prop_width]] <- triple$width
+  }
+  if (!is.null(triple$color) && !is.na(triple$color)) {
+    args[[prop_color]] <- triple$color
+  }
+  do.call(S7::set_props, args)
+}
+
+# Pull the per-side border triple off a style_node. Returns NULL if
+# all three scalars are NA (= no override for this side).
+.style_node_border_triple <- function(node, side) {
+  sty <- S7::prop(node, paste0("border_", side, "_style"))
+  wid <- S7::prop(node, paste0("border_", side, "_width"))
+  col <- S7::prop(node, paste0("border_", side, "_color"))
+  if (
+    (length(sty) == 0L || is.na(sty)) &&
+      (length(wid) == 0L || is.na(wid)) &&
+      (length(col) == 0L || is.na(col))
+  ) {
+    return(NULL)
+  }
+  list(
+    style = if (length(sty) > 0L) sty else NA_character_,
+    width = if (length(wid) > 0L) wid else NA_real_,
+    color = if (length(col) > 0L) col else NA_character_
+  )
 }
 
 # ---------------------------------------------------------------------
