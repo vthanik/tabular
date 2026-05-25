@@ -35,12 +35,49 @@ engine_style <- function(spec) {
 
   grid <- .empty_style_grid(nrow_data, ncol_data, col_names)
 
+  call <- rlang::caller_env()
+
+  # Cascade ordering (lowest to highest priority):
+  #   1. Session preset's @style layers   — set via `set_preset(style = ...)`
+  #   2. Spec preset's @style layers      — set via `preset(spec, style = ...)`
+  #   3. Per-spec @styles@predicates      — legacy where-predicate path
+  #   4. Per-spec @styles@layers          — new `at = cells_*()` path
+  #
+  # Later layers override earlier ones per attribute via the same
+  # field-level merge contract (`.merge_style_node`). NA fields on a
+  # later layer leave the prior layer's value intact.
+
+  session_preset <- get_preset()
+  if (is_preset_spec(session_preset) && length(session_preset@style) > 0L) {
+    for (layer in session_preset@style) {
+      grid <- .apply_style_layer(
+        layer = layer,
+        grid = grid,
+        data = data,
+        col_names = col_names,
+        call = call
+      )
+    }
+  }
+
+  spec_preset <- spec@preset
+  if (is_preset_spec(spec_preset) && length(spec_preset@style) > 0L) {
+    for (layer in spec_preset@style) {
+      grid <- .apply_style_layer(
+        layer = layer,
+        grid = grid,
+        data = data,
+        col_names = col_names,
+        call = call
+      )
+    }
+  }
+
   styles <- spec@styles
   if (!is_style_spec(styles)) {
     return(grid)
   }
 
-  call <- rlang::caller_env()
   for (pred in styles@predicates) {
     grid <- .apply_style_predicate(
       pred = pred,

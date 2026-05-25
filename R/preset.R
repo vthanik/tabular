@@ -448,7 +448,7 @@
 #' [`as_grid()`].
 #'
 #' @export
-preset <- function(.spec, ..., template = NULL, reset = FALSE) {
+preset <- function(.spec, ..., template = NULL, style = NULL, reset = FALSE) {
   call <- rlang::caller_env()
   check_tabular_spec(.spec, call = call)
   reset <- .check_scalar_lgl(reset, arg = "reset", call = call)
@@ -456,18 +456,21 @@ preset <- function(.spec, ..., template = NULL, reset = FALSE) {
   knobs <- rlang::list2(...)
   .check_preset_knob_names(knobs, call = call)
   template_knobs <- .extract_template_knobs(template, call = call)
+  style_layers <- .extract_style_template_layers(style, call = call)
 
   if (
     reset &&
       length(knobs) == 0L &&
-      length(template_knobs) == 0L
+      length(template_knobs) == 0L &&
+      length(style_layers) == 0L
   ) {
     return(S7::set_props(.spec, preset = NULL))
   }
   if (
     !reset &&
       length(knobs) == 0L &&
-      length(template_knobs) == 0L
+      length(template_knobs) == 0L &&
+      length(style_layers) == 0L
   ) {
     return(.spec)
   }
@@ -496,6 +499,12 @@ preset <- function(.spec, ..., template = NULL, reset = FALSE) {
     .apply_preset_knobs(base, knobs, call = call)
   } else {
     base
+  }
+  if (length(style_layers) > 0L) {
+    new_preset <- S7::set_props(
+      new_preset,
+      style = c(new_preset@style, style_layers)
+    )
   }
   S7::set_props(.spec, preset = new_preset)
 }
@@ -608,18 +617,20 @@ preset <- function(.spec, ..., template = NULL, reset = FALSE) {
 #' [`as_grid()`].
 #'
 #' @export
-set_preset <- function(..., template = NULL, reset = FALSE) {
+set_preset <- function(..., template = NULL, style = NULL, reset = FALSE) {
   call <- rlang::caller_env()
   reset <- .check_scalar_lgl(reset, arg = "reset", call = call)
 
   knobs <- rlang::list2(...)
   .check_preset_knob_names(knobs, call = call)
   template_knobs <- .extract_template_knobs(template, call = call)
+  style_layers <- .extract_style_template_layers(style, call = call)
 
   if (
     reset &&
       length(knobs) == 0L &&
-      length(template_knobs) == 0L
+      length(template_knobs) == 0L &&
+      length(style_layers) == 0L
   ) {
     .tabular_session$preset <- NULL
     return(invisible(NULL))
@@ -635,6 +646,12 @@ set_preset <- function(..., template = NULL, reset = FALSE) {
     .apply_preset_knobs(base, knobs, call = call)
   } else {
     base
+  }
+  if (length(style_layers) > 0L) {
+    new_preset <- S7::set_props(
+      new_preset,
+      style = c(new_preset@style, style_layers)
+    )
   }
   .tabular_session$preset <- new_preset
   invisible(new_preset)
@@ -800,6 +817,29 @@ get_preset <- function() {
     }
   }
   out
+}
+
+# Extract a list of `style_layer` records from a
+# `tabular_style_template` (built by [`style_template()`]). Returns
+# an empty list when `style` is NULL; aborts otherwise on a
+# non-template input. Used by `preset()` and `set_preset()` to flow
+# house-style layers into `preset_spec@style`.
+.extract_style_template_layers <- function(style, call) {
+  if (is.null(style)) {
+    return(list())
+  }
+  if (!is_style_template(style)) {
+    cli::cli_abort(
+      c(
+        "{.arg style} must be a {.cls tabular_style_template} or {.code NULL}.",
+        "x" = "You supplied {.obj_type_friendly {style}}.",
+        "i" = "Build one with {.fn style_template} then chain through {.fn style}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  style$layers
 }
 
 # Memoised factory preset_spec — used by `.extract_template_knobs`
