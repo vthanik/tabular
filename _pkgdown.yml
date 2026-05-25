@@ -45,9 +45,16 @@ reference:
   - derive
 
 - title: Styling
-  desc: Predicate-targeted styling and formatting rules.
+  desc: A single `style()` verb, paired with one of the `cells_*()`
+        location helpers, drives every visual rule — body cells,
+        headers, footnotes, page chrome, table edges. Build a
+        reusable house style with `style_template()` and attach it
+        to `preset()` so every downstream table inherits the look.
   contents:
   - style
+  - cells
+  - style_template
+  - brdr
 
 - title: Pagination
   desc: Configure page splits, group-run protection, and horizontal
