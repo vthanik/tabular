@@ -8,11 +8,10 @@ to pull, verify, and continue.
 
 ## TL;DR
 
-- **Branch:** `unify-style-locations` — 9 commits ahead of `main`.
+- **Branch:** `unify-style-locations` — 13 commits ahead of `main`.
 - **Base SHA (main):** `85f4fd488cb2e5bbfb9a80a4431a511468b57d42`
-- **Tip SHA (unify-style-locations):** `f1034e92a90ad783fa251f699d5fe19a7a98e123`
-- **Diff size:** +2207 / -51 across 23 files.
-- **Tests:** 4047 / 4101 pass (6 pre-existing `pkgload` S3-dispatch
+- **Tip SHA (unify-style-locations):** `d84c9de3af3fbcaa1899d0175f719c2372da4bff`
+- **Tests:** 4083 / 4117 pass (4 pre-existing `pkgload` S3-dispatch
   failures in dev mode; all pass under `R CMD check`).
 
 ## Getting the branch onto your Mac mini
@@ -57,10 +56,10 @@ a6de74e feat(engine_style): route body-surface style_layers through cell grid
 | 2. `style_layer` S7 class | ✅ done | Added alongside legacy `style_predicate` (NOT renamed) |
 | 3. `style(..., at = cells_*())` verb | ✅ done | Legacy `where = ` path still works unchanged |
 | 4. `blank_above` / `blank_below` slots | ✅ done | numeric→integer coercion in `.build_style_node` |
-| 5. Engine routing | ⚠️ **partial** | Body-surface only. Headers/footnotes/table-edge surfaces NOT yet wired |
+| 5. Engine routing | ⚠️ **mostly done** | Body ✅, cells_table outer/rows/cols ✅, chrome surface borders + text props ✅. Still TODO: per-spanner `cells_headers(level=N, labels=…)` filtering onto `header_node@style`; `cells_group_headers()` → `header_row_plan` annotation. |
 | 6. `style_template()` + preset cascade | ✅ done | `preset(style = …)` + `set_preset(style = …)` |
 | 7. Shrink `preset_spec` (destructive) | ⏸ **NOT started** | Removing `@borders`/`@padding`/`@fonts`/`@colors`/`@alignment`/`*_pad_*` slots |
-| 8. Backend audit (5 backends) | ⏸ **NOT started** | Depends on Step 7 |
+| 8. Backend audit (5 backends) | ⏸ **NOT started** | Depends on Step 7. Backends already read `chrome_style` (chrome borders surface immediately); `chrome_style$surfaces$<key>@<text-prop>` reads need adding. `preset@*_pad_*` reads need replacing with the not-yet-built `engine_chrome_blanks()`. |
 | 9. NAMESPACE + `_pkgdown.yml` | ✅ done | New exports grouped under Styling |
 | 10. Rd files (regenerated) | ✅ done | `man/cells.Rd` + `man/style_template.Rd` new |
 | 11. Visual location diagram | ✅ done | `man/figures/style_locations.{svg,png}` BMS-style |
