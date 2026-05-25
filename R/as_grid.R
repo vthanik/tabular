@@ -248,6 +248,11 @@ as_grid <- function(spec) {
 
   headers <- engine_headers(spec)
   style_mat <- engine_style(spec)
+  # engine_borders runs after engine_style so per-cell predicate
+  # borders (the user's highest-priority layer via `style(border_
+  # <side>_*)`) survive theme-side region stamping. Region values
+  # only apply where the predicate layer is silent.
+  style_mat <- engine_borders(spec, style_mat)
   fmt <- engine_format(spec)
 
   cols_named <- .cols_named_for_decimal(spec)

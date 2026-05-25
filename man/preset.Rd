@@ -4,7 +4,7 @@
 \alias{preset}
 \title{Override the render preset on a spec}
 \usage{
-preset(.spec, ..., reset = FALSE)
+preset(.spec, ..., template = NULL, reset = FALSE)
 }
 \arguments{
 \item{.spec}{\emph{The \code{tabular_spec} to attach the preset to.}
@@ -181,6 +181,15 @@ preset(
   margins     = c(0.75, 0.5, 0.75, 0.5)
 )
 }\if{html}{\out{</div>}}}
+
+\item{template}{\emph{A \code{preset_spec} to bulk-apply before \code{...}.}
+\verb{<preset_spec | NULL>: default NULL}. When supplied, every knob
+the template has set away from its factory default feeds in as
+the base layer; user-supplied \code{...} knobs then merge on top.
+List-valued knobs (\code{borders}, \code{fonts}, \code{colors}, \code{padding},
+\code{alignment}) shallow-merge per key; scalars replace. Use this
+to layer a house-style \code{preset_spec} onto a chain without
+restating its knobs.}
 
 \item{reset}{\emph{Discard the spec's existing preset before applying
 \code{...}.} \verb{<logical(1)>: default FALSE}. When \code{TRUE}, the spec's

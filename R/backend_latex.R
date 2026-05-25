@@ -273,19 +273,146 @@ backend_latex <- function(grid, file) {
   if (is.na(body_valign)) {
     body_valign <- "top"
   }
-  c(
-    sprintf(
-      "\\begin{longtblr}[caption={}, label={}]{colspec={%s}, rowhead=%d, rows={valign=%s}}",
-      colspec,
-      rowhead,
-      .latex_valign_letter(body_valign)
+  # tabularray border manifest from preset@borders regions. Builds
+  # a list of `hline{i}={spec}` / `vline{j}={spec}` directives that
+  # ride alongside the colspec inside the outer longtblr arg.
+  # Header band occupies rows 1..rowhead; first body row index is
+  # `rowhead + 1` (offset by the band row count + label row already
+  # in `header_rules`). nrow_body / n_cols_vis bound the loops.
+  nrow_body <- length(body_rows)
+  border_directives <- .latex_border_directives(
+    preset = meta$preset,
+    rowhead = rowhead,
+    nrow_body = nrow_body,
+    n_cols_vis = length(col_names_vis)
+  )
+  outer_args <- paste(
+    c(
+      sprintf("colspec={%s}", colspec),
+      sprintf("rowhead=%d", rowhead),
+      sprintf("rows={valign=%s}", .latex_valign_letter(body_valign)),
+      border_directives
     ),
+    collapse = ", "
+  )
+  c(
+    paste0("\\begin{longtblr}[caption={}, label={}]{", outer_args, "}"),
     header_rules,
     banner_row,
     body_rows,
     footer_rule,
     "\\end{longtblr}"
   )
+}
+
+# Translate `preset@borders` regions (resolved via the same shared
+# `.resolve_border_regions()` helper engine_borders uses) to tabular-
+# ray's `hline{i}={spec}` / `vline{j}={spec}` directives. Returns a
+# character vector (zero or more entries) ready to splice into the
+# outer longtblr arg string.
+#
+# Region -> tabularray mapping:
+#   outer_top    -> hline{1}                  (top of body)
+#   outer_bottom -> hline{nrow_body + 1}      (below last body row)
+#   outer_left   -> vline{1}                  (left of col 1)
+#   outer_right  -> vline{n_cols + 1}         (right of last col)
+#   body_rows    -> hline{2..nrow_body}       (between body rows)
+#   body_cols    -> vline{2..n_cols}          (between body cols)
+#
+# Rows 1..rowhead are the header band; tabularray's hline{N}
+# numbering counts from the table's top row, so the body's first
+# row is at index `rowhead + 1` -- the helper accepts the offset.
+# Per-cell predicate borders from `style()` are NOT routed through
+# this surface; they would require partial hline{N}={col_a-col_b}
+# emissions which Phase 6 leaves to a future revisit. The
+# regions above cover the BMS Appendix I baseline cleanly.
+.latex_border_directives <- function(preset, rowhead, nrow_body, n_cols_vis) {
+  if (!is_preset_spec(preset)) {
+    return(character())
+  }
+  borders <- preset@borders
+  if (length(borders) == 0L) {
+    return(character())
+  }
+  resolved <- .resolve_border_regions(borders)
+  out <- character()
+  body_first <- rowhead + 1L
+  body_last <- rowhead + nrow_body
+  if (!is.null(resolved$outer_top)) {
+    spec <- .latex_border_spec(resolved$outer_top)
+    if (nzchar(spec)) {
+      out <- c(out, sprintf("hline{%d}={%s}", body_first, spec))
+    }
+  }
+  if (!is.null(resolved$outer_bottom) && nrow_body > 0L) {
+    spec <- .latex_border_spec(resolved$outer_bottom)
+    if (nzchar(spec)) {
+      out <- c(out, sprintf("hline{%d}={%s}", body_last + 1L, spec))
+    }
+  }
+  if (!is.null(resolved$outer_left)) {
+    spec <- .latex_border_spec(resolved$outer_left)
+    if (nzchar(spec)) {
+      out <- c(out, sprintf("vline{1}={%s}", spec))
+    }
+  }
+  if (!is.null(resolved$outer_right)) {
+    spec <- .latex_border_spec(resolved$outer_right)
+    if (nzchar(spec)) {
+      out <- c(out, sprintf("vline{%d}={%s}", n_cols_vis + 1L, spec))
+    }
+  }
+  if (!is.null(resolved$body_rows) && nrow_body > 1L) {
+    spec <- .latex_border_spec(resolved$body_rows)
+    if (nzchar(spec)) {
+      # Emit one hline for each row boundary between body rows.
+      for (i in seq(body_first + 1L, body_last)) {
+        out <- c(out, sprintf("hline{%d}={%s}", i, spec))
+      }
+    }
+  }
+  if (!is.null(resolved$body_cols) && n_cols_vis > 1L) {
+    spec <- .latex_border_spec(resolved$body_cols)
+    if (nzchar(spec)) {
+      for (j in seq(2L, n_cols_vis)) {
+        out <- c(out, sprintf("vline{%d}={%s}", j, spec))
+      }
+    }
+  }
+  out
+}
+
+# Map one resolved border triple to a tabularray border-spec
+# braced fragment. `none` -> ""; the caller skips emission.
+# Style enum maps to tabularray's line-style keywords; width emits
+# as `<pt>pt`; colour is passed verbatim when set (the engine
+# leaves `currentColor` as-is; tabularray's default colour wins).
+.latex_border_spec <- function(triple) {
+  if (is.null(triple) || identical(triple$style, "none")) {
+    return("")
+  }
+  style_kw <- switch(
+    triple$style,
+    solid = "solid",
+    dashed = "dashed",
+    dotted = "dotted",
+    double = "double",
+    dashdot = "dashdotted",
+    "solid"
+  )
+  parts <- c(
+    sprintf("%gpt", triple$width),
+    style_kw
+  )
+  if (
+    !is.null(triple$color) &&
+      !is.na(triple$color) &&
+      nzchar(triple$color) &&
+      !identical(triple$color, "currentColor")
+  ) {
+    parts <- c(parts, paste0("fg=", triple$color))
+  }
+  paste(parts, collapse = ", ")
 }
 
 # Render the subgroup banner row inside a longtblr environment.

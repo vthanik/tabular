@@ -51,6 +51,62 @@
   "none"
 )
 
+# Recognised region keys on `preset_spec@borders`. The 12 regions
+# cover the BMS Appendix I + clinical pharmaverse vocabulary at one
+# vocabulary level — region semantics are interpreted by
+# `engine_borders()` which translates each region to per-cell
+# entries on the cells_style matrix.
+.preset_border_regions <- c(
+  "outer",
+  "outer_top",
+  "outer_bottom",
+  "outer_left",
+  "outer_right",
+  "header_top",
+  "header_bottom",
+  "header_between",
+  "body_top",
+  "body_bottom",
+  "body_rows",
+  "body_cols",
+  "subgroup",
+  "footer_top",
+  "footer_bottom"
+)
+
+# Recognised surface keys on `preset_spec@fonts`. Each surface gets
+# a named list (family / size / weight); the engine_style cascade
+# applies it to the cells in that surface as a theme-default layer.
+.preset_font_surfaces <- c(
+  "body",
+  "header",
+  "titles",
+  "footnotes",
+  "subgroup"
+)
+
+# Recognised token keys on `preset_spec@colors`. Centralised theme
+# colour palette; CSS / backend emission resolves these against
+# tabular's `--tabular-*` custom-property scaffold.
+.preset_color_tokens <- c(
+  "border",
+  "border_muted",
+  "text",
+  "text_muted",
+  "background"
+)
+
+# Recognised surface keys on `preset_spec@padding`. Numeric points;
+# a scalar applies symmetrically to all four sides; a named list of
+# top/right/bottom/left gives granular control.
+.preset_padding_surfaces <- c(
+  "body",
+  "header",
+  "titles",
+  "footnotes",
+  "subgroup"
+)
+
 # Recognised keys on `preset_spec@alignment`. Each entry pairs with
 # a value-set drawn from `.align_anchor_values` (left/center/right)
 # for `_halign` and `.valign_values` (top/middle/bottom) for
@@ -627,7 +683,11 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "auto"
     ),
-    alignment = S7::new_property(S7::class_list, default = list())
+    alignment = S7::new_property(S7::class_list, default = list()),
+    borders = S7::new_property(S7::class_list, default = list()),
+    fonts = S7::new_property(S7::class_list, default = list()),
+    colors = S7::new_property(S7::class_list, default = list()),
+    padding = S7::new_property(S7::class_list, default = list())
   ),
   validator = function(self) {
     if (!(self@orientation %in% .orientation_values)) {
@@ -696,6 +756,26 @@ preset_spec <- S7::new_class(
     al_err <- .preset_alignment_shape_error(self@alignment)
     if (!is.null(al_err)) {
       return(paste0("@alignment ", al_err))
+    }
+    # Borders named-list — every name in the 15-region key set; each
+    # value either a `tabular_brdr` (constructed via `brdr()`), a
+    # bare triple list with style/width/color, the string "none" to
+    # suppress a baseline border, or NULL to clear the entry.
+    br_err <- .preset_borders_shape_error(self@borders)
+    if (!is.null(br_err)) {
+      return(paste0("@borders ", br_err))
+    }
+    fn_err <- .preset_fonts_shape_error(self@fonts)
+    if (!is.null(fn_err)) {
+      return(paste0("@fonts ", fn_err))
+    }
+    co_err <- .preset_colors_shape_error(self@colors)
+    if (!is.null(co_err)) {
+      return(paste0("@colors ", co_err))
+    }
+    pa_err <- .preset_padding_shape_error(self@padding)
+    if (!is.null(pa_err)) {
+      return(paste0("@padding ", pa_err))
     }
     NULL
   }

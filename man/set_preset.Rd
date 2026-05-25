@@ -4,12 +4,18 @@
 \alias{set_preset}
 \title{Set or clear the session default preset}
 \usage{
-set_preset(..., reset = FALSE)
+set_preset(..., template = NULL, reset = FALSE)
 }
 \arguments{
 \item{...}{\emph{Named preset knobs.} Same shape as \code{\link[=preset]{preset()}}; see
 that verb for the full list of 13 recognised knobs. Unknown
 names raise \code{tabular_error_input}.}
+
+\item{template}{\emph{A \code{preset_spec} to bulk-apply before \code{...}.}
+\verb{<preset_spec | NULL>: default NULL}. Same semantics as
+\code{\link[=preset]{preset()}}'s \code{template}: every knob set away from its factory
+default feeds in as the base layer; user-supplied \code{...} knobs
+then merge on top with shallow-merge per list-valued knob.}
 
 \item{reset}{\emph{Discard the existing session preset before applying
 \code{...}.} \verb{<logical(1)>: default FALSE}. With no knobs, clears

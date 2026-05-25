@@ -39,7 +39,11 @@
   "na_text",
   "decimal_metrics",
   "chrome_onscreen",
-  "alignment"
+  "alignment",
+  "borders",
+  "fonts",
+  "colors",
+  "padding"
 )
 
 # List-valued knobs on `preset_spec` that should SHALLOW-MERGE across
@@ -48,7 +52,13 @@
 # `knobs[[name]]` is merged onto `prior[[name]]` so a user can layer
 # `preset(alignment = list(title_halign = "left"))` on top of an
 # existing alignment list without erasing the other keys.
-.preset_list_merged_knobs <- c("alignment")
+.preset_list_merged_knobs <- c(
+  "alignment",
+  "borders",
+  "fonts",
+  "colors",
+  "padding"
+)
 
 #' Override the render preset on a spec
 #'
@@ -261,6 +271,15 @@
 #'   )
 #'   ```
 #'
+#' @param template *A `preset_spec` to bulk-apply before `...`.*
+#'   `<preset_spec | NULL>: default NULL`. When supplied, every knob
+#'   the template has set away from its factory default feeds in as
+#'   the base layer; user-supplied `...` knobs then merge on top.
+#'   List-valued knobs (`borders`, `fonts`, `colors`, `padding`,
+#'   `alignment`) shallow-merge per key; scalars replace. Use this
+#'   to layer a house-style `preset_spec` onto a chain without
+#'   restating its knobs.
+#'
 #' @param reset *Discard the spec's existing preset before applying
 #'   `...`.* `<logical(1)>: default FALSE`. When `TRUE`, the spec's
 #'   prior `preset_spec` (if any) is dropped and `...` knobs are
@@ -381,25 +400,55 @@
 #' [`as_grid()`].
 #'
 #' @export
-preset <- function(.spec, ..., reset = FALSE) {
+preset <- function(.spec, ..., template = NULL, reset = FALSE) {
   call <- rlang::caller_env()
   check_tabular_spec(.spec, call = call)
   reset <- .check_scalar_lgl(reset, arg = "reset", call = call)
 
   knobs <- rlang::list2(...)
   .check_preset_knob_names(knobs, call = call)
+  template_knobs <- .extract_template_knobs(template, call = call)
 
-  if (reset && length(knobs) == 0L) {
+  if (
+    reset &&
+      length(knobs) == 0L &&
+      length(template_knobs) == 0L
+  ) {
     return(S7::set_props(.spec, preset = NULL))
   }
-  if (!reset && length(knobs) == 0L) {
+  if (
+    !reset &&
+      length(knobs) == 0L &&
+      length(template_knobs) == 0L
+  ) {
     return(.spec)
   }
 
   prior <- .spec@preset
   base <- if (reset || !is_preset_spec(prior)) preset_spec() else prior
 
-  new_preset <- .apply_preset_knobs(base, knobs, call = call)
+  # Two-pass application so list-valued knobs (borders / fonts /
+  # colors / padding / alignment) merge cleanly:
+  #
+  #   1. template -> base   (shallow-merge each list-valued knob;
+  #                          scalars replace)
+  #   2. user ...  -> base  (same semantics; user wins for keys
+  #                          they touched, template values for the
+  #                          rest survive)
+  #
+  # This is the ggplot2 `theme(... ) + theme(panel.grid = ...)`
+  # composition pattern: each call adds to what the prior layer
+  # built up, and `borders = list(...)` callers can layer one-off
+  # region overrides onto a house-style template without restating
+  # the others.
+  if (length(template_knobs) > 0L) {
+    base <- .apply_preset_knobs(base, template_knobs, call = call)
+  }
+  new_preset <- if (length(knobs) > 0L) {
+    .apply_preset_knobs(base, knobs, call = call)
+  } else {
+    base
+  }
   S7::set_props(.spec, preset = new_preset)
 }
 
@@ -432,6 +481,12 @@ preset <- function(.spec, ..., reset = FALSE) {
 #' @param ... *Named preset knobs.* Same shape as [`preset()`]; see
 #'   that verb for the full list of 13 recognised knobs. Unknown
 #'   names raise `tabular_error_input`.
+#'
+#' @param template *A `preset_spec` to bulk-apply before `...`.*
+#'   `<preset_spec | NULL>: default NULL`. Same semantics as
+#'   [`preset()`]'s `template`: every knob set away from its factory
+#'   default feeds in as the base layer; user-supplied `...` knobs
+#'   then merge on top with shallow-merge per list-valued knob.
 #'
 #' @param reset *Discard the existing session preset before applying
 #'   `...`.* `<logical(1)>: default FALSE`. With no knobs, clears
@@ -505,14 +560,19 @@ preset <- function(.spec, ..., reset = FALSE) {
 #' [`as_grid()`].
 #'
 #' @export
-set_preset <- function(..., reset = FALSE) {
+set_preset <- function(..., template = NULL, reset = FALSE) {
   call <- rlang::caller_env()
   reset <- .check_scalar_lgl(reset, arg = "reset", call = call)
 
   knobs <- rlang::list2(...)
   .check_preset_knob_names(knobs, call = call)
+  template_knobs <- .extract_template_knobs(template, call = call)
 
-  if (reset && length(knobs) == 0L) {
+  if (
+    reset &&
+      length(knobs) == 0L &&
+      length(template_knobs) == 0L
+  ) {
     .tabular_session$preset <- NULL
     return(invisible(NULL))
   }
@@ -520,7 +580,14 @@ set_preset <- function(..., reset = FALSE) {
   prior <- .tabular_session$preset
   base <- if (reset || !is_preset_spec(prior)) preset_spec() else prior
 
-  new_preset <- .apply_preset_knobs(base, knobs, call = call)
+  if (length(template_knobs) > 0L) {
+    base <- .apply_preset_knobs(base, template_knobs, call = call)
+  }
+  new_preset <- if (length(knobs) > 0L) {
+    .apply_preset_knobs(base, knobs, call = call)
+  } else {
+    base
+  }
   .tabular_session$preset <- new_preset
   invisible(new_preset)
 }
@@ -649,6 +716,53 @@ get_preset <- function() {
       )
     }
   )
+}
+
+# Convert a `preset_spec` template (or NULL) into a named-list of
+# knob values that DIFFER from `preset_spec()` factory defaults.
+# This is what makes `preset(template = ...)` non-destructive: only
+# the template author's deliberate overrides feed into the cascade;
+# factory-default knobs on the template (e.g. `font_size = 9` when
+# the user never customised it) leave the prior preset's value
+# alone.
+#
+# Comparison memoises the factory `preset_spec()` once in the
+# session env so we don't reconstruct it on every preset call.
+.extract_template_knobs <- function(template, call) {
+  if (is.null(template)) {
+    return(list())
+  }
+  if (!is_preset_spec(template)) {
+    cli::cli_abort(
+      c(
+        "{.arg template} must be a {.cls preset_spec} or {.code NULL}.",
+        "x" = "You supplied {.obj_type_friendly {template}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  factory <- .preset_factory_default_spec()
+  out <- list()
+  for (nm in .preset_knob_names) {
+    v <- S7::prop(template, nm)
+    f <- S7::prop(factory, nm)
+    if (!identical(v, f)) {
+      out[[nm]] <- v
+    }
+  }
+  out
+}
+
+# Memoised factory preset_spec — used by `.extract_template_knobs`
+# to decide which template knobs are deliberate overrides. The
+# `.preset_factory_defaults_env` env is shared with `align.R`'s
+# `.preset_factory_default()` helper.
+.preset_factory_default_spec <- function() {
+  if (is.null(.preset_factory_defaults_env$preset)) {
+    .preset_factory_defaults_env$preset <- preset_spec()
+  }
+  .preset_factory_defaults_env$preset
 }
 
 # For each list-valued knob present in `knobs`, replace the incoming
