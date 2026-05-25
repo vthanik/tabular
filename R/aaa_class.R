@@ -797,7 +797,14 @@ preset_spec <- S7::new_class(
     title_pad_top = S7::new_property(S7::class_numeric, default = 1L),
     title_pad_bottom = S7::new_property(S7::class_numeric, default = 1L),
     body_pad_top = S7::new_property(S7::class_numeric, default = 0L),
-    body_pad_bottom = S7::new_property(S7::class_numeric, default = 0L)
+    body_pad_bottom = S7::new_property(S7::class_numeric, default = 0L),
+    # @style — ordered list of `style_layer` records that flow into
+    # every spec rendered against this preset. Populated via
+    # `preset(spec, style = style_template())` or `set_preset(style =
+    # ...)`. The engine cascade applies these layers BEFORE per-spec
+    # `style()` layers, so a house style sets defaults that an
+    # individual table can still override per attribute.
+    style = S7::new_property(S7::class_list, default = list())
   ),
   validator = function(self) {
     if (!(self@orientation %in% .orientation_values)) {
