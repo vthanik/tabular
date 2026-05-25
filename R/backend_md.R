@@ -142,14 +142,23 @@ backend_md <- function(grid, file) {
 # page when `page$repeat_headers` is TRUE (the default).
 .render_md_page <- function(page, meta, page_number, total_pages) {
   out <- character()
+  pad_title_top <- as.integer(meta$preset@title_pad_top)
+  pad_title_bottom <- as.integer(meta$preset@title_pad_bottom)
+  pad_body_top <- as.integer(meta$preset@body_pad_top)
+  pad_body_bottom <- as.integer(meta$preset@body_pad_bottom)
 
   if (page_number == 1L) {
     titles <- .render_md_title_block(meta$titles_ast)
     if (length(titles) > 0L) {
-      out <- c(out, titles, "")
+      out <- c(
+        out,
+        rep("", pad_title_top),
+        titles,
+        rep("", pad_title_bottom)
+      )
     }
   } else if (length(page$continuation) > 0L) {
-    out <- c(out, paste0("*", as.character(page$continuation), "*"), "")
+    out <- c(out, paste0("*", as.character(page$continuation), "*"))
   }
 
   # Subgroup banner row — emitted on every page of a subgroup (page
@@ -159,8 +168,10 @@ backend_md <- function(grid, file) {
   # untouched when the page carries no subgroup runtime.
   banner <- .render_md_subgroup_banner(page)
   if (length(banner) > 0L) {
-    out <- c(out, banner, "")
+    out <- c(out, banner)
   }
+
+  out <- c(out, rep("", pad_body_top))
 
   show_header <- page_number == 1L || isTRUE(page$repeat_headers)
   if (show_header) {
@@ -178,11 +189,12 @@ backend_md <- function(grid, file) {
   }
 
   out <- c(out, .render_md_body_rows(page$cells_text))
+  out <- c(out, rep("", pad_body_bottom))
 
   if (page_number == 1L) {
     footnotes <- .render_md_footnote_block(meta$footnotes_ast)
     if (length(footnotes) > 0L) {
-      out <- c(out, "", footnotes)
+      out <- c(out, footnotes)
     }
   }
   out

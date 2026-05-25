@@ -227,12 +227,25 @@ backend_docx <- function(grid, file) {
 # Commits 4-5 wire page chrome refs and per-cell styling.
 .docx_document_xml <- function(grid, preset, hyperlinks, rid_map) {
   meta <- grid@metadata
+  blank_p <- "<w:p/>"
+  pad_title_top <- as.integer(preset@title_pad_top)
+  pad_title_bottom <- as.integer(preset@title_pad_bottom)
+  pad_body_top <- as.integer(preset@body_pad_top)
+  pad_body_bottom <- as.integer(preset@body_pad_bottom)
+
   titles_block <- .docx_title_block(
     meta$titles_ast %||% list(),
     hyperlinks,
     rid_map,
     preset = preset
   )
+  if (length(titles_block) > 0L) {
+    titles_block <- c(
+      rep(blank_p, pad_title_top),
+      titles_block,
+      rep(blank_p, pad_title_bottom)
+    )
+  }
   table_block <- .render_docx_table(grid, preset, hyperlinks, rid_map)
   footnotes_block <- .docx_footnote_block(
     meta$footnotes_ast %||% list(),
@@ -244,7 +257,9 @@ backend_docx <- function(grid, file) {
 
   body <- paste0(
     paste(titles_block, collapse = ""),
+    paste(rep(blank_p, pad_body_top), collapse = ""),
     table_block,
+    paste(rep(blank_p, pad_body_bottom), collapse = ""),
     paste(footnotes_block, collapse = ""),
     sect_pr
   )

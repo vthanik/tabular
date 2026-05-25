@@ -115,11 +115,20 @@ backend_latex <- function(grid, file) {
 # number of band-rows + 1 for the column-labels row).
 .render_latex_page <- function(page, meta, page_number, total_pages) {
   out <- character()
+  pad_title_top <- as.integer(meta$preset@title_pad_top)
+  pad_title_bottom <- as.integer(meta$preset@title_pad_bottom)
+  pad_body_top <- as.integer(meta$preset@body_pad_top)
+  pad_body_bottom <- as.integer(meta$preset@body_pad_bottom)
 
   if (page_number == 1L) {
     titles <- .render_latex_title_block(meta$titles_ast, preset = meta$preset)
     if (length(titles) > 0L) {
-      out <- c(out, titles, "")
+      out <- c(
+        out,
+        rep("", pad_title_top),
+        titles,
+        rep("", pad_title_bottom)
+      )
     }
   } else if (length(page$continuation) > 0L) {
     out <- c(
@@ -132,7 +141,9 @@ backend_latex <- function(grid, file) {
     )
   }
 
+  out <- c(out, rep("", pad_body_top))
   out <- c(out, .render_latex_table(page, meta))
+  out <- c(out, rep("", pad_body_bottom))
 
   if (page_number == 1L) {
     footnotes <- .render_latex_footnote_block(
@@ -140,7 +151,7 @@ backend_latex <- function(grid, file) {
       preset = meta$preset
     )
     if (length(footnotes) > 0L) {
-      out <- c(out, "", footnotes)
+      out <- c(out, footnotes)
     }
   }
   out

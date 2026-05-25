@@ -271,12 +271,22 @@ backend_html <- function(grid, file) {
 # repeat on every page when `page$repeat_headers` is TRUE.
 .render_html_page <- function(page, meta, page_number, total_pages) {
   out <- "<section class=\"tabular-page\">"
+  blank_p <- "<p class=\"tabular-pad\">&nbsp;</p>"
+  pad_title_top <- as.integer(meta$preset@title_pad_top)
+  pad_title_bottom <- as.integer(meta$preset@title_pad_bottom)
+  pad_body_top <- as.integer(meta$preset@body_pad_top)
+  pad_body_bottom <- as.integer(meta$preset@body_pad_bottom)
 
   if (page_number == 1L) {
-    out <- c(
-      out,
-      .render_html_title_block(meta$titles_ast, preset = meta$preset)
-    )
+    titles <- .render_html_title_block(meta$titles_ast, preset = meta$preset)
+    if (length(titles) > 0L) {
+      out <- c(
+        out,
+        rep(blank_p, pad_title_top),
+        titles,
+        rep(blank_p, pad_title_bottom)
+      )
+    }
   } else if (length(page$continuation) > 0L) {
     out <- c(
       out,
@@ -288,13 +298,15 @@ backend_html <- function(grid, file) {
     )
   }
 
+  out <- c(out, rep(blank_p, pad_body_top))
+
   show_header <- page_number == 1L || isTRUE(page$repeat_headers)
   table_lines <- .render_html_table(
     page = page,
     meta = meta,
     show_header = show_header
   )
-  out <- c(out, table_lines)
+  out <- c(out, table_lines, rep(blank_p, pad_body_bottom))
 
   if (page_number == 1L) {
     out <- c(

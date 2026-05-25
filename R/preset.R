@@ -44,7 +44,11 @@
   "borders",
   "fonts",
   "colors",
-  "padding"
+  "padding",
+  "title_pad_top",
+  "title_pad_bottom",
+  "body_pad_top",
+  "body_pad_bottom"
 )
 
 # List-valued knobs on `preset_spec` that should SHALLOW-MERGE across
@@ -253,6 +257,25 @@
 #'       `<character(1)>`. Default `"  "`.
 #'   *   **`title_align`**, **`footnote_align`** — block alignment.
 #'       `<character(1)>`. One of `"left"`, `"center"`, `"right"`.
+#'   *   **`title_pad_top`**, **`title_pad_bottom`** — blank-line
+#'       count above and below the title block. `<numeric(1)>:
+#'       default 1`. Non-negative whole number. Matches the
+#'       Appendix-I "blank line above and below the title" layout
+#'       contract; set to `0` for a compact title flush against the
+#'       column-header rule, or `2`+ for poster-sized prints with
+#'       extra breathing room.
+#'   *   **`body_pad_top`**, **`body_pad_bottom`** — blank-line count
+#'       above and below the table body. `<numeric(1)>: default 1`.
+#'       Non-negative whole number. `body_pad_top` sits between the
+#'       title block (or subgroup banner, when active) and the
+#'       column-header rule; `body_pad_bottom` sits between the
+#'       table's bottom rule and the footnote block (or the page
+#'       footer when no footnotes are set). Stacks with
+#'       `title_pad_bottom`: total blank lines between the title
+#'       and the table = `title_pad_bottom + body_pad_top`. Every
+#'       backend (MD / HTML / LaTeX / RTF / DOCX) honours all four
+#'       counts uniformly — one empty line / paragraph / `\par` /
+#'       `<w:p/>` per unit.
 #'   *   **`na_text`** — global NA fallback. `<character(1)>`.
 #'   *   **`decimal_metrics`** *(experimental)* — reserved knob
 #'       for future em-aware decimal-padding refinement.

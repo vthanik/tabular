@@ -134,8 +134,22 @@ backend_rtf <- function(grid, file) {
     out <- c(out, .rtf_footer_group(meta$pagefoot_ast, preset))
   }
 
+  blank_par <- "\\pard\\plain\\par"
+  pad_title_top <- as.integer(preset@title_pad_top)
+  pad_title_bottom <- as.integer(preset@title_pad_bottom)
+  pad_body_top <- as.integer(preset@body_pad_top)
+  pad_body_bottom <- as.integer(preset@body_pad_bottom)
+
   if (page_number == 1L) {
-    out <- c(out, .render_rtf_title_block(meta$titles_ast, preset))
+    titles <- .render_rtf_title_block(meta$titles_ast, preset)
+    if (length(titles) > 0L) {
+      out <- c(
+        out,
+        rep(blank_par, pad_title_top),
+        titles,
+        rep(blank_par, pad_title_bottom)
+      )
+    }
   } else if (length(page$continuation) > 0L) {
     out <- c(
       out,
@@ -147,7 +161,9 @@ backend_rtf <- function(grid, file) {
     )
   }
 
+  out <- c(out, rep(blank_par, pad_body_top))
   out <- c(out, .render_rtf_table(page, meta, preset))
+  out <- c(out, rep(blank_par, pad_body_bottom))
 
   if (page_number == 1L) {
     out <- c(out, .render_rtf_footnote_block(meta$footnotes_ast, preset))

@@ -163,6 +163,24 @@ fallback \code{"<interactive>"}.
 \verb{<character(1)>}. Default \code{"  "}.
 \item \strong{\code{title_align}}, \strong{\code{footnote_align}} — block alignment.
 \verb{<character(1)>}. One of \code{"left"}, \code{"center"}, \code{"right"}.
+\item \strong{\code{title_pad_top}}, \strong{\code{title_pad_bottom}} — blank-line
+count above and below the title block. \verb{<numeric(1)>: default 1}. Non-negative whole number. Matches the
+Appendix-I "blank line above and below the title" layout
+contract; set to \code{0} for a compact title flush against the
+column-header rule, or \code{2}+ for poster-sized prints with
+extra breathing room.
+\item \strong{\code{body_pad_top}}, \strong{\code{body_pad_bottom}} — blank-line count
+above and below the table body. \verb{<numeric(1)>: default 1}.
+Non-negative whole number. \code{body_pad_top} sits between the
+title block (or subgroup banner, when active) and the
+column-header rule; \code{body_pad_bottom} sits between the
+table's bottom rule and the footnote block (or the page
+footer when no footnotes are set). Stacks with
+\code{title_pad_bottom}: total blank lines between the title
+and the table = \code{title_pad_bottom + body_pad_top}. Every
+backend (MD / HTML / LaTeX / RTF / DOCX) honours all four
+counts uniformly — one empty line / paragraph / \verb{\\par} /
+\verb{<w:p/>} per unit.
 \item \strong{\code{na_text}} — global NA fallback. \verb{<character(1)>}.
 \item \strong{\code{decimal_metrics}} \emph{(experimental)} — reserved knob
 for future em-aware decimal-padding refinement.

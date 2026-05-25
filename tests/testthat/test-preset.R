@@ -129,3 +129,45 @@ test_that("preset() snapshot errors", {
     preset(spec, margins = c(1, 0.5, 1))
   )
 })
+
+# ---------------------------------------------------------------------
+# Title + body pad knobs (Phase 7c)
+# ---------------------------------------------------------------------
+
+test_that("preset_spec() defaults all four pad knobs to 1L", {
+  p <- preset_spec()
+  expect_equal(p@title_pad_top, 1L)
+  expect_equal(p@title_pad_bottom, 1L)
+  expect_equal(p@body_pad_top, 1L)
+  expect_equal(p@body_pad_bottom, 1L)
+})
+
+test_that("preset() accepts integer and numeric pad values", {
+  spec <- tabular(data.frame(x = 1:3))
+  out <- preset(
+    spec,
+    title_pad_top = 0L,
+    title_pad_bottom = 2,
+    body_pad_top = 0,
+    body_pad_bottom = 3L
+  )
+  expect_equal(out@preset@title_pad_top, 0L)
+  expect_equal(out@preset@title_pad_bottom, 2)
+  expect_equal(out@preset@body_pad_top, 0)
+  expect_equal(out@preset@body_pad_bottom, 3L)
+})
+
+test_that("preset() rejects negative / fractional / NA / length>1 pad values", {
+  spec <- tabular(data.frame(x = 1:3))
+  bad_inputs <- list(-1, 1.5, NA_real_, c(1, 2))
+  for (bad in bad_inputs) {
+    expect_error(
+      preset(spec, title_pad_top = bad),
+      class = "tabular_error_input"
+    )
+    expect_error(
+      preset(spec, body_pad_bottom = bad),
+      class = "tabular_error_input"
+    )
+  }
+})

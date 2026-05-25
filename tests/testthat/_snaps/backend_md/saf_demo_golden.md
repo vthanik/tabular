@@ -1,6 +1,8 @@
+
 # Table 14.1.1
 # Demographics
 # Safety Population
+
 
 | Statistic | Placebo<br/>N=86 | High Dose<br/>N=72 | Low Dose<br/>N=96 | Total<br/>N=254 |
 | :--- | ---: | ---: | ---: | ---: |

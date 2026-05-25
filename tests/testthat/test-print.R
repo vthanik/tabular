@@ -162,14 +162,14 @@ test_that("default print routes through as.tags + htmltools (cat HTML on console
 test_that("output = 'md' cats markdown source to console", {
   s <- tabular(data.frame(x = 1L), titles = "T")
   out <- testthat::capture_output(.tabular_spec_print(s, output = "md"))
-  expect_match(out, "^# T", all = FALSE)
+  expect_match(out, "# T", all = FALSE)
   expect_match(out, "\\| x \\|")
 })
 
 test_that("output = 'markdown' aliases to md", {
   s <- tabular(data.frame(x = 1L), titles = "T")
   out <- testthat::capture_output(.tabular_spec_print(s, output = "markdown"))
-  expect_match(out, "^# T", all = FALSE)
+  expect_match(out, "# T", all = FALSE)
 })
 
 test_that("output = 'cli' forces the structural cli-tree", {
