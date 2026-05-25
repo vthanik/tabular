@@ -1117,7 +1117,7 @@ backend_html <- function(grid, file) {
     ".tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }",
     ".tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }",
     ".tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }",
-    "@media print { .tabular-page { page-break-after: always; } .tabular-page-break { display: none; } .tabular-page-header, .tabular-page-footer { display: none; } }"
+    "@media print { .tabular-page { page-break-after: always; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-break { display: none; } .tabular-page-header, .tabular-page-footer { display: none; } }"
   )
   page_rules <- .html_render_page_band_rules(pagehead_ast, pagefoot_ast)
   preset_rules <- .html_preset_overrides_css(preset)

@@ -682,6 +682,13 @@ backend_docx <- function(grid, file) {
       next
     }
     for (i in seq_len(nrows)) {
+      # Word-side keep-with-next: `<w:keepNext/>` is a paragraph
+      # property that glues a paragraph to the next paragraph on
+      # the same page. Stamping it inside every cell's `<w:pPr>`
+      # for every row except the last on the page makes Word treat
+      # the page tabular has split as a single keep-together unit.
+      is_last_row <- (i == nrows)
+      keep_next_tok <- if (is_last_row) "" else "<w:keepNext/>"
       cells <- vapply(
         seq_along(col_names_vis),
         function(j) {
@@ -709,6 +716,7 @@ backend_docx <- function(grid, file) {
             "<w:tc>",
             tc_pr,
             "<w:p><w:pPr>",
+            keep_next_tok,
             align_tok,
             "</w:pPr><w:r>",
             r_pr,
@@ -719,7 +727,16 @@ backend_docx <- function(grid, file) {
         },
         character(1L)
       )
-      out <- c(out, paste0("<w:tr>", paste(cells, collapse = ""), "</w:tr>"))
+      # `<w:cantSplit/>` on every row prevents Word from splitting
+      # a single row's content across two pages (e.g. a multi-line
+      # cell value). Applies to every body row regardless of
+      # position; the paragraph-level `<w:keepNext/>` above handles
+      # the row-to-row glue.
+      tr_pr <- "<w:trPr><w:cantSplit/></w:trPr>"
+      out <- c(
+        out,
+        paste0("<w:tr>", tr_pr, paste(cells, collapse = ""), "</w:tr>")
+      )
     }
   }
   out
