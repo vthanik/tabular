@@ -168,7 +168,7 @@ tabular(vit, titles = c("Table 14.4.1", "Vital Signs Summary")) |>
     drug_100   = col_spec(label = "Drug 100", align = "decimal")
   ) |>
   headers(
-    "Variable"        = c("param", "visit", "stat_label"),
+    "Variable"        = c("param", "paramcd", "visit", "stat_label"),
     "Treatment Group" = c("placebo", "drug_50", "drug_100")
   )
 
