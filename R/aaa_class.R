@@ -17,6 +17,13 @@
 # Helper enums (character vectors used by validators)
 # ---------------------------------------------------------------------
 
+# Cross-platform single-quote wrapper for values in error messages.
+# Base R's `shQuote()` defaults to `type = "sh"` on Unix (single
+# quotes) and `type = "cmd"` on Windows (double quotes), which makes
+# snapshot tests fail on the Windows CI runner. Force "sh" here so
+# every validator emits stable single-quoted output regardless of OS.
+.sh_quote <- function(x) shQuote(x, type = "sh")
+
 .col_usage_values <- c("display", "group", "across", "computed")
 
 # Recognised values for `col_spec@group_display`. Active only when
@@ -319,25 +326,25 @@ NULL
     if (!is.na(self@usage) && !(self@usage %in% .col_usage_values)) {
       return(paste0(
         "@usage must be one of ",
-        paste(shQuote(.col_usage_values), collapse = ", "),
+        paste(.sh_quote(.col_usage_values), collapse = ", "),
         "; got ",
-        shQuote(self@usage)
+        .sh_quote(self@usage)
       ))
     }
     if (!is.na(self@align) && !(self@align %in% .align_values)) {
       return(paste0(
         "@align must be one of ",
-        paste(shQuote(.align_values), collapse = ", "),
+        paste(.sh_quote(.align_values), collapse = ", "),
         "; got ",
-        shQuote(self@align)
+        .sh_quote(self@align)
       ))
     }
     if (!is.na(self@valign) && !(self@valign %in% .valign_values)) {
       return(paste0(
         "@valign must be one of ",
-        paste(shQuote(.valign_values), collapse = ", "),
+        paste(.sh_quote(.valign_values), collapse = ", "),
         "; got ",
-        shQuote(self@valign)
+        .sh_quote(self@valign)
       ))
     }
     if (!.is_auto_width(self@width)) {
@@ -379,9 +386,9 @@ NULL
     ) {
       return(paste0(
         "@group_display must be one of ",
-        paste(shQuote(.col_group_display_values), collapse = ", "),
+        paste(.sh_quote(.col_group_display_values), collapse = ", "),
         "; got ",
-        shQuote(self@group_display)
+        .sh_quote(self@group_display)
       ))
     }
     if (length(self@group_skip) != 1L) {
@@ -487,9 +494,9 @@ derive_spec <- S7::new_class(
     if (!(self@type %in% .derive_type_values)) {
       return(paste0(
         "@type must be one of ",
-        paste(shQuote(.derive_type_values), collapse = ", "),
+        paste(.sh_quote(.derive_type_values), collapse = ", "),
         "; got ",
-        shQuote(self@type)
+        .sh_quote(self@type)
       ))
     }
     NULL
@@ -595,9 +602,9 @@ style_node <- S7::new_class(
     ) {
       return(paste0(
         "@halign must be one of ",
-        paste(shQuote(.align_anchor_values), collapse = ", "),
+        paste(.sh_quote(.align_anchor_values), collapse = ", "),
         "; got ",
-        shQuote(self@halign)
+        .sh_quote(self@halign)
       ))
     }
     if (
@@ -607,9 +614,9 @@ style_node <- S7::new_class(
     ) {
       return(paste0(
         "@valign must be one of ",
-        paste(shQuote(.valign_values), collapse = ", "),
+        paste(.sh_quote(.valign_values), collapse = ", "),
         "; got ",
-        shQuote(self@valign)
+        .sh_quote(self@valign)
       ))
     }
     for (side in c("top", "bottom", "left", "right")) {
@@ -623,9 +630,9 @@ style_node <- S7::new_class(
           "@border_",
           side,
           "_style must be one of ",
-          paste(shQuote(.border_style_values), collapse = ", "),
+          paste(.sh_quote(.border_style_values), collapse = ", "),
           "; got ",
-          shQuote(sty)
+          .sh_quote(sty)
         ))
       }
       wid <- S7::prop(self, paste0("border_", side, "_width"))
@@ -663,9 +670,9 @@ style_predicate <- S7::new_class(
     if (!(self@scope %in% .scope_values)) {
       return(paste0(
         "@scope must be one of ",
-        paste(shQuote(.scope_values), collapse = ", "),
+        paste(.sh_quote(.scope_values), collapse = ", "),
         "; got ",
-        shQuote(self@scope)
+        .sh_quote(self@scope)
       ))
     }
     NULL
@@ -810,19 +817,19 @@ preset_spec <- S7::new_class(
     if (!(self@orientation %in% .orientation_values)) {
       return(paste0(
         "@orientation must be one of ",
-        paste(shQuote(.orientation_values), collapse = ", ")
+        paste(.sh_quote(.orientation_values), collapse = ", ")
       ))
     }
     if (!(self@paper_size %in% .paper_size_values)) {
       return(paste0(
         "@paper_size must be one of ",
-        paste(shQuote(.paper_size_values), collapse = ", ")
+        paste(.sh_quote(.paper_size_values), collapse = ", ")
       ))
     }
     if (!(self@hlines %in% .hlines_values)) {
       return(paste0(
         "@hlines must be one of ",
-        paste(shQuote(.hlines_values), collapse = ", ")
+        paste(.sh_quote(.hlines_values), collapse = ", ")
       ))
     }
     if (!(self@title_align %in% .align_anchor_values)) {
@@ -834,7 +841,7 @@ preset_spec <- S7::new_class(
     if (!(self@decimal_metrics %in% .decimal_metrics_values)) {
       return(paste0(
         "@decimal_metrics must be one of ",
-        paste(shQuote(.decimal_metrics_values), collapse = ", ")
+        paste(.sh_quote(.decimal_metrics_values), collapse = ", ")
       ))
     }
     if (!(self@chrome_onscreen %in% .chrome_onscreen_values)) {
@@ -843,9 +850,9 @@ preset_spec <- S7::new_class(
     if (!(self@width_mode %in% .preset_width_mode_values)) {
       return(paste0(
         "@width_mode must be one of ",
-        paste(shQuote(.preset_width_mode_values), collapse = ", "),
+        paste(.sh_quote(.preset_width_mode_values), collapse = ", "),
         "; got ",
-        shQuote(self@width_mode)
+        .sh_quote(self@width_mode)
       ))
     }
     if (!(length(self@margins) %in% c(1L, 2L, 4L))) {

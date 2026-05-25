@@ -42,9 +42,9 @@
   if (length(unknown) > 0L) {
     return(paste0(
       "contains unknown key(s): ",
-      paste(shQuote(unknown), collapse = ", "),
+      paste(.sh_quote(unknown), collapse = ", "),
       "; recognised: ",
-      paste(shQuote(.preset_alignment_keys), collapse = ", ")
+      paste(.sh_quote(.preset_alignment_keys), collapse = ", ")
     ))
   }
   for (k in nms) {
@@ -58,38 +58,38 @@
     if (!is.character(v)) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " must be a character vector; got ",
         class(v)[[1]]
       ))
     }
     if (anyNA(v)) {
-      return(paste0("key ", shQuote(k), " must not contain NA"))
+      return(paste0("key ", .sh_quote(k), " must not contain NA"))
     }
     if (length(v) == 0L) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " must be length >= 1 (use NULL to clear)"
       ))
     }
     if (length(v) > 1L && !accepts_vector) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " must be length 1; vectors are accepted only for ",
-        paste(shQuote(.preset_alignment_keys_vector_halign), collapse = ", ")
+        paste(.sh_quote(.preset_alignment_keys_vector_halign), collapse = ", ")
       ))
     }
     bad <- v[!(v %in% allowed)]
     if (length(bad) > 0L) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " value(s) must be one of ",
-        paste(shQuote(allowed), collapse = ", "),
+        paste(.sh_quote(allowed), collapse = ", "),
         "; got ",
-        paste(shQuote(bad), collapse = ", ")
+        paste(.sh_quote(bad), collapse = ", ")
       ))
     }
   }

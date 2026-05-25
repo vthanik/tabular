@@ -501,14 +501,14 @@ print.tabular_location <- function(x, ...) {
   if (!is.null(x$labels)) {
     parts <- c(
       parts,
-      sprintf("labels=c(%s)", paste(shQuote(x$labels), collapse = ", "))
+      sprintf("labels=c(%s)", paste(.sh_quote(x$labels), collapse = ", "))
     )
   }
   if (!is.null(x$slot)) {
-    parts <- c(parts, sprintf("slot=%s", shQuote(x$slot)))
+    parts <- c(parts, sprintf("slot=%s", .sh_quote(x$slot)))
   }
   if (!is.null(x$side)) {
-    parts <- c(parts, sprintf("side=%s", shQuote(x$side)))
+    parts <- c(parts, sprintf("side=%s", .sh_quote(x$side)))
   }
   body <- if (length(parts) == 0L) "" else paste(parts, collapse = ", ")
   cat(sprintf("<tabular_location: %s(%s)>\n", x$surface, body))

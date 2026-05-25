@@ -23,9 +23,9 @@
   if (length(unknown) > 0L) {
     return(paste0(
       "contains unknown region(s): ",
-      paste(shQuote(unknown), collapse = ", "),
+      paste(.sh_quote(unknown), collapse = ", "),
       "; recognised: ",
-      paste(shQuote(.preset_border_regions), collapse = ", ")
+      paste(.sh_quote(.preset_border_regions), collapse = ", ")
     ))
   }
   for (k in nms) {
@@ -44,7 +44,7 @@
     }
     return(paste0(
       "key ",
-      shQuote(k),
+      .sh_quote(k),
       " must be a brdr() value, \"none\", or NULL"
     ))
   }
@@ -70,9 +70,9 @@
   if (length(unknown) > 0L) {
     return(paste0(
       "contains unknown surface(s): ",
-      paste(shQuote(unknown), collapse = ", "),
+      paste(.sh_quote(unknown), collapse = ", "),
       "; recognised: ",
-      paste(shQuote(.preset_font_surfaces), collapse = ", ")
+      paste(.sh_quote(.preset_font_surfaces), collapse = ", ")
     ))
   }
   for (k in nms) {
@@ -83,7 +83,7 @@
     if (!is.list(v)) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " must be a named list with any of family / size / weight"
       ))
     }
@@ -91,7 +91,7 @@
     if (is.null(spec_nms) || anyNA(spec_nms) || any(!nzchar(spec_nms))) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " entries must all be named"
       ))
     }
@@ -99,16 +99,16 @@
     if (length(unknown_keys) > 0L) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " has unknown sub-key(s): ",
-        paste(shQuote(unknown_keys), collapse = ", "),
+        paste(.sh_quote(unknown_keys), collapse = ", "),
         "; recognised: 'family', 'size', 'weight'"
       ))
     }
     if (!is.null(v$family) && (!is.character(v$family) || anyNA(v$family))) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " family must be a non-NA character"
       ))
     }
@@ -121,7 +121,7 @@
     ) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " size must be a single positive numeric"
       ))
     }
@@ -131,7 +131,7 @@
     ) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " weight must be a single character (e.g. 'normal' / 'bold')"
       ))
     }
@@ -158,9 +158,9 @@
   if (length(unknown) > 0L) {
     return(paste0(
       "contains unknown token(s): ",
-      paste(shQuote(unknown), collapse = ", "),
+      paste(.sh_quote(unknown), collapse = ", "),
       "; recognised: ",
-      paste(shQuote(.preset_color_tokens), collapse = ", ")
+      paste(.sh_quote(.preset_color_tokens), collapse = ", ")
     ))
   }
   for (k in nms) {
@@ -176,7 +176,7 @@
     ) {
       return(paste0(
         "key ",
-        shQuote(k),
+        .sh_quote(k),
         " must be a single non-empty character (hex, CSS name, or 'currentColor' / 'transparent')"
       ))
     }
@@ -203,9 +203,9 @@
   if (length(unknown) > 0L) {
     return(paste0(
       "contains unknown surface(s): ",
-      paste(shQuote(unknown), collapse = ", "),
+      paste(.sh_quote(unknown), collapse = ", "),
       "; recognised: ",
-      paste(shQuote(.preset_padding_surfaces), collapse = ", ")
+      paste(.sh_quote(.preset_padding_surfaces), collapse = ", ")
     ))
   }
   for (k in nms) {
@@ -219,15 +219,15 @@
     if (is.list(v)) {
       spec_nms <- names(v)
       if (is.null(spec_nms) || anyNA(spec_nms) || any(!nzchar(spec_nms))) {
-        return(paste0("key ", shQuote(k), " entries must all be named"))
+        return(paste0("key ", .sh_quote(k), " entries must all be named"))
       }
       unknown_keys <- setdiff(spec_nms, c("top", "right", "bottom", "left"))
       if (length(unknown_keys) > 0L) {
         return(paste0(
           "key ",
-          shQuote(k),
+          .sh_quote(k),
           " has unknown side(s): ",
-          paste(shQuote(unknown_keys), collapse = ", "),
+          paste(.sh_quote(unknown_keys), collapse = ", "),
           "; recognised: 'top', 'right', 'bottom', 'left'"
         ))
       }
@@ -241,9 +241,9 @@
         ) {
           return(paste0(
             "key ",
-            shQuote(k),
+            .sh_quote(k),
             " side ",
-            shQuote(side),
+            .sh_quote(side),
             " must be a single non-negative numeric"
           ))
         }
@@ -252,7 +252,7 @@
     }
     return(paste0(
       "key ",
-      shQuote(k),
+      .sh_quote(k),
       " must be a non-negative numeric or a list of top/right/bottom/left"
     ))
   }

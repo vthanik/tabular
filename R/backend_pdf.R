@@ -84,7 +84,7 @@ backend_pdf <- function(grid, file) {
   hints <- if (length(missing_pkg) > 0L) {
     c(
       "x" = "Missing LaTeX package{?s}: {.val {missing_pkg}}.",
-      "i" = "On a local machine: install via {.run tinytex::tlmgr_install(c({paste(shQuote(missing_pkg), collapse = ', ')}))}.",
+      "i" = "On a local machine: install via {.run tinytex::tlmgr_install(c({paste(.sh_quote(missing_pkg), collapse = ', ')}))}.",
       "i" = "In a containerised workspace (Domino / Posit Workbench / Databricks): ask admin to add {.val {paste(missing_pkg, collapse = ' ')}} to the image build."
     )
   } else {

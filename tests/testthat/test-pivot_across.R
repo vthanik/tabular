@@ -417,7 +417,7 @@ test_that("@details example: custom fmt$p shows exact rounded percentages", {
     variable_level = c(NA),
     context = c("categorical"),
     stat_name = c("p"),
-    stat = c(0.0005),
+    stat = c(0.0008),
     stringsAsFactors = FALSE
   )
   out <- pivot_across(
@@ -427,7 +427,10 @@ test_that("@details example: custom fmt$p shows exact rounded percentages", {
     fmt = list(p = function(x) sprintf("%.1f", x * 100))
   )
   # Without the custom fmt this would render as "<0.1" (pharma threshold);
-  # the custom fmt forces the exact rounded value.
+  # the custom fmt forces the exact rounded value. Use 0.0008 (= 0.08%)
+  # rather than the rounding-boundary 0.0005 (= 0.05%) so the sprintf
+  # rounds deterministically across platforms (Windows printf rounds
+  # 0.05 to "0.0" while Unix rounds to "0.1").
   expect_identical(out$A[[1L]], "0.1")
 })
 
