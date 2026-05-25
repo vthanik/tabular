@@ -138,17 +138,91 @@ test_that(".text_width_em routes math operators through Symbol", {
 })
 
 test_that(".text_width_em falls back to space-width for unmapped codepoints", {
-  # Latin-1 supplement (é, U+00E9) — outside ASCII, not in AGL
-  # Symbol subset. Should NOT crash; should return space-width
-  # plus the surrounding ASCII widths.
+  # CJK codepoint (U+4E2D, Chinese "middle") — not in any AGL bridge.
+  # Falls back to the primary font's space width.
   space_w <- tabular:::.text_width_em(" ", "Times-Roman")
-  rest_w <- tabular:::.text_width_em("Caf", "Times-Roman")
-  caf_acute_w <- tabular:::.text_width_em("Café", "Times-Roman")
-  expect_identical(caf_acute_w, rest_w + space_w)
-
-  # CJK codepoint (U+4E2D, Chinese "middle") — also falls back.
   cjk_w <- tabular:::.text_width_em("中", "Times-Roman")
   expect_identical(cjk_w, space_w)
+})
+
+test_that(".text_width_em uses the Latin-1 AGL bridge for accented Latin glyphs", {
+  # Æ (U+00C6) is the AE ligature — its AFM width (889 in Times-
+  # Roman) is dramatically different from the space fallback (250).
+  # The bridge resolves U+00C6 -> "AE" -> 889.
+  ae_w <- tabular:::.text_width_em("Æ", "Times-Roman")
+  expected <- tabular:::afm_glyph_widths[["Times-Roman"]][["AE"]]
+  expect_identical(ae_w, unname(expected))
+
+  # Same for ñ (U+00F1) -> "ntilde". The width matches the AFM's
+  # `C -1 ; WX <w> ; N ntilde` entry exactly.
+  ntilde_w <- tabular:::.text_width_em("ñ", "Times-Roman")
+  expected_n <- tabular:::afm_glyph_widths[["Times-Roman"]][["ntilde"]]
+  expect_identical(ntilde_w, unname(expected_n))
+})
+
+test_that(".text_width_em handles a full Latin-1 word", {
+  # "Müller" — ASCII letters around an Umlaut. Width should be the
+  # sum of per-glyph widths.
+  glyphs <- tabular:::afm_glyph_widths[["Times-Roman"]]
+  expected <- sum(c(
+    glyphs[["M"]],
+    glyphs[["udieresis"]],
+    glyphs[["l"]],
+    glyphs[["l"]],
+    glyphs[["e"]],
+    glyphs[["r"]]
+  ))
+  actual <- tabular:::.text_width_em("Müller", "Times-Roman")
+  expect_identical(actual, as.integer(expected))
+})
+
+test_that(".unicode_to_glyph_name returns AGL names for Latin-1 codepoints", {
+  expect_equal(tabular:::.unicode_to_glyph_name(0x00E9L), "eacute")
+  expect_equal(tabular:::.unicode_to_glyph_name(0x00C6L), "AE")
+  expect_equal(tabular:::.unicode_to_glyph_name(0x00F1L), "ntilde")
+  expect_equal(tabular:::.unicode_to_glyph_name(0x00F8L), "oslash")
+  # ASCII passes through as NA (caller already has a fast path).
+  expect_true(is.na(tabular:::.unicode_to_glyph_name(0x0041L)))
+  # Outside Latin-1 supplement: NA.
+  expect_true(is.na(tabular:::.unicode_to_glyph_name(0x4E2DL)))
+})
+
+test_that("ZapfDingbats AFM is bundled with > 100 glyphs", {
+  # Phase 4 adds ZapfDingbats to the AFM bundle for Core-14
+  # completeness. The font carries decorative checkmarks / bullets
+  # / arrows that future presets can pull glyphs from.
+  expect_true("ZapfDingbats" %in% names(tabular:::afm_metrics))
+  expect_true(length(tabular:::afm_glyph_widths[["ZapfDingbats"]]) > 100L)
+})
+
+test_that(".agl_latin1 entries match a real glyph in every Core-12 AFM", {
+  # The bridge is only as good as the AFM coverage. Every name in
+  # .agl_latin1 must resolve to a non-missing width in every
+  # Latin-text Core-12 font (Times, Helvetica, Courier × 4). Symbol
+  # / ZapfDingbats are excluded — they don't carry Latin glyphs.
+  core_latin_fonts <- c(
+    "Helvetica",
+    "Helvetica-Bold",
+    "Helvetica-Oblique",
+    "Helvetica-BoldOblique",
+    "Times-Roman",
+    "Times-Bold",
+    "Times-Italic",
+    "Times-BoldItalic",
+    "Courier",
+    "Courier-Bold",
+    "Courier-Oblique",
+    "Courier-BoldOblique"
+  )
+  for (font in core_latin_fonts) {
+    tbl <- tabular:::afm_glyph_widths[[font]]
+    for (name in unname(tabular:::.agl_latin1)) {
+      expect_false(
+        is.na(tbl[name]),
+        info = sprintf("%s missing in %s", name, font)
+      )
+    }
+  }
 })
 
 test_that(".text_width_em errors on unknown AFM name", {

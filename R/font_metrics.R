@@ -130,6 +130,145 @@
 # cross-checked against `Symbol.afm` glyph names. Values are stable
 # across PostScript revisions; the Symbol font has not changed
 # encoding since the 1980s.
+# Latin-1 supplement codepoints (U+00A0 - U+00FF) -> Adobe Glyph
+# List names. Drives the bridge that lets `.text_width_em()` measure
+# accented Latin glyphs (é, ñ, ü, ø, etc.) at their true AFM widths
+# instead of falling back to the default space width.
+#
+# Source: Adobe Glyph List for New Fonts (AGLFN). Names match the
+# `N` field in every Core-14 AFM's `C -1 ; WX <w> ; N <name>` entry
+# (unencoded glyphs — accented Latin lives at Adobe Standard
+# Encoding's `C -1` lines because byte slots 128-255 hold a different
+# set in Adobe Standard Encoding than in Latin-1).
+#
+# Names that resolve to a Latin-character look-alike (no-break space
+# -> "space", soft hyphen -> "hyphen") share width with the ASCII
+# original. Names that don't exist in a particular font (e.g.
+# "Aacute" in Symbol) fall back to default space-width via the lookup
+# path in `.text_width_em()`.
+.agl_latin1 <- c(
+  "160" = "space", # U+00A0 no-break space
+  "161" = "exclamdown", # U+00A1
+  "162" = "cent", # U+00A2
+  "163" = "sterling", # U+00A3
+  "164" = "currency", # U+00A4
+  "165" = "yen", # U+00A5
+  "166" = "brokenbar", # U+00A6
+  "167" = "section", # U+00A7
+  "168" = "dieresis", # U+00A8
+  "169" = "copyright", # U+00A9
+  "170" = "ordfeminine", # U+00AA
+  "171" = "guillemotleft", # U+00AB
+  "172" = "logicalnot", # U+00AC
+  "173" = "hyphen", # U+00AD soft hyphen
+  "174" = "registered", # U+00AE
+  "175" = "macron", # U+00AF
+  "176" = "degree", # U+00B0
+  "177" = "plusminus", # U+00B1
+  "178" = "twosuperior", # U+00B2
+  "179" = "threesuperior", # U+00B3
+  "180" = "acute", # U+00B4
+  "181" = "mu", # U+00B5 micro sign
+  "182" = "paragraph", # U+00B6
+  "183" = "periodcentered", # U+00B7
+  "184" = "cedilla", # U+00B8
+  "185" = "onesuperior", # U+00B9
+  "186" = "ordmasculine", # U+00BA
+  "187" = "guillemotright", # U+00BB
+  "188" = "onequarter", # U+00BC
+  "189" = "onehalf", # U+00BD
+  "190" = "threequarters", # U+00BE
+  "191" = "questiondown", # U+00BF
+  "192" = "Agrave", # U+00C0
+  "193" = "Aacute", # U+00C1
+  "194" = "Acircumflex", # U+00C2
+  "195" = "Atilde", # U+00C3
+  "196" = "Adieresis", # U+00C4
+  "197" = "Aring", # U+00C5
+  "198" = "AE", # U+00C6
+  "199" = "Ccedilla", # U+00C7
+  "200" = "Egrave", # U+00C8
+  "201" = "Eacute", # U+00C9
+  "202" = "Ecircumflex", # U+00CA
+  "203" = "Edieresis", # U+00CB
+  "204" = "Igrave", # U+00CC
+  "205" = "Iacute", # U+00CD
+  "206" = "Icircumflex", # U+00CE
+  "207" = "Idieresis", # U+00CF
+  "208" = "Eth", # U+00D0
+  "209" = "Ntilde", # U+00D1
+  "210" = "Ograve", # U+00D2
+  "211" = "Oacute", # U+00D3
+  "212" = "Ocircumflex", # U+00D4
+  "213" = "Otilde", # U+00D5
+  "214" = "Odieresis", # U+00D6
+  "215" = "multiply", # U+00D7
+  "216" = "Oslash", # U+00D8
+  "217" = "Ugrave", # U+00D9
+  "218" = "Uacute", # U+00DA
+  "219" = "Ucircumflex", # U+00DB
+  "220" = "Udieresis", # U+00DC
+  "221" = "Yacute", # U+00DD
+  "222" = "Thorn", # U+00DE
+  "223" = "germandbls", # U+00DF
+  "224" = "agrave", # U+00E0
+  "225" = "aacute", # U+00E1
+  "226" = "acircumflex", # U+00E2
+  "227" = "atilde", # U+00E3
+  "228" = "adieresis", # U+00E4
+  "229" = "aring", # U+00E5
+  "230" = "ae", # U+00E6
+  "231" = "ccedilla", # U+00E7
+  "232" = "egrave", # U+00E8
+  "233" = "eacute", # U+00E9
+  "234" = "ecircumflex", # U+00EA
+  "235" = "edieresis", # U+00EB
+  "236" = "igrave", # U+00EC
+  "237" = "iacute", # U+00ED
+  "238" = "icircumflex", # U+00EE
+  "239" = "idieresis", # U+00EF
+  "240" = "eth", # U+00F0
+  "241" = "ntilde", # U+00F1
+  "242" = "ograve", # U+00F2
+  "243" = "oacute", # U+00F3
+  "244" = "ocircumflex", # U+00F4
+  "245" = "otilde", # U+00F5
+  "246" = "odieresis", # U+00F6
+  "247" = "divide", # U+00F7
+  "248" = "oslash", # U+00F8
+  "249" = "ugrave", # U+00F9
+  "250" = "uacute", # U+00FA
+  "251" = "ucircumflex", # U+00FB
+  "252" = "udieresis", # U+00FC
+  "253" = "yacute", # U+00FD
+  "254" = "thorn", # U+00FE
+  "255" = "ydieresis" # U+00FF
+)
+
+# Look up a Unicode codepoint's glyph name via the AGL bridge.
+# Returns the glyph name (suitable for indexing
+# `afm_glyph_widths[[font]]`) or NA_character_ when the codepoint
+# isn't in our curated AGL. ASCII codepoints (32-127) pass through
+# as the raw character — every AFM stores ASCII glyph names as the
+# raw character (e.g. "A", "space"), so the lookup works directly.
+.unicode_to_glyph_name <- function(cp) {
+  if (cp < 32L) {
+    return(NA_character_)
+  }
+  if (cp < 128L) {
+    # ASCII: AFM glyph names for letters / digits are the raw
+    # character ("A", "B", "0", "1"). Punctuation has named glyphs
+    # ("space", "exclam"); we don't bridge these here because the
+    # ASCII fast path in .text_width_em() consumes them already.
+    return(NA_character_)
+  }
+  nm <- .agl_latin1[as.character(cp)]
+  if (!is.na(nm)) {
+    return(unname(nm))
+  }
+  NA_character_
+}
+
 .agl_symbol <- c(
   # Greek lowercase (U+03B1 - U+03C9)
   "945" = 97L, # alpha     a
@@ -248,6 +387,10 @@
     NA_integer_
   }
 
+  # Glyph-name keyed widths for the primary font. Drives the
+  # Latin-1 supplement bridge (cp 160-255 -> AGL name -> width).
+  primary_glyph_widths <- afm_glyph_widths[[afm_name]]
+
   vapply(
     text,
     function(t) {
@@ -265,6 +408,20 @@
           total <- total + lut[[cp]]
           next
         }
+        # Latin-1 supplement via AGL bridge: codepoint -> glyph
+        # name (e.g. "eacute") -> width in the primary font. Every
+        # Core-14 AFM ships these glyphs at `C -1` unencoded slots
+        # with their canonical AGL names.
+        if (cp >= 160L && cp <= 255L && !is.null(primary_glyph_widths)) {
+          glyph_name <- .unicode_to_glyph_name(cp)
+          if (!is.na(glyph_name)) {
+            w <- primary_glyph_widths[glyph_name]
+            if (!is.na(w)) {
+              total <- total + unname(w)
+              next
+            }
+          }
+        }
         # Try Symbol via AGL for Greek / math codepoints. Single
         # bracket so a miss returns NA instead of erroring.
         slot <- .agl_symbol[as.character(cp)]
@@ -274,7 +431,7 @@
           total <- total + if (is.na(w)) symbol_default else unname(w)
           next
         }
-        # Latin-1 supplement, CJK, anything else: space-width.
+        # CJK, anything else outside the curated bridges: space-width.
         total <- total + default_w
       }
       total
