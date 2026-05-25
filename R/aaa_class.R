@@ -240,8 +240,9 @@
 #' | `sort_spec`         | sort keys + per-key direction                         | internal — built by [`sort_rows()`]|
 #' | `derive_spec`       | one computed-column expression (quosure-captured)     | internal — built by [`derive()`]  |
 #' | `style_node`        | one resolved style attribute set (per-cell)           | internal — built by [`style()`]   |
-#' | `style_predicate`   | one `where` quosure + scope + style_node              | internal — built by [`style()`]   |
-#' | `style_spec`        | the cascade root (defaults + cols + headers + preds)  | internal — built by [`style()`]   |
+#' | `style_predicate`   | (legacy) one `where` quosure + scope + style_node     | internal — built by [`style()`]   |
+#' | `style_layer`       | one `tabular_location` + style_node                   | internal — built by [`style()`]   |
+#' | `style_spec`        | the cascade root (defaults + cols + headers + layers) | internal — built by [`style()`]   |
 #' | `pagination_spec`   | page-split policy (keep_together, panels, floors)     | internal — built by [`paginate()`]|
 #' | `preset_spec`       | render geometry (paper, orientation, font, margins)   | internal — built by [`preset()`]  |
 #' | `inline_ast`        | parsed inline-formatting AST (runs of bold / sup / …) | internal — built by `parse_inline()`|
@@ -525,6 +526,8 @@ style_node <- S7::new_class(
     border_right = S7::new_property(S7::class_any, default = NA),
     padding = S7::new_property(S7::class_numeric, default = NA_real_),
     blank_after = S7::new_property(S7::class_integer, default = NA_integer_),
+    blank_above = S7::new_property(S7::class_integer, default = NA_integer_),
+    blank_below = S7::new_property(S7::class_integer, default = NA_integer_),
     pretext = S7::new_property(S7::class_character, default = NA_character_),
     posttext = S7::new_property(S7::class_character, default = NA_character_),
     halign = S7::new_property(S7::class_character, default = NA_character_),
@@ -640,7 +643,9 @@ style_node <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
-# style_predicate — predicate + style + scope
+# style_predicate — predicate + style + scope (legacy; superseded by
+# style_layer but kept while existing tests / integrations migrate.
+# New code paths use style_layer.)
 # ---------------------------------------------------------------------
 
 #' @rdname tabular_classes
@@ -668,6 +673,23 @@ style_predicate <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
+# style_layer — one tabular_location + style_node pair, accumulated
+# by every `style()` call against the unified API.
+# ---------------------------------------------------------------------
+
+#' @rdname tabular_classes
+#' @format NULL
+#' @usage NULL
+style_layer <- S7::new_class(
+  "style_layer",
+  package = "tabular",
+  properties = list(
+    location = S7::class_any,
+    style = style_node
+  )
+)
+
+# ---------------------------------------------------------------------
 # style_spec — container for the cascade
 # ---------------------------------------------------------------------
 
@@ -681,7 +703,8 @@ style_spec <- S7::new_class(
     defaults = style_node,
     cols = S7::new_property(S7::class_list, default = list()),
     headers = S7::new_property(S7::class_list, default = list()),
-    predicates = S7::new_property(S7::class_list, default = list())
+    predicates = S7::new_property(S7::class_list, default = list()),
+    layers = S7::new_property(S7::class_list, default = list())
   )
 )
 
@@ -1038,7 +1061,8 @@ tabular_grid <- S7::new_class(
 #' | `is_sort_spec()`       | `sort_spec`        | [`sort_rows()`]                   |
 #' | `is_derive_spec()`     | `derive_spec`      | [`derive()`]                      |
 #' | `is_style_node()`      | `style_node`       | [`style()`] (per-cell style)      |
-#' | `is_style_predicate()` | `style_predicate`  | [`style()`] (one per call)        |
+#' | `is_style_predicate()` | `style_predicate`  | (legacy) [`style()`] predicate path|
+#' | `is_style_layer()`     | `style_layer`      | [`style()`] (one per call)        |
 #' | `is_style_spec()`      | `style_spec`       | [`style()`] (the cascade root)    |
 #' | `is_pagination_spec()` | `pagination_spec`  | [`paginate()`]                    |
 #' | `is_preset_spec()`     | `preset_spec`      | [`preset()`], [`set_preset()`]    |
@@ -1155,6 +1179,10 @@ is_style_node <- function(x) S7::S7_inherits(x, style_node)
 #' @rdname tabular_predicates
 #' @export
 is_style_predicate <- function(x) S7::S7_inherits(x, style_predicate)
+
+#' @rdname tabular_predicates
+#' @export
+is_style_layer <- function(x) S7::S7_inherits(x, style_layer)
 
 #' @rdname tabular_predicates
 #' @export
