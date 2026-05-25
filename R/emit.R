@@ -600,5 +600,30 @@ emit <- function(
     }
     full[page$row_indices, page$col_names] <- page$cells_text
   }
+
+  # Scrub anything we add internally so the data_file ships clean
+  # plain-text values that match the final rendered cells (the same
+  # values shown in HTML / RTF / DOCX / LaTeX / Markdown), minus the
+  # alignment glyphs we use as a visual-only layout aid:
+  #
+  #   * U+00A0 NBSP -> dropped. engine_decimal pads cells with NBSP
+  #     so the decimal points line up; in a CSV / TSV / RDS QC
+  #     artefact the padding is noise.
+  #   * `<tag>` markup and HTML entities -> stripped / unescaped.
+  #     cells_text shouldn't contain markup, but if a user attaches
+  #     inline_format / md() content the scrub keeps the QC file
+  #     plain text.
+  #
+  # Regular spaces and format-string-width padding (e.g. ` 1.2`
+  # aligned to `12.3`) are preserved because they ARE part of the
+  # rendered cell value the reader sees.
+  full[] <- gsub("\u00a0", "", full)
+  full[] <- gsub("<[^>]+>", "", full)
+  full[] <- gsub("&nbsp;", " ", full, fixed = TRUE)
+  full[] <- gsub("&amp;", "&", full, fixed = TRUE)
+  full[] <- gsub("&lt;", "<", full, fixed = TRUE)
+  full[] <- gsub("&gt;", ">", full, fixed = TRUE)
+  full[] <- trimws(full)
+
   as.data.frame(full, stringsAsFactors = FALSE)
 }
