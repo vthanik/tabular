@@ -423,15 +423,16 @@ cells_pagefoot <- function(slot = NULL) {
 cells_table <- function(side = NULL, i = NULL, j = NULL) {
   call <- rlang::caller_env()
   if (!is.null(side)) {
+    valid_sides <- .location_table_sides
     if (
       !is.character(side) ||
         length(side) != 1L ||
         is.na(side) ||
-        !(side %in% .location_table_sides)
+        !(side %in% valid_sides)
     ) {
       cli::cli_abort(
         c(
-          "{.arg side} must be one of {.val {.location_table_sides}}.",
+          "{.arg side} must be one of {.val {valid_sides}}.",
           "x" = "You supplied {.val {side}}."
         ),
         class = "tabular_error_input",
@@ -461,15 +462,16 @@ is_tabular_location <- function(x) {
   if (is.null(slot)) {
     return(NULL)
   }
+  valid_slots <- .location_band_slots
   if (
     !is.character(slot) ||
       length(slot) != 1L ||
       is.na(slot) ||
-      !(slot %in% .location_band_slots)
+      !(slot %in% valid_slots)
   ) {
     cli::cli_abort(
       c(
-        "{.arg slot} must be one of {.val {.location_band_slots}}.",
+        "{.arg slot} must be one of {.val {valid_slots}}.",
         "x" = "You supplied {.val {slot}}."
       ),
       class = "tabular_error_input",
