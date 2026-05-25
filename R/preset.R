@@ -328,6 +328,13 @@
 #'   to layer a house-style `preset_spec` onto a chain without
 #'   restating its knobs.
 #'
+#' @param style *A `style_template()` to layer onto the cascade.*
+#'   `<style_template | NULL>: default NULL`. When supplied, every
+#'   layer the template has accumulated via [`style()`] is replayed
+#'   in order at engine time, after the per-spec [`style()`] layers
+#'   on `.spec`. Use this to attach a sponsor's reusable house style
+#'   to a chain without restating every per-region rule.
+#'
 #' @param reset *Discard the spec's existing preset before applying
 #'   `...`.* `<logical(1)>: default FALSE`. When `TRUE`, the spec's
 #'   prior `preset_spec` (if any) is dropped and `...` knobs are
@@ -544,6 +551,12 @@ preset <- function(.spec, ..., template = NULL, style = NULL, reset = FALSE) {
 #'   [`preset()`]'s `template`: every knob set away from its factory
 #'   default feeds in as the base layer; user-supplied `...` knobs
 #'   then merge on top with shallow-merge per list-valued knob.
+#'
+#' @param style *A `style_template()` to layer into the session
+#'   default.* `<style_template | NULL>: default NULL`. Same
+#'   semantics as [`preset()`]'s `style`: the template's accumulated
+#'   layers feed in as session-default style, layered before any
+#'   per-spec [`style()`] calls.
 #'
 #' @param reset *Discard the existing session preset before applying
 #'   `...`.* `<logical(1)>: default FALSE`. With no knobs, clears

@@ -107,6 +107,15 @@
 #'   **Note:** Unknown attribute names warn and are silently dropped
 #'   (they do NOT pass through to the backend).
 #'
+#' @param at *Location target via the `cells_*()` vocabulary.*
+#'   `<tabular_location | NULL>: default NULL`. Mutually exclusive
+#'   with `where`. When supplied, the style attributes apply to the
+#'   region named by the location: body cells ([`cells_body()`]),
+#'   column-header bands ([`cells_headers()`]), subgroup banners
+#'   ([`cells_subgroup_labels()`]), title, footnotes, page-head /
+#'   page-foot slots, or table edges ([`cells_table()`]). See
+#'   [`cells`] for the full vocabulary.
+#'
 #' @param .scope *Targeting scope.*
 #'   `<character(1)>: default "cell"`. One of `"cell"`, `"row"`,
 #'   `"col"`. See the Scope semantics section.

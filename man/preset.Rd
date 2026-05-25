@@ -234,6 +234,13 @@ List-valued knobs (\code{borders}, \code{fonts}, \code{colors}, \code{padding},
 to layer a house-style \code{preset_spec} onto a chain without
 restating its knobs.}
 
+\item{style}{\emph{A \code{style_template()} to layer onto the cascade.}
+\verb{<style_template | NULL>: default NULL}. When supplied, every
+layer the template has accumulated via \code{\link[=style]{style()}} is replayed
+in order at engine time, after the per-spec \code{\link[=style]{style()}} layers
+on \code{.spec}. Use this to attach a sponsor's reusable house style
+to a chain without restating every per-region rule.}
+
 \item{reset}{\emph{Discard the spec's existing preset before applying
 \code{...}.} \verb{<logical(1)>: default FALSE}. When \code{TRUE}, the spec's
 prior \code{preset_spec} (if any) is dropped and \code{...} knobs are
