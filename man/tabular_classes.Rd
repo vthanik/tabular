@@ -9,6 +9,7 @@
 \alias{derive_spec}
 \alias{style_node}
 \alias{style_predicate}
+\alias{style_layer}
 \alias{style_spec}
 \alias{pagination_spec}
 \alias{preset_spec}
@@ -34,8 +35,9 @@ fits in one mental model:\tabular{lll}{
    \code{sort_spec} \tab sort keys + per-key direction \tab internal — built by \code{\link[=sort_rows]{sort_rows()}} \cr
    \code{derive_spec} \tab one computed-column expression (quosure-captured) \tab internal — built by \code{\link[=derive]{derive()}} \cr
    \code{style_node} \tab one resolved style attribute set (per-cell) \tab internal — built by \code{\link[=style]{style()}} \cr
-   \code{style_predicate} \tab one \code{where} quosure + scope + style_node \tab internal — built by \code{\link[=style]{style()}} \cr
-   \code{style_spec} \tab the cascade root (defaults + cols + headers + preds) \tab internal — built by \code{\link[=style]{style()}} \cr
+   \code{style_predicate} \tab (legacy) one \code{where} quosure + scope + style_node \tab internal — built by \code{\link[=style]{style()}} \cr
+   \code{style_layer} \tab one \code{tabular_location} + style_node \tab internal — built by \code{\link[=style]{style()}} \cr
+   \code{style_spec} \tab the cascade root (defaults + cols + headers + layers) \tab internal — built by \code{\link[=style]{style()}} \cr
    \code{pagination_spec} \tab page-split policy (keep_together, panels, floors) \tab internal — built by \code{\link[=paginate]{paginate()}} \cr
    \code{preset_spec} \tab render geometry (paper, orientation, font, margins) \tab internal — built by \code{\link[=preset]{preset()}} \cr
    \code{inline_ast} \tab parsed inline-formatting AST (runs of bold / sup / …) \tab internal — built by \code{parse_inline()} \cr

@@ -4,7 +4,7 @@
 \alias{style}
 \title{Style cells, rows, or columns by predicate}
 \usage{
-style(.spec, where, ..., .scope = "cell")
+style(.spec, where, ..., at = NULL, .scope = "cell")
 }
 \arguments{
 \item{.spec}{\emph{The \code{tabular_spec} to attach the predicate to.}

@@ -492,5 +492,17 @@ style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
     )
   }
   recognised <- intersect(attr_names, .style_node_fields)
-  do.call(style_node, attrs[recognised])
+  values <- attrs[recognised]
+  # Coerce numeric -> integer for integer-typed slots so users can
+  # write `blank_above = 1` without a literal `1L`.
+  for (nm in intersect(
+    names(values),
+    c("blank_after", "blank_above", "blank_below")
+  )) {
+    v <- values[[nm]]
+    if (is.numeric(v) && !is.integer(v) && all(is.na(v) | v == trunc(v))) {
+      values[[nm]] <- as.integer(v)
+    }
+  }
+  do.call(style_node, values)
 }
