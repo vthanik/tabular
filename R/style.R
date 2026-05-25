@@ -1,9 +1,25 @@
-# style.R — predicate-targeted styling verb. Each style() call adds
-# one style_predicate to spec@styles@predicates. Multiple calls
-# accumulate; the engine resolves the cascade at render time. The
-# verb captures `where` as a quosure so the predicate environment
-# travels with it; engine_style evaluates against the post-engine
-# data grid (so user predicates may reference derived columns).
+# style.R — unified styling verb. Each style() call adds one record
+# to the styles container; multiple calls accumulate; the engine
+# resolves the cascade at render time.
+#
+# Two paths share one verb signature:
+#
+#   1. Layer path (preferred). `style(spec, ..., at = cells_*())`
+#      appends a `style_layer` to `spec@styles@layers`. The location
+#      object (`cells_body`, `cells_headers`, `cells_table`, ...) names
+#      the surface; engines switch on `location$surface` to route the
+#      style to the right code path.
+#
+#   2. Predicate path (legacy). `style(spec, where = ..., ..., .scope =
+#      ...)` appends a `style_predicate` to `spec@styles@predicates`.
+#      This is the original API — preserved for back-compat while
+#      callers migrate to `cells_body(where = ..., i = ..., j = ...)`.
+#
+# The first argument also accepts a `tabular_style_template` (built
+# by [`style_template()`]). When given, layers accumulate onto the
+# template's `layers` slot instead of a spec. Same verb, same
+# attribute names — symmetric API for per-table vs house-style
+# composition.
 
 #' Style cells, rows, or columns by predicate
 #'
@@ -239,22 +255,41 @@
 #' **Inline pretext / posttext formatting:** [`md()`], [`html()`].
 #'
 #' @export
-style <- function(.spec, where, ..., .scope = "cell") {
+style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
   call <- rlang::caller_env()
-  check_tabular_spec(.spec, call = call)
 
-  scope_val <- check_enum(.scope, .scope_values, arg = ".scope", call = call)
+  is_template <- is_style_template(.spec)
+  if (!is_template) {
+    check_tabular_spec(.spec, call = call)
+  }
 
   where_quo <- rlang::enquo(where)
-  if (rlang::quo_is_missing(where_quo)) {
+  has_where <- !rlang::quo_is_missing(where_quo)
+  has_at <- !is.null(at)
+
+  if (has_at && has_where) {
     cli::cli_abort(
       c(
-        "{.arg where} is required.",
-        "i" = "Pass an expression that evaluates to a length-{.code nrow} logical vector."
+        "Pass only one of {.arg at} and {.arg where}.",
+        "i" = "Use {.arg at} for the location vocabulary, {.arg where} for the legacy predicate path."
       ),
       class = "tabular_error_input",
       call = call
     )
+  }
+
+  if (has_at) {
+    if (!is_tabular_location(at)) {
+      cli::cli_abort(
+        c(
+          "{.arg at} must be a {.cls tabular_location}.",
+          "x" = "You supplied {.obj_type_friendly {at}}.",
+          "i" = "Build one with {.fn cells_body} / {.fn cells_headers} / etc."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
   }
 
   attrs <- rlang::list2(...)
@@ -281,8 +316,48 @@ style <- function(.spec, where, ..., .scope = "cell") {
     )
   }
 
+  attrs <- .expand_brdr_shorthand(attrs, call = call)
   node <- .build_style_node(attrs, call = call)
 
+  if (has_at) {
+    layer <- style_layer(location = at, style = node)
+    if (is_template) {
+      return(.style_template_add_layer(.spec, layer))
+    }
+    current <- .spec@styles
+    if (!is_style_spec(current)) {
+      current <- style_spec()
+    }
+    updated <- S7::set_props(
+      current,
+      layers = c(current@layers, list(layer))
+    )
+    return(S7::set_props(.spec, styles = updated))
+  }
+
+  if (is_template) {
+    cli::cli_abort(
+      c(
+        "{.arg at} is required when piping through a {.cls tabular_style_template}.",
+        "i" = "The legacy {.arg where} path is for {.cls tabular_spec} only."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+
+  if (!has_where) {
+    cli::cli_abort(
+      c(
+        "Specify one of {.arg at} or {.arg where}.",
+        "i" = "Use {.code at = cells_body()} (preferred) or {.code where = <predicate>}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+
+  scope_val <- check_enum(.scope, .scope_values, arg = ".scope", call = call)
   pred <- style_predicate(
     where = where_quo,
     style = node,
@@ -322,6 +397,8 @@ style <- function(.spec, where, ..., .scope = "cell") {
   "border_right",
   "padding",
   "blank_after",
+  "blank_above",
+  "blank_below",
   "pretext",
   "posttext",
   "halign",
@@ -339,6 +416,63 @@ style <- function(.spec, where, ..., .scope = "cell") {
   "border_right_width",
   "border_right_color"
 )
+
+# Expand `brdr()`-shorthand entries in the user's attribute list.
+#
+# Convenience sugar: a user writing
+#   style(border_top = brdr("thick", "double"), ...)
+# wants the three scalars `border_top_style` / `border_top_width` /
+# `border_top_color` populated from one brdr value. Same for
+# `border = brdr(...)` (sets all four sides) and the legacy
+# Boolean knobs `rule_above` / `rule_below` / `border_left` /
+# `border_right` (already accepted as TRUE / FALSE by the engine).
+#
+# A `"none"` literal string is also accepted as shorthand for "kill
+# the border on this side" — expands to (style = "none", width = 0).
+.expand_brdr_shorthand <- function(attrs, call) {
+  sides <- c("top", "bottom", "left", "right")
+  # Umbrella `border = ...` — set all four sides if user didn't
+  # already pass a per-side override.
+  if (!is.null(attrs[["border"]])) {
+    val <- attrs[["border"]]
+    attrs[["border"]] <- NULL
+    for (side in sides) {
+      key <- paste0("border_", side)
+      if (is.null(attrs[[key]])) {
+        attrs[[key]] <- val
+      }
+    }
+  }
+  # Per-side `border_top = brdr(...)` / `border_top = "none"` etc.
+  for (side in sides) {
+    key <- paste0("border_", side)
+    val <- attrs[[key]]
+    if (is.null(val)) {
+      next
+    }
+    if (is_brdr(val)) {
+      attrs[[key]] <- NULL
+      attrs[[paste0(key, "_style")]] <- val$style
+      attrs[[paste0(key, "_width")]] <- val$width
+      attrs[[paste0(key, "_color")]] <- val$color
+      next
+    }
+    if (
+      is.character(val) &&
+        length(val) == 1L &&
+        !is.na(val) &&
+        val == "none"
+    ) {
+      attrs[[key]] <- NULL
+      attrs[[paste0(key, "_style")]] <- "none"
+      attrs[[paste0(key, "_width")]] <- 0
+      next
+    }
+    # Leave alone — could still be a legacy Boolean ("rule_above" et
+    # al. flow through here unchanged on the Boolean knobs).
+  }
+  attrs
+}
 
 # Build a style_node from a list of named attributes. Unknown
 # attribute names warn (backend may still handle them); the warned
