@@ -178,6 +178,30 @@
 #'     Total    = col_spec(width = "0.9in")
 #'   )
 #'
+#' # ---- Example 4: Compact AE-overall with computed Active column ----
+#' #
+#' # Drop the per-arm columns and surface only the Total. A
+#' # `usage = "computed"` column adds a pooled "Active" denominator
+#' # built from the two drug arms — `derive()` computes the values,
+#' # `cols()` declares the column's role so the engine treats it
+#' # like a data column rather than a group column.
+#' tabular(
+#'   saf_aeoverall,
+#'   titles = c("Table 14.3.0", "Adverse Event Overview"),
+#'   footnotes = "Active = pooled Drug 50 + Drug 100 columns."
+#' ) |>
+#'   derive(
+#'     active = paste0(drug_50, " / ", drug_100)
+#'   ) |>
+#'   cols(
+#'     stat_label = col_spec(usage = "group", label = ""),
+#'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
+#'     active     = col_spec(usage = "computed", label = "Active arms"),
+#'     drug_50    = col_spec(visible = FALSE),
+#'     drug_100   = col_spec(visible = FALSE),
+#'     Total      = col_spec(label = "Total", align = "decimal")
+#'   )
+#'
 #' @seealso
 #' **Companion constructor:** [`col_spec()`] builds the per-column
 #' DSL object that `cols()` attaches.

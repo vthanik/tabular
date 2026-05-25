@@ -74,6 +74,35 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
   check_fonts(spec_mono)
 }
 
+# ---- Example 3: Explicit cross-platform stack ----
+#
+# A length>1 input is treated as an explicit fallback chain and
+# emitted verbatim — no alias lookup, no fabrication. Use this
+# when the first choice is a sponsor / brand face that needs an
+# honest fallback for reviewers who don't have it installed.
+spec_brand <- tabular(saf_demo) |>
+  preset(font_family = c("Inter", "Liberation Sans", "Arial", "sans"))
+if (requireNamespace("systemfonts", quietly = TRUE)) {
+  check_fonts(spec_brand)
+}
+
+# ---- Example 4: Compare serif vs sans fallback chains ----
+#
+# Side-by-side check of the two generic families. Useful when
+# deciding the house-style default: the serif chain leads with
+# Liberation Serif (Linux-server-first); the sans chain leads
+# with Liberation Sans. Both close with the backend's native
+# fallback layer (CSS generic on HTML, Latin Modern on LaTeX).
+if (requireNamespace("systemfonts", quietly = TRUE)) {
+  tabular(saf_demo) |>
+    preset(font_family = "serif") |>
+    check_fonts()
+
+  tabular(saf_demo) |>
+    preset(font_family = "sans") |>
+    check_fonts()
+}
+
 }
 \seealso{
 \strong{Builds the spec:} \code{\link[=tabular]{tabular()}}, \code{\link[=preset]{preset()}}.

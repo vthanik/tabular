@@ -154,6 +154,32 @@ tabular(demo, titles = "Demographics, ranked within section") |>
     descending = c(FALSE, TRUE)
   )
 
+# ---- Example 4: Hierarchical SOC -> PT sort with factor outer key ----
+#
+# A factor outer key locks the SOC display order to the canonical
+# interleaved sequence (`overall` first, then `soc` blocks, then
+# `pt` detail rows inside each SOC) regardless of input order. The
+# numeric inner key sorts PTs within each SOC by descending total
+# subject count.
+ae <- saf_aesocpt
+ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
+ae$n_total  <- as.integer(sub(" .*", "", ae$Total))
+tabular(ae, titles = "AE by SOC and PT, ranked within SOC") |>
+  cols(
+    soc      = col_spec(usage = "group", label = "SOC / PT"),
+    pt       = col_spec(visible = FALSE),
+    row_type = col_spec(visible = FALSE),
+    n_total  = col_spec(visible = FALSE),
+    placebo  = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50  = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100 = col_spec(label = "Drug 100", align = "decimal"),
+    Total    = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  sort_rows(
+    by         = c("row_type", "soc", "n_total"),
+    descending = c(FALSE, FALSE, TRUE)
+  )
+
 }
 \seealso{
 \strong{Sibling build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},

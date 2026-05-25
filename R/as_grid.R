@@ -206,6 +206,41 @@
 #' length(sg_grid@pages)
 #' vapply(sg_grid@pages, function(p) p$subgroup_index %||% NA_integer_, integer(1))
 #'
+#' # ---- Example 4: Pre-flight inspection before emit() ----
+#' #
+#' # Resolve a spec to its grid without writing anywhere. Useful in
+#' # tests, for snapshotting cell text under different presets, or
+#' # for spec-introspection inside higher-level wrappers that need
+#' # to know how many pages a render will produce.
+#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' demog_spec <- tabular(
+#'   saf_demo,
+#'   titles = "Demographics"
+#' ) |>
+#'   cols(
+#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     placebo    = col_spec(
+#'       label = sprintf("Placebo\nN=%d", n["placebo"]),
+#'       align = "decimal"
+#'     ),
+#'     drug_50    = col_spec(
+#'       label = sprintf("Drug 50\nN=%d", n["drug_50"]),
+#'       align = "decimal"
+#'     ),
+#'     drug_100   = col_spec(
+#'       label = sprintf("Drug 100\nN=%d", n["drug_100"]),
+#'       align = "decimal"
+#'     ),
+#'     Total      = col_spec(
+#'       label = sprintf("Total\nN=%d", n["Total"]),
+#'       align = "decimal"
+#'     )
+#'   )
+#' grid <- as_grid(demog_spec)
+#' length(grid@pages)
+#' dim(grid@pages[[1]]$cells_text)
+#'
 #' @seealso
 #' **I/O sibling:** [`emit()`] writes the resolved grid to a file
 #' via a registered backend; `as_grid()` is the no-I/O entry into

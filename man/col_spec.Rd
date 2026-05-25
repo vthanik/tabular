@@ -296,6 +296,39 @@ tabular(fit, titles = "Treatment-effect estimates by model") |>
     )
   )
 
+# ---- Example 4: Per-column width + halign override for vitals ----
+#
+# `width` accepts a numeric (inches), a CSS-style string ("1.5in",
+# "20\%"), or `"auto"`. Centering the visit column under a wider
+# group-column setup demonstrates the alignment cascade —
+# col_spec@align beats the engine default but yields to a more
+# specific style() rule downstream.
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+tabular(
+  saf_vital,
+  titles = "Vital Signs at Baseline and End of Treatment"
+) |>
+  cols(
+    paramcd    = col_spec(visible = FALSE),
+    param      = col_spec(usage = "group", label = "Parameter",
+                          width = "1.6in"),
+    visit      = col_spec(usage = "group", label = "Visit",
+                          width = "1.2in", align = "center"),
+    stat_label = col_spec(label = "Statistic", width = "1.0in"),
+    placebo    = col_spec(
+      label = sprintf("Placebo\nN=\%d", n["placebo"]),
+      align = "decimal", width = "0.9in"
+    ),
+    drug_50    = col_spec(
+      label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
+      align = "decimal", width = "0.9in"
+    ),
+    drug_100   = col_spec(
+      label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
+      align = "decimal", width = "0.9in"
+    )
+  )
+
 }
 \seealso{
 \strong{Companion verb:} \code{\link[=cols]{cols()}} attaches \code{col_spec} entries to a

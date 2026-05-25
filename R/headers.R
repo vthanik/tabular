@@ -168,6 +168,34 @@
 #'     "Treatment Group" = c("placebo", "drug_50", "drug_100")
 #'   )
 #'
+#' # ---- Example 4: Three-tier band over efficacy arms + Total ----
+#' #
+#' # Demographics-style three-tier nesting: top band labels the
+#' # whole arm strip, middle band splits Active vs Placebo, leaf
+#' # bands carry the per-arm column labels. Each child within a
+#' # `list(...)` may itself be a `list(...)` — bands nest to
+#' # arbitrary depth using nested list literals.
+#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' tabular(saf_demo, titles = "Demographics, hierarchical headers") |>
+#'   cols(
+#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     placebo    = col_spec(label = sprintf("N=%d", n["placebo"])),
+#'     drug_50    = col_spec(label = sprintf("N=%d", n["drug_50"])),
+#'     drug_100   = col_spec(label = sprintf("N=%d", n["drug_100"])),
+#'     Total      = col_spec(label = sprintf("N=%d", n["Total"]))
+#'   ) |>
+#'   headers(
+#'     "Treatment Group" = list(
+#'       "Control" = "placebo",
+#'       "Active"  = list(
+#'         "Drug 50"  = "drug_50",
+#'         "Drug 100" = "drug_100"
+#'       ),
+#'       "Pooled"  = "Total"
+#'     )
+#'   )
+#'
 #' @seealso
 #' **Companion verb:** [`cols()`] / [`col_spec()`] sets per-column
 #' labels — the leaf-row header text that sits below the band rows

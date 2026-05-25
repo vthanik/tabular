@@ -169,6 +169,41 @@ tabular(
   titles = "Quick summary"
 )
 
+# ---- Example 4: Vital-signs panel with hidden code column ----
+#
+# Show the canonical 4-visit-by-4-parameter vitals shape. The
+# CDISC `paramcd` is kept in the data frame as the natural sort
+# key but hidden at render via `col_spec(visible = FALSE)`, while
+# `param` (the display label) drives the group block.
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+tabular(
+  saf_vital,
+  titles = c(
+    "Table 14.4.1",
+    "Summary of Vital Signs",
+    sprintf("Safety Population (N=\%d)", n["Total"])
+  ),
+  footnotes = "Statistics computed on observed cases."
+) |>
+  cols(
+    paramcd    = col_spec(visible = FALSE),
+    param      = col_spec(usage = "group", label = "Parameter"),
+    visit      = col_spec(usage = "group", label = "Visit"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(
+      label = sprintf("Placebo\nN=\%d", n["placebo"]),
+      align = "decimal"
+    ),
+    drug_50    = col_spec(
+      label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
+      align = "decimal"
+    ),
+    drug_100   = col_spec(
+      label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
+      align = "decimal"
+    )
+  )
+
 }
 \seealso{
 \strong{Downstream build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},

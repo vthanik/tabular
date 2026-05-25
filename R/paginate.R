@@ -216,6 +216,33 @@
 #'     continuation  = "(continued)"
 #'   )
 #'
+#' # ---- Example 4: Many-arm horizontal pagination via column-fit ----
+#' #
+#' # Wide AE-by-SOC/PT table where the column strip itself does not
+#' # fit on a single page. The engine slices columns into groups
+#' # (each group keeping the `usage = "group"` columns repeated on
+#' # every horizontal page) so the SOC / PT label band re-appears
+#' # alongside whichever arm columns land on each panel.
+#' tabular(
+#'   saf_aesocpt,
+#'   titles = c("Table 14.3.1", "AEs by SOC and PT (wide-page split)")
+#' ) |>
+#'   cols(
+#'     soc      = col_spec(usage = "group", label = "SOC / PT",
+#'                         width = "2.5in"),
+#'     pt       = col_spec(visible = FALSE),
+#'     row_type = col_spec(visible = FALSE),
+#'     placebo  = col_spec(label = "Placebo",  align = "decimal",
+#'                         width = "2.0in"),
+#'     drug_50  = col_spec(label = "Drug 50",  align = "decimal",
+#'                         width = "2.0in"),
+#'     drug_100 = col_spec(label = "Drug 100", align = "decimal",
+#'                         width = "2.0in"),
+#'     Total    = col_spec(label = "Total",    align = "decimal",
+#'                         width = "2.0in")
+#'   ) |>
+#'   paginate(keep_together = "soc")
+#'
 #' @seealso
 #' **Render-geometry partner:** [`preset()`] / [`set_preset()`]
 #' — the preset's paper, orientation, margins, and font size feed

@@ -219,6 +219,39 @@ tabular(two_arm, titles = "Risk ratios: Drug 100 vs Placebo") |>
   ) |>
   derive(risk_ratio = drug_100 / placebo)
 
+# ---- Example 4: Multi-column derive with row-level guard ----
+#
+# Three derives in one call: a pooled-active count, a pooled-arm
+# rate against the safety BigN, and a flag string. Each
+# expression references prior bindings in left-to-right order
+# (active uses placebo/drug_*, pooled_rate uses active). NA-safe
+# divide guards against zero denominators.
+df <- saf_aeoverall[saf_aeoverall$stat_label \%in\%
+  c("Any TEAE", "Any Serious AE (SAE)"), ]
+df$pbo_n  <- as.integer(sub(" .*", "", df$placebo))
+df$d50_n  <- as.integer(sub(" .*", "", df$drug_50))
+df$d100_n <- as.integer(sub(" .*", "", df$drug_100))
+tabular(df, titles = "Pooled-arm safety overview") |>
+  derive(
+    active_n    = d50_n + d100_n,
+    active_rate = sprintf("\%.1f\%\%", active_n / (96 + 72) * 100),
+    pbo_flag    = ifelse(pbo_n > 10, "high", "low")
+  ) |>
+  cols(
+    stat_label  = col_spec(usage = "group", label = ""),
+    placebo     = col_spec(visible = FALSE),
+    drug_50     = col_spec(visible = FALSE),
+    drug_100    = col_spec(visible = FALSE),
+    Total       = col_spec(visible = FALSE),
+    pbo_n       = col_spec(label = "Placebo n",   align = "decimal"),
+    active_n    = col_spec(usage = "computed",
+                           label = "Active n (D50+D100)",
+                           align = "decimal"),
+    active_rate = col_spec(usage = "computed",
+                           label = "Active \%",   align = "right"),
+    pbo_flag    = col_spec(usage = "computed", label = "Pbo flag")
+  )
+
 }
 \seealso{
 \strong{Companion verb:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}} — declare

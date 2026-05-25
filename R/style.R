@@ -207,6 +207,27 @@
 #'     .scope = "row"
 #'   )
 #'
+#' # ---- Example 4: Banded-row backgrounds via row-scope predicate ----
+#' #
+#' # Apply a soft grey background to every other body row. The
+#' # predicate runs against the data grid (`seq_len(nrow(.spec@data))`
+#' # mod 2), and `.scope = "row"` paints the matching rows wall-to-wall.
+#' # Standard zebra-striping pattern for long tables.
+#' tabular(saf_demo, titles = "Demographics with banded rows") |>
+#'   cols(
+#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
+#'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+#'     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+#'     Total      = col_spec(label = "Total",    align = "decimal")
+#'   ) |>
+#'   style(
+#'     where = seq_len(nrow(saf_demo)) %% 2 == 0,
+#'     background = "#f2f2f2",
+#'     .scope = "row"
+#'   )
+#'
 #' @seealso
 #' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
 #' [`headers()`], [`sort_rows()`], [`derive()`], [`paginate()`],

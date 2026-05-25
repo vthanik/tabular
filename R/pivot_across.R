@@ -343,6 +343,32 @@
 #'   pivot_across(statistic = "{n} ({p}%)")
 #' head(wide, 3)
 #'
+#' # ---- Example 4: Multi-row continuous spec + label re-labelling ----
+#' #
+#' # `statistic = c(<label> = <template>, ...)` produces one display
+#' # row per named entry — the canonical "N / Mean (SD) / Median /
+#' # Min, Max" block for continuous variables. `label = c(...)`
+#' # renames the variable headings emitted into the wide output.
+#' saf_demo_card |>
+#'   pivot_across(
+#'     statistic = list(
+#'       continuous = c(
+#'         N            = "{N}",
+#'         "Mean (SD)"  = "{mean} ({sd})",
+#'         Median       = "{median}",
+#'         "Q1, Q3"     = "{p25}, {p75}",
+#'         "Min, Max"   = "{min}, {max}"
+#'       ),
+#'       categorical = "{n} ({p}%)"
+#'     ),
+#'     label = c(
+#'       AGE    = "Age (years)",
+#'       WEIGHT = "Weight (kg)",
+#'       HEIGHT = "Height (cm)",
+#'       BMI    = "BMI (kg/m^2)"
+#'     )
+#'   )
+#'
 #' @seealso
 #' **Pipeline entry consumer:** [`tabular()`] — wraps the wide data
 #' frame this helper returns.

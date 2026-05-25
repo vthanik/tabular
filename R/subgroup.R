@@ -170,6 +170,24 @@
 #'     label = "Sex: {sex} / Age: {agegr}"
 #'   )
 #'
+#' # ---- Example 4: Clear a partition with subgroup(character()) ----
+#' #
+#' # `subgroup(by = character())` (or `subgroup(by = NULL)`)
+#' # explicitly clears any prior partition. Useful in
+#' # programmatically-built pipelines where a downstream branch
+#' # decides not to paginate by group after all — the call resets
+#' # the spec back to a single-page-set render.
+#' demo <- data.frame(
+#'   region = c("US", "US", "EU", "EU"),
+#'   ae     = c("Headache", "Nausea", "Headache", "Nausea"),
+#'   n      = c(12, 8, 9, 5)
+#' )
+#' tabular(demo, titles = "Pooled (no region partition)") |>
+#'   subgroup("region", label = "Region: {region}") |>
+#'   # Decide later that the regional split was the wrong default —
+#'   # clear it before rendering.
+#'   subgroup(character())
+#'
 #' @seealso
 #' **Pipeline siblings:** [`sort_rows()`], [`paginate()`],
 #' [`derive()`].

@@ -137,6 +137,29 @@ lapply(
   function(s) brdr(style = s)
 )
 
+# ---- Example 4: Submission-style chrome wrapping the body block ----
+#
+# Full Appendix-I chrome on a real demographics table: heavy
+# outer rule around the body, single hairline between header and
+# body, no inter-row rules to keep the body airy. The combination
+# of the three region keys is the canonical clinical convention.
+tabular(saf_demo, titles = "Demographics with submission chrome") |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  preset(
+    borders = list(
+      outer     = brdr(width = "medium", style = "solid"),
+      body_top  = brdr(width = "thin",   style = "solid"),
+      body_rows = brdr(style = "none")
+    )
+  )
+
 }
 \seealso{
 \strong{Where to attach:} \code{\link[=preset]{preset()}} takes a
