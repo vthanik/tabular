@@ -429,14 +429,110 @@ engine_borders <- function(spec, cells_style) {
 # default.
 engine_chrome_borders <- function(spec) {
   cs <- chrome_style()
+
+  # ---- Legacy preset@borders chrome regions ----
   preset <- .effective_preset(spec)
   borders <- preset@borders
-  if (length(borders) == 0L) {
-    return(cs)
+  if (length(borders) > 0L) {
+    resolved <- .resolve_border_regions(borders)
+    for (region in .chrome_border_regions) {
+      cs$borders[[region]] <- resolved[[region]]
+    }
   }
-  resolved <- .resolve_border_regions(borders)
-  for (region in .chrome_border_regions) {
-    cs$borders[[region]] <- resolved[[region]]
+
+  # ---- New chrome-surface layer cascade ----
+  # Walk session preset -> spec preset -> per-spec layers. For each
+  # layer whose location targets a chrome surface, write its text
+  # properties onto chrome_style$surfaces[<surface>] (merge with
+  # later layers winning per attribute) and its border triple onto
+  # the matching chrome border region.
+  for (layer in .collect_chrome_layers(spec)) {
+    cs <- .apply_chrome_layer(layer = layer, cs = cs)
+  }
+  cs
+}
+
+# Collect every layer in the four-tier cascade whose location is a
+# chrome surface (anything mapping to a chrome_style surface key).
+# Order: session preset -> spec preset -> per-spec layers.
+.collect_chrome_layers <- function(spec) {
+  sources <- list()
+  session <- get_preset()
+  if (is_preset_spec(session)) {
+    sources <- c(sources, session@style)
+  }
+  if (is_preset_spec(spec@preset)) {
+    sources <- c(sources, spec@preset@style)
+  }
+  if (is_style_spec(spec@styles)) {
+    sources <- c(sources, spec@styles@layers)
+  }
+  chrome_surfaces <- names(.location_to_chrome_surface)
+  matches <- vapply(
+    sources,
+    function(layer) {
+      loc <- layer@location
+      !is.null(loc) && loc$surface %in% chrome_surfaces
+    },
+    logical(1L)
+  )
+  sources[matches]
+}
+
+# Apply one chrome-surface layer to a chrome_style sidecar:
+#   * text/alignment properties merge into chrome_style$surfaces[<key>]
+#     via .merge_style_node (later layers win per attribute).
+#   * border properties (border_top / border_bottom) flow into
+#     chrome_style$borders[<region>] using the per-surface
+#     region-mapping below.
+.apply_chrome_layer <- function(layer, cs) {
+  loc <- layer@location
+  surface_key <- .location_to_chrome_surface[[loc$surface]]
+  node <- layer@style
+
+  # Merge the layer's text/alignment properties onto the surface
+  # node. Reuse engine_style's merge contract — non-NA overrides.
+  existing <- cs$surfaces[[surface_key]]
+  if (!is_style_node(existing)) {
+    existing <- style_node()
+  }
+  cs$surfaces[[surface_key]] <- .merge_style_node(existing, node)
+
+  # Border properties → chrome border regions. Each chrome surface
+  # has a top-edge region, a bottom-edge region (or neither for
+  # pagehead/pagefoot which only own one edge each):
+  region_map <- switch(
+    loc$surface,
+    pagehead        = list(bottom = "pagehead_bottom"),
+    title           = list(),
+    headers         = list(
+      top    = "header_top",
+      bottom = "header_bottom",
+      between = "header_between"
+    ),
+    subgroup_labels = list(
+      top    = "subgroup_top",
+      bottom = "subgroup_bottom"
+    ),
+    footnotes       = list(
+      top    = "footer_top",
+      bottom = "footer_bottom"
+    ),
+    pagefoot        = list(top = "pagefoot_top"),
+    list()
+  )
+  for (border_side in names(region_map)) {
+    if (border_side == "between") {
+      # header_between is fed by the umbrella `border` value if
+      # neither top nor bottom carries a specific between-rule.
+      triple <- .style_node_border_triple(node, "top")
+    } else {
+      triple <- .style_node_border_triple(node, border_side)
+    }
+    region <- region_map[[border_side]]
+    if (!is.null(triple)) {
+      cs$borders[[region]] <- triple
+    }
   }
   cs
 }

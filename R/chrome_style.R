@@ -56,13 +56,27 @@
 )
 
 # Recognised chrome surfaces for the Phase 2 text-prop cascade.
-# Reserved key set — not populated by Phase 1.
+# Populated by the cascade routing in engine_chrome_borders() from
+# cells_*() layers attached via style().
 .chrome_surface_keys <- c(
   "pagehead",
+  "title",
   "header",
   "subgroup",
   "footer",
   "pagefoot"
+)
+
+# Mapping from a `cells_*()` location surface to the chrome_style
+# surface key it writes text properties onto. Used by
+# engine_chrome_borders() when walking the four-tier cascade.
+.location_to_chrome_surface <- c(
+  pagehead        = "pagehead",
+  title           = "title",
+  headers         = "header",
+  subgroup_labels = "subgroup",
+  footnotes       = "footer",
+  pagefoot        = "pagefoot"
 )
 
 # Build an empty chrome_style. Each border slot defaults to NULL

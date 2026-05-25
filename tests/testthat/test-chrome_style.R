@@ -33,7 +33,7 @@ test_that("chrome_style()$surfaces carries every chrome surface key with default
   cs <- tabular:::chrome_style()
   expect_named(
     cs$surfaces,
-    c("pagehead", "header", "subgroup", "footer", "pagefoot")
+    c("pagehead", "title", "header", "subgroup", "footer", "pagefoot")
   )
   expect_true(all(vapply(cs$surfaces, is_style_node, logical(1L))))
 })
