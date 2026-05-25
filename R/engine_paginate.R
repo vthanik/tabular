@@ -89,6 +89,22 @@ engine_paginate <- function(spec) {
     widow_floor = widow
   )
 
+  # Keep-with-next mask drives the RTF and LaTeX backend's native
+  # pagination hints (`\trkeep` + `\keepn` in RTF, `\nopagebreak[4]`
+  # after each row in LaTeX). Each entry says "render row i glued
+  # to row i+1 — do not break between them". For keep_together
+  # groups that fit on one page the entire group glues. For
+  # oversized groups only the top (`orphan_floor - 1`) and bottom
+  # (`widow_floor - 1`) edges glue so the middle stays free to
+  # split.
+  keep_with_next <- .build_keep_mask(
+    data = data,
+    kt_idx = kt_idx,
+    rpp = rpp,
+    orphan_floor = orphan,
+    widow_floor = widow
+  )
+
   group_cols <- .group_col_names(spec@cols)
   # Filter visible columns BEFORE pagination so the slice phase
   # (`.slice_one_page`) and every backend see only the columns the
@@ -133,7 +149,8 @@ engine_paginate <- function(spec) {
     rows_per_page = as.integer(rpp),
     total_pages = as.integer(total_pages),
     total_panels = as.integer(n_horiz),
-    pages = pages
+    pages = pages,
+    keep_with_next = keep_with_next
   )
 }
 
@@ -300,6 +317,71 @@ engine_paginate <- function(spec) {
   }
 
   pages
+}
+
+# Build the global keep-with-next logical vector consumed by the
+# RTF and LaTeX backends. Mirrors galley's `build_keep_mask`
+# semantics (R/render-common.R) lifted to tabular's source-row
+# scale — tabular's blank-row separators are injected per-page by
+# the renderer rather than living in the source data, so every
+# index here points at a real data row.
+#
+# Returns a length-`nrow(data)` logical vector. `TRUE` at position
+# i means "render row i glued to row i+1 (do not break between
+# them)". Falls back to all-`FALSE` when `kt_idx` is empty.
+.build_keep_mask <- function(data, kt_idx, rpp, orphan_floor, widow_floor) {
+  nr <- nrow(data)
+  if (nr <= 1L || length(kt_idx) == 0L) {
+    return(rep(FALSE, nr))
+  }
+
+  # Build a single string key per row over the keep_together cols.
+  key_parts <- lapply(kt_idx, function(j) as.character(data[, j]))
+  keys <- do.call(
+    function(...) paste(..., sep = "\x1f"),
+    key_parts
+  )
+
+  mask <- rep(FALSE, nr)
+  start <- 1L
+  while (start <= nr) {
+    end <- start
+    while (end < nr && keys[[end + 1L]] == keys[[start]]) {
+      end <- end + 1L
+    }
+    group_size <- end - start + 1L
+    if (group_size > 1L) {
+      if (group_size <= rpp) {
+        # Group fits on one page: full keepn chain (every row but
+        # the last in the group glues to the next).
+        mask[start:(end - 1L)] <- TRUE
+      } else {
+        # Oversized group: only edge protection. Top
+        # `orphan_floor - 1` rows glue downward; bottom
+        # `widow_floor - 1` rows glue downward (everything but the
+        # very last row in the group).
+        top_n <- max(0L, orphan_floor - 1L)
+        if (top_n > 0L) {
+          mask[start:(start + top_n - 1L)] <- TRUE
+        }
+        bottom_n <- max(0L, widow_floor - 1L)
+        if (bottom_n > 0L) {
+          bottom_start <- end - bottom_n
+          if (bottom_start < end) {
+            mask[bottom_start:(end - 1L)] <- TRUE
+          }
+        }
+      }
+    }
+    start <- end + 1L
+  }
+
+  # The final row in the data is never followed by anything; clear
+  # any mask that landed on the last index.
+  if (mask[nr]) {
+    mask[nr] <- FALSE
+  }
+  mask
 }
 
 # Move the tentative page break back if it would split a contiguous

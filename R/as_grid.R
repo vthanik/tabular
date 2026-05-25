@@ -423,6 +423,7 @@ as_grid <- function(spec) {
       rows_per_page = pag$rows_per_page,
       total_pages = pag$total_pages,
       total_panels = pag$total_panels,
+      keep_with_next = pag$keep_with_next,
       nrow_data = nrow(spec@data),
       ncol_data = ncol(spec@data),
       col_names = names(spec@data),

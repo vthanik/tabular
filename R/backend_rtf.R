@@ -748,6 +748,15 @@ backend_rtf <- function(grid, file) {
     cellx_lines <- character(length(col_names_vis))
     cell_bodies <- character(length(col_names_vis))
     is_last_row <- (r == nrow_data)
+    # Word-side keep-with-next: every row except the last on the
+    # page emits \trkeep at the row level and \keepn inside each
+    # cell paragraph so Word never re-paginates inside the page
+    # tabular has already split. Galley pattern lifted to tabular's
+    # manual-pagination model — defense-in-depth against viewer-
+    # side re-flow (font substitution, DPI change, locale).
+    keep_row <- !is_last_row
+    trkeep_tok <- if (keep_row) "\\trkeep" else ""
+    keepn_tok <- if (keep_row) "\\keepn" else ""
     for (i in seq_along(col_names_vis)) {
       sn <- .cell_style_at(cells_style, r, col_names_vis[[i]])
       cs <- col_specs[[i]]
@@ -773,6 +782,7 @@ backend_rtf <- function(grid, file) {
       text_props <- .rtf_cell_text_props(sn)
       cell_bodies[[i]] <- paste0(
         "\\pard\\plain\\intbl ",
+        keepn_tok,
         align_tok,
         " ",
         cf_tok,
@@ -783,7 +793,7 @@ backend_rtf <- function(grid, file) {
     }
     out <- c(
       out,
-      sprintf("\\trowd\\trgaph%d", trgaph),
+      paste0(sprintf("\\trowd\\trgaph%d", trgaph), trkeep_tok),
       cellx_lines,
       cell_bodies,
       "\\row"

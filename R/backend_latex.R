@@ -675,7 +675,16 @@ backend_latex <- function(grid, file) {
         },
         character(1L)
       )
-      paste0(paste(cells, collapse = " & "), " \\\\")
+      # `\\*` is LaTeX's no-page-break row terminator (inherited
+      # by tabularray's longtblr from longtable). Emit it on every
+      # row except the last of the page so the renderer never
+      # re-paginates inside the page that engine_paginate already
+      # split. The last row of the page uses the plain `\\` so the
+      # natural longtblr / longtable page break can fall at the
+      # end of the page. Galley pattern lifted to tabular's manual
+      # pagination.
+      terminator <- if (i == nrow_data) " \\\\" else " \\\\*"
+      paste0(paste(cells, collapse = " & "), terminator)
     },
     character(1L)
   )

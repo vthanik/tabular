@@ -342,3 +342,82 @@ test_that("emit() does not render col_spec(visible = FALSE) columns across backe
   )
   expect_false(grepl("Y hidden", doc, fixed = TRUE))
 })
+
+# ---------------------------------------------------------------------
+# Keep-with-next mask (galley parity for RTF / PDF / LaTeX)
+# ---------------------------------------------------------------------
+
+test_that("engine_paginate() emits keep_with_next FALSE when keep_together is unset", {
+  df <- data.frame(grp = c("A", "A", "B", "B", "B"), val = 1:5)
+  spec <- tabular(df) |>
+    cols(grp = col_spec(usage = "group", label = "Group"))
+  plan <- tabular:::engine_paginate(spec)
+  expect_type(plan$keep_with_next, "logical")
+  expect_length(plan$keep_with_next, 5L)
+  expect_false(any(plan$keep_with_next))
+})
+
+test_that("engine_paginate() glues a small group fully via keep_with_next", {
+  # 3-row group "A", 2-row group "B"; both fit on one page. Mask
+  # glues rows 1-2 (within A), and rows 4-5 are flagged FALSE on
+  # row 5 (last of B; nothing to glue forward to).
+  df <- data.frame(grp = c("A", "A", "A", "B", "B"), val = 1:5)
+  spec <- tabular(df) |>
+    cols(grp = col_spec(usage = "group", label = "Group")) |>
+    paginate(keep_together = "grp")
+  plan <- tabular:::engine_paginate(spec)
+  expect_equal(plan$keep_with_next, c(TRUE, TRUE, FALSE, TRUE, FALSE))
+})
+
+test_that("engine_paginate() applies edge protection on an oversized group", {
+  # 12-row group at rpp=4 (force via 72pt body font on letter
+  # portrait). Top orphan_floor-1 = 2 rows + bottom widow_floor-1
+  # = 1 row glue; middle rows free to split.
+  df <- data.frame(grp = rep("A", 12L), val = 1:12)
+  spec <- tabular(df) |>
+    cols(grp = col_spec(usage = "group", label = "Group")) |>
+    paginate(keep_together = "grp", orphan_floor = 3L, widow_floor = 2L)
+  spec <- S7::set_props(spec, preset = preset_spec(font_size = 72))
+  plan <- tabular:::engine_paginate(spec)
+  expect_lt(plan$rows_per_page, 12L)
+  m <- plan$keep_with_next
+  # Top 2 rows glue forward; bottom widow_floor-1 = 1 row (row 11)
+  # glues forward; row 12 is the last row of the group and the
+  # data — never glues forward.
+  expect_true(m[[1L]])
+  expect_true(m[[2L]])
+  expect_false(m[[3L]])
+  expect_false(m[[10L]])
+  expect_true(m[[11L]])
+  expect_false(m[[12L]])
+})
+
+test_that("RTF backend emits \\trkeep + \\keepn on non-last body rows", {
+  df <- data.frame(grp = c("A", "A", "B"), val = c("1", "2", "3"))
+  spec <- tabular(df) |>
+    cols(
+      grp = col_spec(usage = "group", label = "Group"),
+      val = col_spec(label = "Value")
+    )
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # At least one \trkeep + \keepn must appear (the non-last body
+  # rows of the only page).
+  expect_match(txt, "\\\\trkeep", fixed = FALSE)
+  expect_match(txt, "\\\\keepn", fixed = FALSE)
+})
+
+test_that("LaTeX backend emits \\\\* (no-page-break terminator) on non-last rows", {
+  df <- data.frame(grp = c("A", "A", "B"), val = c("1", "2", "3"))
+  spec <- tabular(df) |>
+    cols(
+      grp = col_spec(usage = "group", label = "Group"),
+      val = col_spec(label = "Value")
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # At least one row terminator with the no-page-break modifier.
+  expect_match(txt, "\\\\\\\\\\*", fixed = FALSE)
+})
