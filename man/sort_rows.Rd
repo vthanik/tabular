@@ -85,7 +85,7 @@ tabular(
 ) |>
   cols(
     soc      = col_spec(usage = "group", label = "SOC / PT"),
-    pt       = col_spec(visible = FALSE),
+    label       = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"])),
@@ -167,7 +167,7 @@ ae$n_total  <- as.integer(sub(" .*", "", ae$Total))
 tabular(ae, titles = "AE by SOC and PT, ranked within SOC") |>
   cols(
     soc      = col_spec(usage = "group", label = "SOC / PT"),
-    pt       = col_spec(visible = FALSE),
+    label       = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = "Placebo",  align = "decimal"),

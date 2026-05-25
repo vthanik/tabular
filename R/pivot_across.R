@@ -130,7 +130,7 @@
 #'   `<character> | NULL: default NULL`. Named character vector
 #'   mapping variable names to display labels (e.g.
 #'   `c(AGE = "Age (years)", SEX = "Sex")`). Applies to
-#'   `variable`, `soc`, and `pt` columns of the output. `NULL`
+#'   `variable`, `soc`, and `label` columns of the output. `NULL`
 #'   leaves the upstream variable names verbatim.
 #'
 #' @param overall *Column name for `NA`-arm (overall / total) rows.*
@@ -232,7 +232,7 @@
 #'   *   One column per arm level (named after the `group1_level`
 #'       values or the renamed arm column).
 #'   *   `Total` (or whatever `overall` is set to) when applicable.
-#'   *   Hierarchical ARD adds `soc`, `pt`, `row_type` instead of
+#'   *   Hierarchical ARD adds `soc`, `label`, `row_type` instead of
 #'       `variable`.
 #'
 #'   Pass the result straight into [`tabular()`] to start the
@@ -295,7 +295,7 @@
 #' #
 #' # Hierarchical `cards::ard_stack_hierarchical()` output threaded
 #' # through `pivot_across()`. The hierarchical ARD emits a
-#' # (soc, pt, row_type) triple plus one stat row per (arm, SOC, PT);
+#' # (soc, label, row_type) triple plus one stat row per (arm, SOC, PT);
 #' # `pivot_across()` folds the arm dimension to columns and
 #' # preserves the hierarchy markers for downstream sorting and
 #' # visibility control.
@@ -314,7 +314,7 @@
 #'   ) |>
 #'   cols(
 #'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     pt       = col_spec(visible = FALSE),
+#'     label       = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     Placebo  = col_spec(
 #'       label = sprintf("Placebo\nN=%d", n["placebo"]),
@@ -335,7 +335,7 @@
 #' # `saf_aesocpt_card` carries an `ard_stack_hierarchical` shape with
 #' # two grouping variables (AEBODSYS / AEDECOD). `pivot_across()`
 #' # recognises the hierarchical structure and emits dedicated `soc`,
-#' # `pt`, and `row_type` columns so the SOC -> PT nesting survives
+#' # `label`, and `row_type` columns so the SOC -> PT nesting survives
 #' # the pivot. The result is ready for `tabular()` plus `sort_rows()`.
 #' head(saf_aesocpt_card, 3)
 #'
@@ -1543,9 +1543,9 @@ pivot_across <- function(
   }
 
   out_cols <- if (n_levels <= 2L) {
-    c("soc", "pt")[seq_len(n_levels)]
+    c("soc", "label")[seq_len(n_levels)]
   } else {
-    c("soc", paste0("l", seq(2L, n_levels - 1L)), "pt")
+    c("soc", paste0("l", seq(2L, n_levels - 1L)), "label")
   }
 
   df_by_var <- split(df, df$variable)
@@ -1750,7 +1750,7 @@ pivot_across <- function(
 .apply_label_map <- function(wide, label) {
   label_from <- names(label)
   label_to <- unname(unlist(label))
-  for (col in intersect(c("variable", "soc", "pt"), names(wide))) {
+  for (col in intersect(c("variable", "soc", "label"), names(wide))) {
     m <- match(wide[[col]], label_from)
     hit <- !is.na(m)
     if (any(hit)) {

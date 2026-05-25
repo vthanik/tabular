@@ -10,8 +10,12 @@ A data frame with 61 rows and 7 columns:
 \item{\code{soc}}{System Organ Class label. Repeats across the SOC's
 PT rows so \code{cols(usage = "group")} collapses the run at
 render.}
-\item{\code{pt}}{Preferred Term label. Equal to \code{soc} on SOC-summary
-rows; the displayed value to render on PT detail rows.}
+\item{\code{label}}{The row's display label. Equal to \code{soc} on the
+overall and SOC-summary rows (so the column carries a real
+value at every row); equal to the preferred-term name on PT
+detail rows. Named \code{label} rather than \code{pt} because the
+column also carries the SOC and overall-summary text, not
+just preferred terms.}
 \item{\code{row_type}}{One of \code{"overall"}, \code{"soc"}, \code{"pt"}. Use it
 as a sort key and / or hide it via
 \code{col_spec(visible = FALSE)}. Coerce to a factor with levels
@@ -59,7 +63,7 @@ tabular(
 ) |>
   cols(
     soc      = col_spec(usage = "group", label = "SOC / PT"),
-    pt       = col_spec(visible = FALSE),
+    label       = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(

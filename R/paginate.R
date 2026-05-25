@@ -138,7 +138,7 @@
 #' ) |>
 #'   cols(
 #'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     pt       = col_spec(visible = FALSE),
+#'     label       = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"])),
@@ -230,7 +230,7 @@
 #'   cols(
 #'     soc      = col_spec(usage = "group", label = "SOC / PT",
 #'                         width = "2.5in"),
-#'     pt       = col_spec(visible = FALSE),
+#'     label       = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = "Placebo",  align = "decimal",
 #'                         width = "2.0in"),

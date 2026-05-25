@@ -33,7 +33,7 @@ must handle.
 }
 \examples{
 # Hierarchical ARD pivot. pivot_across() recognises the
-# ard_stack_hierarchical shape and emits soc / pt / row_type.
+# ard_stack_hierarchical shape and emits soc / label / row_type.
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 saf_aesocpt_card |>
   pivot_across(statistic = "{n} ({p}\%)") |>

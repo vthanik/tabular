@@ -111,7 +111,7 @@ group columns exist.}
 \verb{<character> | NULL: default NULL}. Named character vector
 mapping variable names to display labels (e.g.
 \code{c(AGE = "Age (years)", SEX = "Sex")}). Applies to
-\code{variable}, \code{soc}, and \code{pt} columns of the output. \code{NULL}
+\code{variable}, \code{soc}, and \code{label} columns of the output. \code{NULL}
 leaves the upstream variable names verbatim.}
 
 \item{overall}{\emph{Column name for \code{NA}-arm (overall / total) rows.}
@@ -152,7 +152,7 @@ fmt = list(
 \item One column per arm level (named after the \code{group1_level}
 values or the renamed arm column).
 \item \code{Total} (or whatever \code{overall} is set to) when applicable.
-\item Hierarchical ARD adds \code{soc}, \code{pt}, \code{row_type} instead of
+\item Hierarchical ARD adds \code{soc}, \code{label}, \code{row_type} instead of
 \code{variable}.
 }
 
@@ -292,7 +292,7 @@ saf_demo_card |>
 #
 # Hierarchical `cards::ard_stack_hierarchical()` output threaded
 # through `pivot_across()`. The hierarchical ARD emits a
-# (soc, pt, row_type) triple plus one stat row per (arm, SOC, PT);
+# (soc, label, row_type) triple plus one stat row per (arm, SOC, PT);
 # `pivot_across()` folds the arm dimension to columns and
 # preserves the hierarchy markers for downstream sorting and
 # visibility control.
@@ -311,7 +311,7 @@ saf_aesocpt_card |>
   ) |>
   cols(
     soc      = col_spec(usage = "group", label = "SOC / PT"),
-    pt       = col_spec(visible = FALSE),
+    label       = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     Placebo  = col_spec(
       label = sprintf("Placebo\nN=\%d", n["placebo"]),
@@ -332,7 +332,7 @@ saf_aesocpt_card |>
 # `saf_aesocpt_card` carries an `ard_stack_hierarchical` shape with
 # two grouping variables (AEBODSYS / AEDECOD). `pivot_across()`
 # recognises the hierarchical structure and emits dedicated `soc`,
-# `pt`, and `row_type` columns so the SOC -> PT nesting survives
+# `label`, and `row_type` columns so the SOC -> PT nesting survives
 # the pivot. The result is ready for `tabular()` plus `sort_rows()`.
 head(saf_aesocpt_card, 3)
 

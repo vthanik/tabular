@@ -154,8 +154,12 @@
 #'   \item{`soc`}{System Organ Class label. Repeats across the SOC's
 #'     PT rows so `cols(usage = "group")` collapses the run at
 #'     render.}
-#'   \item{`pt`}{Preferred Term label. Equal to `soc` on SOC-summary
-#'     rows; the displayed value to render on PT detail rows.}
+#'   \item{`label`}{The row's display label. Equal to `soc` on the
+#'     overall and SOC-summary rows (so the column carries a real
+#'     value at every row); equal to the preferred-term name on PT
+#'     detail rows. Named `label` rather than `pt` because the
+#'     column also carries the SOC and overall-summary text, not
+#'     just preferred terms.}
 #'   \item{`row_type`}{One of `"overall"`, `"soc"`, `"pt"`. Use it
 #'     as a sort key and / or hide it via
 #'     `col_spec(visible = FALSE)`. Coerce to a factor with levels
@@ -192,7 +196,7 @@
 #' ) |>
 #'   cols(
 #'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     pt       = col_spec(visible = FALSE),
+#'     label       = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(
@@ -421,7 +425,7 @@
 #'
 #' @examples
 #' # Hierarchical ARD pivot. pivot_across() recognises the
-#' # ard_stack_hierarchical shape and emits soc / pt / row_type.
+#' # ard_stack_hierarchical shape and emits soc / label / row_type.
 #' n <- stats::setNames(saf_n$n, saf_n$arm_short)
 #' saf_aesocpt_card |>
 #'   pivot_across(statistic = "{n} ({p}%)") |>

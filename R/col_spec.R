@@ -354,7 +354,7 @@
 #' ) |>
 #'   cols(
 #'     soc      = col_spec(usage = "group", label = "SOC / Preferred Term", width = 2.5),
-#'     pt       = col_spec(visible = FALSE),
+#'     label       = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),

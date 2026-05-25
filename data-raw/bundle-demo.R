@@ -380,7 +380,7 @@ any_total <- adae_trim |> distinct(USUBJID) |> nrow()
 any_row <- bind_cols(
   tibble(
     soc = "TOTAL SUBJECTS WITH AN EVENT",
-    pt = "TOTAL SUBJECTS WITH AN EVENT",
+    label = "TOTAL SUBJECTS WITH AN EVENT",
     row_type = "overall"
   ),
   any_arm,
@@ -403,7 +403,7 @@ soc_total <- adae_trim |>
   select(AEBODSYS, Total)
 
 soc_wide <- left_join(soc_arm, soc_total, by = "AEBODSYS") |>
-  mutate(soc = AEBODSYS, pt = AEBODSYS, row_type = "soc", .before = 1) |>
+  mutate(soc = AEBODSYS, label = AEBODSYS, row_type = "soc", .before = 1) |>
   select(-AEBODSYS)
 
 # PT level (one subject per SOC/PT)
@@ -426,7 +426,7 @@ pt_total <- adae_trim |>
   select(AEBODSYS, AEDECOD, Total)
 
 pt_wide <- left_join(pt_arm, pt_total, by = c("AEBODSYS", "AEDECOD")) |>
-  mutate(soc = AEBODSYS, pt = AEDECOD, row_type = "pt", .before = 1) |>
+  mutate(soc = AEBODSYS, label = AEDECOD, row_type = "pt", .before = 1) |>
   select(-AEBODSYS, -AEDECOD)
 
 # Interleave: any-row, then per-SOC (soc-row + its PTs, sorted by SOC freq)
@@ -646,7 +646,7 @@ saf_demo_card <- ard_stack(
 
 # saf_aesocpt_card — hierarchical ARD (SOC / PT) matching the
 # top-10 SOC × top-5 PT slice in saf_aesocpt. Covers the harder
-# pivot case where pivot_across() must emit soc / pt / row_type
+# pivot case where pivot_across() must emit soc / label / row_type
 # columns and preserve the SOC -> PT nesting under sort.
 saf_aesocpt_card <- ard_stack_hierarchical(
   data = adae_trim,

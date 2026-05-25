@@ -136,7 +136,7 @@ test_that("list-column stat normalises to numeric", {
 test_that("Hierarchical ARD: SOC and PT columns appear in output", {
   out <- pivot_across(saf_aesocpt_card, statistic = "{n} ({p}%)")
   expect_true("soc" %in% names(out))
-  expect_true("pt" %in% names(out))
+  expect_true("label" %in% names(out))
   expect_true("row_type" %in% names(out))
 })
 

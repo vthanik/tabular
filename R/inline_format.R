@@ -162,7 +162,7 @@
 #' ) |>
 #'   cols(
 #'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     pt       = col_spec(visible = FALSE),
+#'     label       = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     Total    = col_spec(label = sprintf("Total\nN=%d", n["Total"]))
 #'   )
