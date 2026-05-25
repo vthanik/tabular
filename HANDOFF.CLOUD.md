@@ -198,11 +198,3 @@ In rough priority order:
 4. **Then** tackle Steps 7-8 (destructive preset shrinkage + backend
    audit) — see `~/.claude/plans/system-reminder-you-re-running-in-
    stateful-falcon.md` for the full plan.
-
-## Diagram preview
-
-`man/figures/style_locations.svg` is the BMS-Appendix-I-style
-location reference. Open it in a browser or look at the rendered
-PNG at `man/figures/style_locations.png`. Referenced from
-`?cells_body` and `?style` via `\if{html}{\figure{}}` so the help
-pages open with the diagram.
