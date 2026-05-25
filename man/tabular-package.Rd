@@ -10,10 +10,5 @@ Native emission of clinical submission tables to RTF, LaTeX, HTML, PDF, and DOCX
 \author{
 \strong{Maintainer}: Vignesh Thanikachalam \email{about.vignesh@gmail.com}
 
-Authors:
-\itemize{
-  \item Vignesh Thanikachalam \email{about.vignesh@gmail.com}
-}
-
 }
 \keyword{internal}
