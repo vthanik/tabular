@@ -51,27 +51,48 @@
   "none"
 )
 
-# Recognised region keys on `preset_spec@borders`. The 12 regions
-# cover the canonical submission page-layout vocabulary at one
-# level — region semantics are interpreted by `engine_borders()`
-# which translates each region to per-cell entries on the
-# cells_style matrix.
+# Recognised region keys on `preset_spec@borders`. The vocabulary
+# covers every visual rule the canonical submission page layout
+# can carry, split across body regions (interpreted by
+# `engine_borders()` onto the `cells_style` matrix) and chrome
+# regions (interpreted by `engine_chrome_borders()` onto the
+# `chrome_style$borders` sidecar — `R/chrome_style.R`):
+#
+#   Body regions (cells_style):
+#     outer, outer_{top,bottom,left,right}
+#     body_top / body_bottom (aliases for outer_top / outer_bottom)
+#     body_rows / body_cols  (interior separators)
+#
+#   Chrome regions (chrome_style$borders):
+#     pagehead_bottom                   bottom edge of the page-head band
+#     header_top / header_bottom        top + bottom of the column-header block
+#     header_between                    between rows of a multi-band header
+#     subgroup_top / subgroup_bottom    around the subgroup banner row
+#     subgroup                          legacy alias for `subgroup_bottom`
+#     footer_top / footer_bottom        around the footnote block
+#     pagefoot_top                      top edge of the page-foot band
 .preset_border_regions <- c(
+  # Body regions
   "outer",
   "outer_top",
   "outer_bottom",
   "outer_left",
   "outer_right",
-  "header_top",
-  "header_bottom",
-  "header_between",
   "body_top",
   "body_bottom",
   "body_rows",
   "body_cols",
+  # Chrome regions
+  "pagehead_bottom",
+  "header_top",
+  "header_bottom",
+  "header_between",
+  "subgroup_top",
+  "subgroup_bottom",
   "subgroup",
   "footer_top",
-  "footer_bottom"
+  "footer_bottom",
+  "pagefoot_top"
 )
 
 # Recognised surface keys on `preset_spec@fonts`. Each surface gets

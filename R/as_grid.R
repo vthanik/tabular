@@ -311,6 +311,10 @@ as_grid <- function(spec) {
   # <side>_*)`) survive theme-side region stamping. Region values
   # only apply where the predicate layer is silent.
   style_mat <- engine_borders(spec, style_mat)
+  # Chrome regions (header_*, subgroup_*, footer_*, pagehead_bottom,
+  # pagefoot_top) live outside the body-cell matrix; populate the
+  # parallel sidecar from the same preset@borders dictionary.
+  chrome_style_mat <- engine_chrome_borders(spec)
   fmt <- engine_format(spec)
 
   cols_named <- .cols_named_for_decimal(spec)
@@ -385,6 +389,7 @@ as_grid <- function(spec) {
       pagehead_ast = pagehead_ast,
       pagefoot_ast = pagefoot_ast,
       preset = eff_preset,
+      chrome_style = chrome_style_mat,
       subgroup_runtime = runtime
     )
   )

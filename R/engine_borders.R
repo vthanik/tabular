@@ -119,7 +119,8 @@ engine_borders <- function(spec, cells_style) {
 # `body_top` / `body_bottom` collapse onto `outer_top` /
 # `outer_bottom`. Per-side keys win over `outer` (e.g.
 # `list(outer = brdr(), outer_right = "none")` clears just the
-# right edge).
+# right edge). The legacy `subgroup` key resolves to
+# `subgroup_bottom` so older configs keep working.
 .resolve_border_regions <- function(borders) {
   out <- list(
     outer_top = NULL,
@@ -127,7 +128,18 @@ engine_borders <- function(spec, cells_style) {
     outer_left = NULL,
     outer_right = NULL,
     body_rows = NULL,
-    body_cols = NULL
+    body_cols = NULL,
+    # Chrome regions — interpreted by engine_chrome_borders() and the
+    # backends that emit chrome rules.
+    pagehead_bottom = NULL,
+    header_top = NULL,
+    header_bottom = NULL,
+    header_between = NULL,
+    subgroup_top = NULL,
+    subgroup_bottom = NULL,
+    footer_top = NULL,
+    footer_bottom = NULL,
+    pagefoot_top = NULL
   )
   outer <- .normalise_region_value(borders[["outer"]])
   if (!is.null(outer)) {
@@ -161,7 +173,54 @@ engine_borders <- function(spec, cells_style) {
   }
   out$body_rows <- .normalise_region_value(borders[["body_rows"]])
   out$body_cols <- .normalise_region_value(borders[["body_cols"]])
+  # Chrome regions — each key resolves independently. The legacy
+  # `subgroup` key is an alias for `subgroup_bottom` (the bar under
+  # the banner row); an explicit `subgroup_bottom` overrides the
+  # alias (last-set wins).
+  chrome_keys <- c(
+    "pagehead_bottom",
+    "header_top",
+    "header_bottom",
+    "header_between",
+    "subgroup_top",
+    "subgroup_bottom",
+    "footer_top",
+    "footer_bottom",
+    "pagefoot_top"
+  )
+  for (key in chrome_keys) {
+    out[[key]] <- .normalise_region_value(borders[[key]])
+  }
+  legacy_sg <- .normalise_region_value(borders[["subgroup"]])
+  if (!is.null(legacy_sg) && is.null(out$subgroup_bottom)) {
+    out$subgroup_bottom <- legacy_sg
+  }
   out
+}
+
+# Build the chrome_style sidecar from a spec's effective preset.
+# Pure function. Populates `chrome_style$borders` with the resolved
+# triples for the chrome region keys; `chrome_style$surfaces` stays
+# at its default no-op style_nodes (Phase 2 reserved).
+#
+# Backends consume the sidecar in place of their previously
+# hardcoded chrome-rule emissions (`\hline` in LaTeX, `\trowd
+# \brdrb` in RTF, `<hr>` in HTML, `<w:tcBorders>` in DOCX). A NULL
+# value at a chrome key means "use the backend's built-in default
+# rule"; the explicit-clear sentinel (style = "none") suppresses the
+# default.
+engine_chrome_borders <- function(spec) {
+  cs <- chrome_style()
+  preset <- .effective_preset(spec)
+  borders <- preset@borders
+  if (length(borders) == 0L) {
+    return(cs)
+  }
+  resolved <- .resolve_border_regions(borders)
+  for (region in .chrome_border_regions) {
+    cs$borders[[region]] <- resolved[[region]]
+  }
+  cs
 }
 
 # Coerce a region's value to the bare `list(style, width, color)`
