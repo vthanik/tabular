@@ -17,6 +17,12 @@ names raise \code{tabular_error_input}.}
 default feeds in as the base layer; user-supplied \code{...} knobs
 then merge on top with shallow-merge per list-valued knob.}
 
+\item{style}{\emph{A \code{style_template()} to layer into the session
+default.} \verb{<style_template | NULL>: default NULL}. Same
+semantics as \code{\link[=preset]{preset()}}'s \code{style}: the template's accumulated
+layers feed in as session-default style, layered before any
+per-spec \code{\link[=style]{style()}} calls.}
+
 \item{reset}{\emph{Discard the existing session preset before applying
 \code{...}.} \verb{<logical(1)>: default FALSE}. With no knobs, clears
 the session default back to NULL.}

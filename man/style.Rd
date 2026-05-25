@@ -49,6 +49,15 @@ as a shorthand for \verb{("solid", 0.5pt, default colour)}.
 \strong{Note:} Unknown attribute names warn and are silently dropped
 (they do NOT pass through to the backend).}
 
+\item{at}{\emph{Location target via the \verb{cells_*()} vocabulary.}
+\verb{<tabular_location | NULL>: default NULL}. Mutually exclusive
+with \code{where}. When supplied, the style attributes apply to the
+region named by the location: body cells (\code{\link[=cells_body]{cells_body()}}),
+column-header bands (\code{\link[=cells_headers]{cells_headers()}}), subgroup banners
+(\code{\link[=cells_subgroup_labels]{cells_subgroup_labels()}}), title, footnotes, page-head /
+page-foot slots, or table edges (\code{\link[=cells_table]{cells_table()}}). See
+\code{\link{cells}} for the full vocabulary.}
+
 \item{.scope}{\emph{Targeting scope.}
 \verb{<character(1)>: default "cell"}. One of \code{"cell"}, \code{"row"},
 \code{"col"}. See the Scope semantics section.
