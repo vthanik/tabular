@@ -174,6 +174,39 @@
 #'   )
 #'   ```
 #'
+#' @param group_skip *Insert a blank row between consecutive groups.*
+#'   `<logical(1)>: default NA`. Active only when `usage = "group"`;
+#'   ignored otherwise. Three values:
+#'
+#'   *   **`TRUE`** — engine injects one blank row immediately before
+#'       each value transition on this column (PROC REPORT's `BREAK
+#'       AFTER var / SKIP` semantics, lifted to per-column control).
+#'       Never trails the final group.
+#'   *   **`FALSE`** — never insert a blank row for this column.
+#'   *   **`NA`** *(default)* — follow `group_display`: `TRUE` when
+#'       `group_display = "header_row"`, `FALSE` when `"column"` or
+#'       `"column_repeat"`. Picks the canonical Appendix-I shape
+#'       without an extra knob to set.
+#'
+#'   **Interaction:** When two or more columns have an effective
+#'   `group_skip = TRUE` and their value transitions coincide on the
+#'   same row, the engine emits ONE blank row at that boundary, not
+#'   one per column. Transition row indices are unioned across all
+#'   contributing group columns.
+#'
+#'   ```r
+#'   # Default: header_row mode auto-injects blanks between sections.
+#'   col_spec(usage = "group", group_display = "header_row")
+#'
+#'   # Override: keep the column visible (suppressed-value mode) but
+#'   # still insert blank-row separators between value changes.
+#'   col_spec(usage = "group", group_display = "column", group_skip = TRUE)
+#'
+#'   # Override: section headers without the blank-row separator
+#'   # (denser layout, used when vertical space is tight).
+#'   col_spec(usage = "group", group_display = "header_row", group_skip = FALSE)
+#'   ```
+#'
 #' @param align *Horizontal alignment within the column.*
 #'   `<character(1) | NULL>: default NULL`. One of:
 #'
@@ -374,6 +407,7 @@ col_spec <- function(
   visible = TRUE,
   width = "auto",
   group_display = "header_row",
+  group_skip = NA,
   align = NULL,
   valign = NULL,
   na_text = ""
@@ -387,6 +421,7 @@ col_spec <- function(
   .check_col_visible(visible, call = call)
   .check_col_width(width, call = call)
   group_display_val <- .check_col_group_display(group_display, call = call)
+  group_skip_val <- .check_col_group_skip(group_skip, call = call)
   .check_col_na_text(na_text, call = call)
   .check_col_format(format, call = call)
 
@@ -398,10 +433,40 @@ col_spec <- function(
     visible = visible,
     width = width,
     group_display = group_display_val,
+    group_skip = group_skip_val,
     align = align_val,
     valign = valign_val,
     na_text = na_text
   )
+}
+
+.check_col_group_skip <- function(x, call) {
+  if (length(x) == 1L && (is.logical(x) || is.na(x))) {
+    return(as.logical(x))
+  }
+  cli::cli_abort(
+    c(
+      "Bad {.arg group_skip}.",
+      "x" = "Got {.obj_type_friendly {x}}.",
+      "i" = "Use TRUE, FALSE, or NA (default: follow {.arg group_display})."
+    ),
+    class = "tabular_error_input",
+    call = call
+  )
+}
+
+# Resolve the effective group_skip for a col_spec. NA means "follow
+# group_display": TRUE for header_row mode (visible section
+# separator), FALSE for column / column_repeat (no separator
+# between rows of a column-mode group).
+.effective_group_skip <- function(cs) {
+  if (!is_col_spec(cs)) {
+    return(FALSE)
+  }
+  if (is.na(cs@group_skip)) {
+    return(identical(cs@group_display, "header_row"))
+  }
+  isTRUE(cs@group_skip)
 }
 
 .check_col_group_display <- function(x, call) {

@@ -381,6 +381,7 @@ as.tags.tabular_spec <- function(x, ..., id = NULL) {
 # ---------------------------------------------------------------------
 
 #' @rawNamespace S3method(knitr::knit_print, tabular_spec)
+#' @noRd
 knit_print.tabular_spec <- function(x, ..., inline = FALSE) {
   pandoc_to <- tryCatch(knitr::pandoc_to(), error = function(e) NULL)
 

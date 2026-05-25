@@ -330,6 +330,92 @@ test_that("emit() aborts when data_file parent dir does not exist", {
   )
 })
 
+test_that("emit() data_file carries raw values, never column-mode suppression", {
+  # The data_file QC artefact must never reflect col_spec@group_display
+  # = "column" repeat-suppression. The display blanks the repeated
+  # group value for layout reasons; the QC reader still wants the
+  # source value on every row.
+  .register_stub("md")
+  df <- data.frame(
+    grp = c("A", "A", "B", "B"),
+    v = c("1", "2", "3", "4"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      grp = col_spec(
+        usage = "group",
+        group_display = "column",
+        label = "Group"
+      ),
+      v = col_spec(label = "Value")
+    )
+  render_path <- tempfile(fileext = ".md")
+  qc_path <- tempfile(fileext = ".csv")
+  emit(spec, render_path, data_file = qc_path)
+  qc <- utils::read.csv(qc_path, stringsAsFactors = FALSE)
+
+  # Every QC row carries its source group value, no blank repeats.
+  expect_equal(qc$grp, c("A", "A", "B", "B"))
+  expect_equal(nrow(qc), 4L)
+})
+
+test_that("emit() data_file carries raw values under group_skip + header_row", {
+  # Default header_row mode injects synthesised section headers AND
+  # blank-row separators. Neither belongs in the QC artefact, which
+  # must mirror source rows one-for-one.
+  .register_stub("md")
+  df <- data.frame(
+    grp = c("A", "A", "B", "B", "C", "C"),
+    v = c("1", "2", "3", "4", "5", "6"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      grp = col_spec(usage = "group", label = "Group"),
+      v = col_spec(label = "Value")
+    )
+  render_path <- tempfile(fileext = ".md")
+  qc_path <- tempfile(fileext = ".csv")
+  emit(spec, render_path, data_file = qc_path)
+  qc <- utils::read.csv(qc_path, stringsAsFactors = FALSE)
+
+  expect_equal(nrow(qc), 6L)
+  expect_equal(qc$grp, c("A", "A", "B", "B", "C", "C"))
+  expect_equal(as.character(qc$v), c("1", "2", "3", "4", "5", "6"))
+  expect_false(anyNA(qc$grp))
+  expect_false(any(qc$grp == ""))
+})
+
+test_that("emit() data_file handles header_row group injection without dim mismatch", {
+  # Regression: before this fix, .data_file_frame wrote the
+  # synthesised section-header + blank rows from
+  # engine_group_display into the QC frame using page$row_indices,
+  # which only counts SOURCE data rows. Mismatched dims aborted
+  # the call with "number of items to replace is not a multiple
+  # of replacement length".
+  .register_stub("md")
+  df <- data.frame(
+    grp = c("A", "A", "B", "B"),
+    v = c("1", "2", "3", "4"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      grp = col_spec(usage = "group", label = "Group"),
+      v = col_spec(label = "Value")
+    )
+  render_path <- tempfile(fileext = ".md")
+  qc_path <- tempfile(fileext = ".csv")
+  expect_no_error(emit(spec, render_path, data_file = qc_path))
+  expect_true(file.exists(qc_path))
+
+  qc <- utils::read.csv(qc_path, stringsAsFactors = FALSE)
+  # One QC row per SOURCE data row -- never include synthesised
+  # header / blank rows in the data_file artefact.
+  expect_equal(nrow(qc), 4L)
+})
+
 test_that("emit() data_file is empty df frame on zero-row data", {
   .register_stub("md")
   spec <- tabular(data.frame(x = integer(0L), y = character(0L)))

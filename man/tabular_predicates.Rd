@@ -44,13 +44,14 @@ is_subgroup_spec(x)
 is_inline_ast(x)
 }
 \arguments{
-\item{x}{\emph{Any R object.} The predicate inspects the S7 class
-chain via \code{\link[S7:S7_inherits]{S7::S7_inherits()}}; no other introspection is
-performed.}
+\item{x}{\emph{Object to test.} Any R value. Each predicate returns
+\code{TRUE} if \code{x} inherits from the named class, \code{FALSE} otherwise.}
 }
 \value{
 \emph{A single \code{TRUE} / \code{FALSE}.} Use in \code{if} / \code{stopifnot}
 guards, or chain into validation helpers.
+
+\emph{A length-1 \code{logical}} — \code{TRUE} or \code{FALSE}. Never \code{NA}.
 }
 \description{
 Class predicates returning a single logical indicating whether

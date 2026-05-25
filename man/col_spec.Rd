@@ -11,6 +11,7 @@ col_spec(
   visible = TRUE,
   width = "auto",
   group_display = "header_row",
+  group_skip = NA,
   align = NULL,
   valign = NULL,
   na_text = ""
@@ -156,6 +157,38 @@ cols(
   stat_label = col_spec(usage = "group", group_display = "column"),
   placebo    = col_spec(label = "Placebo", align = "decimal")
 )
+}\if{html}{\out{</div>}}}
+
+\item{group_skip}{\emph{Insert a blank row between consecutive groups.}
+\verb{<logical(1)>: default NA}. Active only when \code{usage = "group"};
+ignored otherwise. Three values:
+\itemize{
+\item \strong{\code{TRUE}} — engine injects one blank row immediately before
+each value transition on this column (PROC REPORT's \verb{BREAK AFTER var / SKIP} semantics, lifted to per-column control).
+Never trails the final group.
+\item \strong{\code{FALSE}} — never insert a blank row for this column.
+\item \strong{\code{NA}} \emph{(default)} — follow \code{group_display}: \code{TRUE} when
+\code{group_display = "header_row"}, \code{FALSE} when \code{"column"} or
+\code{"column_repeat"}. Picks the canonical Appendix-I shape
+without an extra knob to set.
+}
+
+\strong{Interaction:} When two or more columns have an effective
+\code{group_skip = TRUE} and their value transitions coincide on the
+same row, the engine emits ONE blank row at that boundary, not
+one per column. Transition row indices are unioned across all
+contributing group columns.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Default: header_row mode auto-injects blanks between sections.
+col_spec(usage = "group", group_display = "header_row")
+
+# Override: keep the column visible (suppressed-value mode) but
+# still insert blank-row separators between value changes.
+col_spec(usage = "group", group_display = "column", group_skip = TRUE)
+
+# Override: section headers without the blank-row separator
+# (denser layout, used when vertical space is tight).
+col_spec(usage = "group", group_display = "header_row", group_skip = FALSE)
 }\if{html}{\out{</div>}}}
 
 \item{align}{\emph{Horizontal alignment within the column.}

@@ -139,6 +139,17 @@
 #' @param edge_trim When `TRUE` (default), strip column-wide leading
 #'   or trailing pad characters that every cell shares, until at
 #'   least one cell has a non-pad edge.
+#' @param metrics Character flag selecting the width-measurement
+#'   backend. `"chars"` (default) pads by character count — the
+#'   classic monospace assumption. `"afm"` activates AFM-em-aware
+#'   widths, measuring each glyph against the active font's AFM and
+#'   padding so the decimal mark falls on a single em-anchored column
+#'   under proportional-font rendering.
+#' @param afm_name Optional bundled-AFM short name selecting the font
+#'   whose glyph widths drive `metrics = "afm"`. `NA_character_`
+#'   (default) lets the resolver pick the active preset's body font;
+#'   pass an explicit name like `"Times-Roman"` to override. Ignored
+#'   when `metrics = "chars"`.
 #' @return A character matrix with `nrow(cells_text)` rows and
 #'   `ncol(cells_text)` columns. Same dimensions, dimnames preserved.
 #' @keywords internal

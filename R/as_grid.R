@@ -317,6 +317,14 @@ as_grid <- function(spec) {
   chrome_style_mat <- engine_chrome_borders(spec)
   fmt <- engine_format(spec)
 
+  # Snapshot of formatted cells BEFORE any cosmetic mutation. The
+  # `data_file` QC artefact reads from this — never from
+  # post-engine_group_display (which suppresses repeats in column
+  # mode) or post-engine_decimal (which pads with NBSP for visual
+  # alignment). One character row per source data row, every
+  # column from `names(spec@data)`.
+  data_cells_text <- fmt$cells_text
+
   # Apply col_spec@group_display semantics. Header_row mode
   # splices section-header rows above each group-variable
   # transition; column mode suppresses repeats; column_repeat is a
@@ -381,7 +389,8 @@ as_grid <- function(spec) {
     cells_style = style_mat,
     col_labels_ast = fmt$col_labels_ast,
     col_names = names(spec@data),
-    header_row_plan = gd$header_row_plan
+    header_row_plan = gd$header_row_plan,
+    skip_transitions = gd$skip_transitions
   )
 
   # Stamp per-group subgroup metadata onto every page descriptor.
@@ -417,6 +426,7 @@ as_grid <- function(spec) {
       nrow_data = nrow(spec@data),
       ncol_data = ncol(spec@data),
       col_names = names(spec@data),
+      data_cells_text = data_cells_text,
       cols = resolved_cols,
       headers = headers,
       titles = spec@titles,
@@ -530,7 +540,8 @@ as_grid <- function(spec) {
   cells_style,
   col_labels_ast,
   col_names,
-  header_row_plan = NULL
+  header_row_plan = NULL,
+  skip_transitions = integer(0L)
 ) {
   lapply(pag$pages, function(p) {
     .slice_one_page(
@@ -540,7 +551,8 @@ as_grid <- function(spec) {
       cells_style = cells_style,
       col_labels_ast = col_labels_ast,
       col_names = col_names,
-      header_row_plan = header_row_plan
+      header_row_plan = header_row_plan,
+      skip_transitions = skip_transitions
     )
   })
 }
@@ -558,7 +570,8 @@ as_grid <- function(spec) {
   cells_style,
   col_labels_ast,
   col_names,
-  header_row_plan = NULL
+  header_row_plan = NULL,
+  skip_transitions = integer(0L)
 ) {
   ri <- p$row_indices
   ci <- p$col_indices
@@ -568,21 +581,25 @@ as_grid <- function(spec) {
   ast_slice <- .slice_list_matrix(cells_ast, ri, ci)
   style_slice <- .slice_list_matrix(cells_style, ri, ci)
 
-  if (!is.null(header_row_plan)) {
+  has_any_plan <- !is.null(header_row_plan) || length(skip_transitions) > 0L
+  if (has_any_plan) {
     injected <- .inject_header_rows_for_page(
       cells_text = text_slice,
       cells_ast = ast_slice,
       cells_style = style_slice,
       row_indices = ri,
       visible_col_names = visible,
-      header_row_plan = header_row_plan
+      header_row_plan = header_row_plan,
+      skip_transitions = skip_transitions
     )
     text_slice <- injected$cells_text
     ast_slice <- injected$cells_ast
     style_slice <- injected$cells_style
     is_header_row <- injected$is_header_row
+    is_blank_row <- injected$is_blank_row
   } else {
     is_header_row <- rep(FALSE, length(ri))
+    is_blank_row <- rep(FALSE, length(ri))
   }
 
   list(
@@ -598,6 +615,7 @@ as_grid <- function(spec) {
     cells_ast = ast_slice,
     cells_style = style_slice,
     is_header_row = is_header_row,
+    is_blank_row = is_blank_row,
     col_labels_ast = col_labels_ast[visible]
   )
 }

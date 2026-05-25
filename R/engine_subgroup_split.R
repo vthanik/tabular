@@ -26,6 +26,21 @@
 # When spec@subgroup is NULL: one-entry list with runtime = NULL.
 # When set: N entries, one per unique value combination of the
 # partition `by` cols.
+
+#' Partition a `tabular_spec` by its subgroup definition
+#'
+#' @param spec A `tabular_spec`. When `spec@subgroup` is `NULL` the
+#'   helper returns a single-entry list carrying the unchanged spec
+#'   and `runtime = NULL`. When set, the helper filters `spec@data`
+#'   by every unique value combination of `spec@subgroup@by` and
+#'   returns one entry per group.
+#' @return A list of `list(spec = <sub_spec>, runtime = <runtime>)`
+#'   entries. `runtime` is `NULL` when the spec has no subgroup;
+#'   otherwise a list describing the group (`by`, `values`, `index`,
+#'   `total`, `banner_text`) that the page-chrome layer renders as a
+#'   centred subgroup banner above the column-header rule.
+#' @keywords internal
+#' @noRd
 engine_subgroup_split <- function(spec) {
   if (is.null(spec@subgroup) || length(spec@subgroup@by) == 0L) {
     return(list(list(spec = spec, runtime = NULL)))

@@ -28,6 +28,28 @@
 #
 # Pure function. No I/O.
 
+#' Apply `col_spec@group_display` semantics in the resolve pipeline
+#'
+#' @param cells_text Character matrix of formatted cell strings
+#'   (one row per data row, one column per data column).
+#' @param cells_ast List-matrix of inline-AST nodes parallel to
+#'   `cells_text`.
+#' @param cells_style List-matrix of `style_node` overrides parallel
+#'   to `cells_text`.
+#' @param cols Named list of `col_spec` objects keyed by data column
+#'   name. Columns with `usage = "group"` drive the per-group
+#'   behaviour selected by `col_spec@group_display`.
+#' @return A list with six named slots: `cells_text`, `cells_ast`,
+#'   `cells_style` (the possibly-blanked matrices), `cols` (the
+#'   possibly-visibility-flipped col_spec map for header_row
+#'   columns), `header_row_plan` (per-row injection sidecar consumed
+#'   by `.slice_one_page()`), and `skip_transitions` (sorted integer
+#'   vector of transition row indices unioned across every group
+#'   column whose effective `group_skip` is `TRUE` — coincident
+#'   transitions collapse to a single index so only one blank row is
+#'   injected).
+#' @keywords internal
+#' @noRd
 engine_group_display <- function(
   cells_text,
   cells_ast,
@@ -91,9 +113,13 @@ engine_group_display <- function(
     }
   }
 
-  # Phase 2: build the header-row plan + hide source columns. Only
-  # the FIRST header_row group column produces a plan (multi-header
-  # nesting is a follow-up).
+  # Phase 2: build the header-row plan + the blank-skip plan + hide
+  # source columns. Only the FIRST header_row group column produces
+  # a header plan (multi-header nesting is a follow-up). Per-column
+  # `group_skip` (TRUE / FALSE / NA-defaulting-via-group_display)
+  # drives the blank-row plan independently — every group column
+  # whose `.effective_group_skip()` resolves TRUE contributes its
+  # transition row indices.
   header_row_plan <- NULL
   if (!is.null(header_col)) {
     host_col <- .header_row_host_column(col_names, group_names, cols)
@@ -112,12 +138,28 @@ engine_group_display <- function(
     }
   }
 
+  # Per-column group_skip plan. A blank row is inserted BEFORE any
+  # row that is a transition (on the data row scale) for any group
+  # column whose effective `group_skip` resolves TRUE. The first
+  # transition on the page never gets a leading blank.
+  skip_transitions <- integer(0L)
+  for (nm in group_names) {
+    cs <- cols[[nm]]
+    if (.effective_group_skip(cs)) {
+      run_ids <- .runs_grouping(cells_text[, nm])
+      col_trans <- which(c(TRUE, diff(run_ids) != 0L))
+      skip_transitions <- union(skip_transitions, col_trans)
+    }
+  }
+  skip_transitions <- sort(as.integer(skip_transitions))
+
   list(
     cells_text = cells_text,
     cells_ast = cells_ast,
     cells_style = cells_style,
     cols = cols,
-    header_row_plan = header_row_plan
+    header_row_plan = header_row_plan,
+    skip_transitions = skip_transitions
   )
 }
 
@@ -242,64 +284,79 @@ engine_group_display <- function(
   row_indices,
   visible_col_names,
   header_row_plan,
+  skip_transitions = integer(0L),
   call = rlang::caller_env()
 ) {
-  if (is.null(header_row_plan) || length(row_indices) == 0L) {
+  # Header transitions (drive section-header row injection) and
+  # blank transitions (drive blank-row injection) are computed
+  # independently. Header transitions come from the outer
+  # `header_row` group column; blank transitions come from every
+  # group column whose effective `group_skip` resolves TRUE.
+  header_transitions <- if (is.null(header_row_plan)) {
+    integer(0L)
+  } else {
+    intersect(header_row_plan$transitions, row_indices)
+  }
+  blank_transitions <- intersect(skip_transitions, row_indices)
+
+  has_header_plan <- !is.null(header_row_plan) &&
+    length(header_transitions) > 0L
+  has_blank_plan <- length(blank_transitions) > 0L
+
+  if (length(row_indices) == 0L || (!has_header_plan && !has_blank_plan)) {
     return(list(
       cells_text = cells_text,
       cells_ast = cells_ast,
       cells_style = cells_style,
-      is_header_row = rep(FALSE, length(row_indices))
+      is_header_row = rep(FALSE, length(row_indices)),
+      is_blank_row = rep(FALSE, length(row_indices))
     ))
   }
 
-  # Transitions that fall within this page's row range.
-  page_transitions <- intersect(header_row_plan$transitions, row_indices)
-  if (length(page_transitions) == 0L) {
-    return(list(
-      cells_text = cells_text,
-      cells_ast = cells_ast,
-      cells_style = cells_style,
-      is_header_row = rep(FALSE, length(row_indices))
-    ))
-  }
-
-  host_col <- header_row_plan$host_col
-  host_idx <- match(host_col, visible_col_names)
-  if (length(host_idx) != 1L || is.na(host_idx)) {
-    # Host column isn't visible on this page (unusual — skip).
-    return(list(
-      cells_text = cells_text,
-      cells_ast = cells_ast,
-      cells_style = cells_style,
-      is_header_row = rep(FALSE, length(row_indices))
-    ))
+  host_idx <- NA_integer_
+  if (has_header_plan) {
+    host_idx <- match(header_row_plan$host_col, visible_col_names)
+    if (length(host_idx) != 1L || is.na(host_idx)) {
+      has_header_plan <- FALSE
+    }
   }
 
   ncol_visible <- length(visible_col_names)
   blank_ast <- parse_inline("", call = call)
   default_node <- style_node()
 
-  # Output row by row. At each page row, prepend a header row if
-  # that row is a transition.
   n_page <- length(row_indices)
-  total_out <- n_page + length(page_transitions)
+  total_out_max <- n_page +
+    length(header_transitions) +
+    length(blank_transitions)
   text_out <- matrix(
     "",
-    nrow = total_out,
+    nrow = total_out_max,
     ncol = ncol_visible,
     dimnames = list(NULL, visible_col_names)
   )
-  ast_out <- matrix(list(), nrow = total_out, ncol = ncol_visible)
-  style_out <- matrix(list(), nrow = total_out, ncol = ncol_visible)
+  ast_out <- matrix(list(), nrow = total_out_max, ncol = ncol_visible)
+  style_out <- matrix(list(), nrow = total_out_max, ncol = ncol_visible)
   colnames(ast_out) <- visible_col_names
   colnames(style_out) <- visible_col_names
-  is_header_row <- logical(total_out)
+  is_header_row <- logical(total_out_max)
+  is_blank_row <- logical(total_out_max)
 
   out_pos <- 0L
+  first_emit <- TRUE
   for (k in seq_len(n_page)) {
     data_idx <- row_indices[[k]]
-    if (data_idx %in% page_transitions) {
+    # Blank row goes BEFORE the row at this transition, but not for
+    # the very first row of the page (no preceding group on page).
+    if (data_idx %in% blank_transitions && !first_emit) {
+      out_pos <- out_pos + 1L
+      for (j in seq_len(ncol_visible)) {
+        ast_out[[out_pos, j]] <- blank_ast
+        style_out[[out_pos, j]] <- default_node
+      }
+      is_blank_row[[out_pos]] <- TRUE
+    }
+    if (has_header_plan && data_idx %in% header_transitions) {
       out_pos <- out_pos + 1L
       text_out[out_pos, host_idx] <- header_row_plan$group_values[[data_idx]]
       for (j in seq_len(ncol_visible)) {
@@ -311,6 +368,7 @@ engine_group_display <- function(
         style_out[[out_pos, j]] <- default_node
       }
       is_header_row[[out_pos]] <- TRUE
+      first_emit <- FALSE
     }
     out_pos <- out_pos + 1L
     text_out[out_pos, ] <- cells_text[k, ]
@@ -319,12 +377,16 @@ engine_group_display <- function(
       style_out[[out_pos, j]] <- cells_style[[k, j]]
     }
     is_header_row[[out_pos]] <- FALSE
+    is_blank_row[[out_pos]] <- FALSE
+    first_emit <- FALSE
   }
 
+  total_out <- out_pos
   list(
-    cells_text = text_out,
-    cells_ast = ast_out,
-    cells_style = style_out,
-    is_header_row = is_header_row
+    cells_text = text_out[seq_len(total_out), , drop = FALSE],
+    cells_ast = ast_out[seq_len(total_out), , drop = FALSE],
+    cells_style = style_out[seq_len(total_out), , drop = FALSE],
+    is_header_row = is_header_row[seq_len(total_out)],
+    is_blank_row = is_blank_row[seq_len(total_out)]
   )
 }

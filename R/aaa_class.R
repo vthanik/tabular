@@ -297,6 +297,10 @@ NULL
       S7::class_character,
       default = "header_row"
     ),
+    group_skip = S7::new_property(
+      S7::class_logical,
+      default = NA
+    ),
     align = S7::new_property(
       S7::class_character,
       default = NA_character_
@@ -378,6 +382,9 @@ NULL
         "; got ",
         shQuote(self@group_display)
       ))
+    }
+    if (length(self@group_skip) != 1L) {
+      return("@group_skip must be length 1 (TRUE / FALSE / NA)")
     }
     NULL
   }
@@ -1064,6 +1071,11 @@ tabular_grid <- S7::new_class(
 #'
 #' grid <- as_grid(spec)
 #' stopifnot(is_tabular_grid(grid))
+#'
+#' @param x *Object to test.* Any R value. Each predicate returns
+#'   `TRUE` if `x` inherits from the named class, `FALSE` otherwise.
+#'
+#' @return *A length-1 `logical`* — `TRUE` or `FALSE`. Never `NA`.
 #'
 #' @seealso
 #' **Class definitions:** [`tabular_classes`].

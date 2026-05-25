@@ -317,6 +317,7 @@ is_brdr <- function(x) inherits(x, "tabular_brdr")
 # Pretty-printer for tabular_brdr — keeps the inspect output compact
 # instead of dumping the underlying list.
 #' @export
+#' @noRd
 print.tabular_brdr <- function(x, ...) {
   cat(sprintf(
     "<tabular_brdr> %gpt %s %s\n",

@@ -571,10 +571,24 @@ emit <- function(
   data_file
 }
 
-# Build the data frame written to the QC artefact. We use the
-# resolved post-engine_decimal cell text (so the file matches the
-# rendered display verbatim). Pagination is collapsed back to the
-# full table; the QC reader does not care about page splits.
+# Build the data frame written to the QC artefact. The QC reader
+# wants the resolved POST-engine_format wide data \u2014 never any of
+# the cosmetic mutations the resolve engine performs to drive
+# display:
+#
+#   * No synthesised section-header rows (group_display = "header_row").
+#   * No blank-row separators (group_skip).
+#   * No suppressed repeats (group_display = "column" blanks
+#     adjacent duplicates for display; QC sees the originals).
+#   * No NBSP decimal-alignment padding.
+#   * No inline HTML markup escapes.
+#
+# We read from `metadata$data_cells_text`, which is the snapshot
+# `as_grid()` captures immediately after `engine_format()` and
+# BEFORE any of the cosmetic phases run. One character row per
+# SOURCE data row, one column per declared column in
+# `names(spec@data)` \u2014 every column, including those marked
+# `visible = FALSE`.
 .data_file_frame <- function(grid) {
   meta <- grid@metadata
   nrow_data <- meta$nrow_data
@@ -588,35 +602,23 @@ emit <- function(
     return(df)
   }
 
-  full <- matrix(
-    NA_character_,
-    nrow = nrow_data,
-    ncol = length(col_names),
-    dimnames = list(NULL, col_names)
-  )
-  for (page in grid@pages) {
-    if (page$panel_index != 1L) {
-      next
-    }
-    full[page$row_indices, page$col_names] <- page$cells_text
+  full <- meta$data_cells_text
+  if (is.null(full)) {
+    # Defensive fallback for grids built by code paths that didn't
+    # populate the snapshot. Empty-but-typed frame keeps downstream
+    # writers happy.
+    full <- matrix(
+      NA_character_,
+      nrow = nrow_data,
+      ncol = length(col_names),
+      dimnames = list(NULL, col_names)
+    )
   }
 
-  # Scrub anything we add internally so the data_file ships clean
-  # plain-text values that match the final rendered cells (the same
-  # values shown in HTML / RTF / DOCX / LaTeX / Markdown), minus the
-  # alignment glyphs we use as a visual-only layout aid:
-  #
-  #   * U+00A0 NBSP -> dropped. engine_decimal pads cells with NBSP
-  #     so the decimal points line up; in a CSV / TSV / RDS QC
-  #     artefact the padding is noise.
-  #   * `<tag>` markup and HTML entities -> stripped / unescaped.
-  #     cells_text shouldn't contain markup, but if a user attaches
-  #     inline_format / md() content the scrub keeps the QC file
-  #     plain text.
-  #
-  # Regular spaces and format-string-width padding (e.g. ` 1.2`
-  # aligned to `12.3`) are preserved because they ARE part of the
-  # rendered cell value the reader sees.
+  # Strip the inline HTML / NBSP / entity glyphs that md() / html()
+  # / engine_decimal would have introduced downstream \u2014 even though
+  # the snapshot is pre-decimal, the formatted cells can still
+  # carry user-supplied markup via inline_format.
   full[] <- gsub("\u00a0", "", full)
   full[] <- gsub("<[^>]+>", "", full)
   full[] <- gsub("&nbsp;", " ", full, fixed = TRUE)
