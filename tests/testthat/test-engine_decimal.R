@@ -1121,3 +1121,70 @@ test_that("snapshot: per-section + zero-suppress + edge-trim on saf_demo Total",
   )
   expect_snapshot(cat(out, sep = "\n"))
 })
+
+# ---------------------------------------------------------------------
+# Layer 4 — decimal_metrics = "afm" (em-aware alignment)
+# ---------------------------------------------------------------------
+
+test_that(".build_measure default falls back to nchar", {
+  m <- tabular:::.build_measure("chars", NA_character_, " ")
+  expect_equal(m("hello"), 5L)
+  expect_equal(m(""), 0L)
+})
+
+test_that(".build_measure with metrics='afm' returns NBSP-equivalent units", {
+  m <- tabular:::.build_measure(
+    "afm",
+    "Times-Roman",
+    tabular:::.nbsp
+  )
+  # Times-Roman digits are all 500 em, NBSP (space) is 250 em -> 2 units per digit.
+  expect_equal(m("12345"), 10L)
+  # AE ligature: 889 em / 250 em = round(3.556) = 4 units.
+  expect_equal(m("Æ"), 4L)
+})
+
+test_that("engine_decimal in afm mode keeps uniform column widths in proportional font", {
+  m <- tabular:::.build_measure(
+    "afm",
+    "Times-Roman",
+    tabular:::.nbsp
+  )
+  out <- tabular:::.align_decimal_column(
+    c("12.3", "1.45", "100.5"),
+    pad = tabular:::.nbsp,
+    measure = m,
+    zero_suppress = FALSE,
+    edge_trim = FALSE
+  )
+  widths <- m(out)
+  expect_true(all(widths == widths[[1L]]))
+  expect_true(all(grepl(".", out, fixed = TRUE)))
+})
+
+test_that("as_grid threads preset@decimal_metrics='afm' end-to-end", {
+  spec <- tabular(saf_demo) |>
+    cols(
+      variable = col_spec(usage = "group", label = "Characteristic"),
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo", align = "decimal"),
+      drug_50 = col_spec(label = "Drug 50", align = "decimal"),
+      drug_100 = col_spec(label = "Drug 100", align = "decimal"),
+      Total = col_spec(label = "Total", align = "decimal")
+    ) |>
+    preset(decimal_metrics = "afm")
+  grid <- as_grid(spec)
+  expect_true(is.matrix(grid@pages[[1]]$cells_text))
+  expect_type(grid@pages[[1]]$cells_text, "character")
+})
+
+test_that("preset_spec default for decimal_metrics is 'chars'", {
+  expect_equal(preset_spec()@decimal_metrics, "chars")
+})
+
+test_that("preset_spec accepts all three decimal_metrics values", {
+  for (m in c("chars", "afm", "systemfonts")) {
+    ps <- preset_spec(decimal_metrics = m)
+    expect_equal(ps@decimal_metrics, m, info = m)
+  }
+})

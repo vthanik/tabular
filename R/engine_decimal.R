@@ -150,9 +150,12 @@ engine_decimal <- function(
   not_considered = character(),
   pad = .nbsp,
   zero_suppress = TRUE,
-  edge_trim = TRUE
+  edge_trim = TRUE,
+  metrics = "chars",
+  afm_name = NA_character_
 ) {
   col_names <- colnames(cells_text)
+  measure <- .build_measure(metrics, afm_name, pad)
   for (nm in col_names) {
     cs <- cols[[nm]]
     if (!is_col_spec(cs)) {
@@ -167,10 +170,64 @@ engine_decimal <- function(
       not_considered = not_considered,
       pad = pad,
       zero_suppress = zero_suppress,
-      edge_trim = edge_trim
+      edge_trim = edge_trim,
+      measure = measure
     )
   }
   cells_text
+}
+
+# Build the measurement function used throughout the alignment
+# pipeline. Returns a closure `measure(s)` that takes a string and
+# returns the count of `pad`-character equivalents — i.e. how many
+# pad characters of glyph-width are needed to match the input
+# string's rendered width.
+#
+# Two modes:
+#
+#   "chars" (default) — measure by character count. Each glyph
+#                       counts as one unit. Cheap; matches the
+#                       backward-compat behavior for monospace and
+#                       for any backend that bypasses the AFM bridge.
+#
+#   "afm"             — measure by AFM em-width, scaled so one pad
+#                       character is one unit. `pad` (typically NBSP)
+#                       sets the unit scale; a glyph wider than the
+#                       pad character counts as multiple units. The
+#                       output is still NBSP-padded character data
+#                       (backends consume unchanged) — the AFM math
+#                       only changes how many NBSPs each slot
+#                       receives so the visual alignment is correct
+#                       in proportional fonts (Times-Roman, Helvetica)
+#                       as well as monospace (Courier).
+.build_measure <- function(metrics, afm_name, pad) {
+  if (
+    !identical(metrics, "afm") ||
+      is.na(afm_name) ||
+      !nzchar(afm_name)
+  ) {
+    return(function(s) {
+      if (length(s) == 0L) {
+        return(integer(0L))
+      }
+      nchar(s, type = "chars")
+    })
+  }
+  # AFM mode: scale em-widths so one pad character == one unit.
+  pad_em <- as.integer(.text_width_em(pad, afm_name))
+  if (length(pad_em) != 1L || is.na(pad_em) || pad_em <= 0L) {
+    # Defensive fallback: NBSP not in the font's metric table for
+    # some reason. Use 250 em (Times-Roman's space width) so we
+    # never divide by zero.
+    pad_em <- 250L
+  }
+  function(s) {
+    if (length(s) == 0L) {
+      return(integer(0L))
+    }
+    em <- .text_width_em(s, afm_name)
+    as.integer(round(em / pad_em))
+  }
 }
 
 # ---------------------------------------------------------------------
@@ -205,8 +262,12 @@ engine_decimal <- function(
   not_considered = character(),
   pad = " ",
   zero_suppress = TRUE,
-  edge_trim = TRUE
+  edge_trim = TRUE,
+  measure = NULL
 ) {
+  if (is.null(measure)) {
+    measure <- function(s) nchar(s, type = "chars")
+  }
   n <- length(values)
   if (n == 0L) {
     return(values)
@@ -243,7 +304,7 @@ engine_decimal <- function(
     }
     contrib <- which(!na_mask & !opaque_mask)
     if (length(contrib) > 0L) {
-      column_floor <- .compute_column_floor(v[contrib])
+      column_floor <- .compute_column_floor(v[contrib], measure = measure)
     }
   }
 
@@ -257,7 +318,8 @@ engine_decimal <- function(
       opaque_mask = opaque_mask,
       column_floor = NULL,
       pad = pad,
-      zero_suppress = zero_suppress
+      zero_suppress = zero_suppress,
+      measure = measure
     )
   } else {
     sec_ids <- .runs(sections)
@@ -273,16 +335,27 @@ engine_decimal <- function(
         opaque_mask = opaque_mask[keep],
         column_floor = column_floor,
         pad = pad,
-        zero_suppress = zero_suppress
+        zero_suppress = zero_suppress,
+        measure = measure
       )
       out[keep] <- rendered
     }
   }
 
-  # Final pass: right-pad every non-NA cell to the column max nchar.
+  # Final pass: right-pad every non-NA cell to the column max width.
+  # In "chars" mode this is identical to nchar; in "afm" mode the
+  # measure closure scales by em-width / pad-em-width so the pad
+  # count converges on visually-equal slot widths in proportional
+  # fonts.
   if (any(!na_mask)) {
-    max_w <- max(nchar(out[!na_mask], type = "chars"))
-    out[!na_mask] <- .pad_right(out[!na_mask], max_w, pad = pad)
+    cell_w <- measure(out[!na_mask])
+    max_w <- max(cell_w)
+    out[!na_mask] <- .pad_right(
+      out[!na_mask],
+      max_w,
+      pad = pad,
+      cell_w = cell_w
+    )
   }
 
   # Symmetric edge-trim: strip column-wide leading / trailing pad
@@ -305,7 +378,8 @@ engine_decimal <- function(
   opaque_mask,
   column_floor,
   pad,
-  zero_suppress
+  zero_suppress,
+  measure = function(s) nchar(s, type = "chars")
 ) {
   n <- length(v)
   out <- character(n)
@@ -335,7 +409,12 @@ engine_decimal <- function(
 
   sigs <- vapply(tokens, .signature_key, character(1))
   dominant <- .pick_dominant(sigs, tokens)
-  widths <- .compute_widths(tokens, dominant, column_floor = column_floor)
+  widths <- .compute_widths(
+    tokens,
+    dominant,
+    column_floor = column_floor,
+    measure = measure
+  )
 
   for (k in seq_along(active)) {
     out[[active[[k]]]] <- .render_cell(
@@ -344,7 +423,8 @@ engine_decimal <- function(
       dominant = dominant,
       widths = widths,
       pad = pad,
-      zero_suppress = zero_suppress
+      zero_suppress = zero_suppress,
+      measure = measure
     )
   }
   out
@@ -372,7 +452,10 @@ engine_decimal <- function(
 #   int_w    : max nchar(sign + int) of the FIRST float token
 #   prefix_w : max nchar(comparator prefix) of the FIRST float token
 # Returns NULL if no cell has any float token.
-.compute_column_floor <- function(values) {
+.compute_column_floor <- function(
+  values,
+  measure = function(s) nchar(s, type = "chars")
+) {
   int_w <- 0L
   prefix_w <- 0L
   any_float <- FALSE
@@ -383,11 +466,8 @@ engine_decimal <- function(
     }
     any_float <- TRUE
     p <- tok$parsed[[1L]]
-    prefix_w <- max(prefix_w, nchar(p$prefix, type = "chars"))
-    int_w <- max(
-      int_w,
-      nchar(p$sign, type = "chars") + nchar(p$int, type = "chars")
-    )
+    prefix_w <- max(prefix_w, measure(p$prefix))
+    int_w <- max(int_w, measure(paste0(p$sign, p$int)))
   }
   if (!any_float) {
     return(NULL)
@@ -536,7 +616,12 @@ engine_decimal <- function(
 #
 # When no dominant signature exists (section is text-only), returns
 # NULL.
-.compute_widths <- function(tokens, dominant, column_floor = NULL) {
+.compute_widths <- function(
+  tokens,
+  dominant,
+  column_floor = NULL,
+  measure = function(s) nchar(s, type = "chars")
+) {
   if (is.null(dominant)) {
     return(NULL)
   }
@@ -562,14 +647,11 @@ engine_decimal <- function(
     k_contrib <- min(k_contrib, k_dom)
     for (k in seq_len(k_contrib)) {
       p <- tok$parsed[[k]]
-      prefix_w[[k]] <- max(prefix_w[[k]], nchar(p$prefix, type = "chars"))
-      int_w[[k]] <- max(
-        int_w[[k]],
-        nchar(p$sign, type = "chars") + nchar(p$int, type = "chars")
-      )
+      prefix_w[[k]] <- max(prefix_w[[k]], measure(p$prefix))
+      int_w[[k]] <- max(int_w[[k]], measure(paste0(p$sign, p$int)))
       if (nzchar(p$dec)) {
         has_dec[[k]] <- TRUE
-        dec_w[[k]] <- max(dec_w[[k]], nchar(p$dec, type = "chars"))
+        dec_w[[k]] <- max(dec_w[[k]], measure(p$dec))
       }
     }
   }
@@ -621,7 +703,8 @@ engine_decimal <- function(
   dominant,
   widths,
   pad,
-  zero_suppress
+  zero_suppress,
+  measure = function(s) nchar(s, type = "chars")
 ) {
   k_row <- length(tok$floats)
 
@@ -637,14 +720,14 @@ engine_decimal <- function(
       .is_n_pct_shape(dominant) &&
       .is_zero_n(tok$parsed[[1L]])
   ) {
-    return(.render_cell_zero_suppress(tok, dominant, widths, pad))
+    return(.render_cell_zero_suppress(tok, dominant, widths, pad, measure))
   }
 
   if (is_dominant) {
-    return(.render_cell_dominant(tok, dominant, widths, pad))
+    return(.render_cell_dominant(tok, dominant, widths, pad, measure))
   }
 
-  .render_cell_primary_only(tok, dominant, widths, pad)
+  .render_cell_primary_only(tok, dominant, widths, pad, measure)
 }
 
 # Detect "n (pct)" / "n (pct, lo, hi)" / "n/N (pct)" family shapes:
@@ -676,7 +759,13 @@ engine_decimal <- function(
 }
 
 # Full structured render — cell matches the dominant signature.
-.render_cell_dominant <- function(tok, dominant, widths, pad) {
+.render_cell_dominant <- function(
+  tok,
+  dominant,
+  widths,
+  pad,
+  measure = function(s) nchar(s, type = "chars")
+) {
   k <- dominant$k
   parts <- character(2L * k + 1L)
   parts[[1L]] <- dominant$literals[[1L]]
@@ -691,7 +780,8 @@ engine_decimal <- function(
       int_w = widths$int_w[[j]],
       has_dec = widths$has_dec[[j]],
       dec_w = widths$dec_w[[j]],
-      pad = pad
+      pad = pad,
+      measure = measure
     )
     parts[[2L * j + 1L]] <- dominant$literals[[j + 1L]]
   }
@@ -701,7 +791,13 @@ engine_decimal <- function(
 # Zero-suppress render: emit the n slot, then blank-pad the rest of
 # the line to the dominant width using `pad`. Result has the same
 # nchar as a full dominant render, so column-width invariants hold.
-.render_cell_zero_suppress <- function(tok, dominant, widths, pad) {
+.render_cell_zero_suppress <- function(
+  tok,
+  dominant,
+  widths,
+  pad,
+  measure = function(s) nchar(s, type = "chars")
+) {
   k <- dominant$k
   p <- tok$parsed[[1L]]
   n_slot <- .render_slot(
@@ -713,20 +809,22 @@ engine_decimal <- function(
     int_w = widths$int_w[[1L]],
     has_dec = widths$has_dec[[1L]],
     dec_w = widths$dec_w[[1L]],
-    pad = pad
+    pad = pad,
+    measure = measure
   )
   # Width of the dominant render's post-slot-1 portion:
-  # literals[2..k+1] + slots[2..k].
+  # literals[2..k+1] + slots[2..k]. Literals are measured via
+  # `measure()` so the unit (chars vs em-equivalent NBSPs) matches
+  # the rest of the slot widths.
   remaining_w <- 0L
   for (j in seq.int(2L, k)) {
     remaining_w <- remaining_w +
-      nchar(dominant$literals[[j]], type = "chars") +
+      measure(dominant$literals[[j]]) +
       widths$prefix_w[[j]] +
       widths$int_w[[j]] +
       (if (widths$has_dec[[j]]) 1L + widths$dec_w[[j]] else 0L)
   }
-  remaining_w <- remaining_w +
-    nchar(dominant$literals[[k + 1L]], type = "chars")
+  remaining_w <- remaining_w + measure(dominant$literals[[k + 1L]])
   paste0(
     dominant$literals[[1L]],
     n_slot,
@@ -741,7 +839,13 @@ engine_decimal <- function(
 # dominant's literal here would silently drop the cell's leading
 # punctuation — a correctness bug, since content beats alignment
 # when the cell has a structurally different shape.
-.render_cell_primary_only <- function(tok, dominant, widths, pad) {
+.render_cell_primary_only <- function(
+  tok,
+  dominant,
+  widths,
+  pad,
+  measure = function(s) nchar(s, type = "chars")
+) {
   p <- tok$parsed[[1L]]
   rendered_slot <- .render_slot(
     prefix = p$prefix,
@@ -752,7 +856,8 @@ engine_decimal <- function(
     int_w = widths$int_w[[1L]],
     has_dec = widths$has_dec[[1L]],
     dec_w = widths$dec_w[[1L]],
-    pad = pad
+    pad = pad,
+    measure = measure
   )
   paste0(
     tok$literals[[1L]],
@@ -773,15 +878,16 @@ engine_decimal <- function(
   int_w,
   has_dec,
   dec_w,
-  pad
+  pad,
+  measure = function(s) nchar(s, type = "chars")
 ) {
   si_str <- paste0(sign, int)
-  si_padded <- .pad_left(si_str, int_w, pad = pad)
-  pre_padded <- .pad_left(prefix, prefix_w, pad = pad)
+  si_padded <- .pad_left(si_str, int_w, pad = pad, measure = measure)
+  pre_padded <- .pad_left(prefix, prefix_w, pad = pad, measure = measure)
 
   if (has_dec) {
     if (nzchar(dec)) {
-      dec_padded <- .pad_right(dec, dec_w, pad = pad)
+      dec_padded <- .pad_right(dec, dec_w, pad = pad, measure = measure)
       paste0(pre_padded, si_padded, ".", dec_padded)
     } else {
       paste0(pre_padded, si_padded, pad, strrep(pad, dec_w))
@@ -795,25 +901,42 @@ engine_decimal <- function(
 # Padding helpers
 # ---------------------------------------------------------------------
 
-# Left-pad `x` to `width` characters using `pad`. Shorter values are
-# padded; longer values pass through unchanged. UTF-8 safe via
-# `nchar(x, type = "chars")`.
-.pad_left <- function(x, width, pad = " ") {
+# Left-pad `x` to `width` units of `measure(x)` using `pad`. With
+# the default `measure`, the units are characters (today's
+# behavior); with the AFM measure they're NBSP-em-equivalents so
+# proportional fonts align visually. Shorter values are padded;
+# longer values pass through unchanged. Optionally accepts a
+# pre-computed `cell_w` vector to avoid re-measuring inside hot
+# loops.
+.pad_left <- function(
+  x,
+  width,
+  pad = " ",
+  measure = function(s) nchar(s, type = "chars"),
+  cell_w = NULL
+) {
   if (width <= 0L) {
     return(x)
   }
-  n <- nchar(x, type = "chars")
+  n <- if (is.null(cell_w)) measure(x) else cell_w
   need <- pmax(0L, width - n)
   paste0(vapply(need, function(k) strrep(pad, k), character(1L)), x)
 }
 
-# Right-pad `x` to `width` characters using `pad`. Shorter values
-# are padded; longer values pass through unchanged.
-.pad_right <- function(x, width, pad = " ") {
+# Right-pad `x` to `width` units of `measure(x)` using `pad`.
+# Shorter values are padded; longer values pass through unchanged.
+# Optionally accepts a pre-computed `cell_w` vector.
+.pad_right <- function(
+  x,
+  width,
+  pad = " ",
+  measure = function(s) nchar(s, type = "chars"),
+  cell_w = NULL
+) {
   if (width <= 0L) {
     return(x)
   }
-  n <- nchar(x, type = "chars")
+  n <- if (is.null(cell_w)) measure(x) else cell_w
   need <- pmax(0L, width - n)
   paste0(x, vapply(need, function(k) strrep(pad, k), character(1L)))
 }

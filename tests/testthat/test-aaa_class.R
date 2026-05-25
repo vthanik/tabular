@@ -125,7 +125,7 @@ test_that("preset_spec() defaults", {
   expect_identical(p@orientation, "portrait")
   expect_identical(p@paper_size, "letter")
   expect_identical(p@hlines, "header")
-  expect_identical(p@decimal_metrics, "afm")
+  expect_identical(p@decimal_metrics, "chars")
 })
 
 test_that("preset_spec() rejects unknown orientation", {

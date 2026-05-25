@@ -318,9 +318,23 @@ as_grid <- function(spec) {
   fmt <- engine_format(spec)
 
   cols_named <- .cols_named_for_decimal(spec)
+  # Em-aware decimal alignment when the active preset opts into it
+  # via `decimal_metrics = "afm"`. The default "chars" mode keeps
+  # the byte-for-byte legacy behaviour (every glyph counts as one
+  # NBSP-unit). The AFM mode looks up real glyph widths so the pad
+  # count converges on visually-equal slot widths in proportional
+  # fonts (Times-Roman, Helvetica).
+  decimal_metrics <- .effective_preset(spec)@decimal_metrics
+  afm_name <- if (identical(decimal_metrics, "afm")) {
+    .resolve_afm_name(.effective_preset(spec)@font_family)
+  } else {
+    NA_character_
+  }
   cells_text <- engine_decimal(
     fmt$cells_text,
-    cols = cols_named
+    cols = cols_named,
+    metrics = decimal_metrics,
+    afm_name = afm_name
   )
 
   # Resolve col widths via AFM Core 13 metrics (auto sizing).

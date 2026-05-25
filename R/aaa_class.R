@@ -35,7 +35,7 @@
 .align_anchor_values <- c("left", "center", "right")
 .valign_values <- c("top", "middle", "bottom")
 .derive_type_values <- c("numeric", "character")
-.decimal_metrics_values <- c("afm", "systemfonts")
+.decimal_metrics_values <- c("chars", "afm", "systemfonts")
 .chrome_onscreen_values <- c("auto", "off")
 
 # Recognised values for `preset_spec@width_mode`. Table-level
@@ -716,7 +716,7 @@ preset_spec <- S7::new_class(
     na_text = S7::new_property(S7::class_character, default = ""),
     decimal_metrics = S7::new_property(
       S7::class_character,
-      default = "afm"
+      default = "chars"
     ),
     chrome_onscreen = S7::new_property(
       S7::class_character,
@@ -758,7 +758,10 @@ preset_spec <- S7::new_class(
       return("@footnote_align must be left, center, or right")
     }
     if (!(self@decimal_metrics %in% .decimal_metrics_values)) {
-      return("@decimal_metrics must be afm or systemfonts")
+      return(paste0(
+        "@decimal_metrics must be one of ",
+        paste(shQuote(.decimal_metrics_values), collapse = ", ")
+      ))
     }
     if (!(self@chrome_onscreen %in% .chrome_onscreen_values)) {
       return("@chrome_onscreen must be auto or off")
