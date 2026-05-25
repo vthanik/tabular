@@ -25,7 +25,12 @@ col_spec(
 \item \strong{\code{"group"}} — row-label with repeat-suppression and
 continuation-page repeat keys. Use for \code{variable}, \code{soc},
 \code{stat_label}.
-\item \strong{\code{"across"}} — pivot source. Pair with \code{\link[=pivot_across]{pivot_across()}}.
+\item \strong{\code{"across"}} — pivot-source tag. Mark every column that
+originated as a treatment arm in \code{\link[=pivot_across]{pivot_across()}}'s wide
+output. The tag is informational — \code{\link[=sort_rows]{sort_rows()}} uses it
+to reject sort keys on arm columns (pivot upstream of the
+sort instead), and downstream introspection tools walk the
+spec to find which columns came from an ARD pivot.
 \item \strong{\code{"computed"}} — derived column; pair with a \code{\link[=derive]{derive()}}
 entry. The column need not exist in \code{data} yet at
 \code{\link[=cols]{cols()}} time.
@@ -34,7 +39,8 @@ entry. The column need not exist in \code{data} yet at
 
 \strong{Interaction:} \code{"computed"} requires a matching \code{\link[=derive]{derive()}}
 entry by engine_validate time. \code{"across"} requires the pivot
-to have happened upstream via \code{\link[=pivot_across]{pivot_across()}}.
+to have happened upstream via \code{\link[=pivot_across]{pivot_across()}}; sorting by an
+\code{"across"} column is a \code{tabular_error_input}.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two row-label columns and four arm columns.
 cols(
@@ -43,6 +49,40 @@ cols(
   placebo    = col_spec(),
   drug_50    = col_spec()
 )
+}\if{html}{\out{</div>}}
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# End-to-end ARD → wide → tabular pipeline with usage = "across"
+# tagging every arm column. The cards ARD `saf_demo_card` is
+# the long upstream input; `pivot_across()` widens to one column
+# per arm; `cols()` then attaches per-column display rules.
+wide <- pivot_across(
+  saf_demo_card,
+  statistic = list(
+    continuous  = c(N = "\{N\}", "Mean (SD)" = "\{mean\} (\{sd\})"),
+    categorical = "\{n\} (\{p\}\%)"
+  )
+)
+tabular(wide, titles = "Demographics") |>
+  cols(
+    variable                 = col_spec(
+      usage = "group", label = "Characteristic"
+    ),
+    stat_label               = col_spec(
+      usage = "group", label = "Statistic"
+    ),
+    Placebo                  = col_spec(
+      usage = "across", align = "decimal"
+    ),
+    `Xanomeline High Dose`   = col_spec(
+      usage = "across", label = "High Dose", align = "decimal"
+    ),
+    `Xanomeline Low Dose`    = col_spec(
+      usage = "across", label = "Low Dose", align = "decimal"
+    ),
+    Total                    = col_spec(
+      usage = "across", align = "decimal"
+    )
+  )
 }\if{html}{\out{</div>}}}
 
 \item{label}{\emph{Display label for the column header.}
