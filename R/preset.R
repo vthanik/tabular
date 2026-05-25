@@ -787,3 +787,67 @@ get_preset <- function() {
   }
   knobs
 }
+
+# ---------------------------------------------------------------------
+# Effective-value helpers for the Phase 6 named-list knobs
+# (`@fonts`, `@colors`, `@padding`). Each returns the surface- or
+# token-specific value when set, falling back to the legacy scalar
+# (`@font_family`, `@font_size`) or a sentinel (`NA_character_`,
+# `NULL`) when unset. Backend renderers consume these so the new
+# knobs override the legacy scalars without any backend caring about
+# the named-list structure.
+
+.effective_font_family <- function(preset, surface = "body") {
+  if (!is_preset_spec(preset)) {
+    preset <- preset_spec()
+  }
+  fonts <- preset@fonts
+  if (
+    is.list(fonts) &&
+      !is.null(fonts[[surface]]) &&
+      !is.null(fonts[[surface]]$family)
+  ) {
+    return(fonts[[surface]]$family)
+  }
+  preset@font_family
+}
+
+.effective_font_size <- function(preset, surface = "body") {
+  if (!is_preset_spec(preset)) {
+    preset <- preset_spec()
+  }
+  fonts <- preset@fonts
+  if (
+    is.list(fonts) &&
+      !is.null(fonts[[surface]]) &&
+      !is.null(fonts[[surface]]$size)
+  ) {
+    return(fonts[[surface]]$size)
+  }
+  preset@font_size
+}
+
+.effective_color <- function(preset, token) {
+  if (!is_preset_spec(preset)) {
+    return(NA_character_)
+  }
+  colors <- preset@colors
+  if (is.list(colors) && !is.null(colors[[token]])) {
+    return(colors[[token]])
+  }
+  NA_character_
+}
+
+# Returns either NULL (no padding override), a single non-negative
+# numeric (uniform padding in points), or a named list with any of
+# top / right / bottom / left (per-side padding in points).
+.effective_padding <- function(preset, surface = "body") {
+  if (!is_preset_spec(preset)) {
+    return(NULL)
+  }
+  padding <- preset@padding
+  if (is.list(padding) && !is.null(padding[[surface]])) {
+    return(padding[[surface]])
+  }
+  NULL
+}

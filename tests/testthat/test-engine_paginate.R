@@ -294,3 +294,51 @@ test_that("engine_paginate() row budget accounts for spanner header depth", {
   plan_spanned <- tabular:::engine_paginate(spec_spanned)
   expect_gt(plan_flat$rows_per_page, plan_spanned$rows_per_page)
 })
+
+test_that("engine_paginate() excludes col_spec(visible = FALSE) columns from page panels", {
+  spec <- tabular(data.frame(x = 1:3, y = 11:13, z = 21:23)) |>
+    cols(
+      x = col_spec(label = "X"),
+      y = col_spec(visible = FALSE),
+      z = col_spec(label = "Z")
+    )
+  plan <- tabular:::engine_paginate(spec)
+  # The single panel should carry only the data-frame indices for
+  # visible columns (x and z, indices 1 and 3); index 2 (y) is
+  # filtered out.
+  expect_identical(plan$pages[[1]]$col_indices, c(1L, 3L))
+})
+
+test_that("emit() does not render col_spec(visible = FALSE) columns across backends", {
+  spec <- tabular(data.frame(x = 1:2, y = 11:12, z = 21:22)) |>
+    cols(
+      x = col_spec(label = "X"),
+      y = col_spec(label = "Y hidden", visible = FALSE),
+      z = col_spec(label = "Z")
+    )
+  out_html <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out_html)
+  txt_html <- paste(readLines(out_html, warn = FALSE), collapse = "\n")
+  expect_false(grepl("Y hidden", txt_html, fixed = TRUE))
+  expect_false(grepl(">11<", txt_html, fixed = TRUE))
+
+  out_rtf <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out_rtf)
+  txt_rtf <- paste(readLines(out_rtf, warn = FALSE), collapse = "\n")
+  expect_false(grepl("Y hidden", txt_rtf, fixed = TRUE))
+
+  out_tex <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out_tex)
+  txt_tex <- paste(readLines(out_tex, warn = FALSE), collapse = "\n")
+  expect_false(grepl("Y hidden", txt_tex, fixed = TRUE))
+
+  out_docx <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out_docx)
+  td <- withr::local_tempdir()
+  utils::unzip(out_docx, exdir = td)
+  doc <- paste(
+    readLines(file.path(td, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_false(grepl("Y hidden", doc, fixed = TRUE))
+})

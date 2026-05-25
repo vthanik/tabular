@@ -90,11 +90,23 @@ engine_paginate <- function(spec) {
   )
 
   group_cols <- .group_col_names(spec@cols)
+  # Filter visible columns BEFORE pagination so the slice phase
+  # (`.slice_one_page`) and every backend see only the columns the
+  # user wants rendered. Hidden columns (col_spec@visible = FALSE)
+  # remain in spec@data for upstream phases (sort_rows / derive /
+  # subgroup) but never reach the backend renderer.
+  visible_col_names <- .visible_col_names(spec, col_names)
   col_panels <- .compute_horizontal_panels(
-    col_names = col_names,
+    col_names = visible_col_names,
     group_col_names = group_cols,
     panels = panels
   )
+  # `.compute_horizontal_panels` returns indices into its
+  # `col_names` argument; remap them to indices into the full
+  # `col_names` vector so the downstream slice picks the right
+  # data / style / label columns.
+  visible_indices <- match(visible_col_names, col_names)
+  col_panels <- lapply(col_panels, function(idx) visible_indices[idx])
 
   n_vert <- length(row_pages)
   n_horiz <- length(col_panels)
@@ -323,6 +335,27 @@ engine_paginate <- function(spec) {
     return(tentative_end)
   }
   i
+}
+
+# Filter `col_names` to those whose `col_spec@visible` is TRUE.
+# Columns absent from `spec@cols` (no col_spec set) default to
+# visible. Used by engine_paginate to drop hidden columns BEFORE
+# the slice phase; this is the single point that enforces
+# `col_spec(visible = FALSE)` across every backend.
+.visible_col_names <- function(spec, col_names) {
+  cols <- spec@cols
+  keep <- vapply(
+    col_names,
+    function(nm) {
+      cs <- cols[[nm]]
+      if (!is_col_spec(cs)) {
+        return(TRUE)
+      }
+      isTRUE(cs@visible)
+    },
+    logical(1L)
+  )
+  col_names[keep]
 }
 
 # Horizontal pagination: split non-group columns into approximately

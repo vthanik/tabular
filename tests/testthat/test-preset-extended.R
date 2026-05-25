@@ -294,3 +294,443 @@ test_that("preset@borders surfaces in LaTeX tabularray directives", {
   expect_true(grepl("hline{2}={1pt, solid}", txt, fixed = TRUE))
   expect_true(grepl("vline{1}={1pt, solid}", txt, fixed = TRUE))
 })
+
+# ---------------------------------------------------------------------
+# Defensive branches in preset_validators.R — direct unit tests on the
+# shape-error helpers. Some branches are unreachable through the S7
+# `class_list` gate (non-list inputs); direct calls exercise them as
+# part of the helper's standalone contract.
+# ---------------------------------------------------------------------
+
+test_that(".preset_borders_shape_error rejects non-list and unnamed entries", {
+  expect_match(
+    tabular:::.preset_borders_shape_error("foo"),
+    "must be a named list"
+  )
+  expect_match(
+    tabular:::.preset_borders_shape_error(list(brdr())),
+    "must all be named"
+  )
+  expect_match(
+    tabular:::.preset_borders_shape_error(list(outer = brdr(), brdr())),
+    "must all be named"
+  )
+})
+
+test_that(".preset_borders_shape_error accepts NULL values and bare triples", {
+  expect_null(tabular:::.preset_borders_shape_error(list(outer = NULL)))
+  expect_null(
+    tabular:::.preset_borders_shape_error(
+      list(outer = list(style = "dashed", width = 1, color = "#000"))
+    )
+  )
+})
+
+test_that(".preset_fonts_shape_error rejects non-list and unnamed entries", {
+  expect_match(
+    tabular:::.preset_fonts_shape_error("foo"),
+    "must be a named list"
+  )
+  expect_match(
+    tabular:::.preset_fonts_shape_error(list(list(size = 9))),
+    "must all be named"
+  )
+})
+
+test_that(".preset_fonts_shape_error accepts NULL surface and rejects non-list spec", {
+  expect_null(tabular:::.preset_fonts_shape_error(list(body = NULL)))
+  expect_match(
+    tabular:::.preset_fonts_shape_error(list(body = "Inter")),
+    "must be a named list with any of family / size / weight"
+  )
+})
+
+test_that(".preset_fonts_shape_error rejects unnamed sub-keys and bad family/weight", {
+  expect_match(
+    tabular:::.preset_fonts_shape_error(list(body = list("Inter", size = 9))),
+    "entries must all be named"
+  )
+  expect_match(
+    tabular:::.preset_fonts_shape_error(list(
+      body = list(family = NA_character_)
+    )),
+    "family must be a non-NA character"
+  )
+  expect_match(
+    tabular:::.preset_fonts_shape_error(list(body = list(weight = 9))),
+    "weight must be a single character"
+  )
+  expect_match(
+    tabular:::.preset_fonts_shape_error(list(
+      body = list(weight = NA_character_)
+    )),
+    "weight must be a single character"
+  )
+})
+
+test_that(".preset_colors_shape_error rejects non-list and unnamed entries", {
+  expect_match(
+    tabular:::.preset_colors_shape_error("foo"),
+    "must be a named list"
+  )
+  expect_match(
+    tabular:::.preset_colors_shape_error(list("red")),
+    "must all be named"
+  )
+})
+
+test_that(".preset_colors_shape_error accepts NULL values and rejects bad strings", {
+  expect_null(tabular:::.preset_colors_shape_error(list(text = NULL)))
+  expect_match(
+    tabular:::.preset_colors_shape_error(list(text = 1)),
+    "single non-empty character"
+  )
+  expect_match(
+    tabular:::.preset_colors_shape_error(list(text = NA_character_)),
+    "single non-empty character"
+  )
+  expect_match(
+    tabular:::.preset_colors_shape_error(list(text = "")),
+    "single non-empty character"
+  )
+})
+
+test_that(".preset_padding_shape_error rejects non-list and unnamed entries", {
+  expect_match(
+    tabular:::.preset_padding_shape_error("foo"),
+    "must be a named list"
+  )
+  expect_match(
+    tabular:::.preset_padding_shape_error(list(3)),
+    "must all be named"
+  )
+})
+
+test_that(".preset_padding_shape_error accepts NULL and rejects bad side specs", {
+  expect_null(tabular:::.preset_padding_shape_error(list(body = NULL)))
+  expect_match(
+    tabular:::.preset_padding_shape_error(list(body = list(3, 4))),
+    "must all be named"
+  )
+  expect_match(
+    tabular:::.preset_padding_shape_error(list(body = list(top = NA_real_))),
+    "must be a single non-negative numeric"
+  )
+  expect_match(
+    tabular:::.preset_padding_shape_error(list(body = list(top = -1))),
+    "must be a single non-negative numeric"
+  )
+  expect_match(
+    tabular:::.preset_padding_shape_error(list(body = TRUE)),
+    "non-negative numeric or a list"
+  )
+})
+
+# ---------------------------------------------------------------------
+# Defensive branches in engine_borders.R — direct unit tests on the
+# internal helpers. Covers early-return guards, body_cols stamping,
+# the body_top / body_bottom aliases, and the non-style_node coercion
+# in .set_border_triple.
+# ---------------------------------------------------------------------
+
+test_that("engine_borders short-circuits on non-matrix cells_style", {
+  spec <- tabular(data.frame(x = 1))
+  expect_null(tabular:::engine_borders(spec, NULL))
+  expect_identical(
+    tabular:::engine_borders(spec, "not a matrix"),
+    "not a matrix"
+  )
+})
+
+test_that("engine_borders short-circuits when borders is empty", {
+  spec <- tabular(data.frame(x = 1))
+  m <- matrix(
+    list(style_node()),
+    nrow = 1L,
+    ncol = 1L,
+    dimnames = list(NULL, "x")
+  )
+  # No preset@borders -> identity on the matrix.
+  expect_identical(tabular:::engine_borders(spec, m), m)
+})
+
+test_that("engine_borders short-circuits on zero-row matrix", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(borders = list(outer = brdr()))
+  empty <- matrix(list(), nrow = 0L, ncol = 1L, dimnames = list(NULL, "x"))
+  expect_identical(tabular:::engine_borders(spec, empty), empty)
+})
+
+test_that("engine_borders stamps body_cols left between visible columns", {
+  spec <- tabular(data.frame(a = 1, b = 2, c = 3)) |>
+    preset(borders = list(body_cols = brdr("thin", "solid", "#000")))
+  grid <- as_grid(spec)
+  cs <- grid@pages[[1]]$cells_style
+  expect_true(is.na(cs[[1, "a"]]@border_left_style))
+  expect_identical(cs[[1, "b"]]@border_left_style, "solid")
+  expect_identical(cs[[1, "c"]]@border_left_style, "solid")
+})
+
+test_that(".resolve_border_regions maps body_top / body_bottom onto outer_top / outer_bottom", {
+  out <- tabular:::.resolve_border_regions(list(
+    body_top = brdr("medium", "dotted"),
+    body_bottom = brdr("hairline")
+  ))
+  expect_identical(out$outer_top$style, "dotted")
+  expect_identical(out$outer_bottom$style, "solid")
+})
+
+test_that(".visible_col_indices treats unknown col names as visible by default", {
+  spec <- tabular(data.frame(x = 1, y = 2))
+  idx <- tabular:::.visible_col_indices(spec, c("ghost", "x"))
+  expect_identical(unname(idx), c(1L, 2L))
+})
+
+test_that(".visible_col_indices honours col_spec@visible", {
+  spec <- tabular(data.frame(x = 1, y = 2)) |>
+    cols(x = col_spec(visible = TRUE), y = col_spec(visible = FALSE))
+  idx <- tabular:::.visible_col_indices(spec, c("x", "y"))
+  expect_identical(unname(idx), 1L)
+})
+
+test_that("engine_borders short-circuits when no columns are visible", {
+  spec <- tabular(data.frame(x = 1, y = 2)) |>
+    cols(x = col_spec(visible = FALSE), y = col_spec(visible = FALSE)) |>
+    preset(borders = list(outer = brdr()))
+  m <- matrix(
+    list(style_node(), style_node()),
+    nrow = 1L,
+    ncol = 2L,
+    dimnames = list(NULL, c("x", "y"))
+  )
+  expect_identical(tabular:::engine_borders(spec, m), m)
+})
+
+test_that(".stamp_body_cols short-circuits with fewer than 2 visible cols", {
+  m <- matrix(
+    list(style_node()),
+    nrow = 1L,
+    ncol = 1L,
+    dimnames = list(NULL, "x")
+  )
+  out <- tabular:::.stamp_body_cols(
+    m,
+    visible_idx = 1L,
+    triple = list(style = "solid", width = 1, color = "#000")
+  )
+  expect_identical(out, m)
+})
+
+test_that(".stamp_outer_edge short-circuits on empty matrix", {
+  empty <- matrix(list(), nrow = 0L, ncol = 0L)
+  out <- tabular:::.stamp_outer_edge(
+    empty,
+    visible_idx = integer(),
+    side = "top",
+    triple = list(style = "solid", width = 1, color = "#000")
+  )
+  expect_identical(out, empty)
+})
+
+# ---------------------------------------------------------------------
+# preset@fonts / @colors / @padding flow through each backend
+# (Pass B wiring). One proof per knob per backend confirms that
+# setting a knob produces a visible output token.
+# ---------------------------------------------------------------------
+
+test_that(".effective_font_family overlays fonts$body$family on @font_family", {
+  p <- preset_spec(
+    font_family = "serif",
+    fonts = list(body = list(family = "Inter"))
+  )
+  expect_identical(tabular:::.effective_font_family(p, "body"), "Inter")
+  # Falls back when the surface key is absent.
+  p2 <- preset_spec(font_family = "sans")
+  expect_identical(tabular:::.effective_font_family(p2, "body"), "sans")
+  # NULL-preset path returns the factory default font_family.
+  expect_identical(
+    tabular:::.effective_font_family(NULL, "body"),
+    preset_spec()@font_family
+  )
+})
+
+test_that(".effective_font_size overlays fonts$body$size on @font_size", {
+  p <- preset_spec(
+    font_size = 9,
+    fonts = list(body = list(size = 8))
+  )
+  expect_identical(tabular:::.effective_font_size(p, "body"), 8)
+  p2 <- preset_spec(font_size = 11)
+  expect_identical(tabular:::.effective_font_size(p2, "body"), 11)
+})
+
+test_that(".effective_color returns NA when token is unset or preset is NULL", {
+  p <- preset_spec(colors = list(text = "#ff0000"))
+  expect_identical(tabular:::.effective_color(p, "text"), "#ff0000")
+  expect_true(is.na(tabular:::.effective_color(p, "background")))
+  expect_true(is.na(tabular:::.effective_color(NULL, "text")))
+})
+
+test_that(".effective_padding returns NULL when surface is unset or preset is NULL", {
+  p <- preset_spec(padding = list(body = 5))
+  expect_identical(tabular:::.effective_padding(p, "body"), 5)
+  expect_null(tabular:::.effective_padding(p, "header"))
+  expect_null(tabular:::.effective_padding(NULL, "body"))
+})
+
+test_that("HTML emit consumes preset@fonts$body$family", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(fonts = list(body = list(family = "Inter")))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Single-name family without spaces is emitted unquoted by
+  # .html_quote_font; presence of the literal family name is the
+  # wire check.
+  expect_true(grepl("font-family: Inter", txt, fixed = TRUE))
+})
+
+test_that("HTML emit consumes preset@colors$text", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(colors = list(text = "#ff0000"))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl(
+    ".tabular-table td { color: #ff0000; }",
+    txt,
+    fixed = TRUE
+  ))
+})
+
+test_that("HTML emit consumes preset@padding$body", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(padding = list(body = 5))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl(
+    ".tabular-table tbody td { padding: 5pt; }",
+    txt,
+    fixed = TRUE
+  ))
+})
+
+test_that("DOCX emit consumes preset@colors$text on body cells", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(colors = list(text = "#ff0000"))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  td <- withr::local_tempdir()
+  utils::unzip(out, exdir = td)
+  doc <- paste(
+    readLines(file.path(td, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_true(grepl("<w:color w:val=\"FF0000\"/>", doc, fixed = TRUE))
+})
+
+test_that("DOCX emit consumes preset@padding$body via <w:tcMar>", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(padding = list(body = 5))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  td <- withr::local_tempdir()
+  utils::unzip(out, exdir = td)
+  doc <- paste(
+    readLines(file.path(td, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_true(grepl("<w:tcMar>", doc, fixed = TRUE))
+  expect_true(grepl(
+    "<w:top w:w=\"100\" w:type=\"dxa\"/>",
+    doc,
+    fixed = TRUE
+  ))
+})
+
+test_that("RTF emit consumes preset@fonts$body$family via the font table", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(fonts = list(body = list(family = "Inter")))
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("\\f0\\froman\\fprq2 Inter", txt, fixed = TRUE))
+})
+
+test_that("RTF emit consumes preset@colors$text via colortbl + cf token", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(colors = list(text = "#ff0000"))
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl(
+    "{\\colortbl;\\red255\\green0\\blue0;}",
+    txt,
+    fixed = TRUE
+  ))
+  expect_true(grepl("\\cf1 ", txt, fixed = TRUE))
+})
+
+test_that("RTF emit consumes preset@padding$body via \\trgaph", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(padding = list(body = 5))
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # 5pt -> 100 twips
+  expect_true(grepl("\\trowd\\trgaph100", txt, fixed = TRUE))
+})
+
+test_that("LaTeX emit consumes preset@colors$text via \\definecolor", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(colors = list(text = "#ff0000"))
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl(
+    "\\definecolor{tabular_text}{HTML}{FF0000}",
+    txt,
+    fixed = TRUE
+  ))
+  expect_true(grepl(
+    "\\AtBeginDocument{\\color{tabular_text}}",
+    txt,
+    fixed = TRUE
+  ))
+})
+
+test_that("LaTeX emit consumes preset@padding$body via tabularray rowsep", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(padding = list(body = 5))
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("rowsep=5pt", txt, fixed = TRUE))
+})
+
+test_that("LaTeX emit consumes preset@fonts$body$family in the font preamble", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(fonts = list(body = list(family = "Inter")))
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # .latex_font_lines routes any non-generic family through fontspec /
+  # pdftex packages; presence of the literal family name is the wire
+  # check.
+  expect_true(grepl("Inter", txt, fixed = TRUE))
+})
+
+test_that(".set_border_triple coerces non-style_node input via style_node()", {
+  out <- tabular:::.set_border_triple(
+    node = NULL,
+    prop_style = "border_top_style",
+    prop_width = "border_top_width",
+    prop_color = "border_top_color",
+    triple = list(style = "solid", width = 0.5, color = "#000")
+  )
+  expect_true(tabular:::is_style_node(out))
+  expect_identical(out@border_top_style, "solid")
+  expect_identical(out@border_top_width, 0.5)
+  expect_identical(out@border_top_color, "#000")
+})

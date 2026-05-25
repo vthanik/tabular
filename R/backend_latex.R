@@ -286,11 +286,15 @@ backend_latex <- function(grid, file) {
     nrow_body = nrow_body,
     n_cols_vis = length(col_names_vis)
   )
+  rows_inner <- c(
+    sprintf("valign=%s", .latex_valign_letter(body_valign)),
+    .latex_rowsep_inner(meta$preset)
+  )
   outer_args <- paste(
     c(
       sprintf("colspec={%s}", colspec),
       sprintf("rowhead=%d", rowhead),
-      sprintf("rows={valign=%s}", .latex_valign_letter(body_valign)),
+      sprintf("rows={%s}", paste(rows_inner, collapse = ", ")),
       border_directives
     ),
     collapse = ", "
@@ -681,6 +685,30 @@ backend_latex <- function(grid, file) {
 # resolver, DOCX/RTF/HTML emission); LaTeX gains border emission
 # in Phase 6 when the `brdr()` constructor lets the table-level
 # manifest accumulate per-cell entries cleanly.
+# Emit tabularray `rowsep=Xpt` for the table-level `rows={...}` arg,
+# driven by `preset@padding$body`. Uniform numeric inputs map to a
+# single rowsep; per-side lists average top + bottom (tabularray
+# carries one rowsep per row). Empty character vector when the knob
+# is unset so the longtblr arg stays minimal.
+.latex_rowsep_inner <- function(preset) {
+  pad <- .effective_padding(preset, "body")
+  if (is.null(pad)) {
+    return(character())
+  }
+  pt <- if (is.numeric(pad) && length(pad) == 1L) {
+    as.numeric(pad)
+  } else if (is.list(pad)) {
+    tb <- c(
+      if (is.null(pad$top)) 0 else as.numeric(pad$top),
+      if (is.null(pad$bottom)) 0 else as.numeric(pad$bottom)
+    )
+    mean(tb)
+  } else {
+    return(character())
+  }
+  sprintf("rowsep=%spt", format(pt, trim = TRUE, scientific = FALSE))
+}
+
 .latex_setcell_alignment <- function(style) {
   if (!is_style_node(style)) {
     return("")
@@ -906,9 +934,12 @@ backend_latex <- function(grid, file) {
     preset <- preset_spec()
   }
   geo <- .latex_geometry_opts(preset)
-  class_opt <- .latex_class_size(preset@font_size)
-  font_lines <- .latex_font_lines(preset@font_family, preset@font_size)
+  body_font_size <- .effective_font_size(preset, "body")
+  body_font_family <- .effective_font_family(preset, "body")
+  class_opt <- .latex_class_size(body_font_size)
+  font_lines <- .latex_font_lines(body_font_family, body_font_size)
   chrome <- .latex_pagestyle_block(pagehead_ast, pagefoot_ast, preset)
+  color_lines <- .latex_preset_color_lines(preset)
 
   c(
     sprintf("\\documentclass[%s]{article}", class_opt),
@@ -928,8 +959,28 @@ backend_latex <- function(grid, file) {
     "\\UseTblrLibrary{siunitx}",
     chrome$packages,
     font_lines,
+    color_lines,
     "\\setlength{\\parindent}{0pt}",
     chrome$style
+  )
+}
+
+# Emit `\definecolor{tabular_text}{HTML}{RRGGBB}` + a top-level
+# `\AtBeginDocument{\color{tabular_text}}` when `preset@colors$text`
+# is set; empty otherwise. The xcolor package is already loaded
+# unconditionally in the preamble.
+.latex_preset_color_lines <- function(preset) {
+  text_color <- .effective_color(preset, "text")
+  if (is.na(text_color) || !nzchar(text_color)) {
+    return(character())
+  }
+  hex <- toupper(sub("^#", "", as.character(text_color)))
+  if (!grepl("^[0-9A-F]{6}$", hex)) {
+    return(character())
+  }
+  c(
+    sprintf("\\definecolor{tabular_text}{HTML}{%s}", hex),
+    "\\AtBeginDocument{\\color{tabular_text}}"
   )
 }
 

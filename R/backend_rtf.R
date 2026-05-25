@@ -73,9 +73,14 @@ backend_rtf <- function(grid, file) {
 
   preamble <- c(
     "{\\rtf1\\ansi\\ansicpg1252\\deff0\\uc1",
-    .rtf_font_table(preset@font_family),
-    sprintf("\\fs%d", as.integer(round(preset@font_size * 2)))
+    .rtf_font_table(.effective_font_family(preset, "body")),
+    .rtf_color_table(preset),
+    sprintf(
+      "\\fs%d",
+      as.integer(round(.effective_font_size(preset, "body") * 2))
+    )
   )
+  preamble <- preamble[nzchar(preamble)]
 
   if (total == 0L) {
     section <- .render_rtf_empty(grid, preset)
@@ -719,6 +724,8 @@ backend_rtf <- function(grid, file) {
   }
 
   col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
+  trgaph <- .rtf_body_trgaph(preset)
+  cf_tok <- .rtf_body_cf_token(preset)
 
   out <- character()
   for (r in seq_len(nrow_data)) {
@@ -751,19 +758,55 @@ backend_rtf <- function(grid, file) {
         "\\pard\\plain\\intbl ",
         align_tok,
         " ",
+        cf_tok,
         text,
         "\\cell"
       )
     }
     out <- c(
       out,
-      "\\trowd\\trgaph108",
+      sprintf("\\trowd\\trgaph%d", trgaph),
       cellx_lines,
       cell_bodies,
       "\\row"
     )
   }
   out
+}
+
+# Resolve the body row's `\trgaph<halfWidth>` value (twips). The
+# legacy default of 108 twips (5.4pt) is preserved when
+# `preset@padding$body` is unset; a numeric override converts pt to
+# twips (1pt = 20 twips); a per-side list collapses to the average
+# of left + right since RTF carries only one gap per row.
+.rtf_body_trgaph <- function(preset) {
+  pad <- .effective_padding(preset, "body")
+  if (is.null(pad)) {
+    return(108L)
+  }
+  if (is.numeric(pad) && length(pad) == 1L) {
+    return(as.integer(round(pad * 20)))
+  }
+  if (is.list(pad)) {
+    lr <- c(
+      if (is.null(pad$left)) 0 else as.numeric(pad$left),
+      if (is.null(pad$right)) 0 else as.numeric(pad$right)
+    )
+    return(as.integer(round(mean(lr) * 20)))
+  }
+  108L
+}
+
+# Body cell text color token. Empty string when `preset@colors$text`
+# is unset (cell inherits the document default); `\cf1 ` (with the
+# trailing space terminator) when set, addressing the slot
+# registered by `.rtf_color_table()`.
+.rtf_body_cf_token <- function(preset) {
+  text_color <- .effective_color(preset, "text")
+  if (is.na(text_color) || !nzchar(text_color)) {
+    return("")
+  }
+  "\\cf1 "
 }
 
 # Map an `align` value to the RTF paragraph alignment control.
@@ -1045,6 +1088,41 @@ backend_rtf <- function(grid, file) {
 # server emits what it has), and Word on a Mac / Windows consumer
 # without Liberation reads the `\*\falt` -> "Times New Roman" ->
 # match. Result: same metric-compatible rendering on every OS.
+# Compose the `{\colortbl ...}` group. Always emits a leading
+# semicolon (the RTF "auto" sentinel at index 0). When
+# `preset@colors$text` is set, a second entry at index 1 carries
+# the user's text color (RGB triple); body cells switch to it via
+# `\cf1`. Without an explicit text color, only the auto entry is
+# registered and body cells inherit the document default.
+.rtf_color_table <- function(preset) {
+  text_color <- .effective_color(preset, "text")
+  if (is.na(text_color) || !nzchar(text_color)) {
+    return("")
+  }
+  rgb <- .rtf_color_rgb(text_color)
+  sprintf(
+    "{\\colortbl;\\red%d\\green%d\\blue%d;}",
+    rgb[[1L]],
+    rgb[[2L]],
+    rgb[[3L]]
+  )
+}
+
+# Translate a "#RRGGBB" hex color into an integer RGB triple. Falls
+# back to black on malformed input so the colortbl never emits a
+# negative or NA component.
+.rtf_color_rgb <- function(hex) {
+  s <- toupper(sub("^#", "", as.character(hex)))
+  if (!grepl("^[0-9A-F]{6}$", s)) {
+    return(c(0L, 0L, 0L))
+  }
+  c(
+    strtoi(substr(s, 1L, 2L), 16L),
+    strtoi(substr(s, 3L, 4L), 16L),
+    strtoi(substr(s, 5L, 6L), 16L)
+  )
+}
+
 .rtf_font_table <- function(font_family) {
   body_chain <- .resolve_font_stack(font_family, "rtf")
   mono_chain <- .resolve_font_stack("mono", "rtf")

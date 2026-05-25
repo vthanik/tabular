@@ -1046,7 +1046,69 @@ backend_html <- function(grid, file) {
     "@media print { .tabular-page { page-break-after: always; } .tabular-page-break { display: none; } .tabular-page-header, .tabular-page-footer { display: none; } }"
   )
   page_rules <- .html_render_page_band_rules(pagehead_ast, pagefoot_ast)
-  c("<style>", body_css, page_rules, "</style>")
+  preset_rules <- .html_preset_overrides_css(preset)
+  c("<style>", body_css, page_rules, preset_rules, "</style>")
+}
+
+# Emit CSS overrides driven by the Phase 6 `preset@colors` and
+# `preset@padding` knobs. Each override is a single ruleset that
+# tightens the baseline `.tabular-table` style above; unset knobs
+# emit nothing so cascade order is preserved and snapshot diffs
+# stay minimal when knobs are absent.
+.html_preset_overrides_css <- function(preset) {
+  if (!is_preset_spec(preset)) {
+    return(character())
+  }
+  rules <- character()
+  text_color <- .effective_color(preset, "text")
+  if (!is.na(text_color) && nzchar(text_color)) {
+    rules <- c(
+      rules,
+      sprintf(".tabular-table td { color: %s; }", text_color)
+    )
+  }
+  bg_color <- .effective_color(preset, "background")
+  if (!is.na(bg_color) && nzchar(bg_color)) {
+    rules <- c(
+      rules,
+      sprintf(".tabular-table { background: %s; }", bg_color)
+    )
+  }
+  pad <- .effective_padding(preset, "body")
+  if (!is.null(pad)) {
+    rules <- c(
+      rules,
+      sprintf(
+        ".tabular-table tbody td { padding: %s; }",
+        .html_padding_value(pad)
+      )
+    )
+  }
+  rules
+}
+
+# Translate a body-padding value (uniform numeric or named list of
+# top/right/bottom/left) to a CSS shorthand string in points.
+.html_padding_value <- function(pad) {
+  if (is.numeric(pad) && length(pad) == 1L) {
+    return(sprintf("%spt", format(pad, trim = TRUE, scientific = FALSE)))
+  }
+  if (is.list(pad)) {
+    sides <- c("top", "right", "bottom", "left")
+    vals <- vapply(
+      sides,
+      function(s) {
+        v <- pad[[s]]
+        if (is.null(v)) 0 else as.numeric(v)
+      },
+      numeric(1L)
+    )
+    return(paste(
+      sprintf("%spt", format(vals, trim = TRUE, scientific = FALSE)),
+      collapse = " "
+    ))
+  }
+  "0"
 }
 
 # Render the CSS `@page { @top-* / @bottom-* }` margin-box rules
@@ -1228,7 +1290,11 @@ backend_html <- function(grid, file) {
 # logic (generic family / single name / explicit stack) is
 # shared with every other backend.
 .html_font_family_css <- function(preset) {
-  fam <- if (is_preset_spec(preset)) preset@font_family else "serif"
+  fam <- if (is_preset_spec(preset)) {
+    .effective_font_family(preset, "body")
+  } else {
+    "serif"
+  }
   chain <- .resolve_font_stack(fam, "html")
   paste(vapply(chain, .html_quote_font, character(1L)), collapse = ", ")
 }

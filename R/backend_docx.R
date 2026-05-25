@@ -681,10 +681,10 @@ backend_docx <- function(grid, file) {
           align_tok <- .docx_align_token(halign)
           valign_tok <- .docx_valign_token(valign)
           tc_pr <- .docx_tcPr_inject_valign(
-            .docx_tcPr_from_style(style, widths_twips[[j]]),
+            .docx_tcPr_from_style(style, widths_twips[[j]], preset = preset),
             valign_tok
           )
-          r_pr_inner <- .docx_rPr_from_style(style)
+          r_pr_inner <- .docx_rPr_from_style(style, preset = preset)
           r_pr <- if (nzchar(r_pr_inner)) {
             paste0("<w:rPr>", r_pr_inner, "</w:rPr>")
           } else {
@@ -1497,7 +1497,8 @@ backend_docx <- function(grid, file) {
 .docx_tcPr_from_style <- function(
   style,
   width_twips,
-  gridspan = NA_integer_
+  gridspan = NA_integer_,
+  preset = NULL
 ) {
   parts <- character()
   parts <- c(
@@ -1506,6 +1507,10 @@ backend_docx <- function(grid, file) {
   )
   if (!is.na(gridspan) && gridspan > 1L) {
     parts <- c(parts, sprintf("<w:gridSpan w:val=\"%d\"/>", gridspan))
+  }
+  tc_mar <- .docx_tcMar_from_preset(preset)
+  if (nzchar(tc_mar)) {
+    parts <- c(parts, tc_mar)
   }
   if (is_style_node(style)) {
     # Per-side border resolution via the shared cascade helper —
@@ -1608,9 +1613,9 @@ backend_docx <- function(grid, file) {
 #
 # Emission order is stable (declaration order in style_node) so
 # byte-determinism is trivial.
-.docx_rPr_from_style <- function(style) {
+.docx_rPr_from_style <- function(style, preset = NULL) {
   if (!is_style_node(style)) {
-    return("")
+    style <- style_node()
   }
   parts <- character()
   if (!is.na(style@font_family) && nzchar(style@font_family)) {
@@ -1630,10 +1635,20 @@ backend_docx <- function(grid, file) {
   if (isTRUE(style@italic)) {
     parts <- c(parts, "<w:i/>")
   }
-  if (!is.na(style@color) && nzchar(style@color)) {
+  # Per-cell predicate color wins over the preset@colors$text default;
+  # only consult the preset when the style_node is silent on color.
+  effective_color <- if (!is.na(style@color) && nzchar(style@color)) {
+    style@color
+  } else {
+    .effective_color(preset, "text")
+  }
+  if (!is.na(effective_color) && nzchar(effective_color)) {
     parts <- c(
       parts,
-      sprintf("<w:color w:val=\"%s\"/>", .docx_normalize_color(style@color))
+      sprintf(
+        "<w:color w:val=\"%s\"/>",
+        .docx_normalize_color(effective_color)
+      )
     )
   }
   if (!is.na(style@font_size) && is.numeric(style@font_size)) {
@@ -1649,6 +1664,57 @@ backend_docx <- function(grid, file) {
     parts <- c(parts, "<w:u w:val=\"single\"/>")
   }
   paste(parts, collapse = "")
+}
+
+# Emit a `<w:tcMar>` block from `preset@padding$body`. Word's tcMar
+# uses twentieths-of-a-point (dxa) per side. Uniform numerics stamp
+# all four sides; per-side lists honour each side individually.
+# Returns "" when the knob is unset.
+.docx_tcMar_from_preset <- function(preset) {
+  if (is.null(preset) || !is_preset_spec(preset)) {
+    return("")
+  }
+  pad <- .effective_padding(preset, "body")
+  if (is.null(pad)) {
+    return("")
+  }
+  twips <- if (is.numeric(pad) && length(pad) == 1L) {
+    n <- as.integer(round(pad * 20))
+    c(top = n, left = n, bottom = n, right = n)
+  } else if (is.list(pad)) {
+    c(
+      top = if (is.null(pad$top)) {
+        0L
+      } else {
+        as.integer(round(as.numeric(pad$top) * 20))
+      },
+      left = if (is.null(pad$left)) {
+        0L
+      } else {
+        as.integer(round(as.numeric(pad$left) * 20))
+      },
+      bottom = if (is.null(pad$bottom)) {
+        0L
+      } else {
+        as.integer(round(as.numeric(pad$bottom) * 20))
+      },
+      right = if (is.null(pad$right)) {
+        0L
+      } else {
+        as.integer(round(as.numeric(pad$right) * 20))
+      }
+    )
+  } else {
+    return("")
+  }
+  paste0(
+    "<w:tcMar>",
+    sprintf("<w:top w:w=\"%d\" w:type=\"dxa\"/>", twips[["top"]]),
+    sprintf("<w:left w:w=\"%d\" w:type=\"dxa\"/>", twips[["left"]]),
+    sprintf("<w:bottom w:w=\"%d\" w:type=\"dxa\"/>", twips[["bottom"]]),
+    sprintf("<w:right w:w=\"%d\" w:type=\"dxa\"/>", twips[["right"]]),
+    "</w:tcMar>"
+  )
 }
 
 # Normalize a hex color to the OOXML `RRGGBB` form (no leading "#",
