@@ -329,6 +329,22 @@
 #'     )
 #'   )
 #'
+#' # ---- Example 3: Inspect ARD shape before pivoting ----
+#' #
+#' # The cards ARD format carries one row per (variable, statistic,
+#' # group) triple — each row is a single number plus its metadata.
+#' # Useful to inspect the input shape before pivoting to confirm
+#' # the right glue template for the value column.
+#' head(saf_aeoverall_card, 3)
+#'
+#' wide <- saf_aeoverall_card |>
+#'   pivot_across(statistic = "{n} ({p}%)")
+#' head(wide, 3)
+#'
+#' # The wide output is now ready for `tabular()`. `pivot_across`
+#' # is the only verb that consumes long ARD; everything else in
+#' # tabular operates on the wide shape.
+#'
 #' @seealso
 #' **Pipeline entry consumer:** [`tabular()`] — wraps the wide data
 #' frame this helper returns.

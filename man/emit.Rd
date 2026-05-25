@@ -208,6 +208,36 @@ emit(
   manifest  = TRUE
 )
 
+# ---- Example 3: Same spec, four backends — one-loop fan-out ----
+#
+# `emit()` dispatches by file extension, so the same spec can
+# render to every backend in one loop. Useful for visual diffs
+# across formats during development and for shipping a build
+# artefact set (RTF for submission, HTML for review, PDF for the
+# CSR appendix).
+eff <- eff_resp
+eff$stat_label <- factor(eff$stat_label, levels = c(
+  "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
+  "Objective Response Rate (CR + PR)",
+  "Disease Control Rate (CR + PR + SD)"
+))
+eff_spec <- tabular(eff, titles = "Best Overall Response") |>
+  cols(
+    stat_label = col_spec(usage = "group", label = "Response"),
+    row_type   = col_spec(visible = FALSE),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal")
+  ) |>
+  sort_rows(by = "stat_label")
+
+out_dir <- tempfile()
+dir.create(out_dir)
+for (ext in c(".html", ".rtf", ".tex", ".docx", ".md")) {
+  emit(eff_spec, file.path(out_dir, paste0("eff", ext)))
+}
+list.files(out_dir)
+
 }
 \seealso{
 \strong{No-I/O sibling:} \code{\link[=as_grid]{as_grid()}} returns the resolved grid

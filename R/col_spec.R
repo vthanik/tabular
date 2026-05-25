@@ -255,6 +255,37 @@
 #'   ) |>
 #'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 #'
+#' # ---- Example 3: Format string + na_text for clean numeric display ----
+#' #
+#' # A column that carries pre-computed numeric values (rather than
+#' # the typical pre-formatted "12 (5.8)" string) uses `format =`
+#' # to pin the printed precision and `na_text` to render missing
+#' # values as a dash rather than a literal "NA". `valign = "top"`
+#' # keeps the multi-line cell text aligned to the top.
+#' fit <- data.frame(
+#'   model     = c("ANCOVA", "MMRM", "Cox PH", "Bootstrap"),
+#'   estimate  = c(-2.31, -2.45, 0.81, -2.29),
+#'   lower_ci  = c(-3.42, NA,    0.68, -3.50),
+#'   upper_ci  = c(-1.20, NA,    0.97, -1.10)
+#' )
+#' tabular(fit, titles = "Treatment-effect estimates by model") |>
+#'   cols(
+#'     model    = col_spec(usage = "group",  label = "Model",   valign = "top"),
+#'     estimate = col_spec(label = "Estimate", align = "decimal", format = "%.2f"),
+#'     lower_ci = col_spec(
+#'       label   = "Lower\n95% CI",
+#'       align   = "decimal",
+#'       format  = "%.2f",
+#'       na_text = "--"
+#'     ),
+#'     upper_ci = col_spec(
+#'       label   = "Upper\n95% CI",
+#'       align   = "decimal",
+#'       format  = "%.2f",
+#'       na_text = "--"
+#'     )
+#'   )
+#'
 #' @seealso
 #' **Companion verb:** [`cols()`] attaches `col_spec` entries to a
 #' `tabular_spec` keyed by input column name.

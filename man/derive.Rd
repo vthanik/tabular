@@ -193,6 +193,32 @@ tabular(
   ) |>
   sort_rows(by = "soc")
 
+# ---- Example 3: Risk ratio with custom formatter via after-derive cols() ----
+#
+# Two-arm safety table where the derived column carries a risk
+# ratio (drug / placebo, 1 dp). The trick is to declare the
+# `col_spec(usage = "computed")` upfront so the formatter and
+# alignment are honoured even though the column does not exist
+# in `spec@data` until `derive()` runs.
+two_arm <- data.frame(
+  ae       = c("Headache", "Nausea", "Insomnia"),
+  placebo  = c(12L,  8L,  5L),
+  drug_100 = c(24L, 18L,  9L)
+)
+tabular(two_arm, titles = "Risk ratios: Drug 100 vs Placebo") |>
+  cols(
+    ae        = col_spec(usage = "group",    label = "Adverse Event"),
+    placebo   = col_spec(label  = "Placebo\nn",     align = "decimal"),
+    drug_100  = col_spec(label  = "Drug 100\nn",    align = "decimal"),
+    risk_ratio = col_spec(
+      usage  = "computed",
+      label  = "Risk Ratio\n(D100 / Pbo)",
+      align  = "decimal",
+      format = "\%.1f"
+    )
+  ) |>
+  derive(risk_ratio = drug_100 / placebo)
+
 }
 \seealso{
 \strong{Companion verb:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}} — declare

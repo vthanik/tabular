@@ -149,6 +149,29 @@ tabular(
   ) |>
   sort_rows(by = "stat_label")
 
+# ---- Example 3: Multiple peer bands side by side ----
+#
+# Vital-signs summary where the parameter columns (param,
+# paramcd, visit, stat_label) sit on the left under a "Variable"
+# band, and the arm columns sit on the right under "Treatment
+# Group". Demonstrates multiple top-level bands in one call --
+# bands render side by side in the order declared.
+vit <- saf_vital
+tabular(vit, titles = c("Table 14.4.1", "Vital Signs Summary")) |>
+  cols(
+    param      = col_spec(usage = "group", label = "Parameter"),
+    paramcd    = col_spec(visible = FALSE),
+    visit      = col_spec(usage = "group", label = "Visit"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal")
+  ) |>
+  headers(
+    "Variable"        = c("param", "visit", "stat_label"),
+    "Treatment Group" = c("placebo", "drug_50", "drug_100")
+  )
+
 }
 \seealso{
 \strong{Companion verb:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}} sets per-column

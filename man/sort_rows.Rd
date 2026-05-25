@@ -129,6 +129,31 @@ tabular(
   ) |>
   sort_rows(by = "stat_label")
 
+# ---- Example 3: Mixed-direction multi-key sort with hidden helper ----
+#
+# Demographics-style table sorted by `variable` ascending and a
+# hidden numeric key descending. The `descending` argument takes
+# one value per `by` entry so each key can flip direction
+# independently. The helper column rides in `spec@data` for the
+# sort but never renders (visible = FALSE on its col_spec).
+demo <- saf_demo
+demo$display_order <- match(demo$variable, unique(demo$variable))
+
+tabular(demo, titles = "Demographics, ranked within section") |>
+  cols(
+    variable      = col_spec(usage = "group", label = "Characteristic"),
+    stat_label    = col_spec(label = "Statistic"),
+    display_order = col_spec(visible = FALSE),
+    placebo       = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50       = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100      = col_spec(label = "Drug 100", align = "decimal"),
+    Total         = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  sort_rows(
+    by         = c("display_order", "stat_label"),
+    descending = c(FALSE, TRUE)
+  )
+
 }
 \seealso{
 \strong{Sibling build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},

@@ -121,6 +121,22 @@ tabular(data.frame(x = 1:3)) |>
   my_house_style() |>
   preset(borders = list(body_rows = brdr("hairline", "dashed")))
 
+# ---- Example 3: Width keyword vs numeric, every style enum value ----
+#
+# Width accepts both the four named keywords and a bare numeric
+# in points; style accepts six enum values. Use `is_brdr()` to
+# confirm the constructor returned a valid `tabular_brdr` rather
+# than a fallback list.
+for (w in c("hairline", "thin", "medium", "thick")) {
+  cat(w, "=", brdr(width = w)$width, "pt\n")
+}
+is_brdr(brdr(width = 0.75))
+
+lapply(
+  c("solid", "dashed", "dotted", "double", "dashdot", "none"),
+  function(s) brdr(style = s)
+)
+
 }
 \seealso{
 \strong{Where to attach:} \code{\link[=preset]{preset()}} takes a

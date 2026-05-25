@@ -190,6 +190,33 @@ tabular(
   sort_rows(by = "stat_label") |>
   paginate(panels = 2, repeat_headers = TRUE)
 
+# ---- Example 3: Orphan / widow floors + continuation marker ----
+#
+# Long vital-signs table with two safeguards: orphan_floor = 4
+# prevents fewer than 4 rows of a group landing alone at the
+# bottom of a page; widow_floor = 2 prevents fewer than 2 rows of
+# a group landing alone at the top of the next page; the
+# continuation marker prints on every page after the first.
+tabular(
+  saf_vital,
+  titles = c("Table 14.4.1", "Vital Signs Summary at Each Visit")
+) |>
+  cols(
+    param      = col_spec(usage = "group", label = "Parameter"),
+    paramcd    = col_spec(visible = FALSE),
+    visit      = col_spec(usage = "group", label = "Visit"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal")
+  ) |>
+  paginate(
+    keep_together = "param",
+    orphan_floor  = 4L,
+    widow_floor   = 2L,
+    continuation  = "(continued)"
+  )
+
 }
 \seealso{
 \strong{Render-geometry partner:} \code{\link[=preset]{preset()}} / \code{\link[=set_preset]{set_preset()}}

@@ -152,6 +152,21 @@
 #'   ) |>
 #'   sort_rows(by = "stat_label")
 #'
+#' # ---- Example 3: Minimal three-line spec from an inline data frame ----
+#' #
+#' # The smallest viable `tabular()` call: a tiny inline data frame,
+#' # a single-line title, no footnotes. The default `col_spec` per
+#' # column kicks in, giving sensible labels (the data frame's
+#' # column names) and left-aligned text. Useful when teaching the
+#' # core API shape without the clinical-context surface noise.
+#' tabular(
+#'   data.frame(
+#'     measure = c("Mean", "Median", "Min", "Max"),
+#'     value   = c("12.4", "12.0", "8.7", "17.2")
+#'   ),
+#'   titles = "Quick summary"
+#' )
+#'
 #' @seealso
 #' **Downstream build verbs:** [`cols()`] / [`col_spec()`],
 #' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`],

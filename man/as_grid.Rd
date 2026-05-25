@@ -155,6 +155,29 @@ ae_spec <- tabular(
 ae_grid <- as_grid(ae_spec)
 length(ae_grid@pages)
 
+# ---- Example 3: Subgroup partition — one page set per group ----
+#
+# When `subgroup()` is attached, `as_grid()` runs the resolve
+# pipeline once per group and concatenates the pages. Inspect
+# `@pages[[i]]$subgroup_index` and `@pages[[i]]$subgroup_line_ast`
+# to confirm each page knows its group identity and banner text.
+demo <- data.frame(
+  cohort = factor(c("A", "A", "B", "B"), levels = c("A", "B")),
+  param  = c("ALT", "AST", "ALT", "AST"),
+  value  = c("12.4", "18.1", "11.7", "17.5")
+)
+sg_spec <- tabular(demo) |>
+  cols(
+    cohort = col_spec(visible = FALSE),
+    param  = col_spec(label = "Parameter"),
+    value  = col_spec(label = "Result")
+  ) |>
+  subgroup("cohort")
+
+sg_grid <- as_grid(sg_spec)
+length(sg_grid@pages)
+vapply(sg_grid@pages, function(p) p$subgroup_index \%||\% NA_integer_, integer(1))
+
 }
 \seealso{
 \strong{I/O sibling:} \code{\link[=emit]{emit()}} writes the resolved grid to a file

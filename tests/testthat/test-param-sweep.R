@@ -203,7 +203,10 @@ test_that("tabular() accepts titles / footnotes of any length >= 0", {
   df <- data.frame(x = 1)
   expect_silent(tabular(df, titles = character()))
   expect_silent(tabular(df, titles = "Single title"))
-  expect_silent(tabular(df, titles = c("Line 1", "Line 2", "Line 3", "Line 4")))
+  expect_silent(tabular(
+    df,
+    titles = c("Line 1", "Line 2", "Line 3", "Line 4")
+  ))
   expect_silent(tabular(df, footnotes = character()))
   expect_silent(tabular(df, footnotes = paste("Footnote", 1:5)))
 })
@@ -242,7 +245,9 @@ test_that("subgroup(by = character()) clears the partition", {
 test_that("style() accepts every per-cell scope value", {
   df <- data.frame(x = 1:3)
   for (s in c("cell", "row", "col")) {
-    expect_silent(tabular(df) |> style(where = x == 1, bold = TRUE, .scope = s))
+    expect_silent(
+      tabular(df) |> style(where = x == 1, bold = TRUE, .scope = s)
+    )
   }
 })
 
