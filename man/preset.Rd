@@ -4,7 +4,7 @@
 \alias{preset}
 \title{Override the render preset on a spec}
 \usage{
-preset(.spec, ..., template = NULL, reset = FALSE)
+preset(.spec, ..., template = NULL, style = NULL, reset = FALSE)
 }
 \arguments{
 \item{.spec}{\emph{The \code{tabular_spec} to attach the preset to.}
