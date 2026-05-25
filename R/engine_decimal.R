@@ -735,7 +735,12 @@ engine_decimal <- function(
 }
 
 # Slot-1-only render — cell has at least one float but does not
-# match the dominant signature.
+# match the dominant signature. The cell's OWN leading literal is
+# preserved so opening syntax (e.g. the "(" of "(0.3, 8.1)" when
+# mixed with a dominant "13 (45.0)") survives intact. Using the
+# dominant's literal here would silently drop the cell's leading
+# punctuation — a correctness bug, since content beats alignment
+# when the cell has a structurally different shape.
 .render_cell_primary_only <- function(tok, dominant, widths, pad) {
   p <- tok$parsed[[1L]]
   rendered_slot <- .render_slot(
@@ -750,7 +755,7 @@ engine_decimal <- function(
     pad = pad
   )
   paste0(
-    dominant$literals[[1L]],
+    tok$literals[[1L]],
     rendered_slot,
     .raw_remainder_after_first_float(tok)
   )

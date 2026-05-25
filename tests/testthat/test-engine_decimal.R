@@ -250,6 +250,32 @@ test_that("saf_demo Age (years) column mixes 4 shapes and aligns on primary", {
   )
 })
 
+test_that("non-dominant cell's leading literal (e.g. opening paren of a CI line) survives", {
+  # Regression: when a cell's signature differs from the section's
+  # dominant signature, .render_cell_primary_only() used to prepend
+  # the dominant's leading literal — silently dropping the cell's
+  # own opening punctuation. For a column mixing n (pct) responders
+  # with a (low, high) CI row, the CI cell would render as
+  # " 0.3, 8.1) " (NBSP-padded where the "(" used to be). The fix
+  # preserves the cell's own leading literal.
+  v <- c("13 (45.0)", "8 (28.0)", "9 (31.0)", "(0.3, 8.1)")
+  out <- align(v)
+  expect_equal(
+    out,
+    c(
+      "13   (45.0)",
+      " 8   (28.0)",
+      " 9   (31.0)",
+      "( 0.3, 8.1)"
+    )
+  )
+  # The opening paren of the CI line is the first character — the
+  # bug used to swallow it and leave a leading space.
+  expect_equal(substr(out[[4L]], 1L, 1L), "(")
+  # All rows are the same column width.
+  expect_true(all(nchar(out) == nchar(out[[1L]])))
+})
+
 test_that("integer N row aligns with both est_spread and float rows in the same column", {
   # A stats block where the very first row is the N (integer), then
   # Mean (SD), then a few SD/Median/Min/Max rows that are floats.
