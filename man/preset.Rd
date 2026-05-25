@@ -171,6 +171,23 @@ for future em-aware decimal-padding refinement.
 rendering; the engine pads decimal columns by character
 count regardless. Roadmapped for em-unit prefix
 measurement in a later release.
+\item \strong{\code{width_mode}} — table-level column-sizing policy. Mirrors
+Word's Table Layout menu. \verb{<character(1)>}. One of:
+\itemize{
+\item \strong{\code{"content"}} \emph{(default)} — Each column auto-sized to
+\code{max(body, header)}. The table doesn't fill the page.
+Word's "Auto-fit Contents".
+\item \strong{\code{"window"}} — Auto-sized columns expand to share the
+residual page width equally. Pinned and percent columns
+keep their pins. Word's "Auto-fit Window".
+\item \strong{\code{"fixed"}} — Only explicit per-column widths drive
+the layout. Auto-sized columns collapse to a minimum
+sliver. Word's "Fixed Column Width".
+}
+
+\strong{Interaction:} Pair with \code{col_spec(width = ...)} pins to
+drive the layout under \code{"window"} / \code{"fixed"}. Under
+\code{"content"}, pins still take priority over auto columns.
 }
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Landscape A4, 8pt body, slim margins for one wide table.

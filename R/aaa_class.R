@@ -38,6 +38,24 @@
 .decimal_metrics_values <- c("afm", "systemfonts")
 .chrome_onscreen_values <- c("auto", "off")
 
+# Recognised values for `preset_spec@width_mode`. Table-level
+# column-sizing policy that mirrors Word's Table Layout menu
+# (Auto-fit Contents / Auto-fit Window / Fixed Column Width):
+#
+#   "content" (default) — Each column auto-sized to max(body, header).
+#                         The table doesn't fill the page. Today's
+#                         behavior; equivalent to Word's "Auto-fit
+#                         Contents".
+#   "window"            — Auto-sized columns expand to fill the
+#                         residual page width equally. Pinned and
+#                         percent columns keep their pins; the rest
+#                         share what's left. Word's "Auto-fit Window".
+#   "fixed"             — Use only explicit per-column widths.
+#                         Auto-sized columns collapse to the minimum
+#                         (`.min_auto_width_in`). The table doesn't
+#                         auto-expand. Word's "Fixed Column Width".
+.preset_width_mode_values <- c("content", "window", "fixed")
+
 # Recognised line styles on the new border_{side}_style scalars.
 # "none" is the explicit clear-this-border sentinel; the back-compat
 # Boolean knobs (rule_above / border_left / etc.) map to "solid"
@@ -704,6 +722,10 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "auto"
     ),
+    width_mode = S7::new_property(
+      S7::class_character,
+      default = "content"
+    ),
     alignment = S7::new_property(S7::class_list, default = list()),
     borders = S7::new_property(S7::class_list, default = list()),
     fonts = S7::new_property(S7::class_list, default = list()),
@@ -740,6 +762,14 @@ preset_spec <- S7::new_class(
     }
     if (!(self@chrome_onscreen %in% .chrome_onscreen_values)) {
       return("@chrome_onscreen must be auto or off")
+    }
+    if (!(self@width_mode %in% .preset_width_mode_values)) {
+      return(paste0(
+        "@width_mode must be one of ",
+        paste(shQuote(.preset_width_mode_values), collapse = ", "),
+        "; got ",
+        shQuote(self@width_mode)
+      ))
     }
     if (!(length(self@margins) %in% c(1L, 2L, 4L))) {
       return(paste0(

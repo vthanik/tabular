@@ -225,7 +225,7 @@
     widths[[nm]] <- .classify_width(w, cells_text, col_labels_ast, nm, preset)
   }
 
-  resolved <- .distribute_widths(widths, available)
+  resolved <- .distribute_widths(widths, available, mode = preset@width_mode)
 
   for (nm in vis_names) {
     full_cols[[nm]] <- S7::set_props(
@@ -291,7 +291,7 @@
 #     fit semantics; don't expand to fill.
 #   - If sum(auto) >  remaining: shrink auto proportionally so
 #     sum(auto) == remaining.
-.distribute_widths <- function(widths, available) {
+.distribute_widths <- function(widths, available, mode = "content") {
   if (length(widths) == 0L) {
     return(numeric(0L))
   }
@@ -325,6 +325,22 @@
     return(resolved)
   }
 
+  # Table-level width_mode dispatch. "content" (default) keeps the
+  # natural-fit shrink behavior; "window" promotes auto cols to share
+  # the residual equally (Word's Auto-fit Window); "fixed" collapses
+  # auto cols to the minimum sliver so only pinned + percent drive
+  # the layout (Word's Fixed Column Width).
+  if (identical(mode, "fixed")) {
+    resolved[is_auto] <- .min_auto_width_in
+    return(resolved)
+  }
+  if (identical(mode, "window")) {
+    resolved[is_auto] <- remaining / sum(is_auto)
+    return(resolved)
+  }
+
+  # mode == "content" (default): natural fit. Don't expand to fill;
+  # shrink proportionally only if auto total exceeds remaining.
   sum_auto <- sum(values[is_auto])
   if (sum_auto <= remaining) {
     return(resolved)
