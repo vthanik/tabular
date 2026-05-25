@@ -36,7 +36,7 @@ engine_style <- function(spec) {
   grid <- .empty_style_grid(nrow_data, ncol_data, col_names)
 
   styles <- spec@styles
-  if (!is_style_spec(styles) || length(styles@predicates) == 0L) {
+  if (!is_style_spec(styles)) {
     return(grid)
   }
 
@@ -44,6 +44,15 @@ engine_style <- function(spec) {
   for (pred in styles@predicates) {
     grid <- .apply_style_predicate(
       pred = pred,
+      grid = grid,
+      data = data,
+      col_names = col_names,
+      call = call
+    )
+  }
+  for (layer in styles@layers) {
+    grid <- .apply_style_layer(
+      layer = layer,
       grid = grid,
       data = data,
       col_names = col_names,
@@ -134,6 +143,136 @@ engine_style <- function(spec) {
     }
   }
   grid
+}
+
+# Apply one style_layer to the grid. Only body-surface layers
+# affect the per-cell style matrix; layers with any other surface
+# (headers, footnotes, table-edges, etc.) are routed by other
+# engines and are silently ignored here.
+.apply_style_layer <- function(layer, grid, data, col_names, call) {
+  loc <- layer@location
+  if (!identical(loc$surface, "body")) {
+    return(grid)
+  }
+  target_rows <- .resolve_layer_rows(loc, data, col_names, call = call)
+  if (length(target_rows) == 0L) {
+    return(grid)
+  }
+  target_cols <- .resolve_layer_cols(loc, col_names, call = call)
+  incoming <- layer@style
+  for (r in target_rows) {
+    for (c in target_cols) {
+      grid[[r, c]] <- .merge_style_node(grid[[r, c]], incoming)
+    }
+  }
+  grid
+}
+
+# Resolve a location's row filters (`i` and/or `where`) to a set of
+# row indices into `data`. Returns `seq_len(nrow(data))` when no
+# filter is set.
+.resolve_layer_rows <- function(loc, data, col_names, call) {
+  if (!is.null(loc$where)) {
+    result <- .eval_style_where(loc$where, data, call = call)
+    if (!is.logical(result)) {
+      cli::cli_abort(
+        c(
+          "{.fn cells_body} {.arg where} must evaluate to a logical vector.",
+          "x" = "Got {.obj_type_friendly {result}} of length {length(result)}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    if (length(result) == 1L && nrow(data) > 1L) {
+      result <- rep(result, nrow(data))
+    }
+    if (length(result) != nrow(data)) {
+      cli::cli_abort(
+        c(
+          "{.fn cells_body} {.arg where} returned length {length(result)}, expected {nrow(data)}.",
+          "i" = "The expression must evaluate to a length-{.code nrow} logical vector (or length 1)."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    return(which(result & !is.na(result)))
+  }
+  i <- loc$i
+  if (is.null(i)) {
+    return(seq_len(nrow(data)))
+  }
+  if (is.logical(i)) {
+    if (length(i) == 1L) {
+      i <- rep(i, nrow(data))
+    }
+    if (length(i) != nrow(data)) {
+      cli::cli_abort(
+        "Logical {.arg i} must be length 1 or {.code nrow(data)} ({nrow(data)}).",
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    return(which(i))
+  }
+  if (is.numeric(i)) {
+    if (any(i > nrow(data))) {
+      cli::cli_abort(
+        c(
+          "{.arg i} out of bounds.",
+          "x" = "Row {.val {as.integer(i[i > nrow(data)])}} exceeds nrow(data) = {nrow(data)}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    return(as.integer(i))
+  }
+  # Character — match against row names if any (uncommon for clinical
+  # tables) or warn and fall back to every row. For now, every row.
+  cli::cli_warn(
+    "Character row indices on {.fn cells_body} are not yet supported; applying to every row."
+  )
+  seq_len(nrow(data))
+}
+
+# Resolve a location's column filter (`j`) to column indices. Returns
+# every column when no filter is set.
+.resolve_layer_cols <- function(loc, col_names, call) {
+  j <- loc$j
+  if (is.null(j)) {
+    return(seq_along(col_names))
+  }
+  if (is.character(j)) {
+    matched <- match(j, col_names)
+    if (anyNA(matched)) {
+      missing <- j[is.na(matched)]
+      cli::cli_abort(
+        c(
+          "Unknown column{?s} in {.arg j}: {.val {missing}}.",
+          "i" = "Available: {.val {col_names}}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    return(matched)
+  }
+  if (is.numeric(j)) {
+    if (any(j > length(col_names))) {
+      cli::cli_abort(
+        c(
+          "{.arg j} out of bounds.",
+          "x" = "Column {.val {as.integer(j[j > length(col_names)])}} exceeds ncol(data) = {length(col_names)}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    return(as.integer(j))
+  }
+  seq_along(col_names)
 }
 
 # Evaluate the `where` quosure against the data mask. Errors are
