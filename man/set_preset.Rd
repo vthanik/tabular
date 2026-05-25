@@ -29,7 +29,7 @@ when the call cleared the default).
 Stash a \code{preset_spec} in the package-internal session environment.
 Every subsequent \code{tabular()} chain that does not attach its own
 \code{\link[=preset]{preset()}} inherits these knobs at render time. Mirrors ggplot2's
-\code{\link[ggplot2:theme_set]{ggplot2::theme_set()}}: one call up front, many tables downstream.
+\code{\link[ggplot2:get_theme]{ggplot2::theme_set()}}: one call up front, many tables downstream.
 }
 \details{
 \strong{Persistence.} The session preset lives in a package-internal
