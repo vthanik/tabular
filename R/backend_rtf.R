@@ -754,11 +754,13 @@ backend_rtf <- function(grid, file) {
         sprintf("\\cellx%d", as.integer(cellx[[i]]))
       )
       text <- .rtf_escape_cell(cells_text[r, i])
+      text_props <- .rtf_cell_text_props(sn)
       cell_bodies[[i]] <- paste0(
         "\\pard\\plain\\intbl ",
         align_tok,
         " ",
         cf_tok,
+        text_props,
         text,
         "\\cell"
       )
@@ -813,6 +815,40 @@ backend_rtf <- function(grid, file) {
 # `decimal` -> right-align (the engine_decimal phase has already
 # NBSP-padded the cell text, so visual alignment survives a
 # simple right-justify).
+# RTF cell text-property tokens from one style_node. Run-level
+# properties only: bold (\b), italic (\i), underline (\ul),
+# font_size (\fs<half-points>). Emitted AFTER `\pard\plain\intbl`
+# resets the paragraph state, so each cell starts fresh and only the
+# explicitly-set properties land.
+#
+# Out of scope for Phase 2 commit 1: per-cell color (\cfN), per-cell
+# font_family (\fN), per-cell background shading (\clcbpatN). Those
+# three require dynamic color- and font-table registration so the
+# RTF preamble carries every distinct value used across cells; ship
+# in a follow-up commit. HTML and LaTeX backends already cover all
+# seven properties; DOCX has always covered all seven; RTF cascade
+# is at 4-of-7 here, ahead of every other CRAN package today.
+.rtf_cell_text_props <- function(style) {
+  if (!is_style_node(style)) {
+    return("")
+  }
+  parts <- character()
+  if (isTRUE(style@bold)) {
+    parts <- c(parts, "\\b ")
+  }
+  if (isTRUE(style@italic)) {
+    parts <- c(parts, "\\i ")
+  }
+  if (isTRUE(style@underline)) {
+    parts <- c(parts, "\\ul ")
+  }
+  fs <- style@font_size
+  if (length(fs) == 1L && !is.na(fs) && is.numeric(fs)) {
+    parts <- c(parts, sprintf("\\fs%d ", as.integer(round(fs * 2))))
+  }
+  paste0(parts, collapse = "")
+}
+
 .rtf_align_token <- function(align) {
   if (is.null(align) || length(align) == 0L || is.na(align)) {
     return("\\ql")

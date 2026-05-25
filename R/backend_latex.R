@@ -659,7 +659,8 @@ backend_latex <- function(grid, file) {
             style_node()
           }
           prefix <- .latex_setcell_alignment(sn)
-          paste0(prefix, text)
+          wrapped <- .latex_wrap_text_props(text, sn)
+          paste0(prefix, wrapped)
         },
         character(1L)
       )
@@ -667,6 +668,82 @@ backend_latex <- function(grid, file) {
     },
     character(1L)
   )
+}
+
+# Wrap one cell's escaped text with LaTeX macros for the seven text
+# properties on a style_node: font_family, font_size, bold, italic,
+# underline, color, background. Application order is fixed so the
+# emitted source is stable: background -> color -> font_family ->
+# font_size -> underline -> italic -> bold. Each macro is only
+# applied when the property is explicitly set on the style_node;
+# silent (NA) properties pass through.
+#
+# Macros used:
+#   bold        \textbf{...}
+#   italic      \textit{...}
+#   underline   \underline{...}
+#   color       \textcolor[HTML]{RRGGBB}{...}
+#   background  \colorbox[HTML]{RRGGBB}{...}            (xcolor)
+#   font_family {\fontfamily{ff}\selectfont ...}        (group-scoped)
+#   font_size   {\fontsize{pt}{1.2pt}\selectfont ...}   (group-scoped)
+.latex_wrap_text_props <- function(text, style) {
+  if (!is_style_node(style) || !is.character(text) || length(text) != 1L) {
+    return(text)
+  }
+  out <- text
+  if (isTRUE(style@bold)) {
+    out <- paste0("\\textbf{", out, "}")
+  }
+  if (isTRUE(style@italic)) {
+    out <- paste0("\\textit{", out, "}")
+  }
+  if (isTRUE(style@underline)) {
+    out <- paste0("\\underline{", out, "}")
+  }
+  fs <- style@font_size
+  if (length(fs) == 1L && !is.na(fs) && is.numeric(fs)) {
+    out <- sprintf(
+      "{\\fontsize{%s}{%s}\\selectfont %s}",
+      format(fs, trim = TRUE),
+      format(fs * 1.2, trim = TRUE),
+      out
+    )
+  }
+  ff <- style@font_family
+  if (length(ff) == 1L && !is.na(ff) && nzchar(ff)) {
+    out <- sprintf("{\\fontfamily{%s}\\selectfont %s}", ff, out)
+  }
+  col <- style@color
+  if (length(col) == 1L && !is.na(col) && nzchar(col)) {
+    out <- sprintf(
+      "\\textcolor[HTML]{%s}{%s}",
+      .latex_normalize_hex_color(col),
+      out
+    )
+  }
+  bg <- style@background
+  if (length(bg) == 1L && !is.na(bg) && nzchar(bg)) {
+    out <- sprintf(
+      "\\colorbox[HTML]{%s}{%s}",
+      .latex_normalize_hex_color(bg),
+      out
+    )
+  }
+  out
+}
+
+# Strip the leading '#' from a hex colour for LaTeX's
+# `\textcolor[HTML]{...}` / `\colorbox[HTML]{...}` syntax, which
+# expects six hex digits without the '#'. Returns the input
+# unchanged when it doesn't look like a CSS hex colour.
+.latex_normalize_hex_color <- function(col) {
+  if (!is.character(col) || length(col) != 1L || is.na(col)) {
+    return(col)
+  }
+  if (startsWith(col, "#") && nchar(col) %in% c(7L, 4L)) {
+    return(toupper(substring(col, 2L)))
+  }
+  col
 }
 
 # Build a `\SetCell{halign=l/c/r,valign=t/m/b}` prefix for one body

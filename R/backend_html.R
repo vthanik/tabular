@@ -571,8 +571,8 @@ backend_html <- function(grid, file) {
           halign <- .effective_body_halign(sn, cs, preset)
           valign <- .effective_body_valign(sn, cs, preset)
           class_attr <- .html_cell_class_attr(halign, valign)
-          border_attr <- .html_cell_border_style_attr(sn)
-          paste0("<td", class_attr, border_attr, ">", text, "</td>")
+          style_attr <- .html_cell_inline_style_attr(sn)
+          paste0("<td", class_attr, style_attr, ">", text, "</td>")
         },
         character(1L)
       )
@@ -752,8 +752,20 @@ backend_html <- function(grid, file) {
 # side carries an override. Used in addition to the class attribute
 # so the CSS baseline still drives non-overridden cells.
 .html_cell_border_style_attr <- function(cell_style) {
-  if (!is_style_node(cell_style)) {
+  decls <- .html_cell_border_decls(cell_style)
+  if (length(decls) == 0L) {
     return("")
+  }
+  sprintf(" style=\"%s\"", paste(decls, collapse = " "))
+}
+
+# Sub-helper: the CSS border declarations alone (no `style=`
+# wrapper). Sits behind both the border-only and the combined inline-
+# style attribute paths so callers can merge decls without re-
+# parsing emitted attribute strings.
+.html_cell_border_decls <- function(cell_style) {
+  if (!is_style_node(cell_style)) {
+    return(character())
   }
   decls <- character()
   for (side in c("top", "right", "bottom", "left")) {
@@ -773,6 +785,56 @@ backend_html <- function(grid, file) {
       decls <- c(decls, decl)
     }
   }
+  decls
+}
+
+# CSS declarations for the seven text properties on a style_node:
+# font_family, font_size, bold, italic, underline, color, background.
+# Returns a character vector of `prop: value;` strings (zero or more);
+# the empty case means the cascade carried no explicit text style for
+# this cell.
+.html_cell_text_decls <- function(cell_style) {
+  if (!is_style_node(cell_style)) {
+    return(character())
+  }
+  decls <- character()
+  ff <- cell_style@font_family
+  if (length(ff) == 1L && !is.na(ff) && nzchar(ff)) {
+    decls <- c(decls, sprintf("font-family: %s;", ff))
+  }
+  fs <- cell_style@font_size
+  if (length(fs) == 1L && !is.na(fs) && is.numeric(fs)) {
+    decls <- c(decls, sprintf("font-size: %spt;", format(fs, trim = TRUE)))
+  }
+  if (isTRUE(cell_style@bold)) {
+    decls <- c(decls, "font-weight: bold;")
+  }
+  if (isTRUE(cell_style@italic)) {
+    decls <- c(decls, "font-style: italic;")
+  }
+  if (isTRUE(cell_style@underline)) {
+    decls <- c(decls, "text-decoration: underline;")
+  }
+  col <- cell_style@color
+  if (length(col) == 1L && !is.na(col) && nzchar(col)) {
+    decls <- c(decls, sprintf("color: %s;", col))
+  }
+  bg <- cell_style@background
+  if (length(bg) == 1L && !is.na(bg) && nzchar(bg)) {
+    decls <- c(decls, sprintf("background-color: %s;", bg))
+  }
+  decls
+}
+
+# Combined inline `style="..."` attribute: border decls + text decls
+# in one attribute (HTML allows only one `style` attribute per
+# element). Returns `""` when both subhelpers return empty so the
+# rendered `<td>` stays minimal.
+.html_cell_inline_style_attr <- function(cell_style) {
+  decls <- c(
+    .html_cell_border_decls(cell_style),
+    .html_cell_text_decls(cell_style)
+  )
   if (length(decls) == 0L) {
     return("")
   }
