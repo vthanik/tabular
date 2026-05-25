@@ -176,6 +176,41 @@ tabular(
   sort_rows(by = "stat_label") |>
   style(where = row_type == "derived", bold = TRUE, rule_above = TRUE, .scope = "row")
 
+# ---- Example 3: Per-side cell borders + alignment override ----
+#
+# Vital-signs summary where the `Mean (SD)` row across all
+# parameters carries a thick top border (separating it from the
+# `n` row above) and the body of those cells is centre-aligned
+# rather than the column-level default. Two style calls in a
+# row show the predicate cascade: first call paints the border,
+# second adds the per-cell halign override on the same predicate.
+vit <- saf_vital
+
+tabular(
+  vit,
+  titles = c("Table 14.4.1", "Vital Signs Summary at Each Visit")
+) |>
+  cols(
+    param      = col_spec(usage = "group", label = "Parameter"),
+    paramcd    = col_spec(visible = FALSE),
+    visit      = col_spec(usage = "group", label = "Visit"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal")
+  ) |>
+  style(
+    where = stat_label == "Mean (SD)",
+    border_top_style = "solid",
+    border_top_width = 1,
+    .scope = "row"
+  ) |>
+  style(
+    where = stat_label == "Mean (SD)",
+    halign = "center",
+    .scope = "row"
+  )
+
 }
 \seealso{
 \strong{Sibling build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},

@@ -47,10 +47,12 @@
 #' tabular's job is solely to lay them out with the per-group
 #' banner and page break.
 #'
-#' **Single-var only in v0.1.** Multi-variable crossing (e.g.
-#' `by = c("SEX", "AGEGR1")`) lands in the next release; the
-#' template syntax already accommodates it
-#' (`label = "Sex: {SEX} / Age: {AGEGR1}"`).
+#' **Multi-variable crossing.** `by = c("SEX", "AGEGR1")` partitions
+#' on every combination present in the data (first variable varies
+#' slowest, matching `expand.grid()` convention). An explicit
+#' `label` template is required for multi-var partitions since the
+#' single-var default `"<var>: {<var>}"` does not generalise; raise
+#' `tabular_error_subgroup_label_required` otherwise.
 #'
 #' @param spec *The `tabular_spec` to partition.*
 #'   `<tabular_spec>: required`.
@@ -60,8 +62,10 @@
 #'   `spec@data`. Length-0 (or `character(0)`) clears the partition.
 #'   Matches the `by =` arg convention of [`sort_rows()`].
 #'
-#'   **Restriction:** Single variable only in v0.1; multi-var
-#'   crossing arrives in the next release.
+#'   **Multi-variable.** Pass `c("var1", "var2")` to cross on every
+#'   combination present in the data. Multi-var partitions require
+#'   an explicit `label` template (the single-var auto-default does
+#'   not generalise).
 #'
 #' @param label *Banner template.*
 #'   `<character(1) | NULL>: default NULL`. Glue-style template
@@ -136,6 +140,35 @@
 #'     value    = col_spec(label = "Result")
 #'   ) |>
 #'   subgroup(by = "cohort", label = "Cohort: {cohort} (N = {cohort_n})")
+#'
+#' # ---- Example 3: Multi-variable crossing (Sex x Age group) ----
+#' #
+#' # Pass two columns to partition on every combination present in
+#' # the data. The label template MUST reference each variable
+#' # explicitly because the single-var auto-default does not
+#' # generalise. expand.grid order: first var (sex) varies slowest,
+#' # second (agegr) fastest, giving banner sequence F/<65, F/>=65,
+#' # M/<65, M/>=65.
+#' vitals <- data.frame(
+#'   sex   = factor(rep(c("F", "M"), each = 4), levels = c("F", "M")),
+#'   agegr = factor(
+#'     rep(c("<65", "<65", ">=65", ">=65"), 2),
+#'     levels = c("<65", ">=65")
+#'   ),
+#'   param = rep(c("Systolic BP", "Diastolic BP"), 4),
+#'   value = c("121", "78", "129", "82", "118", "75", "127", "80")
+#' )
+#' tabular(vitals) |>
+#'   cols(
+#'     sex   = col_spec(visible = FALSE),
+#'     agegr = col_spec(visible = FALSE),
+#'     param = col_spec(label = "Parameter"),
+#'     value = col_spec(label = "Mean")
+#'   ) |>
+#'   subgroup(
+#'     by    = c("sex", "agegr"),
+#'     label = "Sex: {sex} / Age: {agegr}"
+#'   )
 #'
 #' @seealso
 #' **Pipeline siblings:** [`sort_rows()`], [`paginate()`],
