@@ -773,8 +773,8 @@ preset_spec <- S7::new_class(
     padding = S7::new_property(S7::class_list, default = list()),
     title_pad_top = S7::new_property(S7::class_numeric, default = 1L),
     title_pad_bottom = S7::new_property(S7::class_numeric, default = 1L),
-    body_pad_top = S7::new_property(S7::class_numeric, default = 1L),
-    body_pad_bottom = S7::new_property(S7::class_numeric, default = 1L)
+    body_pad_top = S7::new_property(S7::class_numeric, default = 0L),
+    body_pad_bottom = S7::new_property(S7::class_numeric, default = 0L)
   ),
   validator = function(self) {
     if (!(self@orientation %in% .orientation_values)) {

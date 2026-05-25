@@ -3,7 +3,6 @@
 # Demographics
 # Safety Population
 
-
 | Statistic | Placebo<br/>N=86 | High Dose<br/>N=72 | Low Dose<br/>N=96 | Total<br/>N=254 |
 | :--- | ---: | ---: | ---: | ---: |
 | Age (years) |  |  |  |  |
@@ -58,5 +57,4 @@
 | Normal (18.5-24.9) |  57   (66.3 ) |  39   (54.2 ) |  46   (47.9 ) | 142   (55.9 ) |
 | Overweight (25-29.9) |  20   (23.3 ) |  23   (31.9 ) |  32   (33.3 ) |  75   (29.5 ) |
 | Obese (>=30) |   6   ( 7.0 ) |   9   (12.5 ) |  13   (13.5 ) |  28   (11.0 ) |
-
 Source: ADSL.

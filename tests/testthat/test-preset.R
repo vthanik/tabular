@@ -134,12 +134,15 @@ test_that("preset() snapshot errors", {
 # Title + body pad knobs (Phase 7c)
 # ---------------------------------------------------------------------
 
-test_that("preset_spec() defaults all four pad knobs to 1L", {
+test_that("preset_spec() default pads: title 1 / 1, body 0 / 0", {
+  # body_pad_* defaults to 0 to avoid stacking with title_pad_bottom
+  # below the title block — opt-in for subgroup banner + no-footnote
+  # cases.
   p <- preset_spec()
   expect_equal(p@title_pad_top, 1L)
   expect_equal(p@title_pad_bottom, 1L)
-  expect_equal(p@body_pad_top, 1L)
-  expect_equal(p@body_pad_bottom, 1L)
+  expect_equal(p@body_pad_top, 0L)
+  expect_equal(p@body_pad_bottom, 0L)
 })
 
 test_that("preset() accepts integer and numeric pad values", {
