@@ -5,14 +5,14 @@
 \alias{saf_vital}
 \title{Vital-signs summary}
 \format{
-A data frame with 32 rows and 7 columns:
+A data frame with 64 rows and 7 columns:
 \describe{
 \item{\code{paramcd}}{CDISC parameter code (\code{SYSBP} / \code{DIABP} /
 \code{PULSE} / \code{TEMP}). Repeats across visit and statistic; use
 \code{col_spec(usage = "group")} to collapse.}
 \item{\code{param}}{Decoded parameter name.}
-\item{\code{visit}}{Analysis visit label (\code{"Baseline"} /
-\code{"End of Treatment"}).}
+\item{\code{visit}}{Analysis visit label (\code{"Baseline"} / \code{"Week 8"} /
+\code{"Week 16"} / \code{"End of Treatment"}).}
 \item{\code{stat_label}}{Statistic label.}
 \item{\code{placebo}, \code{drug_50}, \code{drug_100}}{Per-arm cell text.}
 }
@@ -26,9 +26,11 @@ saf_vital
 }
 \description{
 Pre-summarised vital-signs stats. Four parameters (SYSBP, DIABP,
-PULSE, TEMP) at two visits (Baseline, End of Treatment), each
-producing four statistic rows (\code{n}, \code{Mean (SD)}, \code{Median},
-\verb{Min, Max}).
+PULSE, TEMP) at four visits (Baseline, Week 8, Week 16, End of
+Treatment), each producing four statistic rows (\code{n}, \code{Mean (SD)},
+\code{Median}, \verb{Min, Max}). The 4 x 4 x 4 grid makes this dataset a
+natural fit for \code{\link[=paginate]{paginate()}} examples — 64 rows comfortably exceed
+a single page under typical clinical row-per-page settings.
 }
 \examples{
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
@@ -60,7 +62,6 @@ tabular(
   )
 }
 \seealso{
-\link{saf_vital_card} for the long-format ARD companion;
 \link{saf_n} for BigN denominators.
 }
 \keyword{datasets}

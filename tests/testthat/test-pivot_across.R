@@ -200,8 +200,16 @@ test_that("Named-list-by-context dispatches per context", {
 # ---------------------------------------------------------------------
 
 test_that("Named-list-by-variable: per-variable spec wins, default falls through", {
+  # Filter to AGE + categoricals so the categorical fallback handles
+  # everything; WEIGHT/HEIGHT/BMI now also live in saf_demo_card and need
+  # their own continuous rule which is not the scenario under test here.
+  ard <- saf_demo_card[
+    saf_demo_card$variable %in% c("AGE", "AGEGR1", "SEX", "RACE", "ETHNIC"),
+    ,
+    drop = FALSE
+  ]
   out <- pivot_across(
-    saf_demo_card,
+    ard,
     statistic = list(
       AGE = "{mean}",
       categorical = "{n} ({p}%)"
@@ -1114,21 +1122,15 @@ test_that("pivot_across raises when column filter removes all rows", {
 # ---------------------------------------------------------------------
 
 test_that("pivot_across() works on all bundled _card datasets", {
-  # Use context-aware statistic so continuous variables get "{mean} ({sd})"
-  # and categorical get "{n} ({p}%)".
+  # Two ARD shapes are shipped: flat (saf_demo_card, mixed continuous +
+  # categorical) and hierarchical (saf_aesocpt_card, SOC / PT nested).
   stat <- list(
     continuous = "{mean} ({sd})",
     categorical = "{n} ({p}%)"
   )
-  for (ds in c(
-    "saf_demo_card",
-    "saf_aeoverall_card",
-    "saf_vital_card",
-    "eff_resp_card"
-  )) {
-    out <- pivot_across(get(ds), statistic = stat)
-    expect_s3_class(out, "data.frame")
-  }
+  out <- pivot_across(saf_demo_card, statistic = stat)
+  expect_s3_class(out, "data.frame")
+
   out_h <- pivot_across(saf_aesocpt_card, statistic = stat)
   expect_s3_class(out_h, "data.frame")
   expect_true("soc" %in% names(out_h))

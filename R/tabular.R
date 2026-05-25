@@ -36,8 +36,8 @@
 #'   **Restriction:** At least one column; column names must be
 #'   unique. Zero rows is accepted (engine renders a "No data" stub).
 #'   **Interaction:** The `cards`-format counterparts
-#'   (`saf_demo_card`, `eff_resp_card`, ...) are NOT accepted
-#'   directly; pipe through [`pivot_across()`] first.
+#'   (`saf_demo_card`, `saf_aesocpt_card`) are NOT accepted directly;
+#'   pipe through [`pivot_across()`] first.
 #'
 #' @param titles *Page-title block, one element per row.*
 #'   `<character> | NULL: default NULL`. Each element renders on

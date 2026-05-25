@@ -329,7 +329,7 @@ backend_latex <- function(grid, file) {
 # Per-cell predicate borders from `style()` are NOT routed through
 # this surface; they would require partial hline{N}={col_a-col_b}
 # emissions which Phase 6 leaves to a future revisit. The
-# regions above cover the BMS Appendix I baseline cleanly.
+# regions above cover the canonical submission Appendix I baseline cleanly.
 .latex_border_directives <- function(preset, rowhead, nrow_body, n_cols_vis) {
   if (!is_preset_spec(preset)) {
     return(character())

@@ -45,8 +45,8 @@ runs the full resolve pipeline per group, and concatenates the
 results. \strong{A hard page break is inserted between groups} —
 every subgroup value starts on its own page. A centred banner
 line appears above the column-header rule on every page of the
-group (including continuation pages), matching the BMS Appendix
-I layout convention.
+group (including continuation pages), matching the canonical
+submission page-layout convention.
 }
 \details{
 \strong{Label is a glue-style template.} When \code{label} carries

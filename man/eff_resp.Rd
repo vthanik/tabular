@@ -5,17 +5,22 @@
 \alias{eff_resp}
 \title{Best Overall Response and Response Rates}
 \format{
-A data frame with 9 rows and 5 columns:
+A data frame with 13 rows and 5 columns:
 \describe{
 \item{\code{stat_label}}{Row label
 (\code{"CR"}, \code{"PR"}, \code{"SD"}, \code{"NON-CR/NON-PD"}, \code{"PD"}, \code{"NE"},
 \code{"MISSING"}, \code{"Objective Response Rate (CR + PR)"},
-\code{"Disease Control Rate (CR + PR + SD)"}).}
-\item{\code{row_type}}{\code{"category"} for BOR categorical rows or
-\code{"derived"} for ORR / DCR rate rows. Hide via
+\code{"  95\% CI (Clopper-Pearson)"},
+\code{"Clinical Benefit Rate (CR + PR + SD)"},
+\code{"  95\% CI (Clopper-Pearson)"},
+\code{"Disease Control Rate (CR + PR + SD + NON-CR/NON-PD)"},
+\code{"  95\% CI (Clopper-Pearson)"}).}
+\item{\code{row_type}}{\code{"category"} for BOR categorical rows,
+\code{"derived"} for ORR / CBR / DCR rate rows, \code{"ci"} for the
+paired confidence-interval rows. Hide via
 \code{col_spec(visible = FALSE)} or use as a sort tie-breaker.}
 \item{\code{placebo}, \code{drug_50}, \code{drug_100}}{Per-arm cell text
-(\code{"n (pct)"}).}
+(\code{"n (pct)"} on rate rows, \code{"(lower, upper)"} on CI rows).}
 }
 }
 \source{
@@ -27,25 +32,20 @@ eff_resp
 }
 \description{
 Pre-summarised efficacy table. Per-arm counts of best overall
-response (BOR) per CDISC category, plus derived ORR and DCR
-rate rows. Order is naturally categorical-then-derived; coerce
-\code{stat_label} to a factor with the CDISC level order before
-\code{sort_rows()} to lock in the canonical display sequence.
+response (BOR) per CDISC category, plus derived ORR, CBR, and DCR
+rate rows each followed by an exact (Clopper-Pearson) 95\% CI row.
+Order is naturally categorical-then-derived; coerce \code{stat_label}
+to a factor with the CDISC level order before \code{sort_rows()} to
+lock in the canonical display sequence.
 }
 \examples{
-# 95\% efficacy pattern: BOR table in CDISC response order with
-# derived ORR/DCR rows after.
-bor_levels <- c(
-  "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
-  "Objective Response Rate (CR + PR)",
-  "Disease Control Rate (CR + PR + SD)"
-)
-eff <- eff_resp
-eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
+# 95\% efficacy pattern: BOR categories in CDISC response order,
+# followed by derived ORR / CBR / DCR rate rows each paired with
+# an exact 95\% CI row. The source already ships in the right
+# display order, so no sort step is needed.
 ne <- stats::setNames(eff_n$n, eff_n$arm_short)
-
 tabular(
-  eff,
+  eff_resp,
   titles = c(
     "Table 14.2.1",
     "Best Overall Response and Response Rates",
@@ -67,11 +67,9 @@ tabular(
       label = sprintf("Drug 100\nN=\%d", ne["drug_100"]),
       align = "decimal"
     )
-  ) |>
-  sort_rows(by = "stat_label")
+  )
 }
 \seealso{
-\link{eff_resp_card} for the long-format ARD companion;
 \link{eff_n} for BigN denominators.
 }
 \keyword{datasets}

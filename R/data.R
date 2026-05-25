@@ -1,20 +1,25 @@
-# Per-dataset roxygen blocks for the 12 demo tables:
+# Per-dataset roxygen blocks for the 9 demo tables:
 # - 5 pre-summarised wide tables tabular() consumes directly
-# - 5 cards ARD companions showing the upstream long shape
+# - 2 cards ARD companions covering the flat + hierarchical shapes
 # - 2 BigN denominator tables (safety / efficacy populations)
-# Source: data-raw/bundle-demo.R derives all 12 from `pharmaverseadam`.
+# Source: data-raw/bundle-demo.R derives all 9 from `pharmaverseadam`.
 
 #' Demographics summary, Safety Population
 #'
 #' Pre-summarised wide-format demographics suitable for direct
-#' passing into [tabular()]. One row per displayed statistic, with
-#' both continuous variables (AGE → `n`, `Mean (SD)`, `Median`,
-#' `Q1, Q3`, `Min, Max`) and categorical variables (AGEGR1 / SEX /
-#' RACE / ETHNIC, each level rendered as `n (%)`). Shaped for the
-#' display-only contract: every cell is the final string that will
-#' appear in the rendered table.
+#' passing into [tabular()]. One row per displayed statistic. Eight
+#' parameter blocks:
 #'
-#' @format A data frame with 21 rows and 6 columns:
+#' - continuous: `Age (years)`, `Weight (kg)`, `Height (cm)`,
+#'   `BMI (kg/m^2)` — each emitted as `n`, `Mean (SD)`, `Median`,
+#'   `Q1, Q3`, `Min, Max`
+#' - categorical: `Age Group`, `Sex`, `Race`, `Ethnicity`,
+#'   `BMI Category` — each level rendered as `n (%)`
+#'
+#' Shaped for the display-only contract: every cell is the final
+#' string that will appear in the rendered table.
+#'
+#' @format A data frame with 35 rows and 6 columns:
 #' \describe{
 #'   \item{`variable`}{Display-block label (`"Age (years)"`,
 #'     `"Age Group, n (%)"`, `"Sex, n (%)"`, `"Race, n (%)"`,
@@ -30,7 +35,8 @@
 #'
 #' @source Derived in `data-raw/bundle-demo.R` from
 #'   `pharmaverseadam::adsl` filtered to `SAFFL == "Y"` and the three
-#'   CDISCPILOT01 treatment arms.
+#'   CDISCPILOT01 treatment arms. Baseline Weight / Height / BMI are
+#'   joined in from `pharmaverseadam::advs`.
 #'
 #' @seealso [saf_demo_card] for the long-format ARD companion;
 #'   [saf_n] for the matching BigN denominators.
@@ -72,17 +78,20 @@
 #' Overall adverse-event summary, Safety Population
 #'
 #' Pre-summarised wide-format AE overview. Two clinical blocks:
-#' high-level flag rows (any TEAE, any SAE, any treatment-related)
-#' and maximum-severity rows (mild / moderate / severe). Severity
-#' rows are indented with two leading spaces so a single
+#' high-level flag rows (any TEAE, any SAE, any treatment-related,
+#' any AE leading to death, any AE recovered / resolved) and
+#' maximum-severity rows (mild / moderate / severe). Severity rows
+#' are indented with two leading spaces so a single
 #' `cols(stat_label = col_spec(usage = "group"))` declaration drives
 #' both the block-header rows and the indented detail rows.
 #'
-#' @format A data frame with 6 rows and 5 columns:
+#' @format A data frame with 8 rows and 5 columns:
 #' \describe{
 #'   \item{`stat_label`}{Row label
 #'     (`"Any TEAE"`, `"Any Serious AE (SAE)"`,
 #'     `"Any AE Related to Study Drug"`,
+#'     `"Any AE Leading to Death"`,
+#'     `"Any AE Recovered / Resolved"`,
 #'     `"  Maximum severity: Mild"`, `"  Maximum severity: Moderate"`,
 #'     `"  Maximum severity: Severe"`).}
 #'   \item{`placebo`}{Placebo arm cell text (`"n (pct)"`).}
@@ -95,8 +104,7 @@
 #'   `pharmaverseadam::adae` filtered to `SAFFL == "Y"` and
 #'   `TRTEMFL == "Y"`.
 #'
-#' @seealso [saf_aeoverall_card] for the long-format ARD companion;
-#'   [saf_n] for BigN denominators; [saf_aesocpt] for the
+#' @seealso [saf_n] for BigN denominators; [saf_aesocpt] for the
 #'   SOC / PT detail companion.
 #'
 #' @examples
@@ -134,12 +142,14 @@
 #'
 #' Pre-summarised AE-by-SOC/PT table. Interleaved row order: overall
 #' "any TEAE" row first, then per-SOC blocks where each SOC row is
-#' followed by its preferred-term detail rows. Top 5 SOCs and top 3
-#' PTs per SOC are kept (size guard); `row_type` marks the role of
-#' each row so a downstream pipeline can sort, indent, or hide
-#' selectively.
+#' followed by its preferred-term detail rows. Top 10 SOCs and top
+#' 5 PTs per SOC are kept; `row_type` marks the role of each row so
+#' a downstream pipeline can sort, indent, or hide selectively. The
+#' richer SOC × PT slice exercises [paginate()] and the engine's
+#' horizontal-panel splitter end-to-end on a realistic submission
+#' shell.
 #'
-#' @format A data frame with 21 rows and 7 columns:
+#' @format A data frame with 61 rows and 7 columns:
 #' \describe{
 #'   \item{`soc`}{System Organ Class label. Repeats across the SOC's
 #'     PT rows so `cols(usage = "group")` collapses the run at
@@ -157,9 +167,8 @@
 #' }
 #'
 #' @source Derived in `data-raw/bundle-demo.R` from
-#'   `pharmaverseadam::adae`. Filtered to the top 5 SOCs by total
-#'   incidence and the top 3 PTs per SOC to keep the bundled `.rda`
-#'   under 50 KB.
+#'   `pharmaverseadam::adae`. Filtered to the top 10 SOCs by total
+#'   incidence and the top 5 PTs per SOC.
 #'
 #' @seealso [saf_aesocpt_card] for the hierarchical long ARD;
 #'   [saf_n] for BigN denominators.
@@ -212,18 +221,20 @@
 #' Vital-signs summary
 #'
 #' Pre-summarised vital-signs stats. Four parameters (SYSBP, DIABP,
-#' PULSE, TEMP) at two visits (Baseline, End of Treatment), each
-#' producing four statistic rows (`n`, `Mean (SD)`, `Median`,
-#' `Min, Max`).
+#' PULSE, TEMP) at four visits (Baseline, Week 8, Week 16, End of
+#' Treatment), each producing four statistic rows (`n`, `Mean (SD)`,
+#' `Median`, `Min, Max`). The 4 x 4 x 4 grid makes this dataset a
+#' natural fit for [paginate()] examples — 64 rows comfortably exceed
+#' a single page under typical clinical row-per-page settings.
 #'
-#' @format A data frame with 32 rows and 7 columns:
+#' @format A data frame with 64 rows and 7 columns:
 #' \describe{
 #'   \item{`paramcd`}{CDISC parameter code (`SYSBP` / `DIABP` /
 #'     `PULSE` / `TEMP`). Repeats across visit and statistic; use
 #'     `col_spec(usage = "group")` to collapse.}
 #'   \item{`param`}{Decoded parameter name.}
-#'   \item{`visit`}{Analysis visit label (`"Baseline"` /
-#'     `"End of Treatment"`).}
+#'   \item{`visit`}{Analysis visit label (`"Baseline"` / `"Week 8"` /
+#'     `"Week 16"` / `"End of Treatment"`).}
 #'   \item{`stat_label`}{Statistic label.}
 #'   \item{`placebo`, `drug_50`, `drug_100`}{Per-arm cell text.}
 #' }
@@ -231,8 +242,7 @@
 #' @source Derived in `data-raw/bundle-demo.R` from
 #'   `pharmaverseadam::advs`.
 #'
-#' @seealso [saf_vital_card] for the long-format ARD companion;
-#'   [saf_n] for BigN denominators.
+#' @seealso [saf_n] for BigN denominators.
 #'
 #' @examples
 #' n <- stats::setNames(saf_n$n, saf_n$arm_short)
@@ -267,44 +277,43 @@
 #' Best Overall Response and Response Rates
 #'
 #' Pre-summarised efficacy table. Per-arm counts of best overall
-#' response (BOR) per CDISC category, plus derived ORR and DCR
-#' rate rows. Order is naturally categorical-then-derived; coerce
-#' `stat_label` to a factor with the CDISC level order before
-#' `sort_rows()` to lock in the canonical display sequence.
+#' response (BOR) per CDISC category, plus derived ORR, CBR, and DCR
+#' rate rows each followed by an exact (Clopper-Pearson) 95% CI row.
+#' Order is naturally categorical-then-derived; coerce `stat_label`
+#' to a factor with the CDISC level order before `sort_rows()` to
+#' lock in the canonical display sequence.
 #'
-#' @format A data frame with 9 rows and 5 columns:
+#' @format A data frame with 13 rows and 5 columns:
 #' \describe{
 #'   \item{`stat_label`}{Row label
 #'     (`"CR"`, `"PR"`, `"SD"`, `"NON-CR/NON-PD"`, `"PD"`, `"NE"`,
 #'     `"MISSING"`, `"Objective Response Rate (CR + PR)"`,
-#'     `"Disease Control Rate (CR + PR + SD)"`).}
-#'   \item{`row_type`}{`"category"` for BOR categorical rows or
-#'     `"derived"` for ORR / DCR rate rows. Hide via
+#'     `"  95% CI (Clopper-Pearson)"`,
+#'     `"Clinical Benefit Rate (CR + PR + SD)"`,
+#'     `"  95% CI (Clopper-Pearson)"`,
+#'     `"Disease Control Rate (CR + PR + SD + NON-CR/NON-PD)"`,
+#'     `"  95% CI (Clopper-Pearson)"`).}
+#'   \item{`row_type`}{`"category"` for BOR categorical rows,
+#'     `"derived"` for ORR / CBR / DCR rate rows, `"ci"` for the
+#'     paired confidence-interval rows. Hide via
 #'     `col_spec(visible = FALSE)` or use as a sort tie-breaker.}
 #'   \item{`placebo`, `drug_50`, `drug_100`}{Per-arm cell text
-#'     (`"n (pct)"`).}
+#'     (`"n (pct)"` on rate rows, `"(lower, upper)"` on CI rows).}
 #' }
 #'
 #' @source Derived in `data-raw/bundle-demo.R` from
 #'   `pharmaverseadam::adrs_onco` filtered to `PARAMCD == "BOR"`.
 #'
-#' @seealso [eff_resp_card] for the long-format ARD companion;
-#'   [eff_n] for BigN denominators.
+#' @seealso [eff_n] for BigN denominators.
 #'
 #' @examples
-#' # 95% efficacy pattern: BOR table in CDISC response order with
-#' # derived ORR/DCR rows after.
-#' bor_levels <- c(
-#'   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
-#'   "Objective Response Rate (CR + PR)",
-#'   "Disease Control Rate (CR + PR + SD)"
-#' )
-#' eff <- eff_resp
-#' eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
+#' # 95% efficacy pattern: BOR categories in CDISC response order,
+#' # followed by derived ORR / CBR / DCR rate rows each paired with
+#' # an exact 95% CI row. The source already ships in the right
+#' # display order, so no sort step is needed.
 #' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
-#'
 #' tabular(
-#'   eff,
+#'   eff_resp,
 #'   titles = c(
 #'     "Table 14.2.1",
 #'     "Best Overall Response and Response Rates",
@@ -326,11 +335,10 @@
 #'       label = sprintf("Drug 100\nN=%d", ne["drug_100"]),
 #'       align = "decimal"
 #'     )
-#'   ) |>
-#'   sort_rows(by = "stat_label")
+#'   )
 "eff_resp"
 
-#' Cards ARD for demographics (long-format companion)
+#' Cards ARD for demographics (flat ARD companion)
 #'
 #' The same demographics summary as `saf_demo`, but in the long
 #' Analysis Results Data (ARD) format produced by
@@ -340,6 +348,15 @@
 #' it to the wide form `tabular()` accepts via [pivot_across()] —
 #' tabular itself does **not** consume the long ARD format, since
 #' pre-summarised wide data is the package boundary.
+#'
+#' Continuous variables: `AGE`, `WEIGHT`, `HEIGHT`, `BMI` (each
+#' emitting `N`, `mean`, `sd`, `median`, `p25`, `p75`, `min`, `max`).
+#' Categorical variables: `AGEGR1`, `SEX`, `RACE`, `ETHNIC`,
+#' `BMI_CAT` (each emitting `n`, `N`, `p`).
+#'
+#' This is the package's canonical **flat ARD** demo. Its hierarchical
+#' counterpart is [saf_aesocpt_card]; together they cover both shapes
+#' [pivot_across()] must handle.
 #'
 #' @format A `card`-classed tibble with columns `group1`,
 #'   `group1_level`, `variable`, `variable_level`, `context`,
@@ -377,46 +394,19 @@
 #'   )
 "saf_demo_card"
 
-#' Cards ARD for the AE-overall summary
-#'
-#' Long-format companion to `saf_aeoverall`. Per-subject AE flags
-#' (`ANY_TEAE`, `ANY_SAE`, `ANY_REL`) and maximum severity (`MAX_SEV`)
-#' summarised by treatment arm via `cards::ard_stack()`. Denominators
-#' are adsl-level so subjects with zero TEAEs are still counted in
-#' the `N` row — matching the standard safety-table convention where
-#' `0/254 (0.0%)` rows are kept rather than dropped.
-#'
-#' @format A `card`-classed tibble with the standard ARD columns
-#'   plus per-arm and overall rows.
-#'
-#' @source Derived in `data-raw/bundle-demo.R` via
-#'   `cards::ard_stack()` over a per-subject flag table built from
-#'   `pharmaverseadam::adsl` joined to `pharmaverseadam::adae`.
-#'
-#' @seealso [pivot_across()] for the long-to-wide bridge;
-#'   [saf_aeoverall] for the wide companion.
-#'
-#' @examples
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
-#' saf_aeoverall_card |>
-#'   pivot_across(statistic = "{n} ({p}%)") |>
-#'   tabular(
-#'     titles = c(
-#'       "Table 14.3.0",
-#'       "Adverse Event Overview",
-#'       sprintf("Safety Population (N=%d)", n["Total"])
-#'     )
-#'   )
-"saf_aeoverall_card"
-
 #' Cards hierarchical ARD for AEs by SOC and PT
 #'
 #' Long-format companion to `saf_aesocpt`. Produced by
 #' `cards::ard_stack_hierarchical()` over `(AEBODSYS, AEDECOD)` with
 #' adsl-level denominators, sorted by descending overall incidence
-#' via `cards::sort_ard_hierarchical()`. Limited to the same top-5
-#' SOC, top-3 PT subset as `saf_aesocpt` so the two datasets describe
+#' via `cards::sort_ard_hierarchical()`. Limited to the same top-10
+#' SOC, top-5 PT subset as `saf_aesocpt` so the two datasets describe
 #' the same slice of the data.
+#'
+#' This is the package's canonical **hierarchical ARD** demo
+#' (two grouping variables nested SOC -> PT). Its flat counterpart is
+#' [saf_demo_card]; together they cover both shapes [pivot_across()]
+#' must handle.
 #'
 #' @format A `card`-classed tibble. Carries an
 #'   `..ard_hierarchical_overall..` sentinel row that
@@ -443,75 +433,6 @@
 #'     )
 #'   )
 "saf_aesocpt_card"
-
-#' Cards ARD for vital signs
-#'
-#' Long-format companion to `saf_vital`. Continuous statistics on
-#' `AVAL` grouped by `(PARAMCD, AVISIT, TRT01A)` from
-#' `cards::ard_stack()`. Parameters: SYSBP, DIABP, PULSE, TEMP at
-#' Baseline and End of Treatment.
-#'
-#' @format A `card`-classed tibble. Multi-group (`.by = c(PARAMCD,
-#'   AVISIT, TRT01A)`) so [pivot_across()] keeps PARAMCD and AVISIT
-#'   as output columns and pivots only the arm dimension.
-#'
-#' @source Derived in `data-raw/bundle-demo.R` via
-#'   `cards::ard_stack()` over `pharmaverseadam::advs`.
-#'
-#' @seealso [pivot_across()] for the long-to-wide bridge;
-#'   [saf_vital] for the wide companion.
-#'
-#' @examples
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
-#' saf_vital_card |>
-#'   pivot_across(
-#'     statistic = list(
-#'       continuous = c(
-#'         N           = "{N}",
-#'         "Mean (SD)" = "{mean} ({sd})"
-#'       )
-#'     ),
-#'     decimals = c(mean = 1, sd = 2)
-#'   ) |>
-#'   tabular(
-#'     titles = c(
-#'       "Table 14.4.1",
-#'       "Vital Signs Summary",
-#'       sprintf("Safety Population (N=%d)", n["Total"])
-#'     )
-#'   )
-"saf_vital_card"
-
-#' Cards ARD for best overall response
-#'
-#' Long-format companion to `eff_resp`. Categorical counts of `AVALC`
-#' (CR, PR, SD, NON-CR/NON-PD, PD, NE, MISSING) by treatment arm via
-#' `cards::ard_stack()`. The wide `eff_resp` adds derived ORR and DCR
-#' rate rows on top of these category counts — those derived rows do
-#' not appear in this ARD and must be computed downstream.
-#'
-#' @format A `card`-classed tibble.
-#'
-#' @source Derived in `data-raw/bundle-demo.R` via
-#'   `cards::ard_stack(.by = "ARM")` over
-#'   `pharmaverseadam::adrs_onco` filtered to `PARAMCD == "BOR"`.
-#'
-#' @seealso [pivot_across()] for the long-to-wide bridge;
-#'   [eff_resp] for the wide companion (which adds derived rate
-#'   rows on top of the categorical counts).
-#'
-#' @examples
-#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
-#' eff_resp_card |>
-#'   pivot_across(statistic = "{n} ({p}%)") |>
-#'   tabular(
-#'     titles = c(
-#'       "Table 14.2.1",
-#'       "Best Overall Response",
-#'       sprintf("Efficacy Evaluable Population (N=%d)", ne["Total"])
-#'     )
-#'   )
-"eff_resp_card"
 
 #' Safety-population BigN per arm
 #'

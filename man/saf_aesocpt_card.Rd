@@ -21,9 +21,15 @@ saf_aesocpt_card
 Long-format companion to \code{saf_aesocpt}. Produced by
 \code{cards::ard_stack_hierarchical()} over \verb{(AEBODSYS, AEDECOD)} with
 adsl-level denominators, sorted by descending overall incidence
-via \code{cards::sort_ard_hierarchical()}. Limited to the same top-5
-SOC, top-3 PT subset as \code{saf_aesocpt} so the two datasets describe
+via \code{cards::sort_ard_hierarchical()}. Limited to the same top-10
+SOC, top-5 PT subset as \code{saf_aesocpt} so the two datasets describe
 the same slice of the data.
+}
+\details{
+This is the package's canonical \strong{hierarchical ARD} demo
+(two grouping variables nested SOC -> PT). Its flat counterpart is
+\link{saf_demo_card}; together they cover both shapes \code{\link[=pivot_across]{pivot_across()}}
+must handle.
 }
 \examples{
 # Hierarchical ARD pivot. pivot_across() recognises the

@@ -37,9 +37,10 @@ One format string applied to every variable regardless of
 context. Use when your ARD is homogeneous (e.g. all
 categorical).
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Every variable rendered as "n (p\%)"
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Every variable rendered as "n (p\%)" — categorical-only slice.
+cat_only <- saf_demo_card[saf_demo_card$context == "categorical", ]
 pivot_across(
-  saf_aeoverall_card,
+  cat_only,
   statistic = "\{n\} (\{p\}\%)"
 )
 }\if{html}{\out{</div>}}
@@ -326,21 +327,18 @@ saf_aesocpt_card |>
     )
   )
 
-# ---- Example 3: Inspect ARD shape before pivoting ----
+# ---- Example 3: Hierarchical ARD (SOC / PT) ----
 #
-# The cards ARD format carries one row per (variable, statistic,
-# group) triple — each row is a single number plus its metadata.
-# Useful to inspect the input shape before pivoting to confirm
-# the right glue template for the value column.
-head(saf_aeoverall_card, 3)
+# `saf_aesocpt_card` carries an `ard_stack_hierarchical` shape with
+# two grouping variables (AEBODSYS / AEDECOD). `pivot_across()`
+# recognises the hierarchical structure and emits dedicated `soc`,
+# `pt`, and `row_type` columns so the SOC -> PT nesting survives
+# the pivot. The result is ready for `tabular()` plus `sort_rows()`.
+head(saf_aesocpt_card, 3)
 
-wide <- saf_aeoverall_card |>
+wide <- saf_aesocpt_card |>
   pivot_across(statistic = "{n} ({p}\%)")
 head(wide, 3)
-
-# The wide output is now ready for `tabular()`. `pivot_across`
-# is the only verb that consumes long ARD; everything else in
-# tabular operates on the wide shape.
 
 }
 \seealso{

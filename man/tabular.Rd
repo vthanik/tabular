@@ -16,8 +16,8 @@ drive \code{\link[=sort_rows]{sort_rows()}}).
 \strong{Restriction:} At least one column; column names must be
 unique. Zero rows is accepted (engine renders a "No data" stub).
 \strong{Interaction:} The \code{cards}-format counterparts
-(\code{saf_demo_card}, \code{eff_resp_card}, ...) are NOT accepted
-directly; pipe through \code{\link[=pivot_across]{pivot_across()}} first.}
+(\code{saf_demo_card}, \code{saf_aesocpt_card}) are NOT accepted directly;
+pipe through \code{\link[=pivot_across]{pivot_across()}} first.}
 
 \item{titles}{\emph{Page-title block, one element per row.}
 \verb{<character> | NULL: default NULL}. Each element renders on

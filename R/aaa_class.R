@@ -52,10 +52,10 @@
 )
 
 # Recognised region keys on `preset_spec@borders`. The 12 regions
-# cover the BMS Appendix I + clinical pharmaverse vocabulary at one
-# vocabulary level — region semantics are interpreted by
-# `engine_borders()` which translates each region to per-cell
-# entries on the cells_style matrix.
+# cover the canonical submission page-layout vocabulary at one
+# level — region semantics are interpreted by `engine_borders()`
+# which translates each region to per-cell entries on the
+# cells_style matrix.
 .preset_border_regions <- c(
   "outer",
   "outer_top",

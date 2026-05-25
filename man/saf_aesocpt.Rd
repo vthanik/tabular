@@ -5,7 +5,7 @@
 \alias{saf_aesocpt}
 \title{Adverse events by System Organ Class and Preferred Term}
 \format{
-A data frame with 21 rows and 7 columns:
+A data frame with 61 rows and 7 columns:
 \describe{
 \item{\code{soc}}{System Organ Class label. Repeats across the SOC's
 PT rows so \code{cols(usage = "group")} collapses the run at
@@ -24,9 +24,8 @@ interleaved order under sort.}
 }
 \source{
 Derived in \code{data-raw/bundle-demo.R} from
-\code{pharmaverseadam::adae}. Filtered to the top 5 SOCs by total
-incidence and the top 3 PTs per SOC to keep the bundled \code{.rda}
-under 50 KB.
+\code{pharmaverseadam::adae}. Filtered to the top 10 SOCs by total
+incidence and the top 5 PTs per SOC.
 }
 \usage{
 saf_aesocpt
@@ -34,10 +33,12 @@ saf_aesocpt
 \description{
 Pre-summarised AE-by-SOC/PT table. Interleaved row order: overall
 "any TEAE" row first, then per-SOC blocks where each SOC row is
-followed by its preferred-term detail rows. Top 5 SOCs and top 3
-PTs per SOC are kept (size guard); \code{row_type} marks the role of
-each row so a downstream pipeline can sort, indent, or hide
-selectively.
+followed by its preferred-term detail rows. Top 10 SOCs and top
+5 PTs per SOC are kept; \code{row_type} marks the role of each row so
+a downstream pipeline can sort, indent, or hide selectively. The
+richer SOC × PT slice exercises \code{\link[=paginate]{paginate()}} and the engine's
+horizontal-panel splitter end-to-end on a realistic submission
+shell.
 }
 \examples{
 # 95\% safety pattern: SOC/PT table sorted by descending subject

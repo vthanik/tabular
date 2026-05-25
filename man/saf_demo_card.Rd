@@ -3,7 +3,7 @@
 \docType{data}
 \name{saf_demo_card}
 \alias{saf_demo_card}
-\title{Cards ARD for demographics (long-format companion)}
+\title{Cards ARD for demographics (flat ARD companion)}
 \format{
 A \code{card}-classed tibble with columns \code{group1},
 \code{group1_level}, \code{variable}, \code{variable_level}, \code{context},
@@ -31,6 +31,16 @@ shape users typically have when they start from \code{cards}. Convert
 it to the wide form \code{tabular()} accepts via \code{\link[=pivot_across]{pivot_across()}} —
 tabular itself does \strong{not} consume the long ARD format, since
 pre-summarised wide data is the package boundary.
+}
+\details{
+Continuous variables: \code{AGE}, \code{WEIGHT}, \code{HEIGHT}, \code{BMI} (each
+emitting \code{N}, \code{mean}, \code{sd}, \code{median}, \code{p25}, \code{p75}, \code{min}, \code{max}).
+Categorical variables: \code{AGEGR1}, \code{SEX}, \code{RACE}, \code{ETHNIC},
+\code{BMI_CAT} (each emitting \code{n}, \code{N}, \code{p}).
+
+This is the package's canonical \strong{flat ARD} demo. Its hierarchical
+counterpart is \link{saf_aesocpt_card}; together they cover both shapes
+\code{\link[=pivot_across]{pivot_across()}} must handle.
 }
 \examples{
 # 95\% demographics pattern: cards ARD -> wide -> rendered table.

@@ -505,13 +505,11 @@ test_that("emit(.docx) writes <w:tbl> with <w:tblGrid>, <w:tr>, <w:tc> for data 
 })
 
 test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (boundary-snapped)", {
-  # Saf_demo widths under the golden pipeline (engine-resolved):
-  # 1.045325, 2.491345, 0.733194, 0.733194, 0.733194, 0.763747 in.
-  # Cumulative-rounded boundaries land at:
-  # 1505, 5093, 6149, 7204, 8260, 9360 twips
-  # whose diffs are: 1505, 3588, 1056, 1055, 1056, 1100 twips.
-  # Per-column rounding would yield 1056 on col 4; boundary-snapping
-  # gives 1055 to keep the cumulative sum exact (matches RTF \cellx).
+  # Saf_demo widths under the golden pipeline are content-derived.
+  # Diffs sum to the printable area (9360 twips on US Letter at 0.5"
+  # margins). Per-column rounding can over- or under-count by 1 twip;
+  # boundary-snapping reconciles to keep the cumulative sum exact
+  # (matches RTF \cellx).
   spec <- tabular(
     saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
@@ -536,7 +534,8 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
     doc,
     gregexpr("(?<=<w:gridCol w:w=\")[0-9]+(?=\"/>)", doc, perl = TRUE)
   )[[1L]])
-  expect_identical(widths_twips, c(1505L, 3588L, 1056L, 1055L, 1056L, 1100L))
+  expect_identical(widths_twips, c(1616L, 3332L, 1103L, 1103L, 1103L, 1103L))
+  expect_identical(sum(widths_twips), 9360L)
 })
 
 test_that("col_spec@align surfaces as <w:jc> on data cells", {

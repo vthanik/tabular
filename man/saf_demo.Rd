@@ -5,7 +5,7 @@
 \alias{saf_demo}
 \title{Demographics summary, Safety Population}
 \format{
-A data frame with 21 rows and 6 columns:
+A data frame with 35 rows and 6 columns:
 \describe{
 \item{\code{variable}}{Display-block label (\code{"Age (years)"},
 \code{"Age Group, n (\%)"}, \code{"Sex, n (\%)"}, \code{"Race, n (\%)"},
@@ -22,19 +22,28 @@ collapse repeat values at render.}
 \source{
 Derived in \code{data-raw/bundle-demo.R} from
 \code{pharmaverseadam::adsl} filtered to \code{SAFFL == "Y"} and the three
-CDISCPILOT01 treatment arms.
+CDISCPILOT01 treatment arms. Baseline Weight / Height / BMI are
+joined in from \code{pharmaverseadam::advs}.
 }
 \usage{
 saf_demo
 }
 \description{
 Pre-summarised wide-format demographics suitable for direct
-passing into \code{\link[=tabular]{tabular()}}. One row per displayed statistic, with
-both continuous variables (AGE → \code{n}, \code{Mean (SD)}, \code{Median},
-\verb{Q1, Q3}, \verb{Min, Max}) and categorical variables (AGEGR1 / SEX /
-RACE / ETHNIC, each level rendered as \verb{n (\%)}). Shaped for the
-display-only contract: every cell is the final string that will
-appear in the rendered table.
+passing into \code{\link[=tabular]{tabular()}}. One row per displayed statistic. Eight
+parameter blocks:
+}
+\details{
+\itemize{
+\item continuous: \code{Age (years)}, \code{Weight (kg)}, \code{Height (cm)},
+\code{BMI (kg/m^2)} — each emitted as \code{n}, \code{Mean (SD)}, \code{Median},
+\verb{Q1, Q3}, \verb{Min, Max}
+\item categorical: \verb{Age Group}, \code{Sex}, \code{Race}, \code{Ethnicity},
+\verb{BMI Category} — each level rendered as \verb{n (\%)}
+}
+
+Shaped for the display-only contract: every cell is the final
+string that will appear in the rendered table.
 }
 \examples{
 # 95\% safety pattern: demographics table with BigN-embedded

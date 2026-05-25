@@ -336,7 +336,7 @@
 #' # The submission session sets a portrait letter 9pt default (typical
 #' # safety-table geometry). One particular AE table needs landscape
 #' # for a long PT label band; the per-spec `preset()` overrides only
-#' # orientation. The same per-spec call wires the BMS Appendix I
+#' # orientation. The same per-spec call wires the canonical
 #' # per-page header band (protocol on the left, page X of Y on the
 #' # right) and a footer band that auto-resolves the calling
 #' # script's name and the current render timestamp via the

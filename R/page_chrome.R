@@ -1,6 +1,6 @@
 # page_chrome.R — machinery for preset@pagehead / @pagefoot, the
 # per-page header / footer bands every paginated backend (RTF, LaTeX,
-# PDF, HTML, DOCX) honours. Backed by the BMS Appendix I 4-section
+# PDF, HTML, DOCX) honours. Backed by the canonical submission Appendix I 4-section
 # page layout contract, with the same three-slot (`left` / `center`
 # / `right`) convention shared by galley, arframe, r2rtf, fancyhdr,
 # and Word's UI.
@@ -26,7 +26,7 @@
 # RStudio API -> source() frame walk -> Rscript / R CMD BATCH
 # (`--file=` long form + `-f` short form, which covers Domino and
 # Linux batch jobs) -> knitr current_input -> fallback. This
-# matches the BMS Appendix I "Program Path / Program Name" two-
+# matches the canonical submission Appendix I "Program Path / Program Name" two-
 # line convention.
 #
 # Multi-row contract — index 1 = "body edge", index N = "far from
@@ -260,7 +260,7 @@
 }
 
 # Resolve `{program}` -> base name of the calling script (just the
-# file name, no path). BMS Appendix I "Program Name" line.
+# file name, no path). The canonical submission "Program Name" footer line.
 .resolve_program_token <- function() {
   path <- .resolve_source_path()
   if (is.na(path) || !nzchar(path)) {
@@ -270,7 +270,7 @@
 }
 
 # Resolve `{program_path}` -> full normalised path of the calling
-# script. BMS Appendix I "Program Path" line.
+# script. The canonical submission "Program Path" footer line.
 .resolve_program_path_token <- function() {
   path <- .resolve_source_path()
   if (is.na(path) || !nzchar(path)) {
@@ -280,7 +280,7 @@
 }
 
 # Resolve `{datetime}` -> DDMMMYYYY HH:MM:SS (uppercase month) in
-# UTC. Matches the BMS / galley convention: `24MAY2026 09:33:55`.
+# UTC. Matches the canonical submission convention: `24MAY2026 09:33:55`.
 .resolve_datetime_token <- function() {
   toupper(format(Sys.time(), "%d%b%Y %H:%M:%S", tz = "UTC"))
 }

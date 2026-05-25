@@ -5,11 +5,13 @@
 \alias{saf_aeoverall}
 \title{Overall adverse-event summary, Safety Population}
 \format{
-A data frame with 6 rows and 5 columns:
+A data frame with 8 rows and 5 columns:
 \describe{
 \item{\code{stat_label}}{Row label
 (\code{"Any TEAE"}, \code{"Any Serious AE (SAE)"},
 \code{"Any AE Related to Study Drug"},
+\code{"Any AE Leading to Death"},
+\code{"Any AE Recovered / Resolved"},
 \code{"  Maximum severity: Mild"}, \code{"  Maximum severity: Moderate"},
 \code{"  Maximum severity: Severe"}).}
 \item{\code{placebo}}{Placebo arm cell text (\code{"n (pct)"}).}
@@ -28,9 +30,10 @@ saf_aeoverall
 }
 \description{
 Pre-summarised wide-format AE overview. Two clinical blocks:
-high-level flag rows (any TEAE, any SAE, any treatment-related)
-and maximum-severity rows (mild / moderate / severe). Severity
-rows are indented with two leading spaces so a single
+high-level flag rows (any TEAE, any SAE, any treatment-related,
+any AE leading to death, any AE recovered / resolved) and
+maximum-severity rows (mild / moderate / severe). Severity rows
+are indented with two leading spaces so a single
 \code{cols(stat_label = col_spec(usage = "group"))} declaration drives
 both the block-header rows and the indented detail rows.
 }
@@ -65,7 +68,6 @@ tabular(
   )
 }
 \seealso{
-\link{saf_aeoverall_card} for the long-format ARD companion;
 \link{saf_n} for BigN denominators; \link{saf_aesocpt} for the
 SOC / PT detail companion.
 }
