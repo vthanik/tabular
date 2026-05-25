@@ -21,6 +21,10 @@ inst/doc/
 # data-raw transient
 data-raw/cache/
 
+# testthat per-test scratch / failure-report artefacts
+tests/testthat/_problems/
+tests/testthat/testthat-problems.rds
+
 # macOS
 .DS_Store
 
