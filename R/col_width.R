@@ -199,9 +199,18 @@
 #               measurement.
 #   col_labels_ast  named list of `inline_ast` per data column;
 #                   header text is the AST flattened.
-.resolve_col_widths <- function(spec, cells_text, col_labels_ast) {
+.resolve_col_widths <- function(
+  spec,
+  cells_text,
+  col_labels_ast,
+  cols_override = NULL
+) {
   col_names <- names(spec@data)
-  full_cols <- .cols_by_name(spec@cols, col_names)
+  full_cols <- if (!is.null(cols_override)) {
+    cols_override
+  } else {
+    .cols_by_name(spec@cols, col_names)
+  }
   if (length(full_cols) == 0L) {
     return(full_cols)
   }

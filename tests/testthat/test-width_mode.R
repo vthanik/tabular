@@ -150,9 +150,16 @@ test_that("as_grid() under preset(width_mode='window') expands auto columns to f
 })
 
 test_that("as_grid() under preset(width_mode='fixed') collapses auto cols to the minimum", {
+  # Use group_display='column' so the variable column stays visible;
+  # otherwise header_row mode hides it and the test's expectation
+  # about variable@width going to .min_auto_width_in is moot.
   spec <- tabular(saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(
+        usage = "group",
+        label = "Characteristic",
+        group_display = "column"
+      ),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo", width = 1.5)
     ) |>
@@ -174,13 +181,21 @@ test_that("as_grid() under preset(width_mode='fixed') collapses auto cols to the
 test_that("as_grid() under default preset(width_mode='content') matches today's behavior", {
   spec_default <- tabular(saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(
+        usage = "group",
+        label = "Characteristic",
+        group_display = "column"
+      ),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     )
   spec_explicit <- tabular(saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(
+        usage = "group",
+        label = "Characteristic",
+        group_display = "column"
+      ),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>

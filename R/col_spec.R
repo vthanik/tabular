@@ -139,6 +139,41 @@
 #'   default, which produces identical widths across RTF / LaTeX
 #'   / HTML.
 #'
+#' @param group_display *How `usage = "group"` values render in the body.*
+#'   `<character(1)>: default "header_row"`. Active only when
+#'   `usage = "group"`; ignored otherwise.
+#'
+#'   *   **`"header_row"`** *(default)* — each unique value emits as
+#'       a section header row above its block of data rows. The
+#'       source column is hidden from the visible body. Matches the
+#'       canonical submission Appendix I shape used by clinical TFL
+#'       house templates (Disposition, Demographics, Statistical
+#'       Report sections).
+#'   *   **`"column"`** — column stays visible; repeated values are
+#'       suppressed (only the first row of each value shows the
+#'       label). PROC REPORT's default for grouping variables.
+#'   *   **`"column_repeat"`** — column stays visible; every row
+#'       repeats the value (no suppression). The shape `R`'s
+#'       `print.data.frame` produces.
+#'
+#'   **Composition under multiple group columns.** When more than
+#'   one `usage = "group"` column is declared, the FIRST one
+#'   encountered in `cols()` order is the outer group; subsequent
+#'   group columns nest inside it. Each column's `group_display`
+#'   choice is independent — a common clinical pattern is the outer
+#'   `variable` as `"header_row"` plus the inner `stat_label` as
+#'   `"column"` (visible row labels under each section header).
+#'
+#'   ```r
+#'   # Demographics layout: variable as section header, stat_label
+#'   # as visible suppressed column.
+#'   cols(
+#'     variable   = col_spec(usage = "group", group_display = "header_row"),
+#'     stat_label = col_spec(usage = "group", group_display = "column"),
+#'     placebo    = col_spec(label = "Placebo", align = "decimal")
+#'   )
+#'   ```
+#'
 #' @param align *Horizontal alignment within the column.*
 #'   `<character(1) | NULL>: default NULL`. One of:
 #'
@@ -338,6 +373,7 @@ col_spec <- function(
   format = NULL,
   visible = TRUE,
   width = "auto",
+  group_display = "header_row",
   align = NULL,
   valign = NULL,
   na_text = ""
@@ -350,6 +386,7 @@ col_spec <- function(
   .check_col_label(label, call = call)
   .check_col_visible(visible, call = call)
   .check_col_width(width, call = call)
+  group_display_val <- .check_col_group_display(group_display, call = call)
   .check_col_na_text(na_text, call = call)
   .check_col_format(format, call = call)
 
@@ -360,9 +397,31 @@ col_spec <- function(
     format = format,
     visible = visible,
     width = width,
+    group_display = group_display_val,
     align = align_val,
     valign = valign_val,
     na_text = na_text
+  )
+}
+
+.check_col_group_display <- function(x, call) {
+  if (
+    is.character(x) &&
+      length(x) == 1L &&
+      !is.na(x) &&
+      x %in% .col_group_display_values
+  ) {
+    return(x)
+  }
+  modes <- .col_group_display_values
+  cli::cli_abort(
+    c(
+      "Bad {.arg group_display}.",
+      "x" = "Got {.obj_type_friendly {x}}.",
+      "i" = "Use one of {.val {modes}}."
+    ),
+    class = "tabular_error_input",
+    call = call
   )
 }
 

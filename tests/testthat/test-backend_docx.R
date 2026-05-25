@@ -516,7 +516,11 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
     footnotes = "Source: ADSL."
   ) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(
+        usage = "group",
+        label = "Characteristic",
+        group_display = "column"
+      ),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),

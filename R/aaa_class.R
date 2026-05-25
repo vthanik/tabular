@@ -18,6 +18,23 @@
 # ---------------------------------------------------------------------
 
 .col_usage_values <- c("display", "group", "across", "computed")
+
+# Recognised values for `col_spec@group_display`. Active only when
+# `col_spec@usage = "group"`; ignored otherwise. Controls how the
+# group-variable's unique values render in the body:
+#
+#   "header_row" (default) — each unique value emits as a section
+#                            header row spanning the visible
+#                            columns; the source column is hidden
+#                            from the body. Matches the canonical
+#                            submission Appendix I shape used by
+#                            every clinical-TFL house template.
+#   "column"               — column stays visible; repeated values
+#                            are suppressed (only the first row of
+#                            each value shows the label).
+#   "column_repeat"        — column stays visible; every row repeats
+#                            the value (no suppression).
+.col_group_display_values <- c("header_row", "column", "column_repeat")
 .align_values <- c("left", "center", "right", "decimal")
 
 # Predicate for the "auto" width sentinel. `col_spec@width` is
@@ -276,6 +293,10 @@ NULL
       S7::class_any,
       default = "auto"
     ),
+    group_display = S7::new_property(
+      S7::class_character,
+      default = "header_row"
+    ),
     align = S7::new_property(
       S7::class_character,
       default = NA_character_
@@ -345,6 +366,18 @@ NULL
     }
     if (length(self@na_text) != 1L) {
       return("@na_text must be length 1")
+    }
+    if (
+      length(self@group_display) != 1L ||
+        is.na(self@group_display) ||
+        !(self@group_display %in% .col_group_display_values)
+    ) {
+      return(paste0(
+        "@group_display must be one of ",
+        paste(shQuote(.col_group_display_values), collapse = ", "),
+        "; got ",
+        shQuote(self@group_display)
+      ))
     }
     NULL
   }

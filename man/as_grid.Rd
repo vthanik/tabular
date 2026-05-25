@@ -116,7 +116,7 @@ demo <- tabular(
 
 demo_grid <- as_grid(demo)
 demo_grid@metadata$total_pages
-demo_grid@pages[[1]]$cells_text[1:3, c("variable", "stat_label", "placebo")]
+demo_grid@pages[[1]]$cells_text[1:3, c("stat_label", "placebo")]
 
 # ---- Example 2: AE-by-SOC/PT paginated grid — verify the split ----
 #

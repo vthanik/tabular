@@ -10,6 +10,7 @@ col_spec(
   format = NULL,
   visible = TRUE,
   width = "auto",
+  group_display = "header_row",
   align = NULL,
   valign = NULL,
   na_text = ""
@@ -121,6 +122,41 @@ tabular \code{NA} deferred to backend auto-fit; that path was
 inconsistent across backends and is replaced by the \code{"auto"}
 default, which produces identical widths across RTF / LaTeX
 / HTML.}
+
+\item{group_display}{\emph{How \code{usage = "group"} values render in the body.}
+\verb{<character(1)>: default "header_row"}. Active only when
+\code{usage = "group"}; ignored otherwise.
+\itemize{
+\item \strong{\code{"header_row"}} \emph{(default)} — each unique value emits as
+a section header row above its block of data rows. The
+source column is hidden from the visible body. Matches the
+canonical submission Appendix I shape used by clinical TFL
+house templates (Disposition, Demographics, Statistical
+Report sections).
+\item \strong{\code{"column"}} — column stays visible; repeated values are
+suppressed (only the first row of each value shows the
+label). PROC REPORT's default for grouping variables.
+\item \strong{\code{"column_repeat"}} — column stays visible; every row
+repeats the value (no suppression). The shape \code{R}'s
+\code{print.data.frame} produces.
+}
+
+\strong{Composition under multiple group columns.} When more than
+one \code{usage = "group"} column is declared, the FIRST one
+encountered in \code{cols()} order is the outer group; subsequent
+group columns nest inside it. Each column's \code{group_display}
+choice is independent — a common clinical pattern is the outer
+\code{variable} as \code{"header_row"} plus the inner \code{stat_label} as
+\code{"column"} (visible row labels under each section header).
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Demographics layout: variable as section header, stat_label
+# as visible suppressed column.
+cols(
+  variable   = col_spec(usage = "group", group_display = "header_row"),
+  stat_label = col_spec(usage = "group", group_display = "column"),
+  placebo    = col_spec(label = "Placebo", align = "decimal")
+)
+}\if{html}{\out{</div>}}}
 
 \item{align}{\emph{Horizontal alignment within the column.}
 \verb{<character(1) | NULL>: default NULL}. One of:

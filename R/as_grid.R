@@ -144,7 +144,7 @@
 #'
 #' demo_grid <- as_grid(demo)
 #' demo_grid@metadata$total_pages
-#' demo_grid@pages[[1]]$cells_text[1:3, c("variable", "stat_label", "placebo")]
+#' demo_grid@pages[[1]]$cells_text[1:3, c("stat_label", "placebo")]
 #'
 #' # ---- Example 2: AE-by-SOC/PT paginated grid — verify the split ----
 #' #
@@ -317,7 +317,29 @@ as_grid <- function(spec) {
   chrome_style_mat <- engine_chrome_borders(spec)
   fmt <- engine_format(spec)
 
-  cols_named <- .cols_named_for_decimal(spec)
+  # Apply col_spec@group_display semantics. Header_row mode
+  # splices section-header rows above each group-variable
+  # transition; column mode suppresses repeats; column_repeat is a
+  # no-op. The phase may augment the cells matrices with new
+  # synthesised rows + hide source group columns from the visible
+  # body.
+  gd <- engine_group_display(
+    cells_text = fmt$cells_text,
+    cells_ast = fmt$cells_ast,
+    cells_style = style_mat,
+    cols = .cols_by_name(spec@cols, names(spec@data))
+  )
+  fmt$cells_text <- gd$cells_text
+  fmt$cells_ast <- gd$cells_ast
+  style_mat <- gd$cells_style
+  spec_cols_post <- gd$cols
+  # Merge visibility updates back onto spec@cols so downstream
+  # `engine_paginate()` (which filters via `.visible_col_names()`)
+  # and every backend that consults `spec@cols` directly see the
+  # hidden header_row columns.
+  spec <- S7::set_props(spec, cols = spec_cols_post)
+
+  cols_named <- spec_cols_post
   # Em-aware decimal alignment when the active preset opts into it
   # via `decimal_metrics = "afm"`. The default "chars" mode keeps
   # the byte-for-byte legacy behaviour (every glyph counts as one
@@ -346,7 +368,8 @@ as_grid <- function(spec) {
   resolved_cols <- .resolve_col_widths(
     spec,
     cells_text = cells_text,
-    col_labels_ast = fmt$col_labels_ast
+    col_labels_ast = fmt$col_labels_ast,
+    cols_override = spec_cols_post
   )
 
   pag <- engine_paginate(spec)
@@ -357,7 +380,8 @@ as_grid <- function(spec) {
     cells_ast = fmt$cells_ast,
     cells_style = style_mat,
     col_labels_ast = fmt$col_labels_ast,
-    col_names = names(spec@data)
+    col_names = names(spec@data),
+    header_row_plan = gd$header_row_plan
   )
 
   # Stamp per-group subgroup metadata onto every page descriptor.
@@ -505,7 +529,8 @@ as_grid <- function(spec) {
   cells_ast,
   cells_style,
   col_labels_ast,
-  col_names
+  col_names,
+  header_row_plan = NULL
 ) {
   lapply(pag$pages, function(p) {
     .slice_one_page(
@@ -514,25 +539,51 @@ as_grid <- function(spec) {
       cells_ast = cells_ast,
       cells_style = cells_style,
       col_labels_ast = col_labels_ast,
-      col_names = col_names
+      col_names = col_names,
+      header_row_plan = header_row_plan
     )
   })
 }
 
 # Slice a single page. The cell / style matrices and the col-label
 # list all share the same column-name ordering, so a single
-# `col_indices` projection keeps them coherent.
+# `col_indices` projection keeps them coherent. When a
+# `header_row_plan` is non-NULL, header rows are injected into the
+# sliced matrices for any group-value transitions that fall within
+# this page's row range.
 .slice_one_page <- function(
   p,
   cells_text,
   cells_ast,
   cells_style,
   col_labels_ast,
-  col_names
+  col_names,
+  header_row_plan = NULL
 ) {
   ri <- p$row_indices
   ci <- p$col_indices
   visible <- col_names[ci]
+
+  text_slice <- .slice_matrix(cells_text, ri, ci)
+  ast_slice <- .slice_list_matrix(cells_ast, ri, ci)
+  style_slice <- .slice_list_matrix(cells_style, ri, ci)
+
+  if (!is.null(header_row_plan)) {
+    injected <- .inject_header_rows_for_page(
+      cells_text = text_slice,
+      cells_ast = ast_slice,
+      cells_style = style_slice,
+      row_indices = ri,
+      visible_col_names = visible,
+      header_row_plan = header_row_plan
+    )
+    text_slice <- injected$cells_text
+    ast_slice <- injected$cells_ast
+    style_slice <- injected$cells_style
+    is_header_row <- injected$is_header_row
+  } else {
+    is_header_row <- rep(FALSE, length(ri))
+  }
 
   list(
     page_index = p$page_index,
@@ -543,9 +594,10 @@ as_grid <- function(spec) {
     row_indices = ri,
     col_indices = ci,
     col_names = visible,
-    cells_text = .slice_matrix(cells_text, ri, ci),
-    cells_ast = .slice_list_matrix(cells_ast, ri, ci),
-    cells_style = .slice_list_matrix(cells_style, ri, ci),
+    cells_text = text_slice,
+    cells_ast = ast_slice,
+    cells_style = style_slice,
+    is_header_row = is_header_row,
     col_labels_ast = col_labels_ast[visible]
   )
 }
