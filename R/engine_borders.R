@@ -430,22 +430,17 @@ engine_borders <- function(spec, cells_style) {
 engine_chrome_borders <- function(spec) {
   cs <- chrome_style()
 
-  # ---- Legacy preset@borders chrome regions ----
-  preset <- .effective_preset(spec)
-  borders <- preset@borders
-  if (length(borders) > 0L) {
-    resolved <- .resolve_border_regions(borders)
-    for (region in .chrome_border_regions) {
-      cs$borders[[region]] <- resolved[[region]]
-    }
-  }
-
-  # ---- New chrome-surface layer cascade ----
   # Walk session preset -> spec preset -> per-spec layers. For each
   # layer whose location targets a chrome surface, write its text
   # properties onto chrome_style$surfaces[<surface>] (merge with
   # later layers winning per attribute) and its border triple onto
   # the matching chrome border region.
+  #
+  # `preset(borders = list(<chrome region> = ...))` and
+  # `preset(alignment = list(...))` / `colors = ...` / etc. flow
+  # through this cascade via `.preset_args_to_layers()` in
+  # `R/preset.R` — the lowering happens at `preset()` /
+  # `set_preset()` call time so `preset@style` carries the layers.
   for (layer in .collect_chrome_layers(spec)) {
     cs <- .apply_chrome_layer(layer = layer, cs = cs)
   }
