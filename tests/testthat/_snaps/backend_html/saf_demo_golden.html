@@ -4,10 +4,8 @@
 <meta charset="utf-8">
 <title>Table 14.1.1</title>
 <style>
-body { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-.tabular-page { margin-bottom: 2rem; }
+.tabular-doc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
 .tabular-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin: .2rem 0; }
-.tabular-continuation { text-align: right; color: #6c757d; margin: .25rem 0 .5rem; }
 .tabular-table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .9rem; }
 .tabular-table th, .tabular-table td { padding: .35rem .6rem; }
 .tabular-table td { text-align: left; vertical-align: top; }
@@ -26,7 +24,7 @@ body { font-family: "Liberation Mono", "Courier New", Courier, monospace; color:
 .valign-bottom { vertical-align: bottom; }
 .tabular-footnote { font-size: .85rem; color: #495057; margin: .25rem 0; }
 .tabular-empty { font-style: italic; color: #6c757d; }
-.tabular-page-break { border: none; border-top: 1px dashed #adb5bd; margin: 1.5rem 0; }
+.tabular-page-break-row { display: none; }
 :root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
 .tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: .85rem; color: var(--tabular-chrome-color); }
 .tabular-page-header { border-bottom: 1px solid var(--tabular-border-color-muted); margin-bottom: 1rem; }
@@ -34,11 +32,10 @@ body { font-family: "Liberation Mono", "Courier New", Courier, monospace; color:
 .tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }
 .tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }
 .tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { .tabular-page { page-break-after: always; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-break { display: none; } .tabular-page-header, .tabular-page-footer { display: none; } }
+@media print { .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
 </head>
-<body>
-<section class="tabular-page">
+<body class="tabular-doc">
 <p class="tabular-pad">&nbsp;</p>
 <h1 class="tabular-title">Table 14.1.1</h1>
 <h1 class="tabular-title">Demographics</h1>
@@ -102,25 +99,7 @@ body { font-family: "Liberation Mono", "Courier New", Courier, monospace; color:
 <tr><td>Median</td><td class="text-right"> 23.4        </td><td class="text-right"> 24.8        </td><td class="text-right"> 24.8        </td><td class="text-right"> 24.2        </td></tr>
 <tr><td>Q1, Q3</td><td class="text-right"> 21.2, 25.6  </td><td class="text-right"> 22.7, 27.6  </td><td class="text-right"> 22.3, 28.2  </td><td class="text-right"> 21.9, 27.3  </td></tr>
 <tr><td>Min, Max</td><td class="text-right"> 15  , 33    </td><td class="text-right"> 14  , 35    </td><td class="text-right"> 15  , 40    </td><td class="text-right"> 14  , 40    </td></tr>
-</tbody>
-</table>
-<p class="tabular-footnote">Source: ADSL.</p>
-</section>
-<hr class="tabular-page-break"/>
-<!-- page 2 of 2 -->
-<section class="tabular-page">
-<table class="tabular-table">
-<colgroup>
-<col style="width:2.566667in"/>
-<col style="width:1.141667in"/>
-<col style="width:1.141667in"/>
-<col style="width:1.141667in"/>
-<col style="width:1.141667in"/>
-</colgroup>
-<thead>
-<tr><th>Statistic</th><th class="text-right">Placebo<br/>N=86</th><th class="text-right">High Dose<br/>N=72</th><th class="text-right">Low Dose<br/>N=96</th><th class="text-right">Total<br/>N=254</th></tr>
-</thead>
-<tbody>
+<tr class="tabular-page-break-row" aria-hidden="true"><td colspan="5"></td></tr>
 <tr><td>BMI Category, n (%)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
 <tr><td>Underweight (&lt;18.5)</td><td class="text-right">  3   ( 3.5 )</td><td class="text-right">  1   ( 1.4 )</td><td class="text-right">  4   ( 4.2 )</td><td class="text-right">  8   ( 3.1 )</td></tr>
 <tr><td>Normal (18.5-24.9)</td><td class="text-right"> 57   (66.3 )</td><td class="text-right"> 39   (54.2 )</td><td class="text-right"> 46   (47.9 )</td><td class="text-right">142   (55.9 )</td></tr>
@@ -128,6 +107,6 @@ body { font-family: "Liberation Mono", "Courier New", Courier, monospace; color:
 <tr><td>Obese (&gt;=30)</td><td class="text-right">  6   ( 7.0 )</td><td class="text-right">  9   (12.5 )</td><td class="text-right"> 13   (13.5 )</td><td class="text-right"> 28   (11.0 )</td></tr>
 </tbody>
 </table>
-</section>
+<p class="tabular-footnote">Source: ADSL.</p>
 </body>
 </html>

@@ -453,7 +453,7 @@ test_that(".group_contiguous_runs handles single-element and empty inputs", {
 # Pagination
 # ---------------------------------------------------------------------
 
-test_that("multi-page emit emits one section per page separated by page-break rule", {
+test_that("multi-page emit produces a single continuous table with print-only page-break rows", {
   d <- data.frame(
     grp = rep(letters[1:6], each = 4L),
     x = seq_len(24L)
@@ -466,17 +466,39 @@ test_that("multi-page emit emits one section per page separated by page-break ru
   emit(spec, out)
   lines <- readLines(out)
   txt <- paste(lines, collapse = "\n")
-  sections <- length(grep(
-    "<section class=\"tabular-page\">",
+  # Exactly one continuous <table> / <colgroup> / <thead> / <tbody>.
+  expect_identical(
+    length(grep("<table class=\"tabular-table\">", lines, fixed = TRUE)),
+    1L
+  )
+  expect_identical(
+    length(grep("<colgroup>", lines, fixed = TRUE)),
+    1L
+  )
+  expect_identical(length(grep("<thead>", lines, fixed = TRUE)), 1L)
+  expect_identical(length(grep("<tbody>", lines, fixed = TRUE)), 1L)
+  # One or more invisible page-break rows between vertical pages.
+  break_rows <- length(grep(
+    "<tr class=\"tabular-page-break-row\"",
     lines,
     fixed = TRUE
   ))
-  expect_gt(sections, 1L)
-  expect_true(grepl("<hr class=\"tabular-page-break\"/>", txt, fixed = TRUE))
-  expect_true(any(grepl("<!-- page 2", lines, fixed = TRUE)))
+  expect_gt(break_rows, 0L)
+  # No per-page section wrappers, no <hr> separator, no page-N comment.
+  expect_false(any(grepl(
+    "<section class=\"tabular-page\">",
+    lines,
+    fixed = TRUE
+  )))
+  expect_false(grepl(
+    "<hr class=\"tabular-page-break\"/>",
+    txt,
+    fixed = TRUE
+  ))
+  expect_false(any(grepl("<!-- page 2", lines, fixed = TRUE)))
 })
 
-test_that("continuation marker renders on pages 2+ when set", {
+test_that("continuation marker is a no-op for HTML output", {
   d <- data.frame(
     grp = rep(letters[1:6], each = 4L),
     x = seq_len(24L)
@@ -488,11 +510,188 @@ test_that("continuation marker renders on pages 2+ when set", {
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
+  expect_false(grepl("tabular-continuation", txt, fixed = TRUE))
+  expect_false(grepl("(continued)", txt, fixed = TRUE))
+})
+
+test_that("horizontal panels emit one <table> per panel with its own <thead>", {
+  d <- data.frame(
+    grp = c("a", "b"),
+    c1 = 1:2,
+    c2 = 3:4,
+    c3 = 5:6,
+    c4 = 7:8
+  )
+  spec <- tabular(d) |>
+    cols(grp = col_spec(usage = "group")) |>
+    paginate(panels = 2L)
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  lines <- readLines(out)
+  txt <- paste(lines, collapse = "\n")
+  # Two `<table>` blocks (one per panel), each with its own
+  # `<thead>` and `<tbody>`.
+  expect_identical(
+    length(grep("<table class=\"tabular-table\">", lines, fixed = TRUE)),
+    2L
+  )
+  expect_identical(length(grep("<thead>", lines, fixed = TRUE)), 2L)
+  expect_identical(length(grep("<tbody>", lines, fixed = TRUE)), 2L)
+  # No `<section>` wrapper between panels — natural stacking.
+  expect_false(any(grepl(
+    "<section class=\"tabular-page\">",
+    lines,
+    fixed = TRUE
+  )))
+  # `@media print` carries the panel page-break rule.
   expect_true(grepl(
-    "<p class=\"tabular-continuation\"><em>(continued)</em></p>",
+    ".tabular-table + .tabular-table { page-break-before: always",
     txt,
     fixed = TRUE
   ))
+})
+
+test_that(".tabular-page-break-row CSS hides on screen and breaks pages in print", {
+  spec <- tabular(data.frame(x = 1L), titles = "T")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_true(grepl(
+    ".tabular-page-break-row { display: none; }",
+    txt,
+    fixed = TRUE
+  ))
+  expect_true(grepl(
+    ".tabular-page-break-row { display: table-row; page-break-before: always",
+    txt,
+    fixed = TRUE
+  ))
+})
+
+test_that("removed CSS rules and elements do not appear", {
+  spec <- tabular(data.frame(x = 1L), titles = "T", footnotes = "F")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  # Removed CSS rules
+  expect_false(grepl(".tabular-page { margin-bottom", txt, fixed = TRUE))
+  expect_false(grepl(
+    ".tabular-page-break { border:",
+    txt,
+    fixed = TRUE
+  ))
+  expect_false(grepl(".tabular-continuation", txt, fixed = TRUE))
+  # Removed DOM elements
+  expect_false(grepl("<section class=\"tabular-page\"", txt, fixed = TRUE))
+  expect_false(grepl(
+    "<hr class=\"tabular-page-break\"/>",
+    txt,
+    fixed = TRUE
+  ))
+})
+
+# ---------------------------------------------------------------------
+# Targeted helper coverage — border / valign / chrome counters / link
+# (these helpers exist in `backend_html.R` but were only weakly exercised
+# by the existing tests; explicit coverage keeps them above the 95%
+# coverage gate without leaning on integration paths)
+# ---------------------------------------------------------------------
+
+test_that(".html_border_decl maps style triples to border-<side> declarations", {
+  brd <- list(style = "solid", width = 1, color = "#000")
+  expect_identical(
+    tabular:::.html_border_decl("top", brd),
+    "border-top: 1pt solid #000;"
+  )
+  brd2 <- list(style = "dashed", width = 2, color = "red")
+  expect_identical(
+    tabular:::.html_border_decl("bottom", brd2),
+    "border-bottom: 2pt dashed red;"
+  )
+  brd3 <- list(style = "dashdot", width = 1, color = "blue")
+  expect_match(
+    tabular:::.html_border_decl("left", brd3),
+    "dashed",
+    fixed = TRUE
+  )
+  # `none` style yields NULL
+  expect_null(tabular:::.html_border_decl(
+    "top",
+    list(style = "none", width = 1, color = "#000")
+  ))
+  expect_null(tabular:::.html_border_decl("top", NULL))
+})
+
+test_that(".html_valign_class maps every valign value to its CSS class", {
+  expect_identical(tabular:::.html_valign_class("top"), "valign-top")
+  expect_identical(tabular:::.html_valign_class("middle"), "valign-middle")
+  expect_identical(tabular:::.html_valign_class("bottom"), "valign-bottom")
+  expect_identical(tabular:::.html_valign_class(NA_character_), "")
+  expect_identical(tabular:::.html_valign_class(NULL), "")
+  expect_identical(tabular:::.html_valign_class("garbage"), "")
+})
+
+test_that("cell border styling surfaces as inline style attribute on <td>", {
+  template <- style_template() |>
+    style(
+      .at = cells_body(i = 1L),
+      border_top = brdr(style = "solid", width = 1, color = "#cc0000")
+    )
+  spec <- tabular(data.frame(x = 1:3)) |> preset(.style = template)
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(html, "border-top: 1pt solid #cc0000", fixed = TRUE)
+})
+
+test_that("link without title emits the no-title <a href> branch", {
+  spec <- tabular(
+    data.frame(x = 1L),
+    footnotes = md("[link](https://example.com)")
+  )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(
+    html,
+    "<a href=\"https://example.com\">link</a>",
+    fixed = TRUE
+  )
+})
+
+test_that("pagehead chrome with {page}/{npages} renders text + counter substitution", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(
+        left = "Protocol",
+        right = "Page {page} of {npages}"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # On-screen header substitutes {page} -> 1, {npages} -> 1.
+  expect_match(html, "Page 1 of 1", fixed = TRUE)
+  # @page rules carry CSS counter calls.
+  expect_match(html, "counter(page)", fixed = TRUE)
+  expect_match(html, "counter(pages)", fixed = TRUE)
+})
+
+test_that("subgroup banner row emits inline inside the single <tbody>", {
+  d <- data.frame(
+    g = c("A", "A", "B", "B"),
+    x = 1:4
+  )
+  spec <- tabular(d) |> subgroup("g")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  lines <- readLines(out)
+  txt <- paste(lines, collapse = "\n")
+  # Each subgroup partition produces its own grid; emit handles the
+  # first partition by default. The body must carry a banner <tr>.
+  expect_true(grepl("tabular-subgroup", txt, fixed = TRUE))
+  # The single-<tbody> contract still holds.
+  expect_identical(length(grep("<tbody>", lines, fixed = TRUE)), 1L)
 })
 
 # ---------------------------------------------------------------------
@@ -511,6 +710,7 @@ test_that("empty grid renders titles + (no rows) marker + footnotes", {
   expect_true(any(grepl(">Title<", lines, fixed = TRUE)))
   expect_true(any(grepl(">Foot<", lines, fixed = TRUE)))
   expect_true(any(grepl(">(no rows)<", lines, fixed = TRUE)))
+  expect_false(any(grepl("<section", lines, fixed = TRUE)))
 })
 
 test_that("zero-row spec renders <thead> with no <tbody> rows", {
@@ -824,4 +1024,44 @@ test_that("style(.at = cells_title(), blank_above = 3) emits three pad paragraph
   html <- paste(readLines(out, warn = FALSE), collapse = "\n")
   pad_count <- length(gregexpr("tabular-pad", html, fixed = TRUE)[[1]])
   expect_gte(pad_count, 3L)
+})
+
+# ---------------------------------------------------------------------
+# CSS scoping — body-level rules must bind to `.tabular-doc`, not the
+# host page's <body>. Tabular fragments embed into Quarto chunks,
+# Shiny UIs, pkgdown reference pages, and htmltools viewer-pane
+# wrappers; a bare `body { ... }` selector would rewrite the host's
+# font-family / color / margin.
+# ---------------------------------------------------------------------
+
+test_that(".html_inline_style scopes body-level rules to .tabular-doc", {
+  spec <- tabular(data.frame(x = 1:3))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  payload <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # No top-level `body { ... }` rule — tabular fragments must not
+  # mutate the host page's body styling when embedded.
+  expect_false(grepl("\\bbody\\s*\\{", payload, perl = TRUE))
+
+  # The scoped rule is present.
+  expect_match(
+    payload,
+    "\\.tabular-doc\\s*\\{[^}]*font-family",
+    perl = TRUE
+  )
+
+  # The full-document body carries the scoping class.
+  expect_match(payload, "<body class=\"tabular-doc\">", fixed = TRUE)
+})
+
+test_that("as.tags.tabular_spec wrapping div carries .tabular-doc class", {
+  spec <- tabular(data.frame(x = 1:3))
+  rendered <- htmltools::renderTags(htmltools::as.tags(spec))$html
+
+  # No top-level `body { ... }` rule reaches the embedded fragment.
+  expect_false(grepl("\\bbody\\s*\\{", rendered, perl = TRUE))
+
+  # Wrapping div has the scoping class.
+  expect_match(rendered, "class=\"tabular-doc\"", fixed = TRUE)
 })

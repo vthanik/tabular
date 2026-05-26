@@ -101,13 +101,19 @@
 #' @param repeat_headers *Repeat the column-header band on every
 #'   continuation page.* `<logical(1)>: default TRUE`. `FALSE` shows
 #'   the header band on page 1 only; submission-grade tables almost
-#'   always want `TRUE`.
+#'   always want `TRUE`. **HTML / MD:** ignored. HTML renders one
+#'   continuous `<table>` and browsers natively repeat `<thead>` on
+#'   print; MD has no print model. Effective only for the page-
+#'   oriented backends (RTF, PDF, LaTeX, DOCX).
 #'
 #' @param continuation *Marker text appended after a continuing
 #'   table's title block.* `<character(1) | NULL>: default NULL`.
 #'   `NULL` (the default) renders no marker — pick the wording your
 #'   submission style guide expects (e.g. `"(continued)"`,
 #'   `"(Cont'd)"`, `"Page %d of %d"`) and pass it explicitly.
+#'   **HTML / MD:** ignored. With one continuous document on screen
+#'   there is no continuing-page boundary to mark. Effective only
+#'   for the page-oriented backends (RTF, PDF, LaTeX, DOCX).
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
 #'   [`style()`], [`preset()`], then render via [`emit()`] (or

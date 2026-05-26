@@ -5,6 +5,32 @@
   rewritten at first tagged release; see `git log` for live change
   history in the interim.
 
+## HTML / MD backends — continuous document
+
+* `backend_html` and `backend_md` render the resolved grid as one
+  continuous document instead of one section per logical page. The
+  HTML backend emits a single `<table>` per horizontal panel with
+  one `<thead>` and one `<tbody>`; vertical-page boundaries are
+  carried by invisible `<tr class="tabular-page-break-row">`
+  markers that fire as `page-break-before: always` only under
+  `@media print`. Browsers natively repeat `<thead>` across the
+  resulting printed page breaks. The MD backend emits one pipe
+  table per horizontal panel with all body rows concatenated.
+* `paginate(repeat_headers = ...)` and `paginate(continuation =
+  ...)` are now ignored by the HTML and MD backends — they are
+  effective only for the page-oriented backends (RTF / PDF /
+  LaTeX / DOCX), where per-printed-page headers and continuation
+  markers are part of the regulatory output contract.
+* Removed DOM / CSS classes from the HTML backend: `<section
+  class="tabular-page">`, `<hr class="tabular-page-break"/>`, the
+  `<!-- page N of M -->` comment, the `<p
+  class="tabular-continuation">` paragraph, and the corresponding
+  `.tabular-page` / `.tabular-page-break` / `.tabular-continuation`
+  CSS rules. With `paginate(panels = N)` on HTML / MD output, each
+  panel renders as its own table; in HTML print a single rule on
+  `.tabular-table + .tabular-table` forces each subsequent panel
+  onto a new printed page.
+
 ## New features
 
 * `col_spec(indent_by = "<column_name>")` declares per-row indent
