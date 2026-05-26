@@ -825,3 +825,43 @@ test_that("style(.at = cells_title(), blank_above = 3) emits three pad paragraph
   pad_count <- length(gregexpr("tabular-pad", html, fixed = TRUE)[[1]])
   expect_gte(pad_count, 3L)
 })
+
+# ---------------------------------------------------------------------
+# CSS scoping — body-level rules must bind to `.tabular-doc`, not the
+# host page's <body>. Tabular fragments embed into Quarto chunks,
+# Shiny UIs, pkgdown reference pages, and htmltools viewer-pane
+# wrappers; a bare `body { ... }` selector would rewrite the host's
+# font-family / color / margin.
+# ---------------------------------------------------------------------
+
+test_that(".html_inline_style scopes body-level rules to .tabular-doc", {
+  spec <- tabular(data.frame(x = 1:3))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  payload <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # No top-level `body { ... }` rule — tabular fragments must not
+  # mutate the host page's body styling when embedded.
+  expect_false(grepl("\\bbody\\s*\\{", payload, perl = TRUE))
+
+  # The scoped rule is present.
+  expect_match(
+    payload,
+    "\\.tabular-doc\\s*\\{[^}]*font-family",
+    perl = TRUE
+  )
+
+  # The full-document body carries the scoping class.
+  expect_match(payload, "<body class=\"tabular-doc\">", fixed = TRUE)
+})
+
+test_that("as.tags.tabular_spec wrapping div carries .tabular-doc class", {
+  spec <- tabular(data.frame(x = 1:3))
+  rendered <- htmltools::renderTags(htmltools::as.tags(spec))$html
+
+  # No top-level `body { ... }` rule reaches the embedded fragment.
+  expect_false(grepl("\\bbody\\s*\\{", rendered, perl = TRUE))
+
+  # Wrapping div has the scoping class.
+  expect_match(rendered, "class=\"tabular-doc\"", fixed = TRUE)
+})

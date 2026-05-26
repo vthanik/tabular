@@ -80,7 +80,7 @@ backend_html <- function(grid, file) {
       pagefoot_ast = meta$pagefoot_ast
     ),
     "</head>",
-    "<body>"
+    "<body class=\"tabular-doc\">"
   )
   tail <- c("</body>", "</html>")
 
@@ -1228,7 +1228,7 @@ backend_html <- function(grid, file) {
 ) {
   body_css <- c(
     sprintf(
-      "body { font-family: %s; color: #212529; margin: 1.5rem; }",
+      ".tabular-doc { font-family: %s; color: #212529; margin: 1.5rem; }",
       .html_font_family_css(preset)
     ),
     ".tabular-page { margin-bottom: 2rem; }",

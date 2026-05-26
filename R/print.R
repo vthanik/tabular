@@ -324,6 +324,7 @@ as.tags.tabular_spec <- function(x, ..., id = NULL) {
     if (nzchar(frag$style)) htmltools::HTML(frag$style) else NULL,
     htmltools::tags$div(
       id = id,
+      class = "tabular-doc",
       style = htmltools::css(
         `overflow-x` = "auto",
         `max-width` = "100%"
