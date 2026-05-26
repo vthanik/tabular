@@ -324,11 +324,15 @@ test_that("HTML / LaTeX / RTF / DOCX widths agree byte-for-byte (cross-backend p
   # across every backend. Build the golden saf_demo pipeline once,
   # emit all four widthful backends, parse widths, assert vector
   # equality (converted to a common unit: inches to 6 decimals).
+  # Pinned to portrait so the cellx parsing finds the row boundary
+  # at the expected position; the parity claim is geometry-agnostic
+  # (verified separately under landscape via the golden snapshots).
   spec <- tabular(
     saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
+    preset(orientation = "portrait") |>
     cols(
       variable = col_spec(usage = "group", label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),

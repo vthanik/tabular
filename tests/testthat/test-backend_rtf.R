@@ -55,10 +55,19 @@ test_that("backend_rtf() is callable directly with a grid + file", {
 # ---------------------------------------------------------------------
 
 test_that("font table emits {\\fonttbl} with body + mono entries", {
-  rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
-  expect_true(grepl("{\\fonttbl", rtf, fixed = TRUE))
-  expect_true(grepl("\\f0\\froman", rtf, fixed = TRUE))
-  expect_true(grepl("\\f1\\fmodern", rtf, fixed = TRUE))
+  # Default body is mono, so \f0 (body) and \f1 (mono fallback)
+  # both carry \fmodern. Switch to serif to confirm \f0 carries
+  # \froman while \f1 stays \fmodern.
+  rtf_default <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
+  expect_true(grepl("{\\fonttbl", rtf_default, fixed = TRUE))
+  expect_true(grepl("\\f0\\fmodern", rtf_default, fixed = TRUE))
+  expect_true(grepl("\\f1\\fmodern", rtf_default, fixed = TRUE))
+
+  rtf_serif <- .rtf_emit_text(
+    tabular(data.frame(x = 1:3)) |> preset(font_family = "serif")
+  )
+  expect_true(grepl("\\f0\\froman", rtf_serif, fixed = TRUE))
+  expect_true(grepl("\\f1\\fmodern", rtf_serif, fixed = TRUE))
 })
 
 test_that("font_family = sans switches body class to \\fswiss", {
@@ -88,17 +97,33 @@ test_that("font_family explicit-stack falls back to \\froman class", {
 # Font table — Liberation-first chain + \*\falt fallback for Word
 # ---------------------------------------------------------------------
 
-test_that("default serif leads with Liberation Serif as \\f0 body", {
+test_that("default mono leads with Liberation Mono as \\f0 body", {
   rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
   expect_true(grepl(
-    "{\\f0\\froman\\fprq2 Liberation Serif",
+    "{\\f0\\fmodern\\fprq2 Liberation Mono",
     rtf,
     fixed = TRUE
   ))
 })
 
-test_that("default serif emits {\\*\\falt Times New Roman} in body font definition", {
+test_that("default mono emits {\\*\\falt Courier New} in body font definition", {
   rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
+  expect_true(grepl(
+    "Liberation Mono{\\*\\falt Courier New}",
+    rtf,
+    fixed = TRUE
+  ))
+})
+
+test_that("explicit serif leads with Liberation Serif + Times New Roman fallback", {
+  rtf <- .rtf_emit_text(
+    tabular(data.frame(x = 1:3)) |> preset(font_family = "serif")
+  )
+  expect_true(grepl(
+    "{\\f0\\froman\\fprq2 Liberation Serif",
+    rtf,
+    fixed = TRUE
+  ))
   expect_true(grepl(
     "Liberation Serif{\\*\\falt Times New Roman}",
     rtf,
@@ -154,23 +179,24 @@ test_that("font_size emits \\fsN at body where N = 2*points", {
   expect_true(grepl("\\fs20", rtf, fixed = TRUE))
 })
 
-test_that("section def emits letter portrait by default in twips", {
+test_that("section def emits letter landscape by default in twips", {
   rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
-  # Letter portrait: 12240 x 15840 twips
-  expect_true(grepl("\\pgwsxn12240\\pghsxn15840", rtf, fixed = TRUE))
-  expect_false(grepl("\\lndscpsxn", rtf, fixed = TRUE))
+  # Letter landscape: 15840 x 12240 twips, with \lndscpsxn marker
+  expect_true(grepl("\\pgwsxn15840\\pghsxn12240", rtf, fixed = TRUE))
+  expect_true(grepl("\\lndscpsxn", rtf, fixed = TRUE))
 })
 
-test_that("section def swaps width/height + adds \\lndscpsxn for landscape", {
+test_that("section def emits letter portrait dimensions when explicit", {
   spec <- tabular(data.frame(x = 1:3)) |>
-    preset(orientation = "landscape")
+    preset(orientation = "portrait")
   rtf <- .rtf_emit_text(spec)
-  expect_true(grepl("\\lndscpsxn", rtf, fixed = TRUE))
-  expect_true(grepl("\\pgwsxn15840\\pghsxn12240", rtf, fixed = TRUE))
+  expect_false(grepl("\\lndscpsxn", rtf, fixed = TRUE))
+  expect_true(grepl("\\pgwsxn12240\\pghsxn15840", rtf, fixed = TRUE))
 })
 
 test_that("section def emits A4 paper dimensions when paper_size = 'a4'", {
-  spec <- tabular(data.frame(x = 1:3)) |> preset(paper_size = "a4")
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(paper_size = "a4", orientation = "portrait")
   rtf <- .rtf_emit_text(spec)
   expect_true(grepl("\\pgwsxn11906\\pghsxn16838", rtf, fixed = TRUE))
 })

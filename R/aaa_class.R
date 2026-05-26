@@ -703,17 +703,17 @@ preset_spec <- S7::new_class(
   properties = list(
     font_size = S7::new_property(S7::class_numeric, default = 9),
     # font_family accepts three input shapes (handled by .resolve_font_stack):
-    #   * generic family   — "serif" (default) / "sans" / "mono"
+    #   * generic family   — "mono" (default) / "serif" / "sans"
     #   * single named     — "Courier New", "Inter", ...
     #   * explicit stack   — c("Courier New", "mono"), ...
     # class_any so character vectors typecheck.
     font_family = S7::new_property(
       S7::class_any,
-      default = "serif"
+      default = "mono"
     ),
     orientation = S7::new_property(
       S7::class_character,
-      default = "portrait"
+      default = "landscape"
     ),
     paper_size = S7::new_property(
       S7::class_character,
