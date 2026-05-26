@@ -425,3 +425,102 @@ test_that("saf_demo golden pipeline matches the pinned .rtf snapshot", {
   emit(spec, out)
   expect_snapshot_file(out, "saf_demo_golden.rtf")
 })
+
+# ---------------------------------------------------------------------
+# chrome_style cascade — `style_template() |> style(at = cells_*())`
+# must propagate into the RTF output. Each test isolates one chrome
+# surface so a regression points at the exact surface that broke.
+# ---------------------------------------------------------------------
+
+test_that("style(at = cells_headers(), bold = TRUE, color = ...) emits a chrome \\cf token on the header row", {
+  template <- style_template() |>
+    style(at = cells_headers(), bold = TRUE, color = "#cc0000")
+  spec <- tabular(data.frame(x = 1:2, y = 3:4)) |>
+    preset(style = template)
+  rtf <- .rtf_emit_text(spec)
+
+  # The user-set chrome color registers in the dynamic colortbl.
+  expect_match(
+    rtf,
+    "\\\\colortbl;.*\\\\red204\\\\green0\\\\blue0;",
+    fixed = FALSE
+  )
+  # The header band emits the \cf<idx> token from the chrome cascade.
+  expect_match(rtf, "\\\\cf[1-9][0-9]*", fixed = FALSE)
+})
+
+test_that("style(at = cells_title(), halign = 'left') emits \\ql on the title paragraph", {
+  template <- style_template() |>
+    style(at = cells_title(), halign = "left")
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = "Demographics"
+  ) |>
+    preset(style = template)
+  rtf <- .rtf_emit_text(spec)
+  # The chrome surface halign overrides the default center alignment
+  # for the title paragraph.
+  expect_match(rtf, "\\\\pard\\\\plain\\\\ql.*Demographics", fixed = FALSE)
+})
+
+test_that("style(at = cells_footnotes(), italic = TRUE) emits \\i on the footnote paragraph", {
+  template <- style_template() |>
+    style(at = cells_footnotes(), italic = TRUE)
+  spec <- tabular(
+    data.frame(x = 1L),
+    footnotes = "Source: ADSL"
+  ) |>
+    preset(style = template)
+  rtf <- .rtf_emit_text(spec)
+  expect_match(rtf, "\\\\i.*Source: ADSL", fixed = FALSE)
+})
+
+test_that("style(at = cells_headers(), border_top = brdr(1, 'double')) drives chrome \\brdrdb", {
+  template <- style_template() |>
+    style(at = cells_headers(), border_top = brdr(1, "double", "#000000"))
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(style = template)
+  rtf <- .rtf_emit_text(spec)
+  expect_match(rtf, "\\\\clbrdrt\\\\brdrdb\\\\brdrw20", fixed = FALSE)
+})
+
+test_that("style(at = cells_title(), blank_above = 3) overrides preset@title_pad_top", {
+  template <- style_template() |>
+    style(at = cells_title(), blank_above = 3L)
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = "Demo"
+  ) |>
+    preset(style = template)
+  rtf <- .rtf_emit_text(spec)
+  # Three blank paragraphs above the title (versus the preset
+  # default of 1).
+  blanks <- length(gregexpr("\\\\pard\\\\plain\\\\par", rtf)[[1]])
+  expect_gte(blanks, 3L)
+})
+
+# ---------------------------------------------------------------------
+# Dynamic colortbl + fonttbl — Phase 2b: scan resolved styles
+# ---------------------------------------------------------------------
+
+test_that("a body cell color and a chrome color both register in the dynamic colortbl", {
+  template <- style_template() |>
+    style(at = cells_headers(), color = "#cc0000")
+  spec <- tabular(data.frame(x = c("a", "b"))) |>
+    preset(style = template) |>
+    style(color = "#0000cc", where = x == "a")
+  rtf <- .rtf_emit_text(spec)
+  # Both unique colors land in the colortbl.
+  expect_match(rtf, "\\\\red204\\\\green0\\\\blue0;", fixed = FALSE)
+  expect_match(rtf, "\\\\red0\\\\green0\\\\blue204;", fixed = FALSE)
+})
+
+test_that("a body cell font_family registers as \\f2+ in the dynamic fonttbl", {
+  template <- style_template() |>
+    style(at = cells_headers(), font_family = "Inter")
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(style = template)
+  rtf <- .rtf_emit_text(spec)
+  # \f0 is body; \f1 is mono; Inter registers at index 2 or above.
+  expect_match(rtf, "\\{\\\\f[2-9][^{]*Inter", fixed = FALSE)
+})

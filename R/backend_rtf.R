@@ -70,11 +70,21 @@ backend_rtf <- function(grid, file) {
   total <- length(pages)
   meta <- grid@metadata
   preset <- .rtf_resolve_preset(meta$preset)
+  cs <- meta$chrome_style %||% chrome_style()
+
+  # Walk every style_node that might contribute a color / font family
+  # to the rendered document so the colortbl + fonttbl carry every
+  # value used by any cell or chrome surface. Per-cell `\cf<idx>` /
+  # `\cb<idx>` / `\f<idx>` references then resolve to a real table
+  # entry instead of pointing at the silently-truncated single-slot
+  # tables the static helpers emitted.
+  colors <- .rtf_collect_colors(pages, cs, preset)
+  fonts <- .rtf_collect_fonts(pages, cs, preset)
 
   preamble <- c(
     "{\\rtf1\\ansi\\ansicpg1252\\deff0\\uc1",
-    .rtf_font_table(.effective_font_family(preset, "body")),
-    .rtf_color_table(preset),
+    .rtf_font_table(fonts),
+    .rtf_color_table(colors),
     sprintf(
       "\\fs%d",
       as.integer(round(.effective_font_size(preset, "body") * 2))
@@ -83,7 +93,7 @@ backend_rtf <- function(grid, file) {
   preamble <- preamble[nzchar(preamble)]
 
   if (total == 0L) {
-    section <- .render_rtf_empty(grid, preset)
+    section <- .render_rtf_empty(grid, preset, cs, colors, fonts)
     return(c(preamble, section, "}"))
   }
 
@@ -93,6 +103,9 @@ backend_rtf <- function(grid, file) {
       page = pages[[i]],
       meta = meta,
       preset = preset,
+      cs = cs,
+      colors = colors,
+      fonts = fonts,
       page_number = i,
       total_pages = total
     )
@@ -104,13 +117,13 @@ backend_rtf <- function(grid, file) {
 # (empty data + no body content). Titles + footnotes still
 # appear; the table block is replaced with a centred "(no rows)"
 # marker. Single section, no page chrome.
-.render_rtf_empty <- function(grid, preset) {
+.render_rtf_empty <- function(grid, preset, cs, colors, fonts) {
   meta <- grid@metadata
   c(
     .rtf_section_def(preset, has_pagehead = FALSE, has_pagefoot = FALSE),
-    .render_rtf_title_block(meta$titles_ast, preset),
+    .render_rtf_title_block(meta$titles_ast, preset, cs, colors, fonts),
     "\\pard\\plain\\qc {\\i (no rows)}\\par",
-    .render_rtf_footnote_block(meta$footnotes_ast, preset)
+    .render_rtf_footnote_block(meta$footnotes_ast, preset, cs, colors, fonts)
   )
 }
 
@@ -118,7 +131,16 @@ backend_rtf <- function(grid, file) {
 # definition (so per-page geometry stays self-contained), optional
 # header / footer groups, page-1 title block, optional continuation
 # marker on pages 2+, the table, and the page-1 footnote block.
-.render_rtf_page <- function(page, meta, preset, page_number, total_pages) {
+.render_rtf_page <- function(
+  page,
+  meta,
+  preset,
+  cs,
+  colors,
+  fonts,
+  page_number,
+  total_pages
+) {
   has_ph <- .page_band_is_populated(meta$pagehead_ast)
   has_pf <- .page_band_is_populated(meta$pagefoot_ast)
 
@@ -128,20 +150,42 @@ backend_rtf <- function(grid, file) {
     .rtf_section_def(preset, has_pagehead = has_ph, has_pagefoot = has_pf)
   )
   if (has_ph) {
-    out <- c(out, .rtf_header_group(meta$pagehead_ast, preset))
+    out <- c(
+      out,
+      .rtf_header_group(meta$pagehead_ast, preset, cs, colors, fonts)
+    )
   }
   if (has_pf) {
-    out <- c(out, .rtf_footer_group(meta$pagefoot_ast, preset))
+    out <- c(
+      out,
+      .rtf_footer_group(meta$pagefoot_ast, preset, cs, colors, fonts)
+    )
   }
 
   blank_par <- "\\pard\\plain\\par"
-  pad_title_top <- as.integer(preset@title_pad_top)
-  pad_title_bottom <- as.integer(preset@title_pad_bottom)
+  pad_title_top <- .rtf_blank_count(
+    cs,
+    "title",
+    "above",
+    preset@title_pad_top
+  )
+  pad_title_bottom <- .rtf_blank_count(
+    cs,
+    "title",
+    "below",
+    preset@title_pad_bottom
+  )
   pad_body_top <- as.integer(preset@body_pad_top)
   pad_body_bottom <- as.integer(preset@body_pad_bottom)
 
   if (page_number == 1L) {
-    titles <- .render_rtf_title_block(meta$titles_ast, preset)
+    titles <- .render_rtf_title_block(
+      meta$titles_ast,
+      preset,
+      cs,
+      colors,
+      fonts
+    )
     if (length(titles) > 0L) {
       out <- c(
         out,
@@ -162,15 +206,37 @@ backend_rtf <- function(grid, file) {
   }
 
   out <- c(out, rep(blank_par, pad_body_top))
-  out <- c(out, .render_rtf_table(page, meta, preset))
+  out <- c(out, .render_rtf_table(page, meta, preset, cs, colors, fonts))
   out <- c(out, rep(blank_par, pad_body_bottom))
 
   if (page_number == 1L) {
-    out <- c(out, .render_rtf_footnote_block(meta$footnotes_ast, preset))
+    out <- c(
+      out,
+      .render_rtf_footnote_block(
+        meta$footnotes_ast,
+        preset,
+        cs,
+        colors,
+        fonts
+      )
+    )
   }
 
   out <- c(out, "\\sect")
   out
+}
+
+# Resolve the blank-line count for a chrome surface side. chrome_style
+# wins when the user set `style(blank_above = N, at = cells_title())`;
+# otherwise the legacy preset `*_pad_*` scalar fills in. Always
+# returns a non-negative whole integer.
+.rtf_blank_count <- function(cs, surface, side, legacy) {
+  node <- .chrome_surface_at(cs, surface)
+  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
+  if (length(prop) == 1L && !is.na(prop)) {
+    return(max(0L, as.integer(prop)))
+  }
+  max(0L, as.integer(legacy))
 }
 
 # ---------------------------------------------------------------------
@@ -274,12 +340,15 @@ backend_rtf <- function(grid, file) {
 # `{\header ...}` group. Emits one invisible 1-row 3-cell table
 # per band row, in REVERSE index order so row 1 (body-edge) ends
 # up at the bottom of the header zone, closest to the table body.
-.rtf_header_group <- function(pagehead_ast, preset) {
+.rtf_header_group <- function(pagehead_ast, preset, cs, colors, fonts) {
   nrow_band <- .page_band_nrow(pagehead_ast)
   rows <- character()
   for (i in rev(seq_len(nrow_band))) {
     row_ast <- .page_band_row(pagehead_ast, i)
-    rows <- c(rows, .rtf_chrome_row(row_ast, preset))
+    rows <- c(
+      rows,
+      .rtf_chrome_row(row_ast, preset, cs, "pagehead", colors, fonts)
+    )
   }
   c("{\\header", rows, "}")
 }
@@ -287,12 +356,15 @@ backend_rtf <- function(grid, file) {
 # `{\footer ...}` group. Emits one invisible 1-row 3-cell table
 # per band row, in FORWARD index order so row 1 (body-edge) ends
 # up at the top of the footer zone.
-.rtf_footer_group <- function(pagefoot_ast, preset) {
+.rtf_footer_group <- function(pagefoot_ast, preset, cs, colors, fonts) {
   nrow_band <- .page_band_nrow(pagefoot_ast)
   rows <- character()
   for (i in seq_len(nrow_band)) {
     row_ast <- .page_band_row(pagefoot_ast, i)
-    rows <- c(rows, .rtf_chrome_row(row_ast, preset))
+    rows <- c(
+      rows,
+      .rtf_chrome_row(row_ast, preset, cs, "pagefoot", colors, fonts)
+    )
   }
   c("{\\footer", rows, "}")
 }
@@ -301,7 +373,14 @@ backend_rtf <- function(grid, file) {
 # / Right). Cells with empty ASTs collapse — only non-empty slots
 # emit a `\cell`. Cell widths divide the printable area evenly
 # across non-empty cells; `\cellx<position>` is cumulative.
-.rtf_chrome_row <- function(row_slots_ast, preset) {
+.rtf_chrome_row <- function(
+  row_slots_ast,
+  preset,
+  cs = NULL,
+  surface = NULL,
+  colors = NULL,
+  fonts = NULL
+) {
   slots <- c("left", "center", "right")
   alignments <- c(left = "\\ql", center = "\\qc", right = "\\qr")
   cells <- list()
@@ -323,6 +402,16 @@ backend_rtf <- function(grid, file) {
   printable <- paper$width - margins$left - margins$right
   per_cell <- as.integer(printable %/% length(cells))
 
+  # Chrome surface text props (bold/italic/color/font_family/etc).
+  # Pagehead/pagefoot slots own their own halign via slot position,
+  # so the surface's halign is intentionally not applied here.
+  surface_node <- if (!is.null(surface)) {
+    .chrome_surface_at(cs, surface)
+  } else {
+    NULL
+  }
+  surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
+
   cellx_lines <- character(length(cells))
   cumulative <- 0L
   for (i in seq_along(cells)) {
@@ -337,7 +426,14 @@ backend_rtf <- function(grid, file) {
   cell_bodies <- vapply(
     cells,
     function(c) {
-      paste0("\\pard\\plain\\intbl ", c$align, " ", c$text, "\\cell")
+      paste0(
+        "\\pard\\plain\\intbl ",
+        c$align,
+        surface_props,
+        " ",
+        c$text,
+        "\\cell"
+      )
     },
     character(1L)
   )
@@ -376,28 +472,55 @@ backend_rtf <- function(grid, file) {
 # ---------------------------------------------------------------------
 
 # Title block: each title line emits as a paragraph whose alignment
-# comes from `preset@alignment$title_halign` (scalar broadcasts;
-# vector zips per-line). Bold by default; the cascade-default is
-# centre (\qc) when nothing in the cascade overrides.
-.render_rtf_title_block <- function(titles_ast, preset) {
+# and text properties cascade from `chrome_style$surfaces$title`
+# (set by `style(at = cells_title(), ...)`) down to
+# `preset@alignment$title_halign` (legacy theme layer). Bold by
+# default; the cascade-default alignment is centre when nothing
+# overrides.
+.render_rtf_title_block <- function(
+  titles_ast,
+  preset,
+  cs = NULL,
+  colors = NULL,
+  fonts = NULL
+) {
   n <- length(titles_ast)
   if (n == 0L) {
     return(character())
   }
+  surface_node <- .chrome_surface_at(cs, "title")
+  surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
   vapply(
     seq_len(n),
     function(i) {
-      halign <- .effective_title_halign(preset, line_index = i, n_lines = n)
-      if (is.na(halign)) {
-        halign <- "center"
+      halign <- if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        h <- .effective_title_halign(preset, line_index = i, n_lines = n)
+        if (is.na(h)) "center" else h
       }
       align_tok <- .rtf_align_token(halign)
+      bold_open <- if (
+        is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
+      ) {
+        ""
+      } else {
+        "{\\b "
+      }
+      bold_close <- if (identical(bold_open, "")) "" else "}"
       paste0(
         "\\pard\\plain",
         align_tok,
-        " {\\b ",
+        surface_props,
+        " ",
+        bold_open,
         .render_rtf_inline(titles_ast[[i]]),
-        "}\\par"
+        bold_close,
+        "\\par"
       )
     },
     character(1L)
@@ -405,37 +528,131 @@ backend_rtf <- function(grid, file) {
 }
 
 # Footnote block: each footnote line emits as a paragraph whose
-# alignment comes from `preset@alignment$footnote_halign` (scalar
-# broadcasts; vector zips per-line). Slightly smaller font size.
-# Cascade default is left (\ql).
-.render_rtf_footnote_block <- function(footnotes_ast, preset) {
+# alignment and text props cascade from
+# `chrome_style$surfaces$footer` (set by
+# `style(at = cells_footnotes(), ...)`) down to
+# `preset@alignment$footnote_halign` (legacy theme layer).
+# Slightly smaller font size by default; the cascade default
+# halign is left.
+.render_rtf_footnote_block <- function(
+  footnotes_ast,
+  preset,
+  cs = NULL,
+  colors = NULL,
+  fonts = NULL
+) {
   n <- length(footnotes_ast)
   if (n == 0L) {
     return(character())
   }
-  fs_half <- as.integer(round(max(preset@font_size - 1, 7) * 2))
+  surface_node <- .chrome_surface_at(cs, "footer")
+  # Footer font size cascade: chrome_style@font_size > preset@font_size - 1
+  fs_pt <- if (
+    is_style_node(surface_node) &&
+      length(surface_node@font_size) == 1L &&
+      !is.na(surface_node@font_size)
+  ) {
+    as.numeric(surface_node@font_size)
+  } else {
+    max(preset@font_size - 1, 7)
+  }
+  fs_half <- as.integer(round(fs_pt * 2))
+  # Strip the font_size token from surface_props since we emit it
+  # explicitly on the paragraph; .rtf_chrome_text_props drops it
+  # when we override below.
+  surface_props_no_fs <- .rtf_chrome_text_props(
+    surface_node,
+    colors,
+    fonts,
+    skip = "font_size"
+  )
   vapply(
     seq_len(n),
     function(i) {
-      halign <- .effective_footnote_halign(
-        preset,
-        line_index = i,
-        n_lines = n
-      )
-      if (is.na(halign)) {
-        halign <- "left"
+      halign <- if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        h <- .effective_footnote_halign(
+          preset,
+          line_index = i,
+          n_lines = n
+        )
+        if (is.na(h)) "left" else h
       }
       align_tok <- .rtf_align_token(halign)
       paste0(
         "\\pard\\plain",
         align_tok,
         sprintf("\\fs%d ", fs_half),
+        surface_props_no_fs,
         .render_rtf_inline(footnotes_ast[[i]]),
         "\\par"
       )
     },
     character(1L)
   )
+}
+
+# Helper — render the run-level text props from a chrome surface
+# node, with an optional `skip` set to drop selected props (e.g.
+# the footer block emits font_size explicitly and skips it here).
+# Returns a string like " \\b \\cf3 \\f2 " (always starts and ends
+# with whitespace when non-empty so it can be concatenated between
+# the alignment token and the body inline AST).
+.rtf_chrome_text_props <- function(
+  node,
+  colors = NULL,
+  fonts = NULL,
+  skip = character()
+) {
+  if (!is_style_node(node)) {
+    return("")
+  }
+  parts <- character()
+  if (isTRUE(node@bold) && !("bold" %in% skip)) {
+    parts <- c(parts, "\\b")
+  }
+  if (isTRUE(node@italic) && !("italic" %in% skip)) {
+    parts <- c(parts, "\\i")
+  }
+  if (isTRUE(node@underline) && !("underline" %in% skip)) {
+    parts <- c(parts, "\\ul")
+  }
+  fs <- node@font_size
+  if (
+    length(fs) == 1L &&
+      !is.na(fs) &&
+      is.numeric(fs) &&
+      !("font_size" %in% skip)
+  ) {
+    parts <- c(parts, sprintf("\\fs%d", as.integer(round(fs * 2))))
+  }
+  if (!is.null(colors) && !("color" %in% skip)) {
+    color <- node@color
+    if (length(color) == 1L && !is.na(color) && nzchar(color)) {
+      idx <- colors$lookup(color)
+      if (!is.na(idx)) {
+        parts <- c(parts, sprintf("\\cf%d", as.integer(idx)))
+      }
+    }
+  }
+  if (!is.null(fonts) && !("font_family" %in% skip)) {
+    ff <- node@font_family
+    if (length(ff) == 1L && !is.na(ff) && nzchar(ff)) {
+      idx <- fonts$lookup(ff)
+      if (!is.na(idx) && idx > 0L) {
+        parts <- c(parts, sprintf("\\f%d", as.integer(idx)))
+      }
+    }
+  }
+  if (length(parts) == 0L) {
+    return("")
+  }
+  paste0(" ", paste(parts, collapse = ""), " ")
 }
 
 # ---------------------------------------------------------------------
@@ -446,7 +663,14 @@ backend_rtf <- function(grid, file) {
 # (each band depth = one `\trowd\...\row`), then the column-labels
 # row, then the body rows. Cell widths route through
 # `.rtf_cellx_positions` to compute cumulative `\cellx` values.
-.render_rtf_table <- function(page, meta, preset) {
+.render_rtf_table <- function(
+  page,
+  meta,
+  preset,
+  cs = NULL,
+  colors = NULL,
+  fonts = NULL
+) {
   col_names_vis <- page$col_names
   cols <- meta$cols %||% list()
   cellx <- .rtf_cellx_positions(col_names_vis, cols, preset)
@@ -456,14 +680,20 @@ backend_rtf <- function(grid, file) {
     col_names_vis,
     cols,
     cellx,
-    preset
+    preset,
+    cs,
+    colors,
+    fonts
   )
   label_row <- .render_rtf_col_labels_row(
     meta$col_labels_ast,
     col_names_vis,
     cols,
     cellx,
-    preset
+    preset,
+    cs,
+    colors,
+    fonts
   )
   # Subgroup banner row — single merged cell spanning every visible
   # column, centred and bold, with a top + bottom rule for visual
@@ -473,7 +703,10 @@ backend_rtf <- function(grid, file) {
   banner_row <- .render_rtf_subgroup_banner_row(
     page$subgroup_line_ast,
     cellx = cellx,
-    preset = preset
+    preset = preset,
+    cs = cs,
+    colors = colors,
+    fonts = fonts
   )
 
   body_rows <- .render_rtf_body_rows(
@@ -482,7 +715,10 @@ backend_rtf <- function(grid, file) {
     cols,
     cellx,
     cells_style = page$cells_style,
-    preset = preset
+    preset = preset,
+    cs = cs,
+    colors = colors,
+    fonts = fonts
   )
 
   c(band_rows, label_row, banner_row, body_rows)
@@ -495,7 +731,10 @@ backend_rtf <- function(grid, file) {
 .render_rtf_subgroup_banner_row <- function(
   subgroup_line_ast,
   cellx,
-  preset = NULL
+  preset = NULL,
+  cs = NULL,
+  colors = NULL,
+  fonts = NULL
 ) {
   if (
     is.null(subgroup_line_ast) ||
@@ -506,32 +745,60 @@ backend_rtf <- function(grid, file) {
     return(character())
   }
   inner <- .render_rtf_inline(subgroup_line_ast)
-  halign <- .effective_subgroup_halign(preset)
-  if (is.na(halign)) {
-    halign <- "center"
+  surface_node <- .chrome_surface_at(cs, "subgroup")
+  surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
+  halign <- if (
+    is_style_node(surface_node) &&
+      length(surface_node@halign) == 1L &&
+      !is.na(surface_node@halign)
+  ) {
+    surface_node@halign
+  } else {
+    h <- .effective_subgroup_halign(preset)
+    if (is.na(h)) "center" else h
   }
-  valign <- .effective_subgroup_valign(preset)
+  valign <- if (
+    is_style_node(surface_node) &&
+      length(surface_node@valign) == 1L &&
+      !is.na(surface_node@valign)
+  ) {
+    surface_node@valign
+  } else {
+    .effective_subgroup_valign(preset)
+  }
   align_tok <- .rtf_align_token(halign)
   valign_tok <- .rtf_valign_token(valign)
-  # Subgroup banner backend defaults: solid top + solid bottom
-  # (visual frame around the centred label row); left + right
-  # clear. No cell_style attaches to the banner today, so the
-  # cascade resolver is a no-op until Phase 6 wires
-  # preset@borders$subgroup as a theme-side override.
+  # Subgroup banner chrome rules: chrome_style$borders takes priority
+  # over the legacy `solid top / solid bottom` backend defaults.
+  top_tok <- .rtf_chrome_border_seg(cs, "subgroup_top", "top", "solid")
+  bot_tok <- .rtf_chrome_border_seg(cs, "subgroup_bottom", "bottom", "solid")
+  shading <- .rtf_cell_shading(surface_node, colors)
   cellx_line <- paste0(
-    .rtf_border_seg("top", NULL, "solid"),
-    .rtf_border_seg("bottom", NULL, "solid"),
+    top_tok,
+    bot_tok,
     .rtf_border_seg("left", NULL, "none"),
     .rtf_border_seg("right", NULL, "none"),
+    shading,
     valign_tok,
     sprintf("\\cellx%d", as.integer(cellx[[length(cellx)]]))
   )
+  bold_open <- if (
+    is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
+  ) {
+    ""
+  } else {
+    "{\\b "
+  }
+  bold_close <- if (identical(bold_open, "")) "" else "}"
   cell_body <- paste0(
     "\\pard\\plain\\intbl",
     align_tok,
-    " {\\b ",
+    surface_props,
+    " ",
+    bold_open,
     inner,
-    "}\\cell"
+    bold_close,
+    "\\cell"
   )
   c(
     "\\trowd\\trgaph108",
@@ -598,7 +865,10 @@ backend_rtf <- function(grid, file) {
   col_names_vis,
   cols,
   cellx,
-  preset
+  preset,
+  cs = NULL,
+  colors = NULL,
+  fonts = NULL
 ) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(character())
@@ -624,9 +894,41 @@ backend_rtf <- function(grid, file) {
       character(1L)
     )
     runs <- .rtf_group_contiguous_runs(labels)
-    out <- c(out, .rtf_band_row(runs, cellx))
+    out <- c(out, .rtf_band_row(runs, cellx, cs, colors, fonts))
   }
   out
+}
+
+# Resolve a chrome border region into an RTF cell-prelude border
+# segment. chrome_style$borders takes priority; otherwise the
+# backend default. `side` is the cell side ("top" / "bottom" /
+# "left" / "right") this segment writes to — chrome border regions
+# map onto cell sides via the caller's choice (e.g. "header_top"
+# maps to the cell's top side).
+.rtf_chrome_border_seg <- function(cs, region, side, backend_default) {
+  triple <- .chrome_border_at(cs, region)
+  letter <- substr(side, 1L, 1L)
+  prefix <- paste0("\\clbrdr", letter)
+  if (is.null(triple)) {
+    if (identical(backend_default, "solid")) {
+      return(paste0(prefix, "\\brdrs\\brdrw10"))
+    }
+    return(paste0(prefix, "\\brdrnone"))
+  }
+  if (identical(triple$style, "none")) {
+    return(paste0(prefix, "\\brdrnone"))
+  }
+  style_tok <- switch(
+    triple$style,
+    solid = "\\brdrs",
+    dashed = "\\brdrdash",
+    dotted = "\\brdrdot",
+    double = "\\brdrdb",
+    dashdot = "\\brdrdashd",
+    "\\brdrs"
+  )
+  twips <- max(1L, as.integer(round(as.numeric(triple$width) * 20)))
+  paste0(prefix, style_tok, sprintf("\\brdrw%d", twips))
 }
 
 # Emit one band row given the contiguous-run groups + the
@@ -634,27 +936,61 @@ backend_rtf <- function(grid, file) {
 # emits one cell with its right edge at `cellx[run$end]`. Cells
 # carry bold + centre alignment + a top + bottom rule (chrome
 # style for band headers).
-.rtf_band_row <- function(runs, cellx) {
+.rtf_band_row <- function(
+  runs,
+  cellx,
+  cs = NULL,
+  colors = NULL,
+  fonts = NULL
+) {
   cellx_lines <- character(length(runs))
   cell_bodies <- character(length(runs))
   col_end <- 0L
+  surface_node <- .chrome_surface_at(cs, "header")
+  surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
+  shading <- .rtf_cell_shading(surface_node, colors)
+  top_tok <- .rtf_chrome_border_seg(cs, "header_top", "top", "solid")
+  bot_tok <- .rtf_chrome_border_seg(cs, "header_bottom", "bottom", "solid")
+  halign <- if (
+    is_style_node(surface_node) &&
+      length(surface_node@halign) == 1L &&
+      !is.na(surface_node@halign)
+  ) {
+    surface_node@halign
+  } else {
+    "center"
+  }
+  align_tok <- .rtf_align_token(halign)
+  bold_open <- if (
+    is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
+  ) {
+    ""
+  } else {
+    "{\\b "
+  }
+  bold_close <- if (identical(bold_open, "")) "" else "}"
   for (i in seq_along(runs)) {
     run <- runs[[i]]
     col_end <- col_end + run$length
     pos <- cellx[[col_end]]
     cellx_lines[[i]] <- paste0(
-      "\\clbrdrt\\brdrs\\clbrdrb\\brdrs",
+      top_tok,
+      bot_tok,
       "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
+      shading,
       sprintf("\\cellx%d", as.integer(pos))
     )
     label <- run$value
     body <- if (is.na(label)) {
       ""
     } else {
-      paste0("{\\b ", .rtf_escape(label), "}")
+      paste0(bold_open, .rtf_escape(label), bold_close)
     }
     cell_bodies[[i]] <- paste0(
-      "\\pard\\plain\\intbl\\qc ",
+      "\\pard\\plain\\intbl",
+      align_tok,
+      surface_props,
+      " ",
       body,
       "\\cell"
     )
@@ -678,26 +1014,71 @@ backend_rtf <- function(grid, file) {
   col_names_vis,
   cols,
   cellx,
-  preset
+  preset,
+  cs = NULL,
+  colors = NULL,
+  fonts = NULL
 ) {
   cellx_lines <- character(length(col_names_vis))
   cell_bodies <- character(length(col_names_vis))
+  surface_node <- .chrome_surface_at(cs, "header")
+  surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
+  shading <- .rtf_cell_shading(surface_node, colors)
+  top_tok <- .rtf_chrome_border_seg(cs, "header_top", "top", "solid")
+  bot_tok <- .rtf_chrome_border_seg(cs, "header_bottom", "bottom", "solid")
+  bold_open <- if (
+    is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
+  ) {
+    ""
+  } else {
+    "{\\b "
+  }
+  bold_close <- if (identical(bold_open, "")) "" else "}"
   for (i in seq_along(col_names_vis)) {
     nm <- col_names_vis[[i]]
-    cs <- cols[[nm]]
-    halign <- .effective_header_halign(cs, preset)
-    valign <- .effective_header_valign(cs, preset)
+    col <- cols[[nm]]
+    # Per-column alignment wins over the chrome surface default —
+    # users picking `col_spec(align = "right")` expect the header
+    # cell to follow the column. Surface halign provides the
+    # cascade default when no col_spec sets one.
+    halign <- if (
+      is_col_spec(col) &&
+        length(col@align) == 1L &&
+        !is.na(col@align)
+    ) {
+      if (col@align == "decimal") "right" else col@align
+    } else if (
+      is_style_node(surface_node) &&
+        length(surface_node@halign) == 1L &&
+        !is.na(surface_node@halign)
+    ) {
+      surface_node@halign
+    } else {
+      .effective_header_halign(col, preset)
+    }
+    valign <- if (
+      is_col_spec(col) &&
+        length(col@valign) == 1L &&
+        !is.na(col@valign)
+    ) {
+      col@valign
+    } else if (
+      is_style_node(surface_node) &&
+        length(surface_node@valign) == 1L &&
+        !is.na(surface_node@valign)
+    ) {
+      surface_node@valign
+    } else {
+      .effective_header_valign(col, preset)
+    }
     align_tok <- .rtf_align_token(halign)
     valign_tok <- .rtf_valign_token(valign)
-    # Header band backend defaults: solid top + solid bottom (canonical submission
-    # Appendix I); left and right are clear. Header cells do not
-    # carry per-cell style_nodes today so the cascade only fires
-    # when callers extend the header-style surface (post-Phase 6).
     cellx_lines[[i]] <- paste0(
-      .rtf_border_seg("top", NULL, "solid"),
-      .rtf_border_seg("bottom", NULL, "solid"),
+      top_tok,
+      bot_tok,
       .rtf_border_seg("left", NULL, "none"),
       .rtf_border_seg("right", NULL, "none"),
+      shading,
       valign_tok,
       sprintf("\\cellx%d", as.integer(cellx[[i]]))
     )
@@ -706,9 +1087,12 @@ backend_rtf <- function(grid, file) {
     cell_bodies[[i]] <- paste0(
       "\\pard\\plain\\intbl ",
       align_tok,
-      " {\\b ",
+      surface_props,
+      " ",
+      bold_open,
       label,
-      "}\\cell"
+      bold_close,
+      "\\cell"
     )
   }
   c(
@@ -732,7 +1116,10 @@ backend_rtf <- function(grid, file) {
   cols,
   cellx,
   cells_style = NULL,
-  preset = NULL
+  preset = NULL,
+  cs = NULL,
+  colors = NULL,
+  fonts = NULL
 ) {
   nrow_data <- nrow(cells_text)
   if (nrow_data == 0L) {
@@ -741,7 +1128,7 @@ backend_rtf <- function(grid, file) {
 
   col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
   trgaph <- .rtf_body_trgaph(preset)
-  cf_tok <- .rtf_body_cf_token(preset)
+  cf_tok <- .rtf_body_cf_token(preset, colors)
 
   out <- character()
   for (r in seq_len(nrow_data)) {
@@ -759,9 +1146,9 @@ backend_rtf <- function(grid, file) {
     keepn_tok <- if (keep_row) "\\keepn" else ""
     for (i in seq_along(col_names_vis)) {
       sn <- .cell_style_at(cells_style, r, col_names_vis[[i]])
-      cs <- col_specs[[i]]
-      halign <- .effective_body_halign(sn, cs, preset)
-      valign <- .effective_body_valign(sn, cs, preset)
+      col <- col_specs[[i]]
+      halign <- .effective_body_halign(sn, col, preset)
+      valign <- .effective_body_valign(sn, col, preset)
       align_tok <- .rtf_align_token(halign)
       valign_tok <- .rtf_valign_token(valign)
       # Backend default per-side borders for a body cell: top and
@@ -770,16 +1157,18 @@ backend_rtf <- function(grid, file) {
       # closing rule). The cascade resolver overrides these defaults
       # when the user has set explicit border_<side>_style / etc.
       bottom_default <- if (is_last_row) "solid" else "none"
+      shading <- .rtf_cell_shading(sn, colors)
       cellx_lines[[i]] <- paste0(
         .rtf_border_seg("top", sn, "none"),
         .rtf_border_seg("bottom", sn, bottom_default),
         .rtf_border_seg("left", sn, "none"),
         .rtf_border_seg("right", sn, "none"),
+        shading,
         valign_tok,
         sprintf("\\cellx%d", as.integer(cellx[[i]]))
       )
       text <- .rtf_escape_cell(cells_text[r, i])
-      text_props <- .rtf_cell_text_props(sn)
+      text_props <- .rtf_cell_text_props(sn, colors, fonts)
       cell_bodies[[i]] <- paste0(
         "\\pard\\plain\\intbl ",
         keepn_tok,
@@ -825,36 +1214,37 @@ backend_rtf <- function(grid, file) {
   108L
 }
 
-# Body cell text color token. Empty string when `preset@colors$text`
-# is unset (cell inherits the document default); `\cf1 ` (with the
-# trailing space terminator) when set, addressing the slot
-# registered by `.rtf_color_table()`.
-.rtf_body_cf_token <- function(preset) {
+# Body cell text color token. Empty string when no body-level text
+# color is set anywhere in the cascade; otherwise `\cf<idx> ` with
+# the dynamic-table index. The index is resolved from the
+# `.rtf_collect_colors()` lookup so the slot referenced here is the
+# same one the colortbl emitted at preamble time.
+.rtf_body_cf_token <- function(preset, colors) {
   text_color <- .effective_color(preset, "text")
   if (is.na(text_color) || !nzchar(text_color)) {
     return("")
   }
-  "\\cf1 "
+  idx <- colors$lookup(text_color)
+  if (is.na(idx)) {
+    return("")
+  }
+  sprintf("\\cf%d ", as.integer(idx))
 }
 
 # Map an `align` value to the RTF paragraph alignment control.
 # `decimal` -> right-align (the engine_decimal phase has already
 # NBSP-padded the cell text, so visual alignment survives a
 # simple right-justify).
-# RTF cell text-property tokens from one style_node. Run-level
-# properties only: bold (\b), italic (\i), underline (\ul),
-# font_size (\fs<half-points>). Emitted AFTER `\pard\plain\intbl`
-# resets the paragraph state, so each cell starts fresh and only the
-# explicitly-set properties land.
 #
-# Out of scope for Phase 2 commit 1: per-cell color (\cfN), per-cell
-# font_family (\fN), per-cell background shading (\clcbpatN). Those
-# three require dynamic color- and font-table registration so the
-# RTF preamble carries every distinct value used across cells; ship
-# in a follow-up commit. HTML and LaTeX backends already cover all
-# seven properties; DOCX has always covered all seven; RTF cascade
-# is at 4-of-7 here, ahead of every other CRAN package today.
-.rtf_cell_text_props <- function(style) {
+# RTF cell text-property tokens from one style_node. All seven
+# text properties cascade through here now: bold (`\b`), italic
+# (`\i`), underline (`\ul`), font_size (`\fs<half-points>`), color
+# (`\cf<idx>`), background (cell-level — emitted on the cellx
+# prelude via `.rtf_cell_shading`, NOT here), and font_family
+# (`\f<idx>`). Emitted AFTER `\pard\plain\intbl` resets the
+# paragraph state, so each cell starts fresh and only the
+# explicitly-set properties land.
+.rtf_cell_text_props <- function(style, colors = NULL, fonts = NULL) {
   if (!is_style_node(style)) {
     return("")
   }
@@ -872,7 +1262,43 @@ backend_rtf <- function(grid, file) {
   if (length(fs) == 1L && !is.na(fs) && is.numeric(fs)) {
     parts <- c(parts, sprintf("\\fs%d ", as.integer(round(fs * 2))))
   }
+  if (!is.null(colors)) {
+    color <- style@color
+    if (length(color) == 1L && !is.na(color) && nzchar(color)) {
+      idx <- colors$lookup(color)
+      if (!is.na(idx)) {
+        parts <- c(parts, sprintf("\\cf%d ", as.integer(idx)))
+      }
+    }
+  }
+  if (!is.null(fonts)) {
+    ff <- style@font_family
+    if (length(ff) == 1L && !is.na(ff) && nzchar(ff)) {
+      idx <- fonts$lookup(ff)
+      if (!is.na(idx) && idx > 0L) {
+        parts <- c(parts, sprintf("\\f%d ", as.integer(idx)))
+      }
+    }
+  }
   paste0(parts, collapse = "")
+}
+
+# Cell-level background shading token (`\clcbpat<idx>` on the
+# cellx prelude). Empty when no background is set or the color
+# isn't in the colortbl. Backends emit this BEFORE `\cellx<pos>`.
+.rtf_cell_shading <- function(style, colors) {
+  if (!is_style_node(style) || is.null(colors)) {
+    return("")
+  }
+  bg <- style@background
+  if (length(bg) != 1L || is.na(bg) || !nzchar(bg)) {
+    return("")
+  }
+  idx <- colors$lookup(bg)
+  if (is.na(idx)) {
+    return("")
+  }
+  sprintf("\\clcbpat%d", as.integer(idx))
 }
 
 .rtf_align_token <- function(align) {
@@ -1136,38 +1562,48 @@ backend_rtf <- function(grid, file) {
 
 # Compose the `{\fonttbl ...}` block. `\f0` is the body font (the
 # first entry of the resolved stack), `\f1` is the matching mono
-# face used for `code` inline runs. The RTF family-class keyword
-# (`\froman` / `\fswiss` / `\fmodern`) is derived from the generic
-# the user requested; for an explicit stack or a single named
-# font, we default to `\froman` (the safest fallback class for
-# Word's font matcher).
+# face used for `code` inline runs, and `\f2+` register any
+# additional font families that body cells or chrome surfaces use
+# (driven by `style(font_family = ..., at = ...)` layers). The RTF
+# family-class keyword (`\froman` / `\fswiss` / `\fmodern`) is
+# derived from the generic the user requested; for an explicit
+# stack or a single named font, we default to `\froman` (the
+# safest fallback class for Word's font matcher).
 #
-# When the resolved chain has >=2 entries, the body and mono font
-# definitions carry a `{\*\falt <second>}` token — RTF 1.5+ font-
-# alternate syntax that Word and LibreOffice honour when the
-# primary face is not installed. This is what closes the cross-OS
-# rendering gap: the file NAMES "Liberation Serif" (the Linux
-# server emits what it has), and Word on a Mac / Windows consumer
-# without Liberation reads the `\*\falt` -> "Times New Roman" ->
-# match. Result: same metric-compatible rendering on every OS.
+# When the resolved chain has >=2 entries, every font definition
+# carries a `{\*\falt <second>}` token — RTF 1.5+ font-alternate
+# syntax that Word and LibreOffice honour when the primary face is
+# not installed. This is what closes the cross-OS rendering gap:
+# the file NAMES "Liberation Serif" (the Linux server emits what
+# it has), and Word on a Mac / Windows consumer without Liberation
+# reads the `\*\falt` -> "Times New Roman" -> match. Result: same
+# metric-compatible rendering on every OS.
+#
 # Compose the `{\colortbl ...}` group. Always emits a leading
-# semicolon (the RTF "auto" sentinel at index 0). When
-# `preset@colors$text` is set, a second entry at index 1 carries
-# the user's text color (RGB triple); body cells switch to it via
-# `\cf1`. Without an explicit text color, only the auto entry is
-# registered and body cells inherit the document default.
-.rtf_color_table <- function(preset) {
-  text_color <- .effective_color(preset, "text")
-  if (is.na(text_color) || !nzchar(text_color)) {
+# semicolon (the RTF "auto" sentinel at index 0). Subsequent
+# entries register every distinct color used by any body cell or
+# chrome surface so `\cf<idx>` / `\cb<idx>` references resolve to
+# real entries instead of silently truncating against the static
+# single-slot tables the legacy helpers emitted.
+.rtf_color_table <- function(colors) {
+  values <- colors$values
+  if (length(values) == 0L) {
     return("")
   }
-  rgb <- .rtf_color_rgb(text_color)
-  sprintf(
-    "{\\colortbl;\\red%d\\green%d\\blue%d;}",
-    rgb[[1L]],
-    rgb[[2L]],
-    rgb[[3L]]
+  entries <- vapply(
+    values,
+    function(hex) {
+      rgb <- .rtf_color_rgb(hex)
+      sprintf(
+        "\\red%d\\green%d\\blue%d;",
+        rgb[[1L]],
+        rgb[[2L]],
+        rgb[[3L]]
+      )
+    },
+    character(1L)
   )
+  paste0("{\\colortbl;", paste(entries, collapse = ""), "}")
 }
 
 # Translate a "#RRGGBB" hex color into an integer RGB triple. Falls
@@ -1185,11 +1621,18 @@ backend_rtf <- function(grid, file) {
   )
 }
 
-.rtf_font_table <- function(font_family) {
-  body_chain <- .resolve_font_stack(font_family, "rtf")
-  mono_chain <- .resolve_font_stack("mono", "rtf")
-  body_class <- .rtf_family_class(font_family, "serif")
-  c(
+.rtf_font_table <- function(fonts) {
+  values <- fonts$values
+  if (length(values) < 2L) {
+    # Defensive — `.rtf_collect_fonts` always seeds the body and
+    # mono entries, so this branch only fires if a caller passes a
+    # malformed structure.
+    return(character())
+  }
+  body_chain <- .resolve_font_stack(values[[1L]], "rtf")
+  mono_chain <- .resolve_font_stack(values[[2L]], "rtf")
+  body_class <- .rtf_family_class(values[[1L]], "serif")
+  out <- c(
     "{\\fonttbl",
     sprintf(
       "{\\f0\\%s\\fprq2 %s%s;}",
@@ -1201,9 +1644,156 @@ backend_rtf <- function(grid, file) {
       "{\\f1\\fmodern\\fprq1 %s%s;}",
       .rtf_escape(mono_chain[[1L]]),
       .rtf_falt(mono_chain)
-    ),
-    "}"
+    )
   )
+  if (length(values) > 2L) {
+    extra <- vapply(
+      seq.int(3L, length(values)),
+      function(i) {
+        family <- values[[i]]
+        chain <- .resolve_font_stack(family, "rtf")
+        class <- .rtf_family_class(family, "serif")
+        pitch <- if (identical(class, "fmodern")) 1L else 2L
+        sprintf(
+          "{\\f%d\\%s\\fprq%d %s%s;}",
+          i - 1L,
+          class,
+          pitch,
+          .rtf_escape(chain[[1L]]),
+          .rtf_falt(chain)
+        )
+      },
+      character(1L)
+    )
+    out <- c(out, extra)
+  }
+  c(out, "}")
+}
+
+# ---------------------------------------------------------------------
+# Color / font collectors — Phase 2b: scan resolved styles
+# ---------------------------------------------------------------------
+
+# Walk every style_node that might contribute a color to the
+# rendered document. Returns a deduplicated character vector of
+# "#RRGGBB" hex codes plus a `lookup(hex) -> integer` closure that
+# resolves a hex string to its 1-indexed slot in `\colortbl`. Slot
+# 0 is the RTF "auto" sentinel and is reserved.
+.rtf_collect_colors <- function(pages, cs, preset) {
+  buf <- character()
+  preset_text <- .effective_color(preset, "text")
+  if (!is.na(preset_text) && nzchar(preset_text)) {
+    buf <- c(buf, preset_text)
+  }
+  for (page in pages) {
+    cell_styles <- page$cells_style
+    if (is.null(cell_styles)) {
+      next
+    }
+    for (i in seq_len(nrow(cell_styles))) {
+      for (j in seq_len(ncol(cell_styles))) {
+        sn <- cell_styles[[i, j]]
+        if (!is_style_node(sn)) {
+          next
+        }
+        for (prop in c(sn@color, sn@background)) {
+          if (length(prop) == 1L && !is.na(prop) && nzchar(prop)) {
+            buf <- c(buf, prop)
+          }
+        }
+      }
+    }
+  }
+  if (is.list(cs) && is.list(cs$surfaces)) {
+    for (node in cs$surfaces) {
+      if (!is_style_node(node)) {
+        next
+      }
+      for (prop in c(node@color, node@background)) {
+        if (length(prop) == 1L && !is.na(prop) && nzchar(prop)) {
+          buf <- c(buf, prop)
+        }
+      }
+    }
+  }
+  values <- unique(buf)
+  lookup <- function(hex) {
+    if (
+      is.null(hex) ||
+        length(hex) != 1L ||
+        is.na(hex) ||
+        !nzchar(hex)
+    ) {
+      return(NA_integer_)
+    }
+    idx <- match(hex, values)
+    if (is.na(idx)) NA_integer_ else as.integer(idx)
+  }
+  list(values = values, lookup = lookup)
+}
+
+# Walk every style_node for unique font families. Always seeds the
+# resolved body family at index 0 (`\f0`) and the mono family at
+# index 1 (`\f1`) per the RTF backend's invariant; additional
+# families register at 2+. Returns a list with `values` (character
+# vector) and `lookup(family) -> integer` (0-indexed, returns 0
+# when family is NULL / NA / unrecognised so cells fall through to
+# the body font).
+.rtf_collect_fonts <- function(pages, cs, preset) {
+  body_family <- .effective_font_family(preset, "body")
+  values <- c(body_family, "mono")
+  for (page in pages) {
+    cell_styles <- page$cells_style
+    if (is.null(cell_styles)) {
+      next
+    }
+    for (i in seq_len(nrow(cell_styles))) {
+      for (j in seq_len(ncol(cell_styles))) {
+        sn <- cell_styles[[i, j]]
+        if (!is_style_node(sn)) {
+          next
+        }
+        ff <- sn@font_family
+        if (
+          length(ff) == 1L &&
+            !is.na(ff) &&
+            nzchar(ff) &&
+            !(ff %in% values)
+        ) {
+          values <- c(values, ff)
+        }
+      }
+    }
+  }
+  if (is.list(cs) && is.list(cs$surfaces)) {
+    for (node in cs$surfaces) {
+      if (!is_style_node(node)) {
+        next
+      }
+      ff <- node@font_family
+      if (
+        length(ff) == 1L &&
+          !is.na(ff) &&
+          nzchar(ff) &&
+          !(ff %in% values)
+      ) {
+        values <- c(values, ff)
+      }
+    }
+  }
+  lookup <- function(family) {
+    if (
+      is.null(family) ||
+        length(family) != 1L ||
+        is.na(family) ||
+        !nzchar(family)
+    ) {
+      return(0L)
+    }
+    idx <- match(family, values)
+    if (is.na(idx)) 0L else as.integer(idx) - 1L
+  }
+  list(values = values, lookup = lookup)
 }
 
 # Compose the optional `{\*\falt <second>}` fragment from a
