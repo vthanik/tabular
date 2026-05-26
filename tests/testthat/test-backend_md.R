@@ -204,7 +204,7 @@ test_that("header band labels appear on their own table row above the column-lab
 # Pagination
 # ---------------------------------------------------------------------
 
-test_that("multi-page emit includes page-marker comments + horizontal rules", {
+test_that("multi-page emit produces a single continuous pipe table", {
   d <- data.frame(
     grp = rep(letters[1:6], each = 4L),
     x = seq_len(24L)
@@ -216,8 +216,19 @@ test_that("multi-page emit includes page-marker comments + horizontal rules", {
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   lines <- readLines(out)
-  expect_true(any(grepl("<!-- page 2", lines, fixed = TRUE)))
-  expect_true(any(grepl("^----$", lines)))
+  # No per-page comment or horizontal-rule separator (chrome `----`
+  # only fires when pagehead/pagefoot is populated; this fixture has
+  # neither).
+  expect_false(any(grepl("<!-- page", lines, fixed = TRUE)))
+  expect_false(any(grepl("^----$", lines)))
+  # Exactly one alignment row across the whole document — the
+  # header block emits ONCE for the panel, not once per vertical
+  # page.
+  expect_identical(length(grep("^\\| :", lines)), 1L)
+  # Every numeric data row from the input appears in the body.
+  for (n in seq_len(24L)) {
+    expect_true(any(grepl(sprintf("| %d |", n), lines, fixed = TRUE)))
+  }
 })
 
 # ---- Faux page chrome (pagehead / pagefoot bands) ------------------
@@ -266,7 +277,7 @@ test_that("empty pagehead / pagefoot emits no chrome bands", {
   expect_false(grepl("Program:", txt, fixed = TRUE))
 })
 
-test_that("continuation marker renders on pages 2+ when set", {
+test_that("continuation marker is a no-op for MD output", {
   d <- data.frame(
     grp = rep(letters[1:6], each = 4L),
     x = seq_len(24L)
@@ -277,8 +288,42 @@ test_that("continuation marker renders on pages 2+ when set", {
     preset(font_size = 24L)
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_false(grepl("(continued)", txt, fixed = TRUE))
+})
+
+test_that("horizontal panels emit one pipe table per panel separated by a blank line", {
+  d <- data.frame(
+    grp = c("a", "b"),
+    c1 = 1:2,
+    c2 = 3:4,
+    c3 = 5:6,
+    c4 = 7:8
+  )
+  spec <- tabular(d) |>
+    cols(grp = col_spec(usage = "group")) |>
+    paginate(panels = 2L)
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
   lines <- readLines(out)
-  expect_true(any(grepl("(continued)", lines, fixed = TRUE)))
+  # Two alignment rows — one per panel.
+  expect_identical(length(grep("^\\| :", lines)), 2L)
+  # No inter-page comment or rule between panels.
+  expect_false(any(grepl("<!-- page", lines, fixed = TRUE)))
+})
+
+test_that("subgroup banner emits inline as a bold line before its row block", {
+  d <- data.frame(
+    g = c("A", "A", "B", "B"),
+    x = 1:4
+  )
+  spec <- tabular(d) |> subgroup("g")
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  lines <- readLines(out)
+  # The default banner template renders the group label in bold
+  # (e.g. "**g: A**"). It must appear in the output.
+  expect_true(any(grepl("\\*\\*.+\\*\\*", lines)))
 })
 
 # ---------------------------------------------------------------------

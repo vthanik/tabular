@@ -5,14 +5,23 @@
 # block so the file renders identically online, offline, in
 # email, and in `file://` previews).
 #
-# Output layout — one `<section class="tabular-page">` per
-# `grid@pages` entry; titles emit as `<h1 class="tabular-title">`,
-# the table emits as `<table class="tabular-table">` with a
-# proper `<thead>` (multi-row band stack + column-labels row) and
-# `<tbody>` (post-engine_decimal cells), footnotes emit as
-# `<p class="tabular-footnote">`. Multi-page documents stack
-# sections separated by a horizontal rule on screen and a
-# `page-break-after` rule when printed.
+# Output layout — one continuous document. Titles emit as
+# `<h1 class="tabular-title">` above the table (once). One
+# `<table class="tabular-table">` per horizontal panel (the
+# common case is a single panel) carries one `<colgroup>`, one
+# `<thead>` (multi-row band stack + column-labels row), and one
+# `<tbody>` whose rows concatenate every vertical page slice.
+# Between vertical pages, an invisible `<tr class="tabular-page-
+# break-row">` rides in the `<tbody>` — `display: none` on
+# screen, `page-break-before: always` under `@media print`.
+# Browsers natively repeat `<thead>` across printed page breaks
+# of a single `<table>`, so no per-page header plumbing is
+# needed. Footnotes emit as `<p class="tabular-footnote">` once
+# below the table. When `total_panels > 1` (driven by
+# `paginate(panels = N)`), panel-tables stack inside `<body>`
+# and a single `@media print` rule on `.tabular-table +
+# .tabular-table` forces each subsequent panel onto a new
+# printed page.
 #
 # HTML gives us real `colspan` for header bands — much cleaner
 # than the GFM workaround in `backend_md.R`. For each band-row
@@ -58,15 +67,18 @@ backend_html <- function(grid, file) {
 # ---------------------------------------------------------------------
 
 # Compose the full HTML document: doctype, head (charset, title,
-# inline stylesheet), body with one section per page separated by
-# a horizontal rule on screen + print page-break. Returns a
-# character vector of lines ready for `writeLines()`. Pure — no
-# I/O.
+# inline stylesheet), then a continuous body — chrome header,
+# titles (once), one `<table>` per horizontal panel concatenating
+# every vertical page's rows inside a single `<tbody>` (with
+# print-only `<tr class="tabular-page-break-row">` markers between
+# them), footnotes (once), chrome footer. Returns a character
+# vector of lines ready for `writeLines()`. Pure — no I/O.
 .render_html_grid <- function(grid) {
   pages <- grid@pages
   total <- length(pages)
   meta <- grid@metadata
   doc_title <- .html_doc_title(meta)
+  cs <- meta$chrome_style %||% chrome_style()
 
   head <- c(
     "<!DOCTYPE html>",
@@ -84,59 +96,96 @@ backend_html <- function(grid, file) {
   )
   tail <- c("</body>", "</html>")
 
-  if (total == 0L) {
-    return(c(head, .render_html_empty_grid(grid), tail))
-  }
-
-  # On-screen chrome — semantic HTML5 `<header>` above the first
-  # page section and `<footer>` below the last. The CSS `@page`
-  # rules at `.html_inline_style()` still drive print-time chrome
-  # (so printed output continues to match the canonical submission Appendix I per-page).
-  # `chrome_onscreen = "off"` on the preset suppresses the on-screen
-  # band (print-only behaviour, useful when the HTML is consumed
-  # exclusively via print-to-PDF).
+  # On-screen chrome — semantic HTML5 `<header>` above the document
+  # body and `<footer>` below. The CSS `@page` rules at
+  # `.html_inline_style()` still drive print-time chrome (so
+  # printed output continues to match the canonical submission
+  # Appendix I per-page). `chrome_onscreen = "off"` on the preset
+  # suppresses the on-screen band (print-only behaviour, useful
+  # when the HTML is consumed exclusively via print-to-PDF).
   preset <- meta$preset
   chrome_mode <- if (is_preset_spec(preset)) {
     preset@chrome_onscreen
   } else {
     "auto"
   }
+  total_for_chrome <- max(total, 1L)
   onscreen_header <- .html_render_chrome_band(
     meta$pagehead_ast,
     zone = "header",
-    total_pages = total,
+    total_pages = total_for_chrome,
     chrome_mode = chrome_mode
   )
   onscreen_footer <- .html_render_chrome_band(
     meta$pagefoot_ast,
     zone = "footer",
-    total_pages = total,
+    total_pages = total_for_chrome,
     chrome_mode = chrome_mode
   )
 
-  body <- list()
-  for (i in seq_along(pages)) {
-    section <- .render_html_page(
-      page = pages[[i]],
-      meta = meta,
-      page_number = i,
-      total_pages = total
-    )
-    if (i > 1L) {
-      body[[length(body) + 1L]] <- c(
-        "<hr class=\"tabular-page-break\"/>",
-        sprintf("<!-- page %d of %d -->", i, total)
-      )
-    }
-    body[[length(body) + 1L]] <- section
-  }
-  c(
-    head,
-    onscreen_header,
-    unlist(body, use.names = FALSE),
-    onscreen_footer,
-    tail
+  # Title block — emitted once above the table, with optional
+  # blank-paragraph padding from `chrome_style$surfaces$title`
+  # (blank_above / blank_below).
+  blank_p <- "<p class=\"tabular-pad\">&nbsp;</p>"
+  pad_title_top <- .html_blank_count(cs, "title", "above", 1L)
+  pad_title_bottom <- .html_blank_count(cs, "title", "below", 1L)
+  titles <- .render_html_title_block(
+    meta$titles_ast,
+    preset = preset,
+    cs = cs
   )
+  title_block <- if (length(titles) > 0L) {
+    c(
+      rep(blank_p, pad_title_top),
+      titles,
+      rep(blank_p, pad_title_bottom)
+    )
+  } else {
+    character()
+  }
+
+  footnote_block <- .render_html_footnote_block(
+    meta$footnotes_ast,
+    preset = preset,
+    cs = cs
+  )
+
+  if (total == 0L) {
+    body_inner <- c(
+      title_block,
+      "<p class=\"tabular-empty\">(no rows)</p>",
+      footnote_block
+    )
+    return(c(head, onscreen_header, body_inner, onscreen_footer, tail))
+  }
+
+  # Group pages by panel_index so each horizontal panel renders as
+  # its own `<table>`. The page order produced by
+  # `engine_paginate.R:133-146` is (panel outer, vertical inner), so
+  # iterating panels and pulling their vertical pages preserves the
+  # original sequence. Hidden columns are already filtered upstream
+  # at `engine_paginate.R:114`.
+  panel_indices <- vapply(
+    pages,
+    function(p) as.integer(p$panel_index %||% 1L),
+    integer(1L)
+  )
+  panel_order <- unique(panel_indices)
+  tables <- list()
+  for (pi in panel_order) {
+    panel_pages <- pages[panel_indices == pi]
+    tables[[length(tables) + 1L]] <- .render_html_table(
+      panel_pages = panel_pages,
+      meta = meta,
+      cs = cs
+    )
+  }
+  body_inner <- c(
+    title_block,
+    unlist(tables, use.names = FALSE),
+    footnote_block
+  )
+  c(head, onscreen_header, body_inner, onscreen_footer, tail)
 }
 
 # Render a semantic HTML5 page band (`<header>` or `<footer>`) for
@@ -248,83 +297,6 @@ backend_html <- function(grid, file) {
   # Collapse double spaces that fall out of the join.
   s <- gsub("  +", " ", s)
   trimws(s)
-}
-
-# Render the HTML skeleton for a spec whose grid has zero pages
-# (empty data + no body content). Titles + footnotes still appear;
-# the table block is replaced with a `<p class="tabular-empty">`
-# marker so the reader sees the table exists but is empty.
-.render_html_empty_grid <- function(grid) {
-  meta <- grid@metadata
-  c(
-    "<section class=\"tabular-page\">",
-    .render_html_title_block(meta$titles_ast, preset = meta$preset),
-    "<p class=\"tabular-empty\">(no rows)</p>",
-    .render_html_footnote_block(meta$footnotes_ast, preset = meta$preset),
-    "</section>"
-  )
-}
-
-# Render one page section. Page 1 carries titles + footnotes;
-# continuation pages get the (optional) `continuation` marker the
-# user set on `paginate()`. Header bands + column-labels row
-# repeat on every page when `page$repeat_headers` is TRUE.
-.render_html_page <- function(page, meta, page_number, total_pages) {
-  out <- "<section class=\"tabular-page\">"
-  blank_p <- "<p class=\"tabular-pad\">&nbsp;</p>"
-  cs <- meta$chrome_style %||% chrome_style()
-  pad_title_top <- .html_blank_count(cs, "title", "above", 1L)
-  pad_title_bottom <- .html_blank_count(cs, "title", "below", 1L)
-  pad_body_top <- 0L
-  pad_body_bottom <- 0L
-
-  if (page_number == 1L) {
-    titles <- .render_html_title_block(
-      meta$titles_ast,
-      preset = meta$preset,
-      cs = cs
-    )
-    if (length(titles) > 0L) {
-      out <- c(
-        out,
-        rep(blank_p, pad_title_top),
-        titles,
-        rep(blank_p, pad_title_bottom)
-      )
-    }
-  } else if (length(page$continuation) > 0L) {
-    out <- c(
-      out,
-      paste0(
-        "<p class=\"tabular-continuation\"><em>",
-        .html_escape(as.character(page$continuation)),
-        "</em></p>"
-      )
-    )
-  }
-
-  out <- c(out, rep(blank_p, pad_body_top))
-
-  show_header <- page_number == 1L || isTRUE(page$repeat_headers)
-  table_lines <- .render_html_table(
-    page = page,
-    meta = meta,
-    show_header = show_header,
-    cs = cs
-  )
-  out <- c(out, table_lines, rep(blank_p, pad_body_bottom))
-
-  if (page_number == 1L) {
-    out <- c(
-      out,
-      .render_html_footnote_block(
-        meta$footnotes_ast,
-        preset = meta$preset,
-        cs = cs
-      )
-    )
-  }
-  c(out, "</section>")
 }
 
 # Resolve the blank-line count for a chrome surface side. chrome_style
@@ -480,40 +452,112 @@ backend_html <- function(grid, file) {
 # Table assembly: <table> / <thead> / <tbody>
 # ---------------------------------------------------------------------
 
-# Assemble the `<table>` block: optional `<colgroup>` carrying
-# engine-resolved column widths, optional `<thead>` (header bands
-# + column-labels row), then `<tbody>` (one row per data row).
-.render_html_table <- function(page, meta, show_header, cs = NULL) {
+# Assemble one panel's `<table>` block: one `<colgroup>` carrying
+# engine-resolved column widths, one `<thead>` (header bands +
+# column-labels row), one `<tbody>` whose rows concatenate every
+# vertical page of the panel with `<tr class="tabular-page-break-
+# row">` markers between vertical pages. The marker rows render as
+# `display: none` on screen and as a hard `page-break-before` under
+# `@media print` — browsers natively repeat `<thead>` across the
+# resulting printed page breaks.
+#
+# `panel_pages` is a list of page records that share `col_indices`
+# (every horizontal panel pins one column set; only row indices
+# vary across vertical pages).
+.render_html_table <- function(panel_pages, meta, cs = NULL) {
   preset <- meta$preset
+  cols <- meta$cols %||% list()
+  col_names_visible <- panel_pages[[1L]]$col_names
+  ncols <- length(col_names_visible)
+  col_specs <- lapply(col_names_visible, function(nm) cols[[nm]])
+
   out <- "<table class=\"tabular-table\">"
-  out <- c(
-    out,
-    .html_colgroup(page$col_names, meta$cols %||% list())
+  out <- c(out, .html_colgroup(col_names_visible, cols))
+  thead <- .render_html_thead(
+    headers = meta$headers,
+    col_labels_ast = meta$col_labels_ast,
+    col_names_visible = col_names_visible,
+    cols = cols,
+    preset = preset,
+    cs = cs
   )
-  if (show_header) {
-    thead <- .render_html_thead(
-      headers = meta$headers,
-      col_labels_ast = meta$col_labels_ast,
-      col_names_visible = page$col_names,
-      cols = meta$cols %||% list(),
-      preset = preset,
-      cs = cs
+  out <- c(out, thead)
+
+  # `<tbody>` body — walk panel pages, concat their row blocks
+  # (subgroup banner if any, then data rows), insert an invisible
+  # page-break marker between vertical pages.
+  break_row <- sprintf(
+    "<tr class=\"tabular-page-break-row\" aria-hidden=\"true\"><td colspan=\"%d\"></td></tr>",
+    ncols
+  )
+  body_lines <- character()
+  for (i in seq_along(panel_pages)) {
+    if (i > 1L) {
+      body_lines <- c(body_lines, break_row)
+    }
+    body_lines <- c(
+      body_lines,
+      .render_html_page_body_rows(
+        page = panel_pages[[i]],
+        col_names_visible = col_names_visible,
+        col_specs = col_specs,
+        preset = preset,
+        cs = cs
+      )
     )
-    out <- c(out, thead)
   }
-  out <- c(
-    out,
-    .render_html_tbody(
-      cells_text = page$cells_text,
-      col_names_visible = page$col_names,
-      cols = meta$cols %||% list(),
-      cells_style = page$cells_style,
-      preset = preset,
-      subgroup_line_ast = page$subgroup_line_ast,
-      cs = cs
-    )
+  out <- c(out, "<tbody>", body_lines, "</tbody>", "</table>")
+  out
+}
+
+# Render one page slice's body `<tr>` lines: an optional subgroup
+# banner `<tr class="tabular-subgroup">` followed by one `<tr>` per
+# data row. Returns character(0) when the page is empty.
+.render_html_page_body_rows <- function(
+  page,
+  col_names_visible,
+  col_specs,
+  preset = NULL,
+  cs = NULL
+) {
+  out <- character()
+  banner_row <- .render_html_subgroup_banner_row(
+    page$subgroup_line_ast,
+    n_cols = length(col_names_visible),
+    preset = preset,
+    cs = cs
   )
-  c(out, "</table>")
+  if (length(banner_row) > 0L) {
+    out <- c(out, banner_row)
+  }
+  cells_text <- page$cells_text
+  cells_style <- page$cells_style
+  nrow_data <- nrow(cells_text)
+  if (nrow_data == 0L) {
+    return(out)
+  }
+  rows <- vapply(
+    seq_len(nrow_data),
+    function(i) {
+      cells <- vapply(
+        seq_along(col_names_visible),
+        function(j) {
+          text <- .html_escape_cell(cells_text[i, j])
+          spec <- col_specs[[j]]
+          sn <- .cell_style_at(cells_style, i, col_names_visible[[j]])
+          halign <- .effective_body_halign(sn, spec, preset)
+          valign <- .effective_body_valign(sn, spec, preset)
+          class_attr <- .html_cell_class_attr(halign, valign)
+          style_attr <- .html_cell_inline_style_attr(sn)
+          paste0("<td", class_attr, style_attr, ">", text, "</td>")
+        },
+        character(1L)
+      )
+      paste0("<tr>", paste(cells, collapse = ""), "</tr>")
+    },
+    character(1L)
+  )
+  c(out, rows)
 }
 
 # Compose the `<thead>` block: zero or more band rows (one per
@@ -655,62 +699,6 @@ backend_html <- function(grid, file) {
     character(1L)
   )
   paste0("<tr>", paste(cells, collapse = ""), "</tr>")
-}
-
-# Render the `<tbody>` block: one `<tr>` per data row, one `<td>`
-# per visible column, alignment via the three-layer cascade
-# (style predicate > col_spec > preset). Cell text comes from
-# `cells_text` (post-engine_decimal); we HTML-escape verbatim so
-# NBSP padding survives.
-.render_html_tbody <- function(
-  cells_text,
-  col_names_visible,
-  cols,
-  cells_style = NULL,
-  preset = NULL,
-  subgroup_line_ast = NULL,
-  cs = NULL
-) {
-  out <- "<tbody>"
-  # Subgroup banner row — emitted as the first body row when the
-  # page carries subgroup runtime. Aligned per chrome_style$surfaces$
-  # subgroup (bold). Mirrors gt's `.gt_group_heading_row`.
-  banner_row <- .render_html_subgroup_banner_row(
-    subgroup_line_ast,
-    n_cols = length(col_names_visible),
-    preset = preset,
-    cs = cs
-  )
-  if (length(banner_row) > 0L) {
-    out <- c(out, banner_row)
-  }
-  nrow_data <- nrow(cells_text)
-  if (nrow_data == 0L) {
-    return(c(out, "</tbody>"))
-  }
-  col_specs <- lapply(col_names_visible, function(nm) cols[[nm]])
-  rows <- vapply(
-    seq_len(nrow_data),
-    function(i) {
-      cells <- vapply(
-        seq_along(col_names_visible),
-        function(j) {
-          text <- .html_escape_cell(cells_text[i, j])
-          cs <- col_specs[[j]]
-          sn <- .cell_style_at(cells_style, i, col_names_visible[[j]])
-          halign <- .effective_body_halign(sn, cs, preset)
-          valign <- .effective_body_valign(sn, cs, preset)
-          class_attr <- .html_cell_class_attr(halign, valign)
-          style_attr <- .html_cell_inline_style_attr(sn)
-          paste0("<td", class_attr, style_attr, ">", text, "</td>")
-        },
-        character(1L)
-      )
-      paste0("<tr>", paste(cells, collapse = ""), "</tr>")
-    },
-    character(1L)
-  )
-  c(out, rows, "</tbody>")
 }
 
 # Look up the style_node for cell (row_idx, col_name) on a
@@ -1231,9 +1219,7 @@ backend_html <- function(grid, file) {
       ".tabular-doc { font-family: %s; color: #212529; margin: 1.5rem; }",
       .html_font_family_css(preset)
     ),
-    ".tabular-page { margin-bottom: 2rem; }",
     ".tabular-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin: .2rem 0; }",
-    ".tabular-continuation { text-align: right; color: #6c757d; margin: .25rem 0 .5rem; }",
     ".tabular-table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .9rem; }",
     ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }",
     ".tabular-table td { text-align: left; vertical-align: top; }",
@@ -1252,7 +1238,10 @@ backend_html <- function(grid, file) {
     ".valign-bottom { vertical-align: bottom; }",
     ".tabular-footnote { font-size: .85rem; color: #495057; margin: .25rem 0; }",
     ".tabular-empty { font-style: italic; color: #6c757d; }",
-    ".tabular-page-break { border: none; border-top: 1px dashed #adb5bd; margin: 1.5rem 0; }",
+    # Print-only page-break marker `<tr>` — invisible on screen,
+    # forces a hard page break under `@media print` so a single
+    # `<table>` still paginates cleanly across printed pages.
+    ".tabular-page-break-row { display: none; }",
     # On-screen chrome bands — semantic <header>/<footer> with
     # three flex slots; matches the @page margin-box layout for
     # visual parity between screen and print. Hidden in print so
@@ -1265,7 +1254,7 @@ backend_html <- function(grid, file) {
     ".tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }",
     ".tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }",
     ".tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }",
-    "@media print { .tabular-page { page-break-after: always; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-break { display: none; } .tabular-page-header, .tabular-page-footer { display: none; } }"
+    "@media print { .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }"
   )
   page_rules <- .html_render_page_band_rules(pagehead_ast, pagefoot_ast)
   # Per-cell colour / background / padding ride on cells_style[r,c]

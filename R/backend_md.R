@@ -5,8 +5,18 @@
 # emit() + manifest pipeline have a real consumer for the Round 2
 # verification gate.
 #
-# Output layout — one page block per `grid@pages` entry, separated
-# by an HTML page-marker comment + horizontal rule:
+# Output layout — one continuous document. Titles emit as
+# level-1 headings once above the table. One pipe table per
+# horizontal panel (the common case is a single panel) carries
+# one header-band block + col-labels row + alignment row, then
+# every vertical page's body rows concatenated underneath — no
+# inter-page separator, no continuation marker. Footnotes emit
+# once below the table. Optional pagehead / pagefoot chrome
+# bands frame the whole document, separated by `----` rules:
+#
+#   Protocol: XYZ | Draft | Page 1 of 1
+#
+#   ----
 #
 #   # Title 1
 #   # Title 2
@@ -15,18 +25,21 @@
 #   | Col1 | Col2 | Col3 | Col4 | Col5 | Col6 |
 #   |:-----|-----:|-----:|-----:|-----:|-----:|
 #   |  ... |  ... |  ... |  ... |  ... |  ... |
+#   |  ... |  ... |  ... |  ... |  ... |  ... |
 #
 #   Footnote 1
 #   Footnote 2
 #
-#   <!-- page 2 of 3 -->
 #   ----
-#   ...
+#
+#   Program: tool.R | 24MAY2026
 #
 # GFM has no native row spanning, so multi-level header bands emit
 # one row per depth where the band label is repeated in every
 # spanned cell (the most readable rendering across GFM previewers
-# that don't support `colspan`).
+# that don't support `colspan`). With `total_panels > 1` (driven by
+# `paginate(panels = N)`), panel-tables stack inside the document
+# separated by a blank line.
 #
 # Inline ASTs (cell text, titles, footnotes, col labels) render
 # through `.render_md_inline()` — a recursive walker over the
@@ -69,136 +82,104 @@ backend_md <- function(grid, file) {
 # Grid + page composition
 # ---------------------------------------------------------------------
 
-# Compose every page in the grid, separated by a page-marker
-# comment and a horizontal rule. Returns a character vector of
-# lines ready for `writeLines()`. Pure — no I/O.
+# Compose the full document — pagehead chrome, titles (once),
+# one pipe table per horizontal panel concatenating every vertical
+# page's body rows, footnotes (once), pagefoot chrome. Returns a
+# character vector of lines ready for `writeLines()`. Pure — no
+# I/O.
 .render_md_grid <- function(grid) {
   pages <- grid@pages
   total <- length(pages)
-  if (total == 0L) {
-    return(.render_md_empty_grid(grid))
-  }
   meta <- grid@metadata
-  out <- list()
+  cs <- meta$chrome_style %||% chrome_style()
+  pad_title_top <- .md_blank_count(cs, "title", "above", 1L)
+  pad_title_bottom <- .md_blank_count(cs, "title", "below", 1L)
 
   # Faux page chrome — markdown has no native page-band concept,
   # so emit pagehead at the top of the document and pagefoot at
   # the bottom, surrounded by `----` rules. Three-slot left /
-  # center / right collapse to a single ` | `-joined line per row;
-  # multi-row bands emit one line each.
-  chrome_top <- .render_md_chrome_band(meta$pagehead_ast, total_pages = total)
+  # center / right collapse to a single ` | `-joined line per row.
+  total_for_chrome <- max(total, 1L)
+  chrome_top <- .render_md_chrome_band(
+    meta$pagehead_ast,
+    total_pages = total_for_chrome
+  )
+  chrome_bot <- .render_md_chrome_band(
+    meta$pagefoot_ast,
+    total_pages = total_for_chrome
+  )
+
+  titles <- .render_md_title_block(meta$titles_ast)
+  title_block <- if (length(titles) > 0L) {
+    c(rep("", pad_title_top), titles, rep("", pad_title_bottom))
+  } else {
+    character()
+  }
+  footnote_block <- .render_md_footnote_block(meta$footnotes_ast)
+
+  out <- list()
   if (length(chrome_top) > 0L) {
     out[[length(out) + 1L]] <- c(chrome_top, "", "----", "")
   }
-
-  for (i in seq_along(pages)) {
-    page_lines <- .render_md_page(
-      page = pages[[i]],
-      meta = meta,
-      page_number = i,
-      total_pages = total
-    )
-    if (i > 1L) {
-      out[[length(out) + 1L]] <- c(
-        "",
-        sprintf("<!-- page %d of %d -->", i, total),
-        "",
-        "----",
-        ""
-      )
-    }
-    out[[length(out) + 1L]] <- page_lines
+  if (length(title_block) > 0L) {
+    out[[length(out) + 1L]] <- title_block
   }
 
-  chrome_bot <- .render_md_chrome_band(meta$pagefoot_ast, total_pages = total)
+  if (total == 0L) {
+    out[[length(out) + 1L]] <- c("", "(no rows)", "")
+  } else {
+    # Group pages by panel_index — each horizontal panel renders as
+    # its own pipe table. The grid is row-paginated within a panel
+    # (every page in a panel shares `col_indices`), so the header
+    # block + alignment row emit once per panel, then every page's
+    # body rows concatenate underneath.
+    panel_indices <- vapply(
+      pages,
+      function(p) as.integer(p$panel_index %||% 1L),
+      integer(1L)
+    )
+    panel_order <- unique(panel_indices)
+    for (k in seq_along(panel_order)) {
+      pi <- panel_order[[k]]
+      panel_pages <- pages[panel_indices == pi]
+      col_names <- panel_pages[[1L]]$col_names
+      panel_lines <- c(
+        .render_md_header_bands(meta$headers, col_names),
+        .render_md_col_labels_row(meta$col_labels_ast, col_names),
+        .render_md_alignment_row(
+          meta$col_names,
+          col_names,
+          meta$cols %||% list(),
+          cells_style = panel_pages[[1L]]$cells_style
+        )
+      )
+      for (page in panel_pages) {
+        panel_lines <- c(panel_lines, .render_md_page_body_rows(page))
+      }
+      if (k > 1L) {
+        out[[length(out) + 1L]] <- ""
+      }
+      out[[length(out) + 1L]] <- panel_lines
+    }
+  }
+
+  if (length(footnote_block) > 0L) {
+    out[[length(out) + 1L]] <- footnote_block
+  }
   if (length(chrome_bot) > 0L) {
     out[[length(out) + 1L]] <- c("", "----", "", chrome_bot)
   }
   unlist(out, use.names = FALSE)
 }
 
-# Render the markdown skeleton for a spec whose grid has zero
-# pages (empty data + no body content). Titles + footnotes still
-# appear; the table block is replaced with a `(no rows)` marker so
-# the reader sees the table exists but is empty.
-.render_md_empty_grid <- function(grid) {
-  meta <- grid@metadata
+# Render one page slice's body lines: an optional subgroup banner
+# (bold) followed by one pipe-table row per data row. Returns
+# character(0) when the slice is empty (no banner, zero rows).
+.render_md_page_body_rows <- function(page) {
   c(
-    .render_md_title_block(meta$titles_ast),
-    "",
-    "(no rows)",
-    "",
-    .render_md_footnote_block(meta$footnotes_ast)
+    .render_md_subgroup_banner(page),
+    .render_md_body_rows(page$cells_text)
   )
-}
-
-# Render one page: title block (page 1 only) -> header bands ->
-# column labels row -> alignment row -> body rows -> footnote
-# block (page 1 only).
-#
-# Titles and footnotes ride on page 1 only; continuation pages get
-# the (optional) `continuation` marker the user set on
-# `paginate()`. Header band + column-labels row repeat on every
-# page when `page$repeat_headers` is TRUE (the default).
-.render_md_page <- function(page, meta, page_number, total_pages) {
-  out <- character()
-  cs <- meta$chrome_style %||% chrome_style()
-  pad_title_top <- .md_blank_count(cs, "title", "above", 1L)
-  pad_title_bottom <- .md_blank_count(cs, "title", "below", 1L)
-  pad_body_top <- 0L
-  pad_body_bottom <- 0L
-
-  if (page_number == 1L) {
-    titles <- .render_md_title_block(meta$titles_ast)
-    if (length(titles) > 0L) {
-      out <- c(
-        out,
-        rep("", pad_title_top),
-        titles,
-        rep("", pad_title_bottom)
-      )
-    }
-  } else if (length(page$continuation) > 0L) {
-    out <- c(out, paste0("*", as.character(page$continuation), "*"))
-  }
-
-  # Subgroup banner row — emitted on every page of a subgroup (page
-  # 1 AND every continuation), between titles/continuation and the
-  # column-header band. GFM has no native centring; bold + blank-line
-  # padding is the best-effort approximation. Banner falls through
-  # untouched when the page carries no subgroup runtime.
-  banner <- .render_md_subgroup_banner(page)
-  if (length(banner) > 0L) {
-    out <- c(out, banner)
-  }
-
-  out <- c(out, rep("", pad_body_top))
-
-  show_header <- page_number == 1L || isTRUE(page$repeat_headers)
-  if (show_header) {
-    out <- c(
-      out,
-      .render_md_header_bands(meta$headers, page$col_names),
-      .render_md_col_labels_row(meta$col_labels_ast, page$col_names),
-      .render_md_alignment_row(
-        meta$col_names,
-        page$col_names,
-        meta$cols %||% list(),
-        cells_style = page$cells_style
-      )
-    )
-  }
-
-  out <- c(out, .render_md_body_rows(page$cells_text))
-  out <- c(out, rep("", pad_body_bottom))
-
-  if (page_number == 1L) {
-    footnotes <- .render_md_footnote_block(meta$footnotes_ast)
-    if (length(footnotes) > 0L) {
-      out <- c(out, footnotes)
-    }
-  }
-  out
 }
 
 # Resolve the blank-line count for a chrome surface side. chrome_style
