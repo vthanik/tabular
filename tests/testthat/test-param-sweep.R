@@ -120,7 +120,15 @@ test_that("preset_spec() accepts margins length 1 / 2 / 4", {
   expect_silent(preset_spec(margins = "0.75in"))
 })
 
-test_that("preset_spec() alignment knob accepts every documented surface", {
+# After the Task 4/5 slot cut, the five named-list knobs (alignment /
+# borders / fonts / colors / padding) live only as `preset()` /
+# `set_preset()` arguments — they lower to `style_layer` records on
+# `preset@style` and never reach a `preset_spec` slot. The sweep
+# tests below confirm `preset()` accepts every documented surface /
+# region / token key end-to-end.
+
+test_that("preset() alignment knob accepts every documented surface", {
+  spec <- tabular(data.frame(x = 1))
   for (k in c(
     "title_halign",
     "footnote_halign",
@@ -129,7 +137,7 @@ test_that("preset_spec() alignment knob accepts every documented surface", {
     "body_halign"
   )) {
     arg <- stats::setNames(list("center"), k)
-    expect_silent(preset_spec(alignment = arg))
+    expect_silent(preset(spec, alignment = arg))
   }
   for (k in c(
     "title_valign",
@@ -139,11 +147,12 @@ test_that("preset_spec() alignment knob accepts every documented surface", {
     "body_valign"
   )) {
     arg <- stats::setNames(list("middle"), k)
-    expect_silent(preset_spec(alignment = arg))
+    expect_silent(preset(spec, alignment = arg))
   }
 })
 
-test_that("preset_spec() borders knob accepts every region key", {
+test_that("preset() borders knob accepts every region key", {
+  spec <- tabular(data.frame(x = 1))
   region_keys <- c(
     "outer",
     "outer_top",
@@ -157,41 +166,45 @@ test_that("preset_spec() borders knob accepts every region key", {
   )
   for (k in region_keys) {
     arg <- stats::setNames(list(brdr()), k)
-    expect_silent(preset_spec(borders = arg))
+    expect_silent(preset(spec, borders = arg))
   }
 })
 
-test_that("preset_spec() borders knob accepts 'none' sentinel and NULL", {
-  expect_silent(preset_spec(borders = list(outer = "none")))
-  expect_silent(preset_spec(borders = list(outer = NULL)))
+test_that("preset() borders knob accepts 'none' sentinel and NULL", {
+  spec <- tabular(data.frame(x = 1))
+  expect_silent(preset(spec, borders = list(outer = "none")))
+  expect_silent(preset(spec, borders = list(outer = NULL)))
 })
 
-test_that("preset_spec() fonts knob accepts every surface + sub-key", {
+test_that("preset() fonts knob accepts every surface + sub-key", {
+  spec <- tabular(data.frame(x = 1))
   for (s in c("body", "header", "titles", "footnotes", "subgroup")) {
     arg <- stats::setNames(
       list(list(family = "Inter", size = 9, weight = "normal")),
       s
     )
-    expect_silent(preset_spec(fonts = arg))
+    expect_silent(preset(spec, fonts = arg))
   }
 })
 
-test_that("preset_spec() colors knob accepts every token key", {
-  for (t in c("border", "border_muted", "text", "text_muted", "background")) {
+test_that("preset() colors knob accepts every surviving token key", {
+  spec <- tabular(data.frame(x = 1))
+  for (t in c("text", "background")) {
     arg <- stats::setNames(list("#212529"), t)
-    expect_silent(preset_spec(colors = arg))
+    expect_silent(preset(spec, colors = arg))
   }
 })
 
-test_that("preset_spec() padding knob accepts uniform numeric + per-side", {
+test_that("preset() padding knob accepts uniform numeric + per-side", {
+  spec <- tabular(data.frame(x = 1))
   for (s in c("body", "header", "titles", "footnotes", "subgroup")) {
     arg <- stats::setNames(list(3), s)
-    expect_silent(preset_spec(padding = arg))
+    expect_silent(preset(spec, padding = arg))
     arg2 <- stats::setNames(
       list(list(top = 2, right = 4, bottom = 2, left = 4)),
       s
     )
-    expect_silent(preset_spec(padding = arg2))
+    expect_silent(preset(spec, padding = arg2))
   }
 })
 

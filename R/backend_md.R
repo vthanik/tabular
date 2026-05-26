@@ -184,7 +184,7 @@ backend_md <- function(grid, file) {
         meta$col_names,
         page$col_names,
         meta$cols %||% list(),
-        preset = meta$preset
+        cells_style = page$cells_style
       )
     )
   }
@@ -368,17 +368,25 @@ backend_md <- function(grid, file) {
   col_names_full,
   col_names_visible,
   cols,
-  preset = NULL
+  cells_style = NULL
 ) {
-  # Cascade: col_spec@align > preset@alignment$body_halign > GFM left.
-  body_halign <- .preset_align(preset, "body_halign")
+  # Cascade: col_spec@align > representative cell @halign > GFM left.
+  # The per-column "representative cell" reads cells_style[1, nm] — the
+  # lowered `preset(alignment = list(body_halign = ...))` stamps the
+  # same value on every body cell, so [1, nm] is canonical.
   vapply(
     col_names_visible,
     function(nm) {
       cs <- cols[[nm]]
       align <- if (is_col_spec(cs)) cs@align else NA_character_
-      if (is.na(align)) {
-        align <- body_halign
+      if (is.na(align) && is.matrix(cells_style) && nrow(cells_style) > 0L) {
+        cn <- colnames(cells_style)
+        if (is.character(cn) && nm %in% cn) {
+          node <- cells_style[[1L, nm]]
+          if (is_style_node(node) && !is.na(node@halign)) {
+            align <- node@halign
+          }
+        }
       }
       .md_align_token(align)
     },

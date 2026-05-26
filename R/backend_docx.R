@@ -348,7 +348,7 @@ backend_docx <- function(grid, file) {
 # Render the footnote block: one paragraph per footnote, each
 # tagged with the `TabularFoot` named style (left-aligned; defined
 # in styles.xml). Per-line horizontal alignment from the cascade
-# (preset@alignment$footnote_halign) overrides the style default
+# (chrome_style$surfaces$footer@halign) overrides the style default
 # when set. Inline AST flows through `.render_docx_inline()` so
 # bold / italic / sup / link markup all surface in the .docx.
 .docx_footnote_block <- function(
@@ -624,7 +624,7 @@ backend_docx <- function(grid, file) {
 
 # Render the column-labels row: one `<w:tc>` per visible column,
 # alignment via the header cascade (col_spec@align / @valign >
-# preset@alignment$header_halign / header_valign > Word default).
+# chrome_style$surfaces$header@halign / header_valign > Word default).
 # Label flow from the inline AST through `.render_docx_inline()`.
 # Default run formatting is bold (clinical header convention).
 # Header row carries `<w:tblHeader/>` for Word's auto-repeat across
@@ -718,7 +718,7 @@ backend_docx <- function(grid, file) {
 # goes through the three-layer cascade:
 #
 #   style_node@halign / @valign  >  col_spec@align / @valign
-#                                  >  preset@alignment$body_halign / body_valign
+#                                  >  cells_style[r,c]@halign / body_valign
 #
 # Per-cell style cascade (`cells_style[i, j]`) drives `<w:tcPr>`
 # (background, borders, vAlign) and `<w:rPr>` (bold, italic, color,
@@ -1633,7 +1633,7 @@ backend_docx <- function(grid, file) {
   if (!is.na(gridspan) && gridspan > 1L) {
     parts <- c(parts, sprintf("<w:gridSpan w:val=\"%d\"/>", gridspan))
   }
-  tc_mar <- .docx_tcMar_from_preset(preset)
+  tc_mar <- .docx_tcMar_from_style(style)
   if (nzchar(tc_mar)) {
     parts <- c(parts, tc_mar)
   }
@@ -1760,19 +1760,16 @@ backend_docx <- function(grid, file) {
   if (isTRUE(style@italic)) {
     parts <- c(parts, "<w:i/>")
   }
-  # Per-cell predicate color wins over the preset@colors$text default;
-  # only consult the preset when the style_node is silent on color.
-  effective_color <- if (!is.na(style@color) && nzchar(style@color)) {
-    style@color
-  } else {
-    .effective_color(preset, "text")
-  }
-  if (!is.na(effective_color) && nzchar(effective_color)) {
+  # After the Task 4/5 cut, the lowered `preset(colors = list(text = ...))`
+  # knob stamps `@color` onto every body cell via the cells_body()
+  # layer cascade. So `style@color` already carries the theme
+  # default — no preset slot to fall through to.
+  if (!is.na(style@color) && nzchar(style@color)) {
     parts <- c(
       parts,
       sprintf(
         "<w:color w:val=\"%s\"/>",
-        .docx_normalize_color(effective_color)
+        .docx_normalize_color(style@color)
       )
     )
   }
@@ -1791,53 +1788,28 @@ backend_docx <- function(grid, file) {
   paste(parts, collapse = "")
 }
 
-# Emit a `<w:tcMar>` block from `preset@padding$body`. Word's tcMar
-# uses twentieths-of-a-point (dxa) per side. Uniform numerics stamp
-# all four sides; per-side lists honour each side individually.
-# Returns "" when the knob is unset.
-.docx_tcMar_from_preset <- function(preset) {
-  if (is.null(preset) || !is_preset_spec(preset)) {
+# Emit a `<w:tcMar>` block from the cell's scalar `@padding`. Word's
+# tcMar uses twentieths-of-a-point (dxa) per side. After the Task
+# 4/5 cut, body padding lives on `cells_style[r,c]@padding` (a
+# single numeric — the lowered `preset(padding = list(body = N))`
+# knob stamps the same value on every body cell). All four sides
+# share that scalar; the four-sided shape isn't expressible at the
+# layer surface. Returns "" when no override is set.
+.docx_tcMar_from_style <- function(style) {
+  if (!is_style_node(style)) {
     return("")
   }
-  pad <- .effective_padding(preset, "body")
-  if (is.null(pad)) {
+  pad <- style@padding
+  if (length(pad) != 1L || is.na(pad)) {
     return("")
   }
-  twips <- if (is.numeric(pad) && length(pad) == 1L) {
-    n <- as.integer(round(pad * 20))
-    c(top = n, left = n, bottom = n, right = n)
-  } else if (is.list(pad)) {
-    c(
-      top = if (is.null(pad$top)) {
-        0L
-      } else {
-        as.integer(round(as.numeric(pad$top) * 20))
-      },
-      left = if (is.null(pad$left)) {
-        0L
-      } else {
-        as.integer(round(as.numeric(pad$left) * 20))
-      },
-      bottom = if (is.null(pad$bottom)) {
-        0L
-      } else {
-        as.integer(round(as.numeric(pad$bottom) * 20))
-      },
-      right = if (is.null(pad$right)) {
-        0L
-      } else {
-        as.integer(round(as.numeric(pad$right) * 20))
-      }
-    )
-  } else {
-    return("")
-  }
+  n <- as.integer(round(as.numeric(pad) * 20))
   paste0(
     "<w:tcMar>",
-    sprintf("<w:top w:w=\"%d\" w:type=\"dxa\"/>", twips[["top"]]),
-    sprintf("<w:left w:w=\"%d\" w:type=\"dxa\"/>", twips[["left"]]),
-    sprintf("<w:bottom w:w=\"%d\" w:type=\"dxa\"/>", twips[["bottom"]]),
-    sprintf("<w:right w:w=\"%d\" w:type=\"dxa\"/>", twips[["right"]]),
+    sprintf("<w:top w:w=\"%d\" w:type=\"dxa\"/>", n),
+    sprintf("<w:left w:w=\"%d\" w:type=\"dxa\"/>", n),
+    sprintf("<w:bottom w:w=\"%d\" w:type=\"dxa\"/>", n),
+    sprintf("<w:right w:w=\"%d\" w:type=\"dxa\"/>", n),
     "</w:tcMar>"
   )
 }

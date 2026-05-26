@@ -304,9 +304,14 @@ as_grid <- function(spec) {
   # <side>_*)`) survive theme-side region stamping. Region values
   # only apply where the predicate layer is silent.
   style_mat <- engine_borders(spec, style_mat)
+  # Body-region border manifest (outer edges + row/col separators) —
+  # one resolved triple per side. Backends like LaTeX consume this
+  # to emit table-level `hline{i}={spec}` / `vline{j}={spec}`
+  # directives without inferring from per-cell scalars on cells_style.
+  body_borders_mat <- body_border_manifest(spec)
   # Chrome regions (header_*, subgroup_*, footer_*, pagehead_bottom,
   # pagefoot_top) live outside the body-cell matrix; populate the
-  # parallel sidecar from the same preset@borders dictionary.
+  # parallel sidecar from the lowered cells_*() chrome layers.
   chrome_style_mat <- engine_chrome_borders(spec)
   fmt <- engine_format(spec)
 
@@ -323,12 +328,20 @@ as_grid <- function(spec) {
   # transition; column mode suppresses repeats; column_repeat is a
   # no-op. The phase may augment the cells matrices with new
   # synthesised rows + hide source group columns from the visible
-  # body.
+  # body. When `header_row` mode is active, every data row's
+  # host-column text is prefixed with `preset@indent_chars` so the
+  # data rows visually nest under their synthetic section header.
+  gd_preset <- .effective_preset(spec)
   gd <- engine_group_display(
     cells_text = fmt$cells_text,
     cells_ast = fmt$cells_ast,
     cells_style = style_mat,
-    cols = .cols_by_name(spec@cols, names(spec@data))
+    cols = .cols_by_name(spec@cols, names(spec@data)),
+    indent_chars = if (is_preset_spec(gd_preset)) {
+      gd_preset@indent_chars
+    } else {
+      preset_spec()@indent_chars
+    }
   )
   fmt$cells_text <- gd$cells_text
   fmt$cells_ast <- gd$cells_ast
@@ -432,6 +445,7 @@ as_grid <- function(spec) {
       pagefoot_ast = pagefoot_ast,
       preset = eff_preset,
       chrome_style = chrome_style_mat,
+      body_borders = body_borders_mat,
       subgroup_runtime = runtime
     )
   )

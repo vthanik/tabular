@@ -385,7 +385,7 @@ backend_html <- function(grid, file) {
 
 # Title block: each title line becomes an `<h1 class="tabular-
 # title">`. Per-line horizontal alignment from
-# `preset@alignment$title_halign` (scalar broadcasts; vector zips
+# `chrome_style$surfaces$title@halign` (scalar broadcasts; vector zips
 # 1:1 then pads with last). Empty title list returns an empty
 # character vector so the caller can skip the surrounding spacing.
 .render_html_title_block <- function(titles_ast, preset = NULL, cs = NULL) {
@@ -427,7 +427,7 @@ backend_html <- function(grid, file) {
 
 # Footnote block: each footnote line becomes a `<p class="tabular-
 # footnote">`. Per-line horizontal alignment from
-# `preset@alignment$footnote_halign` (scalar broadcasts; vector zips
+# `chrome_style$surfaces$footer@halign` (scalar broadcasts; vector zips
 # 1:1 then pads with last). Empty list returns an empty character
 # vector. Footnote CSS baseline: text-align: left (browser default);
 # emit override class only when the cascade differs.
@@ -601,7 +601,7 @@ backend_html <- function(grid, file) {
 
 # Render the column-labels row: one `<th>` per visible column,
 # alignment from the header cascade (col_spec@align / @valign
-# > preset@alignment$header_halign / header_valign > baked
+# > chrome_style$surfaces$header@halign / header_valign > baked
 # defaults). Label pulled from `col_labels_ast`; falls back to
 # the column name when the spec did not set a label.
 .render_html_col_labels_row <- function(
@@ -737,7 +737,7 @@ backend_html <- function(grid, file) {
 }
 
 # Render the subgroup banner `<tr>` — one bold cell spanning every
-# visible column, aligned per `preset@alignment$subgroup_halign`
+# visible column, aligned per `chrome_style$surfaces$subgroup@halign`
 # (default centre). Returns character(0) when the page has no
 # subgroup runtime so the caller can skip cleanly.
 .render_html_subgroup_banner_row <- function(
@@ -978,6 +978,10 @@ backend_html <- function(grid, file) {
   bg <- cell_style@background
   if (length(bg) == 1L && !is.na(bg) && nzchar(bg)) {
     decls <- c(decls, sprintf("background-color: %s;", bg))
+  }
+  pad <- cell_style@padding
+  if (length(pad) == 1L && !is.na(pad)) {
+    decls <- c(decls, sprintf("padding: %spt;", format(pad, trim = TRUE)))
   }
   decls
 }
@@ -1264,69 +1268,13 @@ backend_html <- function(grid, file) {
     "@media print { .tabular-page { page-break-after: always; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-break { display: none; } .tabular-page-header, .tabular-page-footer { display: none; } }"
   )
   page_rules <- .html_render_page_band_rules(pagehead_ast, pagefoot_ast)
-  preset_rules <- .html_preset_overrides_css(preset)
-  c("<style>", body_css, page_rules, preset_rules, "</style>")
-}
-
-# Emit CSS overrides driven by the legacy `preset@colors` and
-# `preset@padding` knobs. Each override is a single ruleset that
-# tightens the baseline `.tabular-table` style above; unset knobs
-# emit nothing so cascade order is preserved and snapshot diffs
-# stay minimal when knobs are absent.
-.html_preset_overrides_css <- function(preset) {
-  if (!is_preset_spec(preset)) {
-    return(character())
-  }
-  rules <- character()
-  text_color <- .effective_color(preset, "text")
-  if (!is.na(text_color) && nzchar(text_color)) {
-    rules <- c(
-      rules,
-      sprintf(".tabular-table td { color: %s; }", text_color)
-    )
-  }
-  bg_color <- .effective_color(preset, "background")
-  if (!is.na(bg_color) && nzchar(bg_color)) {
-    rules <- c(
-      rules,
-      sprintf(".tabular-table { background: %s; }", bg_color)
-    )
-  }
-  pad <- .effective_padding(preset, "body")
-  if (!is.null(pad)) {
-    rules <- c(
-      rules,
-      sprintf(
-        ".tabular-table tbody td { padding: %s; }",
-        .html_padding_value(pad)
-      )
-    )
-  }
-  rules
-}
-
-# Translate a body-padding value (uniform numeric or named list of
-# top/right/bottom/left) to a CSS shorthand string in points.
-.html_padding_value <- function(pad) {
-  if (is.numeric(pad) && length(pad) == 1L) {
-    return(sprintf("%spt", format(pad, trim = TRUE, scientific = FALSE)))
-  }
-  if (is.list(pad)) {
-    sides <- c("top", "right", "bottom", "left")
-    vals <- vapply(
-      sides,
-      function(s) {
-        v <- pad[[s]]
-        if (is.null(v)) 0 else as.numeric(v)
-      },
-      numeric(1L)
-    )
-    return(paste(
-      sprintf("%spt", format(vals, trim = TRUE, scientific = FALSE)),
-      collapse = " "
-    ))
-  }
-  "0"
+  # Per-cell colour / background / padding ride on cells_style[r,c]
+  # now (set by `style(at = cells_body(), ...)` and the lowered
+  # `preset(colors = ..., padding = ...)` knobs). They land as inline
+  # `style="..."` attributes on each `<td>` via `.html_cell_style_attr()`,
+  # so the table-wide CSS block has nothing to emit on their behalf —
+  # the per-cell stamps already carry the visual.
+  c("<style>", body_css, page_rules, "</style>")
 }
 
 # Render the CSS `@page { @top-* / @bottom-* }` margin-box rules
@@ -1508,11 +1456,7 @@ backend_html <- function(grid, file) {
 # logic (generic family / single name / explicit stack) is
 # shared with every other backend.
 .html_font_family_css <- function(preset) {
-  fam <- if (is_preset_spec(preset)) {
-    .effective_font_family(preset, "body")
-  } else {
-    "serif"
-  }
+  fam <- .effective_font_family(preset)
   chain <- .resolve_font_stack(fam, "html")
   paste(vapply(chain, .html_quote_font, character(1L)), collapse = ", ")
 }

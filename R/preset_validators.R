@@ -1,11 +1,16 @@
-# preset_validators.R — shape validators for the named-list knobs
-# on `preset_spec` (borders / fonts / colors / padding). Mirrors the
-# `.preset_alignment_shape_error` pattern in `R/align.R`: each helper
-# returns NULL when well-formed, otherwise an error-message string
-# suitable for the S7 validator (caller prepends "@<knob> ").
+# preset_validators.R — shape validators for the five named-list
+# knobs accepted by `preset()` / `set_preset()` (alignment /
+# borders / fonts / colors / padding). After the Task 4/5 slot
+# cut these knobs no longer reach `preset_spec` as properties;
+# they lower to `style_layer` records on `@style` via
+# `.preset_args_to_layers()`. The validators below are invoked at
+# `preset()` call time through `.validate_lowered_knobs()` (in
+# `R/preset.R`) and return NULL on well-formed input, otherwise an
+# error-message string the caller surfaces as
+# `tabular_error_input`.
 
 # ---------------------------------------------------------------------
-# preset@borders
+# borders knob
 # ---------------------------------------------------------------------
 
 .preset_borders_shape_error <- function(br) {
@@ -52,7 +57,7 @@
 }
 
 # ---------------------------------------------------------------------
-# preset@fonts
+# fonts knob
 # ---------------------------------------------------------------------
 
 .preset_fonts_shape_error <- function(fn) {
@@ -140,7 +145,7 @@
 }
 
 # ---------------------------------------------------------------------
-# preset@colors
+# colors knob
 # ---------------------------------------------------------------------
 
 .preset_colors_shape_error <- function(co) {
@@ -185,7 +190,7 @@
 }
 
 # ---------------------------------------------------------------------
-# preset@padding
+# padding knob
 # ---------------------------------------------------------------------
 
 .preset_padding_shape_error <- function(pa) {

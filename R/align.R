@@ -1,19 +1,26 @@
 # align.R — alignment cascade resolver.
 #
-# Three-layer cascade for horizontal + vertical alignment on every
+# Four-layer cascade for horizontal + vertical alignment on every
 # emitted surface (body cells, header cells, subgroup banner, title
 # lines, footnote lines, page chrome). Resolution order, lowest to
 # highest precedence:
 #
 #   1. Baked-in built-in default for the surface.
-#   2. `preset@alignment` named-list (theme layer).
-#   3. `col_spec@align` / `@valign` (per-column override, body+header
+#   2. Legacy `preset@title_align` / `preset@footnote_align` scalars
+#      (the only two alignment slots surviving the Task 4/5 cut).
+#   3. `chrome_style$surfaces[<surface>]@halign / @valign` — the
+#      lowered `preset(alignment = list(...))` knob (or
+#      `style(at = cells_<surface>(), halign = ...)`) lands here
+#      via `engine_chrome_borders()`. Body alignment lowers to
+#      `cells_body()` layers and stamps `cells_style[r,c]@halign`
+#      directly (skipping the chrome path).
+#   4. `col_spec@align` / `@valign` (per-column override, body +
+#      header cell scope only).
+#   5. `style_node@halign` / `@valign` (per-cell predicate, body
 #      cell scope only).
-#   4. `style_node@halign` / `@valign` (per-cell predicate, body cell
-#      scope only).
 #
 # Title / footnote / subgroup label surfaces don't have a column or
-# cell layer; they fall through 1 -> 2.
+# cell layer; they consult the chrome layer + legacy scalars.
 #
 # `col_spec@align == "decimal"` is special: the engine_decimal phase
 # has already NBSP-padded the cell text, so the visual decimal mark
@@ -22,7 +29,8 @@
 # the cascade.
 
 # ---------------------------------------------------------------------
-# preset@alignment validator (called from preset_spec validator)
+# `preset(alignment = list(...))` knob shape validator (called from
+# .validate_lowered_knobs() at preset() / set_preset() call time)
 # ---------------------------------------------------------------------
 
 # Returns NULL when the list is well-formed; otherwise a message
@@ -54,45 +62,33 @@
     }
     halign <- k %in% .preset_alignment_keys_halign
     allowed <- if (halign) .align_anchor_values else .valign_values
-    accepts_vector <- halign && (k %in% .preset_alignment_keys_vector_halign)
     if (!is.character(v)) {
       return(paste0(
         "key ",
         .sh_quote(k),
-        " must be a character vector; got ",
+        " must be a character scalar; got ",
         class(v)[[1]]
       ))
     }
     if (anyNA(v)) {
       return(paste0("key ", .sh_quote(k), " must not contain NA"))
     }
-    if (length(v) == 0L) {
+    if (length(v) != 1L) {
       return(paste0(
         "key ",
         .sh_quote(k),
-        " must be length >= 1 (use NULL to clear)"
+        " must be length 1 (vector-form alignment dropped in the ",
+        "Task 4/5 slot cut; use NULL to clear)"
       ))
     }
-    if (length(v) > 1L && !accepts_vector) {
+    if (!(v %in% allowed)) {
       return(paste0(
         "key ",
         .sh_quote(k),
-        " must be length 1; vectors are accepted only for ",
-        paste(
-          .sh_quote(.preset_alignment_keys_vector_halign),
-          collapse = ", "
-        )
-      ))
-    }
-    bad <- v[!(v %in% allowed)]
-    if (length(bad) > 0L) {
-      return(paste0(
-        "key ",
-        .sh_quote(k),
-        " value(s) must be one of ",
+        " value must be one of ",
         paste(.sh_quote(allowed), collapse = ", "),
         "; got ",
-        paste(.sh_quote(bad), collapse = ", ")
+        .sh_quote(v)
       ))
     }
   }
@@ -109,34 +105,23 @@
 # key; the caller decides whether to fall through to a baked
 # default or to leave the surface to CSS / backend defaults.
 #
-# Caveat on the legacy fall-through: `preset@title_align` /
-# `@footnote_align` carry baked-in scalar defaults ("center" /
-# "left") declared on `preset_spec`. Treating those as "explicit"
-# would force every untouched preset to override the CSS / backend
-# baseline. We therefore consult the legacy scalars ONLY when the
-# user has changed them away from the factory default — detected
-# by comparing against `preset_spec()`'s default values.
+# Resolve one alignment key from the surviving `preset_spec`
+# scalars. After the Task 4/5 slot cut, only `preset@title_align`
+# and `preset@footnote_align` remain on the class — every other
+# alignment knob (`alignment = list(header_halign = …)` etc.)
+# lowers to a style_layer and flows through chrome_style /
+# cells_style, consumed by the caller before falling through to
+# this helper.
+#
+# We treat the legacy scalars as "explicit" only when the user has
+# changed them away from the factory default; otherwise the
+# factory baseline would clobber a chrome-layer override from the
+# user's `preset(alignment = list(title_halign = ...))` call. The
+# comparison memoises the factory `preset_spec()` once per session.
 .preset_align <- function(preset, key, line_index = 1L, n_lines = 1L) {
   if (!is_preset_spec(preset)) {
     return(NA_character_)
   }
-  al <- preset@alignment
-  v <- al[[key]]
-  if (!is.null(v) && length(v) > 0L) {
-    if (length(v) == 1L) {
-      return(v)
-    }
-    # Vector form (title_halign / footnote_halign): index into the
-    # vector by line_index; if shorter than the rendered block,
-    # broadcast the last value (length-1 applies to every line; a
-    # longer vector zips 1:1 then pads with the last entry).
-    idx <- min(line_index, length(v))
-    return(v[[idx]])
-  }
-  # Legacy flat scalars — only treat as explicit when set away from
-  # the factory default. `.preset_factory_default("title_align")`
-  # returns "center"; if the user changed `title_align` to "left",
-  # that's an explicit override and we honour it here.
   legacy_key <- switch(
     key,
     title_halign = "title_align",
@@ -175,8 +160,11 @@
 # Effective horizontal alignment for one body cell. Walks:
 #
 #   style_node@halign  >  col_spec@align (decimal -> right)
-#                       >  preset@alignment$body_halign
-#                       >  baked default "left"
+#                       >  NA (backend default takes over)
+#
+# Body alignment from `preset(alignment = list(body_halign = ...))`
+# stamps `cells_style[r,c]@halign` via the lowered cells_body()
+# layer, so the top of the cascade reads it.
 .effective_body_halign <- function(cell_style, col_spec, preset) {
   if (
     is_style_node(cell_style) &&
@@ -200,9 +188,11 @@
 
 # Effective vertical alignment for one body cell. Walks:
 #
-#   style_node@valign  >  col_spec@valign
-#                       >  preset@alignment$body_valign
-#                       >  baked default "top"
+#   style_node@valign  >  col_spec@valign  >  NA (backend default)
+#
+# Body valign from `preset(alignment = list(body_valign = ...))`
+# stamps `cells_style[r,c]@valign` via the lowered cells_body()
+# layer, so the top of the cascade reads it.
 .effective_body_valign <- function(cell_style, col_spec, preset) {
   if (
     is_style_node(cell_style) &&

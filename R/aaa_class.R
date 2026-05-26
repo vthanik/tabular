@@ -147,14 +147,16 @@
   "subgroup"
 )
 
-# Recognised token keys on `preset_spec@colors`. Centralised theme
-# colour palette; CSS / backend emission resolves these against
-# tabular's `--tabular-*` custom-property scaffold.
+# Recognised token keys for the `preset(colors = list(...))` knob.
+# Each token lowers through `.preset_args_to_layers()` to a per-cell
+# `style_node` attribute on `cells_body()`; there is no slot on
+# `preset_spec` after the Task 4/5 cut. The legacy `border` /
+# `border_muted` tokens dropped — use
+# `style(at = cells_table(side = "rows"), border_top = brdr(color = ...))`
+# (and analogous outer / cols variants) instead. `text_muted` dropped
+# (no backend ever consumed it).
 .preset_color_tokens <- c(
-  "border",
-  "border_muted",
   "text",
-  "text_muted",
   "background"
 )
 
@@ -169,14 +171,12 @@
   "subgroup"
 )
 
-# Recognised keys on `preset_spec@alignment`. Each entry pairs with
-# a value-set drawn from `.align_anchor_values` (left/center/right)
-# for `_halign` and `.valign_values` (top/middle/bottom) for
-# `_valign`. The validator in preset_spec walks both halves.
-# Title / footnote / subgroup `_halign` accept either a length-1
-# scalar (applies to every line) OR a character vector aligning
-# 1:1 with the title / footnote vector; the other six keys are
-# scalar-only.
+# Recognised keys for the `preset(alignment = list(...))` knob. Each
+# entry pairs with a value-set drawn from `.align_anchor_values`
+# (left/center/right) for `_halign` and `.valign_values`
+# (top/middle/bottom) for `_valign`. Every key is scalar-only after
+# the Task 4/5 cut — vector-form alignment (per-title-line halign)
+# is no longer expressible at the cascade surface.
 .preset_alignment_keys_halign <- c(
   "title_halign",
   "footnote_halign",
@@ -194,10 +194,6 @@
 .preset_alignment_keys <- c(
   .preset_alignment_keys_halign,
   .preset_alignment_keys_valign
-)
-.preset_alignment_keys_vector_halign <- c(
-  "title_halign",
-  "footnote_halign"
 )
 
 # Recognised inline-formatting run types. Each element of an
@@ -765,15 +761,15 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "content"
     ),
-    alignment = S7::new_property(S7::class_list, default = list()),
-    borders = S7::new_property(S7::class_list, default = list()),
-    fonts = S7::new_property(S7::class_list, default = list()),
-    colors = S7::new_property(S7::class_list, default = list()),
-    padding = S7::new_property(S7::class_list, default = list()),
     # @style — ordered list of `style_layer` records that flow into
-    # every spec rendered against this preset. Populated via
-    # `preset(spec, style = style_template())` or `set_preset(style =
-    # ...)`. The engine cascade applies these layers BEFORE per-spec
+    # every spec rendered against this preset. Populated by:
+    #   * `preset()` / `set_preset()` named-list knobs (`alignment` /
+    #     `borders` / `fonts` / `colors` / `padding`), lowered through
+    #     `.preset_args_to_layers()` at call time.
+    #   * `preset(spec, style = style_template())` /
+    #     `set_preset(style = …)`, which appends a user-built
+    #     reusable house-style template.
+    # The engine cascade applies these layers BEFORE per-spec
     # `style()` layers, so a house style sets defaults that an
     # individual table can still override per attribute.
     style = S7::new_property(S7::class_list, default = list())
@@ -849,34 +845,12 @@ preset_spec <- S7::new_class(
     if (!is.null(pf_err)) {
       return(paste0("@pagefoot ", pf_err))
     }
-    # Alignment named-list — every name in the allowed key set,
-    # every value in the appropriate enum (halign vs valign), with
-    # title / footnote _halign also accepting a character vector
-    # for per-line broadcast.
-    al_err <- .preset_alignment_shape_error(self@alignment)
-    if (!is.null(al_err)) {
-      return(paste0("@alignment ", al_err))
-    }
-    # Borders named-list — every name in the 15-region key set; each
-    # value either a `tabular_brdr` (constructed via `brdr()`), a
-    # bare triple list with style/width/color, the string "none" to
-    # suppress a baseline border, or NULL to clear the entry.
-    br_err <- .preset_borders_shape_error(self@borders)
-    if (!is.null(br_err)) {
-      return(paste0("@borders ", br_err))
-    }
-    fn_err <- .preset_fonts_shape_error(self@fonts)
-    if (!is.null(fn_err)) {
-      return(paste0("@fonts ", fn_err))
-    }
-    co_err <- .preset_colors_shape_error(self@colors)
-    if (!is.null(co_err)) {
-      return(paste0("@colors ", co_err))
-    }
-    pa_err <- .preset_padding_shape_error(self@padding)
-    if (!is.null(pa_err)) {
-      return(paste0("@padding ", pa_err))
-    }
+    # `alignment` / `borders` / `fonts` / `colors` / `padding` knobs
+    # live only as `preset()` / `set_preset()` arguments after the
+    # Task 4/5 cut — they lower to `style_layer` records on `@style`
+    # via `.preset_args_to_layers()` and never reach a `preset_spec`
+    # slot. The corresponding shape validators run at call time
+    # (`.validate_lowered_knobs()` in `R/preset.R`), not here.
     NULL
   }
 )

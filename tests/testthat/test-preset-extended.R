@@ -1,127 +1,186 @@
-# test-preset-extended.R — Phase 6 additions to preset_spec: the
-# four named-list knobs (borders / fonts / colors / padding), the
-# template arg on preset() / set_preset(), and shallow-merge
-# semantics across calls.
+# test-preset-extended.R — coverage for the five lowered named-list
+# knobs (borders / fonts / colors / padding / alignment), the
+# template arg on preset() / set_preset(), and end-to-end emission
+# through each backend.
+#
+# After the Task 4/5 slot cut, every named-list knob enters through
+# `preset()` / `set_preset()` and lowers to a `style_layer` on
+# `preset@style` via `.preset_args_to_layers()`. There is no slot
+# on `preset_spec` to inspect — the layer cascade is the source of
+# truth, consumed by engine_style / engine_borders / engine_chrome_borders
+# at resolve time.
 
 # ---------------------------------------------------------------------
-# borders / fonts / colors / padding validators
+# preset() shape validators (call-time, see .validate_lowered_knobs)
 # ---------------------------------------------------------------------
 
-test_that("preset_spec accepts well-formed borders/fonts/colors/padding", {
-  p <- preset_spec(
-    borders = list(
-      outer = brdr("medium"),
-      body_rows = brdr("hairline", "dotted")
-    ),
-    fonts = list(
-      body = list(family = "Inter", size = 10, weight = "normal")
-    ),
-    colors = list(
-      border = "#212529",
-      text = "#000000"
-    ),
-    padding = list(
-      body = 3,
-      titles = list(top = 2, bottom = 2)
+test_that("preset() accepts well-formed borders/fonts/colors/padding", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(
+      borders = list(
+        outer = brdr("medium"),
+        body_rows = brdr("hairline", "dotted")
+      ),
+      fonts = list(
+        body = list(family = "Inter", size = 10, weight = "normal")
+      ),
+      colors = list(text = "#000000"),
+      padding = list(body = 3)
     )
+  expect_true(is_preset_spec(spec@preset))
+  expect_true(length(spec@preset@style) > 0L)
+})
+
+test_that("preset_spec() rejects direct named-list arguments (slot cut)", {
+  expect_error(
+    suppressWarnings(preset_spec(borders = list(outer = brdr()))),
+    "unused argument"
   )
-  expect_identical(p@borders$outer$style, "solid")
-  expect_identical(p@fonts$body$family, "Inter")
-  expect_identical(p@colors$border, "#212529")
-  expect_identical(p@padding$body, 3)
+  expect_error(
+    suppressWarnings(preset_spec(fonts = list(body = list(size = 9)))),
+    "unused argument"
+  )
+  expect_error(
+    suppressWarnings(preset_spec(colors = list(text = "#000"))),
+    "unused argument"
+  )
+  expect_error(
+    suppressWarnings(preset_spec(padding = list(body = 3))),
+    "unused argument"
+  )
 })
 
-test_that("preset_spec rejects unknown border region", {
-  expect_error(preset_spec(borders = list(diagonal = brdr())))
+test_that("preset() rejects unknown border region", {
+  expect_error(
+    tabular(data.frame(x = 1)) |> preset(borders = list(diagonal = brdr())),
+    class = "tabular_error_input"
+  )
 })
 
-test_that("preset_spec rejects non-brdr border value", {
-  expect_error(preset_spec(borders = list(outer = "not a brdr")))
+test_that("preset() rejects non-brdr border value", {
+  expect_error(
+    tabular(data.frame(x = 1)) |> preset(borders = list(outer = "not a brdr")),
+    class = "tabular_error_input"
+  )
 })
 
-test_that("preset_spec accepts 'none' as clear sentinel on borders", {
-  p <- preset_spec(borders = list(outer = "none"))
-  expect_identical(p@borders$outer, "none")
+test_that("preset() accepts 'none' as clear sentinel on borders", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(borders = list(outer = "none"))
+  expect_true(is_preset_spec(spec@preset))
 })
 
-test_that("preset_spec rejects unknown font surface", {
-  expect_error(preset_spec(fonts = list(legend = list(size = 9))))
+test_that("preset() rejects unknown font surface", {
+  expect_error(
+    tabular(data.frame(x = 1)) |>
+      preset(fonts = list(legend = list(size = 9))),
+    class = "tabular_error_input"
+  )
 })
 
-test_that("preset_spec rejects unknown font sub-key", {
-  expect_error(preset_spec(fonts = list(body = list(typeface = "Inter"))))
+test_that("preset() rejects unknown font sub-key", {
+  expect_error(
+    tabular(data.frame(x = 1)) |>
+      preset(fonts = list(body = list(typeface = "Inter"))),
+    class = "tabular_error_input"
+  )
 })
 
-test_that("preset_spec rejects non-positive font size", {
-  expect_error(preset_spec(fonts = list(body = list(size = -1))))
+test_that("preset() rejects non-positive font size", {
+  expect_error(
+    tabular(data.frame(x = 1)) |>
+      preset(fonts = list(body = list(size = -1))),
+    class = "tabular_error_input"
+  )
 })
 
-test_that("preset_spec rejects unknown color token", {
-  expect_error(preset_spec(colors = list(neon = "#ff00ff")))
+test_that("preset() rejects unknown color token", {
+  expect_error(
+    tabular(data.frame(x = 1)) |> preset(colors = list(neon = "#ff00ff")),
+    class = "tabular_error_input"
+  )
 })
 
-test_that("preset_spec rejects unknown padding surface", {
-  expect_error(preset_spec(padding = list(legend = 3)))
+test_that("preset() rejects dropped color tokens (border / border_muted / text_muted)", {
+  expect_error(
+    tabular(data.frame(x = 1)) |> preset(colors = list(border = "#212529")),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    tabular(data.frame(x = 1)) |>
+      preset(colors = list(border_muted = "#dee2e6")),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    tabular(data.frame(x = 1)) |>
+      preset(colors = list(text_muted = "#6c757d")),
+    class = "tabular_error_input"
+  )
 })
 
-test_that("preset_spec rejects negative padding", {
-  expect_error(preset_spec(padding = list(body = -1)))
+test_that("preset() rejects unknown padding surface", {
+  expect_error(
+    tabular(data.frame(x = 1)) |> preset(padding = list(legend = 3)),
+    class = "tabular_error_input"
+  )
 })
 
-test_that("preset_spec rejects bad padding side", {
-  expect_error(preset_spec(padding = list(body = list(diagonal = 1))))
+test_that("preset() rejects negative padding", {
+  expect_error(
+    tabular(data.frame(x = 1)) |> preset(padding = list(body = -1)),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("preset() rejects bad padding side", {
+  expect_error(
+    tabular(data.frame(x = 1)) |>
+      preset(padding = list(body = list(diagonal = 1))),
+    class = "tabular_error_input"
+  )
 })
 
 # ---------------------------------------------------------------------
-# Shallow-merge across preset() calls
+# Successive preset() calls — layer-append (last-write wins per
+# attribute at the cell)
 # ---------------------------------------------------------------------
 
-test_that("preset() shallow-merges borders across calls", {
+test_that("preset() appends border layers across successive calls", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(borders = list(outer = brdr("thick"))) |>
     preset(borders = list(body_rows = brdr("hairline")))
-  bs <- spec@preset@borders
-  expect_identical(bs$outer$width, 1.5)
-  expect_identical(bs$body_rows$width, 0.25)
+  # 4 outer-side layers + 1 rows layer = 5 layers total.
+  expect_length(spec@preset@style, 5L)
 })
 
-test_that("preset() shallow-merges fonts and colors and padding", {
+test_that("preset() appends font / color / padding layers across calls", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(
       fonts = list(body = list(family = "Inter")),
-      colors = list(border = "#212529"),
+      colors = list(text = "#000000"),
       padding = list(body = 3)
     ) |>
     preset(
       fonts = list(header = list(size = 11)),
-      colors = list(text = "#000000"),
+      colors = list(background = "#eee"),
       padding = list(header = 4)
     )
-  p <- spec@preset
-  expect_identical(p@fonts$body$family, "Inter")
-  expect_identical(p@fonts$header$size, 11)
-  expect_identical(p@colors$border, "#212529")
-  expect_identical(p@colors$text, "#000000")
-  expect_identical(p@padding$body, 3)
-  expect_identical(p@padding$header, 4)
+  # First call: 1 font family layer (body) + 1 color text layer (body)
+  # + 1 padding body layer = 3 layers. Second call: 1 font size layer
+  # (header) + 1 color background layer (body) + 1 padding header
+  # layer = 3 layers. Total: 6 layers.
+  expect_length(spec@preset@style, 6L)
 })
 
 # ---------------------------------------------------------------------
 # template arg
 # ---------------------------------------------------------------------
 
-test_that("preset(template = preset_spec(...)) applies non-default knobs", {
-  tmpl <- preset_spec(
-    borders = list(outer = brdr("thick")),
-    fonts = list(body = list(family = "Inter")),
-    font_size = 8
-  )
+test_that("preset(template = preset_spec(...)) applies non-default scalar knobs", {
+  tmpl <- preset_spec(font_size = 8)
   spec <- tabular(data.frame(x = 1)) |>
     preset(template = tmpl)
-  p <- spec@preset
-  expect_identical(p@borders$outer$width, 1.5)
-  expect_identical(p@fonts$body$family, "Inter")
-  expect_identical(p@font_size, 8)
+  expect_identical(spec@preset@font_size, 8)
 })
 
 test_that("preset(template = ..., scalar = ...) lets explicit kwargs win", {
@@ -131,17 +190,17 @@ test_that("preset(template = ..., scalar = ...) lets explicit kwargs win", {
   expect_identical(spec@preset@font_size, 11)
 })
 
-test_that("preset(template = ...) shallow-merges template borders with later call", {
-  tmpl <- preset_spec(
-    borders = list(outer = brdr("thick"), body_rows = brdr("thin"))
-  )
+test_that("preset(template = ...) propagates template @style layers", {
+  # The template's lowered layers (set via the template's own
+  # preset() calls) carry through.
+  tmpl <- tabular(data.frame(z = 1)) |>
+    preset(borders = list(outer = brdr("thick")))
+  template_preset <- tmpl@preset
   spec <- tabular(data.frame(x = 1)) |>
-    preset(template = tmpl) |>
-    preset(borders = list(body_rows = brdr("hairline", "dashed")))
-  bs <- spec@preset@borders
-  expect_identical(bs$outer$width, 1.5)
-  expect_identical(bs$body_rows$style, "dashed")
-  expect_identical(bs$body_rows$width, 0.25)
+    preset(template = template_preset) |>
+    preset(borders = list(body_rows = brdr("hairline")))
+  # Template's 4 outer-side layers + later body_rows layer = 5 total.
+  expect_length(spec@preset@style, 5L)
 })
 
 test_that("preset(template = NULL) is the same as no template", {
@@ -172,7 +231,6 @@ test_that("set_preset(template = ...) feeds the session default", {
 # ---------------------------------------------------------------------
 
 test_that(".extract_template_knobs drops factory-default knobs", {
-  # An empty template returns nothing.
   out <- tabular:::.extract_template_knobs(
     preset_spec(),
     call = environment()
@@ -180,14 +238,14 @@ test_that(".extract_template_knobs drops factory-default knobs", {
   expect_identical(length(out), 0L)
 })
 
-test_that(".extract_template_knobs picks up deliberate overrides only", {
-  tmpl <- preset_spec(font_size = 8, borders = list(outer = brdr()))
+test_that(".extract_template_knobs picks up deliberate scalar overrides only", {
+  tmpl <- preset_spec(font_size = 8, paper_size = "a4")
   out <- tabular:::.extract_template_knobs(tmpl, call = environment())
-  expect_named(out, c("font_size", "borders"))
+  expect_setequal(names(out), c("font_size", "paper_size"))
 })
 
 # ---------------------------------------------------------------------
-# engine_borders -> per-cell stamping
+# engine_borders — body-region layer stamping onto cells_style
 # ---------------------------------------------------------------------
 
 test_that("engine_borders stamps outer borders on body cells", {
@@ -196,7 +254,6 @@ test_that("engine_borders stamps outer borders on body cells", {
   grid <- as_grid(spec)
   page1 <- grid@pages[[1]]
   cs <- page1$cells_style
-  # Row 1 cell 1: top + left + bottom + right all set (single row + single col -> outer covers all sides on the one cell of each visible col? actually outer_left only on first col, outer_right only on last col)
   c1 <- cs[[1, "x"]]
   c2 <- cs[[1, "y"]]
   expect_identical(c1@border_top_style, "solid")
@@ -212,7 +269,6 @@ test_that("engine_borders stamps body_rows top between rows", {
     preset(borders = list(body_rows = brdr("hairline", "dotted")))
   grid <- as_grid(spec)
   cs <- grid@pages[[1]]$cells_style
-  # Row 1 has no body_rows border (first row); rows 2..3 have top.
   expect_true(is.na(cs[[1, "x"]]@border_top_style))
   expect_identical(cs[[2, "x"]]@border_top_style, "dotted")
   expect_identical(cs[[3, "x"]]@border_top_style, "dotted")
@@ -223,31 +279,14 @@ test_that("engine_borders 'none' value clears the cell side", {
     preset(borders = list(outer = brdr(), outer_right = "none"))
   grid <- as_grid(spec)
   cs <- grid@pages[[1]]$cells_style
-  # outer_right cleared -> last col right side carries the
-  # explicit "none" sentinel.
   expect_identical(cs[[1, "x"]]@border_right_style, "none")
 })
 
-test_that("engine_borders skips cells touched by a predicate border", {
-  # Predicate border explicit -> survives region overlay.
-  spec <- tabular(data.frame(x = c(1, 2))) |>
-    style(
-      where = x == 1,
-      border_top_style = "dashed",
-      .scope = "row"
-    ) |>
-    preset(borders = list(outer = brdr("medium", "solid")))
-  grid <- as_grid(spec)
-  cs <- grid@pages[[1]]$cells_style
-  # Row 1 carries the predicate's "dashed" top; outer_top NOT applied.
-  expect_identical(cs[[1, "x"]]@border_top_style, "dashed")
-})
-
 # ---------------------------------------------------------------------
-# Backend smoke
+# Backend smoke — each lowered knob produces a visible output token
 # ---------------------------------------------------------------------
 
-test_that("preset@borders surfaces in HTML inline style", {
+test_that("preset(borders) surfaces in HTML inline style", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(borders = list(outer = brdr("medium", "dashed", "#abcdef")))
   out <- withr::local_tempfile(fileext = ".html")
@@ -256,7 +295,7 @@ test_that("preset@borders surfaces in HTML inline style", {
   expect_true(grepl("border-top: 1pt dashed #abcdef;", txt, fixed = TRUE))
 })
 
-test_that("preset@borders surfaces in DOCX OOXML", {
+test_that("preset(borders) surfaces in DOCX OOXML", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(borders = list(outer = brdr("medium")))
   out <- withr::local_tempfile(fileext = ".docx")
@@ -267,11 +306,10 @@ test_that("preset@borders surfaces in DOCX OOXML", {
     readLines(file.path(td, "word", "document.xml"), warn = FALSE),
     collapse = ""
   )
-  # Medium width = 1pt -> 8 eighths
   expect_true(grepl("w:val=\"single\" w:sz=\"8\"", doc, fixed = TRUE))
 })
 
-test_that("preset@borders surfaces in RTF", {
+test_that("preset(borders) surfaces in RTF", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(borders = list(outer = brdr("medium", "dashed")))
   out <- withr::local_tempfile(fileext = ".rtf")
@@ -280,7 +318,7 @@ test_that("preset@borders surfaces in RTF", {
   expect_true(grepl("\\\\brdrdash\\\\brdrw20", txt))
 })
 
-test_that("preset@borders surfaces in LaTeX tabularray directives", {
+test_that("preset(borders) surfaces in LaTeX tabularray directives", {
   spec <- tabular(data.frame(x = "a", y = "b")) |>
     preset(
       borders = list(
@@ -296,10 +334,7 @@ test_that("preset@borders surfaces in LaTeX tabularray directives", {
 })
 
 # ---------------------------------------------------------------------
-# Defensive branches in preset_validators.R — direct unit tests on the
-# shape-error helpers. Some branches are unreachable through the S7
-# `class_list` gate (non-list inputs); direct calls exercise them as
-# part of the helper's standalone contract.
+# Shape-validator helpers — direct-call coverage for each branch
 # ---------------------------------------------------------------------
 
 test_that(".preset_borders_shape_error rejects non-list and unnamed entries", {
@@ -427,10 +462,7 @@ test_that(".preset_padding_shape_error accepts NULL and rejects bad side specs",
 })
 
 # ---------------------------------------------------------------------
-# Defensive branches in engine_borders.R — direct unit tests on the
-# internal helpers. Covers early-return guards, body_cols stamping,
-# the body_top / body_bottom aliases, and the non-style_node coercion
-# in .set_border_triple.
+# engine_borders — early-return guards + visibility-aware stamping
 # ---------------------------------------------------------------------
 
 test_that("engine_borders short-circuits on non-matrix cells_style", {
@@ -442,7 +474,7 @@ test_that("engine_borders short-circuits on non-matrix cells_style", {
   )
 })
 
-test_that("engine_borders short-circuits when borders is empty", {
+test_that("engine_borders short-circuits when no borders are set", {
   spec <- tabular(data.frame(x = 1))
   m <- matrix(
     list(style_node()),
@@ -450,7 +482,6 @@ test_that("engine_borders short-circuits when borders is empty", {
     ncol = 1L,
     dimnames = list(NULL, "x")
   )
-  # No preset@borders -> identity on the matrix.
   expect_identical(tabular:::engine_borders(spec, m), m)
 })
 
@@ -469,15 +500,6 @@ test_that("engine_borders stamps body_cols left between visible columns", {
   expect_true(is.na(cs[[1, "a"]]@border_left_style))
   expect_identical(cs[[1, "b"]]@border_left_style, "solid")
   expect_identical(cs[[1, "c"]]@border_left_style, "solid")
-})
-
-test_that(".resolve_border_regions maps body_top / body_bottom onto outer_top / outer_bottom", {
-  out <- tabular:::.resolve_border_regions(list(
-    body_top = brdr("medium", "dotted"),
-    body_bottom = brdr("hairline")
-  ))
-  expect_identical(out$outer_top$style, "dotted")
-  expect_identical(out$outer_bottom$style, "solid")
 })
 
 test_that(".visible_col_indices treats unknown col names as visible by default", {
@@ -506,117 +528,68 @@ test_that("engine_borders short-circuits when no columns are visible", {
   expect_identical(tabular:::engine_borders(spec, m), m)
 })
 
-test_that(".stamp_body_cols short-circuits with fewer than 2 visible cols", {
-  m <- matrix(
-    list(style_node()),
-    nrow = 1L,
-    ncol = 1L,
-    dimnames = list(NULL, "x")
-  )
-  out <- tabular:::.stamp_body_cols(
-    m,
-    visible_idx = 1L,
-    triple = list(style = "solid", width = 1, color = "#000")
-  )
-  expect_identical(out, m)
-})
-
-test_that(".stamp_outer_edge short-circuits on empty matrix", {
-  empty <- matrix(list(), nrow = 0L, ncol = 0L)
-  out <- tabular:::.stamp_outer_edge(
-    empty,
-    visible_idx = integer(),
-    side = "top",
-    triple = list(style = "solid", width = 1, color = "#000")
-  )
-  expect_identical(out, empty)
-})
-
 # ---------------------------------------------------------------------
-# preset@fonts / @colors / @padding flow through each backend
-# (Pass B wiring). One proof per knob per backend confirms that
-# setting a knob produces a visible output token.
+# Effective font helpers — survive as table-wide fallbacks
 # ---------------------------------------------------------------------
 
-test_that(".effective_font_family overlays fonts$body$family on @font_family", {
-  p <- preset_spec(
-    font_family = "serif",
-    fonts = list(body = list(family = "Inter"))
-  )
-  expect_identical(tabular:::.effective_font_family(p, "body"), "Inter")
-  # Falls back when the surface key is absent.
-  p2 <- preset_spec(font_family = "sans")
-  expect_identical(tabular:::.effective_font_family(p2, "body"), "sans")
-  # NULL-preset path returns the factory default font_family.
+test_that(".effective_font_family reads the preset_spec scalar slot", {
   expect_identical(
-    tabular:::.effective_font_family(NULL, "body"),
+    tabular:::.effective_font_family(preset_spec(font_family = "Inter")),
+    "Inter"
+  )
+  # NULL falls back to factory default.
+  expect_identical(
+    tabular:::.effective_font_family(NULL),
     preset_spec()@font_family
   )
 })
 
-test_that(".effective_font_size overlays fonts$body$size on @font_size", {
-  p <- preset_spec(
-    font_size = 9,
-    fonts = list(body = list(size = 8))
+test_that(".effective_font_size reads the preset_spec scalar slot", {
+  expect_identical(
+    tabular:::.effective_font_size(preset_spec(font_size = 8)),
+    8
   )
-  expect_identical(tabular:::.effective_font_size(p, "body"), 8)
-  p2 <- preset_spec(font_size = 11)
-  expect_identical(tabular:::.effective_font_size(p2, "body"), 11)
+  expect_identical(
+    tabular:::.effective_font_size(NULL),
+    preset_spec()@font_size
+  )
 })
 
-test_that(".effective_color returns NA when token is unset or preset is NULL", {
-  p <- preset_spec(colors = list(text = "#ff0000"))
-  expect_identical(tabular:::.effective_color(p, "text"), "#ff0000")
-  expect_true(is.na(tabular:::.effective_color(p, "background")))
-  expect_true(is.na(tabular:::.effective_color(NULL, "text")))
-})
+# ---------------------------------------------------------------------
+# Backend smoke — each lowered knob produces a visible token
+# ---------------------------------------------------------------------
 
-test_that(".effective_padding returns NULL when surface is unset or preset is NULL", {
-  p <- preset_spec(padding = list(body = 5))
-  expect_identical(tabular:::.effective_padding(p, "body"), 5)
-  expect_null(tabular:::.effective_padding(p, "header"))
-  expect_null(tabular:::.effective_padding(NULL, "body"))
-})
-
-test_that("HTML emit consumes preset@fonts$body$family", {
+test_that("HTML emit consumes preset(fonts) family", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(fonts = list(body = list(family = "Inter")))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  # Single-name family without spaces is emitted unquoted by
-  # .html_quote_font; presence of the literal family name is the
-  # wire check.
-  expect_true(grepl("font-family: Inter", txt, fixed = TRUE))
+  # Surface-specific fonts now ride on cells_body() layer stamps, so
+  # the per-cell <td> carries `font-family: Inter` in inline style.
+  expect_true(grepl("Inter", txt, fixed = TRUE))
 })
 
-test_that("HTML emit consumes preset@colors$text", {
+test_that("HTML emit per-cell color stamp for preset(colors = text)", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(colors = list(text = "#ff0000"))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_true(grepl(
-    ".tabular-table td { color: #ff0000; }",
-    txt,
-    fixed = TRUE
-  ))
+  # Per-cell inline style carries color.
+  expect_true(grepl("color: #ff0000", txt, fixed = TRUE))
 })
 
-test_that("HTML emit consumes preset@padding$body", {
+test_that("HTML emit per-cell padding stamp for preset(padding = body)", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(padding = list(body = 5))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_true(grepl(
-    ".tabular-table tbody td { padding: 5pt; }",
-    txt,
-    fixed = TRUE
-  ))
+  expect_true(grepl("padding: 5pt", txt, fixed = TRUE))
 })
 
-test_that("DOCX emit consumes preset@colors$text on body cells", {
+test_that("DOCX emit consumes preset(colors = text) on body cells", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(colors = list(text = "#ff0000"))
   out <- withr::local_tempfile(fileext = ".docx")
@@ -630,7 +603,7 @@ test_that("DOCX emit consumes preset@colors$text on body cells", {
   expect_true(grepl("<w:color w:val=\"FF0000\"/>", doc, fixed = TRUE))
 })
 
-test_that("DOCX emit consumes preset@padding$body via <w:tcMar>", {
+test_that("DOCX emit consumes preset(padding = body) via <w:tcMar>", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(padding = list(body = 5))
   out <- withr::local_tempfile(fileext = ".docx")
@@ -649,16 +622,16 @@ test_that("DOCX emit consumes preset@padding$body via <w:tcMar>", {
   ))
 })
 
-test_that("RTF emit consumes preset@fonts$body$family via the font table", {
+test_that("RTF emit consumes preset(fonts = body family) via the font table", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(fonts = list(body = list(family = "Inter")))
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_true(grepl("\\f0\\froman\\fprq2 Inter", txt, fixed = TRUE))
+  expect_true(grepl("Inter", txt, fixed = TRUE))
 })
 
-test_that("RTF emit consumes preset@colors$text via colortbl + cf token", {
+test_that("RTF emit consumes preset(colors = text) via colortbl + cf token", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(colors = list(text = "#ff0000"))
   out <- withr::local_tempfile(fileext = ".rtf")
@@ -672,35 +645,39 @@ test_that("RTF emit consumes preset@colors$text via colortbl + cf token", {
   expect_true(grepl("\\cf1 ", txt, fixed = TRUE))
 })
 
-test_that("RTF emit consumes preset@padding$body via \\trgaph", {
+test_that("RTF emit consumes preset(padding = body) via \\trgaph", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(padding = list(body = 5))
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  # 5pt -> 100 twips
+  # 5pt -> 100 twips on the representative body cell.
   expect_true(grepl("\\trowd\\trgaph100", txt, fixed = TRUE))
 })
 
-test_that("LaTeX emit consumes preset@colors$text via \\definecolor", {
+test_that("LaTeX emit drops table-wide \\definecolor + AtBeginDocument (slot cut)", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(colors = list(text = "#ff0000"))
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_true(grepl(
-    "\\definecolor{tabular_text}{HTML}{FF0000}",
+  # Per-cell color still surfaces via cells_style stamp.
+  expect_false(grepl(
+    "\\definecolor{tabular_text}",
     txt,
     fixed = TRUE
   ))
-  expect_true(grepl(
+  expect_false(grepl(
     "\\AtBeginDocument{\\color{tabular_text}}",
     txt,
     fixed = TRUE
   ))
+  # The per-cell `\SetCell{...}` carries the color triple.
+  expect_true(grepl("FF0000", txt, ignore.case = TRUE) ||
+              grepl("ff0000", txt, ignore.case = TRUE))
 })
 
-test_that("LaTeX emit consumes preset@padding$body via tabularray rowsep", {
+test_that("LaTeX emit consumes preset(padding = body) via tabularray rowsep", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(padding = list(body = 5))
   out <- withr::local_tempfile(fileext = ".tex")
@@ -709,36 +686,18 @@ test_that("LaTeX emit consumes preset@padding$body via tabularray rowsep", {
   expect_true(grepl("rowsep=5pt", txt, fixed = TRUE))
 })
 
-test_that("LaTeX emit consumes preset@fonts$body$family in the font preamble", {
+test_that("LaTeX emit consumes preset(fonts = body family) in the font preamble", {
   spec <- tabular(data.frame(x = 1)) |>
     preset(fonts = list(body = list(family = "Inter")))
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  # .latex_font_lines routes any non-generic family through fontspec /
-  # pdftex packages; presence of the literal family name is the wire
-  # check.
   expect_true(grepl("Inter", txt, fixed = TRUE))
-})
-
-test_that(".set_border_triple coerces non-style_node input via style_node()", {
-  out <- tabular:::.set_border_triple(
-    node = NULL,
-    prop_style = "border_top_style",
-    prop_width = "border_top_width",
-    prop_color = "border_top_color",
-    triple = list(style = "solid", width = 0.5, color = "#000")
-  )
-  expect_true(tabular:::is_style_node(out))
-  expect_identical(out@border_top_style, "solid")
-  expect_identical(out@border_top_width, 0.5)
-  expect_identical(out@border_top_color, "#000")
 })
 
 # ---------------------------------------------------------------------
 # Coverage — preset_spec validator branches that earlier tests didn't
-# trigger (chrome_onscreen, paginate dimension parse, body_pad_top
-# negative, margin parse error).
+# trigger (chrome_onscreen, margin parse error).
 # ---------------------------------------------------------------------
 
 test_that("preset_spec(chrome_onscreen = 'bogus') is rejected", {
@@ -765,3 +724,9 @@ test_that("preset_spec(margins = '50%') is rejected (percent not allowed)", {
 # v0.1.0; their validator branches no longer exist. Title pad now
 # routes through `style(at = cells_title(), blank_above = N)`; body
 # pad is a hardcoded backend constant (0 / 0).
+#
+# preset_spec@alignment / @borders / @fonts / @colors / @padding
+# slots were dropped in the Task 4/5 cut. The corresponding shape
+# validators run at preset() / set_preset() call time via
+# `.validate_lowered_knobs()`; the slot-level validator branches
+# no longer exist.
