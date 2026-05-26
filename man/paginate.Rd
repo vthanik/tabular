@@ -58,13 +58,19 @@ primary split rule.}
 \item{repeat_headers}{\emph{Repeat the column-header band on every
 continuation page.} \verb{<logical(1)>: default TRUE}. \code{FALSE} shows
 the header band on page 1 only; submission-grade tables almost
-always want \code{TRUE}.}
+always want \code{TRUE}. \strong{HTML / MD:} ignored. HTML renders one
+continuous \verb{<table>} and browsers natively repeat \verb{<thead>} on
+print; MD has no print model. Effective only for the page-
+oriented backends (RTF, PDF, LaTeX, DOCX).}
 
 \item{continuation}{\emph{Marker text appended after a continuing
 table's title block.} \verb{<character(1) | NULL>: default NULL}.
 \code{NULL} (the default) renders no marker — pick the wording your
 submission style guide expects (e.g. \code{"(continued)"},
-\code{"(Cont'd)"}, \code{"Page \%d of \%d"}) and pass it explicitly.}
+\code{"(Cont'd)"}, \code{"Page \%d of \%d"}) and pass it explicitly.
+\strong{HTML / MD:} ignored. With one continuous document on screen
+there is no continuing-page boundary to mark. Effective only
+for the page-oriented backends (RTF, PDF, LaTeX, DOCX).}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with

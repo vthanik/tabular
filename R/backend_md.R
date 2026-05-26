@@ -164,7 +164,10 @@ backend_md <- function(grid, file) {
   }
 
   if (length(footnote_block) > 0L) {
-    out[[length(out) + 1L]] <- footnote_block
+    # Blank line between the pipe table and the footnotes — strict
+    # GFM parsers expect a blank line to close a pipe table cleanly
+    # before parsing the following prose.
+    out[[length(out) + 1L]] <- c("", footnote_block)
   }
   if (length(chrome_bot) > 0L) {
     out[[length(out) + 1L]] <- c("", "----", "", chrome_bot)
