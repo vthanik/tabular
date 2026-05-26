@@ -128,6 +128,12 @@
 #'   sort-key helpers (`row_type`, `n_total`) and for the numeric
 #'   counts behind formatted-text percentage cells.
 #'
+#'   **Auto-hide.** The depth column named by `indent_by` and every
+#'   column named by [`subgroup(by = ...)`][subgroup()] or referenced
+#'   via a `{col}` placeholder in the subgroup banner template are
+#'   flipped to `visible = FALSE` automatically at engine time —
+#'   restating it here is redundant.
+#'
 #' @param width *Column width — auto-sized, pinned, or proportional.*
 #'   `<character(1) | numeric(1)>: default "auto"`.
 #'

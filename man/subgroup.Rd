@@ -79,6 +79,13 @@ slowest, matching \code{expand.grid()} convention). An explicit
 \code{label} template is required for multi-var partitions since the
 single-var default \code{"<var>: {<var>}"} does not generalise; raise
 \code{tabular_error_subgroup_label_required} otherwise.
+
+\strong{Auto-hide of partition + template columns.} Every column named
+in \code{by}, plus every column referenced via a \code{{col}} placeholder
+in \code{label}, automatically flips to \code{visible = FALSE} at engine
+time. Users do not restate \code{col_spec(visible = FALSE)} inside
+\code{\link[=cols]{cols()}} for these columns — mirroring the
+\code{\link[=col_spec]{col_spec(indent_by = ...)}} auto-hide ergonomic.
 }
 \examples{
 # ---- Example 1: TEAEs by treatment arm — one set of pages per arm ----
@@ -122,12 +129,11 @@ tabular(
 # constant within group can ride into the banner. `saf_subgroup`
 # ships partition-constant `sex_n` / `agegr_n` BigN columns
 # alongside the value cells, so each banner reads
-# `"Sex: F (N = 106)"`, etc.
+# `"Sex: F (N = 106)"`, etc. `sex` and `sex_n` auto-hide from the
+# body (partition `by` and template-referenced columns).
 tabular(saf_subgroup, titles = "Vital Signs at End of Treatment") |>
   cols(
-    sex        = col_spec(visible = FALSE),
     agegr      = col_spec(usage = "group", label = "Age Group"),
-    sex_n      = col_spec(visible = FALSE),
     agegr_n    = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
     param      = col_spec(usage = "group", label = "Parameter"),
@@ -149,8 +155,6 @@ tabular(saf_subgroup, titles = "Vital Signs at End of Treatment") |>
 # M/<65, M/>=65.
 tabular(saf_subgroup, titles = "Vital Signs by Sex and Age Group") |>
   cols(
-    sex        = col_spec(visible = FALSE),
-    agegr      = col_spec(visible = FALSE),
     sex_n      = col_spec(visible = FALSE),
     agegr_n    = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),

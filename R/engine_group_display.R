@@ -56,7 +56,8 @@ engine_group_display <- function(
   cells_style,
   cols,
   data = NULL,
-  indent_chars = ""
+  indent_chars = "",
+  subgroup_hide_cols = character(0L)
 ) {
   nrow_data <- nrow(cells_text)
   ncol_data <- ncol(cells_text)
@@ -106,14 +107,17 @@ engine_group_display <- function(
     }
   }
   # Apply the visibility auto-hide on the depth columns that
-  # `.resolve_indent_targets()` flagged. Done after the prefix
-  # block (which still needs to read from data[, depth_col] even if
-  # the column is hidden) and BEFORE the rest of the pipeline so
+  # `.resolve_indent_targets()` flagged AND on the subgroup
+  # partition / template-ref columns the caller pre-computed via
+  # `.subgroup_auto_hide_cols()`. Done after the prefix block
+  # (which still needs to read from data[, depth_col] even if the
+  # column is hidden) and BEFORE the rest of the pipeline so
   # `.visible_col_names()` filters them out downstream.
-  for (depth_col in indent_apply$hide_cols) {
-    cs <- cols[[depth_col]]
+  hide_union <- unique(c(indent_apply$hide_cols, subgroup_hide_cols))
+  for (hide_col in hide_union) {
+    cs <- cols[[hide_col]]
     if (is_col_spec(cs)) {
-      cols[[depth_col]] <- S7::set_props(cs, visible = FALSE)
+      cols[[hide_col]] <- S7::set_props(cs, visible = FALSE)
     }
   }
 

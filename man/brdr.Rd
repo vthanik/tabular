@@ -99,13 +99,13 @@ tabular(
     )
   )
 
-# ---- Example 2: Wrap a house style into a reusable function ----
+# ---- Example 2: Wrap a custom style into a reusable function ----
 #
 # The recommended way to share a border style across many tables
 # is to wrap the `preset()` call in a small function. Subsequent
 # `preset(borders = list(...))` calls then shallow-merge per
 # region — a one-off override layers cleanly on top.
-my_house_style <- function(spec) {
+custom_style <- function(spec) {
   spec |>
     preset(
       borders = list(
@@ -118,7 +118,7 @@ my_house_style <- function(spec) {
 }
 
 tabular(saf_n) |>
-  my_house_style() |>
+  custom_style() |>
   preset(borders = list(body_rows = brdr("hairline", "dashed")))
 
 # ---- Example 3: Width keyword vs numeric, every style enum value ----

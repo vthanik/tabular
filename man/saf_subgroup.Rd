@@ -49,11 +49,12 @@ single-variable cohort-style partitions and the multi-variable
 }
 \examples{
 # 95\% pattern: subgroup partition by sex with inline BigN.
+# `sex` and `sex_n` auto-hide from the body: `sex` because it is
+# the partition `by` column; `sex_n` because the banner template
+# references it. No explicit `col_spec(visible = FALSE)` needed.
 tabular(saf_subgroup, titles = "Vital Signs at End of Treatment") |>
   cols(
-    sex        = col_spec(visible = FALSE),
     agegr      = col_spec(usage = "group", label = "Age Group"),
-    sex_n      = col_spec(visible = FALSE),
     agegr_n    = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
     param      = col_spec(usage = "group", label = "Parameter"),

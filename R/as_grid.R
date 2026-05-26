@@ -185,9 +185,10 @@
 #' # carries `sex` as a natural partition axis; inspect
 #' # `@pages[[i]]$subgroup_index` and `@pages[[i]]$subgroup_line_ast`
 #' # to confirm each page knows its group identity and banner text.
+#' # `sex` auto-hides as the partition `by` column; no explicit
+#' # `col_spec(visible = FALSE)` needed.
 #' sg_spec <- tabular(saf_subgroup) |>
 #'   cols(
-#'     sex        = col_spec(visible = FALSE),
 #'     agegr      = col_spec(usage = "group", label = "Age Group"),
 #'     sex_n      = col_spec(visible = FALSE),
 #'     agegr_n    = col_spec(visible = FALSE),
@@ -343,7 +344,8 @@ as_grid <- function(spec) {
       gd_preset@indent_chars
     } else {
       preset_spec()@indent_chars
-    }
+    },
+    subgroup_hide_cols = .subgroup_auto_hide_cols(spec)
   )
   fmt$cells_text <- gd$cells_text
   fmt$cells_ast <- gd$cells_ast

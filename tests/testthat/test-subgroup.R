@@ -240,3 +240,83 @@ test_that("subgroup_spec() rejects NA character label", {
     regexp = "@label"
   )
 })
+
+# ---------------------------------------------------------------------
+# Auto-hide of partition `by` + template-ref columns at engine time
+# ---------------------------------------------------------------------
+
+test_that(".subgroup_auto_hide_cols returns character(0) when no subgroup", {
+  spec <- tabular(data.frame(x = 1:3))
+  expect_identical(tabular:::.subgroup_auto_hide_cols(spec), character(0L))
+})
+
+test_that(".subgroup_auto_hide_cols returns the by var for single-var partition", {
+  spec <- tabular(saf_subgroup) |> subgroup(by = "sex")
+  expect_identical(
+    sort(tabular:::.subgroup_auto_hide_cols(spec)),
+    sort("sex")
+  )
+})
+
+test_that(".subgroup_auto_hide_cols unions `by` with template-ref columns", {
+  spec <- tabular(saf_subgroup) |>
+    subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
+  expect_identical(
+    sort(tabular:::.subgroup_auto_hide_cols(spec)),
+    sort(c("sex", "sex_n"))
+  )
+})
+
+test_that(".subgroup_auto_hide_cols covers multi-var partition + multi-ref label", {
+  spec <- tabular(saf_subgroup) |>
+    subgroup(
+      by = c("sex", "agegr"),
+      label = "Sex: {sex} / Age: {agegr} (N total {sex_n})"
+    )
+  expect_identical(
+    sort(tabular:::.subgroup_auto_hide_cols(spec)),
+    sort(c("sex", "agegr", "sex_n"))
+  )
+})
+
+test_that("subgroup auto-hide flips partition + template-ref cols from the body", {
+  spec <- tabular(saf_subgroup) |>
+    cols(
+      agegr = col_spec(usage = "group", label = "Age Group"),
+      agegr_n = col_spec(visible = FALSE),
+      paramcd = col_spec(visible = FALSE),
+      param = col_spec(usage = "group", label = "Parameter"),
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo", align = "decimal"),
+      drug_50 = col_spec(label = "Drug 50", align = "decimal"),
+      drug_100 = col_spec(label = "Drug 100", align = "decimal"),
+      Total = col_spec(label = "Total", align = "decimal")
+    ) |>
+    subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
+
+  g <- as_grid(spec)
+  page1 <- g@pages[[1L]]
+  # `sex` (partition) and `sex_n` (template ref) auto-hidden:
+  expect_false("sex" %in% page1$col_names)
+  expect_false("sex_n" %in% page1$col_names)
+  # Body keeps the user-declared visible columns:
+  expect_true("stat_label" %in% page1$col_names)
+  expect_true("placebo" %in% page1$col_names)
+})
+
+test_that("subgroup auto-hide is a no-op when no subgroup is attached", {
+  # Sanity: same spec, no subgroup → `sex` and `sex_n` should NOT
+  # be auto-hidden (the user might want them visible in that case).
+  spec <- tabular(saf_subgroup) |>
+    cols(
+      agegr = col_spec(usage = "group", label = "Age Group"),
+      agegr_n = col_spec(visible = FALSE),
+      paramcd = col_spec(visible = FALSE),
+      param = col_spec(usage = "group", label = "Parameter")
+    )
+  g <- as_grid(spec)
+  page1 <- g@pages[[1L]]
+  # `sex` and `sex_n` are visible by default when no subgroup is set:
+  expect_true("sex" %in% page1$col_names)
+  expect_true("sex_n" %in% page1$col_names)
+})

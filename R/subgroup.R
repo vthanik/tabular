@@ -54,6 +54,13 @@
 #' single-var default `"<var>: {<var>}"` does not generalise; raise
 #' `tabular_error_subgroup_label_required` otherwise.
 #'
+#' **Auto-hide of partition + template columns.** Every column named
+#' in `by`, plus every column referenced via a `{col}` placeholder
+#' in `label`, automatically flips to `visible = FALSE` at engine
+#' time. Users do not restate `col_spec(visible = FALSE)` inside
+#' [`cols()`] for these columns — mirroring the
+#' [`col_spec(indent_by = ...)`][col_spec()] auto-hide ergonomic.
+#'
 #' @param .spec *The `tabular_spec` to partition.*
 #'   `<tabular_spec>: required`.
 #'
@@ -126,12 +133,11 @@
 #' # constant within group can ride into the banner. `saf_subgroup`
 #' # ships partition-constant `sex_n` / `agegr_n` BigN columns
 #' # alongside the value cells, so each banner reads
-#' # `"Sex: F (N = 106)"`, etc.
+#' # `"Sex: F (N = 106)"`, etc. `sex` and `sex_n` auto-hide from the
+#' # body (partition `by` and template-referenced columns).
 #' tabular(saf_subgroup, titles = "Vital Signs at End of Treatment") |>
 #'   cols(
-#'     sex        = col_spec(visible = FALSE),
 #'     agegr      = col_spec(usage = "group", label = "Age Group"),
-#'     sex_n      = col_spec(visible = FALSE),
 #'     agegr_n    = col_spec(visible = FALSE),
 #'     paramcd    = col_spec(visible = FALSE),
 #'     param      = col_spec(usage = "group", label = "Parameter"),
@@ -153,8 +159,6 @@
 #' # M/<65, M/>=65.
 #' tabular(saf_subgroup, titles = "Vital Signs by Sex and Age Group") |>
 #'   cols(
-#'     sex        = col_spec(visible = FALSE),
-#'     agegr      = col_spec(visible = FALSE),
 #'     sex_n      = col_spec(visible = FALSE),
 #'     agegr_n    = col_spec(visible = FALSE),
 #'     paramcd    = col_spec(visible = FALSE),
@@ -335,6 +339,22 @@ subgroup <- function(.spec, by, label = NULL) {
     character(1L)
   )
   unique(refs)
+}
+
+# Compute the union of partition columns and template-ref columns
+# that should auto-hide at engine time. Mirrors the indent_by
+# auto-hide ergonomic — when a column is named in `spec@subgroup@by`
+# or referenced via `{col}` placeholder in `spec@subgroup@label`,
+# the engine flips its `visible` to FALSE so users don't restate
+# the same fact inside `cols()`. Returns `character(0L)` when the
+# spec has no subgroup partition.
+.subgroup_auto_hide_cols <- function(spec) {
+  sg <- spec@subgroup
+  if (is.null(sg) || length(sg@by) == 0L) {
+    return(character(0L))
+  }
+  refs <- .subgroup_template_refs(sg@label %||% "")
+  unique(c(sg@by, refs))
 }
 
 # Substitute `{col}` tokens in `template` against `row_data` (a
