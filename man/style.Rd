@@ -2,251 +2,143 @@
 % Please edit documentation in R/style.R
 \name{style}
 \alias{style}
-\title{Style cells, rows, or columns by predicate}
+\title{Attach a style layer to a \code{tabular_spec} or \code{style_template}}
 \usage{
-style(.spec, where, ..., at = NULL, .scope = "cell")
+style(.spec, ..., .at = cells_body())
 }
 \arguments{
-\item{.spec}{\emph{The \code{tabular_spec} to attach the predicate to.}
-\verb{<tabular_spec>: required}. Dot-prefixed so R's partial argument
-matching cannot accidentally bind a short attribute name in
-\code{...} to the spec slot.}
+\item{.spec}{\emph{A \code{tabular_spec} OR a \code{tabular_style_template}.}
+\verb{<tabular_spec | tabular_style_template>: required}.
+Dot-prefixed so R's partial argument matching cannot
+accidentally bind a short attribute name in \code{...} to the spec
+slot. When piping through \code{style_template() |> style(...)}
+layers accumulate onto the template instead of a spec.}
 
-\item{where}{\emph{Predicate evaluating to a length-\code{nrow} logical.}
-\verb{<expression>: required}. Captured as an rlang quosure;
-evaluated at engine time against the post-sort data grid, so
-the predicate may reference any column in \code{.spec@data}.
+\item{...}{\emph{Named style attributes.} At least one required. See
+the vocabulary list above for recognised names.}
 
-\strong{Tip:} With \code{.scope = "cell"} (the default), the engine
-extracts column names referenced by the expression to decide
-which cells to paint. \code{where = pvalue < 0.05} therefore paints
-only the \code{pvalue} column's cells in matching rows.}
-
-\item{...}{\emph{Named style attributes.} At least one required.
-Recognised attributes: \code{bold}, \code{italic}, \code{underline}, \code{color},
-\code{background}, \code{font_family}, \code{font_size}, \code{rule_above},
-\code{rule_below}, \code{border_left}, \code{border_right}, \code{padding},
-\code{blank_above}, \code{blank_below}, \code{pretext}, \code{posttext}, \code{halign},
-\code{valign}, and the per-side border triple
-\verb{border_\{top,bottom,left,right\}_\{style,width,color\}} (12
-scalars).
-
-\code{halign} is one of \code{"left"}, \code{"center"}, \code{"right"}. \code{valign}
-is one of \code{"top"}, \code{"middle"}, \code{"bottom"}. Per-cell alignment
-overrides win over \code{\link[=col_spec]{col_spec()}} column defaults, which in
-turn override \code{\link[=preset]{preset()}} body defaults.
-
-\verb{border_<side>_style} is one of \code{"solid"}, \code{"dashed"},
-\code{"dotted"}, \code{"double"}, \code{"dashdot"}, \code{"none"}.
-\verb{border_<side>_width} is a non-negative numeric in points
-(typical clinical values: 0.25, 0.5, 1, 1.5).
-\verb{border_<side>_color} is a hex \code{"#RRGGBB"}, a CSS colour name,
-or \code{"currentColor"}. The Boolean knobs (\code{rule_above},
-\code{rule_below}, \code{border_left}, \code{border_right}) remain available
-as a shorthand for \verb{("solid", 0.5pt, default colour)}.
-
-\strong{Note:} Unknown attribute names warn and are silently dropped
-(they do NOT pass through to the backend).}
-
-\item{at}{\emph{Location target via the \verb{cells_*()} vocabulary.}
-\verb{<tabular_location | NULL>: default NULL}. Mutually exclusive
-with \code{where}. When supplied, the style attributes apply to the
-region named by the location: body cells (\code{\link[=cells_body]{cells_body()}}),
-column-header bands (\code{\link[=cells_headers]{cells_headers()}}), subgroup banners
-(\code{\link[=cells_subgroup_labels]{cells_subgroup_labels()}}), title, footnotes, page-head /
-page-foot slots, or table edges (\code{\link[=cells_table]{cells_table()}}). See
-\code{\link{cells}} for the full vocabulary.}
-
-\item{.scope}{\emph{Targeting scope.}
-\verb{<character(1)>: default "cell"}. One of \code{"cell"}, \code{"row"},
-\code{"col"}. See the Scope semantics section.
-
-\strong{Restriction:} \code{"col"} raises \code{tabular_error_input} in the
-current release; planned post-v0.1.0.}
+\item{.at}{\emph{Location object selecting which surface the layer
+targets.} \verb{<tabular_location>: default cells_body()}. Build with
+one of the \verb{cells_*()} constructors; see \code{\link[=cells_body]{cells_body()}} and
+siblings. Dot-prefixed (tidyverse convention) because it comes
+AFTER \code{...} — that way a user-passed style attribute can never
+collide with this arg's name.}
 }
 \value{
-\emph{The updated \code{tabular_spec}.} Continue chaining with
-\code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}, then render via \code{\link[=emit]{emit()}} (or
-resolve without I/O via \code{\link[=as_grid]{as_grid()}}).
+The updated \code{tabular_spec} (or \code{tabular_style_template},
+when called against one).
 }
 \description{
-Attach a \code{style_predicate} to a \code{tabular_spec}. The predicate
-(\code{where}) is captured as an rlang quosure and evaluated at engine
-time against the post-sort data grid; rows where the predicate
-is TRUE pick up the styling attributes given in \code{...}.
-Use this for subtotal-row highlighting, threshold-coloured
-p-values, banded-row backgrounds, and any other rule-driven
-formatting that depends on cell values rather than position.
+One verb, one cascade. Each \code{style()} call appends a single
+\code{style_layer} (location + style attributes) to the spec or
+template. Layers accumulate in declaration order; the engine
+merges them at render time so later layers win per attribute,
+NA-valued fields leave the prior layer intact.
 }
 \details{
-\strong{Multiple calls accumulate.} Each \code{style()} call adds one
-predicate to the spec's predicate list. The engine applies them
-in declaration order at render time; later predicates win for
-overlapping cells. Field-level merge: only non-NA attributes on
-the incoming style override; NA leaves the prior value intact.
-
-\strong{Cascade order.} The full style cascade (lowest to highest
-precedence) is: backend defaults -> preset ->
-\code{style_spec$defaults} -> \code{style_spec$cols} ->
-\code{style_spec$headers} -> \code{style_spec$predicates}. \code{style()}
-populates only the predicates layer; the upper layers (defaults /
-cols / headers) land with \code{preset()} and \code{\link[=col_spec]{col_spec()}}
-integration in later steps.
-}
-\section{Scope semantics}{
-
+\strong{Locations.} The \code{at} argument selects which surface the layer
+targets. Every region of the rendered page has a \verb{cells_*()}
+constructor:
 \itemize{
-\item \strong{\code{.scope = "cell"}} (default) — predicate evaluates to a
-length-\code{nrow} logical. Style applies to cells in the columns
-the \code{where} expression \emph{references}, intersected with
-\code{.spec@data} column names. If no data columns are referenced,
-falls back to all columns (same as \code{"row"}). The natural
-default for value-based highlighting like
-\code{where = pvalue < 0.05} — only the \code{pvalue} cells go red.
-\item \strong{\code{.scope = "row"}} — predicate evaluates to a length-\code{nrow}
-logical. Style applies to EVERY cell in the matching rows.
-Use for whole-row formatting like subtotal bolding or
-alternating-row backgrounds.
-\item \strong{\code{.scope = "col"}} — reserved; raises \code{tabular_error_input}
-at engine time in the current release. Use a per-\code{\link[=col_spec]{col_spec()}}
-style declaration (planned post-v0.1.0) for whole-column
-styling.
-}
+\item \code{cells_body()}             — body cells (default)
+\item \code{cells_headers()}          — column header band
+\item \code{cells_group_headers()}    — synthetic group-header rows
+\item \code{cells_title()}            — title block
+\item \code{cells_subgroup_labels()}  — subgroup banner row
+\item \code{cells_footnotes()}        — footnote block
+\item \code{cells_pagehead()}         — page-header band
+\item \code{cells_pagefoot()}         — page-footer band
+\item \code{cells_table()}            — table-wide regions (outer
+borders, body-row separators)
 }
 
+Body filters live on \code{cells_body()}: \code{i = 1:3} for integer-index
+rows, \code{j = "Total"} for column-name targeting, \verb{where = <expr>}
+for a quosure-captured predicate evaluated against \code{spec@data}.
+
+\strong{Attribute vocabulary.} Each layer carries a \code{style_node} built
+from \code{...}. Recognised attribute names:
+\itemize{
+\item Text — \code{bold}, \code{italic}, \code{underline}, \code{color}, \code{background},
+\code{font_family}, \code{font_size}
+\item Alignment — \code{halign} (\code{"left" / "center" / "right"}),
+\code{valign} (\code{"top" / "middle" / "bottom"})
+\item Borders — \code{border} (umbrella), \code{border_top}, \code{border_bottom},
+\code{border_left}, \code{border_right} (each takes a \code{brdr()} value
+or the literal \code{"none"}); per-side scalars
+\verb{border_<side>_\{style,width,color\}} for finer control
+\item Padding — \code{padding} (CSS-sense interior space)
+\item Spacing — \code{blank_above}, \code{blank_below} (integer blank lines
+above / below the block — for \code{cells_title()} /
+\code{cells_footnotes()} / \code{cells_subgroup_labels()})
+\item Inline — \code{pretext}, \code{posttext} (literal text prepended /
+appended around the cell value)
+\item Legacy Boolean rules — \code{rule_above}, \code{rule_below}
+}
+
+Unknown attribute names emit a \code{cli::cli_warn} and drop from
+the constructed node; the engine never sees a foreign property.
+}
 \examples{
-# ---- Example 1: Subtotal rows bolded and ruled, overall row shaded ----
-#
-# AE-by-SOC/PT table where the SOC-level subtotal rows are bolded
-# with a top rule (visual separator from the PT-level detail rows
-# below) and the overall "TOTAL SUBJECTS WITH AN EVENT" row gets
-# bold text on a light-gray background. Two row-scoped predicates
-# applied in declaration order.
+# ---- AE table by SOC and PT with per-row indent + styled hierarchy ----
 ae <- saf_aesocpt
-ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+ae$indent_level <- as.integer(ae$row_type == "pt")
 
-tabular(
-  ae,
-  titles = c(
-    "Table 14.3.1",
-    "Adverse Events by System Organ Class and Preferred Term",
-    sprintf("Safety Population (N=\%d)", n["Total"])
-  ),
-  footnotes = "Subjects are counted once per SOC and once per PT."
-) |>
+tabular(ae, titles = "Adverse Events by SOC / PT", footnotes = "") |>
   cols(
-    soc      = col_spec(usage = "group", label = "SOC / PT"),
-    label       = col_spec(visible = FALSE),
-    row_type = col_spec(visible = FALSE),
-    n_total  = col_spec(visible = FALSE),
-    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"])),
-    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"])),
-    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"])),
-    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]))
+    soc          = col_spec(usage = "group", group_display = "header_row"),
+    label        = col_spec(label = "Category",
+                             align = "left",
+                             indent_by = "indent_level"),
+    indent_level = col_spec(visible = FALSE),
+    row_type     = col_spec(visible = FALSE),
+    placebo      = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50      = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100     = col_spec(label = "Drug 100", align = "decimal"),
+    Total        = col_spec(label = "Total",    align = "decimal")
   ) |>
-  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
-  sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
-  style(where = row_type == "soc",     bold = TRUE, rule_above = TRUE, .scope = "row") |>
-  style(where = row_type == "overall", bold = TRUE, background = "lightgray", .scope = "row")
+  # SOC summary rows bolded (depth 0 — flush)
+  style(bold = TRUE,
+        .at = cells_body(where = row_type == "soc")) |>
+  # Overall row gets a light background
+  style(background = "#f0f0f0",
+        .at = cells_body(where = row_type == "overall"))
 
-# ---- Example 2: Derived ORR / DCR rows highlighted in efficacy table ----
-#
-# Efficacy BOR table where the derived ORR / DCR summary rows
-# (`row_type == "derived"`) are bolded and ruled above to set them
-# apart from the BOR-category rows. Single row-scoped predicate.
-bor_levels <- c(
-  "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
-  "Objective Response Rate (CR + PR)",
-  "Disease Control Rate (CR + PR + SD)"
-)
-eff <- eff_resp
-eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
-ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+# ---- Chrome styling ----
+tabular(saf_demo) |>
+  style(bold = TRUE, .at = cells_headers()) |>
+  style(border_top = brdr("thick", "double"),
+        .at = cells_headers()) |>
+  style(halign = "left", .at = cells_title()) |>
+  style(blank_above = 1, blank_below = 1,
+        .at = cells_title())
 
-tabular(
-  eff,
-  titles = c(
-    "Table 14.2.1",
-    "Best Overall Response and Response Rates",
-    sprintf("Efficacy Evaluable Population (N=\%d)", ne["Total"])
-  ),
-  footnotes = "Response per RECIST 1.1, investigator assessment."
-) |>
-  cols(
-    stat_label = col_spec(usage = "group", label = "Response"),
-    row_type   = col_spec(visible = FALSE),
-    placebo    = col_spec(label = sprintf("Placebo\nN=\%d",  ne["placebo"])),
-    drug_50    = col_spec(label = sprintf("Drug 50\nN=\%d",  ne["drug_50"])),
-    drug_100   = col_spec(label = sprintf("Drug 100\nN=\%d", ne["drug_100"]))
-  ) |>
-  sort_rows(by = "stat_label") |>
-  style(where = row_type == "derived", bold = TRUE, rule_above = TRUE, .scope = "row")
+# ---- Table-wide borders ----
+tabular(saf_demo) |>
+  style(border = brdr("medium"),
+        .at = cells_table(side = "outer")) |>
+  style(border_top = brdr("hairline", "dotted"),
+        .at = cells_table(side = "rows"))
 
-# ---- Example 3: Per-side cell borders + alignment override ----
-#
-# Vital-signs summary where the `Mean (SD)` row across all
-# parameters carries a thick top border (separating it from the
-# `n` row above) and the body of those cells is centre-aligned
-# rather than the column-level default. Two style calls in a
-# row show the predicate cascade: first call paints the border,
-# second adds the per-cell halign override on the same predicate.
-vit <- saf_vital
-
-tabular(
-  vit,
-  titles = c("Table 14.4.1", "Vital Signs Summary at Each Visit")
-) |>
-  cols(
-    param      = col_spec(usage = "group", label = "Parameter"),
-    paramcd    = col_spec(visible = FALSE),
-    visit      = col_spec(usage = "group", label = "Visit"),
-    stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = "Placebo",  align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100", align = "decimal")
-  ) |>
-  style(
-    where = stat_label == "Mean (SD)",
-    border_top_style = "solid",
-    border_top_width = 1,
-    .scope = "row"
-  ) |>
-  style(
-    where = stat_label == "Mean (SD)",
-    halign = "center",
-    .scope = "row"
-  )
-
-# ---- Example 4: Banded-row backgrounds via row-scope predicate ----
-#
-# Apply a soft grey background to every other body row. The
-# predicate runs against the data grid (`seq_len(nrow(.spec@data))`
-# mod 2), and `.scope = "row"` paints the matching rows wall-to-wall.
-# Standard zebra-striping pattern for long tables.
-tabular(saf_demo, titles = "Demographics with banded rows") |>
-  cols(
-    variable   = col_spec(usage = "group", label = "Characteristic"),
-    stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = "Placebo",  align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
-    Total      = col_spec(label = "Total",    align = "decimal")
-  ) |>
-  style(
-    where = seq_len(nrow(saf_demo)) \%\% 2 == 0,
-    background = "#f2f2f2",
-    .scope = "row"
-  )
+# ---- House style via style_template() ----
+house <- style_template() |>
+  style(bold = TRUE, .at = cells_headers()) |>
+  style(border_top = brdr("thick"), .at = cells_headers()) |>
+  style(border_bottom = brdr("thick"), .at = cells_headers()) |>
+  style(border_bottom = brdr("medium"),
+        .at = cells_table(side = "outer_bottom"))
+# Attach once via set_preset(); every tabular() chain inherits.
+# set_preset(style = house, font_size = 9)
 
 }
 \seealso{
-\strong{Sibling build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
-\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
+\strong{Companion verbs:} \code{\link[=cols]{cols()}}, \code{\link[=headers]{headers()}}, \code{\link[=preset]{preset()}},
+\code{\link[=set_preset]{set_preset()}}.
 
-\strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
-\code{\link[=as_grid]{as_grid()}}.
+\strong{Location constructors:} \code{\link[=cells_body]{cells_body()}}, \code{\link[=cells_headers]{cells_headers()}},
+\code{\link[=cells_group_headers]{cells_group_headers()}}, \code{\link[=cells_title]{cells_title()}},
+\code{\link[=cells_subgroup_labels]{cells_subgroup_labels()}}, \code{\link[=cells_footnotes]{cells_footnotes()}},
+\code{\link[=cells_pagehead]{cells_pagehead()}}, \code{\link[=cells_pagefoot]{cells_pagefoot()}}, \code{\link[=cells_table]{cells_table()}}.
 
-\strong{Inline pretext / posttext formatting:} \code{\link[=md]{md()}}, \code{\link[=html]{html()}}.
+\strong{Style values:} \code{\link[=brdr]{brdr()}}, \code{\link[=style_template]{style_template()}}.
 }

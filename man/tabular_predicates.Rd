@@ -8,7 +8,6 @@
 \alias{is_header_node}
 \alias{is_sort_spec}
 \alias{is_style_node}
-\alias{is_style_predicate}
 \alias{is_style_layer}
 \alias{is_style_spec}
 \alias{is_pagination_spec}
@@ -28,8 +27,6 @@ is_header_node(x)
 is_sort_spec(x)
 
 is_style_node(x)
-
-is_style_predicate(x)
 
 is_style_layer(x)
 

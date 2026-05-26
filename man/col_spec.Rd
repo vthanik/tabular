@@ -14,7 +14,8 @@ col_spec(
   group_skip = NA,
   align = NULL,
   valign = NULL,
-  na_text = ""
+  na_text = "",
+  indent_by = NA_character_
 )
 }
 \arguments{
@@ -252,6 +253,38 @@ step, so \code{format} does not need to anticipate \code{NA}.
 \strong{Tip:} Use a sentinel (\code{"-"}, \code{"NR"}, \code{"."}) when blank cells
 would be ambiguous, e.g. when "not applicable" and "not
 reported" both render blank.}
+
+\item{indent_by}{\emph{Name of a column in \code{spec@data} whose per-row
+integer / logical values drive indent depth on this column.}
+\verb{<character(1)>: default NA_character_}. When set, the engine
+reads \code{spec@data[[indent_by]]} and prefixes this column's text
+\itemize{
+\item AST in each row with
+\code{paste(rep(preset@indent_chars, depth), collapse = "")}. The
+referenced depth column is auto-hidden — no need to set
+\code{visible = FALSE} on it.
+}
+
+Typical SOC / PT pattern:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{ae$indent_level <- as.integer(ae$row_type == "pt")
+cols(
+  label        = col_spec(label = "Category",
+                           indent_by = "indent_level"),
+  indent_level = col_spec(visible = FALSE)  # belt + braces
+)
+}\if{html}{\out{</div>}}
+
+Multi-depth nesting works the same way — values
+\verb{c(0L, 1L, 2L, …)} produce \code{0}, \code{1}, \code{2}, … copies of
+\code{preset@indent_chars}. Negative values clamp to 0 (warn);
+fractional numerics floor (warn); NA → 0 (silent).
+
+Composes orthogonally with \code{group_display = "header_row"}:
+synthetic group headers (depth 0) stay flush as parents; data
+rows under them carry their column's declared depth. Works in
+flat listings too — \code{indent_by} does not require any
+\code{usage = "group"} columns.}
 }
 \value{
 \emph{A \code{col_spec} S7 object.} Pass it to \code{\link[=cols]{cols()}} keyed by
