@@ -447,6 +447,15 @@ saf_aesocpt <- bind_rows(
   rename_arms() |>
   as.data.frame()
 
+# Ship the canonical depth column so users do not reconstruct it in
+# every saf_aesocpt example. Integer values: 0 on overall and SOC
+# rows, 1 on PT rows. Use as `col_spec(label, indent_by = "indent_level")`.
+saf_aesocpt$indent_level <- as.integer(saf_aesocpt$row_type == "pt")
+saf_aesocpt <- saf_aesocpt[, c(
+  "soc", "label", "row_type", "indent_level",
+  "placebo", "drug_50", "drug_100", "Total"
+)]
+
 # ────────────────────────────────────────────────────────────────────────
 # saf_vital — vital-signs continuous summary at 4 visits × 4 parameters.
 # Richer than the v0 2-visit × 4-param shape; supports paginate() and
@@ -601,6 +610,132 @@ eff_resp <- eff_resp[, c("stat_label", "row_type", arm_levels)]
 eff_resp <- rename_arms(eff_resp) |> as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
+# saf_subgroup — vital-signs summary partitioned by sex × age group.
+# Designed for subgroup() / as_grid() examples: ships partition-constant
+# BigN columns (sex_n, agegr_n) so banners can inline the denominator
+# via `subgroup(label = "Sex: {sex} (N = {sex_n})")`. Two parameters
+# (Systolic BP, Diastolic BP) at End of Treatment keep the dataset
+# small while exercising the multi-variable partition cross.
+# ────────────────────────────────────────────────────────────────────────
+subgroup_params <- c(SYSBP = "Systolic BP (mmHg)", DIABP = "Diastolic BP (mmHg)")
+
+advs_subgroup <- pharmaverseadam::advs |>
+  blank_to_na() |>
+  filter(
+    SAFFL == "Y",
+    TRT01A %in% arm_levels,
+    PARAMCD %in% names(subgroup_params),
+    AVISIT == "End of Treatment",
+    SEX %in% c("F", "M"),
+    !is.na(AGEGR1)
+  ) |>
+  mutate(
+    sex = factor(SEX, levels = c("F", "M")),
+    agegr = factor(
+      ifelse(AGEGR1 == "18-64", "<65", ">=65"),
+      levels = c("<65", ">=65")
+    ),
+    TRT01A = factor(TRT01A, levels = arm_levels)
+  )
+
+sex_n_int <- advs_subgroup |>
+  distinct(USUBJID, sex) |>
+  count(sex) |>
+  pull(n, name = sex)
+
+agegr_n_int <- advs_subgroup |>
+  distinct(USUBJID, agegr) |>
+  count(agegr) |>
+  pull(n, name = agegr)
+
+vs_subgroup_arm <- advs_subgroup |>
+  group_by(sex, agegr, PARAMCD, TRT01A) |>
+  summarise(
+    n = as.character(sum(!is.na(AVAL))),
+    `Mean (SD)` = sprintf(
+      "%s (%s)",
+      fmt1(mean(AVAL, na.rm = TRUE)),
+      fmt1(sd(AVAL, na.rm = TRUE))
+    ),
+    Median = fmt1(median(AVAL, na.rm = TRUE)),
+    `Min, Max` = sprintf(
+      "%s, %s",
+      fmt0(min(AVAL, na.rm = TRUE)),
+      fmt0(max(AVAL, na.rm = TRUE))
+    ),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    c(n, `Mean (SD)`, Median, `Min, Max`),
+    names_to = "stat_label",
+    values_to = "value"
+  ) |>
+  pivot_wider(names_from = TRT01A, values_from = value)
+
+vs_subgroup_total <- advs_subgroup |>
+  group_by(sex, agegr, PARAMCD) |>
+  summarise(
+    n = as.character(sum(!is.na(AVAL))),
+    `Mean (SD)` = sprintf(
+      "%s (%s)",
+      fmt1(mean(AVAL, na.rm = TRUE)),
+      fmt1(sd(AVAL, na.rm = TRUE))
+    ),
+    Median = fmt1(median(AVAL, na.rm = TRUE)),
+    `Min, Max` = sprintf(
+      "%s, %s",
+      fmt0(min(AVAL, na.rm = TRUE)),
+      fmt0(max(AVAL, na.rm = TRUE))
+    ),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    c(n, `Mean (SD)`, Median, `Min, Max`),
+    names_to = "stat_label",
+    values_to = "Total"
+  )
+
+saf_subgroup <- left_join(
+  vs_subgroup_arm,
+  vs_subgroup_total,
+  by = c("sex", "agegr", "PARAMCD", "stat_label")
+) |>
+  mutate(
+    sex_n = as.integer(sex_n_int[as.character(sex)]),
+    agegr_n = as.integer(agegr_n_int[as.character(agegr)]),
+    paramcd = as.character(PARAMCD),
+    param = unname(subgroup_params[paramcd]),
+    .before = "stat_label"
+  ) |>
+  select(-PARAMCD) |>
+  rename_arms() |>
+  mutate(across(
+    all_of(c("placebo", "drug_50", "drug_100", "Total")),
+    ~ tidyr::replace_na(.x, "")
+  )) |>
+  select(
+    sex, agegr, sex_n, agegr_n, paramcd, param, stat_label,
+    placebo, drug_50, drug_100, Total
+  ) |>
+  arrange(sex, agegr, paramcd) |>
+  as.data.frame()
+
+# ────────────────────────────────────────────────────────────────────────
+# eff_estimates — model-based treatment-effect estimates. Lifted from
+# the arframe-examples tte-summary / efficacy-bor pattern: four
+# competing models, point estimate, 95% CI bounds, nominal p. One row
+# carries NA CI bounds to exercise col_spec(na_text = ...) in examples.
+# ────────────────────────────────────────────────────────────────────────
+eff_estimates <- data.frame(
+  model = c("ANCOVA", "MMRM", "Cox PH", "Bootstrap (1000 reps)"),
+  estimate = c(-2.31, -2.45, 0.81, -2.29),
+  lower_ci = c(-3.42, NA_real_, 0.68, -3.50),
+  upper_ci = c(-1.20, NA_real_, 0.97, -1.10),
+  p_value = c(0.0042, 0.0061, 0.0087, 0.0050),
+  stringsAsFactors = FALSE
+)
+
+# ────────────────────────────────────────────────────────────────────────
 # Cards Analysis Results Data (ARD) companions
 #
 # Two long-format datasets covering the two distinct ARD shapes that
@@ -692,7 +827,9 @@ usethis::use_data(
   saf_aeoverall,
   saf_aesocpt,
   saf_vital,
+  saf_subgroup,
   eff_resp,
+  eff_estimates,
   saf_demo_card,
   saf_aesocpt_card,
   saf_n,
@@ -708,7 +845,9 @@ files <- file.path(
     "saf_aeoverall.rda",
     "saf_aesocpt.rda",
     "saf_vital.rda",
+    "saf_subgroup.rda",
     "eff_resp.rda",
+    "eff_estimates.rda",
     "saf_demo_card.rda",
     "saf_aesocpt_card.rda",
     "saf_n.rda",

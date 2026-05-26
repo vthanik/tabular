@@ -495,14 +495,20 @@ engine_group_display <- function(
 # collapse = "")` for depth N. The caller injects these on
 # `cells_text[, target]` and on `cells_ast[, target]`.
 .build_indent_prefixes <- function(depths, indent_chars) {
-  if (!is.character(indent_chars) || length(indent_chars) != 1L ||
-      is.na(indent_chars) || !nzchar(indent_chars)) {
+  if (
+    !is.character(indent_chars) ||
+      length(indent_chars) != 1L ||
+      is.na(indent_chars) ||
+      !nzchar(indent_chars)
+  ) {
     return(rep("", length(depths)))
   }
   vapply(
     depths,
     function(d) {
-      if (d <= 0L) return("")
+      if (d <= 0L) {
+        return("")
+      }
       paste(rep(indent_chars, d), collapse = "")
     },
     character(1L)

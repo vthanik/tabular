@@ -62,8 +62,14 @@ test_that(".preset_args_to_layers() lowers body border regions to cells_table()"
   )
   expect_setequal(
     sides,
-    c("outer_top", "outer_bottom", "outer_left", "outer_right",
-      "rows", "cols")
+    c(
+      "outer_top",
+      "outer_bottom",
+      "outer_left",
+      "outer_right",
+      "rows",
+      "cols"
+    )
   )
 })
 

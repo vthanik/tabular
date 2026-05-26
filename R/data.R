@@ -143,30 +143,32 @@
 #' Pre-summarised AE-by-SOC/PT table. Interleaved row order: overall
 #' "any TEAE" row first, then per-SOC blocks where each SOC row is
 #' followed by its preferred-term detail rows. Top 10 SOCs and top
-#' 5 PTs per SOC are kept; `row_type` marks the role of each row so
-#' a downstream pipeline can sort, indent, or hide selectively. The
-#' richer SOC × PT slice exercises [paginate()] and the engine's
-#' horizontal-panel splitter end-to-end on a realistic submission
-#' shell.
+#' 5 PTs per SOC are kept; `row_type` marks the role of each row and
+#' `indent_level` carries the canonical depth (0 for overall and SOC,
+#' 1 for PT) so the downstream pipeline drives the SOC -> PT indent
+#' via `col_spec(indent_by = "indent_level")` without reconstructing
+#' it in every script. The richer SOC × PT slice exercises
+#' [paginate()] and the engine's horizontal-panel splitter end-to-end
+#' on a realistic submission shell.
 #'
-#' @format A data frame with 61 rows and 7 columns:
+#' @format A data frame with 61 rows and 8 columns:
 #' \describe{
 #'   \item{`soc`}{System Organ Class label. Repeats across the SOC's
-#'     PT rows so `cols(usage = "group")` collapses the run at
-#'     render.}
+#'     PT rows; hide via `col_spec(visible = FALSE)` once `label`
+#'     carries the same SOC text on SOC rows.}
 #'   \item{`label`}{The row's display label. Equal to `soc` on the
-#'     overall and SOC-summary rows (so the column carries a real
-#'     value at every row); equal to the preferred-term name on PT
-#'     detail rows. Named `label` rather than `pt` because the
-#'     column also carries the SOC and overall-summary text, not
-#'     just preferred terms.}
-#'   \item{`row_type`}{One of `"overall"`, `"soc"`, `"pt"`. Use it
-#'     as a sort key and / or hide it via
-#'     `col_spec(visible = FALSE)`. Coerce to a factor with levels
-#'     `c("overall", "soc", "pt")` to preserve the canonical
-#'     interleaved order under sort.}
+#'     overall and SOC-summary rows; equal to the preferred-term name
+#'     on PT detail rows. Promoted to the primary display column —
+#'     pair with `indent_by = "indent_level"` to drive the SOC -> PT
+#'     indent.}
+#'   \item{`row_type`}{One of `"overall"`, `"soc"`, `"pt"`. Sort key
+#'     and partition key; hide via `col_spec(visible = FALSE)`.}
+#'   \item{`indent_level`}{Integer depth (0 on overall and SOC rows,
+#'     1 on PT rows). Consumed by `col_spec(indent_by = "indent_level")`
+#'     on the `label` column; the engine auto-hides this column at
+#'     resolve time.}
 #'   \item{`placebo`}{Placebo arm cell text (`"n (pct)"`).}
-#'   \item{`drug_100`, `drug_50`}{Drug arms cell text.}
+#'   \item{`drug_50`, `drug_100`}{Drug arms cell text.}
 #'   \item{`Total`}{Pooled-across-arms cell text.}
 #' }
 #'
@@ -178,9 +180,10 @@
 #'   [saf_n] for BigN denominators.
 #'
 #' @examples
-#' # 95% safety pattern: SOC/PT table sorted by descending subject
-#' # count, hierarchy preserved. `Total` cells are formatted text
-#' # ("171 (67.3)"), so attach a numeric rank column for sort_rows().
+#' # 95% safety pattern: SOC/PT table where `label` carries SOC text
+#' # on SOC rows and PT text on PT rows, indented by `indent_level`.
+#' # `soc` and `row_type` ride along as hidden sort / partition keys;
+#' # `n_total` is the numeric rank derived from `Total` cell text.
 #' ae <- saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -195,8 +198,8 @@
 #'   )
 #' ) |>
 #'   cols(
-#'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     label       = col_spec(visible = FALSE),
+#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(
@@ -278,6 +281,66 @@
 #'   )
 "saf_vital"
 
+#' Vital-signs subgroup summary by Sex and Age Group
+#'
+#' Pre-summarised vital-signs stats partitioned by sex (`F` / `M`)
+#' and age group (`<65` / `>=65`) at the End-of-Treatment visit. Two
+#' parameters (Systolic BP, Diastolic BP) emit four statistic rows
+#' each (`n`, `Mean (SD)`, `Median`, `Min, Max`). Partition-constant
+#' BigN columns (`sex_n`, `agegr_n`) ride alongside so banners can
+#' inline the denominator via
+#' `subgroup(label = "Sex: {sex} (N = {sex_n})")` without reaching for
+#' a separate lookup.
+#'
+#' Designed for [subgroup()] and [as_grid()] examples: the two
+#' partition axes plus the partition-constant BigN columns cover both
+#' single-variable cohort-style partitions and the multi-variable
+#' (sex × agegr) crossing.
+#'
+#' @format A data frame with 32 rows and 11 columns:
+#' \describe{
+#'   \item{`sex`}{Factor (`F` / `M`).}
+#'   \item{`agegr`}{Factor (`<65` / `>=65`).}
+#'   \item{`sex_n`}{Integer BigN — number of subjects in the partition
+#'     row's sex (partition-constant; rides into the banner via
+#'     `{sex_n}` template tokens).}
+#'   \item{`agegr_n`}{Integer BigN per age group.}
+#'   \item{`paramcd`}{CDISC parameter code (`SYSBP` / `DIABP`).}
+#'   \item{`param`}{Decoded parameter name (`"Systolic BP (mmHg)"`,
+#'     `"Diastolic BP (mmHg)"`).}
+#'   \item{`stat_label`}{Statistic label
+#'     (`n`, `Mean (SD)`, `Median`, `Min, Max`).}
+#'   \item{`placebo`, `drug_50`, `drug_100`, `Total`}{Per-arm cell
+#'     text.}
+#' }
+#'
+#' @source Derived in `data-raw/bundle-demo.R` from
+#'   `pharmaverseadam::advs` filtered to `SAFFL == "Y"`, the three
+#'   CDISCPILOT01 arms, the `SYSBP` / `DIABP` parameters, and the
+#'   End-of-Treatment visit.
+#'
+#' @seealso [saf_n] for BigN denominators; [subgroup()] for the verb
+#'   this dataset is designed for.
+#'
+#' @examples
+#' # 95% pattern: subgroup partition by sex with inline BigN.
+#' tabular(saf_subgroup, titles = "Vital Signs at End of Treatment") |>
+#'   cols(
+#'     sex        = col_spec(visible = FALSE),
+#'     agegr      = col_spec(usage = "group", label = "Age Group"),
+#'     sex_n      = col_spec(visible = FALSE),
+#'     agegr_n    = col_spec(visible = FALSE),
+#'     paramcd    = col_spec(visible = FALSE),
+#'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
+#'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+#'     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+#'     Total      = col_spec(label = "Total",    align = "decimal")
+#'   ) |>
+#'   subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
+"saf_subgroup"
+
 #' Best Overall Response and Response Rates
 #'
 #' Pre-summarised efficacy table. Per-arm counts of best overall
@@ -341,6 +404,50 @@
 #'     )
 #'   )
 "eff_resp"
+
+#' Treatment-effect estimates by model
+#'
+#' Four competing efficacy models with their treatment-effect point
+#' estimate, 95% confidence-interval bounds, and nominal p-value.
+#' Shaped as a numeric-cell table (one row per model) rather than the
+#' usual pre-formatted character cells, so it exercises the
+#' `col_spec(format = ...)` + `col_spec(na_text = ...)` cascade. One
+#' row (`MMRM`) carries `NA` CI bounds to demonstrate `na_text`.
+#'
+#' @format A data frame with 4 rows and 5 columns:
+#' \describe{
+#'   \item{`model`}{Model name (`"ANCOVA"`, `"MMRM"`, `"Cox PH"`,
+#'     `"Bootstrap (1000 reps)"`).}
+#'   \item{`estimate`}{Numeric point estimate.}
+#'   \item{`lower_ci`, `upper_ci`}{Numeric 95% CI bounds. The MMRM
+#'     row has `NA` bounds.}
+#'   \item{`p_value`}{Nominal p-value (numeric).}
+#' }
+#'
+#' @source Synthetic estimates following the
+#'   `_archive/.../arframe-examples/tables/tte-summary.qmd` and
+#'   `efficacy-bor.qmd` shapes. Not derived from any patient-level
+#'   data — illustrative values only.
+#'
+#' @seealso [col_spec()] for the formatting cascade these values
+#'   exercise.
+#'
+#' @examples
+#' # Numeric-cell efficacy table — format = "%.2f" pins precision,
+#' # na_text = "--" renders the MMRM row's NA bounds as dashes.
+#' tabular(eff_estimates, titles = "Treatment-effect estimates by model") |>
+#'   cols(
+#'     model    = col_spec(usage = "group",  label = "Model", valign = "top"),
+#'     estimate = col_spec(label = "Estimate", align = "decimal",
+#'                         format = "%.2f"),
+#'     lower_ci = col_spec(label = "Lower\n95% CI", align = "decimal",
+#'                         format = "%.2f", na_text = "--"),
+#'     upper_ci = col_spec(label = "Upper\n95% CI", align = "decimal",
+#'                         format = "%.2f", na_text = "--"),
+#'     p_value  = col_spec(label = "p-value",  align = "decimal",
+#'                         format = "%.4f")
+#'   )
+"eff_estimates"
 
 #' Cards ARD for demographics (flat ARD companion)
 #'

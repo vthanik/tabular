@@ -140,14 +140,15 @@
 #'   ) |>
 #'   sort_rows(by = "stat_label")
 #'
-#' # ---- Example 3: AE-by-SOC/PT with two group columns + repeat-call merge ----
+#' # ---- Example 3: AE-by-SOC/PT with indented label + repeat-call merge ----
 #' #
-#' # SOC is the outer group column and PT is the inner group column;
-#' # row_type and n_total help drive sort but never render
-#' # (visible = FALSE). A second `cols()` call later in the chain
-#' # adds widths once the user knows the page geometry; the
-#' # repeat-call merge preserves the earlier attributes (label,
-#' # usage, align, visible) without restating them.
+#' # `label` carries SOC text on SOC rows and PT text on PT rows;
+#' # `indent_by = "indent_level"` indents the PT rows one level under
+#' # their SOC. `soc`, `row_type`, and `n_total` ride along as hidden
+#' # sort keys. A second `cols()` call later in the chain adds widths
+#' # once the user knows the page geometry; the repeat-call merge
+#' # preserves prior attributes (label, indent_by, align, visible)
+#' # without restating them.
 #' ae <- saf_aesocpt
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
@@ -157,8 +158,8 @@
 #'   titles = c("Table 14.3.1", "Adverse Events by SOC and Preferred Term")
 #' ) |>
 #'   cols(
-#'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     label       = col_spec(visible = FALSE),
+#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = "Placebo",  align = "decimal"),
@@ -170,7 +171,7 @@
 #'   # Second `cols()` call: add widths after the rest of the spec
 #'   # is built. Repeat-call merge preserves prior attributes.
 #'   cols(
-#'     soc      = col_spec(width = "2.5in"),
+#'     label    = col_spec(width = "2.5in"),
 #'     placebo  = col_spec(width = "0.9in"),
 #'     drug_50  = col_spec(width = "0.9in"),
 #'     drug_100 = col_spec(width = "0.9in"),

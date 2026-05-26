@@ -5,24 +5,24 @@
 \alias{saf_aesocpt}
 \title{Adverse events by System Organ Class and Preferred Term}
 \format{
-A data frame with 61 rows and 7 columns:
+A data frame with 61 rows and 8 columns:
 \describe{
 \item{\code{soc}}{System Organ Class label. Repeats across the SOC's
-PT rows so \code{cols(usage = "group")} collapses the run at
-render.}
+PT rows; hide via \code{col_spec(visible = FALSE)} once \code{label}
+carries the same SOC text on SOC rows.}
 \item{\code{label}}{The row's display label. Equal to \code{soc} on the
-overall and SOC-summary rows (so the column carries a real
-value at every row); equal to the preferred-term name on PT
-detail rows. Named \code{label} rather than \code{pt} because the
-column also carries the SOC and overall-summary text, not
-just preferred terms.}
-\item{\code{row_type}}{One of \code{"overall"}, \code{"soc"}, \code{"pt"}. Use it
-as a sort key and / or hide it via
-\code{col_spec(visible = FALSE)}. Coerce to a factor with levels
-\code{c("overall", "soc", "pt")} to preserve the canonical
-interleaved order under sort.}
+overall and SOC-summary rows; equal to the preferred-term name
+on PT detail rows. Promoted to the primary display column —
+pair with \code{indent_by = "indent_level"} to drive the SOC -> PT
+indent.}
+\item{\code{row_type}}{One of \code{"overall"}, \code{"soc"}, \code{"pt"}. Sort key
+and partition key; hide via \code{col_spec(visible = FALSE)}.}
+\item{\code{indent_level}}{Integer depth (0 on overall and SOC rows,
+1 on PT rows). Consumed by \code{col_spec(indent_by = "indent_level")}
+on the \code{label} column; the engine auto-hides this column at
+resolve time.}
 \item{\code{placebo}}{Placebo arm cell text (\code{"n (pct)"}).}
-\item{\code{drug_100}, \code{drug_50}}{Drug arms cell text.}
+\item{\code{drug_50}, \code{drug_100}}{Drug arms cell text.}
 \item{\code{Total}}{Pooled-across-arms cell text.}
 }
 }
@@ -38,16 +38,19 @@ saf_aesocpt
 Pre-summarised AE-by-SOC/PT table. Interleaved row order: overall
 "any TEAE" row first, then per-SOC blocks where each SOC row is
 followed by its preferred-term detail rows. Top 10 SOCs and top
-5 PTs per SOC are kept; \code{row_type} marks the role of each row so
-a downstream pipeline can sort, indent, or hide selectively. The
-richer SOC × PT slice exercises \code{\link[=paginate]{paginate()}} and the engine's
-horizontal-panel splitter end-to-end on a realistic submission
-shell.
+5 PTs per SOC are kept; \code{row_type} marks the role of each row and
+\code{indent_level} carries the canonical depth (0 for overall and SOC,
+1 for PT) so the downstream pipeline drives the SOC -> PT indent
+via \code{col_spec(indent_by = "indent_level")} without reconstructing
+it in every script. The richer SOC × PT slice exercises
+\code{\link[=paginate]{paginate()}} and the engine's horizontal-panel splitter end-to-end
+on a realistic submission shell.
 }
 \examples{
-# 95\% safety pattern: SOC/PT table sorted by descending subject
-# count, hierarchy preserved. `Total` cells are formatted text
-# ("171 (67.3)"), so attach a numeric rank column for sort_rows().
+# 95\% safety pattern: SOC/PT table where `label` carries SOC text
+# on SOC rows and PT text on PT rows, indented by `indent_level`.
+# `soc` and `row_type` ride along as hidden sort / partition keys;
+# `n_total` is the numeric rank derived from `Total` cell text.
 ae <- saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -62,8 +65,8 @@ tabular(
   )
 ) |>
   cols(
-    soc      = col_spec(usage = "group", label = "SOC / PT"),
-    label       = col_spec(visible = FALSE),
+    label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+    soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(

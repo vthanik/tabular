@@ -296,25 +296,29 @@
 #' # Hierarchical `cards::ard_stack_hierarchical()` output threaded
 #' # through `pivot_across()`. The hierarchical ARD emits a
 #' # (soc, label, row_type) triple plus one stat row per (arm, SOC, PT);
-#' # `pivot_across()` folds the arm dimension to columns and
-#' # preserves the hierarchy markers for downstream sorting and
-#' # visibility control.
-#' saf_aesocpt_card |>
-#'   pivot_across(statistic = "{n} ({p}%)") |>
-#'   tabular(
-#'     titles = c(
-#'       "Table 14.3.1",
-#'       "Adverse Events by System Organ Class and Preferred Term",
-#'       sprintf("Safety Population (N=%d)", n["Total"])
-#'     ),
-#'     footnotes = c(
-#'       "Subjects are counted once per SOC and once per PT.",
-#'       "Percentages based on N per treatment group."
-#'     )
-#'   ) |>
+#' # `pivot_across()` folds the arm dimension to columns and preserves
+#' # the hierarchy markers. Derive `indent_level` from `row_type` so
+#' # `col_spec(indent_by = "indent_level")` drives the SOC -> PT
+#' # indent on the `label` column.
+#' wide <- saf_aesocpt_card |>
+#'   pivot_across(statistic = "{n} ({p}%)")
+#' wide$indent_level <- as.integer(wide$row_type == "pt")
+#'
+#' tabular(
+#'   wide,
+#'   titles = c(
+#'     "Table 14.3.1",
+#'     "Adverse Events by System Organ Class and Preferred Term",
+#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'   ),
+#'   footnotes = c(
+#'     "Subjects are counted once per SOC and once per PT.",
+#'     "Percentages based on N per treatment group."
+#'   )
+#' ) |>
 #'   cols(
-#'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     label       = col_spec(visible = FALSE),
+#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     Placebo  = col_spec(
 #'       label = sprintf("Placebo\nN=%d", n["placebo"]),

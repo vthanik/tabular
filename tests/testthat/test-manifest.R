@@ -415,7 +415,7 @@ test_that("x-tabular pagination mirrors paginate plan", {
 
 test_that("x-tabular styles captures declared predicates", {
   spec <- tabular(data.frame(x = c(1L, 2L, 3L))) |>
-    style( bold = TRUE, .at = cells_body(where = x > 1))
+    style(bold = TRUE, .at = cells_body(where = x > 1))
   grid <- as_grid(spec)
   m <- tabular:::.build_manifest(
     spec = spec,

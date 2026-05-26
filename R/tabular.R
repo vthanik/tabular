@@ -107,8 +107,8 @@
 #'   )
 #' ) |>
 #'   cols(
-#'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     label       = col_spec(visible = FALSE),
+#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"])),
@@ -152,20 +152,15 @@
 #'   ) |>
 #'   sort_rows(by = "stat_label")
 #'
-#' # ---- Example 3: Minimal three-line spec from an inline data frame ----
+#' # ---- Example 3: Minimal three-line BigN table from saf_n ----
 #' #
-#' # The smallest viable `tabular()` call: a tiny inline data frame,
-#' # a single-line title, no footnotes. The default `col_spec` per
-#' # column kicks in, giving sensible labels (the data frame's
-#' # column names) and left-aligned text. Useful when teaching the
-#' # core API shape without the clinical-context surface noise.
-#' tabular(
-#'   data.frame(
-#'     measure = c("Mean", "Median", "Min", "Max"),
-#'     value   = c("12.4", "12.0", "8.7", "17.2")
-#'   ),
-#'   titles = "Quick summary"
-#' )
+#' # The smallest viable `tabular()` call: the bundled `saf_n` 4-row
+#' # BigN table, a single-line title, no footnotes. The default
+#' # `col_spec` per column kicks in, giving sensible labels (the
+#' # data frame's column names) and left-aligned text. Useful when
+#' # teaching the core API shape without the clinical-context
+#' # surface noise.
+#' tabular(saf_n, titles = "Safety-population BigN per arm")
 #'
 #' # ---- Example 4: Vital-signs panel with hidden code column ----
 #' #

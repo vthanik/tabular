@@ -118,8 +118,9 @@ test_that("DOCX style(border_top_*) emits <w:top> with the right attrs", {
     style(
       border_top_style = "dashed",
       border_top_width = 1,
-      border_top_color = "#abcdef"
-    , .at = cells_body(where = TRUE))
+      border_top_color = "#abcdef",
+      .at = cells_body(where = TRUE)
+    )
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   td <- withr::local_tempdir()
@@ -137,7 +138,7 @@ test_that("DOCX style(border_top_*) emits <w:top> with the right attrs", {
 
 test_that("DOCX legacy rule_above retains back-compat single border", {
   spec <- tabular(data.frame(x = 1L)) |>
-    style( rule_above = TRUE, .at = cells_body(where = TRUE))
+    style(rule_above = TRUE, .at = cells_body(where = TRUE))
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   td <- withr::local_tempdir()
@@ -157,8 +158,9 @@ test_that("DOCX explicit border_top_style='none' suppresses emission", {
   spec <- tabular(data.frame(x = 1L)) |>
     style(
       rule_above = TRUE,
-      border_top_style = "none"
-    , .at = cells_body(where = TRUE))
+      border_top_style = "none",
+      .at = cells_body(where = TRUE)
+    )
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   td <- withr::local_tempdir()
@@ -197,8 +199,9 @@ test_that("RTF emit honours per-cell border on body cell", {
   spec <- tabular(data.frame(x = 1L)) |>
     style(
       border_top_style = "dotted",
-      border_top_width = 0.75
-    , .at = cells_body(where = TRUE))
+      border_top_width = 0.75,
+      .at = cells_body(where = TRUE)
+    )
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -257,8 +260,9 @@ test_that("HTML emit injects style=... on body cell with border override", {
     style(
       border_left_style = "solid",
       border_left_width = 1,
-      border_left_color = "#123456"
-    , .at = cells_body(where = TRUE))
+      border_left_color = "#123456",
+      .at = cells_body(where = TRUE)
+    )
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")

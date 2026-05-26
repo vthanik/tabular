@@ -39,7 +39,7 @@ set_preset(font_size = 9, paper_size = "letter")
 
 # Read-tweak-attach without mutating the session default.
 base_knobs <- get_preset()
-tabular(data.frame(x = 1:3)) |>
+tabular(saf_n) |>
   preset(
     font_size   = base_knobs@font_size,
     paper_size  = base_knobs@paper_size,

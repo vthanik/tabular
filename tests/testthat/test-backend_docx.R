@@ -948,7 +948,7 @@ test_that("emit(.docx) is byte-deterministic across repeated calls", {
       ),
       pagefoot = list(left = "Source: ADSL")
     ) |>
-    style( bold = TRUE, .at = cells_body(where = variable == "Sex, n (%)"))
+    style(bold = TRUE, .at = cells_body(where = variable == "Sex, n (%)"))
 
   a <- withr::local_tempfile(fileext = ".docx")
   b <- withr::local_tempfile(fileext = ".docx")

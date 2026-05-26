@@ -117,7 +117,9 @@ body_border_manifest <- function(spec) {
       }
       next
     }
-    if (side %in% c("outer_top", "outer_bottom", "outer_left", "outer_right")) {
+    if (
+      side %in% c("outer_top", "outer_bottom", "outer_left", "outer_right")
+    ) {
       s <- sub("^outer_", "", side)
       triple <- .style_node_border_triple(node, s)
       if (!is.null(triple)) {
@@ -566,4 +568,3 @@ engine_chrome_borders <- function(spec) {
   )
   which(vis)
 }
-

@@ -28,8 +28,9 @@ bold_red_spec <- function() {
       color = "#cc0000",
       background = "#ffeedd",
       font_family = "Helvetica",
-      font_size = 11
-    , .at = cells_body(where = stat_label == "Mean (SD)"))
+      font_size = 11,
+      .at = cells_body(where = stat_label == "Mean (SD)")
+    )
 }
 
 # ---------------------------------------------------------------------

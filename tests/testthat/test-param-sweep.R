@@ -273,9 +273,15 @@ test_that("style() accepts every cells_body() filter shape", {
 
 test_that("style() accepts every bool attribute toggle", {
   df <- data.frame(x = 1:2)
-  expect_silent(tabular(df) |> style( bold = TRUE, .at = cells_body(where = x == 1)))
-  expect_silent(tabular(df) |> style( italic = TRUE, .at = cells_body(where = x == 1)))
-  expect_silent(tabular(df) |> style( underline = TRUE, .at = cells_body(where = x == 1)))
+  expect_silent(
+    tabular(df) |> style(bold = TRUE, .at = cells_body(where = x == 1))
+  )
+  expect_silent(
+    tabular(df) |> style(italic = TRUE, .at = cells_body(where = x == 1))
+  )
+  expect_silent(
+    tabular(df) |> style(underline = TRUE, .at = cells_body(where = x == 1))
+  )
 })
 
 test_that("style() accepts halign / valign enum values", {
@@ -284,16 +290,20 @@ test_that("style() accepts halign / valign enum values", {
   # a column-level surface that lives on col_spec via the engine_decimal
   # pre-padding phase and is not addressable per cell.
   for (h in c("left", "center", "right")) {
-    expect_silent(tabular(df) |> style( halign = h, .at = cells_body(where = x == 1)))
+    expect_silent(
+      tabular(df) |> style(halign = h, .at = cells_body(where = x == 1))
+    )
   }
   for (v in c("top", "middle", "bottom")) {
-    expect_silent(tabular(df) |> style( valign = v, .at = cells_body(where = x == 1)))
+    expect_silent(
+      tabular(df) |> style(valign = v, .at = cells_body(where = x == 1))
+    )
   }
 })
 
 test_that("style() accepts every border style attribute", {
   df <- data.frame(x = 1:2)
-  loc <- cells_body(i = 1L)  # built upfront; equivalent to where = x == 1
+  loc <- cells_body(i = 1L) # built upfront; equivalent to where = x == 1
   for (side in c("top", "bottom", "left", "right")) {
     arg <- stats::setNames(list("solid"), paste0("border_", side, "_style"))
     expect_silent(do.call(

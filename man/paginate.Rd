@@ -138,8 +138,9 @@ tabular(
   footnotes = "Subjects are counted once per SOC and once per PT."
 ) |>
   cols(
-    soc      = col_spec(usage = "group", label = "SOC / PT"),
-    label       = col_spec(visible = FALSE),
+    label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+    soc      = col_spec(usage = "group", visible = FALSE,
+                        group_display = "column_repeat"),
     row_type = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"])),
@@ -229,9 +230,10 @@ tabular(
   titles = c("Table 14.3.1", "AEs by SOC and PT (wide-page split)")
 ) |>
   cols(
-    soc      = col_spec(usage = "group", label = "SOC / PT",
+    label    = col_spec(label = "SOC / PT", indent_by = "indent_level",
                         width = "2.5in"),
-    label       = col_spec(visible = FALSE),
+    soc      = col_spec(usage = "group", visible = FALSE,
+                        group_display = "column_repeat"),
     row_type = col_spec(visible = FALSE),
     placebo  = col_spec(label = "Placebo",  align = "decimal",
                         width = "2.0in"),

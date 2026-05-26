@@ -280,11 +280,11 @@ mk_soc_pt_spec <- function(indent = NULL) {
   )
   spec <- tabular(df, titles = "AE", footnotes = "") |>
     cols(
-      soc          = col_spec(usage = "group", group_display = "header_row"),
-      label        = col_spec(label = "Category", indent_by = "indent_level"),
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Category", indent_by = "indent_level"),
       indent_level = col_spec(visible = FALSE),
-      row_type     = col_spec(visible = FALSE),
-      n            = col_spec(label = "N")
+      row_type = col_spec(visible = FALSE),
+      n = col_spec(label = "N")
     )
   if (!is.null(indent)) {
     spec <- preset(spec, indent_chars = indent)
@@ -297,13 +297,15 @@ test_that("indent_by depth 0 rows stay flush; depth 1 rows carry '  '", {
   page1 <- g@pages[[1L]]
   # SOC summary rows have indent_level = 0L -> flush.
   soc_rows <- page1$cells_text[
-    !page1$is_header_row & !page1$is_blank_row &
+    !page1$is_header_row &
+      !page1$is_blank_row &
       page1$cells_text[, "label"] %in% c("CARDIAC", "GI"),
     "label"
   ]
   # PT rows have indent_level = 1L -> "  " prefix.
   pt_rows <- page1$cells_text[
-    !page1$is_header_row & !page1$is_blank_row &
+    !page1$is_header_row &
+      !page1$is_blank_row &
       !(page1$cells_text[, "label"] %in% c("CARDIAC", "GI")),
     "label"
   ]
@@ -316,7 +318,8 @@ test_that("indent_by prefix lands on cells_ast as a leading plain run", {
   page1 <- g@pages[[1L]]
   # First PT row (depth 1) — find it by matching one of the PT labels.
   pt_idx <- which(
-    !page1$is_header_row & !page1$is_blank_row &
+    !page1$is_header_row &
+      !page1$is_blank_row &
       page1$cells_text[, "label"] == "  Atrial fib"
   )[[1L]]
   ast <- page1$cells_ast[[pt_idx, "label"]]
@@ -343,7 +346,8 @@ test_that("indent_by depth-0 cells_ast carries NO leading prefix run", {
   # SOC summary row (depth 0) — first run should be the SOC label,
   # not an empty plain run injected by the indent helper.
   soc_idx <- which(
-    !page1$is_header_row & !page1$is_blank_row &
+    !page1$is_header_row &
+      !page1$is_blank_row &
       page1$cells_text[, "label"] == "CARDIAC"
   )[[1L]]
   ast <- page1$cells_ast[[soc_idx, "label"]]
@@ -364,14 +368,16 @@ test_that("preset(indent_chars = '    ') honours custom indent width on PT rows"
   g <- as_grid(mk_soc_pt_spec(indent = "    "))
   page1 <- g@pages[[1L]]
   pt_rows <- page1$cells_text[
-    !page1$is_header_row & !page1$is_blank_row &
+    !page1$is_header_row &
+      !page1$is_blank_row &
       !(page1$cells_text[, "label"] %in% c("    ", "CARDIAC", "GI")),
     "label"
   ]
   expect_true(all(startsWith(pt_rows, "    ")))
   # SOC rows (depth 0) stay flush even with a 4-space indent_chars.
   soc_rows <- page1$cells_text[
-    !page1$is_header_row & !page1$is_blank_row &
+    !page1$is_header_row &
+      !page1$is_blank_row &
       page1$cells_text[, "label"] %in% c("CARDIAC", "GI"),
     "label"
   ]
@@ -382,7 +388,8 @@ test_that("preset(indent_chars = '> ') honours custom prefix marker on PT rows",
   g <- as_grid(mk_soc_pt_spec(indent = "> "))
   page1 <- g@pages[[1L]]
   pt_idx <- which(
-    !page1$is_header_row & !page1$is_blank_row &
+    !page1$is_header_row &
+      !page1$is_blank_row &
       page1$cells_text[, "label"] == "> Atrial fib"
   )[[1L]]
   ast <- page1$cells_ast[[pt_idx, "label"]]
@@ -643,7 +650,7 @@ test_that(".resolve_indent_targets multi-depth produces N copies of indent_chars
 
 test_that(".resolve_indent_targets errors when indent_by points at a missing column", {
   d <- data.frame(x = c("a", "b"), real_depth = c(0L, 1L))
-  args <- mk_indent_call_args(d, "x", "depth")  # `depth` not in data
+  args <- mk_indent_call_args(d, "x", "depth") # `depth` not in data
   expect_error(
     do.call(
       tabular:::.resolve_indent_targets,
@@ -656,6 +663,21 @@ test_that(".resolve_indent_targets errors when indent_by points at a missing col
 test_that(".resolve_indent_targets errors on character depth column", {
   d <- data.frame(x = c("a", "b"), depth = c("foo", "bar"))
   args <- mk_indent_call_args(d, "x", "depth")
+  expect_error(
+    do.call(
+      tabular:::.resolve_indent_targets,
+      c(args, list(call = environment()))
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that(".resolve_indent_targets errors when depth column length != nrow_data", {
+  d <- data.frame(x = c("a", "b"), depth = c(0L, 1L))
+  args <- mk_indent_call_args(d, "x", "depth")
+  # Force a nrow_data mismatch — the engine guards against the
+  # depth column not aligning with the cells_text grid.
+  args$nrow_data <- 5L
   expect_error(
     do.call(
       tabular:::.resolve_indent_targets,
@@ -682,8 +704,8 @@ test_that(".resolve_indent_targets auto-hides the depth column", {
   d <- data.frame(x = c("a", "b"), depth = c(0L, 1L))
   spec <- tabular(d) |>
     cols(
-      x     = col_spec(label = "X", indent_by = "depth"),
-      depth = col_spec(visible = TRUE)  # user explicitly set TRUE
+      x = col_spec(label = "X", indent_by = "depth"),
+      depth = col_spec(visible = TRUE) # user explicitly set TRUE
     )
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
@@ -758,8 +780,8 @@ test_that("indent_by composes with sort_rows() — depths follow their rows", {
   #   Atrial fib (depth 1), Nausea (depth 1), CARDIAC (depth 0), GI (depth 0)
   spec <- tabular(df) |>
     cols(
-      label    = col_spec(label = "C", indent_by = "depth"),
-      depth    = col_spec(visible = FALSE),
+      label = col_spec(label = "C", indent_by = "depth"),
+      depth = col_spec(visible = FALSE),
       sort_key = col_spec(visible = FALSE)
     ) |>
     sort_rows(by = "sort_key")
@@ -804,7 +826,7 @@ test_that("indent_by referencing a character column raises a tabular_error_input
   )
   spec <- tabular(df) |>
     cols(
-      label     = col_spec(label = "L", indent_by = "bad_depth"),
+      label = col_spec(label = "L", indent_by = "bad_depth"),
       bad_depth = col_spec(visible = FALSE)
     )
   expect_error(as_grid(spec), class = "tabular_error_input")
@@ -819,20 +841,22 @@ test_that("indent_by works without group_display='header_row' (flat listing)", {
   df <- data.frame(
     usubjid = c("01", "02", "03"),
     aedecod = c("Headache", "Dizziness", "Nausea"),
-    depth   = c(0L, 1L, 2L),
+    depth = c(0L, 1L, 2L),
     stringsAsFactors = FALSE
   )
   spec <- tabular(df) |>
     cols(
       usubjid = col_spec(label = "USUBJID"),
       aedecod = col_spec(label = "AEDECOD", indent_by = "depth"),
-      depth   = col_spec(visible = FALSE)
+      depth = col_spec(visible = FALSE)
     )
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
   expect_false(any(page1$is_header_row))
-  expect_equal(unname(page1$cells_text[, "aedecod"]),
-               c("Headache", "  Dizziness", "    Nausea"))
+  expect_equal(
+    unname(page1$cells_text[, "aedecod"]),
+    c("Headache", "  Dizziness", "    Nausea")
+  )
 })
 
 # ---------------------------------------------------------------------
@@ -857,7 +881,8 @@ test_that("engine_group_display() skips indent when indent_chars is empty", {
   # vector lists col1 (soc) values then col2 (label) values.
   cells_text <- matrix(
     c("CARDIAC", "CARDIAC", "Atrial fib", "Tachycardia"),
-    nrow = 2L, ncol = 2L,
+    nrow = 2L,
+    ncol = 2L,
     dimnames = list(NULL, c("soc", "label"))
   )
   cells_ast <- matrix(
@@ -867,12 +892,14 @@ test_that("engine_group_display() skips indent when indent_chars is empty", {
       tabular:::parse_inline("Atrial fib"),
       tabular:::parse_inline("Tachycardia")
     ),
-    nrow = 2L, ncol = 2L,
+    nrow = 2L,
+    ncol = 2L,
     dimnames = list(NULL, c("soc", "label"))
   )
   cells_style <- matrix(
     list(style_node(), style_node(), style_node(), style_node()),
-    nrow = 2L, ncol = 2L,
+    nrow = 2L,
+    ncol = 2L,
     dimnames = list(NULL, c("soc", "label"))
   )
   cols <- list(
@@ -887,8 +914,10 @@ test_that("engine_group_display() skips indent when indent_chars is empty", {
     cols = cols,
     indent_chars = ""
   )
-  expect_identical(unname(out_empty$cells_text[, "label"]),
-                   c("Atrial fib", "Tachycardia"))
+  expect_identical(
+    unname(out_empty$cells_text[, "label"]),
+    c("Atrial fib", "Tachycardia")
+  )
   # Non-character indent — same passthrough.
   out_null <- tabular:::engine_group_display(
     cells_text = cells_text,
@@ -897,8 +926,10 @@ test_that("engine_group_display() skips indent when indent_chars is empty", {
     cols = cols,
     indent_chars = NULL
   )
-  expect_identical(unname(out_null$cells_text[, "label"]),
-                   c("Atrial fib", "Tachycardia"))
+  expect_identical(
+    unname(out_null$cells_text[, "label"]),
+    c("Atrial fib", "Tachycardia")
+  )
   # NA indent — same passthrough.
   out_na <- tabular:::engine_group_display(
     cells_text = cells_text,
@@ -907,8 +938,10 @@ test_that("engine_group_display() skips indent when indent_chars is empty", {
     cols = cols,
     indent_chars = NA_character_
   )
-  expect_identical(unname(out_na$cells_text[, "label"]),
-                   c("Atrial fib", "Tachycardia"))
+  expect_identical(
+    unname(out_na$cells_text[, "label"]),
+    c("Atrial fib", "Tachycardia")
+  )
 })
 
 test_that("engine_group_display() short-circuits on zero-row / zero-col matrices", {
@@ -929,17 +962,20 @@ test_that("engine_group_display() short-circuits on zero-row / zero-col matrices
 test_that("engine_group_display() short-circuits when no group columns are declared", {
   cells_text <- matrix(
     c("a", "b"),
-    nrow = 2L, ncol = 1L,
+    nrow = 2L,
+    ncol = 1L,
     dimnames = list(NULL, "x")
   )
   cells_ast <- matrix(
     list(tabular:::parse_inline("a"), tabular:::parse_inline("b")),
-    nrow = 2L, ncol = 1L,
+    nrow = 2L,
+    ncol = 1L,
     dimnames = list(NULL, "x")
   )
   cells_style <- matrix(
     list(style_node(), style_node()),
-    nrow = 2L, ncol = 1L,
+    nrow = 2L,
+    ncol = 1L,
     dimnames = list(NULL, "x")
   )
   out <- tabular:::engine_group_display(
@@ -959,21 +995,27 @@ test_that("engine_group_display() with group_display='column' only takes the no-
   # outer_run_ids fall back to the first group column.
   cells_text <- matrix(
     c("A", "A", "B", "x", "y", "z"),
-    nrow = 3L, ncol = 2L,
+    nrow = 3L,
+    ncol = 2L,
     dimnames = list(NULL, c("g", "v"))
   )
   cells_ast <- matrix(
     list(
-      tabular:::parse_inline("A"), tabular:::parse_inline("A"),
-      tabular:::parse_inline("B"), tabular:::parse_inline("x"),
-      tabular:::parse_inline("y"), tabular:::parse_inline("z")
+      tabular:::parse_inline("A"),
+      tabular:::parse_inline("A"),
+      tabular:::parse_inline("B"),
+      tabular:::parse_inline("x"),
+      tabular:::parse_inline("y"),
+      tabular:::parse_inline("z")
     ),
-    nrow = 3L, ncol = 2L,
+    nrow = 3L,
+    ncol = 2L,
     dimnames = list(NULL, c("g", "v"))
   )
   cells_style <- matrix(
     rep(list(style_node()), 6L),
-    nrow = 3L, ncol = 2L,
+    nrow = 3L,
+    ncol = 2L,
     dimnames = list(NULL, c("g", "v"))
   )
   cols <- list(
@@ -1015,10 +1057,18 @@ test_that(".suppress_column_repeats_ast() short-circuits on length-1 input", {
 
 test_that(".inject_header_rows_for_page() falls through to identity when no plans active", {
   txt <- matrix("a", nrow = 1L, ncol = 1L, dimnames = list(NULL, "x"))
-  ast <- matrix(list(tabular:::parse_inline("a")), nrow = 1L, ncol = 1L,
-                dimnames = list(NULL, "x"))
-  st <- matrix(list(style_node()), nrow = 1L, ncol = 1L,
-               dimnames = list(NULL, "x"))
+  ast <- matrix(
+    list(tabular:::parse_inline("a")),
+    nrow = 1L,
+    ncol = 1L,
+    dimnames = list(NULL, "x")
+  )
+  st <- matrix(
+    list(style_node()),
+    nrow = 1L,
+    ncol = 1L,
+    dimnames = list(NULL, "x")
+  )
   # No header_row_plan, no skip_transitions -> identity return.
   out <- tabular:::.inject_header_rows_for_page(
     cells_text = txt,
@@ -1039,24 +1089,30 @@ test_that(".inject_header_rows_for_page() disables header plan when host_col mis
   # injection, only the blank-row plan (if any) survives.
   txt <- matrix(
     c("A", "B"),
-    nrow = 2L, ncol = 1L,
+    nrow = 2L,
+    ncol = 1L,
     dimnames = list(NULL, "v")
   )
   ast <- matrix(
     list(tabular:::parse_inline("A"), tabular:::parse_inline("B")),
-    nrow = 2L, ncol = 1L,
+    nrow = 2L,
+    ncol = 1L,
     dimnames = list(NULL, "v")
   )
   st <- matrix(
     list(style_node(), style_node()),
-    nrow = 2L, ncol = 1L,
+    nrow = 2L,
+    ncol = 1L,
     dimnames = list(NULL, "v")
   )
   plan <- list(
     group_col = "g",
     group_values = c("A", "B"),
-    group_asts = list(tabular:::parse_inline("A"), tabular:::parse_inline("B")),
-    host_col = "ghost",  # not in visible_col_names
+    group_asts = list(
+      tabular:::parse_inline("A"),
+      tabular:::parse_inline("B")
+    ),
+    host_col = "ghost", # not in visible_col_names
     transitions = c(1L, 2L),
     indent_chars = ""
   )
@@ -1080,17 +1136,20 @@ test_that("engine_group_display() handles host_col == NA without indenting", {
   # for that and the data rows fall through untouched.
   cells_text <- matrix(
     c("A", "B"),
-    nrow = 2L, ncol = 1L,
+    nrow = 2L,
+    ncol = 1L,
     dimnames = list(NULL, "soc")
   )
   cells_ast <- matrix(
     list(tabular:::parse_inline("A"), tabular:::parse_inline("B")),
-    nrow = 2L, ncol = 1L,
+    nrow = 2L,
+    ncol = 1L,
     dimnames = list(NULL, "soc")
   )
   cells_style <- matrix(
     list(style_node(), style_node()),
-    nrow = 2L, ncol = 1L,
+    nrow = 2L,
+    ncol = 1L,
     dimnames = list(NULL, "soc")
   )
   cols <- list(
