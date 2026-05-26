@@ -1063,19 +1063,17 @@ get_preset <- function() {
 }
 
 # Surface -> `cells_*()` constructor for the per-surface knobs
-# (alignment / fonts / padding). `body` is the only cells_body
-# target; the four chrome surfaces map onto their cells_*()
-# constructors.
+# (fonts / padding). Keys mirror `.preset_font_surfaces` /
+# `.preset_padding_surfaces` from `R/aaa_class.R`: body / header /
+# titles / footnotes / subgroup. Alignment routes via its own
+# key-to-surface map inside `.preset_alignment_to_layers()`.
 .preset_surface_to_location <- function(surface) {
   switch(
     surface,
     body = cells_body(),
     header = cells_headers(),
-    headers = cells_headers(),
     titles = cells_title(),
-    title = cells_title(),
     footnotes = cells_footnotes(),
-    footer = cells_footnotes(),
     subgroup = cells_subgroup_labels(),
     NULL
   )
