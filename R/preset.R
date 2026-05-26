@@ -466,7 +466,13 @@
 #' [`as_grid()`].
 #'
 #' @export
-preset <- function(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE) {
+preset <- function(
+  .spec,
+  ...,
+  .template = NULL,
+  .style = NULL,
+  .reset = FALSE
+) {
   call <- rlang::caller_env()
   check_tabular_spec(.spec, call = call)
   .reset <- .check_scalar_lgl(.reset, arg = ".reset", call = call)
@@ -550,18 +556,48 @@ preset <- function(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE) 
 #'
 #' **Merge, not replace.** A second `set_preset()` call merges its
 #' knobs onto the existing session preset; unspecified knobs keep
-#' their prior value. Pass `reset = TRUE` to discard the existing
+#' their prior value. Pass `.reset = TRUE` to discard the existing
 #' session preset and start from `preset_spec()` defaults.
 #' `set_preset(.reset = TRUE)` with no knobs clears the session
 #' default back to NULL.
+#'
+#' **Save and restore.** Every call returns the *previous* session
+#' preset invisibly, the same primitive ggplot2's
+#' [`ggplot2::theme_set()`] ships. Capture it once, render, and
+#' restore by passing the saved value back as the positional `new`
+#' argument:
+#'
+#' ```r
+#' old <- set_preset(font_size = 10, paper_size = "a4")
+#' # ... one renegade render at 10pt A4 ...
+#' set_preset(old)        # restore
+#' ```
+#'
+#' When the prior was `NULL` (no session preset ever attached), the
+#' restore is `set_preset(.reset = TRUE)` instead — `set_preset(NULL)`
+#' is the same shape as `set_preset()` and falls through to factory
+#' defaults rather than clearing the session.
 #'
 #' **Cascade with `preset()`.** A per-spec [`preset()`] always wins
 #' over the session default. The session default fills in only when
 #' the spec carries no preset of its own.
 #'
+#' @param new *A `preset_spec` to install wholesale.*
+#'   `<preset_spec | NULL>: default NULL`. When non-`NULL`, replaces
+#'   the session preset in one call without touching knobs. The
+#'   primary use is the save/restore round-trip
+#'   (`old <- set_preset(...); set_preset(old)`) — `new` accepts any
+#'   `preset_spec` previously returned by `set_preset()` or
+#'   [`get_preset()`].
+#'
+#'   Mutually exclusive with `...`, `.template`, `.style`, `.reset`:
+#'   passing any of those alongside a non-`NULL` `new` raises
+#'   `tabular_error_input`.
+#'
 #' @param ... *Named preset knobs.* Same shape as [`preset()`]; see
 #'   that verb for the full list of 13 recognised knobs. Unknown
-#'   names raise `tabular_error_input`.
+#'   names raise `tabular_error_input`. Mutually exclusive with
+#'   a non-`NULL` `new`.
 #'
 #' @param .template *A `preset_spec` to bulk-apply before `...`.*
 #'   `<preset_spec | NULL>: default NULL`. Same semantics as
@@ -579,8 +615,12 @@ preset <- function(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE) 
 #'   `...`.* `<logical(1)>: default FALSE`. With no knobs, clears
 #'   the session default back to NULL.
 #'
-#' @return Invisibly returns the new session `preset_spec` (or NULL
-#'   when the call cleared the default).
+#' @return *The previous session `preset_spec` (invisible).* Returns
+#'   `NULL` when no session preset was attached prior to the call.
+#'   Capture it to round-trip a temporary override:
+#'   `old <- set_preset(...); set_preset(old)`. Mirrors
+#'   [`ggplot2::theme_set()`] and `base::options()` — the canonical
+#'   tidyverse save/restore primitive.
 #'
 #' @examples
 #' # ---- Example 1: Sticky session default for an analysis script ----
@@ -637,6 +677,49 @@ preset <- function(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE) 
 #' # are not affected.
 #' set_preset(.reset = TRUE)
 #'
+#' # ---- Example 3: Save and restore around a renegade table ----
+#' #
+#' # Most of the submission renders portrait letter at 9pt. One
+#' # renegade efficacy table needs landscape A4 at 10pt. Capture
+#' # the prior session preset, render the renegade, then restore.
+#' set_preset(font_size = 9, paper_size = "letter")
+#'
+#' old <- set_preset(
+#'   font_size   = 10,
+#'   paper_size  = "a4",
+#'   orientation = "landscape"
+#' )
+#' # ... one renegade render ...
+#' if (is.null(old)) {
+#'   set_preset(.reset = TRUE)   # was no prior — clear
+#' } else {
+#'   set_preset(old)              # round-trip via the positional `new` arg
+#' }
+#' get_preset()@paper_size  # "letter" — restored
+#'
+#' # ---- Example 4: Snapshot current preset, mutate, restore ----
+#' #
+#' # Capture whatever the session preset is right now (may be NULL),
+#' # let a downstream helper mutate it, then put it back when done.
+#' set_preset(font_size = 9, paper_size = "letter")
+#' snapshot <- get_preset()
+#'
+#' # Simulate downstream code mutating session state.
+#' set_preset(font_size = 11, orientation = "landscape")
+#'
+#' # Restore. The wholesale-install path of `set_preset(new)`
+#' # accepts any `preset_spec` returned by `get_preset()` /
+#' # `set_preset()`.
+#' if (is.null(snapshot)) {
+#'   set_preset(.reset = TRUE)
+#' } else {
+#'   set_preset(snapshot)
+#' }
+#' get_preset()@font_size    # 9 — restored
+#'
+#' # Reset for subsequent examples / R sessions.
+#' set_preset(.reset = TRUE)
+#'
 #' @seealso
 #' **Per-spec partner:** [`preset()`] — overrides the session
 #' default on one chain.
@@ -647,8 +730,54 @@ preset <- function(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE) 
 #' [`as_grid()`].
 #'
 #' @export
-set_preset <- function(..., .template = NULL, .style = NULL, .reset = FALSE) {
+set_preset <- function(
+  new = NULL,
+  ...,
+  .template = NULL,
+  .style = NULL,
+  .reset = FALSE
+) {
   call <- rlang::caller_env()
+  old <- .tabular_session$preset
+
+  # ---- Wholesale-install path ----------------------------------
+  # `set_preset(some_preset_spec)` swaps the session preset for a
+  # prebuilt object in one call. This is the ggplot2 set_theme(new)
+  # primitive that makes `set_preset(old)` the natural restore for
+  # an `old <- set_preset(...)` save.
+  if (!is.null(new)) {
+    if (!is_preset_spec(new)) {
+      cli::cli_abort(
+        c(
+          "{.arg new} must be a {.cls preset_spec} or {.code NULL}.",
+          "x" = "You supplied {.obj_type_friendly {new}}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    knobs <- rlang::list2(...)
+    if (
+      length(knobs) > 0L ||
+        !is.null(.template) ||
+        !is.null(.style) ||
+        isTRUE(.reset)
+    ) {
+      cli::cli_abort(
+        c(
+          "Pass {.arg new} OR knobs / {.arg .template} / {.arg .style} / {.arg .reset}, not both.",
+          "i" = "Wholesale install, {.code set_preset(spec)}.",
+          "i" = "Knob update, {.code set_preset(font_size = 9)}.",
+          "i" = "Restore saved, {.code set_preset(old)} after {.code old <- set_preset(...)}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    .tabular_session$preset <- new
+    return(invisible(old))
+  }
+
   .reset <- .check_scalar_lgl(.reset, arg = ".reset", call = call)
 
   knobs <- rlang::list2(...)
@@ -666,11 +795,10 @@ set_preset <- function(..., .template = NULL, .style = NULL, .reset = FALSE) {
       length(style_layers) == 0L
   ) {
     .tabular_session$preset <- NULL
-    return(invisible(NULL))
+    return(invisible(old))
   }
 
-  prior <- .tabular_session$preset
-  base <- if (.reset || !is_preset_spec(prior)) preset_spec() else prior
+  base <- if (.reset || !is_preset_spec(old)) preset_spec() else old
 
   # Mirrors `preset()`'s lower-only path for the five named-list
   # knobs — see the long comment there for the rationale.
@@ -696,7 +824,7 @@ set_preset <- function(..., .template = NULL, .style = NULL, .reset = FALSE) {
     )
   }
   .tabular_session$preset <- new_preset
-  invisible(new_preset)
+  invisible(old)
 }
 
 #' Get the active session-default preset
@@ -1199,7 +1327,12 @@ get_preset <- function() {
       ))
     }
   }
-  for (side_key in c("outer_top", "outer_bottom", "outer_left", "outer_right")) {
+  for (side_key in c(
+    "outer_top",
+    "outer_bottom",
+    "outer_left",
+    "outer_right"
+  )) {
     if (!is.null(br[[side_key]])) {
       add(.preset_layer_table_border(
         side = side_key,
