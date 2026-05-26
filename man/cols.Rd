@@ -15,26 +15,25 @@ matching cannot accidentally bind a short user-supplied name
 is supplied positionally.}
 
 \item{...}{\emph{Named \code{col_spec} objects, one per column.} Each name
-is the input column name in \code{.spec@data}; each value is a
-\code{\link[=col_spec]{col_spec()}}.
+is the input column name in \code{.spec@data}. Names must match an
+existing column — pre-compute derived columns upstream with
+\code{dplyr::mutate()} (or equivalent) before \code{\link[=tabular]{tabular()}}.
 
-\strong{Restriction:} Each name must match a column in \code{.spec@data},
-OR carry \code{usage = "computed"} (column supplied by a later
-\code{\link[=derive]{derive()}} call). Names must be unique within a single
-\code{cols()} call (duplicates warn; "last value wins").
+\strong{Restriction:} Names must be unique within a single \code{cols()}
+call (duplicates warn; "last value wins").
 \strong{Tip:} To override an attribute already declared, use a
 second \code{cols()} call downstream and let the merge rule apply.}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with
-\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=style]{style()}}.
 }
 \description{
 Add \code{\link[=col_spec]{col_spec()}} entries to a \code{tabular_spec}. Each named argument
 is one column: the name is the input column in \code{.spec@data} and the
 value is the \code{col_spec} carrying that column's display attributes
 (usage, label, format, alignment, width, visibility, NA text).
-Columns not mentioned get a default \code{col_spec(usage = "display")}
+Columns not mentioned get a default \code{col_spec()} (usage = display)
 at engine-validate time.
 }
 \details{
@@ -182,25 +181,26 @@ tabular(
     Total    = col_spec(width = "0.9in")
   )
 
-# ---- Example 4: Compact AE-overall with computed Active column ----
+# ---- Example 4: Compact AE-overall with pre-derived Active column ----
 #
-# Drop the per-arm columns and surface only the Total. A
-# `usage = "computed"` column adds a pooled "Active" denominator
-# built from the two drug arms — `derive()` computes the values,
-# `cols()` declares the column's role so the engine treats it
-# like a data column rather than a group column.
+# Drop the per-arm columns and surface only the Total. Pre-compute
+# the pooled "Active" column upstream (here `paste0(drug_50, " / ",
+# drug_100)`) before piping into `tabular()`; `cols()` then just
+# declares each column's display role. The same pattern handles
+# any post-pivot derivation (`pivot_across() |> mutate(...) |>
+# tabular()`).
+ae <- saf_aeoverall
+ae$active <- paste0(ae$drug_50, " / ", ae$drug_100)
+
 tabular(
-  saf_aeoverall,
+  ae,
   titles = c("Table 14.3.0", "Adverse Event Overview"),
   footnotes = "Active = pooled Drug 50 + Drug 100 columns."
 ) |>
-  derive(
-    active = paste0(drug_50, " / ", drug_100)
-  ) |>
   cols(
     stat_label = col_spec(usage = "group", label = ""),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
-    active     = col_spec(usage = "computed", label = "Active arms"),
+    active     = col_spec(label = "Active arms"),
     drug_50    = col_spec(visible = FALSE),
     drug_100   = col_spec(visible = FALSE),
     Total      = col_spec(label = "Total", align = "decimal")
@@ -212,7 +212,7 @@ tabular(
 DSL object that \code{cols()} attaches.
 
 \strong{Sibling build verbs:} \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
-\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
+\code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
 \strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
 \code{\link[=as_grid]{as_grid()}}.

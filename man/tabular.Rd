@@ -53,7 +53,7 @@ footnotes = c(
 }
 \value{
 \emph{A \code{tabular_spec} S7 object.} Pipe it into \code{\link[=cols]{cols()}},
-\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}},
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=style]{style()}},
 \code{\link[=paginate]{paginate()}}, and \code{\link[=preset]{preset()}} to build the display, then
 into \code{\link[=emit]{emit()}} to render or \code{\link[=as_grid]{as_grid()}} to resolve without
 writing.
@@ -62,7 +62,7 @@ writing.
 Wrap a pre-summarised data frame into a \code{tabular_spec} ready for
 the verb chain. \code{tabular()} is the entry verb — it owns the
 \code{data}, \code{titles}, and \code{footnotes} slots; every downstream verb
-(\code{\link[=cols]{cols()}}, \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}},
+(\code{\link[=cols]{cols()}}, \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
 \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}) returns an updated
 spec for further chaining, terminating in \code{\link[=emit]{emit()}} (write to
 file) or \code{\link[=as_grid]{as_grid()}} (resolve without writing).
@@ -207,7 +207,7 @@ tabular(
 }
 \seealso{
 \strong{Downstream build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
-\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}},
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=style]{style()}},
 \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
 \strong{Terminal verbs:} \code{\link[=emit]{emit()}} (write), \code{\link[=as_grid]{as_grid()}} (resolve

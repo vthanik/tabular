@@ -24,7 +24,7 @@
 # every validator emits stable single-quoted output regardless of OS.
 .sh_quote <- function(x) shQuote(x, type = "sh")
 
-.col_usage_values <- c("display", "group", "across", "computed")
+.col_usage_values <- c("display", "group")
 
 # Recognised values for `col_spec@group_display`. Active only when
 # `col_spec@usage = "group"`; ignored otherwise. Controls how the
@@ -58,7 +58,6 @@
 .hlines_values <- c("header", "none", "all")
 .align_anchor_values <- c("left", "center", "right")
 .valign_values <- c("top", "middle", "bottom")
-.derive_type_values <- c("numeric", "character")
 .decimal_metrics_values <- c("chars", "afm", "systemfonts")
 .chrome_onscreen_values <- c("auto", "off")
 
@@ -231,8 +230,8 @@
 #' not construct these directly except for [`col_spec()`]; every
 #' other class is built and chained by the verb pipeline
 #' ([`tabular()`] -> [`cols()`] -> [`headers()`] -> [`sort_rows()`]
-#' -> [`derive()`] -> [`style()`] -> [`paginate()`] -> [`preset()`]
-#' -> [`as_grid()`] / [`emit()`]).
+#' -> [`style()`] -> [`paginate()`] -> [`preset()`] -> [`as_grid()`]
+#' / [`emit()`]).
 #'
 #' @details
 #'
@@ -245,7 +244,6 @@
 #' | `col_spec`          | per-column DSL (usage, label, format, align, ...)     | [`col_spec()`]                    |
 #' | `header_node`       | one node in the multi-level header tree               | internal — built by [`headers()`] |
 #' | `sort_spec`         | sort keys + per-key direction                         | internal — built by [`sort_rows()`]|
-#' | `derive_spec`       | one computed-column expression (quosure-captured)     | internal — built by [`derive()`]  |
 #' | `style_node`        | one resolved style attribute set (per-cell)           | internal — built by [`style()`]   |
 #' | `style_predicate`   | (legacy) one `where` quosure + scope + style_node     | internal — built by [`style()`]   |
 #' | `style_layer`       | one `tabular_location` + style_node                   | internal — built by [`style()`]   |
@@ -470,34 +468,6 @@ subgroup_spec <- S7::new_class(
           "@label must be NULL or a length-1 non-NA character (glue-style template)"
         )
       }
-    }
-    NULL
-  }
-)
-
-# ---------------------------------------------------------------------
-# derive_spec
-# ---------------------------------------------------------------------
-
-#' @rdname tabular_classes
-#' @format NULL
-#' @usage NULL
-derive_spec <- S7::new_class(
-  "derive_spec",
-  package = "tabular",
-  properties = list(
-    name = S7::new_property(S7::class_character, default = NA_character_),
-    expr = S7::class_any,
-    type = S7::new_property(S7::class_character, default = "numeric")
-  ),
-  validator = function(self) {
-    if (!(self@type %in% .derive_type_values)) {
-      return(paste0(
-        "@type must be one of ",
-        paste(.sh_quote(.derive_type_values), collapse = ", "),
-        "; got ",
-        .sh_quote(self@type)
-      ))
     }
     NULL
   }
@@ -963,7 +933,6 @@ tabular_spec <- S7::new_class(
     cols = S7::new_property(S7::class_list, default = list()),
     headers = S7::new_property(S7::class_list, default = list()),
     sort = S7::class_any,
-    derives = S7::new_property(S7::class_list, default = list()),
     styles = S7::class_any,
     preset = S7::class_any,
     pagination = S7::class_any,
@@ -1073,7 +1042,6 @@ tabular_grid <- S7::new_class(
 #' | `is_col_spec()`        | `col_spec`         | [`col_spec()`]                    |
 #' | `is_header_node()`     | `header_node`      | [`headers()`] (internal nodes)    |
 #' | `is_sort_spec()`       | `sort_spec`        | [`sort_rows()`]                   |
-#' | `is_derive_spec()`     | `derive_spec`      | [`derive()`]                      |
 #' | `is_style_node()`      | `style_node`       | [`style()`] (per-cell style)      |
 #' | `is_style_predicate()` | `style_predicate`  | (legacy) [`style()`] predicate path|
 #' | `is_style_layer()`     | `style_layer`      | [`style()`] (one per call)        |
@@ -1155,8 +1123,8 @@ tabular_grid <- S7::new_class(
 #' **Class definitions:** [`tabular_classes`].
 #'
 #' **Verbs producing each class:** [`tabular()`], [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`],
-#' [`paginate()`], [`preset()`], [`as_grid()`].
+#' [`headers()`], [`sort_rows()`], [`style()`], [`paginate()`],
+#' [`preset()`], [`as_grid()`].
 #'
 #' @keywords internal
 #' @name tabular_predicates
@@ -1181,10 +1149,6 @@ is_header_node <- function(x) S7::S7_inherits(x, header_node)
 #' @rdname tabular_predicates
 #' @export
 is_sort_spec <- function(x) S7::S7_inherits(x, sort_spec)
-
-#' @rdname tabular_predicates
-#' @export
-is_derive_spec <- function(x) S7::S7_inherits(x, derive_spec)
 
 #' @rdname tabular_predicates
 #' @export

@@ -65,7 +65,10 @@ test_that("preset@borders and cells_table() layers compose in cascade order", {
   # Preset says outer_top is "double"; per-spec layer overrides to thick solid.
   spec <- g$spec |>
     preset(borders = list(outer_top = brdr("thick", "double"))) |>
-    style(border_top = brdr("thin", "solid"), at = cells_table(side = "outer_top"))
+    style(
+      border_top = brdr("thin", "solid"),
+      at = cells_table(side = "outer_top")
+    )
   cs <- tabular:::engine_borders(spec, tabular:::engine_style(spec))
   expect_identical(cs[[1L, 1L]]@border_top_style, "solid")
 })

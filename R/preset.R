@@ -449,7 +449,7 @@
 #' and font size.
 #'
 #' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`].
+#' [`headers()`], [`sort_rows()`], [`style()`].
 #'
 #' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
 #' [`as_grid()`].

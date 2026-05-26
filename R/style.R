@@ -25,8 +25,8 @@
 #'
 #' Attach a `style_predicate` to a `tabular_spec`. The predicate
 #' (`where`) is captured as an rlang quosure and evaluated at engine
-#' time against the post-[`derive()`] data grid; rows where the
-#' predicate is TRUE pick up the styling attributes given in `...`.
+#' time against the post-sort data grid; rows where the predicate
+#' is TRUE pick up the styling attributes given in `...`.
 #' Use this for subtotal-row highlighting, threshold-coloured
 #' p-values, banded-row backgrounds, and any other rule-driven
 #' formatting that depends on cell values rather than position.
@@ -72,9 +72,8 @@
 #'
 #' @param where *Predicate evaluating to a length-`nrow` logical.*
 #'   `<expression>: required`. Captured as an rlang quosure;
-#'   evaluated at engine time against the post-[`derive()`] data
-#'   grid, so the predicate may reference any column in `.spec@data`
-#'   or any column added by [`derive()`].
+#'   evaluated at engine time against the post-sort data grid, so
+#'   the predicate may reference any column in `.spec@data`.
 #'
 #'   **Tip:** With `.scope = "cell"` (the default), the engine
 #'   extracts column names referenced by the expression to decide
@@ -255,8 +254,7 @@
 #'
 #' @seealso
 #' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`derive()`], [`paginate()`],
-#' [`preset()`].
+#' [`headers()`], [`sort_rows()`], [`paginate()`], [`preset()`].
 #'
 #' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
 #' [`as_grid()`].

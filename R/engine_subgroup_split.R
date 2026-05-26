@@ -1,5 +1,5 @@
 # engine_subgroup_split.R — partition phase. Runs FIRST in
-# `.resolve_spec_to_grid` (before engine_derive). When
+# `.resolve_spec_to_grid` (before engine_sort). When
 # `spec@subgroup` is NULL, returns a single-entry list carrying the
 # unchanged spec and `runtime = NULL`. When set, splits @data by
 # the unique values (or value combinations) of the subgroup `by`

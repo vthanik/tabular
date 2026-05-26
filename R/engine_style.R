@@ -16,8 +16,8 @@
 
 #' Resolve the style cascade to a per-cell style matrix
 #'
-#' Pure function. Called by the resolve engine after `engine_derive()`
-#' so predicates can reference derived columns. Returns a list-matrix
+#' Pure function. Called by the resolve engine after `engine_sort()`
+#' so predicates see the final row order. Returns a list-matrix
 #' aligned with `spec@data`: `[i, j]` holds the resolved
 #' `style_node` for the cell at row `i`, column `j`.
 #'
@@ -312,9 +312,18 @@ engine_style <- function(spec) {
   seq_along(col_names)
 }
 
+# Identifiers referenced by a quosure or expression. all.vars() walks
+# the language tree and returns identifier names (including
+# backticked ones), skipping function-position names like `+`. Used
+# by .scope = "cell" to decide which columns the predicate targets.
+.referenced_symbols <- function(expr) {
+  e <- if (rlang::is_quosure(expr)) rlang::quo_get_expr(expr) else expr
+  all.vars(e)
+}
+
 # Evaluate the `where` quosure against the data mask. Errors are
 # rewrapped as tabular_error_input so the verb's class contract
-# holds end-to-end (same approach as engine_derive's eval helper).
+# holds end-to-end.
 .eval_style_where <- function(quo, data, call) {
   mask <- as.list(data)
   tryCatch(

@@ -7,7 +7,6 @@
 \alias{is_col_spec}
 \alias{is_header_node}
 \alias{is_sort_spec}
-\alias{is_derive_spec}
 \alias{is_style_node}
 \alias{is_style_predicate}
 \alias{is_style_layer}
@@ -27,8 +26,6 @@ is_col_spec(x)
 is_header_node(x)
 
 is_sort_spec(x)
-
-is_derive_spec(x)
 
 is_style_node(x)
 
@@ -71,7 +68,6 @@ Eleven predicates cover the full S7 surface:\tabular{lll}{
    \code{is_col_spec()} \tab \code{col_spec} \tab \code{\link[=col_spec]{col_spec()}} \cr
    \code{is_header_node()} \tab \code{header_node} \tab \code{\link[=headers]{headers()}} (internal nodes) \cr
    \code{is_sort_spec()} \tab \code{sort_spec} \tab \code{\link[=sort_rows]{sort_rows()}} \cr
-   \code{is_derive_spec()} \tab \code{derive_spec} \tab \code{\link[=derive]{derive()}} \cr
    \code{is_style_node()} \tab \code{style_node} \tab \code{\link[=style]{style()}} (per-cell style) \cr
    \code{is_style_predicate()} \tab \code{style_predicate} \tab (legacy) \code{\link[=style]{style()}} predicate path \cr
    \code{is_style_layer()} \tab \code{style_layer} \tab \code{\link[=style]{style()}} (one per call) \cr
@@ -144,7 +140,7 @@ stopifnot(is_tabular_grid(grid))
 \strong{Class definitions:} \code{\link{tabular_classes}}.
 
 \strong{Verbs producing each class:} \code{\link[=tabular]{tabular()}}, \code{\link[=col_spec]{col_spec()}},
-\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}},
-\code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}, \code{\link[=as_grid]{as_grid()}}.
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}},
+\code{\link[=preset]{preset()}}, \code{\link[=as_grid]{as_grid()}}.
 }
 \keyword{internal}

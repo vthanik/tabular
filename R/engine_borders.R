@@ -503,22 +503,22 @@ engine_chrome_borders <- function(spec) {
   # pagehead/pagefoot which only own one edge each):
   region_map <- switch(
     loc$surface,
-    pagehead        = list(bottom = "pagehead_bottom"),
-    title           = list(),
-    headers         = list(
-      top    = "header_top",
+    pagehead = list(bottom = "pagehead_bottom"),
+    title = list(),
+    headers = list(
+      top = "header_top",
       bottom = "header_bottom",
       between = "header_between"
     ),
     subgroup_labels = list(
-      top    = "subgroup_top",
+      top = "subgroup_top",
       bottom = "subgroup_bottom"
     ),
-    footnotes       = list(
-      top    = "footer_top",
+    footnotes = list(
+      top = "footer_top",
       bottom = "footer_bottom"
     ),
-    pagefoot        = list(top = "pagefoot_top"),
+    pagefoot = list(top = "pagefoot_top"),
     list()
   )
   for (border_side in names(region_map)) {

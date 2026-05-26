@@ -103,9 +103,9 @@ to nrow / ncol.
 
 \strong{Predicate vocabulary.} \code{cells_body(where = pvalue < 0.05)} is
 the canonical data-driven filter — \code{where} is captured as an rlang
-quosure and evaluated at engine time against the post-\code{\link[=derive]{derive()}}
-grid. Mutually exclusive with \code{i} (you target \emph{either} by index
-\emph{or} by predicate, not both).
+quosure and evaluated at engine time against the post-sort grid.
+Mutually exclusive with \code{i} (you target \emph{either} by index \emph{or} by
+predicate, not both).
 
 \strong{Why \code{cells_headers} not \code{cells_column_spanners}.} The verb that
 builds the multi-level header tree is named \code{\link[=headers]{headers()}}. The

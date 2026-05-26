@@ -78,7 +78,10 @@
         "key ",
         .sh_quote(k),
         " must be length 1; vectors are accepted only for ",
-        paste(.sh_quote(.preset_alignment_keys_vector_halign), collapse = ", ")
+        paste(
+          .sh_quote(.preset_alignment_keys_vector_halign),
+          collapse = ", "
+        )
       ))
     }
     bad <- v[!(v %in% allowed)]

@@ -114,14 +114,6 @@ test_that("as_grid() honours sort_rows() before formatting", {
   expect_identical(g@pages[[1L]]$cells_text[, "x"], c("1", "2", "3"))
 })
 
-test_that("as_grid() materialises derives", {
-  d <- data.frame(a = c(1, 2, 3), b = c(10, 20, 30))
-  spec <- tabular(d) |> derive(sum = a + b)
-  g <- as_grid(spec)
-  expect_identical(g@metadata$col_names, c("a", "b", "sum"))
-  expect_identical(g@pages[[1L]]$cells_text[, "sum"], c("11", "22", "33"))
-})
-
 test_that("as_grid() applies col_spec decimal alignment", {
   d <- data.frame(x = c("1.5", "10.25", "100.125"))
   spec <- tabular(d) |> cols(x = col_spec(align = "decimal"))

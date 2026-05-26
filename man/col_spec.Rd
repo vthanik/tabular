@@ -25,22 +25,8 @@ col_spec(
 \item \strong{\code{"group"}} — row-label with repeat-suppression and
 continuation-page repeat keys. Use for \code{variable}, \code{soc},
 \code{stat_label}.
-\item \strong{\code{"across"}} — pivot-source tag. Mark every column that
-originated as a treatment arm in \code{\link[=pivot_across]{pivot_across()}}'s wide
-output. The tag is informational — \code{\link[=sort_rows]{sort_rows()}} uses it
-to reject sort keys on arm columns (pivot upstream of the
-sort instead), and downstream introspection tools walk the
-spec to find which columns came from an ARD pivot.
-\item \strong{\code{"computed"}} — derived column; pair with a \code{\link[=derive]{derive()}}
-entry. The column need not exist in \code{data} yet at
-\code{\link[=cols]{cols()}} time.
 \item \strong{\code{NULL}} — inferred as \code{"display"} in \code{\link[=cols]{cols()}}.
 }
-
-\strong{Interaction:} \code{"computed"} requires a matching \code{\link[=derive]{derive()}}
-entry by engine_validate time. \code{"across"} requires the pivot
-to have happened upstream via \code{\link[=pivot_across]{pivot_across()}}; sorting by an
-\code{"across"} column is a \code{tabular_error_input}.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two row-label columns and four arm columns.
 cols(
@@ -51,10 +37,11 @@ cols(
 )
 }\if{html}{\out{</div>}}
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# End-to-end ARD → wide → tabular pipeline with usage = "across"
-# tagging every arm column. The cards ARD `saf_demo_card` is
-# the long upstream input; `pivot_across()` widens to one column
-# per arm; `cols()` then attaches per-column display rules.
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# End-to-end ARD → wide → tabular pipeline. The cards ARD
+# `saf_demo_card` is the long upstream input; `pivot_across()`
+# widens to one column per arm and stamps an internal marker
+# so [`sort_rows()`] can reject sort keys on those arm columns.
+# `cols()` then attaches per-column display rules.
 wide <- pivot_across(
   saf_demo_card,
   statistic = list(
@@ -70,18 +57,14 @@ tabular(wide, titles = "Demographics") |>
     stat_label               = col_spec(
       usage = "group", label = "Statistic"
     ),
-    Placebo                  = col_spec(
-      usage = "across", align = "decimal"
-    ),
+    Placebo                  = col_spec(align = "decimal"),
     `Xanomeline High Dose`   = col_spec(
-      usage = "across", label = "High Dose", align = "decimal"
+      label = "High Dose", align = "decimal"
     ),
     `Xanomeline Low Dose`    = col_spec(
-      usage = "across", label = "Low Dose", align = "decimal"
+      label = "Low Dose", align = "decimal"
     ),
-    Total                    = col_spec(
-      usage = "across", align = "decimal"
-    )
+    Total                    = col_spec(align = "decimal")
   )
 }\if{html}{\out{</div>}}}
 
@@ -121,8 +104,8 @@ col_spec(format = function(x) formatC(x, format = "f", digits = 1, big.mark = ",
 
 \item{visible}{\emph{Whether the column renders.}
 \verb{<logical(1)>: default TRUE}. \code{FALSE} hides the column from
-output but keeps it in \code{spec@data} so \code{\link[=sort_rows]{sort_rows()}},
-\code{\link[=derive]{derive()}}, and \code{\link[=style]{style()}} predicates can still reference it.
+output but keeps it in \code{spec@data} so \code{\link[=sort_rows]{sort_rows()}} and
+\code{\link[=style]{style()}} predicates can still reference it.
 
 \strong{Interaction:} Hidden columns are the standard pattern for
 sort-key helpers (\code{row_type}, \code{n_total}) and for the numeric
@@ -444,7 +427,7 @@ tabular(
 \code{tabular_spec} keyed by input column name.
 
 \strong{Sibling build verbs:} \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
-\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
+\code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
 \strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
 \code{\link[=as_grid]{as_grid()}}.

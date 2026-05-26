@@ -14,9 +14,8 @@ matching cannot accidentally bind a short attribute name in
 
 \item{where}{\emph{Predicate evaluating to a length-\code{nrow} logical.}
 \verb{<expression>: required}. Captured as an rlang quosure;
-evaluated at engine time against the post-\code{\link[=derive]{derive()}} data
-grid, so the predicate may reference any column in \code{.spec@data}
-or any column added by \code{\link[=derive]{derive()}}.
+evaluated at engine time against the post-sort data grid, so
+the predicate may reference any column in \code{.spec@data}.
 
 \strong{Tip:} With \code{.scope = "cell"} (the default), the engine
 extracts column names referenced by the expression to decide
@@ -73,8 +72,8 @@ resolve without I/O via \code{\link[=as_grid]{as_grid()}}).
 \description{
 Attach a \code{style_predicate} to a \code{tabular_spec}. The predicate
 (\code{where}) is captured as an rlang quosure and evaluated at engine
-time against the post-\code{\link[=derive]{derive()}} data grid; rows where the
-predicate is TRUE pick up the styling attributes given in \code{...}.
+time against the post-sort data grid; rows where the predicate
+is TRUE pick up the styling attributes given in \code{...}.
 Use this for subtotal-row highlighting, threshold-coloured
 p-values, banded-row backgrounds, and any other rule-driven
 formatting that depends on cell values rather than position.
@@ -244,8 +243,7 @@ tabular(saf_demo, titles = "Demographics with banded rows") |>
 }
 \seealso{
 \strong{Sibling build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
-\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=paginate]{paginate()}},
-\code{\link[=preset]{preset()}}.
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
 \strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
 \code{\link[=as_grid]{as_grid()}}.

@@ -12,7 +12,7 @@
 # ---------------------------------------------------------------------
 
 test_that("col_spec() accepts every documented usage value", {
-  for (u in c("display", "group", "across", "computed")) {
+  for (u in c("display", "group")) {
     expect_silent(col_spec(usage = u))
   }
   expect_silent(col_spec(usage = NULL))

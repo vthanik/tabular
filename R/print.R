@@ -39,9 +39,8 @@
 #'   we deliberately do *not* compile through tinytex on every
 #'   autoprint.
 #' * `"cli"` — print the structural cli-tree summary (props,
-#'   headers, derives, sort, pagination, preset). Useful for
-#'   debugging spec composition without paying the HTML render
-#'   cost.
+#'   headers, sort, pagination, preset). Useful for debugging
+#'   spec composition without paying the HTML render cost.
 #'
 #' **Robustness.** The HTML render is wrapped in `tryCatch`; if
 #' rendering fails for any reason the printer falls back to the
@@ -446,8 +445,7 @@ knit_print.tabular_spec <- function(x, ..., inline = FALSE) {
 
   configured <- c(
     cols = length(x@cols),
-    headers = length(x@headers),
-    derives = length(x@derives)
+    headers = length(x@headers)
   )
   configured <- configured[configured > 0L]
   if (length(configured) > 0L) {

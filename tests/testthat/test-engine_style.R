@@ -149,16 +149,14 @@ test_that("engine_style() rejects a result with wrong length", {
   )
 })
 
-# ---- edge case 2: predicate references computed col ---------------
+# ---- edge case 2: predicate references upstream-derived column ----
 
-test_that("engine_style() allows predicates on derived columns", {
+test_that("engine_style() allows predicates on upstream-derived columns", {
   resp <- data.frame(stat_label = c("R", "NR"), n = c(1L, 2L))
+  resp$twice <- resp$n * 2L
   spec <- tabular(resp) |>
-    derive(twice = n * 2L) |>
     style(where = twice > 2L, bold = TRUE, .scope = "row")
-  # After engine_derive, `twice` is in data; engine_style then runs.
-  resolved <- tabular:::engine_derive(spec)
-  grid <- tabular:::engine_style(resolved)
+  grid <- tabular:::engine_style(spec)
   expect_identical(grid[[2L, 1L]]@bold, TRUE)
   expect_true(is.na(grid[[1L, 1L]]@bold))
 })

@@ -114,8 +114,8 @@
 #' name). Recognised extensions on the returned path are `.csv`,
 #' `.tsv` (alias: `.txt`), and `.rds`; anything else raises
 #' `tabular_error_input`. The written data frame is the post-
-#' [`derive()`] / post-[`sort_rows()`] / post-`engine_decimal()`
-#' wide grid — exactly the cell text the backend wrote.
+#' [`sort_rows()`] / post-`engine_decimal()` wide grid — exactly
+#' the cell text the backend wrote.
 #'
 #' **`manifest = TRUE` writes a sidecar.** The audit manifest is
 #' written to `<file>.audit.yml` next to the render (e.g. `out.md`
@@ -137,9 +137,9 @@
 #'
 #' @param spec *The `tabular_spec` to render.*
 #'   `<tabular_spec>: required`. The full verb chain ([`tabular()`]
-#'   -> [`cols()`] -> [`headers()`] -> [`sort_rows()`] -> [`derive()`]
-#'   -> [`style()`] -> [`paginate()`] -> [`preset()`]) feeds into
-#'   `emit()`'s first argument by pipe.
+#'   -> [`cols()`] -> [`headers()`] -> [`sort_rows()`] -> [`style()`]
+#'   -> [`paginate()`] -> [`preset()`]) feeds into `emit()`'s first
+#'   argument by pipe.
 #'
 #' @param file *Destination path for the rendered artefact.*
 #'   `<character(1)>: required`. Extension drives the backend (see
@@ -311,7 +311,7 @@
 #'
 #' **Build verbs the pipeline feeds from:** [`tabular()`],
 #' [`cols()`] / [`col_spec()`], [`headers()`], [`sort_rows()`],
-#' [`derive()`], [`style()`], [`paginate()`], [`preset()`].
+#' [`style()`], [`paginate()`], [`preset()`].
 #'
 #' **Inline formatting helpers:** [`md()`], [`html()`] (titles,
 #' footnotes, labels, cell text).
@@ -491,8 +491,7 @@ emit <- function(
 # the render path), validate the resulting path, dispatch to the
 # format-specific writer, and return the absolute path written. The
 # data frame written is the resolved wide data frame as it sits
-# after engine_derive() and engine_sort() — exactly the cell text
-# the backends consume.
+# after engine_sort() — exactly the cell text the backends consume.
 .write_data_file <- function(spec, grid, data_file, render_path, call) {
   path <- .resolve_data_file_path(data_file, render_path, call = call)
   parent <- dirname(path)

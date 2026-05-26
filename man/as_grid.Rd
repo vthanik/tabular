@@ -9,8 +9,8 @@ as_grid(spec)
 \arguments{
 \item{spec}{\emph{The \code{tabular_spec} to resolve.}
 \verb{<tabular_spec>: required}. Built by the verb chain (\code{\link[=tabular]{tabular()}}
--> \code{\link[=cols]{cols()}} -> \code{\link[=headers]{headers()}} -> \code{\link[=sort_rows]{sort_rows()}} -> \code{\link[=derive]{derive()}}
--> \code{\link[=style]{style()}} -> \code{\link[=paginate]{paginate()}} -> \code{\link[=preset]{preset()}}).}
+-> \code{\link[=cols]{cols()}} -> \code{\link[=headers]{headers()}} -> \code{\link[=sort_rows]{sort_rows()}} -> \code{\link[=style]{style()}}
+-> \code{\link[=paginate]{paginate()}} -> \code{\link[=preset]{preset()}}).}
 }
 \value{
 \emph{A \code{tabular_grid} S7 object.} Two slots:
@@ -52,16 +52,12 @@ inline preview chunk in a Quarto notebook).
 fixed order; the order matters because each phase reads the post-
 previous-phase state of the spec:
 \enumerate{
-\item \code{engine_derive()} — materialise computed columns onto
-\code{spec@data}. Derived columns become first-class from this
-point forward.
-\item \code{engine_sort()} — apply the sort spec; sort keys may reference
-derived columns.
+\item \code{engine_sort()} — apply the sort spec.
 \item \code{engine_headers()} — validate the header tree and flatten it
 to a band grid.
 \item \code{engine_style()} — evaluate every style predicate against the
-post-derive, post-sort data grid. A predicate may reference
-any column in \code{spec@data} (including derives).
+post-sort data grid. A predicate may reference any column in
+\code{spec@data}.
 \item \code{engine_format()} — apply per-column formats, substitute
 \code{na_text}, and parse every cell / title / footnote / label
 through \code{parse_inline()} to its \code{inline_ast}.
@@ -221,7 +217,7 @@ the same pipeline.
 
 \strong{Build verbs the pipeline feeds from:} \code{\link[=tabular]{tabular()}},
 \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}}, \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
-\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
+\code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
 \strong{Inline formatting helpers:} \code{\link[=md]{md()}}, \code{\link[=html]{html()}}.
 }

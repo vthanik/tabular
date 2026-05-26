@@ -81,13 +81,14 @@ test_that("sort_rows() error names the missing column", {
   expect_match(conditionMessage(err), "no_such_col")
 })
 
-# ---- edge case 3: by references an across column --------------------
+# ---- edge case 3: by references an arm column from pivot_across() ---
 
-test_that("sort_rows() rejects sort by an across-usage column", {
-  spec <- tabular(saf_demo) |>
-    cols(variable = col_spec(usage = "across"))
+test_that("sort_rows() rejects sort by an arm column stamped by pivot_across()", {
+  d <- saf_demo
+  attr(d, "across_cols") <- "drug_50"
+  spec <- tabular(d)
   expect_error(
-    spec |> sort_rows(by = "variable"),
+    spec |> sort_rows(by = "drug_50"),
     class = "tabular_error_input"
   )
 })

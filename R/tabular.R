@@ -7,7 +7,7 @@
 #' Wrap a pre-summarised data frame into a `tabular_spec` ready for
 #' the verb chain. `tabular()` is the entry verb — it owns the
 #' `data`, `titles`, and `footnotes` slots; every downstream verb
-#' ([`cols()`], [`headers()`], [`sort_rows()`], [`derive()`],
+#' ([`cols()`], [`headers()`], [`sort_rows()`],
 #' [`style()`], [`paginate()`], [`preset()`]) returns an updated
 #' spec for further chaining, terminating in [`emit()`] (write to
 #' file) or [`as_grid()`] (resolve without writing).
@@ -74,7 +74,7 @@
 #'   ```
 #'
 #' @return *A `tabular_spec` S7 object.* Pipe it into [`cols()`],
-#'   [`headers()`], [`sort_rows()`], [`derive()`], [`style()`],
+#'   [`headers()`], [`sort_rows()`], [`style()`],
 #'   [`paginate()`], and [`preset()`] to build the display, then
 #'   into [`emit()`] to render or [`as_grid()`] to resolve without
 #'   writing.
@@ -204,7 +204,7 @@
 #'
 #' @seealso
 #' **Downstream build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`],
+#' [`headers()`], [`sort_rows()`], [`style()`],
 #' [`paginate()`], [`preset()`].
 #'
 #' **Terminal verbs:** [`emit()`] (write), [`as_grid()`] (resolve

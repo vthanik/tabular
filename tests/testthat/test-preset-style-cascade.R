@@ -95,9 +95,9 @@ test_that("session preset + spec preset + per-spec layers compose", {
     preset(style = spec_tmpl) |>
     style(color = "red", at = cells_body())
   grid <- tabular:::engine_style(spec)
-  expect_identical(grid[[1L, 1L]]@bold, TRUE)     # session preset
-  expect_identical(grid[[1L, 1L]]@italic, TRUE)    # spec preset
-  expect_identical(grid[[1L, 1L]]@color, "red")    # per-spec
+  expect_identical(grid[[1L, 1L]]@bold, TRUE) # session preset
+  expect_identical(grid[[1L, 1L]]@italic, TRUE) # spec preset
+  expect_identical(grid[[1L, 1L]]@color, "red") # per-spec
 })
 
 # ---------------------------------------------------------------------

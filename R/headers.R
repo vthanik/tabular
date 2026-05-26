@@ -67,7 +67,7 @@
 #'   **Tip:** Pass `headers()` with no arguments to clear the tree.
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
-#'   [`sort_rows()`], [`derive()`], [`style()`].
+#'   [`sort_rows()`], [`style()`].
 #'
 #' @examples
 #' # ---- Example 1: Single "Treatment Group" band over four arms ----
@@ -201,7 +201,7 @@
 #' labels — the leaf-row header text that sits below the band rows
 #' this verb builds.
 #'
-#' **Sibling build verbs:** [`sort_rows()`], [`derive()`],
+#' **Sibling build verbs:** [`sort_rows()`],
 #' [`style()`], [`paginate()`], [`preset()`].
 #'
 #' **Entry / terminal verbs:** [`tabular()`], [`emit()`],

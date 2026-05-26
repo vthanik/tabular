@@ -15,9 +15,11 @@ sort_rows(spec, by = character(), descending = FALSE)
 sort). May reference columns not declared in \code{\link[=cols]{cols()}} —
 sort-only helper columns ride along through the engine.
 
-\strong{Restriction:} Every entry must be a column in \code{spec@data} (or
-one that will be added by \code{\link[=derive]{derive()}}). Cannot reference
-\code{usage = "across"} columns; pivot upstream of the sort instead.
+\strong{Restriction:} Every entry must be a column in \code{spec@data}.
+Cannot reference arm columns produced by \code{\link[=pivot_across]{pivot_across()}};
+pivot upstream of the sort instead. Arm cells hold rendered
+stat strings (e.g. \code{"75.2 (8.3)"}) that do not order
+meaningfully.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two-key clinical sort: row_type ascending, n_total descending.
 sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
@@ -35,14 +37,13 @@ key and calls \code{order()} once on all keys.}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with
-\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}, then
-render via \code{\link[=emit]{emit()}} (or resolve without I/O via \code{\link[=as_grid]{as_grid()}}).
+\code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}, then render via
+\code{\link[=emit]{emit()}} (or resolve without I/O via \code{\link[=as_grid]{as_grid()}}).
 }
 \description{
 Attach a \code{sort_spec} to a \code{tabular_spec}. The engine applies the
-sort after \code{\link[=derive]{derive()}} runs and before pagination, so \code{by} may
-reference any column in \code{spec@data} (including derived columns)
-whether or not the column is declared in \code{\link[=cols]{cols()}}.
+sort before pagination, so \code{by} may reference any column in
+\code{spec@data} whether or not the column is declared in \code{\link[=cols]{cols()}}.
 }
 \details{
 \strong{Replace, not stack.} A second \code{sort_rows()} call REPLACES the
@@ -183,8 +184,7 @@ tabular(ae, titles = "AE by SOC and PT, ranked within SOC") |>
 }
 \seealso{
 \strong{Sibling build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
-\code{\link[=headers]{headers()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}},
-\code{\link[=preset]{preset()}}.
+\code{\link[=headers]{headers()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
 \strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
 \code{\link[=as_grid]{as_grid()}}.

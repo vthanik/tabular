@@ -13,7 +13,7 @@
 #'
 #' Gate at the top of every verb that takes a spec as its first
 #' argument (`cols`, `headers`, `sort_rows`, `pivot_across`,
-#' `derive`, `style`, `paginate`, `preset`, `emit`, `as_grid`).
+#' `style`, `paginate`, `preset`, `emit`, `as_grid`).
 #' Aborts with friendly cli error and points back to `tabular()`.
 #'
 #' @param x Object to check.

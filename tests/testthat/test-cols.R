@@ -25,19 +25,13 @@ test_that("cols() attaches col_specs keyed by input name", {
   expect_identical(s@cols$drug_a@name, "drug_a")
 })
 
-# Edge case 1: name not in data, usage != computed — reject -----------
+# Edge case 1: name not in data — reject ------------------------------
 
-test_that("cols() rejects a name not in data when usage != computed", {
+test_that("cols() rejects a name not in data", {
   expect_error(
     mk_spec() |> cols(missing_col = col_spec(usage = "display")),
     class = "tabular_error_input"
   )
-})
-
-test_that("cols() accepts a name not in data when usage = computed", {
-  s <- mk_spec() |> cols(pct = col_spec(usage = "computed"))
-  expect_true(is_col_spec(s@cols$pct))
-  expect_identical(s@cols$pct@usage, "computed")
 })
 
 # Edge case 2: empty ... is a no-op ------------------------------------
@@ -95,14 +89,6 @@ test_that("cols() second-call non-default overrides first-call", {
     cols(param = col_spec(label = "Old")) |>
     cols(param = col_spec(label = "New"))
   expect_identical(s@cols$param@label, "New")
-})
-
-# Edge case 6: usage = computed for col not in data --------------------
-
-test_that("cols() accepts computed col with name absent from data", {
-  s <- mk_spec() |> cols(rate = col_spec(usage = "computed", label = "Rate"))
-  expect_identical(s@cols$rate@usage, "computed")
-  expect_identical(s@cols$rate@label, "Rate")
 })
 
 # Edge case 8: across with high cardinality — not checked here --------

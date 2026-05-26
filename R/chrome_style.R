@@ -71,12 +71,12 @@
 # surface key it writes text properties onto. Used by
 # engine_chrome_borders() when walking the four-tier cascade.
 .location_to_chrome_surface <- c(
-  pagehead        = "pagehead",
-  title           = "title",
-  headers         = "header",
+  pagehead = "pagehead",
+  title = "title",
+  headers = "header",
   subgroup_labels = "subgroup",
-  footnotes       = "footer",
-  pagefoot        = "pagefoot"
+  footnotes = "footer",
+  pagefoot = "pagefoot"
 )
 
 # Build an empty chrome_style. Each border slot defaults to NULL

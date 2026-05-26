@@ -30,7 +30,7 @@ Names must be unique within one \code{headers()} call.
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with
-\code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
+\code{\link[=sort_rows]{sort_rows()}}, \code{\link[=style]{style()}}.
 }
 \description{
 Build the column-header band(s) above the rendered table. Each
@@ -206,7 +206,7 @@ tabular(saf_demo, titles = "Demographics, hierarchical headers") |>
 labels — the leaf-row header text that sits below the band rows
 this verb builds.
 
-\strong{Sibling build verbs:} \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}},
+\strong{Sibling build verbs:} \code{\link[=sort_rows]{sort_rows()}},
 \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
 \strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},

@@ -374,7 +374,7 @@
 #' frame this helper returns.
 #'
 #' **Downstream spec-build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`],
+#' [`headers()`], [`sort_rows()`], [`style()`],
 #' [`paginate()`], [`preset()`].
 #'
 #' **Terminal verbs:** [`emit()`], [`as_grid()`].
@@ -496,6 +496,14 @@ pivot_across <- function(
   }
 
   rownames(wide) <- NULL
+  # Stamp the arm column names so downstream verbs (e.g. sort_rows())
+  # can reject sort keys that target pivoted arm columns — those cells
+  # hold rendered stat strings that don't order meaningfully. No user-
+  # visible col_spec tag needed; the attribute is the engine's wire.
+  attr(wide, "across_cols") <- intersect(
+    as.character(arm_levels),
+    names(wide)
+  )
   wide
 }
 

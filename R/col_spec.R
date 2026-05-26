@@ -39,21 +39,7 @@
 #'   *   **`"group"`** — row-label with repeat-suppression and
 #'       continuation-page repeat keys. Use for `variable`, `soc`,
 #'       `stat_label`.
-#'   *   **`"across"`** — pivot-source tag. Mark every column that
-#'       originated as a treatment arm in [`pivot_across()`]'s wide
-#'       output. The tag is informational — [`sort_rows()`] uses it
-#'       to reject sort keys on arm columns (pivot upstream of the
-#'       sort instead), and downstream introspection tools walk the
-#'       spec to find which columns came from an ARD pivot.
-#'   *   **`"computed"`** — derived column; pair with a [`derive()`]
-#'       entry. The column need not exist in `data` yet at
-#'       [`cols()`] time.
 #'   *   **`NULL`** — inferred as `"display"` in [`cols()`].
-#'
-#'   **Interaction:** `"computed"` requires a matching [`derive()`]
-#'   entry by engine_validate time. `"across"` requires the pivot
-#'   to have happened upstream via [`pivot_across()`]; sorting by an
-#'   `"across"` column is a `tabular_error_input`.
 #'
 #'   ```r
 #'   # Two row-label columns and four arm columns.
@@ -66,10 +52,11 @@
 #'   ```
 #'
 #'   ```r
-#'   # End-to-end ARD → wide → tabular pipeline with usage = "across"
-#'   # tagging every arm column. The cards ARD `saf_demo_card` is
-#'   # the long upstream input; `pivot_across()` widens to one column
-#'   # per arm; `cols()` then attaches per-column display rules.
+#'   # End-to-end ARD → wide → tabular pipeline. The cards ARD
+#'   # `saf_demo_card` is the long upstream input; `pivot_across()`
+#'   # widens to one column per arm and stamps an internal marker
+#'   # so [`sort_rows()`] can reject sort keys on those arm columns.
+#'   # `cols()` then attaches per-column display rules.
 #'   wide <- pivot_across(
 #'     saf_demo_card,
 #'     statistic = list(
@@ -85,18 +72,14 @@
 #'       stat_label               = col_spec(
 #'         usage = "group", label = "Statistic"
 #'       ),
-#'       Placebo                  = col_spec(
-#'         usage = "across", align = "decimal"
-#'       ),
+#'       Placebo                  = col_spec(align = "decimal"),
 #'       `Xanomeline High Dose`   = col_spec(
-#'         usage = "across", label = "High Dose", align = "decimal"
+#'         label = "High Dose", align = "decimal"
 #'       ),
 #'       `Xanomeline Low Dose`    = col_spec(
-#'         usage = "across", label = "Low Dose", align = "decimal"
+#'         label = "Low Dose", align = "decimal"
 #'       ),
-#'       Total                    = col_spec(
-#'         usage = "across", align = "decimal"
-#'       )
+#'       Total                    = col_spec(align = "decimal")
 #'     )
 #'   ```
 #'
@@ -138,8 +121,8 @@
 #'
 #' @param visible *Whether the column renders.*
 #'   `<logical(1)>: default TRUE`. `FALSE` hides the column from
-#'   output but keeps it in `spec@data` so [`sort_rows()`],
-#'   [`derive()`], and [`style()`] predicates can still reference it.
+#'   output but keeps it in `spec@data` so [`sort_rows()`] and
+#'   [`style()`] predicates can still reference it.
 #'
 #'   **Interaction:** Hidden columns are the standard pattern for
 #'   sort-key helpers (`row_type`, `n_total`) and for the numeric
@@ -433,7 +416,7 @@
 #' `tabular_spec` keyed by input column name.
 #'
 #' **Sibling build verbs:** [`headers()`], [`sort_rows()`],
-#' [`derive()`], [`style()`], [`paginate()`], [`preset()`].
+#' [`style()`], [`paginate()`], [`preset()`].
 #'
 #' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
 #' [`as_grid()`].

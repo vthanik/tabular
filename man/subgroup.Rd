@@ -186,8 +186,7 @@ tabular(demo, titles = "Pooled (no region partition)") |>
 
 }
 \seealso{
-\strong{Pipeline siblings:} \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=paginate]{paginate()}},
-\code{\link[=derive]{derive()}}.
+\strong{Pipeline siblings:} \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=paginate]{paginate()}}.
 
 \strong{Resolve / render:} \code{\link[=as_grid]{as_grid()}}, \code{\link[=emit]{emit()}}.
 }

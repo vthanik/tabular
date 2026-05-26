@@ -6,9 +6,8 @@
 #' Sort the display rows
 #'
 #' Attach a `sort_spec` to a `tabular_spec`. The engine applies the
-#' sort after [`derive()`] runs and before pagination, so `by` may
-#' reference any column in `spec@data` (including derived columns)
-#' whether or not the column is declared in [`cols()`].
+#' sort before pagination, so `by` may reference any column in
+#' `spec@data` whether or not the column is declared in [`cols()`].
 #'
 #' @details
 #'
@@ -35,9 +34,11 @@
 #'   sort). May reference columns not declared in [`cols()`] —
 #'   sort-only helper columns ride along through the engine.
 #'
-#'   **Restriction:** Every entry must be a column in `spec@data` (or
-#'   one that will be added by [`derive()`]). Cannot reference
-#'   `usage = "across"` columns; pivot upstream of the sort instead.
+#'   **Restriction:** Every entry must be a column in `spec@data`.
+#'   Cannot reference arm columns produced by [`pivot_across()`];
+#'   pivot upstream of the sort instead. Arm cells hold rendered
+#'   stat strings (e.g. `"75.2 (8.3)"`) that do not order
+#'   meaningfully.
 #'
 #'   ```r
 #'   # Two-key clinical sort: row_type ascending, n_total descending.
@@ -55,8 +56,8 @@
 #'   key and calls `order()` once on all keys.
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
-#'   [`derive()`], [`style()`], [`paginate()`], [`preset()`], then
-#'   render via [`emit()`] (or resolve without I/O via [`as_grid()`]).
+#'   [`style()`], [`paginate()`], [`preset()`], then render via
+#'   [`emit()`] (or resolve without I/O via [`as_grid()`]).
 #'
 #' @examples
 #' # ---- Example 1: AE table sorted by SOC, then by descending subject count ----
@@ -180,8 +181,7 @@
 #'
 #' @seealso
 #' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`derive()`], [`style()`], [`paginate()`],
-#' [`preset()`].
+#' [`headers()`], [`style()`], [`paginate()`], [`preset()`].
 #'
 #' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
 #' [`as_grid()`].
@@ -208,14 +208,14 @@ sort_rows <- function(spec, by = character(), descending = FALSE) {
       )
     }
 
-    across_cols <- .across_col_names(spec@cols)
+    across_cols <- .across_col_names(spec@data)
     bad_across <- intersect(by, across_cols)
     if (length(bad_across) > 0L) {
       cli::cli_abort(
         c(
-          "{.arg by} cannot reference {length(bad_across)} {.code usage = \"across\"} column{?s}.",
+          "{.arg by} cannot reference {length(bad_across)} arm column{?s} produced by {.fn pivot_across}.",
           "x" = "Offending: {.val {bad_across}}.",
-          "i" = "Across columns pivot into header bands; sort upstream of the pivot."
+          "i" = "Arm cells hold rendered stat strings; sort upstream of the pivot."
         ),
         class = "tabular_error_input",
         call = call
@@ -244,14 +244,15 @@ sort_rows <- function(spec, by = character(), descending = FALSE) {
 # Internal helpers
 # ---------------------------------------------------------------------
 
-.across_col_names <- function(cols) {
-  if (length(cols) == 0L) {
+# Return the names of arm columns produced by `pivot_across()`.
+# The reshaper stamps `attr(data, "across_cols")` on its return value;
+# sort_rows() reads that attribute to reject sort keys whose cells
+# hold rendered stat strings (e.g. "75.2 (8.3)"). NULL when the data
+# did not pass through pivot_across().
+.across_col_names <- function(data) {
+  out <- attr(data, "across_cols", exact = TRUE)
+  if (is.null(out)) {
     return(character())
   }
-  is_across <- vapply(
-    cols,
-    function(c) !is.na(c@usage) && c@usage == "across",
-    logical(1)
-  )
-  names(cols)[is_across]
+  as.character(out)
 }

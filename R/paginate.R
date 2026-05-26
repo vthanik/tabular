@@ -249,7 +249,7 @@
 #' the per-page row budget this verb depends on.
 #'
 #' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`derive()`], [`style()`].
+#' [`headers()`], [`sort_rows()`], [`style()`].
 #'
 #' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
 #' [`as_grid()`].
@@ -385,7 +385,6 @@ paginate <- function(
 }
 
 # Return the names of `usage = "group"` columns from a cols list.
-# Mirrors `.across_col_names()` in R/sort_rows.R.
 .group_col_names <- function(cols) {
   if (length(cols) == 0L) {
     return(character())

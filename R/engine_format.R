@@ -1,9 +1,8 @@
 # engine_format.R — resolve-engine phase that converts a
 # tabular_spec's data + string slots into formatted text + parsed
-# inline_ast. Runs between engine_derive / engine_sort (which finalize
-# the data frame and row order) and engine_decimal (which space-pads
-# decimal-aligned columns). The output is the canonical hand-off to
-# the backend layer:
+# inline_ast. Runs after engine_sort (which finalizes row order) and
+# before engine_decimal (which space-pads decimal-aligned columns).
+# The output is the canonical hand-off to the backend layer:
 #
 #   cells_text       : character matrix, one cell per (row, col).
 #                      NA values substituted with the column's

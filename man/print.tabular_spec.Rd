@@ -65,9 +65,8 @@ artefact. The viewer pane cannot render RTF / OOXML, and
 we deliberately do \emph{not} compile through tinytex on every
 autoprint.
 \item \code{"cli"} — print the structural cli-tree summary (props,
-headers, derives, sort, pagination, preset). Useful for
-debugging spec composition without paying the HTML render
-cost.
+headers, sort, pagination, preset). Useful for debugging
+spec composition without paying the HTML render cost.
 }
 
 \strong{Robustness.} The HTML render is wrapped in \code{tryCatch}; if

@@ -386,7 +386,7 @@ row budget from the active preset's paper, orientation, margins,
 and font size.
 
 \strong{Sibling build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},
-\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}.
+\code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}}, \code{\link[=style]{style()}}.
 
 \strong{Entry / terminal verbs:} \code{\link[=tabular]{tabular()}}, \code{\link[=emit]{emit()}},
 \code{\link[=as_grid]{as_grid()}}.

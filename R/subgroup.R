@@ -189,8 +189,7 @@
 #'   subgroup(character())
 #'
 #' @seealso
-#' **Pipeline siblings:** [`sort_rows()`], [`paginate()`],
-#' [`derive()`].
+#' **Pipeline siblings:** [`sort_rows()`], [`paginate()`].
 #'
 #' **Resolve / render:** [`as_grid()`], [`emit()`].
 #'

@@ -179,9 +179,9 @@
 #'
 #' **Predicate vocabulary.** `cells_body(where = pvalue < 0.05)` is
 #' the canonical data-driven filter — `where` is captured as an rlang
-#' quosure and evaluated at engine time against the post-[`derive()`]
-#' grid. Mutually exclusive with `i` (you target *either* by index
-#' *or* by predicate, not both).
+#' quosure and evaluated at engine time against the post-sort grid.
+#' Mutually exclusive with `i` (you target *either* by index *or* by
+#' predicate, not both).
 #'
 #' **Why `cells_headers` not `cells_column_spanners`.** The verb that
 #' builds the multi-level header tree is named [`headers()`]. The
@@ -348,9 +348,7 @@ cells_headers <- function(level = NULL, labels = NULL, j = NULL) {
     level <- as.integer(level)
   }
   if (!is.null(labels)) {
-    if (
-      !is.character(labels) || length(labels) == 0L || anyNA(labels)
-    ) {
+    if (!is.character(labels) || length(labels) == 0L || anyNA(labels)) {
       cli::cli_abort(
         "{.arg labels} must be a non-empty character vector with no NAs.",
         class = "tabular_error_input",

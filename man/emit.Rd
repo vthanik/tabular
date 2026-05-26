@@ -9,9 +9,9 @@ emit(spec, file, format = NULL, data_file = NULL, manifest = FALSE)
 \arguments{
 \item{spec}{\emph{The \code{tabular_spec} to render.}
 \verb{<tabular_spec>: required}. The full verb chain (\code{\link[=tabular]{tabular()}}
--> \code{\link[=cols]{cols()}} -> \code{\link[=headers]{headers()}} -> \code{\link[=sort_rows]{sort_rows()}} -> \code{\link[=derive]{derive()}}
--> \code{\link[=style]{style()}} -> \code{\link[=paginate]{paginate()}} -> \code{\link[=preset]{preset()}}) feeds into
-\code{emit()}'s first argument by pipe.}
+-> \code{\link[=cols]{cols()}} -> \code{\link[=headers]{headers()}} -> \code{\link[=sort_rows]{sort_rows()}} -> \code{\link[=style]{style()}}
+-> \code{\link[=paginate]{paginate()}} -> \code{\link[=preset]{preset()}}) feeds into \code{emit()}'s first
+argument by pipe.}
 
 \item{file}{\emph{Destination path for the rendered artefact.}
 \verb{<character(1)>: required}. Extension drives the backend (see
@@ -112,8 +112,8 @@ file from it (suffix, sibling folder, separate sponsor-styled
 name). Recognised extensions on the returned path are \code{.csv},
 \code{.tsv} (alias: \code{.txt}), and \code{.rds}; anything else raises
 \code{tabular_error_input}. The written data frame is the post-
-\code{\link[=derive]{derive()}} / post-\code{\link[=sort_rows]{sort_rows()}} / post-\code{engine_decimal()}
-wide grid — exactly the cell text the backend wrote.
+\code{\link[=sort_rows]{sort_rows()}} / post-\code{engine_decimal()} wide grid — exactly
+the cell text the backend wrote.
 
 \strong{\code{manifest = TRUE} writes a sidecar.} The audit manifest is
 written to \verb{<file>.audit.yml} next to the render (e.g. \code{out.md}
@@ -251,7 +251,7 @@ without writing a file — use during development to inspect what
 
 \strong{Build verbs the pipeline feeds from:} \code{\link[=tabular]{tabular()}},
 \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}}, \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
-\code{\link[=derive]{derive()}}, \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
+\code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.
 
 \strong{Inline formatting helpers:} \code{\link[=md]{md()}}, \code{\link[=html]{html()}} (titles,
 footnotes, labels, cell text).

@@ -393,9 +393,9 @@
   Filter(function(v) length(v) > 0L && !all(is.na(v)), fields)
 }
 
-# Input provenance: shape of the resolved data frame (post-derive,
-# post-sort). Mirrors the field names in the CDISC ARS reference
-# bible's example.
+# Input provenance: shape of the resolved data frame (post-sort).
+# Mirrors the field names in the CDISC ARS reference bible's
+# example.
 .x_tabular_input_provenance <- function(grid) {
   meta <- grid@metadata
   list(

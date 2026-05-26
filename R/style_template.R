@@ -99,7 +99,11 @@ is_style_template <- function(x) {
 #' @noRd
 print.tabular_style_template <- function(x, ...) {
   n <- length(x$layers)
-  cat(sprintf("<tabular_style_template: %d layer%s>\n", n, if (n == 1L) "" else "s"))
+  cat(sprintf(
+    "<tabular_style_template: %d layer%s>\n",
+    n,
+    if (n == 1L) "" else "s"
+  ))
   if (n == 0L) {
     return(invisible(x))
   }

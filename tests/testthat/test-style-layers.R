@@ -85,8 +85,14 @@ test_that("border = brdr(...) sets all four sides", {
     style(border = brdr("thin", "solid", "#666"), at = cells_table())
   node <- spec@styles@layers[[1]]@style
   for (side in c("top", "bottom", "left", "right")) {
-    expect_identical(S7::prop(node, paste0("border_", side, "_style")), "solid")
-    expect_identical(S7::prop(node, paste0("border_", side, "_color")), "#666")
+    expect_identical(
+      S7::prop(node, paste0("border_", side, "_style")),
+      "solid"
+    )
+    expect_identical(
+      S7::prop(node, paste0("border_", side, "_color")),
+      "#666"
+    )
   }
 })
 

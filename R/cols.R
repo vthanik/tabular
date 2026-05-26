@@ -9,7 +9,7 @@
 #' is one column: the name is the input column in `.spec@data` and the
 #' value is the `col_spec` carrying that column's display attributes
 #' (usage, label, format, alignment, width, visibility, NA text).
-#' Columns not mentioned get a default `col_spec(usage = "display")`
+#' Columns not mentioned get a default `col_spec()` (usage = display)
 #' at engine-validate time.
 #'
 #' @details
@@ -66,18 +66,17 @@
 #'   is supplied positionally.
 #'
 #' @param ... *Named `col_spec` objects, one per column.* Each name
-#'   is the input column name in `.spec@data`; each value is a
-#'   [`col_spec()`].
+#'   is the input column name in `.spec@data`. Names must match an
+#'   existing column — pre-compute derived columns upstream with
+#'   `dplyr::mutate()` (or equivalent) before [`tabular()`].
 #'
-#'   **Restriction:** Each name must match a column in `.spec@data`,
-#'   OR carry `usage = "computed"` (column supplied by a later
-#'   [`derive()`] call). Names must be unique within a single
-#'   `cols()` call (duplicates warn; "last value wins").
+#'   **Restriction:** Names must be unique within a single `cols()`
+#'   call (duplicates warn; "last value wins").
 #'   **Tip:** To override an attribute already declared, use a
 #'   second `cols()` call downstream and let the merge rule apply.
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
-#'   [`headers()`], [`sort_rows()`], [`derive()`], [`style()`].
+#'   [`headers()`], [`sort_rows()`], [`style()`].
 #'
 #' @examples
 #' # ---- Example 1: Demographics with arm BigN inline in headers ----
@@ -178,25 +177,26 @@
 #'     Total    = col_spec(width = "0.9in")
 #'   )
 #'
-#' # ---- Example 4: Compact AE-overall with computed Active column ----
+#' # ---- Example 4: Compact AE-overall with pre-derived Active column ----
 #' #
-#' # Drop the per-arm columns and surface only the Total. A
-#' # `usage = "computed"` column adds a pooled "Active" denominator
-#' # built from the two drug arms — `derive()` computes the values,
-#' # `cols()` declares the column's role so the engine treats it
-#' # like a data column rather than a group column.
+#' # Drop the per-arm columns and surface only the Total. Pre-compute
+#' # the pooled "Active" column upstream (here `paste0(drug_50, " / ",
+#' # drug_100)`) before piping into `tabular()`; `cols()` then just
+#' # declares each column's display role. The same pattern handles
+#' # any post-pivot derivation (`pivot_across() |> mutate(...) |>
+#' # tabular()`).
+#' ae <- saf_aeoverall
+#' ae$active <- paste0(ae$drug_50, " / ", ae$drug_100)
+#'
 #' tabular(
-#'   saf_aeoverall,
+#'   ae,
 #'   titles = c("Table 14.3.0", "Adverse Event Overview"),
 #'   footnotes = "Active = pooled Drug 50 + Drug 100 columns."
 #' ) |>
-#'   derive(
-#'     active = paste0(drug_50, " / ", drug_100)
-#'   ) |>
 #'   cols(
 #'     stat_label = col_spec(usage = "group", label = ""),
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
-#'     active     = col_spec(usage = "computed", label = "Active arms"),
+#'     active     = col_spec(label = "Active arms"),
 #'     drug_50    = col_spec(visible = FALSE),
 #'     drug_100   = col_spec(visible = FALSE),
 #'     Total      = col_spec(label = "Total", align = "decimal")
@@ -207,7 +207,7 @@
 #' DSL object that `cols()` attaches.
 #'
 #' **Sibling build verbs:** [`headers()`], [`sort_rows()`],
-#' [`derive()`], [`style()`], [`paginate()`], [`preset()`].
+#' [`style()`], [`paginate()`], [`preset()`].
 #'
 #' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
 #' [`as_grid()`].
@@ -266,13 +266,12 @@ cols <- function(.spec, ...) {
   data_cols <- names(.spec@data)
   for (i in seq_along(args)) {
     nm <- arg_names[[i]]
-    cs <- args[[i]]
-    if (!(nm %in% data_cols) && !.is_computed(cs)) {
+    if (!(nm %in% data_cols)) {
       cli::cli_abort(
         c(
           "{.val {nm}} is not a column of {.arg data}.",
           "x" = "Available columns: {.val {data_cols}}.",
-          "i" = "For derived columns, set {.code usage = \"computed\"} and add a {.fn derive} entry."
+          "i" = "Pre-compute derived columns upstream with {.fn dplyr::mutate} (or equivalent) before {.fn tabular}."
         ),
         class = "tabular_error_input",
         call = call
@@ -297,11 +296,6 @@ cols <- function(.spec, ...) {
 # ---------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------
-
-.is_computed <- function(cs) {
-  u <- cs@usage
-  is.character(u) && length(u) == 1L && !is.na(u) && u == "computed"
-}
 
 # Merge `new` into `existing` field-by-field. A non-default value in
 # `new` overrides the corresponding field in `existing`; a default

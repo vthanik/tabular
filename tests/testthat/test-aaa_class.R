@@ -8,8 +8,8 @@
 # the S7 validator still catches bad input from set_props() in
 # engine code).
 
-test_that(".col_spec_class accepts the 4 valid usage values", {
-  for (u in c("display", "group", "across", "computed")) {
+test_that(".col_spec_class accepts the 2 valid usage values", {
+  for (u in c("display", "group")) {
     expect_true(is_col_spec(tabular:::.col_spec_class(usage = u)))
   }
 })
@@ -54,18 +54,6 @@ test_that("sort_spec() builds with defaults", {
   expect_true(is_sort_spec(s))
   expect_identical(s@by, character())
   expect_false(s@descending)
-})
-
-# derive_spec ---------------------------------------------------------
-
-test_that("derive_spec() defaults to numeric type", {
-  d <- derive_spec(name = "pct")
-  expect_true(is_derive_spec(d))
-  expect_identical(d@type, "numeric")
-})
-
-test_that("derive_spec() rejects unknown type", {
-  expect_error(derive_spec(name = "x", type = "logical"), "must be one of")
 })
 
 # style_node ----------------------------------------------------------

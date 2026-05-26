@@ -109,8 +109,8 @@ engine_paginate <- function(spec) {
   # Filter visible columns BEFORE pagination so the slice phase
   # (`.slice_one_page`) and every backend see only the columns the
   # user wants rendered. Hidden columns (col_spec@visible = FALSE)
-  # remain in spec@data for upstream phases (sort_rows / derive /
-  # subgroup) but never reach the backend renderer.
+  # remain in spec@data for upstream phases (sort_rows / subgroup)
+  # but never reach the backend renderer.
   visible_col_names <- .visible_col_names(spec, col_names)
   col_panels <- .compute_horizontal_panels(
     col_names = visible_col_names,

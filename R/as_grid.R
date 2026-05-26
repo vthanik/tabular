@@ -13,25 +13,23 @@
 #
 # Pipeline order (locked):
 #
-#   1. engine_derive()    — materialise derived columns onto spec@data.
-#   2. engine_sort()      — apply sort_spec to data rows.
-#   3. engine_headers()   — validate + flatten spec@headers into a
+#   1. engine_sort()      — apply sort_spec to data rows.
+#   2. engine_headers()   — validate + flatten spec@headers into a
 #                           band grid (rows = header cells).
-#   4. engine_style()     — resolve style predicates into a per-cell
+#   3. engine_style()     — resolve style predicates into a per-cell
 #                           style matrix (one style_node per cell).
-#   5. engine_format()    — per-column format + NA substitution +
+#   4. engine_format()    — per-column format + NA substitution +
 #                           parse_inline() over cells, titles,
 #                           footnotes, and col labels.
-#   6. engine_decimal()   — column-wide decimal alignment for any
+#   5. engine_decimal()   — column-wide decimal alignment for any
 #                           col_spec(align = "decimal").
-#   7. engine_paginate()  — split into pages (vertical row chunks +
+#   6. engine_paginate()  — split into pages (vertical row chunks +
 #                           horizontal panel chunks).
 #
-# Steps 1-2 mutate the spec (data widened by derives, then sorted).
-# Steps 3-6 read from the post-derive/post-sort spec and produce
-# parallel matrices and lists, all aligned to the same row order.
-# Step 7 returns a plan that the slicer uses to project per-page
-# views of those matrices.
+# Step 1 mutates the spec (sort reorders @data). Steps 2-5 read from
+# the post-sort spec and produce parallel matrices and lists, all
+# aligned to the same row order. Step 6 returns a plan that the
+# slicer uses to project per-page views of those matrices.
 
 # ---------------------------------------------------------------------
 # Public entry
@@ -53,24 +51,20 @@
 #' fixed order; the order matters because each phase reads the post-
 #' previous-phase state of the spec:
 #'
-#' 1. `engine_derive()` — materialise computed columns onto
-#'    `spec@data`. Derived columns become first-class from this
-#'    point forward.
-#' 2. `engine_sort()` — apply the sort spec; sort keys may reference
-#'    derived columns.
-#' 3. `engine_headers()` — validate the header tree and flatten it
+#' 1. `engine_sort()` — apply the sort spec.
+#' 2. `engine_headers()` — validate the header tree and flatten it
 #'    to a band grid.
-#' 4. `engine_style()` — evaluate every style predicate against the
-#'    post-derive, post-sort data grid. A predicate may reference
-#'    any column in `spec@data` (including derives).
-#' 5. `engine_format()` — apply per-column formats, substitute
+#' 3. `engine_style()` — evaluate every style predicate against the
+#'    post-sort data grid. A predicate may reference any column in
+#'    `spec@data`.
+#' 4. `engine_format()` — apply per-column formats, substitute
 #'    `na_text`, and parse every cell / title / footnote / label
 #'    through `parse_inline()` to its `inline_ast`.
-#' 6. `engine_decimal()` — column-wide decimal alignment for any
+#' 5. `engine_decimal()` — column-wide decimal alignment for any
 #'    column flagged `col_spec(align = "decimal")`. Operates on the
 #'    formatted text; output is the same character matrix with NBSP
 #'    padding inserted so the decimal marks line up.
-#' 7. `engine_paginate()` — split into pages (vertical row chunks +
+#' 6. `engine_paginate()` — split into pages (vertical row chunks +
 #'    horizontal panel chunks). The plan drives the per-page slicing
 #'    of cells / styles / ASTs below.
 #'
@@ -87,8 +81,8 @@
 #'
 #' @param spec *The `tabular_spec` to resolve.*
 #'   `<tabular_spec>: required`. Built by the verb chain ([`tabular()`]
-#'   -> [`cols()`] -> [`headers()`] -> [`sort_rows()`] -> [`derive()`]
-#'   -> [`style()`] -> [`paginate()`] -> [`preset()`]).
+#'   -> [`cols()`] -> [`headers()`] -> [`sort_rows()`] -> [`style()`]
+#'   -> [`paginate()`] -> [`preset()`]).
 #'
 #' @return *A `tabular_grid` S7 object.* Two slots:
 #'   * `@pages` — a list of one entry per display page. Each entry is
@@ -248,7 +242,7 @@
 #'
 #' **Build verbs the pipeline feeds from:** [`tabular()`],
 #' [`cols()`] / [`col_spec()`], [`headers()`], [`sort_rows()`],
-#' [`derive()`], [`style()`], [`paginate()`], [`preset()`].
+#' [`style()`], [`paginate()`], [`preset()`].
 #'
 #' **Inline formatting helpers:** [`md()`], [`html()`].
 #'
@@ -301,7 +295,6 @@ as_grid <- function(spec) {
 # is stamped with subgroup_* fields and a pre-rendered
 # subgroup_line_ast banner.
 .resolve_single_to_grid <- function(spec, format, call, runtime) {
-  spec <- engine_derive(spec)
   spec <- engine_sort(spec)
 
   headers <- engine_headers(spec)
