@@ -4,12 +4,25 @@
 \alias{set_preset}
 \title{Set or clear the session default preset}
 \usage{
-set_preset(..., .template = NULL, .style = NULL, .reset = FALSE)
+set_preset(new = NULL, ..., .template = NULL, .style = NULL, .reset = FALSE)
 }
 \arguments{
+\item{new}{\emph{A \code{preset_spec} to install wholesale.}
+\verb{<preset_spec | NULL>: default NULL}. When non-\code{NULL}, replaces
+the session preset in one call without touching knobs. The
+primary use is the save/restore round-trip
+(\verb{old <- set_preset(...); set_preset(old)}) — \code{new} accepts any
+\code{preset_spec} previously returned by \code{set_preset()} or
+\code{\link[=get_preset]{get_preset()}}.
+
+Mutually exclusive with \code{...}, \code{.template}, \code{.style}, \code{.reset}:
+passing any of those alongside a non-\code{NULL} \code{new} raises
+\code{tabular_error_input}.}
+
 \item{...}{\emph{Named preset knobs.} Same shape as \code{\link[=preset]{preset()}}; see
 that verb for the full list of 13 recognised knobs. Unknown
-names raise \code{tabular_error_input}.}
+names raise \code{tabular_error_input}. Mutually exclusive with
+a non-\code{NULL} \code{new}.}
 
 \item{.template}{\emph{A \code{preset_spec} to bulk-apply before \code{...}.}
 \verb{<preset_spec | NULL>: default NULL}. Same semantics as
@@ -28,14 +41,18 @@ per-spec \code{\link[=style]{style()}} calls.}
 the session default back to NULL.}
 }
 \value{
-Invisibly returns the new session \code{preset_spec} (or NULL
-when the call cleared the default).
+\emph{The previous session \code{preset_spec} (invisible).} Returns
+\code{NULL} when no session preset was attached prior to the call.
+Capture it to round-trip a temporary override:
+\verb{old <- set_preset(...); set_preset(old)}. Mirrors
+\code{\link[ggplot2:get_theme]{ggplot2::theme_set()}} and \code{base::options()} — the canonical
+tidyverse save/restore primitive.
 }
 \description{
 Stash a \code{preset_spec} in the package-internal session environment.
 Every subsequent \code{tabular()} chain that does not attach its own
 \code{\link[=preset]{preset()}} inherits these knobs at render time. Mirrors ggplot2's
-\code{\link[ggplot2:theme_set]{ggplot2::theme_set()}}: one call up front, many tables downstream.
+\code{\link[ggplot2:get_theme]{ggplot2::theme_set()}}: one call up front, many tables downstream.
 }
 \details{
 \strong{Persistence.} The session preset lives in a package-internal
@@ -46,10 +63,26 @@ default at the top of each analysis script (or in a project-level
 
 \strong{Merge, not replace.} A second \code{set_preset()} call merges its
 knobs onto the existing session preset; unspecified knobs keep
-their prior value. Pass \code{reset = TRUE} to discard the existing
+their prior value. Pass \code{.reset = TRUE} to discard the existing
 session preset and start from \code{preset_spec()} defaults.
 \code{set_preset(.reset = TRUE)} with no knobs clears the session
 default back to NULL.
+
+\strong{Save and restore.} Every call returns the \emph{previous} session
+preset invisibly, the same primitive ggplot2's
+\code{\link[ggplot2:get_theme]{ggplot2::theme_set()}} ships. Capture it once, render, and
+restore by passing the saved value back as the positional \code{new}
+argument:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{old <- set_preset(font_size = 10, paper_size = "a4")
+# ... one renegade render at 10pt A4 ...
+set_preset(old)        # restore
+}\if{html}{\out{</div>}}
+
+When the prior was \code{NULL} (no session preset ever attached), the
+restore is \code{set_preset(.reset = TRUE)} instead — \code{set_preset(NULL)}
+is the same shape as \code{set_preset()} and falls through to factory
+defaults rather than clearing the session.
 
 \strong{Cascade with \code{preset()}.} A per-spec \code{\link[=preset]{preset()}} always wins
 over the session default. The session default fills in only when
@@ -108,6 +141,49 @@ get_preset()@orientation  # "landscape"
 
 # Reset the session default so subsequent examples / R sessions
 # are not affected.
+set_preset(.reset = TRUE)
+
+# ---- Example 3: Save and restore around a renegade table ----
+#
+# Most of the submission renders portrait letter at 9pt. One
+# renegade efficacy table needs landscape A4 at 10pt. Capture
+# the prior session preset, render the renegade, then restore.
+set_preset(font_size = 9, paper_size = "letter")
+
+old <- set_preset(
+  font_size   = 10,
+  paper_size  = "a4",
+  orientation = "landscape"
+)
+# ... one renegade render ...
+if (is.null(old)) {
+  set_preset(.reset = TRUE)   # was no prior — clear
+} else {
+  set_preset(old)              # round-trip via the positional `new` arg
+}
+get_preset()@paper_size  # "letter" — restored
+
+# ---- Example 4: Snapshot current preset, mutate, restore ----
+#
+# Capture whatever the session preset is right now (may be NULL),
+# let a downstream helper mutate it, then put it back when done.
+set_preset(font_size = 9, paper_size = "letter")
+snapshot <- get_preset()
+
+# Simulate downstream code mutating session state.
+set_preset(font_size = 11, orientation = "landscape")
+
+# Restore. The wholesale-install path of `set_preset(new)`
+# accepts any `preset_spec` returned by `get_preset()` /
+# `set_preset()`.
+if (is.null(snapshot)) {
+  set_preset(.reset = TRUE)
+} else {
+  set_preset(snapshot)
+}
+get_preset()@font_size    # 9 — restored
+
+# Reset for subsequent examples / R sessions.
 set_preset(.reset = TRUE)
 
 }
