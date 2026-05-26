@@ -202,3 +202,41 @@ test_that("subgroup() template-unknown-col error message names the bad ref", {
       subgroup("variable", label = "Cohort: {nonexistent}")
   )
 })
+
+# ---------------------------------------------------------------------
+# Coverage — subgroup_spec validator branches
+# ---------------------------------------------------------------------
+
+test_that("subgroup_spec() rejects NA in @by directly", {
+  expect_error(
+    tabular:::subgroup_spec(by = c("a", NA_character_), label = NULL),
+    regexp = "@by"
+  )
+})
+
+test_that("subgroup_spec() rejects empty strings in @by", {
+  expect_error(
+    tabular:::subgroup_spec(by = c("a", ""), label = NULL),
+    regexp = "@by"
+  )
+})
+
+test_that("subgroup_spec() rejects non-character label values", {
+  expect_error(
+    tabular:::subgroup_spec(by = "a", label = 42)
+  )
+})
+
+test_that("subgroup_spec() rejects multi-element character label", {
+  expect_error(
+    tabular:::subgroup_spec(by = "a", label = c("x", "y")),
+    regexp = "@label"
+  )
+})
+
+test_that("subgroup_spec() rejects NA character label", {
+  expect_error(
+    tabular:::subgroup_spec(by = "a", label = NA_character_),
+    regexp = "@label"
+  )
+})

@@ -137,3 +137,42 @@ test_that("emit(.pdf) compiles a minimal spec end to end (when TeX is available)
   expect_true(file.exists(out))
   expect_gt(file.info(out)$size, 0L)
 })
+
+# ---------------------------------------------------------------------
+# Mocked-compile coverage — exercise the backend_pdf() body and
+# .pdf_compile_abort() without requiring tinytex on the test host.
+# ---------------------------------------------------------------------
+
+test_that("backend_pdf() aborts with tabular_error_backend when latexmk fails", {
+  skip_if_not_installed("tinytex")
+  testthat::local_mocked_bindings(
+    latexmk = function(file, engine, pdf_file) {
+      stop("! LaTeX Error: File `tabularray.sty' not found.")
+    },
+    .package = "tinytex"
+  )
+  spec <- tabular(data.frame(x = 1:2), titles = "T")
+  grid <- as_grid(spec)
+  out <- withr::local_tempfile(fileext = ".pdf")
+  expect_error(
+    backend_pdf(grid, out),
+    class = "tabular_error_backend"
+  )
+})
+
+test_that("backend_pdf() returns the file path invisibly on a mocked successful compile", {
+  skip_if_not_installed("tinytex")
+  testthat::local_mocked_bindings(
+    latexmk = function(file, engine, pdf_file) {
+      writeLines("%PDF-stub", pdf_file)
+      pdf_file
+    },
+    .package = "tinytex"
+  )
+  spec <- tabular(data.frame(x = 1L), titles = "T")
+  grid <- as_grid(spec)
+  out <- withr::local_tempfile(fileext = ".pdf")
+  result <- backend_pdf(grid, out)
+  expect_identical(result, out)
+  expect_true(file.exists(out))
+})

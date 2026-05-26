@@ -210,3 +210,33 @@ test_that("col_spec(label = '   ') (whitespace-only) is accepted", {
   cs <- col_spec(label = "   ")
   expect_identical(cs@label, "   ")
 })
+
+# ---------------------------------------------------------------------
+# Coverage — col_spec validator branches
+# ---------------------------------------------------------------------
+
+test_that("col_spec(width = '0in') is rejected (must be positive)", {
+  expect_error(col_spec(width = "0in"), class = "tabular_error_input")
+})
+
+test_that("col_spec(width = '-1in') is rejected via parse_dim error", {
+  expect_error(col_spec(width = "-1in"), class = "tabular_error_input")
+})
+
+test_that("col_spec(na_text = c('a','b')) is rejected (must be length 1)", {
+  expect_error(col_spec(na_text = c("a", "b")), class = "tabular_error_input")
+})
+
+test_that("col_spec(group_display = 'bogus') is rejected", {
+  expect_error(
+    col_spec(group_display = "bogus"),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("col_spec(group_skip = c(TRUE, FALSE)) is rejected (length 1)", {
+  expect_error(
+    col_spec(group_skip = c(TRUE, FALSE)),
+    class = "tabular_error_input"
+  )
+})

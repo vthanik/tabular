@@ -770,10 +770,6 @@ preset_spec <- S7::new_class(
     fonts = S7::new_property(S7::class_list, default = list()),
     colors = S7::new_property(S7::class_list, default = list()),
     padding = S7::new_property(S7::class_list, default = list()),
-    title_pad_top = S7::new_property(S7::class_numeric, default = 1L),
-    title_pad_bottom = S7::new_property(S7::class_numeric, default = 1L),
-    body_pad_top = S7::new_property(S7::class_numeric, default = 0L),
-    body_pad_bottom = S7::new_property(S7::class_numeric, default = 0L),
     # @style — ordered list of `style_layer` records that flow into
     # every spec rendered against this preset. Populated via
     # `preset(spec, style = style_template())` or `set_preset(style =
@@ -880,38 +876,6 @@ preset_spec <- S7::new_class(
     pa_err <- .preset_padding_shape_error(self@padding)
     if (!is.null(pa_err)) {
       return(paste0("@padding ", pa_err))
-    }
-    if (
-      length(self@title_pad_top) != 1L ||
-        is.na(self@title_pad_top) ||
-        self@title_pad_top < 0 ||
-        self@title_pad_top != trunc(self@title_pad_top)
-    ) {
-      return("@title_pad_top must be a length-1 non-negative whole number")
-    }
-    if (
-      length(self@title_pad_bottom) != 1L ||
-        is.na(self@title_pad_bottom) ||
-        self@title_pad_bottom < 0 ||
-        self@title_pad_bottom != trunc(self@title_pad_bottom)
-    ) {
-      return("@title_pad_bottom must be a length-1 non-negative whole number")
-    }
-    if (
-      length(self@body_pad_top) != 1L ||
-        is.na(self@body_pad_top) ||
-        self@body_pad_top < 0 ||
-        self@body_pad_top != trunc(self@body_pad_top)
-    ) {
-      return("@body_pad_top must be a length-1 non-negative whole number")
-    }
-    if (
-      length(self@body_pad_bottom) != 1L ||
-        is.na(self@body_pad_bottom) ||
-        self@body_pad_bottom < 0 ||
-        self@body_pad_bottom != trunc(self@body_pad_bottom)
-    ) {
-      return("@body_pad_bottom must be a length-1 non-negative whole number")
     }
     NULL
   }

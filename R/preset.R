@@ -44,11 +44,7 @@
   "borders",
   "fonts",
   "colors",
-  "padding",
-  "title_pad_top",
-  "title_pad_bottom",
-  "body_pad_top",
-  "body_pad_bottom"
+  "padding"
 )
 
 # List-valued knobs on `preset_spec` that should SHALLOW-MERGE across

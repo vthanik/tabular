@@ -163,20 +163,10 @@ backend_rtf <- function(grid, file) {
   }
 
   blank_par <- "\\pard\\plain\\par"
-  pad_title_top <- .rtf_blank_count(
-    cs,
-    "title",
-    "above",
-    preset@title_pad_top
-  )
-  pad_title_bottom <- .rtf_blank_count(
-    cs,
-    "title",
-    "below",
-    preset@title_pad_bottom
-  )
-  pad_body_top <- as.integer(preset@body_pad_top)
-  pad_body_bottom <- as.integer(preset@body_pad_bottom)
+  pad_title_top <- .rtf_blank_count(cs, "title", "above", 1L)
+  pad_title_bottom <- .rtf_blank_count(cs, "title", "below", 1L)
+  pad_body_top <- 0L
+  pad_body_bottom <- 0L
 
   if (page_number == 1L) {
     titles <- .render_rtf_title_block(

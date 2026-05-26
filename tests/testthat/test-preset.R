@@ -131,46 +131,37 @@ test_that("preset() snapshot errors", {
 })
 
 # ---------------------------------------------------------------------
-# Title + body pad knobs (Phase 7c)
+# Title + body pad knobs — superseded. Title pad is now driven by
+# `style(at = cells_title(), blank_above = N)`; body pad is no
+# longer a user-tunable surface (factory default 0 / 0 hardcoded
+# per backend).
 # ---------------------------------------------------------------------
 
-test_that("preset_spec() default pads: title 1 / 1, body 0 / 0", {
-  # body_pad_* defaults to 0 to avoid stacking with title_pad_bottom
-  # below the title block — opt-in for subgroup banner + no-footnote
-  # cases.
-  p <- preset_spec()
-  expect_equal(p@title_pad_top, 1L)
-  expect_equal(p@title_pad_bottom, 1L)
-  expect_equal(p@body_pad_top, 0L)
-  expect_equal(p@body_pad_bottom, 0L)
+test_that("style(at = cells_title(), blank_above = N) reaches the title pad pipeline", {
+  template <- style_template() |>
+    style(at = cells_title(), blank_above = 3L, blank_below = 2L)
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = "Demo"
+  ) |>
+    preset(style = template)
+  expect_silent(as_grid(spec))
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # blank_above = 3 emits >= 3 leading `\pard\plain\par` paragraphs.
+  blanks <- length(gregexpr("\\\\pard\\\\plain\\\\par", rtf)[[1L]])
+  expect_gte(blanks, 3L)
 })
 
-test_that("preset() accepts integer and numeric pad values", {
-  spec <- tabular(data.frame(x = 1:3))
-  out <- preset(
-    spec,
-    title_pad_top = 0L,
-    title_pad_bottom = 2,
-    body_pad_top = 0,
-    body_pad_bottom = 3L
+test_that("preset() no longer accepts title_pad_top / body_pad_bottom (cut in v0.1.0)", {
+  spec <- tabular(data.frame(x = 1L))
+  expect_error(
+    preset(spec, title_pad_top = 2L),
+    class = "tabular_error_input"
   )
-  expect_equal(out@preset@title_pad_top, 0L)
-  expect_equal(out@preset@title_pad_bottom, 2)
-  expect_equal(out@preset@body_pad_top, 0)
-  expect_equal(out@preset@body_pad_bottom, 3L)
-})
-
-test_that("preset() rejects negative / fractional / NA / length>1 pad values", {
-  spec <- tabular(data.frame(x = 1:3))
-  bad_inputs <- list(-1, 1.5, NA_real_, c(1, 2))
-  for (bad in bad_inputs) {
-    expect_error(
-      preset(spec, title_pad_top = bad),
-      class = "tabular_error_input"
-    )
-    expect_error(
-      preset(spec, body_pad_bottom = bad),
-      class = "tabular_error_input"
-    )
-  }
+  expect_error(
+    preset(spec, body_pad_bottom = 2L),
+    class = "tabular_error_input"
+  )
 })

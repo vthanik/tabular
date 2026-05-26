@@ -734,3 +734,34 @@ test_that(".set_border_triple coerces non-style_node input via style_node()", {
   expect_identical(out@border_top_width, 0.5)
   expect_identical(out@border_top_color, "#000")
 })
+
+# ---------------------------------------------------------------------
+# Coverage — preset_spec validator branches that earlier tests didn't
+# trigger (chrome_onscreen, paginate dimension parse, body_pad_top
+# negative, margin parse error).
+# ---------------------------------------------------------------------
+
+test_that("preset_spec(chrome_onscreen = 'bogus') is rejected", {
+  expect_error(
+    tabular:::preset_spec(chrome_onscreen = "bogus"),
+    regexp = "@chrome_onscreen"
+  )
+})
+
+test_that("preset_spec(margins = c(1, 2, 3)) is rejected (length must be 1/2/4)", {
+  expect_error(
+    tabular:::preset_spec(margins = c(1, 2, 3)),
+    regexp = "@margins"
+  )
+})
+
+test_that("preset_spec(margins = '50%') is rejected (percent not allowed)", {
+  expect_error(
+    tabular:::preset_spec(margins = "50%")
+  )
+})
+
+# Note: preset_spec@title_pad_* / @body_pad_* slots were dropped in
+# v0.1.0; their validator branches no longer exist. Title pad now
+# routes through `style(at = cells_title(), blank_above = N)`; body
+# pad is a hardcoded backend constant (0 / 0).

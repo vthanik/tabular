@@ -143,20 +143,10 @@ backend_md <- function(grid, file) {
 .render_md_page <- function(page, meta, page_number, total_pages) {
   out <- character()
   cs <- meta$chrome_style %||% chrome_style()
-  pad_title_top <- .md_blank_count(
-    cs,
-    "title",
-    "above",
-    meta$preset@title_pad_top
-  )
-  pad_title_bottom <- .md_blank_count(
-    cs,
-    "title",
-    "below",
-    meta$preset@title_pad_bottom
-  )
-  pad_body_top <- as.integer(meta$preset@body_pad_top)
-  pad_body_bottom <- as.integer(meta$preset@body_pad_bottom)
+  pad_title_top <- .md_blank_count(cs, "title", "above", 1L)
+  pad_title_bottom <- .md_blank_count(cs, "title", "below", 1L)
+  pad_body_top <- 0L
+  pad_body_bottom <- 0L
 
   if (page_number == 1L) {
     titles <- .render_md_title_block(meta$titles_ast)
