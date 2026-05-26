@@ -186,7 +186,7 @@ test_that(".latex_pdftex_font_pkg routes generics to TeX Gyre bundles", {
   expect_identical(tabular:::.latex_pdftex_font_pkg("monospace"), "tgcursor")
 })
 
-test_that("default preset (font_family = 'serif') -> tgtermes + Liberation Serif cascade lead", {
+test_that("default preset(font_family = 'serif') -> tgtermes + Liberation Serif cascade lead", {
   txt <- render_tex(tabular(data.frame(x = 1L)))
   expect_match(txt, "\\usepackage{tgtermes}", fixed = TRUE)
   # Liberation Serif is the outermost branch of the fontspec cascade
@@ -757,52 +757,52 @@ test_that("headheight bumps when multi-row pagehead is present", {
 })
 
 # ---------------------------------------------------------------------
-# chrome_style cascade — `style_template() |> style(at = cells_*())`
+# chrome_style cascade — `style_template() |> style(.at = cells_*())`
 # must propagate into the LaTeX output. Each test isolates one chrome
 # surface so a regression points at the exact surface that broke.
 # ---------------------------------------------------------------------
 
-test_that("style(at = cells_headers(), color = ...) wraps header band in \\textcolor", {
+test_that("style(.at = cells_headers(), color = ...) wraps header band in \\textcolor", {
   template <- style_template() |>
-    style(at = cells_headers(), color = "#cc0000")
+    style(.at = cells_headers(), color = "#cc0000")
   spec <- tabular(data.frame(x = 1:2)) |>
-    preset(style = template)
+    preset(.style = template)
   tex <- render_tex(spec)
   expect_match(tex, "\\\\textcolor\\[HTML\\]\\{CC0000\\}", fixed = FALSE)
 })
 
-test_that("style(at = cells_title(), halign = 'left') puts title inside flushleft", {
+test_that("style(.at = cells_title(), halign = 'left') puts title inside flushleft", {
   template <- style_template() |>
-    style(at = cells_title(), halign = "left")
+    style(.at = cells_title(), halign = "left")
   spec <- tabular(
     data.frame(x = 1L),
     titles = "Demographics"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   tex <- render_tex(spec)
   expect_match(tex, "\\\\begin\\{flushleft\\}.*Demographics", fixed = FALSE)
 })
 
-test_that("style(at = cells_footnotes(), italic = TRUE) wraps footnote in \\textit", {
+test_that("style(.at = cells_footnotes(), italic = TRUE) wraps footnote in \\textit", {
   template <- style_template() |>
-    style(at = cells_footnotes(), italic = TRUE)
+    style(.at = cells_footnotes(), italic = TRUE)
   spec <- tabular(
     data.frame(x = 1L),
     footnotes = "Source: ADSL"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   tex <- render_tex(spec)
   expect_match(tex, "\\\\textit\\{Source: ADSL\\}", fixed = FALSE)
 })
 
-test_that("style(at = cells_title(), blank_above = 3) emits three blank lines before the title", {
+test_that("style(.at = cells_title(), blank_above = 3) emits three blank lines before the title", {
   template <- style_template() |>
-    style(at = cells_title(), blank_above = 3L)
+    style(.at = cells_title(), blank_above = 3L)
   spec <- tabular(
     data.frame(x = 1L),
     titles = "Demo"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   tex <- render_tex(spec)
   # Pad section just before the title block — count newline-only
   # lines preceding `\begin{center}` (the default title env).

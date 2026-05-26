@@ -9,7 +9,7 @@
 # every subsequent test in the file.
 
 clear_session_preset <- function(env = parent.frame()) {
-  withr::defer(set_preset(reset = TRUE), envir = env)
+  withr::defer(set_preset(.reset = TRUE), envir = env)
 }
 
 test_that("set_preset() stores a preset_spec in the session env", {
@@ -29,21 +29,21 @@ test_that("set_preset() merges knobs across repeat calls", {
   expect_identical(active@orientation, "landscape")
 })
 
-test_that("set_preset(reset = TRUE) replaces the session preset", {
+test_that("set_preset(.reset = TRUE) replaces the session preset", {
   clear_session_preset()
   set_preset(font_size = 8, orientation = "landscape")
-  set_preset(reset = TRUE, font_size = 10)
+  set_preset(.reset = TRUE, font_size = 10)
   active <- get_preset()
   expect_identical(active@font_size, 10)
   # orientation reverts to factory default
   expect_identical(active@orientation, "portrait")
 })
 
-test_that("set_preset(reset = TRUE) with no knobs clears to NULL", {
+test_that("set_preset(.reset = TRUE) with no knobs clears to NULL", {
   clear_session_preset()
   set_preset(font_size = 8)
   expect_true(is_preset_spec(get_preset()))
-  set_preset(reset = TRUE)
+  set_preset(.reset = TRUE)
   expect_null(get_preset())
 })
 
@@ -54,9 +54,9 @@ test_that("set_preset() returns the new preset invisibly", {
   expect_identical(ret@font_size, 8)
 })
 
-test_that("set_preset(reset = TRUE) with no knobs returns NULL invisibly", {
+test_that("set_preset(.reset = TRUE) with no knobs returns NULL invisibly", {
   clear_session_preset()
-  ret <- set_preset(reset = TRUE)
+  ret <- set_preset(.reset = TRUE)
   expect_null(ret)
 })
 
@@ -84,11 +84,11 @@ test_that("set_preset() rejects bad enum values", {
 test_that("set_preset() rejects non-scalar reset", {
   clear_session_preset()
   expect_error(
-    set_preset(reset = c(TRUE, FALSE)),
+    set_preset(.reset = c(TRUE, FALSE)),
     class = "tabular_error_input"
   )
   expect_error(
-    set_preset(reset = NA),
+    set_preset(.reset = NA),
     class = "tabular_error_input"
   )
 })

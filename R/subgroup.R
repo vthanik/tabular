@@ -194,9 +194,9 @@
 #' **Resolve / render:** [`as_grid()`], [`emit()`].
 #'
 #' @export
-subgroup <- function(spec, by, label = NULL) {
+subgroup <- function(.spec, by, label = NULL) {
   call <- rlang::caller_env()
-  check_tabular_spec(spec, call = call)
+  check_tabular_spec(.spec, call = call)
 
   if (missing(by) || is.null(by)) {
     by <- character()
@@ -224,15 +224,15 @@ subgroup <- function(spec, by, label = NULL) {
   # Empty by clears the slot — kept for the API shape; typical
   # clinical pipelines do not toggle subgroup mid-build.
   if (length(by) == 0L) {
-    return(S7::set_props(spec, subgroup = NULL))
+    return(S7::set_props(.spec, subgroup = NULL))
   }
 
-  unknown <- setdiff(by, names(spec@data))
+  unknown <- setdiff(by, names(.spec@data))
   if (length(unknown) > 0L) {
     cli::cli_abort(
       c(
-        "{.arg by} references column{?s} not present in {.field spec@data}: {.val {unknown}}.",
-        "i" = "Available columns: {.val {names(spec@data)}}."
+        "{.arg by} references column{?s} not present in {.field .spec@data}: {.val {unknown}}.",
+        "i" = "Available columns: {.val {names(.spec@data)}}."
       ),
       class = "tabular_error_subgroup_unknown_var",
       call = call
@@ -264,12 +264,12 @@ subgroup <- function(spec, by, label = NULL) {
     # Validate template references up-front so failures land at the
     # verb call site, not deep in the engine.
     refs <- .subgroup_template_refs(label)
-    unknown_refs <- setdiff(refs, names(spec@data))
+    unknown_refs <- setdiff(refs, names(.spec@data))
     if (length(unknown_refs) > 0L) {
       cli::cli_abort(
         c(
-          "{.arg label} references column{?s} not in {.field spec@data}: {.val {unknown_refs}}.",
-          "i" = "Available columns: {.val {names(spec@data)}}."
+          "{.arg label} references column{?s} not in {.field .spec@data}: {.val {unknown_refs}}.",
+          "i" = "Available columns: {.val {names(.spec@data)}}."
         ),
         class = "tabular_error_subgroup_template_unknown_col",
         call = call
@@ -291,7 +291,7 @@ subgroup <- function(spec, by, label = NULL) {
   }
 
   sg <- subgroup_spec(by = by, label = label)
-  S7::set_props(spec, subgroup = sg)
+  S7::set_props(.spec, subgroup = sg)
 }
 
 # ---------------------------------------------------------------------

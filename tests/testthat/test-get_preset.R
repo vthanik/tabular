@@ -4,12 +4,12 @@
 # a per-spec preset() override).
 
 clear_session_preset <- function(env = parent.frame()) {
-  withr::defer(set_preset(reset = TRUE), envir = env)
+  withr::defer(set_preset(.reset = TRUE), envir = env)
 }
 
 test_that("get_preset() returns NULL when no session default is set", {
   clear_session_preset()
-  set_preset(reset = TRUE)
+  set_preset(.reset = TRUE)
   expect_null(get_preset())
 })
 
@@ -30,11 +30,11 @@ test_that("get_preset() reflects the most recent set_preset() merge", {
   expect_identical(get_preset()@font_size, 10)
 })
 
-test_that("get_preset() returns NULL after set_preset(reset = TRUE) with no knobs", {
+test_that("get_preset() returns NULL after set_preset(.reset = TRUE) with no knobs", {
   clear_session_preset()
   set_preset(font_size = 8)
   expect_true(is_preset_spec(get_preset()))
-  set_preset(reset = TRUE)
+  set_preset(.reset = TRUE)
   expect_null(get_preset())
 })
 

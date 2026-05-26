@@ -466,20 +466,20 @@
 #' [`as_grid()`].
 #'
 #' @export
-preset <- function(.spec, ..., template = NULL, style = NULL, reset = FALSE) {
+preset <- function(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE) {
   call <- rlang::caller_env()
   check_tabular_spec(.spec, call = call)
-  reset <- .check_scalar_lgl(reset, arg = "reset", call = call)
+  .reset <- .check_scalar_lgl(.reset, arg = ".reset", call = call)
 
   knobs <- rlang::list2(...)
   .check_preset_knob_names(knobs, call = call)
   .validate_lowered_knobs(knobs, call = call)
-  template_knobs <- .extract_template_knobs(template, call = call)
-  template_style_layers <- .extract_template_style_layers(template)
-  style_layers <- .extract_style_template_layers(style, call = call)
+  template_knobs <- .extract_template_knobs(.template, call = call)
+  template_style_layers <- .extract_template_style_layers(.template)
+  style_layers <- .extract_style_template_layers(.style, call = call)
 
   if (
-    reset &&
+    .reset &&
       length(knobs) == 0L &&
       length(template_knobs) == 0L &&
       length(template_style_layers) == 0L &&
@@ -488,7 +488,7 @@ preset <- function(.spec, ..., template = NULL, style = NULL, reset = FALSE) {
     return(S7::set_props(.spec, preset = NULL))
   }
   if (
-    !reset &&
+    !.reset &&
       length(knobs) == 0L &&
       length(template_knobs) == 0L &&
       length(template_style_layers) == 0L &&
@@ -498,7 +498,7 @@ preset <- function(.spec, ..., template = NULL, style = NULL, reset = FALSE) {
   }
 
   prior <- .spec@preset
-  base <- if (reset || !is_preset_spec(prior)) preset_spec() else prior
+  base <- if (.reset || !is_preset_spec(prior)) preset_spec() else prior
 
   # After the Task 4/5 slot cut, only the 15 scalar preset_spec
   # properties (font_size / paper_size / margins / pagehead / …)
@@ -647,19 +647,19 @@ preset <- function(.spec, ..., template = NULL, style = NULL, reset = FALSE) {
 #' [`as_grid()`].
 #'
 #' @export
-set_preset <- function(..., template = NULL, style = NULL, reset = FALSE) {
+set_preset <- function(..., .template = NULL, .style = NULL, .reset = FALSE) {
   call <- rlang::caller_env()
-  reset <- .check_scalar_lgl(reset, arg = "reset", call = call)
+  .reset <- .check_scalar_lgl(.reset, arg = ".reset", call = call)
 
   knobs <- rlang::list2(...)
   .check_preset_knob_names(knobs, call = call)
   .validate_lowered_knobs(knobs, call = call)
-  template_knobs <- .extract_template_knobs(template, call = call)
-  template_style_layers <- .extract_template_style_layers(template)
-  style_layers <- .extract_style_template_layers(style, call = call)
+  template_knobs <- .extract_template_knobs(.template, call = call)
+  template_style_layers <- .extract_template_style_layers(.template)
+  style_layers <- .extract_style_template_layers(.style, call = call)
 
   if (
-    reset &&
+    .reset &&
       length(knobs) == 0L &&
       length(template_knobs) == 0L &&
       length(template_style_layers) == 0L &&
@@ -670,7 +670,7 @@ set_preset <- function(..., template = NULL, style = NULL, reset = FALSE) {
   }
 
   prior <- .tabular_session$preset
-  base <- if (reset || !is_preset_spec(prior)) preset_spec() else prior
+  base <- if (.reset || !is_preset_spec(prior)) preset_spec() else prior
 
   # Mirrors `preset()`'s lower-only path for the five named-list
   # knobs — see the long comment there for the rationale.

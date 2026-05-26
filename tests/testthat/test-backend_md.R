@@ -405,19 +405,19 @@ test_that("saf_demo golden pipeline matches the pinned .md snapshot", {
 })
 
 # ---------------------------------------------------------------------
-# chrome_style cascade — `style_template() |> style(at = cells_*())`
+# chrome_style cascade — `style_template() |> style(.at = cells_*())`
 # must reach the MD output for the blank-line spacing knobs. (Pure
 # Markdown has no native chrome styling for fonts/colors.)
 # ---------------------------------------------------------------------
 
-test_that("style(at = cells_title(), blank_above = 3) emits three blank lines above the title", {
+test_that("style(.at = cells_title(), blank_above = 3) emits three blank lines above the title", {
   template <- style_template() |>
-    style(at = cells_title(), blank_above = 3L)
+    style(.at = cells_title(), blank_above = 3L)
   spec <- tabular(
     data.frame(x = 1L),
     titles = "Demo"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   md <- paste(readLines(out, warn = FALSE), collapse = "\n")

@@ -31,7 +31,7 @@ combined_spec <- function() {
     ) |>
     headers("Arms" = c("placebo", "drug_50", "drug_100")) |>
     sort_rows(by = c("arm", "helper_sort")) |>
-    style(where = n > 50, bold = TRUE) |>
+    style( bold = TRUE, .at = cells_body(where = n > 50)) |>
     subgroup("cohort", label = "Cohort: {cohort}") |>
     preset(
       alignment = list(title_halign = "left"),

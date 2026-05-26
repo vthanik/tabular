@@ -176,53 +176,53 @@ test_that("preset() appends font / color / padding layers across calls", {
 # template arg
 # ---------------------------------------------------------------------
 
-test_that("preset(template = preset_spec(...)) applies non-default scalar knobs", {
+test_that("preset(.template = preset_spec(...)) applies non-default scalar knobs", {
   tmpl <- preset_spec(font_size = 8)
   spec <- tabular(data.frame(x = 1)) |>
-    preset(template = tmpl)
+    preset(.template = tmpl)
   expect_identical(spec@preset@font_size, 8)
 })
 
-test_that("preset(template = ..., scalar = ...) lets explicit kwargs win", {
+test_that("preset(.template = ..., scalar = ...) lets explicit kwargs win", {
   tmpl <- preset_spec(font_size = 8)
   spec <- tabular(data.frame(x = 1)) |>
-    preset(template = tmpl, font_size = 11)
+    preset(.template = tmpl, font_size = 11)
   expect_identical(spec@preset@font_size, 11)
 })
 
-test_that("preset(template = ...) propagates template @style layers", {
+test_that("preset(.template = ...) propagates template @style layers", {
   # The template's lowered layers (set via the template's own
   # preset() calls) carry through.
   tmpl <- tabular(data.frame(z = 1)) |>
     preset(borders = list(outer = brdr("thick")))
   template_preset <- tmpl@preset
   spec <- tabular(data.frame(x = 1)) |>
-    preset(template = template_preset) |>
+    preset(.template = template_preset) |>
     preset(borders = list(body_rows = brdr("hairline")))
   # Template's 4 outer-side layers + later body_rows layer = 5 total.
   expect_length(spec@preset@style, 5L)
 })
 
-test_that("preset(template = NULL) is the same as no template", {
+test_that("preset(.template = NULL) is the same as no template", {
   spec <- tabular(data.frame(x = 1)) |>
-    preset(font_size = 10, template = NULL)
+    preset(font_size = 10, .template = NULL)
   expect_identical(spec@preset@font_size, 10)
 })
 
-test_that("preset(template = ...) rejects non-preset input", {
+test_that("preset(.template = ...) rejects non-preset input", {
   expect_error(
-    tabular(data.frame(x = 1)) |> preset(template = "not a preset"),
+    tabular(data.frame(x = 1)) |> preset(.template = "not a preset"),
     class = "tabular_error_input"
   )
 })
 
 # ---------------------------------------------------------------------
-# set_preset(template = ...)
+# set_preset(.template = ...)
 # ---------------------------------------------------------------------
 
-test_that("set_preset(template = ...) feeds the session default", {
-  withr::defer(set_preset(reset = TRUE))
-  set_preset(template = preset_spec(font_size = 7))
+test_that("set_preset(.template = ...) feeds the session default", {
+  withr::defer(set_preset(.reset = TRUE))
+  set_preset(.template = preset_spec(font_size = 7))
   expect_identical(get_preset()@font_size, 7)
 })
 
@@ -722,7 +722,7 @@ test_that("preset_spec(margins = '50%') is rejected (percent not allowed)", {
 
 # Note: preset_spec@title_pad_* / @body_pad_* slots were dropped in
 # v0.1.0; their validator branches no longer exist. Title pad now
-# routes through `style(at = cells_title(), blank_above = N)`; body
+# routes through `style(.at = cells_title(), blank_above = N)`; body
 # pad is a hardcoded backend constant (0 / 0).
 #
 # preset_spec@alignment / @borders / @fonts / @colors / @padding

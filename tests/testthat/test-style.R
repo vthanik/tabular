@@ -1,80 +1,61 @@
-# style() — verb that accumulates style_predicates on a tabular_spec.
-# Covers all 9 plan edge cases plus argument-shape errors.
+# style() — unified styling verb. Each call appends one `style_layer`
+# to `spec@styles@layers`. Tests cover the verb's argument-shape
+# contract; engine-level layer application is tested in
+# test-engine_style.R / test-style-layers.R.
 
 # ---- happy path -----------------------------------------------------
 
-test_that("style() stores one style_predicate per call", {
+test_that("style() stores one style_layer per call", {
   spec <- tabular(saf_demo) |>
-    style(where = TRUE, bold = TRUE)
+    style(bold = TRUE, .at = cells_body(where = TRUE))
   expect_true(is_style_spec(spec@styles))
-  expect_length(spec@styles@predicates, 1L)
-  expect_true(is_style_predicate(spec@styles@predicates[[1]]))
+  expect_length(spec@styles@layers, 1L)
+  expect_true(is_style_layer(spec@styles@layers[[1]]))
 })
 
-test_that("style() captures where as an rlang quosure", {
-  spec <- tabular(saf_demo) |> style(where = TRUE, bold = TRUE)
-  expect_true(rlang::is_quosure(spec@styles@predicates[[1]]@where))
+test_that("style() captures `at` as a tabular_location", {
+  spec <- tabular(saf_demo) |>
+    style(bold = TRUE, .at = cells_body(where = TRUE))
+  loc <- spec@styles@layers[[1]]@location
+  expect_true(is_tabular_location(loc))
+  expect_identical(loc$surface, "body")
 })
 
 test_that("style() builds a style_node from variadic attrs", {
   spec <- tabular(saf_demo) |>
-    style(where = TRUE, bold = TRUE, color = "red", font_size = 8)
-  node <- spec@styles@predicates[[1]]@style
+    style(
+      bold = TRUE, color = "red", font_size = 8,
+      .at = cells_body(where = TRUE)
+    )
+  node <- spec@styles@layers[[1]]@style
   expect_true(is_style_node(node))
   expect_identical(node@bold, TRUE)
   expect_identical(node@color, "red")
   expect_identical(node@font_size, 8)
 })
 
-# ---- edge case 7: multiple style() calls accumulate -----------------
+# ---- multiple calls accumulate --------------------------------------
 
-test_that("style() called twice accumulates predicates", {
+test_that("style() called twice accumulates layers", {
   spec <- tabular(saf_demo) |>
-    style(where = TRUE, bold = TRUE) |>
-    style(where = TRUE, italic = TRUE)
-  expect_length(spec@styles@predicates, 2L)
+    style(bold = TRUE, .at = cells_body(where = TRUE)) |>
+    style(italic = TRUE, .at = cells_body(where = TRUE))
+  expect_length(spec@styles@layers, 2L)
 })
 
-# ---- edge case 6: .scope enum --------------------------------------
-
-test_that("style() default scope is 'cell'", {
-  spec <- tabular(saf_demo) |> style(where = TRUE, bold = TRUE)
-  expect_identical(spec@styles@predicates[[1]]@scope, "cell")
-})
-
-test_that("style() accepts .scope = 'row'", {
-  spec <- tabular(saf_demo) |>
-    style(where = TRUE, bold = TRUE, .scope = "row")
-  expect_identical(spec@styles@predicates[[1]]@scope, "row")
-})
-
-test_that("style() accepts .scope = 'col'", {
-  spec <- tabular(saf_demo) |>
-    style(where = TRUE, bold = TRUE, .scope = "col")
-  expect_identical(spec@styles@predicates[[1]]@scope, "col")
-})
-
-test_that("style() rejects invalid .scope value", {
-  expect_error(
-    tabular(saf_demo) |> style(where = TRUE, bold = TRUE, .scope = "block"),
-    class = "tabular_error_input"
-  )
-})
-
-# ---- edge case 4: no style attrs -----------------------------------
+# ---- argument-shape errors -----------------------------------------
 
 test_that("style() errors when no attributes supplied", {
   expect_error(
-    tabular(saf_demo) |> style(where = TRUE),
+    tabular(saf_demo) |> style(.at = cells_body(where = TRUE)),
     class = "tabular_error_input"
   )
 })
 
-# ---- edge case 5: unknown attr name --------------------------------
-
 test_that("style() warns on an unknown attribute name", {
   expect_warning(
-    tabular(saf_demo) |> style(where = TRUE, jiggle = TRUE),
+    tabular(saf_demo) |>
+      style(jiggle = TRUE, .at = cells_body(where = TRUE)),
     "jiggle"
   )
 })
@@ -83,31 +64,30 @@ test_that("style() drops unknown attrs from the constructed node", {
   withr::local_options(list(rlang_warning_verbosity = "quiet"))
   suppressWarnings({
     spec <- tabular(saf_demo) |>
-      style(where = TRUE, bold = TRUE, jiggle = TRUE)
+      style(bold = TRUE, jiggle = TRUE, .at = cells_body(where = TRUE))
   })
-  node <- spec@styles@predicates[[1]]@style
+  node <- spec@styles@layers[[1]]@style
   expect_identical(node@bold, TRUE)
 })
 
-# ---- argument-shape errors -----------------------------------------
-
-test_that("style() rejects non-spec first argument", {
+test_that("style() rejects non-spec / non-template first argument", {
   expect_error(
-    style(data.frame(x = 1), where = TRUE, bold = TRUE),
+    style(data.frame(x = 1), bold = TRUE, .at = cells_body(where = TRUE)),
     class = "tabular_error_input"
   )
 })
 
-test_that("style() errors when where is missing", {
+test_that("style() errors when .at is not a tabular_location", {
   expect_error(
-    tabular(saf_demo) |> style(bold = TRUE),
+    tabular(saf_demo) |> style(bold = TRUE, .at = "not a location"),
     class = "tabular_error_input"
   )
 })
 
 test_that("style() rejects unnamed attribute args", {
   expect_error(
-    tabular(saf_demo) |> style(where = TRUE, TRUE),
+    tabular(saf_demo) |>
+      style(TRUE, .at = cells_body(where = TRUE)),
     class = "tabular_error_input"
   )
 })
@@ -117,10 +97,10 @@ test_that("style() rejects unnamed attribute args", {
 test_that("style() error snapshots", {
   expect_snapshot(
     error = TRUE,
-    tabular(saf_demo) |> style(where = TRUE)
+    tabular(saf_demo) |> style(.at = cells_body(where = TRUE))
   )
   expect_snapshot(
     error = TRUE,
-    tabular(saf_demo) |> style(where = TRUE, bold = TRUE, .scope = "block")
+    tabular(saf_demo) |> style(bold = TRUE, .at = "not a location")
   )
 })

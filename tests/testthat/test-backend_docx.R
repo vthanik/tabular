@@ -887,11 +887,11 @@ test_that(".docx_normalize_color uppercases hex, strips #, defaults bad input to
   expect_identical(tabular:::.docx_normalize_color("#GGHHII"), "000000")
 })
 
-test_that("style(bold = TRUE, .scope = \"row\") surfaces as <w:b/> across the matched row", {
+test_that("style(bold = TRUE) on a row predicate surfaces <w:b/> across the matched row", {
   spec <- tabular(
     data.frame(arm = c("A", "B", "Total"), n = c("10", "12", "22"))
   ) |>
-    style(where = arm == "Total", bold = TRUE, .scope = "row")
+    style(bold = TRUE, .at = cells_body(where = arm == "Total"))
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   unzipped <- .unzip_docx(out)
@@ -916,7 +916,7 @@ test_that("style(background = \"#...\") surfaces as <w:shd> on the matched cells
   spec <- tabular(
     data.frame(arm = c("A", "B"), n = c("10", "12"))
   ) |>
-    style(where = arm == "A", background = "#FFFF99")
+    style(background = "#FFFF99", .at = cells_body(where = arm == "A"))
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   unzipped <- .unzip_docx(out)
@@ -948,7 +948,7 @@ test_that("emit(.docx) is byte-deterministic across repeated calls", {
       ),
       pagefoot = list(left = "Source: ADSL")
     ) |>
-    style(where = variable == "Sex, n (%)", bold = TRUE)
+    style( bold = TRUE, .at = cells_body(where = variable == "Sex, n (%)"))
 
   a <- withr::local_tempfile(fileext = ".docx")
   b <- withr::local_tempfile(fileext = ".docx")
@@ -1002,7 +1002,7 @@ test_that("saf_demo golden pipeline matches the pinned word/document.xml snapsho
 })
 
 # ---------------------------------------------------------------------
-# chrome_style cascade — `style_template() |> style(at = cells_*())`
+# chrome_style cascade — `style_template() |> style(.at = cells_*())`
 # must reach the DOCX output. Tests inspect the unzipped
 # word/document.xml so they survive across binary builds.
 # ---------------------------------------------------------------------
@@ -1020,38 +1020,38 @@ test_that("saf_demo golden pipeline matches the pinned word/document.xml snapsho
   )
 }
 
-test_that("style(at = cells_title(), halign = 'left') emits <w:jc w:val='left'/> on title pPr", {
+test_that("style(.at = cells_title(), halign = 'left') emits <w:jc w:val='left'/> on title pPr", {
   template <- style_template() |>
-    style(at = cells_title(), halign = "left")
+    style(.at = cells_title(), halign = "left")
   spec <- tabular(
     data.frame(x = 1L),
     titles = "Demographics"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   xml <- .docx_doc_xml(spec)
   expect_match(xml, "TabularTitle.*<w:jc w:val=\"left\"/>", fixed = FALSE)
 })
 
-test_that("style(at = cells_footnotes(), halign = 'right') drives footnote jc=right", {
+test_that("style(.at = cells_footnotes(), halign = 'right') drives footnote jc=right", {
   template <- style_template() |>
-    style(at = cells_footnotes(), halign = "right")
+    style(.at = cells_footnotes(), halign = "right")
   spec <- tabular(
     data.frame(x = 1L),
     footnotes = "Source: ADSL"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   xml <- .docx_doc_xml(spec)
   expect_match(xml, "TabularFoot.*<w:jc w:val=\"right\"/>", fixed = FALSE)
 })
 
-test_that("style(at = cells_title(), blank_above = 3) emits three blank paragraphs", {
+test_that("style(.at = cells_title(), blank_above = 3) emits three blank paragraphs", {
   template <- style_template() |>
-    style(at = cells_title(), blank_above = 3L)
+    style(.at = cells_title(), blank_above = 3L)
   spec <- tabular(
     data.frame(x = 1L),
     titles = "Demo"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   xml <- .docx_doc_xml(spec)
   # Count <w:p/> empty paragraphs preceding the TabularTitle paragraph.
   pre_title <- sub("(.*?)<w:pStyle w:val=\"TabularTitle\"/>.*", "\\1", xml)

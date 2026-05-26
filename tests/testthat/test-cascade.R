@@ -22,16 +22,14 @@ bold_red_spec <- function() {
       placebo = col_spec(label = "Placebo")
     ) |>
     style(
-      where = stat_label == "Mean (SD)",
       bold = TRUE,
       italic = TRUE,
       underline = TRUE,
       color = "#cc0000",
       background = "#ffeedd",
       font_family = "Helvetica",
-      font_size = 11,
-      .scope = "row"
-    )
+      font_size = 11
+    , .at = cells_body(where = stat_label == "Mean (SD)"))
 }
 
 # ---------------------------------------------------------------------

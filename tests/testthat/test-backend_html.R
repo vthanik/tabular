@@ -762,30 +762,30 @@ test_that("{page} / {npages} become counter(page) / counter(pages)", {
 })
 
 # ---------------------------------------------------------------------
-# chrome_style cascade — `style_template() |> style(at = cells_*())`
+# chrome_style cascade — `style_template() |> style(.at = cells_*())`
 # must reach the HTML output. Tests target the inline-style attribute
 # emitted on the surface element.
 # ---------------------------------------------------------------------
 
-test_that("style(at = cells_headers(), color = ...) emits inline color on header band cells", {
+test_that("style(.at = cells_headers(), color = ...) emits inline color on header band cells", {
   template <- style_template() |>
-    style(at = cells_headers(), color = "#cc0000")
+    style(.at = cells_headers(), color = "#cc0000")
   spec <- tabular(data.frame(x = 1:2)) |>
-    preset(style = template)
+    preset(.style = template)
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   html <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_match(html, "color: #cc0000", fixed = TRUE)
 })
 
-test_that("style(at = cells_title(), halign = 'left') drives title h1 alignment", {
+test_that("style(.at = cells_title(), halign = 'left') drives title h1 alignment", {
   template <- style_template() |>
-    style(at = cells_title(), halign = "left")
+    style(.at = cells_title(), halign = "left")
   spec <- tabular(
     data.frame(x = 1L),
     titles = "Demographics"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   html <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -793,28 +793,28 @@ test_that("style(at = cells_title(), halign = 'left') drives title h1 alignment"
   expect_match(html, "tabular-title.*text-left.*Demographics", fixed = FALSE)
 })
 
-test_that("style(at = cells_footnotes(), italic = TRUE) puts inline font-style on footnote", {
+test_that("style(.at = cells_footnotes(), italic = TRUE) puts inline font-style on footnote", {
   template <- style_template() |>
-    style(at = cells_footnotes(), italic = TRUE)
+    style(.at = cells_footnotes(), italic = TRUE)
   spec <- tabular(
     data.frame(x = 1L),
     footnotes = "Source: ADSL"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   html <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_match(html, "font-style: italic", fixed = TRUE)
 })
 
-test_that("style(at = cells_title(), blank_above = 3) emits three pad paragraphs", {
+test_that("style(.at = cells_title(), blank_above = 3) emits three pad paragraphs", {
   template <- style_template() |>
-    style(at = cells_title(), blank_above = 3L)
+    style(.at = cells_title(), blank_above = 3L)
   spec <- tabular(
     data.frame(x = 1L),
     titles = "Demo"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   html <- paste(readLines(out, warn = FALSE), collapse = "\n")

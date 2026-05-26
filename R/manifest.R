@@ -337,31 +337,39 @@
   )
 }
 
-# Style trace: one entry per declared predicate. We do not evaluate
-# the predicate here (engine_style already did that); we capture
-# only the user-visible declaration so the manifest documents intent.
+# Style trace: one entry per declared layer. We do not evaluate any
+# predicate here (engine_style already did that); we capture only
+# the user-visible declaration so the manifest documents intent.
 .x_tabular_styles <- function(spec) {
   styles <- spec@styles
-  if (!is_style_spec(styles) || length(styles@predicates) == 0L) {
-    return(list(predicates = list()))
+  if (!is_style_spec(styles) || length(styles@layers) == 0L) {
+    return(list(layers = list()))
   }
   list(
-    predicates = lapply(styles@predicates, .x_tabular_one_predicate)
+    layers = lapply(styles@layers, .x_tabular_one_layer)
   )
 }
 
-# One declared style predicate -> manifest entry. We render the
-# where-expression as its deparsed text so it is human-readable in
-# YAML.
-.x_tabular_one_predicate <- function(pred) {
-  where_text <- tryCatch(
-    paste(deparse(rlang::quo_get_expr(pred@where)), collapse = " "),
-    error = function(e) NA_character_
-  )
+# One declared style layer -> manifest entry. Captures the
+# location's surface + filters (i / j / where deparsed) plus the
+# style attributes that were set.
+.x_tabular_one_layer <- function(layer) {
+  loc <- layer@location
+  where_text <- NA_character_
+  if (!is.null(loc$where)) {
+    where_text <- tryCatch(
+      paste(deparse(rlang::quo_get_expr(loc$where)), collapse = " "),
+      error = function(e) NA_character_
+    )
+  }
   list(
+    surface = loc$surface,
+    i = if (is.null(loc$i)) NA else loc$i,
+    j = if (is.null(loc$j)) NA_character_ else loc$j,
     where = where_text,
-    scope = pred@scope,
-    style = .style_node_to_list(pred@style)
+    side = if (is.null(loc$side)) NA_character_ else loc$side,
+    level = if (is.null(loc$level)) NA_integer_ else loc$level,
+    style = .style_node_to_list(layer@style)
   )
 }
 
