@@ -110,7 +110,13 @@ output but keeps it in \code{spec@data} so \code{\link[=sort_rows]{sort_rows()}}
 
 \strong{Interaction:} Hidden columns are the standard pattern for
 sort-key helpers (\code{row_type}, \code{n_total}) and for the numeric
-counts behind formatted-text percentage cells.}
+counts behind formatted-text percentage cells.
+
+\strong{Auto-hide.} The depth column named by \code{indent_by} and every
+column named by \code{\link[=subgroup]{subgroup(by = ...)}} or referenced
+via a \code{{col}} placeholder in the subgroup banner template are
+flipped to \code{visible = FALSE} automatically at engine time —
+restating it here is redundant.}
 
 \item{width}{\emph{Column width — auto-sized, pinned, or proportional.}
 \verb{<character(1) | numeric(1)>: default "auto"}.
