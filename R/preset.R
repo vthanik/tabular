@@ -949,3 +949,398 @@ get_preset <- function() {
   }
   NULL
 }
+
+# ---------------------------------------------------------------------
+# .preset_args_to_layers — lower the five named-list `preset()` /
+# `set_preset()` args (`alignment`, `borders`, `fonts`, `colors`,
+# `padding`) to a list of `style_layer` records that flow through the
+# unified `engine_style` / `engine_borders` / `engine_chrome_borders`
+# cascade. Used by `preset()` / `set_preset()` to compose theme-level
+# defaults into the same layer surface as `style(at = cells_*())`
+# without parallel storage on `preset_spec`.
+#
+# Mapping summary (one layer per non-NULL entry; per-cell scope unless
+# noted):
+#
+#   alignment$title_halign       -> cells_title()          halign
+#   alignment$footnote_halign    -> cells_footnotes()      halign
+#   alignment$subgroup_halign    -> cells_subgroup_labels()halign
+#   alignment$header_halign      -> cells_headers()        halign
+#   alignment$body_halign        -> cells_body()           halign
+#   (same shape for *_valign)
+#   borders$outer*               -> cells_table(side=...)  border_*_*
+#   borders$body_top|body_bottom -> cells_table(side="outer_top|outer_bottom")
+#   borders$body_rows            -> cells_table(side="rows")
+#   borders$body_cols            -> cells_table(side="cols")
+#   borders$pagehead_bottom      -> cells_pagehead()       border_bottom
+#   borders$header_top|bottom    -> cells_headers()        border_top|bottom
+#   borders$header_between       -> cells_headers()        border_top (alias)
+#   borders$subgroup_top|bottom  -> cells_subgroup_labels()border_top|bottom
+#   borders$subgroup (alias)     -> cells_subgroup_labels()border_bottom
+#   borders$footer_top|bottom    -> cells_footnotes()      border_top|bottom
+#   borders$pagefoot_top         -> cells_pagefoot()       border_top
+#   fonts[<surface>]$family|size -> cells_<surface>()      font_family|font_size
+#   colors$text                  -> cells_body()           color
+#   colors$background            -> cells_body()           background
+#   colors$border                -> cells_table(side="outer") + ("rows") + ("cols")
+#   padding[<surface>]           -> cells_<surface>()      padding (scalar only)
+#
+# Per-side padding lists (`padding = list(body = list(top = 1, ...))`)
+# are NOT lowered to per-side scalars (`style_node@padding` is one
+# numeric); the helper averages the four sides as the closest scalar.
+# Vector-form alignment values (`alignment = list(title_halign =
+# c("left", "right"))`) lower to ONE layer using the first value;
+# per-line vector alignment is not expressible via a single
+# `chrome_style$surfaces` node.
+.preset_args_to_layers <- function(args) {
+  layers <- list()
+  for (knob in c("alignment", "borders", "fonts", "colors", "padding")) {
+    val <- args[[knob]]
+    if (is.null(val) || length(val) == 0L) {
+      next
+    }
+    new <- switch(
+      knob,
+      alignment = .preset_alignment_to_layers(val),
+      borders = .preset_borders_to_layers(val),
+      fonts = .preset_fonts_to_layers(val),
+      colors = .preset_colors_to_layers(val),
+      padding = .preset_padding_to_layers(val)
+    )
+    if (length(new) > 0L) {
+      layers <- c(layers, new)
+    }
+  }
+  layers
+}
+
+# Surface -> `cells_*()` constructor for the per-surface knobs
+# (alignment / fonts / padding). `body` is the only cells_body
+# target; the four chrome surfaces map onto their cells_*()
+# constructors.
+.preset_surface_to_location <- function(surface) {
+  switch(
+    surface,
+    body = cells_body(),
+    header = cells_headers(),
+    headers = cells_headers(),
+    titles = cells_title(),
+    title = cells_title(),
+    footnotes = cells_footnotes(),
+    footer = cells_footnotes(),
+    subgroup = cells_subgroup_labels(),
+    NULL
+  )
+}
+
+# Build one style_layer with a single attribute set. Attribute names
+# must match `style_node` properties (e.g. "halign", "font_family",
+# "padding"). Returns NULL when `value` is NA / empty so callers can
+# `c()` without filtering.
+.preset_layer_one <- function(location, attr, value) {
+  if (is.null(location) || is.null(value)) {
+    return(NULL)
+  }
+  if (length(value) == 0L) {
+    return(NULL)
+  }
+  # For halign/valign and font_family/color/background, NA / "" is
+  # a no-op; for numerics (padding, font_size), NA is a no-op.
+  if (is.character(value) && (anyNA(value) || all(!nzchar(value)))) {
+    return(NULL)
+  }
+  if (is.numeric(value) && anyNA(value)) {
+    return(NULL)
+  }
+  # Use the first element when a vector slipped through (vector-form
+  # alignment); upstream lowering already documented this loss.
+  v <- if (length(value) > 1L) value[[1L]] else value
+  args <- list(style_node())
+  args[[attr]] <- v
+  node <- do.call(S7::set_props, args)
+  style_layer(location = location, style = node)
+}
+
+# Build one style_layer carrying one border triple on a given side
+# (`top` / `bottom` / `left` / `right`). `triple` is the unwrapped
+# `list(style, width, color)` produced by `.as_brdr_triple()`.
+.preset_layer_border <- function(location, side, triple) {
+  if (is.null(location) || is.null(triple)) {
+    return(NULL)
+  }
+  prop_style <- paste0("border_", side, "_style")
+  prop_width <- paste0("border_", side, "_width")
+  prop_color <- paste0("border_", side, "_color")
+  args <- list(style_node())
+  args[[prop_style]] <- if (is.null(triple$style) || is.na(triple$style)) {
+    NA_character_
+  } else {
+    as.character(triple$style)
+  }
+  args[[prop_width]] <- if (is.null(triple$width) || is.na(triple$width)) {
+    NA_real_
+  } else {
+    as.numeric(triple$width)
+  }
+  args[[prop_color]] <- if (is.null(triple$color) || is.na(triple$color)) {
+    NA_character_
+  } else {
+    as.character(triple$color)
+  }
+  node <- do.call(S7::set_props, args)
+  style_layer(location = location, style = node)
+}
+
+# alignment named-list -> per-surface halign/valign layers.
+.preset_alignment_to_layers <- function(al) {
+  if (!is.list(al)) {
+    return(list())
+  }
+  surface_for_key <- c(
+    title_halign = "title",
+    title_valign = "title",
+    footnote_halign = "footer",
+    footnote_valign = "footer",
+    subgroup_halign = "subgroup",
+    subgroup_valign = "subgroup",
+    header_halign = "header",
+    header_valign = "header",
+    body_halign = "body",
+    body_valign = "body"
+  )
+  layers <- list()
+  for (key in intersect(names(al), names(surface_for_key))) {
+    surface <- surface_for_key[[key]]
+    location <- switch(
+      surface,
+      title = cells_title(),
+      footer = cells_footnotes(),
+      subgroup = cells_subgroup_labels(),
+      header = cells_headers(),
+      body = cells_body()
+    )
+    attr <- if (endsWith(key, "_halign")) "halign" else "valign"
+    layer <- .preset_layer_one(location, attr, al[[key]])
+    if (!is.null(layer)) {
+      layers <- c(layers, list(layer))
+    }
+  }
+  layers
+}
+
+# borders named-list -> per-region border layers. Mirrors the
+# `.resolve_border_regions` body / chrome split: body regions become
+# `cells_table(side=...)` layers; chrome regions become `cells_<chrome
+# surface>()` layers carrying the appropriate `border_<side>_*` triple.
+.preset_borders_to_layers <- function(br) {
+  if (!is.list(br)) {
+    return(list())
+  }
+  layers <- list()
+  add <- function(layer) {
+    if (!is.null(layer)) {
+      layers[[length(layers) + 1L]] <<- layer
+    }
+  }
+  triple_for <- function(key) .as_brdr_triple(br[[key]])
+
+  # ---- Body regions (cells_table) ----
+  if (!is.null(br[["outer"]])) {
+    triple <- triple_for("outer")
+    for (side in c("top", "bottom", "left", "right")) {
+      add(.preset_layer_border(
+        cells_table(side = paste0("outer_", side)),
+        side,
+        triple
+      ))
+    }
+  }
+  side_aliases <- list(
+    outer_top = c("top", "outer_top"),
+    outer_bottom = c("bottom", "outer_bottom"),
+    outer_left = c("left", "outer_left"),
+    outer_right = c("right", "outer_right"),
+    body_top = c("top", "outer_top"),
+    body_bottom = c("bottom", "outer_bottom")
+  )
+  for (key in names(side_aliases)) {
+    if (!is.null(br[[key]])) {
+      side <- side_aliases[[key]][[1L]]
+      loc_side <- side_aliases[[key]][[2L]]
+      add(.preset_layer_border(
+        cells_table(side = loc_side),
+        side,
+        triple_for(key)
+      ))
+    }
+  }
+  if (!is.null(br[["body_rows"]])) {
+    add(.preset_layer_border(
+      cells_table(side = "rows"),
+      "top",
+      triple_for("body_rows")
+    ))
+  }
+  if (!is.null(br[["body_cols"]])) {
+    add(.preset_layer_border(
+      cells_table(side = "cols"),
+      "left",
+      triple_for("body_cols")
+    ))
+  }
+
+  # ---- Chrome regions ----
+  chrome_mapping <- list(
+    pagehead_bottom = list(loc = cells_pagehead, side = "bottom"),
+    header_top = list(loc = cells_headers, side = "top"),
+    header_bottom = list(loc = cells_headers, side = "bottom"),
+    header_between = list(loc = cells_headers, side = "top"),
+    subgroup_top = list(loc = cells_subgroup_labels, side = "top"),
+    subgroup_bottom = list(loc = cells_subgroup_labels, side = "bottom"),
+    subgroup = list(loc = cells_subgroup_labels, side = "bottom"),
+    footer_top = list(loc = cells_footnotes, side = "top"),
+    footer_bottom = list(loc = cells_footnotes, side = "bottom"),
+    pagefoot_top = list(loc = cells_pagefoot, side = "top")
+  )
+  for (key in names(chrome_mapping)) {
+    if (!is.null(br[[key]])) {
+      info <- chrome_mapping[[key]]
+      add(.preset_layer_border(
+        info$loc(),
+        info$side,
+        triple_for(key)
+      ))
+    }
+  }
+  layers
+}
+
+# fonts named-list -> per-surface font_family / font_size layers.
+# `weight` is mapped to bold = TRUE when the value is "bold"; other
+# weight keywords are dropped silently (style_node has no general
+# weight slot).
+.preset_fonts_to_layers <- function(fn) {
+  if (!is.list(fn)) {
+    return(list())
+  }
+  layers <- list()
+  for (surface in names(fn)) {
+    spec <- fn[[surface]]
+    if (is.null(spec) || !is.list(spec)) {
+      next
+    }
+    location <- .preset_surface_to_location(surface)
+    if (is.null(location)) {
+      next
+    }
+    family <- spec$family
+    size <- spec$size
+    weight <- spec$weight
+    fam_layer <- .preset_layer_one(location, "font_family", family)
+    if (!is.null(fam_layer)) {
+      layers <- c(layers, list(fam_layer))
+    }
+    sz_layer <- .preset_layer_one(location, "font_size", size)
+    if (!is.null(sz_layer)) {
+      layers <- c(layers, list(sz_layer))
+    }
+    if (
+      is.character(weight) &&
+        length(weight) == 1L &&
+        !is.na(weight) &&
+        identical(tolower(weight), "bold")
+    ) {
+      bold_layer <- .preset_layer_one(location, "bold", TRUE)
+      if (!is.null(bold_layer)) {
+        layers <- c(layers, list(bold_layer))
+      }
+    }
+  }
+  layers
+}
+
+# colors named-list -> cells_body() color/background layers + outer
+# border colour layer. `border` lowers to a colour-only triple on the
+# outer + rows + cols regions; if the user also supplied a `borders`
+# knob, the explicit borders wins (layer order: borders entries first,
+# colors entries last — last-write wins).
+.preset_colors_to_layers <- function(co) {
+  if (!is.list(co)) {
+    return(list())
+  }
+  layers <- list()
+  if (!is.null(co[["text"]])) {
+    layer <- .preset_layer_one(cells_body(), "color", co[["text"]])
+    if (!is.null(layer)) {
+      layers <- c(layers, list(layer))
+    }
+  }
+  if (!is.null(co[["background"]])) {
+    layer <- .preset_layer_one(cells_body(), "background", co[["background"]])
+    if (!is.null(layer)) {
+      layers <- c(layers, list(layer))
+    }
+  }
+  # `border` colour token: a colour-only triple stamped on outer +
+  # body_rows + body_cols so every body-cell separator inherits the
+  # tint. style / width default to NA so they don't accidentally
+  # override an existing border triple.
+  if (!is.null(co[["border"]])) {
+    triple <- list(
+      style = NA_character_,
+      width = NA_real_,
+      color = co[["border"]]
+    )
+    for (sides in list(
+      list(loc = cells_table(side = "outer_top"), side = "top"),
+      list(loc = cells_table(side = "outer_bottom"), side = "bottom"),
+      list(loc = cells_table(side = "outer_left"), side = "left"),
+      list(loc = cells_table(side = "outer_right"), side = "right"),
+      list(loc = cells_table(side = "rows"), side = "top"),
+      list(loc = cells_table(side = "cols"), side = "left")
+    )) {
+      layer <- .preset_layer_border(sides$loc, sides$side, triple)
+      if (!is.null(layer)) {
+        layers <- c(layers, list(layer))
+      }
+    }
+  }
+  layers
+}
+
+# padding named-list -> per-surface padding layers. Per-side padding
+# lists collapse to the mean (style_node@padding is a single numeric;
+# the four-sided shape is not expressible at the layer surface).
+.preset_padding_to_layers <- function(pa) {
+  if (!is.list(pa)) {
+    return(list())
+  }
+  layers <- list()
+  for (surface in names(pa)) {
+    val <- pa[[surface]]
+    if (is.null(val)) {
+      next
+    }
+    location <- .preset_surface_to_location(surface)
+    if (is.null(location)) {
+      next
+    }
+    pad <- if (is.list(val)) {
+      vals <- vapply(
+        c("top", "right", "bottom", "left"),
+        function(s) if (is.null(val[[s]])) 0 else as.numeric(val[[s]]),
+        numeric(1L)
+      )
+      mean(vals)
+    } else if (is.numeric(val) && length(val) == 1L && !is.na(val)) {
+      as.numeric(val)
+    } else {
+      NA_real_
+    }
+    layer <- .preset_layer_one(location, "padding", pad)
+    if (!is.null(layer)) {
+      layers <- c(layers, list(layer))
+    }
+  }
+  layers
+}
