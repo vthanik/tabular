@@ -4,12 +4,9 @@
 \alias{subgroup}
 \title{Partition the report by a variable}
 \usage{
-subgroup(spec, by, label = NULL)
+subgroup(.spec, by, label = NULL)
 }
 \arguments{
-\item{spec}{\emph{The \code{tabular_spec} to partition.}
-\verb{<tabular_spec>: required}.}
-
 \item{by}{\emph{Column name(s) to partition by.}
 \verb{<character>: required}. Must reference a column in
 \code{spec@data}. Length-0 (or \code{character(0)}) clears the partition.
@@ -33,6 +30,9 @@ any qualifier that is constant within group — e.g.
 \strong{Restriction:} Every \code{{col}} reference must be a column in
 \code{spec@data}. Unknown columns raise
 \code{tabular_error_subgroup_template_unknown_col}.}
+
+\item{spec}{\emph{The \code{tabular_spec} to partition.}
+\verb{<tabular_spec>: required}.}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining or

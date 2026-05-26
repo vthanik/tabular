@@ -4,7 +4,7 @@
 \alias{preset}
 \title{Override the render preset on a spec}
 \usage{
-preset(.spec, ..., template = NULL, style = NULL, reset = FALSE)
+preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
 }
 \arguments{
 \item{.spec}{\emph{The \code{tabular_spec} to attach the preset to.}
@@ -268,13 +268,26 @@ verb that returns a modified spec, composable on the pipe alongside
 table needs a one-off geometry (e.g. landscape A4 for one wide
 efficacy summary inside a portfolio of portrait letter tables).
 
-\strong{Merge, not replace.} A second \code{preset()} call merges its knobs
-onto the spec's existing preset; unspecified knobs keep their prior
-value. Pass \code{reset = TRUE} to discard the existing knobs and start
-from \code{preset_spec()} defaults. \code{preset(spec, reset = TRUE)} with no
-knobs clears the per-spec override entirely (the spec then falls
-through to \code{\link[=set_preset]{set_preset()}} or \code{preset_spec()} defaults at render
-time).
+\strong{Merge, not replace.} A second \code{preset()} call merges its scalar
+knobs onto the spec's existing preset; unspecified knobs keep
+their prior value. The five named-list knobs (\code{alignment} /
+\code{borders} / \code{fonts} / \code{colors} / \code{padding}) lower to \code{style_layer}
+records on \code{preset@style} via \code{\link[=.preset_args_to_layers]{.preset_args_to_layers()}}
+(internal) and append in call order; layer order is precedence
+within the engine cascade, so a later \code{preset()} call's lowered
+attribute wins over an earlier one at the cell. Pass \code{reset = TRUE}
+to discard the existing knobs and start from \code{preset_spec()}
+defaults. \code{preset(spec, reset = TRUE)} with no knobs clears the
+per-spec override entirely (the spec then falls through to
+\code{\link[=set_preset]{set_preset()}} or \code{preset_spec()} defaults at render time).
+
+\strong{Direct \code{preset_spec()} calls bypass lowering.} The five
+named-list knobs are no longer slots on the \code{preset_spec} S7
+class — they exist only as \code{preset()} / \code{set_preset()} arguments
+that lower into \verb{@style}. \code{preset_spec(borders = list(...))}
+(and analogous direct calls) raise "unused argument". Wrap such
+calls in \code{tabular(...) |> preset(...)} so the lowering helper
+fires and the layers land on \verb{@style}.
 
 \strong{Cascade with \code{set_preset()}.} The engine resolves the active
 preset in this order: (1) the spec's per-call preset (this verb),

@@ -7,7 +7,6 @@
 \alias{sort_spec}
 \alias{subgroup_spec}
 \alias{style_node}
-\alias{style_predicate}
 \alias{style_layer}
 \alias{style_spec}
 \alias{pagination_spec}
