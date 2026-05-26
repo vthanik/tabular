@@ -142,8 +142,19 @@ backend_md <- function(grid, file) {
 # page when `page$repeat_headers` is TRUE (the default).
 .render_md_page <- function(page, meta, page_number, total_pages) {
   out <- character()
-  pad_title_top <- as.integer(meta$preset@title_pad_top)
-  pad_title_bottom <- as.integer(meta$preset@title_pad_bottom)
+  cs <- meta$chrome_style %||% chrome_style()
+  pad_title_top <- .md_blank_count(
+    cs,
+    "title",
+    "above",
+    meta$preset@title_pad_top
+  )
+  pad_title_bottom <- .md_blank_count(
+    cs,
+    "title",
+    "below",
+    meta$preset@title_pad_bottom
+  )
   pad_body_top <- as.integer(meta$preset@body_pad_top)
   pad_body_bottom <- as.integer(meta$preset@body_pad_bottom)
 
@@ -198,6 +209,18 @@ backend_md <- function(grid, file) {
     }
   }
   out
+}
+
+# Resolve the blank-line count for a chrome surface side. chrome_style
+# wins when the user set `style(blank_above = N, at = cells_title())`;
+# otherwise the legacy preset `*_pad_*` scalar fills in.
+.md_blank_count <- function(cs, surface, side, legacy) {
+  node <- .chrome_surface_at(cs, surface)
+  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
+  if (length(prop) == 1L && !is.na(prop)) {
+    return(max(0L, as.integer(prop)))
+  }
+  max(0L, as.integer(legacy))
 }
 
 # Render the subgroup banner (e.g. "Treatment Arm: Placebo") as one
