@@ -6,7 +6,8 @@
 <style>
 .tabular-doc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
 .tabular-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin: .2rem 0; }
-.tabular-table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .9rem; }
+.tabular-table-wrap { overflow-x: auto; margin: .75rem 0; }
+.tabular-table { border-collapse: collapse; font-size: .9rem; }
 .tabular-table th, .tabular-table td { padding: .35rem .6rem; }
 .tabular-table td { text-align: left; vertical-align: top; }
 .tabular-table thead th { border-top: 1px solid #212529; border-bottom: 1px solid #212529; font-weight: 600; text-align: center; vertical-align: bottom; }
@@ -32,7 +33,7 @@
 .tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }
 .tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }
 .tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+@media print { .tabular-table-wrap { overflow-x: visible; margin: 0; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
 </head>
 <body class="tabular-doc">
@@ -41,7 +42,8 @@
 <h1 class="tabular-title">Demographics</h1>
 <h1 class="tabular-title">Safety Population</h1>
 <p class="tabular-pad">&nbsp;</p>
-<table class="tabular-table">
+<div class="tabular-table-wrap">
+<table class="tabular-table" style="width:7.133333in; table-layout:fixed">
 <colgroup>
 <col style="width:2.566667in"/>
 <col style="width:1.141667in"/>
@@ -107,6 +109,7 @@
 <tr><td>Obese (&gt;=30)</td><td class="text-right">  6   ( 7.0 )</td><td class="text-right">  9   (12.5 )</td><td class="text-right"> 13   (13.5 )</td><td class="text-right"> 28   (11.0 )</td></tr>
 </tbody>
 </table>
+</div>
 <p class="tabular-footnote">Source: ADSL.</p>
 </body>
 </html>

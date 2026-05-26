@@ -33,11 +33,7 @@ test_that("emit(.html) writes a non-empty self-contained .html file", {
     lines,
     fixed = TRUE
   )))
-  expect_true(any(grepl(
-    "<table class=\"tabular-table\">",
-    lines,
-    fixed = TRUE
-  )))
+  expect_true(any(grepl("<table class=\"tabular-table\"", lines)))
   expect_true(any(grepl(
     "<p class=\"tabular-footnote\">F</p>",
     lines,
@@ -51,9 +47,8 @@ test_that("emit(.htm) alias resolves to the html backend", {
   emit(spec, out)
   expect_true(file.exists(out))
   expect_true(any(grepl(
-    "<table class=\"tabular-table\">",
-    readLines(out),
-    fixed = TRUE
+    "<table class=\"tabular-table\"",
+    readLines(out)
   )))
 })
 
@@ -319,6 +314,172 @@ test_that("auto-resolved widths land in <colgroup> end-to-end via emit()", {
   expect_length(cols_found, 2L)
 })
 
+# ---------------------------------------------------------------------
+# Table width — width_mode dispatch + scroll wrapper
+# ---------------------------------------------------------------------
+
+test_that(".html_table_open_tag emits sum-of-widths under width_mode = 'content'", {
+  col_specs <- list(
+    col_spec(width = 1.5),
+    col_spec(width = 2.25),
+    col_spec(width = 0.75)
+  )
+  ps <- tabular:::preset_spec(width_mode = "content")
+  tag <- tabular:::.html_table_open_tag(col_specs, ps)
+  expect_identical(
+    tag,
+    "<table class=\"tabular-table\" style=\"width:4.500000in; table-layout:fixed\">"
+  )
+})
+
+test_that(".html_table_open_tag emits width:100% under width_mode = 'window'", {
+  col_specs <- list(
+    col_spec(width = 1.5),
+    col_spec(width = 2.25)
+  )
+  ps <- tabular:::preset_spec(width_mode = "window")
+  tag <- tabular:::.html_table_open_tag(col_specs, ps)
+  expect_identical(
+    tag,
+    "<table class=\"tabular-table\" style=\"width:100%; table-layout:fixed\">"
+  )
+})
+
+test_that(".html_table_open_tag emits sum-of-widths under width_mode = 'fixed'", {
+  # Same emission path as "content"; the distinction lives upstream
+  # in `.distribute_widths()` which collapses auto cols to the
+  # minimum sliver under "fixed".
+  col_specs <- list(
+    col_spec(width = 3),
+    col_spec(width = 1)
+  )
+  ps <- tabular:::preset_spec(width_mode = "fixed")
+  tag <- tabular:::.html_table_open_tag(col_specs, ps)
+  expect_identical(
+    tag,
+    "<table class=\"tabular-table\" style=\"width:4.000000in; table-layout:fixed\">"
+  )
+})
+
+test_that(".html_table_open_tag falls back to bare <table> when no widths resolved", {
+  # Defensive fallback: when a spec bypasses engine resolution and
+  # no visible column carries a numeric width, emit the unstyled
+  # tag so the natural-fit browser layout still works.
+  col_specs <- list(NULL, NULL)
+  ps <- tabular:::preset_spec()
+  tag <- tabular:::.html_table_open_tag(col_specs, ps)
+  expect_identical(tag, "<table class=\"tabular-table\">")
+})
+
+test_that("each <table> is wrapped in <div class=\"tabular-table-wrap\">", {
+  spec <- tabular(data.frame(x = c(1L, 2L), y = c("a", "b")))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  lines <- readLines(out)
+  # one wrap open + one wrap close immediately surrounding the
+  # single panel `<table>`.
+  expect_identical(
+    length(grep("<div class=\"tabular-table-wrap\">", lines, fixed = TRUE)),
+    1L
+  )
+  # wrap closes match wrap opens (single panel here).
+  txt <- paste(lines, collapse = "\n")
+  opens <- length(gregexpr(
+    "<div class=\"tabular-table-wrap\">",
+    txt,
+    fixed = TRUE
+  )[[1L]])
+  closes <- length(gregexpr(
+    "</table>\n</div>",
+    txt,
+    fixed = TRUE
+  )[[1L]])
+  expect_identical(opens, closes)
+})
+
+test_that("horizontal panels each get their own scroll wrapper", {
+  d <- data.frame(
+    grp = c("a", "b"),
+    c1 = 1:2,
+    c2 = 3:4,
+    c3 = 5:6,
+    c4 = 7:8
+  )
+  spec <- tabular(d) |>
+    cols(grp = col_spec(usage = "group")) |>
+    paginate(panels = 2L)
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  lines <- readLines(out)
+  expect_identical(
+    length(grep("<div class=\"tabular-table-wrap\">", lines, fixed = TRUE)),
+    2L
+  )
+})
+
+test_that("default preset emits a content-fitted <table> end-to-end", {
+  spec <- tabular(
+    saf_demo,
+    titles = "Demographics",
+    footnotes = "Source: ADSL."
+  ) |>
+    cols(
+      variable = col_spec(usage = "group", label = "Characteristic"),
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
+      drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
+      drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
+      Total = col_spec(label = "Total\nN=254", align = "decimal")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  # Table opening carries an inline width:<N>in style with
+  # table-layout:fixed (content mode is the preset default).
+  expect_match(
+    txt,
+    "<table class=\"tabular-table\" style=\"width:[0-9.]+in; table-layout:fixed\">",
+    perl = TRUE
+  )
+  # No `width: 100%` on `.tabular-table` baseline rule.
+  expect_false(grepl(".tabular-table { width: 100%", txt, fixed = TRUE))
+})
+
+test_that("width_mode = 'window' flips the <table> to width:100% end-to-end", {
+  spec <- tabular(
+    data.frame(x = c(1L, 2L), y = c("a", "b"))
+  ) |>
+    preset(width_mode = "window")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(
+    txt,
+    "<table class=\"tabular-table\" style=\"width:100%; table-layout:fixed\">",
+    fixed = TRUE
+  )
+})
+
+test_that(".tabular-table-wrap CSS is present and resets under @media print", {
+  spec <- tabular(data.frame(x = 1L))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  # Screen rule: horizontal scroll fallback for narrow viewports.
+  expect_match(
+    txt,
+    ".tabular-table-wrap { overflow-x: auto; margin: .75rem 0; }",
+    fixed = TRUE
+  )
+  # Print rule: reset to visible overflow so paper output is
+  # untouched by the screen-only scroll behaviour.
+  expect_match(
+    txt,
+    ".tabular-table-wrap { overflow-x: visible; margin: 0; }",
+    fixed = TRUE
+  )
+})
+
 test_that("HTML / LaTeX / RTF / DOCX widths agree byte-for-byte (cross-backend parity)", {
   # The quality-bar claim — engine-resolved widths render identically
   # across every backend. Build the golden saf_demo pipeline once,
@@ -468,7 +629,7 @@ test_that("multi-page emit produces a single continuous table with print-only pa
   txt <- paste(lines, collapse = "\n")
   # Exactly one continuous <table> / <colgroup> / <thead> / <tbody>.
   expect_identical(
-    length(grep("<table class=\"tabular-table\">", lines, fixed = TRUE)),
+    length(grep("<table class=\"tabular-table\"", lines)),
     1L
   )
   expect_identical(
@@ -532,7 +693,7 @@ test_that("horizontal panels emit one <table> per panel with its own <thead>", {
   # Two `<table>` blocks (one per panel), each with its own
   # `<thead>` and `<tbody>`.
   expect_identical(
-    length(grep("<table class=\"tabular-table\">", lines, fixed = TRUE)),
+    length(grep("<table class=\"tabular-table\"", lines)),
     2L
   )
   expect_identical(length(grep("<thead>", lines, fixed = TRUE)), 2L)

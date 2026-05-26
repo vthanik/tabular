@@ -471,7 +471,10 @@ backend_html <- function(grid, file) {
   ncols <- length(col_names_visible)
   col_specs <- lapply(col_names_visible, function(nm) cols[[nm]])
 
-  out <- "<table class=\"tabular-table\">"
+  out <- c(
+    "<div class=\"tabular-table-wrap\">",
+    .html_table_open_tag(col_specs, preset)
+  )
   out <- c(out, .html_colgroup(col_names_visible, cols))
   thead <- .render_html_thead(
     headers = meta$headers,
@@ -506,7 +509,7 @@ backend_html <- function(grid, file) {
       )
     )
   }
-  out <- c(out, "<tbody>", body_lines, "</tbody>", "</table>")
+  out <- c(out, "<tbody>", body_lines, "</tbody>", "</table>", "</div>")
   out
 }
 
@@ -789,6 +792,52 @@ backend_html <- function(grid, file) {
     inner,
     bold_close
   )
+}
+
+# Emit the opening `<table>` tag carrying width-mode-aware inline
+# style. Reads `preset@width_mode` and the resolved column widths
+# stored on each `col_spec@width` (engine-resolved inches via
+# `.distribute_widths()` in R/col_width.R). Brings HTML into parity
+# with the paginated backends — RTF / LaTeX / PDF / DOCX honour
+# `width_mode` via the engine's distribution math; HTML now honours
+# it at emit time so the on-screen preview matches what the
+# paginated output will look like.
+#
+#   "content" / "fixed" -> style="width:<sum>in; table-layout:fixed"
+#   "window"            -> style="width:100%;  table-layout:fixed"
+#
+# Falls back to the bare `<table class="tabular-table">` when no
+# visible column has a resolved numeric width (rare — only when a
+# spec bypasses engine resolution). Keeps the document additive-
+# only against the natural-fit fallback, mirroring `.html_colgroup`.
+#
+# `table-layout: fixed` is intentional in every non-fallback branch
+# — the engine has done the width math; the browser should honour
+# it strictly, the way RTF (`\cellx`) and LaTeX (`Q[<a>,wd=...in]`)
+# already do.
+.html_table_open_tag <- function(col_specs, preset) {
+  widths <- vapply(
+    col_specs,
+    function(cs) {
+      w <- if (is_col_spec(cs)) cs@width else NA_real_
+      if (is.numeric(w) && length(w) == 1L && !is.na(w)) {
+        as.numeric(w)
+      } else {
+        NA_real_
+      }
+    },
+    numeric(1L)
+  )
+  if (!any(!is.na(widths))) {
+    return("<table class=\"tabular-table\">")
+  }
+  mode <- if (is.null(preset)) "content" else preset@width_mode
+  style <- if (identical(mode, "window")) {
+    "width:100%; table-layout:fixed"
+  } else {
+    sprintf("width:%fin; table-layout:fixed", sum(widths, na.rm = TRUE))
+  }
+  sprintf("<table class=\"tabular-table\" style=\"%s\">", style)
 }
 
 # Emit a `<colgroup>` block carrying the engine-resolved column
@@ -1220,7 +1269,17 @@ backend_html <- function(grid, file) {
       .html_font_family_css(preset)
     ),
     ".tabular-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin: .2rem 0; }",
-    ".tabular-table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .9rem; }",
+    # Wrapper around each `<table>` panel. The table's own inline
+    # `width:<N>in` / `width:100%` rides on the `<table>` itself (see
+    # `.html_table_open_tag()` in this file). The wrapper provides
+    # the screen-only horizontal-scroll fallback when the viewport
+    # is narrower than a content-fitted table, so the surrounding
+    # chrome (titles, page bands, footnotes) stays at viewport width
+    # while only the table scrolls. Print mode resets to
+    # `overflow-x: visible` (further below) — paginated output has
+    # paper geometry and never needs scroll behaviour.
+    ".tabular-table-wrap { overflow-x: auto; margin: .75rem 0; }",
+    ".tabular-table { border-collapse: collapse; font-size: .9rem; }",
     ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }",
     ".tabular-table td { text-align: left; vertical-align: top; }",
     ".tabular-table thead th { border-top: 1px solid #212529; border-bottom: 1px solid #212529; font-weight: 600; text-align: center; vertical-align: bottom; }",
@@ -1254,7 +1313,7 @@ backend_html <- function(grid, file) {
     ".tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }",
     ".tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }",
     ".tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }",
-    "@media print { .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }"
+    "@media print { .tabular-table-wrap { overflow-x: visible; margin: 0; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }"
   )
   page_rules <- .html_render_page_band_rules(pagehead_ast, pagefoot_ast)
   # Per-cell colour / background / padding ride on cells_style[r,c]
