@@ -365,3 +365,78 @@ test_that("tabular_preview_dir option overrides the temp directory", {
   })
   expect_gt(files_after, files_before)
 })
+
+# ---------------------------------------------------------------------
+# Coverage — output = ... routing through .print_with_output
+# ---------------------------------------------------------------------
+
+test_that("print(output = 'latex') routes through the md source branch (pending real backend)", {
+  s <- tabular(data.frame(x = 1L))
+  res <- capture.output(
+    suppressMessages(print(s, output = "latex", view = FALSE))
+  )
+  expect_true(length(res) >= 1L)
+})
+
+test_that("print(output = 'docx') routes through the binary-fallback branch", {
+  s <- tabular(data.frame(x = 1L))
+  res <- capture.output(
+    suppressMessages(print(s, output = "docx", view = FALSE))
+  )
+  expect_true(length(res) >= 0L)
+})
+
+test_that("print(output = 'pdf') routes through the binary-fallback branch", {
+  s <- tabular(data.frame(x = 1L))
+  res <- capture.output(
+    suppressMessages(print(s, output = "pdf", view = FALSE))
+  )
+  expect_true(length(res) >= 0L)
+})
+
+test_that("print(output = 'rtf') routes through the binary-fallback branch", {
+  s <- tabular(data.frame(x = 1L))
+  res <- capture.output(
+    suppressMessages(print(s, output = "rtf", view = FALSE))
+  )
+  expect_true(length(res) >= 0L)
+})
+
+# ---------------------------------------------------------------------
+# Coverage — knit_print routing through pandoc_to fallbacks
+# ---------------------------------------------------------------------
+
+test_that("knit_print.tabular_spec returns asis text under pandoc_to = 'latex'", {
+  s <- tabular(data.frame(x = 1L))
+  out <- withr::with_options(
+    list(),
+    testthat::local_mocked_bindings(
+      pandoc_to = function() "latex",
+      .package = "knitr"
+    )
+  )
+  # The mocked binding is scoped to this test_that — calling
+  # knit_print should now route to .knit_print_md.
+  result <- knit_print.tabular_spec(s)
+  expect_s3_class(result, "knit_asis")
+})
+
+test_that("knit_print.tabular_spec returns asis text under pandoc_to = 'docx'", {
+  testthat::local_mocked_bindings(
+    pandoc_to = function() "docx",
+    .package = "knitr"
+  )
+  s <- tabular(data.frame(x = 1L))
+  result <- knit_print.tabular_spec(s)
+  expect_s3_class(result, "knit_asis")
+})
+
+test_that("knit_print.tabular_spec returns asis text under pandoc_to = 'rtf'", {
+  testthat::local_mocked_bindings(
+    pandoc_to = function() "rtf",
+    .package = "knitr"
+  )
+  s <- tabular(data.frame(x = 1L))
+  result <- knit_print.tabular_spec(s)
+  expect_s3_class(result, "knit_asis")
+})

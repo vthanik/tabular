@@ -185,3 +185,74 @@ test_that("engine_style() error snapshots", {
     style(where = TRUE, bold = TRUE, .scope = "col")
   expect_snapshot(error = TRUE, tabular:::engine_style(spec2))
 })
+
+# ---------------------------------------------------------------------
+# Coverage — .resolve_layer_rows() + .resolve_layer_cols() error paths.
+# Triggered via the public `style()` verb so the abort class is
+# pinned at the engine layer where users actually hit it.
+# ---------------------------------------------------------------------
+
+test_that(".resolve_layer_rows aborts on non-logical `where` result", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    style(where = x, bold = TRUE)
+  expect_error(
+    tabular:::engine_style(spec),
+    class = "tabular_error_input"
+  )
+})
+
+test_that(".resolve_layer_rows aborts when `where` length is wrong", {
+  # Use a `where` that returns a length-2 logical on a 3-row data
+  # frame to trigger the length-mismatch branch.
+  spec <- tabular(data.frame(x = 1:3)) |>
+    style(where = c(TRUE, FALSE), bold = TRUE)
+  expect_error(
+    tabular:::engine_style(spec),
+    class = "tabular_error_input"
+  )
+})
+
+test_that(".resolve_layer_rows aborts on numeric i out of bounds", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    style(bold = TRUE, at = cells_body(i = 1:5))
+  expect_error(
+    tabular:::engine_style(spec),
+    class = "tabular_error_input"
+  )
+})
+
+test_that(".resolve_layer_rows aborts on logical i with wrong length", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    style(bold = TRUE, at = cells_body(i = c(TRUE, FALSE)))
+  expect_error(
+    tabular:::engine_style(spec),
+    class = "tabular_error_input"
+  )
+})
+
+test_that(".resolve_layer_rows warns on character i and applies to every row", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    style(bold = TRUE, at = cells_body(i = c("a", "b", "c")))
+  expect_warning(
+    tabular:::engine_style(spec),
+    "Character row indices"
+  )
+})
+
+test_that(".resolve_layer_cols aborts on unknown character j", {
+  spec <- tabular(data.frame(x = 1:3, y = 4:6)) |>
+    style(bold = TRUE, at = cells_body(j = "nope"))
+  expect_error(
+    tabular:::engine_style(spec),
+    class = "tabular_error_input"
+  )
+})
+
+test_that(".resolve_layer_cols aborts on numeric j out of bounds", {
+  spec <- tabular(data.frame(x = 1:3, y = 4:6)) |>
+    style(bold = TRUE, at = cells_body(j = 5L))
+  expect_error(
+    tabular:::engine_style(spec),
+    class = "tabular_error_input"
+  )
+})

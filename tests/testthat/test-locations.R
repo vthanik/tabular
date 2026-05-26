@@ -195,3 +195,104 @@ test_that("print.tabular_location shows surface + filter summary", {
   expect_match(out, "i=1,2", all = FALSE)
   expect_match(out, "j=Total", all = FALSE)
 })
+
+# ---------------------------------------------------------------------
+# Error-branch coverage — exercise every .check_location_index() abort
+# path and the cells_headers() validators.
+# ---------------------------------------------------------------------
+
+test_that("cells_body() rejects logical i with NAs", {
+  expect_error(
+    cells_body(i = c(TRUE, NA)),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cells_body() rejects numeric i with non-positive values", {
+  expect_error(
+    cells_body(i = c(1L, 0L)),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cells_body() rejects numeric i with fractional values", {
+  expect_error(
+    cells_body(i = c(1.5, 2)),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cells_body() rejects character i with NAs", {
+  expect_error(
+    cells_body(i = c("row1", NA_character_)),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cells_body() rejects character i with empty strings", {
+  expect_error(
+    cells_body(i = c("row1", "")),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cells_body() rejects unsupported i types", {
+  expect_error(
+    cells_body(i = list(1, 2)),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cells_body() rejects double-length-0 (empty character)", {
+  expect_error(
+    cells_body(i = character(0L)),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cells_headers() rejects level = 0 (must be non-zero whole)", {
+  expect_error(
+    cells_headers(level = 0),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cells_headers() rejects non-character labels", {
+  expect_error(
+    cells_headers(labels = 1L),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cells_headers() rejects labels with NAs", {
+  expect_error(
+    cells_headers(labels = c("Treatment", NA_character_)),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cells_headers() rejects empty character labels", {
+  expect_error(
+    cells_headers(labels = character(0L)),
+    class = "tabular_error_input"
+  )
+})
+
+# ---------------------------------------------------------------------
+# print.tabular_location — exercise every parts branch
+# ---------------------------------------------------------------------
+
+test_that("print.tabular_location renders i / j / where / level / labels / slot / side", {
+  expect_snapshot({
+    print(cells_body(i = 1:3, j = "Total"))
+    print(cells_body(where = x > 0))
+    print(cells_headers(level = 1L))
+    print(cells_headers(labels = "Treatment Group"))
+    print(cells_pagehead(slot = "left"))
+    print(cells_table(side = "outer_top"))
+  })
+})
+
+test_that(".format_filter truncates long index vectors", {
+  expect_snapshot(print(cells_body(i = 1:10)))
+})

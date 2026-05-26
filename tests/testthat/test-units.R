@@ -218,3 +218,46 @@ test_that(".is_percent_dim distinguishes percent from fixed dims", {
     tabular:::.is_percent_dim(list(value = 2, unit = "cm"))
   )
 })
+
+# ---------------------------------------------------------------------
+# Additional error-branch coverage for `.parse_dim()`
+# ---------------------------------------------------------------------
+
+test_that(".parse_dim rejects percent unit when allow_percent = FALSE", {
+  expect_error(
+    tabular:::.parse_dim("50%", allow_percent = FALSE),
+    class = "tabular_error_input"
+  )
+})
+
+test_that(".parse_dim rejects unsupported units like 'em' for page geometry", {
+  expect_error(
+    tabular:::.parse_dim("3em", allow_percent = FALSE),
+    class = "tabular_error_input"
+  )
+})
+
+test_that(".parse_dim rejects percent > 100", {
+  expect_error(
+    tabular:::.parse_dim("150%", allow_percent = TRUE),
+    class = "tabular_error_input"
+  )
+})
+
+test_that(".parse_dim rejects negative numeric component", {
+  expect_error(
+    tabular:::.parse_dim("-2in", allow_percent = FALSE),
+    class = "tabular_error_input"
+  )
+})
+
+test_that(".parse_dim rejects 'auto' string and other non-numeric tokens", {
+  expect_error(
+    tabular:::.parse_dim("auto", allow_percent = FALSE),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    tabular:::.parse_dim("five inches", allow_percent = FALSE),
+    class = "tabular_error_input"
+  )
+})
