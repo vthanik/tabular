@@ -544,7 +544,7 @@ preset <- function(
 #' Stash a `preset_spec` in the package-internal session environment.
 #' Every subsequent `tabular()` chain that does not attach its own
 #' [`preset()`] inherits these knobs at render time. Mirrors ggplot2's
-#' [`ggplot2::theme_set()`]: one call up front, many tables downstream.
+#' \link[ggplot2:theme_set]{\code{ggplot2::theme_set()}}: one call up front, many tables downstream.
 #'
 #' @details
 #'
@@ -563,7 +563,7 @@ preset <- function(
 #'
 #' **Save and restore.** Every call returns the *previous* session
 #' preset invisibly, the same primitive ggplot2's
-#' [`ggplot2::theme_set()`] ships. Capture it once, render, and
+#' \link[ggplot2:theme_set]{\code{ggplot2::theme_set()}} ships. Capture it once, render, and
 #' restore by passing the saved value back as the positional `new`
 #' argument:
 #'
@@ -619,7 +619,7 @@ preset <- function(
 #'   `NULL` when no session preset was attached prior to the call.
 #'   Capture it to round-trip a temporary override:
 #'   `old <- set_preset(...); set_preset(old)`. Mirrors
-#'   [`ggplot2::theme_set()`] and `base::options()` — the canonical
+#'   \link[ggplot2:theme_set]{\code{ggplot2::theme_set()}} and `base::options()` — the canonical
 #'   tidyverse save/restore primitive.
 #'
 #' @examples

@@ -45,14 +45,14 @@ the session default back to NULL.}
 \code{NULL} when no session preset was attached prior to the call.
 Capture it to round-trip a temporary override:
 \verb{old <- set_preset(...); set_preset(old)}. Mirrors
-\code{\link[ggplot2:get_theme]{ggplot2::theme_set()}} and \code{base::options()} — the canonical
+\link[ggplot2:theme_set]{\code{ggplot2::theme_set()}} and \code{base::options()} — the canonical
 tidyverse save/restore primitive.
 }
 \description{
 Stash a \code{preset_spec} in the package-internal session environment.
 Every subsequent \code{tabular()} chain that does not attach its own
 \code{\link[=preset]{preset()}} inherits these knobs at render time. Mirrors ggplot2's
-\code{\link[ggplot2:get_theme]{ggplot2::theme_set()}}: one call up front, many tables downstream.
+\link[ggplot2:theme_set]{\code{ggplot2::theme_set()}}: one call up front, many tables downstream.
 }
 \details{
 \strong{Persistence.} The session preset lives in a package-internal
@@ -70,7 +70,7 @@ default back to NULL.
 
 \strong{Save and restore.} Every call returns the \emph{previous} session
 preset invisibly, the same primitive ggplot2's
-\code{\link[ggplot2:get_theme]{ggplot2::theme_set()}} ships. Capture it once, render, and
+\link[ggplot2:theme_set]{\code{ggplot2::theme_set()}} ships. Capture it once, render, and
 restore by passing the saved value back as the positional \code{new}
 argument:
 
