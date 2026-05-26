@@ -225,7 +225,7 @@ preset(
 )
 }\if{html}{\out{</div>}}}
 
-\item{template}{\emph{A \code{preset_spec} to bulk-apply before \code{...}.}
+\item{.template}{\emph{A \code{preset_spec} to bulk-apply before \code{...}.}
 \verb{<preset_spec | NULL>: default NULL}. When supplied, every knob
 the template has set away from its factory default feeds in as
 the base layer; user-supplied \code{...} knobs then merge on top.
@@ -234,14 +234,14 @@ List-valued knobs (\code{borders}, \code{fonts}, \code{colors}, \code{padding},
 to layer a house-style \code{preset_spec} onto a chain without
 restating its knobs.}
 
-\item{style}{\emph{A \code{style_template()} to layer onto the cascade.}
+\item{.style}{\emph{A \code{style_template()} to layer onto the cascade.}
 \verb{<style_template | NULL>: default NULL}. When supplied, every
 layer the template has accumulated via \code{\link[=style]{style()}} is replayed
 in order at engine time, after the per-spec \code{\link[=style]{style()}} layers
 on \code{.spec}. Use this to attach a sponsor's reusable house style
 to a chain without restating every per-region rule.}
 
-\item{reset}{\emph{Discard the spec's existing preset before applying
+\item{.reset}{\emph{Discard the spec's existing preset before applying
 \code{...}.} \verb{<logical(1)>: default FALSE}. When \code{TRUE}, the spec's
 prior \code{preset_spec} (if any) is dropped and \code{...} knobs are
 merged onto fresh \code{preset_spec()} defaults. With no knobs, the
@@ -275,9 +275,9 @@ their prior value. The five named-list knobs (\code{alignment} /
 records on \code{preset@style} via \code{.preset_args_to_layers()}
 (internal) and append in call order; layer order is precedence
 within the engine cascade, so a later \code{preset()} call's lowered
-attribute wins over an earlier one at the cell. Pass \code{reset = TRUE}
+attribute wins over an earlier one at the cell. Pass \code{.reset = TRUE}
 to discard the existing knobs and start from \code{preset_spec()}
-defaults. \code{preset(spec, reset = TRUE)} with no knobs clears the
+defaults. \code{preset(.spec, .reset = TRUE)} with no knobs clears the
 per-spec override entirely (the spec then falls through to
 \code{\link[=set_preset]{set_preset()}} or \code{preset_spec()} defaults at render time).
 
@@ -388,7 +388,7 @@ tabular(
 
 # Reset the session default so subsequent examples / R sessions
 # are not affected.
-set_preset(reset = TRUE)
+set_preset(.reset = TRUE)
 
 }
 \seealso{
