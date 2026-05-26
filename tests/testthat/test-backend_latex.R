@@ -64,11 +64,12 @@ test_that("emit(.tex) renders saf_demo golden pipeline end to end", {
 
 test_that("default preamble uses preset defaults", {
   txt <- render_tex(tabular(data.frame(x = 1L)))
-  # Default preset: font_size=9 -> 10pt class option, paper=letter.
+  # Default preset: font_size=9 -> 10pt class option, paper=letter,
+  # orientation=landscape.
   expect_match(txt, "\\documentclass[10pt]{article}", fixed = TRUE)
   expect_match(
     txt,
-    "\\usepackage[letterpaper, margin=1in]{geometry}",
+    "\\usepackage[letterpaper, margin=1in, landscape]{geometry}",
     fixed = TRUE
   )
   expect_match(txt, "\\usepackage{tabularray}", fixed = TRUE)
@@ -186,8 +187,23 @@ test_that(".latex_pdftex_font_pkg routes generics to TeX Gyre bundles", {
   expect_identical(tabular:::.latex_pdftex_font_pkg("monospace"), "tgcursor")
 })
 
-test_that("default preset(font_family = 'serif') -> tgtermes + Liberation Serif cascade lead", {
+test_that("default preset() -> tgcursor + Liberation Mono cascade lead", {
+  # The factory default for preset_spec()@font_family is "mono", so a
+  # tabular() with no explicit preset() call emits the mono cascade.
   txt <- render_tex(tabular(data.frame(x = 1L)))
+  expect_match(txt, "\\usepackage{tgcursor}", fixed = TRUE)
+  expect_match(
+    txt,
+    "\\IfFontExistsTF{Liberation Mono}{\\setmainfont{Liberation Mono}}",
+    fixed = TRUE
+  )
+  expect_match(txt, "\\setmainfont{Latin Modern Mono}", fixed = TRUE)
+})
+
+test_that("preset(font_family = 'serif') -> tgtermes + Liberation Serif cascade lead", {
+  txt <- render_tex(
+    tabular(data.frame(x = 1L)) |> preset(font_family = "serif")
+  )
   expect_match(txt, "\\usepackage{tgtermes}", fixed = TRUE)
   # Liberation Serif is the outermost branch of the fontspec cascade
   # (compile-time \IfFontExistsTF picks it first on Linux servers).
@@ -431,6 +447,7 @@ test_that("col_spec width percent -> resolved against available content width", 
   # 6.5in printable area on letter portrait, 1in margins = 1.95in).
   # Backend sees the resolved numeric inches.
   spec <- tabular(data.frame(x = "a", y = "b")) |>
+    preset(orientation = "portrait") |>
     cols(x = col_spec(width = "30%"), y = col_spec(width = "70%"))
   txt <- render_tex(spec)
   expect_match(txt, "Q[l,wd=1.950000in]", fixed = TRUE)
@@ -439,6 +456,7 @@ test_that("col_spec width percent -> resolved against available content width", 
 
 test_that("col_spec width respects align letter", {
   spec <- tabular(data.frame(x = "a", y = "b")) |>
+    preset(orientation = "portrait") |>
     cols(
       x = col_spec(align = "right", width = "1in"),
       y = col_spec(align = "center", width = "20%")

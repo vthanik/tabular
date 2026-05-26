@@ -159,10 +159,10 @@ test_that("explicit vector stack passes through verbatim", {
   )
 })
 
-test_that("empty input falls back to serif default", {
+test_that("empty input falls back to mono default", {
   expect_identical(
     tabular:::.resolve_font_stack(character(), "html"),
-    tabular:::.resolve_font_stack("serif", "html")
+    tabular:::.resolve_font_stack("mono", "html")
   )
 })
 
@@ -226,8 +226,8 @@ test_that("check_fonts requires systemfonts and accepts tabular_spec input", {
   spec <- tabular(data.frame(x = 1L))
   msgs <- testthat::capture_messages(check_fonts(spec))
   joined <- paste(msgs, collapse = "")
-  # Default font_family is "serif" — the chain header should show it.
-  expect_match(joined, "serif", fixed = TRUE)
+  # Default font_family is "mono" — the chain header should show it.
+  expect_match(joined, "mono", fixed = TRUE)
   expect_match(joined, "backend:", fixed = TRUE)
 })
 

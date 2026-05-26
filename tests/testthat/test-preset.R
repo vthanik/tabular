@@ -28,11 +28,11 @@ test_that("preset() merges knobs across repeat calls (no reset)", {
 
 test_that("preset(.reset = TRUE) discards prior knobs", {
   spec <- tabular(data.frame(x = 1:3)) |>
-    preset(font_size = 8, orientation = "landscape") |>
+    preset(font_size = 8, orientation = "portrait") |>
     preset(font_size = 10, .reset = TRUE)
   expect_identical(spec@preset@font_size, 10)
   # orientation reverts to factory default
-  expect_identical(spec@preset@orientation, "portrait")
+  expect_identical(spec@preset@orientation, "landscape")
 })
 
 test_that("preset(.reset = TRUE) with no knobs clears the per-spec preset", {

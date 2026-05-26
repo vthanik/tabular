@@ -1,5 +1,5 @@
 \documentclass[10pt]{article}
-\usepackage[letterpaper, margin=1in]{geometry}
+\usepackage[letterpaper, margin=1in, landscape]{geometry}
 \usepackage{iftex}
 \ifPDFTeX
   \usepackage[T1]{fontenc}
@@ -12,10 +12,10 @@
 \UseTblrLibrary{siunitx}
 \usepackage{iftex}
 \ifPDFTeX
-  \usepackage{tgtermes}
+  \usepackage{tgcursor}
 \else
   \usepackage{fontspec}
-  \IfFontExistsTF{Liberation Serif}{\setmainfont{Liberation Serif}}{\IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{\IfFontExistsTF{Times}{\setmainfont{Times}}{\IfFontExistsTF{TeX Gyre Termes}{\setmainfont{TeX Gyre Termes}}{\setmainfont{Latin Modern Roman}}}}}
+  \IfFontExistsTF{Liberation Mono}{\setmainfont{Liberation Mono}}{\IfFontExistsTF{Courier New}{\setmainfont{Courier New}}{\IfFontExistsTF{Courier}{\setmainfont{Courier}}{\IfFontExistsTF{TeX Gyre Cursor}{\setmainfont{TeX Gyre Cursor}}{\setmainfont{Latin Modern Mono}}}}}
 \fi
 \fontsize{9}{10.8}\selectfont
 \setlength{\parindent}{0pt}
@@ -31,7 +31,7 @@
 {\bfseries Safety Population}\par
 \end{center}
 
-\begin{longtblr}[caption={}, label={}]{colspec={Q[l,wd=2.548167in] Q[r,wd=0.843667in] Q[r,wd=0.843667in] Q[r,wd=0.843667in] Q[r,wd=0.843667in]}, rowhead=1, rows={valign=t}}
+\begin{longtblr}[caption={}, label={}]{colspec={Q[l,wd=2.566667in] Q[r,wd=1.141667in] Q[r,wd=1.141667in] Q[r,wd=1.141667in] Q[r,wd=1.141667in]}, rowhead=1, rows={valign=t}}
 \hline
 Statistic & Placebo \\ N=86 & High Dose \\ N=72 & Low Dose \\ N=96 & Total \\ N=254 \\
 \hline
@@ -80,13 +80,7 @@ n &  86           &  72           &  95         
 Mean (SD) &  23.6 ( 3.67) &  25.2 ( 3.97) &  25.2 ( 4.40) &  24.7 ( 4.09) \\*
 Median &  23.4         &  24.8         &  24.8         &  24.2         \\*
 Q1, Q3 &  21.2, 25.6   &  22.7, 27.6   &  22.3, 28.2   &  21.9, 27.3   \\*
-Min, Max &  15  , 33     &  14  , 35     &  15  , 40     &  14  , 40     \\*
- &  &  &  &  \\*
-BMI Category, n (\%) &  &  &  &  \\*
-Underweight (<18.5) &   3   ( 3.5 ) &   1   ( 1.4 ) &   4   ( 4.2 ) &   8   ( 3.1 ) \\*
-Normal (18.5-24.9) &  57   (66.3 ) &  39   (54.2 ) &  46   (47.9 ) & 142   (55.9 ) \\*
-Overweight (25-29.9) &  20   (23.3 ) &  23   (31.9 ) &  32   (33.3 ) &  75   (29.5 ) \\*
-Obese (>=30) &   6   ( 7.0 ) &   9   (12.5 ) &  13   (13.5 ) &  28   (11.0 ) \\
+Min, Max &  15  , 33     &  14  , 35     &  15  , 40     &  14  , 40     \\
 \hline
 \end{longtblr}
 \noindent\small
@@ -94,4 +88,18 @@ Obese (>=30) &   6   ( 7.0 ) &   9   (12.5 ) &  13   (13.5 ) &  
 Source: ADSL.\par
 \end{flushleft}
 \normalsize
+
+\newpage
+
+\begin{longtblr}[caption={}, label={}]{colspec={Q[l,wd=2.566667in] Q[r,wd=1.141667in] Q[r,wd=1.141667in] Q[r,wd=1.141667in] Q[r,wd=1.141667in]}, rowhead=1, rows={valign=t}}
+\hline
+Statistic & Placebo \\ N=86 & High Dose \\ N=72 & Low Dose \\ N=96 & Total \\ N=254 \\
+\hline
+BMI Category, n (\%) &  &  &  &  \\*
+Underweight (<18.5) &   3   ( 3.5 ) &   1   ( 1.4 ) &   4   ( 4.2 ) &   8   ( 3.1 ) \\*
+Normal (18.5-24.9) &  57   (66.3 ) &  39   (54.2 ) &  46   (47.9 ) & 142   (55.9 ) \\*
+Overweight (25-29.9) &  20   (23.3 ) &  23   (31.9 ) &  32   (33.3 ) &  75   (29.5 ) \\*
+Obese (>=30) &   6   ( 7.0 ) &   9   (12.5 ) &  13   (13.5 ) &  28   (11.0 ) \\
+\hline
+\end{longtblr}
 \end{document}

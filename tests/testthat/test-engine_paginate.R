@@ -166,7 +166,7 @@ test_that("engine_paginate() merges last page back when below widow_floor", {
   spec <- tabular(df) |>
     cols(soc = col_spec(usage = "group", label = "SOC")) |>
     paginate(widow_floor = 2L)
-  preset <- preset_spec(font_size = 72)
+  preset <- preset_spec(font_size = 72, orientation = "portrait")
   spec <- S7::set_props(spec, preset = preset)
   plan <- tabular:::engine_paginate(spec)
   expect_identical(length(plan$pages), 2L)

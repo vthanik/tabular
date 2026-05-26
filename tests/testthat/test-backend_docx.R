@@ -207,19 +207,19 @@ test_that(".docx_core_xml carries the first title and fixed timestamps for deter
 # Section properties (page geometry)
 # ---------------------------------------------------------------------
 
-test_that(".docx_section_pr emits letter portrait twips by default", {
+test_that(".docx_section_pr emits letter landscape twips by default", {
   preset <- preset_spec()
   sp <- tabular:::.docx_section_pr(preset)
-  # Letter portrait: 8.5 x 11 in -> 12240 x 15840 twips
-  expect_match(sp, "w:w=\"12240\" w:h=\"15840\"", fixed = TRUE)
-  expect_false(grepl("w:orient=\"landscape\"", sp, fixed = TRUE))
-})
-
-test_that(".docx_section_pr swaps width / height and tags orient for landscape", {
-  preset <- preset_spec(orientation = "landscape")
-  sp <- tabular:::.docx_section_pr(preset)
+  # Letter landscape: 11 x 8.5 in -> 15840 x 12240 twips
   expect_match(sp, "w:w=\"15840\" w:h=\"12240\"", fixed = TRUE)
   expect_match(sp, "w:orient=\"landscape\"", fixed = TRUE)
+})
+
+test_that(".docx_section_pr emits letter portrait dimensions when explicit", {
+  preset <- preset_spec(orientation = "portrait")
+  sp <- tabular:::.docx_section_pr(preset)
+  expect_match(sp, "w:w=\"12240\" w:h=\"15840\"", fixed = TRUE)
+  expect_false(grepl("w:orient=\"landscape\"", sp, fixed = TRUE))
 })
 
 test_that(".docx_section_pr inserts headerReference / footerReference only when chrome populated", {
@@ -506,15 +506,16 @@ test_that("emit(.docx) writes <w:tbl> with <w:tblGrid>, <w:tr>, <w:tc> for data 
 
 test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (boundary-snapped)", {
   # Saf_demo widths under the golden pipeline are content-derived.
-  # Diffs sum to the printable area (9360 twips on US Letter at 0.5"
-  # margins). Per-column rounding can over- or under-count by 1 twip;
-  # boundary-snapping reconciles to keep the cumulative sum exact
-  # (matches RTF \cellx).
+  # Diffs sum to the printable area (9360 twips on US Letter portrait
+  # at 1in margins). Per-column rounding can over- or under-count by
+  # 1 twip; boundary-snapping reconciles to keep the cumulative sum
+  # exact (matches RTF \cellx).
   spec <- tabular(
     saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
+    preset(orientation = "portrait", font_family = "serif") |>
     cols(
       variable = col_spec(
         usage = "group",

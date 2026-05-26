@@ -31,12 +31,12 @@ test_that("set_preset() merges knobs across repeat calls", {
 
 test_that("set_preset(.reset = TRUE) replaces the session preset", {
   clear_session_preset()
-  set_preset(font_size = 8, orientation = "landscape")
+  set_preset(font_size = 8, orientation = "portrait")
   set_preset(.reset = TRUE, font_size = 10)
   active <- get_preset()
   expect_identical(active@font_size, 10)
   # orientation reverts to factory default
-  expect_identical(active@orientation, "portrait")
+  expect_identical(active@orientation, "landscape")
 })
 
 test_that("set_preset(.reset = TRUE) with no knobs clears to NULL", {
@@ -55,10 +55,10 @@ test_that("set_preset() returns the prior session preset invisibly", {
   expect_null(first)
 
   # Second call: prior is the preset that the first call installed.
-  second <- set_preset(orientation = "landscape")
+  second <- set_preset(orientation = "portrait")
   expect_true(is_preset_spec(second))
   expect_identical(second@font_size, 8)
-  expect_identical(second@orientation, "portrait") # before this call
+  expect_identical(second@orientation, "landscape") # before this call
 })
 
 test_that("set_preset(.reset = TRUE) returns the prior preset invisibly", {
@@ -111,12 +111,15 @@ test_that("set_preset() rejects non-scalar reset", {
 
 test_that("set_preset() is visible to engine_paginate when spec has no per-spec preset", {
   clear_session_preset()
+  set_preset(orientation = "portrait")
   spec <- tabular(data.frame(x = 1:5))
-  plan_default <- tabular:::engine_paginate(spec)
+  plan_portrait <- tabular:::engine_paginate(spec)
 
   set_preset(orientation = "landscape")
   plan_landscape <- tabular:::engine_paginate(spec)
-  expect_gt(plan_default$rows_per_page, plan_landscape$rows_per_page)
+  # Portrait letter has more vertical room (11in) than landscape (8.5in)
+  # at the same margins, so rows-per-page is higher in portrait.
+  expect_gt(plan_portrait$rows_per_page, plan_landscape$rows_per_page)
 })
 
 test_that("per-spec preset() wins over session set_preset()", {

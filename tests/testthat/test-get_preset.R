@@ -48,13 +48,14 @@ test_that("get_preset() supports the read-tweak-attach pattern", {
     preset(
       font_size = base@font_size,
       paper_size = base@paper_size,
-      orientation = "landscape"
+      orientation = "portrait"
     )
 
-  # Session default unchanged
+  # Session default unchanged (orientation is the factory default
+  # "landscape" since set_preset() above did not override it).
   expect_identical(get_preset()@font_size, 9)
   expect_identical(get_preset()@paper_size, "letter")
-  expect_identical(get_preset()@orientation, "portrait")
+  expect_identical(get_preset()@orientation, "landscape")
   # Per-spec preset carries the tweak
-  expect_identical(spec@preset@orientation, "landscape")
+  expect_identical(spec@preset@orientation, "portrait")
 })

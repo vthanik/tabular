@@ -100,7 +100,7 @@ test_that("pagination_spec() defaults", {
 test_that("preset_spec() defaults", {
   p <- preset_spec()
   expect_true(is_preset_spec(p))
-  expect_identical(p@orientation, "portrait")
+  expect_identical(p@orientation, "landscape")
   expect_identical(p@paper_size, "letter")
   expect_identical(p@hlines, "header")
   expect_identical(p@decimal_metrics, "chars")

@@ -47,7 +47,7 @@ Requires the \code{systemfonts} package (in \code{Suggests}); call
 \examples{
 # ---- Example 1: Inspect default font resolution ----
 #
-# Build a spec with the default font_family ("serif") and ask
+# Build a spec with the default font_family ("mono") and ask
 # which entries in the cross-platform chain are findable
 # locally. Useful before sharing a render with downstream
 # reviewers who may be on a different OS.

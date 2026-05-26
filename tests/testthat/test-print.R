@@ -115,11 +115,11 @@ test_that("cli tree shows pagination auto when all defaults", {
 test_that("cli tree shows preset diff when knobs differ from defaults", {
   s <- S7::set_props(
     tabular_spec(data = data.frame(x = 1L)),
-    preset = preset_spec(font_size = 8, orientation = "landscape")
+    preset = preset_spec(font_size = 8, orientation = "portrait")
   )
   out <- print_lines(s)
   expect_match(out, "Preset:.*font_size=8")
-  expect_match(out, "orientation=landscape")
+  expect_match(out, "orientation=portrait")
 })
 
 test_that("cli tree shows preset defaults when no knobs differ", {

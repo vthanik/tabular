@@ -122,20 +122,22 @@
 #'
 #'   *   **`font_size`** — body point size. `<numeric(1)>`.
 #'   *   **`font_family`** — body font family. `<character | character(1)>`.
-#'       Default `"serif"`. Three accepted shapes:
+#'       Default `"mono"`. Three accepted shapes:
 #'
-#'       1. **Generic family** — `"serif"` (default), `"sans"`,
-#'          `"mono"` (CSS aliases `"sans-serif"` / `"monospace"`
+#'       1. **Generic family** — `"mono"` (default), `"serif"`,
+#'          `"sans"` (CSS aliases `"monospace"` / `"sans-serif"`
 #'          also recognised). The resolver expands to a per-backend
 #'          chain that leads with the Linux-installed
 #'          **Liberation** face (Posit Workbench / Domino / Citrix
 #'          / RStudio Server), then the Microsoft Office face
-#'          (Times New Roman / Arial / Courier New) for desktop
+#'          (Courier New / Times New Roman / Arial) for desktop
 #'          Win / Mac consumers, then TeX Gyre for LaTeX compile,
-#'          then the CSS generic for HTML. Liberation Serif /
-#'          Sans / Mono are metric-compatible with TNR / Arial /
-#'          Courier New, so layout, line breaks, and decimal
-#'          alignment hold across every render context.
+#'          then the CSS generic for HTML. Liberation Mono / Serif
+#'          / Sans are metric-compatible with Courier New / TNR /
+#'          Arial, so layout, line breaks, and decimal alignment
+#'          hold across every render context. The mono default
+#'          matches the dominant submission-TFL convention where
+#'          deterministic glyph widths drive `n (%)` cell alignment.
 #'
 #'       2. **Named alias** — `"Times"`, `"Times New Roman"`,
 #'          `"Arial"`, `"Helvetica"`, `"Courier"`, `"Courier New"`.
@@ -172,20 +174,20 @@
 #'       **What you see in Word's font dropdown vs. what renders.**
 #'       When you open a tabular-generated `.rtf` in Word on
 #'       macOS or Windows, the font dropdown displays the file's
-#'       *requested* face — `"Liberation Serif"` by default
+#'       *requested* face — `"Liberation Mono"` by default
 #'       (the Linux-server-installed face). The rendered text on
 #'       screen is whatever Word's `\\*\\falt` substitution
-#'       resolved to — typically Times New Roman on macOS /
-#'       Windows. This is correct: Liberation Serif and Times
-#'       New Roman are metric-compatible by design, so the
-#'       rendered layout (line breaks, decimal alignment, page
-#'       breaks) is identical regardless of which face Word
-#'       actually used to render. The same `\\*\\falt`
-#'       substitution model applies to sans (Liberation Sans -> Arial)
-#'       and mono (Liberation Mono -> Courier New).
+#'       resolved to — typically Courier New on macOS /
+#'       Windows. This is correct: Liberation Mono and Courier
+#'       New are metric-compatible by design, so the rendered
+#'       layout (line breaks, decimal alignment, page breaks) is
+#'       identical regardless of which face Word actually used to
+#'       render. The same `\\*\\falt` substitution model applies
+#'       to serif (Liberation Serif -> Times New Roman) and sans
+#'       (Liberation Sans -> Arial).
 #'
 #'       **How to force Office names as the primary.** If
-#'       reviewers will be confused by seeing `"Liberation Serif"`
+#'       reviewers will be confused by seeing `"Liberation Mono"`
 #'       in the Word font dropdown (cosmetic concern; doesn't
 #'       affect rendering), pass an explicit length>1 stack with
 #'       the Office name first. The resolver returns the vector
@@ -194,15 +196,15 @@
 #'       chosen alternate as `\\*\\falt`:
 #'
 #'       ```r
-#'       preset(font_family = c("Times New Roman", "Times", "Liberation Serif"))
+#'       preset(font_family = c("Courier New", "Courier", "Liberation Mono"))
 #'       ```
 #'
 #'       This is the canonical escape hatch for authors who know
 #'       their consumer audience is Mac / Windows Word users and
 #'       want the dropdown to show the Office face directly.
 #'   *   **`orientation`** — page orientation.
-#'       `<character(1)>`. One of `"portrait"` (default),
-#'       `"landscape"`.
+#'       `<character(1)>`. One of `"landscape"` (default),
+#'       `"portrait"`.
 #'   *   **`paper_size`** — paper key.
 #'       `<character(1)>`. One of `"letter"` (default), `"a4"`.
 #'   *   **`margins`** — page margins in inches.

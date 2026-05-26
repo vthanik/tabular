@@ -170,7 +170,7 @@
 # Returns a character vector of font names in priority order.
 #
 # Five branches, in dispatch order:
-#   1. Empty / NULL  -> normalise to `"serif"`.
+#   1. Empty / NULL  -> normalise to `"mono"`.
 #   2. Length > 1    -> explicit stack, verbatim; alias table is
 #                       NOT consulted (escape hatch for users who
 #                       want exact-name semantics).
@@ -183,7 +183,7 @@
 #      / sponsor-specific face) -> emit verbatim, no fallback.
 .resolve_font_stack <- function(font_family, backend) {
   if (length(font_family) == 0L) {
-    font_family <- "serif"
+    font_family <- "mono"
   }
   # Explicit stack: emit verbatim, no fabrication, no alias lookup.
   if (length(font_family) > 1L) {
@@ -278,7 +278,7 @@
 #' @examples
 #' # ---- Example 1: Inspect default font resolution ----
 #' #
-#' # Build a spec with the default font_family ("serif") and ask
+#' # Build a spec with the default font_family ("mono") and ask
 #' # which entries in the cross-platform chain are findable
 #' # locally. Useful before sharing a render with downstream
 #' # reviewers who may be on a different OS.
