@@ -26,8 +26,8 @@ only the \code{pvalue} column's cells in matching rows.}
 Recognised attributes: \code{bold}, \code{italic}, \code{underline}, \code{color},
 \code{background}, \code{font_family}, \code{font_size}, \code{rule_above},
 \code{rule_below}, \code{border_left}, \code{border_right}, \code{padding},
-\code{blank_after}, \code{pretext}, \code{posttext}, \code{halign}, \code{valign},
-and the per-side border triple
+\code{blank_above}, \code{blank_below}, \code{pretext}, \code{posttext}, \code{halign},
+\code{valign}, and the per-side border triple
 \verb{border_\{top,bottom,left,right\}_\{style,width,color\}} (12
 scalars).
 

@@ -84,8 +84,8 @@
 #'   Recognised attributes: `bold`, `italic`, `underline`, `color`,
 #'   `background`, `font_family`, `font_size`, `rule_above`,
 #'   `rule_below`, `border_left`, `border_right`, `padding`,
-#'   `blank_after`, `pretext`, `posttext`, `halign`, `valign`,
-#'   and the per-side border triple
+#'   `blank_above`, `blank_below`, `pretext`, `posttext`, `halign`,
+#'   `valign`, and the per-side border triple
 #'   `border_{top,bottom,left,right}_{style,width,color}` (12
 #'   scalars).
 #'
@@ -403,7 +403,6 @@ style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
   "border_left",
   "border_right",
   "padding",
-  "blank_after",
   "blank_above",
   "blank_below",
   "pretext",
@@ -504,7 +503,7 @@ style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
   # write `blank_above = 1` without a literal `1L`.
   for (nm in intersect(
     names(values),
-    c("blank_after", "blank_above", "blank_below")
+    c("blank_above", "blank_below")
   )) {
     v <- values[[nm]]
     if (is.numeric(v) && !is.integer(v) && all(is.na(v) | v == trunc(v))) {

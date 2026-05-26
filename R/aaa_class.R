@@ -502,7 +502,6 @@ style_node <- S7::new_class(
     border_left = S7::new_property(S7::class_any, default = NA),
     border_right = S7::new_property(S7::class_any, default = NA),
     padding = S7::new_property(S7::class_numeric, default = NA_real_),
-    blank_after = S7::new_property(S7::class_integer, default = NA_integer_),
     blank_above = S7::new_property(S7::class_integer, default = NA_integer_),
     blank_below = S7::new_property(S7::class_integer, default = NA_integer_),
     pretext = S7::new_property(S7::class_character, default = NA_character_),

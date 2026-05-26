@@ -386,7 +386,8 @@
     border_left = node@border_left,
     border_right = node@border_right,
     padding = node@padding,
-    blank_after = node@blank_after,
+    blank_above = node@blank_above,
+    blank_below = node@blank_below,
     pretext = node@pretext,
     posttext = node@posttext
   )
