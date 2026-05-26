@@ -503,6 +503,20 @@ preset <- function(.spec, ..., template = NULL, style = NULL, reset = FALSE) {
   } else {
     base
   }
+  # Lower the five named-list knobs (alignment / borders / fonts /
+  # colors / padding) to style_layer records and append to @style.
+  # Template knobs are lowered first so user knobs land later and win
+  # per attribute (layer order is precedence within the cascade).
+  lowered <- c(
+    .preset_args_to_layers(template_knobs),
+    .preset_args_to_layers(knobs)
+  )
+  if (length(lowered) > 0L) {
+    new_preset <- S7::set_props(
+      new_preset,
+      style = c(new_preset@style, lowered)
+    )
+  }
   if (length(style_layers) > 0L) {
     new_preset <- S7::set_props(
       new_preset,
@@ -655,6 +669,18 @@ set_preset <- function(..., template = NULL, style = NULL, reset = FALSE) {
     .apply_preset_knobs(base, knobs, call = call)
   } else {
     base
+  }
+  # Lower the five named-list knobs to style_layer records. See the
+  # mirroring block in preset() for ordering rationale.
+  lowered <- c(
+    .preset_args_to_layers(template_knobs),
+    .preset_args_to_layers(knobs)
+  )
+  if (length(lowered) > 0L) {
+    new_preset <- S7::set_props(
+      new_preset,
+      style = c(new_preset@style, lowered)
+    )
   }
   if (length(style_layers) > 0L) {
     new_preset <- S7::set_props(
@@ -1001,7 +1027,9 @@ get_preset <- function() {
     }
     new <- switch(
       knob,
-      alignment = .preset_alignment_to_layers(val),
+      alignment = .preset_alignment_to_layers(
+        .preset_alignment_args_lowerable(val)
+      ),
       borders = .preset_borders_to_layers(val),
       fonts = .preset_fonts_to_layers(val),
       colors = .preset_colors_to_layers(val),
@@ -1012,6 +1040,26 @@ get_preset <- function() {
     }
   }
   layers
+}
+
+# Drop vector-form alignment values from lowering — chrome surfaces
+# carry a SCALAR halign / valign, so a per-line alignment vector
+# (`alignment = list(title_halign = c("left", "right"))`) cannot be
+# expressed via a single style_layer. The legacy preset@alignment
+# path is still active for vector form; this filter keeps the
+# lowered layer set scalar-only so chrome_style$surfaces does not
+# silently lock the wrong value as the table-wide override.
+.preset_alignment_args_lowerable <- function(al) {
+  if (!is.list(al)) {
+    return(al)
+  }
+  for (key in names(al)) {
+    v <- al[[key]]
+    if (!is.null(v) && length(v) > 1L) {
+      al[[key]] <- NULL
+    }
+  }
+  al
 }
 
 # Surface -> `cells_*()` constructor for the per-surface knobs
@@ -1130,8 +1178,24 @@ get_preset <- function() {
 
 # borders named-list -> per-region border layers. Mirrors the
 # `.resolve_border_regions` body / chrome split: body regions become
-# `cells_table(side=...)` layers; chrome regions become `cells_<chrome
-# surface>()` layers carrying the appropriate `border_<side>_*` triple.
+# `cells_table(side=...)` layers; chrome regions become
+# `cells_<chrome surface>()` layers carrying the appropriate
+# `border_<side>_*` triple. The `subgroup` legacy alias for
+# `subgroup_bottom` is emitted FIRST so an explicit
+# `subgroup_bottom` later in the list overrides it (layer order is
+# precedence). The "none" / "off" sentinel passes through via
+# `.normalise_region_value`.
+#
+# **Body regions are deliberately not lowered yet.** The legacy
+# `engine_borders()` block uses `.set_border_triple()` (skip-if-explicit)
+# so a per-cell predicate border like `border_top_style = "dashed"`
+# survives the preset region overlay. A naive lowered cells_table
+# layer goes through `.stamp_outer_edge_force()` (always-write) and
+# overrides the predicate. Preserving the predicate-respects-preset
+# semantics under the layer cascade requires a separate change to the
+# cells_table layer engine. Until that lands, body borders stay on
+# the legacy slot path only; this helper lowers only the chrome
+# half.
 .preset_borders_to_layers <- function(br) {
   if (!is.list(br)) {
     return(list())
@@ -1142,62 +1206,21 @@ get_preset <- function() {
       layers[[length(layers) + 1L]] <<- layer
     }
   }
-  triple_for <- function(key) .as_brdr_triple(br[[key]])
-
-  # ---- Body regions (cells_table) ----
-  if (!is.null(br[["outer"]])) {
-    triple <- triple_for("outer")
-    for (side in c("top", "bottom", "left", "right")) {
-      add(.preset_layer_border(
-        cells_table(side = paste0("outer_", side)),
-        side,
-        triple
-      ))
-    }
-  }
-  side_aliases <- list(
-    outer_top = c("top", "outer_top"),
-    outer_bottom = c("bottom", "outer_bottom"),
-    outer_left = c("left", "outer_left"),
-    outer_right = c("right", "outer_right"),
-    body_top = c("top", "outer_top"),
-    body_bottom = c("bottom", "outer_bottom")
-  )
-  for (key in names(side_aliases)) {
-    if (!is.null(br[[key]])) {
-      side <- side_aliases[[key]][[1L]]
-      loc_side <- side_aliases[[key]][[2L]]
-      add(.preset_layer_border(
-        cells_table(side = loc_side),
-        side,
-        triple_for(key)
-      ))
-    }
-  }
-  if (!is.null(br[["body_rows"]])) {
-    add(.preset_layer_border(
-      cells_table(side = "rows"),
-      "top",
-      triple_for("body_rows")
-    ))
-  }
-  if (!is.null(br[["body_cols"]])) {
-    add(.preset_layer_border(
-      cells_table(side = "cols"),
-      "left",
-      triple_for("body_cols")
-    ))
-  }
+  triple_for <- function(key) .normalise_region_value(br[[key]])
 
   # ---- Chrome regions ----
+  # `subgroup` alias for `subgroup_bottom` is emitted FIRST so an
+  # explicit `subgroup_bottom` later wins (the legacy
+  # `.resolve_border_regions` does the same via its second-half
+  # write-if-empty pattern; here we rely on layer order).
   chrome_mapping <- list(
     pagehead_bottom = list(loc = cells_pagehead, side = "bottom"),
     header_top = list(loc = cells_headers, side = "top"),
     header_bottom = list(loc = cells_headers, side = "bottom"),
     header_between = list(loc = cells_headers, side = "top"),
     subgroup_top = list(loc = cells_subgroup_labels, side = "top"),
-    subgroup_bottom = list(loc = cells_subgroup_labels, side = "bottom"),
     subgroup = list(loc = cells_subgroup_labels, side = "bottom"),
+    subgroup_bottom = list(loc = cells_subgroup_labels, side = "bottom"),
     footer_top = list(loc = cells_footnotes, side = "top"),
     footer_bottom = list(loc = cells_footnotes, side = "bottom"),
     pagefoot_top = list(loc = cells_pagefoot, side = "top")
@@ -1259,11 +1282,12 @@ get_preset <- function() {
   layers
 }
 
-# colors named-list -> cells_body() color/background layers + outer
-# border colour layer. `border` lowers to a colour-only triple on the
-# outer + rows + cols regions; if the user also supplied a `borders`
-# knob, the explicit borders wins (layer order: borders entries first,
-# colors entries last — last-write wins).
+# colors named-list -> cells_body() color / background layers. The
+# `border` / `border_muted` tokens are NOT lowered here for the same
+# reason `borders$outer` is not yet lowered (body-region layers
+# bypass the predicate-respect cascade; see
+# `.preset_borders_to_layers`). `text_muted` is dropped silently —
+# no per-cell semantic on style_node.
 .preset_colors_to_layers <- function(co) {
   if (!is.list(co)) {
     return(list())
@@ -1279,30 +1303,6 @@ get_preset <- function() {
     layer <- .preset_layer_one(cells_body(), "background", co[["background"]])
     if (!is.null(layer)) {
       layers <- c(layers, list(layer))
-    }
-  }
-  # `border` colour token: a colour-only triple stamped on outer +
-  # body_rows + body_cols so every body-cell separator inherits the
-  # tint. style / width default to NA so they don't accidentally
-  # override an existing border triple.
-  if (!is.null(co[["border"]])) {
-    triple <- list(
-      style = NA_character_,
-      width = NA_real_,
-      color = co[["border"]]
-    )
-    for (sides in list(
-      list(loc = cells_table(side = "outer_top"), side = "top"),
-      list(loc = cells_table(side = "outer_bottom"), side = "bottom"),
-      list(loc = cells_table(side = "outer_left"), side = "left"),
-      list(loc = cells_table(side = "outer_right"), side = "right"),
-      list(loc = cells_table(side = "rows"), side = "top"),
-      list(loc = cells_table(side = "cols"), side = "left")
-    )) {
-      layer <- .preset_layer_border(sides$loc, sides$side, triple)
-      if (!is.null(layer)) {
-        layers <- c(layers, list(layer))
-      }
     }
   }
   layers

@@ -34,58 +34,36 @@ test_that(".preset_args_to_layers() routes every alignment key to its surface", 
     surfaces,
     c("title", "footnotes", "subgroup_labels", "headers", "body")
   )
-  # Vector form: first value used, rest dropped.
+})
+
+test_that(".preset_args_to_layers() drops vector-form alignment values", {
+  # chrome_style$surfaces carries a SCALAR halign / valign so vector
+  # form can't lower without losing the per-line semantics. The
+  # legacy preset@alignment slot keeps vector form alive while the
+  # lowered set stays scalar-only.
   layers <- tabular:::.preset_args_to_layers(list(
     alignment = list(title_halign = c("left", "right"))
   ))
-  expect_length(layers, 1L)
-  expect_identical(layers[[1L]]@style@halign, "left")
+  expect_identical(layers, list())
 })
 
 # ---------------------------------------------------------------------
-# borders — body regions
+# borders — body regions are deliberately NOT lowered yet (see
+# .preset_borders_to_layers comment). Confirm the helper skips them.
 # ---------------------------------------------------------------------
 
-test_that(".preset_args_to_layers() expands borders$outer into four cells_table sides", {
-  layers <- tabular:::.preset_args_to_layers(list(
-    borders = list(outer = brdr("thin", "solid", "#000"))
-  ))
-  expect_length(layers, 4L)
-  sides <- vapply(layers, function(l) l@location$side, character(1L))
-  expect_setequal(
-    sides,
-    c("outer_top", "outer_bottom", "outer_left", "outer_right")
-  )
-  # Each layer carries the triple on its own side scalar.
-  top <- layers[[which(sides == "outer_top")]]
-  expect_identical(top@style@border_top_style, "solid")
-  expect_identical(top@style@border_top_color, "#000")
-})
-
-test_that(".preset_args_to_layers() maps body_rows / body_cols to cells_table(side=rows/cols)", {
+test_that(".preset_args_to_layers() skips body border regions (outer / body_*)", {
   layers <- tabular:::.preset_args_to_layers(list(
     borders = list(
-      body_rows = brdr("hairline", "dotted"),
+      outer = brdr("thin"),
+      outer_top = brdr("medium"),
+      body_top = brdr(),
+      body_bottom = brdr(),
+      body_rows = brdr("hairline"),
       body_cols = brdr("thin")
     )
   ))
-  sides <- vapply(layers, function(l) l@location$side, character(1L))
-  expect_setequal(sides, c("rows", "cols"))
-  rows <- layers[[which(sides == "rows")]]
-  expect_identical(rows@style@border_top_style, "dotted")
-  cols <- layers[[which(sides == "cols")]]
-  expect_identical(cols@style@border_left_style, "solid")
-})
-
-test_that(".preset_args_to_layers() recognises body_top / body_bottom aliases", {
-  layers <- tabular:::.preset_args_to_layers(list(
-    borders = list(
-      body_top = brdr("medium", "dashed"),
-      body_bottom = brdr("hairline")
-    )
-  ))
-  sides <- vapply(layers, function(l) l@location$side, character(1L))
-  expect_setequal(sides, c("outer_top", "outer_bottom"))
+  expect_identical(layers, list())
 })
 
 # ---------------------------------------------------------------------
@@ -175,15 +153,11 @@ test_that(".preset_args_to_layers() lowers colors$text / $background to cells_bo
   expect_true(all(surfaces == "body"))
 })
 
-test_that(".preset_args_to_layers() lowers colors$border to outer + rows + cols", {
+test_that(".preset_args_to_layers() skips colors$border / $border_muted (body region)", {
   layers <- tabular:::.preset_args_to_layers(list(
-    colors = list(border = "#212529")
+    colors = list(border = "#212529", border_muted = "#dee2e6")
   ))
-  # 4 outer sides + 1 rows + 1 cols = 6 layers
-  expect_length(layers, 6L)
-  for (l in layers) {
-    expect_identical(l@location$surface, "table")
-  }
+  expect_identical(layers, list())
 })
 
 # ---------------------------------------------------------------------
