@@ -84,7 +84,7 @@
 #' knobs onto the spec's existing preset; unspecified knobs keep
 #' their prior value. The five named-list knobs (`alignment` /
 #' `borders` / `fonts` / `colors` / `padding`) lower to `style_layer`
-#' records on `preset@style` via [`.preset_args_to_layers()`]
+#' records on `preset@style` via `.preset_args_to_layers()`
 #' (internal) and append in call order; layer order is precedence
 #' within the engine cascade, so a later `preset()` call's lowered
 #' attribute wins over an earlier one at the cell. Pass `reset = TRUE`

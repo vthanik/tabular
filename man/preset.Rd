@@ -272,7 +272,7 @@ efficacy summary inside a portfolio of portrait letter tables).
 knobs onto the spec's existing preset; unspecified knobs keep
 their prior value. The five named-list knobs (\code{alignment} /
 \code{borders} / \code{fonts} / \code{colors} / \code{padding}) lower to \code{style_layer}
-records on \code{preset@style} via \code{\link[=.preset_args_to_layers]{.preset_args_to_layers()}}
+records on \code{preset@style} via \code{.preset_args_to_layers()}
 (internal) and append in call order; layer order is precedence
 within the engine cascade, so a later \code{preset()} call's lowered
 attribute wins over an earlier one at the cell. Pass \code{reset = TRUE}
