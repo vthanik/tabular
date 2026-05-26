@@ -755,3 +755,56 @@ test_that("headheight bumps when multi-row pagehead is present", {
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_true(grepl("\\setlength{\\headheight}", tex, fixed = TRUE))
 })
+
+# ---------------------------------------------------------------------
+# chrome_style cascade — `style_template() |> style(at = cells_*())`
+# must propagate into the LaTeX output. Each test isolates one chrome
+# surface so a regression points at the exact surface that broke.
+# ---------------------------------------------------------------------
+
+test_that("style(at = cells_headers(), color = ...) wraps header band in \\textcolor", {
+  template <- style_template() |>
+    style(at = cells_headers(), color = "#cc0000")
+  spec <- tabular(data.frame(x = 1:2)) |>
+    preset(style = template)
+  tex <- render_tex(spec)
+  expect_match(tex, "\\\\textcolor\\[HTML\\]\\{CC0000\\}", fixed = FALSE)
+})
+
+test_that("style(at = cells_title(), halign = 'left') puts title inside flushleft", {
+  template <- style_template() |>
+    style(at = cells_title(), halign = "left")
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = "Demographics"
+  ) |>
+    preset(style = template)
+  tex <- render_tex(spec)
+  expect_match(tex, "\\\\begin\\{flushleft\\}.*Demographics", fixed = FALSE)
+})
+
+test_that("style(at = cells_footnotes(), italic = TRUE) wraps footnote in \\textit", {
+  template <- style_template() |>
+    style(at = cells_footnotes(), italic = TRUE)
+  spec <- tabular(
+    data.frame(x = 1L),
+    footnotes = "Source: ADSL"
+  ) |>
+    preset(style = template)
+  tex <- render_tex(spec)
+  expect_match(tex, "\\\\textit\\{Source: ADSL\\}", fixed = FALSE)
+})
+
+test_that("style(at = cells_title(), blank_above = 3) emits three blank lines before the title", {
+  template <- style_template() |>
+    style(at = cells_title(), blank_above = 3L)
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = "Demo"
+  ) |>
+    preset(style = template)
+  tex <- render_tex(spec)
+  # Pad section just before the title block — count newline-only
+  # lines preceding `\begin{center}` (the default title env).
+  expect_match(tex, "\\n\\n\\n", fixed = FALSE)
+})

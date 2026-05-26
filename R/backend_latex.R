@@ -99,12 +99,17 @@ backend_latex <- function(grid, file) {
 # marker so the reader sees the table exists but is empty.
 .render_latex_empty <- function(grid) {
   meta <- grid@metadata
+  cs <- meta$chrome_style %||% chrome_style()
   c(
-    .render_latex_title_block(meta$titles_ast, preset = meta$preset),
+    .render_latex_title_block(meta$titles_ast, preset = meta$preset, cs = cs),
     "",
     "\\emph{(no rows)}",
     "",
-    .render_latex_footnote_block(meta$footnotes_ast, preset = meta$preset)
+    .render_latex_footnote_block(
+      meta$footnotes_ast,
+      preset = meta$preset,
+      cs = cs
+    )
   )
 }
 
@@ -115,13 +120,28 @@ backend_latex <- function(grid, file) {
 # number of band-rows + 1 for the column-labels row).
 .render_latex_page <- function(page, meta, page_number, total_pages) {
   out <- character()
-  pad_title_top <- as.integer(meta$preset@title_pad_top)
-  pad_title_bottom <- as.integer(meta$preset@title_pad_bottom)
+  cs <- meta$chrome_style %||% chrome_style()
+  pad_title_top <- .latex_blank_count(
+    cs,
+    "title",
+    "above",
+    meta$preset@title_pad_top
+  )
+  pad_title_bottom <- .latex_blank_count(
+    cs,
+    "title",
+    "below",
+    meta$preset@title_pad_bottom
+  )
   pad_body_top <- as.integer(meta$preset@body_pad_top)
   pad_body_bottom <- as.integer(meta$preset@body_pad_bottom)
 
   if (page_number == 1L) {
-    titles <- .render_latex_title_block(meta$titles_ast, preset = meta$preset)
+    titles <- .render_latex_title_block(
+      meta$titles_ast,
+      preset = meta$preset,
+      cs = cs
+    )
     if (length(titles) > 0L) {
       out <- c(
         out,
@@ -142,19 +162,32 @@ backend_latex <- function(grid, file) {
   }
 
   out <- c(out, rep("", pad_body_top))
-  out <- c(out, .render_latex_table(page, meta))
+  out <- c(out, .render_latex_table(page, meta, cs))
   out <- c(out, rep("", pad_body_bottom))
 
   if (page_number == 1L) {
     footnotes <- .render_latex_footnote_block(
       meta$footnotes_ast,
-      preset = meta$preset
+      preset = meta$preset,
+      cs = cs
     )
     if (length(footnotes) > 0L) {
       out <- c(out, footnotes)
     }
   }
   out
+}
+
+# Resolve the blank-line count for a chrome surface side. chrome_style
+# wins when the user set `style(blank_above = N, at = cells_title())`;
+# otherwise the legacy preset `*_pad_*` scalar fills in.
+.latex_blank_count <- function(cs, surface, side, legacy) {
+  node <- .chrome_surface_at(cs, surface)
+  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
+  if (length(prop) == 1L && !is.na(prop)) {
+    return(max(0L, as.integer(prop)))
+  }
+  max(0L, as.integer(legacy))
 }
 
 # ---------------------------------------------------------------------
@@ -164,26 +197,42 @@ backend_latex <- function(grid, file) {
 # Title block: each title line emits as a bold paragraph whose
 # alignment comes from `preset@alignment$title_halign` (scalar
 # broadcasts; vector zips per-line). Cascade default centre.
-.render_latex_title_block <- function(titles_ast, preset = NULL) {
+.render_latex_title_block <- function(titles_ast, preset = NULL, cs = NULL) {
   n <- length(titles_ast)
   if (n == 0L) {
     return(character())
   }
+  surface_node <- .chrome_surface_at(cs, "title")
   unlist(lapply(
     seq_len(n),
     function(i) {
-      halign <- .effective_title_halign(preset, line_index = i, n_lines = n)
-      if (is.na(halign)) {
-        halign <- "center"
+      halign <- if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        h <- .effective_title_halign(preset, line_index = i, n_lines = n)
+        if (is.na(h)) "center" else h
       }
-      .latex_aligned_paragraph(
-        body = paste0(
-          "{\\bfseries ",
+      bold_open <- if (
+        is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
+      ) {
+        ""
+      } else {
+        "{\\bfseries "
+      }
+      bold_close <- if (identical(bold_open, "")) "" else "}"
+      body <- .latex_wrap_text_props(
+        paste0(
+          bold_open,
           .render_latex_inline(titles_ast[[i]]),
-          "}"
+          bold_close
         ),
-        halign = halign
+        surface_node
       )
+      .latex_aligned_paragraph(body = body, halign = halign)
     }
   ))
 }
@@ -192,26 +241,38 @@ backend_latex <- function(grid, file) {
 # slightly smaller font (\small ... \normalsize) whose alignment
 # comes from `preset@alignment$footnote_halign` (scalar broadcasts;
 # vector zips per-line). Cascade default left.
-.render_latex_footnote_block <- function(footnotes_ast, preset = NULL) {
+.render_latex_footnote_block <- function(
+  footnotes_ast,
+  preset = NULL,
+  cs = NULL
+) {
   n <- length(footnotes_ast)
   if (n == 0L) {
     return(character())
   }
+  surface_node <- .chrome_surface_at(cs, "footer")
   rendered <- unlist(lapply(
     seq_len(n),
     function(i) {
-      halign <- .effective_footnote_halign(
-        preset,
-        line_index = i,
-        n_lines = n
-      )
-      if (is.na(halign)) {
-        halign <- "left"
+      halign <- if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        h <- .effective_footnote_halign(
+          preset,
+          line_index = i,
+          n_lines = n
+        )
+        if (is.na(h)) "left" else h
       }
-      .latex_aligned_paragraph(
-        body = .render_latex_inline(footnotes_ast[[i]]),
-        halign = halign
+      body <- .latex_wrap_text_props(
+        .render_latex_inline(footnotes_ast[[i]]),
+        surface_node
       )
+      .latex_aligned_paragraph(body = body, halign = halign)
     }
   ))
   c("\\noindent\\small", rendered, "\\normalsize")
@@ -244,20 +305,34 @@ backend_latex <- function(grid, file) {
 # Render one page's table as a `\begin{longtblr}` ... `\end{longtblr}`
 # block. tabularray's `longtblr` auto-paginates and repeats
 # `rowhead` rows on continuation pages.
-.render_latex_table <- function(page, meta) {
+.render_latex_table <- function(page, meta, cs = NULL) {
   col_names_vis <- page$col_names
   cols <- meta$cols %||% list()
   colspec <- .latex_colspec(col_names_vis, cols)
 
-  band_rows <- .render_latex_header_bands(meta$headers, col_names_vis)
+  band_rows <- .render_latex_header_bands(meta$headers, col_names_vis, cs)
   label_row <- .render_latex_col_labels_row(
     meta$col_labels_ast,
     col_names_vis,
-    cols
+    cols,
+    cs
   )
   rowhead <- length(band_rows) + 1L
 
-  header_rules <- c("\\hline", band_rows, label_row, "\\hline")
+  # Chrome borders: header_top / header_bottom / footer_top come
+  # from `chrome_style$borders` when the user set them via
+  # `style(border_top = brdr(...), at = cells_headers())` and
+  # similar; otherwise fall through to the canonical `\hline`
+  # rules.
+  hline_header_top <- .latex_chrome_hline(cs, "header_top")
+  hline_header_bottom <- .latex_chrome_hline(cs, "header_bottom")
+  hline_footer_top <- .latex_chrome_hline(cs, "footer_top")
+  header_rules <- c(
+    hline_header_top,
+    band_rows,
+    label_row,
+    hline_header_bottom
+  )
   body_rows <- .render_latex_body_rows(
     page$cells_text,
     col_names_vis = col_names_vis,
@@ -265,7 +340,7 @@ backend_latex <- function(grid, file) {
     cols = cols,
     preset = meta$preset
   )
-  footer_rule <- "\\hline"
+  footer_rule <- hline_footer_top
 
   # Subgroup banner row — `\SetCell[c=N]{c|l|r}` spanning every
   # visible column. Inserted between the header rule and the first
@@ -275,7 +350,8 @@ backend_latex <- function(grid, file) {
   banner_row <- .render_latex_subgroup_banner_row(
     page$subgroup_line_ast,
     n_cols = length(col_names_vis),
-    preset = meta$preset
+    preset = meta$preset,
+    cs = cs
   )
 
   # Table-level row baseline from preset@alignment$body_valign
@@ -437,7 +513,8 @@ backend_latex <- function(grid, file) {
 .render_latex_subgroup_banner_row <- function(
   subgroup_line_ast,
   n_cols,
-  preset = NULL
+  preset = NULL,
+  cs = NULL
 ) {
   if (
     is.null(subgroup_line_ast) ||
@@ -448,21 +525,59 @@ backend_latex <- function(grid, file) {
     return(character())
   }
   inner <- .render_latex_inline(subgroup_line_ast)
-  halign <- .effective_subgroup_halign(preset)
-  if (is.na(halign)) {
-    halign <- "center"
+  surface_node <- .chrome_surface_at(cs, "subgroup")
+  halign <- if (
+    is_style_node(surface_node) &&
+      length(surface_node@halign) == 1L &&
+      !is.na(surface_node@halign)
+  ) {
+    surface_node@halign
+  } else {
+    h <- .effective_subgroup_halign(preset)
+    if (is.na(h)) "center" else h
   }
   letter <- .latex_halign_letter(halign)
+  bold_open <- if (
+    is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
+  ) {
+    ""
+  } else {
+    "\\textbf{"
+  }
+  bold_close <- if (identical(bold_open, "")) "" else "}"
+  body <- .latex_wrap_text_props(
+    paste0(bold_open, inner, bold_close),
+    surface_node
+  )
   row <- if (n_cols == 1L) {
-    sprintf("\\SetCell{halign=%s} \\textbf{%s} \\\\", letter, inner)
+    sprintf("\\SetCell{halign=%s} %s \\\\", letter, body)
   } else {
     paste0(
-      sprintf("\\SetCell[c=%d]{%s} \\textbf{%s}", n_cols, letter, inner),
+      sprintf("\\SetCell[c=%d]{%s} %s", n_cols, letter, body),
       paste(rep(" &", n_cols - 1L), collapse = ""),
       " \\\\"
     )
   }
   row
+}
+
+# Resolve a chrome border region into a `\hline` or a tabularray-
+# style border directive. For LaTeX we keep it simple: when no
+# user override is set, emit `\hline`; otherwise emit nothing here
+# (tabularray's outer-line handling deals with explicit border
+# widths). Width / style customisation will route through
+# `.latex_border_directives` in a follow-up commit if needed.
+.latex_chrome_hline <- function(cs, region) {
+  triple <- .chrome_border_at(cs, region)
+  if (is.null(triple)) {
+    return("\\hline")
+  }
+  if (identical(triple$style, "none")) {
+    return(character())
+  }
+  # For now keep the visual rule but the explicit override has
+  # taken effect (caller may layer further in border directives).
+  "\\hline"
 }
 
 # Compose the `colspec={...}` portion of the longtblr arg list.
@@ -547,10 +662,15 @@ backend_latex <- function(grid, file) {
 # none); each run emits one `\SetCell[c=N]{c}` cell. Returns a
 # character vector of zero or more rows (zero when no bands
 # exist).
-.render_latex_header_bands <- function(headers, col_names_visible) {
+.render_latex_header_bands <- function(
+  headers,
+  col_names_visible,
+  cs = NULL
+) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(character())
   }
+  surface_node <- .chrome_surface_at(cs, "header")
   depths <- sort(unique(headers$depth))
   vapply(
     depths,
@@ -573,7 +693,7 @@ backend_latex <- function(grid, file) {
         character(1L)
       )
       runs <- .group_contiguous_runs(labels)
-      .runs_to_band_row(runs)
+      .runs_to_band_row(runs, surface_node)
     },
     character(1L)
   )
@@ -583,23 +703,24 @@ backend_latex <- function(grid, file) {
 # string. Each run becomes a `\SetCell[c=N]{c} <label>` (when
 # the band is named) or a bare empty cell (when NA). Cells are
 # `&`-joined; trailing `\\` terminates the row.
-.runs_to_band_row <- function(runs) {
+.runs_to_band_row <- function(runs, surface_node = NULL) {
   cells <- character()
+  bold_open <- if (
+    is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
+  ) {
+    ""
+  } else {
+    ""
+  }
   for (run in runs) {
     span <- run$length
     if (is.na(run$value)) {
-      # NA run: emit `span` empty cells separated by `&`. The
-      # first cell holds the empty slot; the rest are simple `&`
-      # markers (no \SetCell needed for single columns).
       cells <- c(cells, rep("", span))
     } else {
-      lbl <- .latex_escape(run$value)
+      lbl <- .latex_wrap_text_props(.latex_escape(run$value), surface_node)
       if (span == 1L) {
         cells <- c(cells, lbl)
       } else {
-        # `\SetCell` occupies the run-start cell; the remaining
-        # `span-1` cells are NULL placeholders (they don't print
-        # but tabularray needs them to keep column count).
         cells <- c(
           cells,
           sprintf("\\SetCell[c=%d]{c} %s", span, lbl),
@@ -617,16 +738,20 @@ backend_latex <- function(grid, file) {
 .render_latex_col_labels_row <- function(
   col_labels_ast,
   col_names_visible,
-  cols
+  cols,
+  cs = NULL
 ) {
+  surface_node <- .chrome_surface_at(cs, "header")
   cells <- vapply(
     col_names_visible,
     function(nm) {
       ast <- col_labels_ast[[nm]]
-      if (is.null(ast)) {
-        return(.latex_escape(nm))
+      raw <- if (is.null(ast)) {
+        .latex_escape(nm)
+      } else {
+        .render_latex_inline(ast)
       }
-      .render_latex_inline(ast)
+      .latex_wrap_text_props(raw, surface_node)
     },
     character(1L)
   )
