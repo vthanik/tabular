@@ -95,21 +95,20 @@
 #'
 #' @examples
 #' # ---- AE table by SOC and PT with per-row indent + styled hierarchy ----
-#' ae <- saf_aesocpt
-#' ae$indent_level <- as.integer(ae$row_type == "pt")
-#'
-#' tabular(ae, titles = "Adverse Events by SOC / PT", footnotes = "") |>
+#' # `saf_aesocpt` ships with `indent_level` (0 on overall/SOC rows,
+#' # 1 on PT rows); `col_spec(indent_by = "indent_level")` drives the
+#' # PT indent on the `label` column.
+#' tabular(saf_aesocpt, titles = "Adverse Events by SOC / PT",
+#'         footnotes = "") |>
 #'   cols(
-#'     soc          = col_spec(usage = "group", group_display = "header_row"),
-#'     label        = col_spec(label = "Category",
-#'                              align = "left",
-#'                              indent_by = "indent_level"),
-#'     indent_level = col_spec(visible = FALSE),
-#'     row_type     = col_spec(visible = FALSE),
-#'     placebo      = col_spec(label = "Placebo",  align = "decimal"),
-#'     drug_50      = col_spec(label = "Drug 50",  align = "decimal"),
-#'     drug_100     = col_spec(label = "Drug 100", align = "decimal"),
-#'     Total        = col_spec(label = "Total",    align = "decimal")
+#'     label    = col_spec(label = "Category", align = "left",
+#'                         indent_by = "indent_level"),
+#'     soc      = col_spec(visible = FALSE),
+#'     row_type = col_spec(visible = FALSE),
+#'     placebo  = col_spec(label = "Placebo",  align = "decimal"),
+#'     drug_50  = col_spec(label = "Drug 50",  align = "decimal"),
+#'     drug_100 = col_spec(label = "Drug 100", align = "decimal"),
+#'     Total    = col_spec(label = "Total",    align = "decimal")
 #'   ) |>
 #'   # SOC summary rows bolded (depth 0 — flush)
 #'   style(bold = TRUE,

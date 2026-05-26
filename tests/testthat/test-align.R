@@ -169,7 +169,10 @@ test_that(".preset_align respects factory-default fall-through guard", {
   expect_true(is.na(tabular:::.preset_align(preset_spec(), "title_halign")))
   # User-changed `title_align` IS explicit; returns the value.
   expect_identical(
-    tabular:::.preset_align(preset_spec(title_align = "left"), "title_halign"),
+    tabular:::.preset_align(
+      preset_spec(title_align = "left"),
+      "title_halign"
+    ),
     "left"
   )
 })
@@ -313,7 +316,11 @@ test_that("col_spec() rejects bad valign value", {
 
 test_that("style() accepts halign and valign", {
   spec <- tabular(data.frame(x = 1:3)) |>
-    style( halign = "right", valign = "middle", .at = cells_body(where = x > 1))
+    style(
+      halign = "right",
+      valign = "middle",
+      .at = cells_body(where = x > 1)
+    )
   pred <- spec@styles@layers[[1L]]
   expect_identical(pred@style@halign, "right")
   expect_identical(pred@style@valign, "middle")
@@ -465,7 +472,7 @@ test_that("preset(alignment = header_valign = ...) surfaces in HTML <th>", {
 
 test_that("style(halign=) predicate surfaces on HTML body cell", {
   spec <- tabular(data.frame(x = c(1, 2))) |>
-    style( halign = "right", .at = cells_body(where = x == 2))
+    style(halign = "right", .at = cells_body(where = x == 2))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
@@ -521,7 +528,7 @@ test_that("preset(alignment = body_valign = ...) surfaces in RTF \\clvertal", {
 
 test_that("style(halign=) predicate emits per-cell \\SetCell in LaTeX", {
   spec <- tabular(data.frame(x = c(1, 2))) |>
-    style( halign = "right", .at = cells_body(where = x == 2))
+    style(halign = "right", .at = cells_body(where = x == 2))
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")

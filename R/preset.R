@@ -424,8 +424,9 @@
 #'   footnotes = "Subjects are counted once per SOC and once per PT."
 #' ) |>
 #'   cols(
-#'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     label       = col_spec(visible = FALSE),
+#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     soc      = col_spec(usage = "group", visible = FALSE,
+#'                         group_display = "column_repeat"),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"])),
@@ -860,7 +861,7 @@ set_preset <- function(
 #'
 #' # Read-tweak-attach without mutating the session default.
 #' base_knobs <- get_preset()
-#' tabular(data.frame(x = 1:3)) |>
+#' tabular(saf_n) |>
 #'   preset(
 #'     font_size   = base_knobs@font_size,
 #'     paper_size  = base_knobs@paper_size,

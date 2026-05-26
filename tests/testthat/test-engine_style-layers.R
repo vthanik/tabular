@@ -129,7 +129,7 @@ test_that("non-body layers do not affect the body grid", {
 test_that("legacy predicate path and layer path both contribute", {
   resp <- data.frame(stat_label = c("R", "NR"), n = c(1L, 2L))
   spec <- tabular(resp) |>
-    style( bold = TRUE, .at = cells_body(where = n > 1)) |>
+    style(bold = TRUE, .at = cells_body(where = n > 1)) |>
     style(color = "red", .at = cells_body())
   grid <- tabular:::engine_style(spec)
   # Row 1: only red (predicate didn't match)

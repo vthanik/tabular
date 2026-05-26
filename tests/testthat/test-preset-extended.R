@@ -59,7 +59,8 @@ test_that("preset() rejects unknown border region", {
 
 test_that("preset() rejects non-brdr border value", {
   expect_error(
-    tabular(data.frame(x = 1)) |> preset(borders = list(outer = "not a brdr")),
+    tabular(data.frame(x = 1)) |>
+      preset(borders = list(outer = "not a brdr")),
     class = "tabular_error_input"
   )
 })
@@ -673,8 +674,10 @@ test_that("LaTeX emit drops table-wide \\definecolor + AtBeginDocument (slot cut
     fixed = TRUE
   ))
   # The per-cell `\SetCell{...}` carries the color triple.
-  expect_true(grepl("FF0000", txt, ignore.case = TRUE) ||
-              grepl("ff0000", txt, ignore.case = TRUE))
+  expect_true(
+    grepl("FF0000", txt, ignore.case = TRUE) ||
+      grepl("ff0000", txt, ignore.case = TRUE)
+  )
 })
 
 test_that("LaTeX emit consumes preset(padding = body) via tabularray rowsep", {

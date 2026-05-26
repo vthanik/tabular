@@ -24,7 +24,9 @@ test_that("style() captures `at` as a tabular_location", {
 test_that("style() builds a style_node from variadic attrs", {
   spec <- tabular(saf_demo) |>
     style(
-      bold = TRUE, color = "red", font_size = 8,
+      bold = TRUE,
+      color = "red",
+      font_size = 8,
       .at = cells_body(where = TRUE)
     )
   node <- spec@styles@layers[[1]]@style

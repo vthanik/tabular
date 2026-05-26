@@ -23,7 +23,7 @@ test_that("engine_style() returns a default-filled grid when no styles set", {
 test_that("engine_style() row-scope applies to all cells in matching rows", {
   resp <- data.frame(stat_label = c("R", "NR"), n = c(1L, 2L))
   spec <- tabular(resp) |>
-    style( bold = TRUE, .at = cells_body(where = n > 1))
+    style(bold = TRUE, .at = cells_body(where = n > 1))
   grid <- tabular:::engine_style(spec)
   # Row 2 (n=2): both cells bold
   expect_identical(grid[[2L, 1L]]@bold, TRUE)
@@ -68,8 +68,8 @@ test_that("engine_style() with `where = TRUE` (no `j`) paints every visible colu
 test_that("engine_style() later predicate overrides earlier for overlapping cells", {
   resp <- data.frame(stat_label = c("R", "NR"), n = c(1L, 2L))
   spec <- tabular(resp) |>
-    style( color = "blue", .at = cells_body(where = TRUE)) |>
-    style( color = "red", .at = cells_body(where = n > 1))
+    style(color = "blue", .at = cells_body(where = TRUE)) |>
+    style(color = "red", .at = cells_body(where = n > 1))
   grid <- tabular:::engine_style(spec)
   expect_identical(grid[[1L, 1L]]@color, "blue") # only first predicate matches
   expect_identical(grid[[2L, 1L]]@color, "red") # second predicate wins
@@ -78,8 +78,8 @@ test_that("engine_style() later predicate overrides earlier for overlapping cell
 test_that("engine_style() merge preserves non-overlapping fields", {
   resp <- data.frame(stat_label = "R", n = 1L)
   spec <- tabular(resp) |>
-    style( bold = TRUE, .at = cells_body(where = TRUE)) |>
-    style( italic = TRUE, .at = cells_body(where = TRUE))
+    style(bold = TRUE, .at = cells_body(where = TRUE)) |>
+    style(italic = TRUE, .at = cells_body(where = TRUE))
   grid <- tabular:::engine_style(spec)
   expect_identical(grid[[1L, 1L]]@bold, TRUE)
   expect_identical(grid[[1L, 1L]]@italic, TRUE)
@@ -90,7 +90,7 @@ test_that("engine_style() merge preserves non-overlapping fields", {
 test_that("engine_style() with zero-match predicate is a no-op", {
   resp <- data.frame(stat_label = c("R", "NR"), n = c(1L, 2L))
   spec <- tabular(resp) |>
-    style( bold = TRUE, .at = cells_body(where = n > 999))
+    style(bold = TRUE, .at = cells_body(where = n > 999))
   grid <- tabular:::engine_style(spec)
   expect_true(is.na(grid[[1L, 1L]]@bold))
   expect_true(is.na(grid[[2L, 1L]]@bold))
@@ -101,7 +101,7 @@ test_that("engine_style() with zero-match predicate is a no-op", {
 test_that("engine_style() rejects a non-logical where result", {
   resp <- data.frame(stat_label = c("R", "NR"), n = c(1L, 2L))
   spec <- tabular(resp) |>
-    style( bold = TRUE, .at = cells_body(where = n))
+    style(bold = TRUE, .at = cells_body(where = n))
   expect_error(
     tabular:::engine_style(spec),
     class = "tabular_error_input"
@@ -113,7 +113,7 @@ test_that("engine_style() rejects a non-logical where result", {
 test_that("engine_style() rewraps eval errors as tabular_error_input", {
   resp <- data.frame(stat_label = c("R", "NR"), n = c(1L, 2L))
   spec <- tabular(resp) |>
-    style( bold = TRUE, .at = cells_body(where = no_such_col == 1))
+    style(bold = TRUE, .at = cells_body(where = no_such_col == 1))
   expect_error(
     tabular:::engine_style(spec),
     class = "tabular_error_input"
@@ -125,7 +125,7 @@ test_that("engine_style() rewraps eval errors as tabular_error_input", {
 test_that("engine_style() recycles a length-1 logical to nrow", {
   resp <- data.frame(stat_label = c("R", "NR"), n = c(1L, 2L))
   spec <- tabular(resp) |>
-    style( bold = TRUE, .at = cells_body(where = TRUE))
+    style(bold = TRUE, .at = cells_body(where = TRUE))
   grid <- tabular:::engine_style(spec)
   expect_identical(grid[[1L, 1L]]@bold, TRUE)
   expect_identical(grid[[2L, 1L]]@bold, TRUE)
@@ -151,7 +151,7 @@ test_that("engine_style() allows predicates on upstream-derived columns", {
   resp <- data.frame(stat_label = c("R", "NR"), n = c(1L, 2L))
   resp$twice <- resp$n * 2L
   spec <- tabular(resp) |>
-    style( bold = TRUE, .at = cells_body(where = twice > 2L))
+    style(bold = TRUE, .at = cells_body(where = twice > 2L))
   grid <- tabular:::engine_style(spec)
   expect_identical(grid[[2L, 1L]]@bold, TRUE)
   expect_true(is.na(grid[[1L, 1L]]@bold))
@@ -174,7 +174,7 @@ test_that("engine_style() error snapshot on unknown column in predicate", {
 
 test_that(".resolve_layer_rows aborts on non-logical `where` result", {
   spec <- tabular(data.frame(x = 1:3)) |>
-    style( bold = TRUE, .at = cells_body(where = x))
+    style(bold = TRUE, .at = cells_body(where = x))
   expect_error(
     tabular:::engine_style(spec),
     class = "tabular_error_input"
@@ -185,7 +185,7 @@ test_that(".resolve_layer_rows aborts when `where` length is wrong", {
   # Use a `where` that returns a length-2 logical on a 3-row data
   # frame to trigger the length-mismatch branch.
   spec <- tabular(data.frame(x = 1:3)) |>
-    style( bold = TRUE, .at = cells_body(where = c(TRUE, FALSE)))
+    style(bold = TRUE, .at = cells_body(where = c(TRUE, FALSE)))
   expect_error(
     tabular:::engine_style(spec),
     class = "tabular_error_input"

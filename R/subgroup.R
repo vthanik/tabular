@@ -108,8 +108,8 @@
 #'   footnotes = "Subjects counted once per SOC and once per PT."
 #' ) |>
 #'   cols(
-#'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     label       = col_spec(visible = FALSE),
+#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = "Placebo",  align = "decimal"),
@@ -120,26 +120,28 @@
 #'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
 #'   subgroup(by = "row_type")
 #'
-#' # ---- Example 2: Cohort with inline BigN via template ----
+#' # ---- Example 2: Partition by Sex with inline BigN via template ----
 #' #
 #' # `label` is a glue-style template; any column whose value is
-#' # constant within group can ride into the banner. Here the BigN
-#' # column `cohort_n` is pre-computed upstream so each cohort's
-#' # banner reads `"Cohort: A (N = 50)"`, etc.
-#' demo <- data.frame(
-#'   cohort   = factor(c("A", "A", "B", "B"), levels = c("A", "B")),
-#'   cohort_n = c(50L, 50L, 75L, 75L),
-#'   param    = c("ALT", "AST", "ALT", "AST"),
-#'   value    = c("12.4", "18.1", "11.7", "17.5")
-#' )
-#' tabular(demo) |>
+#' # constant within group can ride into the banner. `saf_subgroup`
+#' # ships partition-constant `sex_n` / `agegr_n` BigN columns
+#' # alongside the value cells, so each banner reads
+#' # `"Sex: F (N = 106)"`, etc.
+#' tabular(saf_subgroup, titles = "Vital Signs at End of Treatment") |>
 #'   cols(
-#'     cohort   = col_spec(visible = FALSE),
-#'     cohort_n = col_spec(visible = FALSE),
-#'     param    = col_spec(label = "Parameter"),
-#'     value    = col_spec(label = "Result")
+#'     sex        = col_spec(visible = FALSE),
+#'     agegr      = col_spec(usage = "group", label = "Age Group"),
+#'     sex_n      = col_spec(visible = FALSE),
+#'     agegr_n    = col_spec(visible = FALSE),
+#'     paramcd    = col_spec(visible = FALSE),
+#'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
+#'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+#'     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+#'     Total      = col_spec(label = "Total",    align = "decimal")
 #'   ) |>
-#'   subgroup(by = "cohort", label = "Cohort: {cohort} (N = {cohort_n})")
+#'   subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
 #'
 #' # ---- Example 3: Multi-variable crossing (Sex x Age group) ----
 #' #
@@ -149,21 +151,19 @@
 #' # generalise. expand.grid order: first var (sex) varies slowest,
 #' # second (agegr) fastest, giving banner sequence F/<65, F/>=65,
 #' # M/<65, M/>=65.
-#' vitals <- data.frame(
-#'   sex   = factor(rep(c("F", "M"), each = 4), levels = c("F", "M")),
-#'   agegr = factor(
-#'     rep(c("<65", "<65", ">=65", ">=65"), 2),
-#'     levels = c("<65", ">=65")
-#'   ),
-#'   param = rep(c("Systolic BP", "Diastolic BP"), 4),
-#'   value = c("121", "78", "129", "82", "118", "75", "127", "80")
-#' )
-#' tabular(vitals) |>
+#' tabular(saf_subgroup, titles = "Vital Signs by Sex and Age Group") |>
 #'   cols(
-#'     sex   = col_spec(visible = FALSE),
-#'     agegr = col_spec(visible = FALSE),
-#'     param = col_spec(label = "Parameter"),
-#'     value = col_spec(label = "Mean")
+#'     sex        = col_spec(visible = FALSE),
+#'     agegr      = col_spec(visible = FALSE),
+#'     sex_n      = col_spec(visible = FALSE),
+#'     agegr_n    = col_spec(visible = FALSE),
+#'     paramcd    = col_spec(visible = FALSE),
+#'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
+#'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+#'     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+#'     Total      = col_spec(label = "Total",    align = "decimal")
 #'   ) |>
 #'   subgroup(
 #'     by    = c("sex", "agegr"),
@@ -177,14 +177,9 @@
 #' # programmatically-built pipelines where a downstream branch
 #' # decides not to paginate by group after all — the call resets
 #' # the spec back to a single-page-set render.
-#' demo <- data.frame(
-#'   region = c("US", "US", "EU", "EU"),
-#'   ae     = c("Headache", "Nausea", "Headache", "Nausea"),
-#'   n      = c(12, 8, 9, 5)
-#' )
-#' tabular(demo, titles = "Pooled (no region partition)") |>
-#'   subgroup("region", label = "Region: {region}") |>
-#'   # Decide later that the regional split was the wrong default —
+#' tabular(saf_subgroup, titles = "Pooled (no sex partition)") |>
+#'   subgroup("sex", label = "Sex: {sex}") |>
+#'   # Decide later that the sex split was the wrong default —
 #'   # clear it before rendering.
 #'   subgroup(character())
 #'

@@ -154,7 +154,7 @@ test_that("as_grid() carries the resolved header band grid in metadata", {
 
 test_that("as_grid() emits a populated style grid when a predicate fires", {
   d <- data.frame(x = c(1L, 2L, 3L), y = c(10L, 20L, 30L))
-  spec <- tabular(d) |> style( bold = TRUE, .at = cells_body(where = x > 1))
+  spec <- tabular(d) |> style(bold = TRUE, .at = cells_body(where = x > 1))
   g <- as_grid(spec)
   styles <- g@pages[[1L]]$cells_style
   expect_true(isTRUE(styles[[2L, 1L]]@bold))

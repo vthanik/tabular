@@ -265,13 +265,14 @@ referenced depth column is auto-hidden — no need to set
 \code{visible = FALSE} on it.
 }
 
-Typical SOC / PT pattern:
+Typical SOC / PT pattern (the bundled \code{saf_aesocpt} ships with
+the canonical depth column already attached, so no upstream
+construction is needed):
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{ae$indent_level <- as.integer(ae$row_type == "pt")
-cols(
-  label        = col_spec(label = "Category",
-                           indent_by = "indent_level"),
-  indent_level = col_spec(visible = FALSE)  # belt + braces
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{cols(
+  label    = col_spec(label = "Category", indent_by = "indent_level"),
+  soc      = col_spec(visible = FALSE),
+  row_type = col_spec(visible = FALSE)
 )
 }\if{html}{\out{</div>}}
 
@@ -359,13 +360,14 @@ tabular(
   ) |>
   sort_rows(by = c("variable", "stat_label"))
 
-# ---- Example 2: AE table with hidden helper columns ----
+# ---- Example 2: AE table with indented label + hidden helpers ----
 #
-# AE-by-SOC/PT table where hidden helper columns (`row_type`,
-# `n_total`) drive the sort while staying off the rendered page.
-# Demonstrates `visible = FALSE` for sort-only columns, fixed
-# width on the wide SOC label column, and decimal alignment on
-# all four arm columns.
+# AE-by-SOC/PT table where `label` carries SOC and PT text under
+# one column, indented by `indent_level`. Hidden helpers
+# (`row_type`, `n_total`) drive the sort while staying off the
+# rendered page. Demonstrates `indent_by` plus `visible = FALSE`
+# for sort-only columns, fixed width on the wide label column, and
+# decimal alignment on all four arm columns.
 ae <- saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -379,8 +381,9 @@ tabular(
   )
 ) |>
   cols(
-    soc      = col_spec(usage = "group", label = "SOC / Preferred Term", width = 2.5),
-    label       = col_spec(visible = FALSE),
+    label    = col_spec(label = "SOC / Preferred Term",
+                        indent_by = "indent_level", width = 2.5),
+    soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"]),  align = "decimal"),
@@ -392,18 +395,13 @@ tabular(
 
 # ---- Example 3: Format string + na_text for clean numeric display ----
 #
-# A column that carries pre-computed numeric values (rather than
-# the typical pre-formatted "12 (5.8)" string) uses `format =`
-# to pin the printed precision and `na_text` to render missing
-# values as a dash rather than a literal "NA". `valign = "top"`
-# keeps the multi-line cell text aligned to the top.
-fit <- data.frame(
-  model     = c("ANCOVA", "MMRM", "Cox PH", "Bootstrap"),
-  estimate  = c(-2.31, -2.45, 0.81, -2.29),
-  lower_ci  = c(-3.42, NA,    0.68, -3.50),
-  upper_ci  = c(-1.20, NA,    0.97, -1.10)
-)
-tabular(fit, titles = "Treatment-effect estimates by model") |>
+# `eff_estimates` ships four competing efficacy models with
+# pre-computed numeric estimates, 95\% CI bounds (NA on the MMRM
+# row), and a nominal p-value. `format =` pins the printed
+# precision; `na_text` renders the missing CI bounds as a dash
+# rather than a literal "NA". `valign = "top"` keeps the multi-
+# line cell text aligned to the top.
+tabular(eff_estimates, titles = "Treatment-effect estimates by model") |>
   cols(
     model    = col_spec(usage = "group",  label = "Model",   valign = "top"),
     estimate = col_spec(label = "Estimate", align = "decimal", format = "\%.2f"),
@@ -418,6 +416,11 @@ tabular(fit, titles = "Treatment-effect estimates by model") |>
       align   = "decimal",
       format  = "\%.2f",
       na_text = "--"
+    ),
+    p_value  = col_spec(
+      label   = "p-value",
+      align   = "decimal",
+      format  = "\%.4f"
     )
   )
 

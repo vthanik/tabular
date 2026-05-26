@@ -189,7 +189,7 @@
 #'     )
 #' }
 #'
-#' tabular(data.frame(x = 1:3)) |>
+#' tabular(saf_n) |>
 #'   my_house_style() |>
 #'   preset(borders = list(body_rows = brdr("hairline", "dashed")))
 #'
