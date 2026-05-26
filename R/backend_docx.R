@@ -227,9 +227,20 @@ backend_docx <- function(grid, file) {
 # Commits 4-5 wire page chrome refs and per-cell styling.
 .docx_document_xml <- function(grid, preset, hyperlinks, rid_map) {
   meta <- grid@metadata
+  cs <- meta$chrome_style %||% chrome_style()
   blank_p <- "<w:p/>"
-  pad_title_top <- as.integer(preset@title_pad_top)
-  pad_title_bottom <- as.integer(preset@title_pad_bottom)
+  pad_title_top <- .docx_blank_count(
+    cs,
+    "title",
+    "above",
+    preset@title_pad_top
+  )
+  pad_title_bottom <- .docx_blank_count(
+    cs,
+    "title",
+    "below",
+    preset@title_pad_bottom
+  )
   pad_body_top <- as.integer(preset@body_pad_top)
   pad_body_bottom <- as.integer(preset@body_pad_bottom)
 
@@ -237,7 +248,8 @@ backend_docx <- function(grid, file) {
     meta$titles_ast %||% list(),
     hyperlinks,
     rid_map,
-    preset = preset
+    preset = preset,
+    cs = cs
   )
   if (length(titles_block) > 0L) {
     titles_block <- c(
@@ -246,12 +258,19 @@ backend_docx <- function(grid, file) {
       rep(blank_p, pad_title_bottom)
     )
   }
-  table_block <- .render_docx_table(grid, preset, hyperlinks, rid_map)
+  table_block <- .render_docx_table(
+    grid,
+    preset,
+    hyperlinks,
+    rid_map,
+    cs = cs
+  )
   footnotes_block <- .docx_footnote_block(
     meta$footnotes_ast %||% list(),
     hyperlinks,
     rid_map,
-    preset = preset
+    preset = preset,
+    cs = cs
   )
   sect_pr <- .docx_section_pr(preset, rid_map)
 
@@ -282,12 +301,14 @@ backend_docx <- function(grid, file) {
   titles_ast,
   hyperlinks,
   rid_map = NULL,
-  preset = NULL
+  preset = NULL,
+  cs = NULL
 ) {
   n <- length(titles_ast)
   if (n == 0L) {
     return(character())
   }
+  surface_node <- .chrome_surface_at(cs, "title")
   vapply(
     seq_len(n),
     function(i) {
@@ -296,7 +317,15 @@ backend_docx <- function(grid, file) {
         hyperlinks,
         rid_map = rid_map
       )
-      halign <- .effective_title_halign(preset, line_index = i, n_lines = n)
+      halign <- if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        .effective_title_halign(preset, line_index = i, n_lines = n)
+      }
       jc_override <- if (length(halign) == 1L && !is.na(halign)) {
         .docx_align_token(halign)
       } else {
@@ -314,6 +343,18 @@ backend_docx <- function(grid, file) {
   )
 }
 
+# Resolve the blank-line count for a chrome surface side. chrome_style
+# wins when the user set `style(blank_above = N, at = cells_title())`;
+# otherwise the legacy preset `*_pad_*` scalar fills in.
+.docx_blank_count <- function(cs, surface, side, legacy) {
+  node <- .chrome_surface_at(cs, surface)
+  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
+  if (length(prop) == 1L && !is.na(prop)) {
+    return(max(0L, as.integer(prop)))
+  }
+  max(0L, as.integer(legacy))
+}
+
 # Render the footnote block: one paragraph per footnote, each
 # tagged with the `TabularFoot` named style (left-aligned; defined
 # in styles.xml). Per-line horizontal alignment from the cascade
@@ -324,12 +365,14 @@ backend_docx <- function(grid, file) {
   footnotes_ast,
   hyperlinks,
   rid_map = NULL,
-  preset = NULL
+  preset = NULL,
+  cs = NULL
 ) {
   n <- length(footnotes_ast)
   if (n == 0L) {
     return(character())
   }
+  surface_node <- .chrome_surface_at(cs, "footer")
   vapply(
     seq_len(n),
     function(i) {
@@ -338,11 +381,19 @@ backend_docx <- function(grid, file) {
         hyperlinks,
         rid_map = rid_map
       )
-      halign <- .effective_footnote_halign(
-        preset,
-        line_index = i,
-        n_lines = n
-      )
+      halign <- if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        .effective_footnote_halign(
+          preset,
+          line_index = i,
+          n_lines = n
+        )
+      }
       jc_override <- if (length(halign) == 1L && !is.na(halign)) {
         .docx_align_token(halign)
       } else {
@@ -383,7 +434,8 @@ backend_docx <- function(grid, file) {
   grid,
   preset,
   hyperlinks = character(),
-  rid_map = NULL
+  rid_map = NULL,
+  cs = NULL
 ) {
   meta <- grid@metadata
   pages <- grid@pages
@@ -397,7 +449,8 @@ backend_docx <- function(grid, file) {
   band_rows <- .render_docx_header_bands(
     meta$headers,
     col_names_vis,
-    widths
+    widths,
+    cs = cs
   )
   label_row <- .render_docx_col_labels_row(
     meta$col_labels_ast,
@@ -406,14 +459,16 @@ backend_docx <- function(grid, file) {
     widths,
     hyperlinks,
     rid_map,
-    preset = preset
+    preset = preset,
+    cs = cs
   )
   body_rows <- .render_docx_body_rows(
     pages,
     col_names_vis,
     cols,
     widths,
-    preset = preset
+    preset = preset,
+    cs = cs
   )
 
   paste0(
@@ -507,7 +562,12 @@ backend_docx <- function(grid, file) {
 # same band label (or no band), and emit one `<w:tc>` per run with
 # `<w:gridSpan w:val="N"/>` for runs wider than one column. Returns
 # a character vector of `<w:tr>` strings (one per depth).
-.render_docx_header_bands <- function(headers, col_names_vis, widths_twips) {
+.render_docx_header_bands <- function(
+  headers,
+  col_names_vis,
+  widths_twips,
+  cs = NULL
+) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(character())
   }
@@ -586,8 +646,10 @@ backend_docx <- function(grid, file) {
   widths_twips,
   hyperlinks,
   rid_map = NULL,
-  preset = NULL
+  preset = NULL,
+  cs = NULL
 ) {
+  surface_node <- .chrome_surface_at(cs, "header")
   cells <- vapply(
     seq_along(col_names_vis),
     function(j) {
@@ -608,9 +670,32 @@ backend_docx <- function(grid, file) {
           "</w:t></w:r>"
         )
       }
-      cs <- cols[[nm]]
-      halign <- .effective_header_halign(cs, preset)
-      valign <- .effective_header_valign(cs, preset)
+      col <- cols[[nm]]
+      # Per-column halign wins; surface halign fills in.
+      halign <- if (
+        is_col_spec(col) &&
+          length(col@align) == 1L &&
+          !is.na(col@align)
+      ) {
+        if (col@align == "decimal") "right" else col@align
+      } else if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        .effective_header_halign(col, preset)
+      }
+      valign <- if (
+        is_col_spec(col) &&
+          length(col@valign) == 1L &&
+          !is.na(col@valign)
+      ) {
+        col@valign
+      } else {
+        .effective_header_valign(col, preset)
+      }
       jc <- .docx_align_token(halign)
       valign_tok <- .docx_valign_token(valign)
       tc_pr <- sprintf(
@@ -653,7 +738,8 @@ backend_docx <- function(grid, file) {
   col_names_vis,
   cols,
   widths_twips,
-  preset = NULL
+  preset = NULL,
+  cs = NULL
 ) {
   col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
   n_cols_vis <- length(col_names_vis)
@@ -668,7 +754,8 @@ backend_docx <- function(grid, file) {
         n_cols = n_cols_vis,
         widths_twips = widths_twips,
         page_break_before = page_break_before,
-        preset = preset
+        preset = preset,
+        cs = cs
       )
       if (length(banner_row) > 0L) {
         out <- c(out, banner_row)
@@ -767,7 +854,8 @@ backend_docx <- function(grid, file) {
   n_cols,
   widths_twips,
   page_break_before,
-  preset = NULL
+  preset = NULL,
+  cs = NULL
 ) {
   if (
     is.null(subgroup_line_ast) ||
@@ -787,11 +875,26 @@ backend_docx <- function(grid, file) {
   } else {
     ""
   }
-  halign <- .effective_subgroup_halign(preset)
-  if (is.na(halign)) {
-    halign <- "center"
+  surface_node <- .chrome_surface_at(cs, "subgroup")
+  halign <- if (
+    is_style_node(surface_node) &&
+      length(surface_node@halign) == 1L &&
+      !is.na(surface_node@halign)
+  ) {
+    surface_node@halign
+  } else {
+    h <- .effective_subgroup_halign(preset)
+    if (is.na(h)) "center" else h
   }
-  valign <- .effective_subgroup_valign(preset)
+  valign <- if (
+    is_style_node(surface_node) &&
+      length(surface_node@valign) == 1L &&
+      !is.na(surface_node@valign)
+  ) {
+    surface_node@valign
+  } else {
+    .effective_subgroup_valign(preset)
+  }
   valign_tok <- .docx_valign_token(valign)
   jc_tok <- .docx_align_token(halign)
   paste0(

@@ -1000,3 +1000,61 @@ test_that("saf_demo golden pipeline matches the pinned word/document.xml snapsho
     "saf_demo_golden.xml"
   )
 })
+
+# ---------------------------------------------------------------------
+# chrome_style cascade — `style_template() |> style(at = cells_*())`
+# must reach the DOCX output. Tests inspect the unzipped
+# word/document.xml so they survive across binary builds.
+# ---------------------------------------------------------------------
+
+.docx_doc_xml <- function(spec) {
+  out <- withr::local_tempfile(
+    fileext = ".docx",
+    .local_envir = parent.frame()
+  )
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  paste(
+    readLines(file.path(unzipped, "word/document.xml"), warn = FALSE),
+    collapse = "\n"
+  )
+}
+
+test_that("style(at = cells_title(), halign = 'left') emits <w:jc w:val='left'/> on title pPr", {
+  template <- style_template() |>
+    style(at = cells_title(), halign = "left")
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = "Demographics"
+  ) |>
+    preset(style = template)
+  xml <- .docx_doc_xml(spec)
+  expect_match(xml, "TabularTitle.*<w:jc w:val=\"left\"/>", fixed = FALSE)
+})
+
+test_that("style(at = cells_footnotes(), halign = 'right') drives footnote jc=right", {
+  template <- style_template() |>
+    style(at = cells_footnotes(), halign = "right")
+  spec <- tabular(
+    data.frame(x = 1L),
+    footnotes = "Source: ADSL"
+  ) |>
+    preset(style = template)
+  xml <- .docx_doc_xml(spec)
+  expect_match(xml, "TabularFoot.*<w:jc w:val=\"right\"/>", fixed = FALSE)
+})
+
+test_that("style(at = cells_title(), blank_above = 3) emits three blank paragraphs", {
+  template <- style_template() |>
+    style(at = cells_title(), blank_above = 3L)
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = "Demo"
+  ) |>
+    preset(style = template)
+  xml <- .docx_doc_xml(spec)
+  # Count <w:p/> empty paragraphs preceding the TabularTitle paragraph.
+  pre_title <- sub("(.*?)<w:pStyle w:val=\"TabularTitle\"/>.*", "\\1", xml)
+  blanks <- length(gregexpr("<w:p/>", pre_title, fixed = TRUE)[[1]])
+  expect_gte(blanks, 3L)
+})
