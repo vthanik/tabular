@@ -337,6 +337,7 @@ as_grid <- function(spec) {
     cells_ast = fmt$cells_ast,
     cells_style = style_mat,
     cols = .cols_by_name(spec@cols, names(spec@data)),
+    data = spec@data,
     indent_chars = if (is_preset_spec(gd_preset)) {
       gd_preset@indent_chars
     } else {

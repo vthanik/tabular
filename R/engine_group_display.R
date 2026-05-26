@@ -55,6 +55,7 @@ engine_group_display <- function(
   cells_ast,
   cells_style,
   cols,
+  data = NULL,
   indent_chars = ""
 ) {
   nrow_data <- nrow(cells_text)
@@ -72,6 +73,48 @@ engine_group_display <- function(
       cols = cols,
       header_row_plan = NULL
     ))
+  }
+
+  # Resolve `col_spec@indent_by` references BEFORE any group/column-
+  # mode processing. Each target column with `indent_by = "<name>"`
+  # set picks up per-row depths from `data[[<name>]]`; the target
+  # column's text + AST is prefixed in-place with
+  # `paste(rep(indent_chars, depth), collapse = "")`. The
+  # referenced depth column gets its `visible` auto-flipped to FALSE
+  # (unless the user set it explicitly) so depth values don't render.
+  #
+  # Independent of `group_display = "header_row"` — works in plain
+  # listings (no group cols) just as well as in SOC/PT tables.
+  indent_apply <- .resolve_indent_targets(
+    cols = cols,
+    col_names = col_names,
+    data = data,
+    nrow_data = nrow_data,
+    indent_chars = indent_chars,
+    call = rlang::caller_env()
+  )
+  if (length(indent_apply$targets) > 0L && nzchar(indent_chars %||% "")) {
+    for (target in indent_apply$targets) {
+      cells_text[, target$col] <- paste0(
+        target$prefixes,
+        cells_text[, target$col]
+      )
+      cells_ast[, target$col] <- .indent_host_asts_per_row(
+        cells_ast[, target$col],
+        target$prefixes
+      )
+    }
+  }
+  # Apply the visibility auto-hide on the depth columns that
+  # `.resolve_indent_targets()` flagged. Done after the prefix
+  # block (which still needs to read from data[, depth_col] even if
+  # the column is hidden) and BEFORE the rest of the pipeline so
+  # `.visible_col_names()` filters them out downstream.
+  for (depth_col in indent_apply$hide_cols) {
+    cs <- cols[[depth_col]]
+    if (is_col_spec(cs)) {
+      cols[[depth_col]] <- S7::set_props(cs, visible = FALSE)
+    }
   }
 
   # Identify group columns in declaration order. Outer = first.
@@ -129,38 +172,13 @@ engine_group_display <- function(
       group_values = cells_text[, header_col],
       group_asts = cells_ast[, header_col],
       host_col = host_col,
-      transitions = which(c(TRUE, diff(outer_run_ids) != 0L)),
-      indent_chars = indent_chars
+      transitions = which(c(TRUE, diff(outer_run_ids) != 0L))
     )
     for (nm in group_names) {
       cs <- cols[[nm]]
       if (identical(cs@group_display, "header_row")) {
         cols[[nm]] <- S7::set_props(cs, visible = FALSE)
       }
-    }
-    # Indent every data row's host-column text + AST by indent_chars.
-    # Synthetic header rows (injected later by
-    # `.inject_header_rows_for_page`) sit ABOVE these data rows and
-    # carry the group value flush-left; the indent on the data row
-    # creates the visual nesting under the synthetic header. The
-    # prefix is a literal `plain` run at the head of the AST so
-    # every backend honours it through the same inline-run pipeline
-    # — no per-backend code.
-    if (
-      !is.na(host_col) &&
-        is.character(indent_chars) &&
-        length(indent_chars) == 1L &&
-        !is.na(indent_chars) &&
-        nzchar(indent_chars)
-    ) {
-      cells_text[, host_col] <- paste0(
-        indent_chars,
-        cells_text[, host_col]
-      )
-      cells_ast[, host_col] <- .indent_host_asts(
-        cells_ast[, host_col],
-        indent_chars
-      )
     }
   }
 
@@ -319,6 +337,176 @@ engine_group_display <- function(
     asts[[i]] <- inline_ast(runs = c(list(prefix_run), a@runs))
   }
   asts
+}
+
+# Per-row variant of `.indent_host_asts`. Takes a parallel
+# `prefixes` character vector (length == length(asts)); each row's
+# AST gets its OWN prefix prepended as a leading `plain` run.
+# Empty prefix on a row means no prefix run is added (zero-depth
+# row stays clean — no spurious empty plain run polluting the
+# inline-AST shape).
+.indent_host_asts_per_row <- function(asts, prefixes) {
+  if (length(asts) == 0L) {
+    return(asts)
+  }
+  if (length(prefixes) != length(asts)) {
+    return(asts)
+  }
+  for (i in seq_along(asts)) {
+    pfx <- prefixes[[i]]
+    if (!is.character(pfx) || is.na(pfx) || !nzchar(pfx)) {
+      next
+    }
+    a <- asts[[i]]
+    if (!is_inline_ast(a)) {
+      next
+    }
+    asts[[i]] <- inline_ast(
+      runs = c(list(list(type = "plain", text = pfx)), a@runs)
+    )
+  }
+  asts
+}
+
+# Walk `cols` for every entry with `@indent_by` set and resolve
+# each into a per-row prefix vector against the named depth column
+# in `data`. Returns a list with two slots:
+#
+#   $targets  — list of records, one per resolved indent target:
+#                 list(col = <target>, depth_col = <depth>,
+#                      prefixes = character(nrow_data))
+#   $hide_cols — character vector of depth-column names whose
+#                visibility should be auto-flipped to FALSE.
+#
+# Hard errors (class = "tabular_error_input") on:
+#   - referenced depth column not present in `data`
+#   - depth column wrong length
+#   - depth column not numeric / logical
+#   - target column declares indent_by but isn't in cells_text
+#
+# Soft handling (clamp + continue) on:
+#   - NA depth values  -> 0
+#   - negative depths  -> 0
+#   - fractional depths -> floor()
+.resolve_indent_targets <- function(
+  cols,
+  col_names,
+  data,
+  nrow_data,
+  indent_chars,
+  call
+) {
+  out <- list(targets = list(), hide_cols = character(0L))
+  if (is.null(data)) {
+    return(out)
+  }
+  for (nm in names(cols)) {
+    cs <- cols[[nm]]
+    if (!is_col_spec(cs)) {
+      next
+    }
+    by <- cs@indent_by
+    if (length(by) != 1L || is.na(by) || !nzchar(by)) {
+      next
+    }
+    if (!(nm %in% col_names)) {
+      # Target column isn't in cells_text (e.g. it was dropped
+      # upstream). Silently skip — no engine error on a stale
+      # reference; the engine doesn't get to choose which columns
+      # ride through every phase.
+      next
+    }
+    if (!(by %in% names(data))) {
+      cli::cli_abort(
+        c(
+          "{.code col_spec(indent_by = ...)} references missing column.",
+          "x" = "Column {.val {nm}} declares {.code indent_by = {.val {by}}}, but {.val {by}} is not in {.code spec@data}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    raw <- data[[by]]
+    if (length(raw) != nrow_data) {
+      cli::cli_abort(
+        c(
+          "Bad indent depth column.",
+          "x" = "Column {.val {by}} has length {length(raw)}, expected {nrow_data}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    depths <- .coerce_indent_depths(raw, by, call = call)
+    prefixes <- .build_indent_prefixes(depths, indent_chars)
+    out$targets[[length(out$targets) + 1L]] <- list(
+      col = nm,
+      depth_col = by,
+      prefixes = prefixes
+    )
+    if (!(by %in% out$hide_cols)) {
+      out$hide_cols <- c(out$hide_cols, by)
+    }
+  }
+  out
+}
+
+# Coerce a depth column to an integer vector of non-negative
+# values. Logical -> 0/1; numeric -> floor with a warn on
+# fractional; NA -> 0; negative -> 0 with a warn. Non-numeric +
+# non-logical input is a hard error.
+.coerce_indent_depths <- function(x, depth_col, call) {
+  if (is.logical(x)) {
+    out <- as.integer(x)
+    out[is.na(out)] <- 0L
+    return(out)
+  }
+  if (is.numeric(x)) {
+    if (any(stats::na.omit(x) != floor(stats::na.omit(x)))) {
+      cli::cli_warn(
+        "Indent depth column {.val {depth_col}} has fractional values; floored.",
+        call = call
+      )
+    }
+    out <- suppressWarnings(as.integer(floor(x)))
+    out[is.na(out)] <- 0L
+    if (any(out < 0L)) {
+      cli::cli_warn(
+        "Indent depth column {.val {depth_col}} has negative values; clamped to 0.",
+        call = call
+      )
+      out[out < 0L] <- 0L
+    }
+    return(out)
+  }
+  cli::cli_abort(
+    c(
+      "Bad indent depth column.",
+      "x" = "Column {.val {depth_col}} must be integer or logical.",
+      "i" = "Got {.obj_type_friendly {x}}."
+    ),
+    class = "tabular_error_input",
+    call = call
+  )
+}
+
+# Map an integer depth vector to a parallel character prefix
+# vector. Empty string for depth 0; `paste(rep(indent_chars, N),
+# collapse = "")` for depth N. The caller injects these on
+# `cells_text[, target]` and on `cells_ast[, target]`.
+.build_indent_prefixes <- function(depths, indent_chars) {
+  if (!is.character(indent_chars) || length(indent_chars) != 1L ||
+      is.na(indent_chars) || !nzchar(indent_chars)) {
+    return(rep("", length(depths)))
+  }
+  vapply(
+    depths,
+    function(d) {
+      if (d <= 0L) return("")
+      paste(rep(indent_chars, d), collapse = "")
+    },
+    character(1L)
+  )
 }
 
 # Per-page header-row injection. Called by `.slice_one_page()` after

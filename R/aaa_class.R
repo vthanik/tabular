@@ -314,6 +314,19 @@ NULL
     na_text = S7::new_property(
       S7::class_character,
       default = ""
+    ),
+    # @indent_by — name of a column in `spec@data` whose per-row
+    # integer / logical values drive the indent depth on THIS
+    # column's cell text. `NA_character_` (the default) means no
+    # per-row indent. When set, the engine reads
+    # `spec@data[[indent_by]]` at resolve time, coerces each row's
+    # value to a non-negative integer N, and prefixes this column's
+    # text + AST in that row with `paste(rep(preset@indent_chars, N),
+    # collapse = "")`. The referenced column is auto-hidden unless
+    # the user explicitly set its `visible = TRUE`.
+    indent_by = S7::new_property(
+      S7::class_character,
+      default = NA_character_
     )
   ),
   validator = function(self) {
@@ -387,6 +400,9 @@ NULL
     }
     if (length(self@group_skip) != 1L) {
       return("@group_skip must be length 1 (TRUE / FALSE / NA)")
+    }
+    if (length(self@indent_by) != 1L) {
+      return("@indent_by must be length 1 (column name or NA_character_)")
     }
     NULL
   }

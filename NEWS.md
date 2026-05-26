@@ -5,6 +5,50 @@
   rewritten at first tagged release; see `git log` for live change
   history in the interim.
 
+## New features
+
+* `col_spec(indent_by = "<column_name>")` declares per-row indent
+  depth on the target column. The referenced column carries
+  integer (or logical) values; the engine prefixes the target
+  column's text + AST in each row with
+  `paste(rep(preset@indent_chars, depth), collapse = "")`.
+  Synthetic header rows from `group_display = "header_row"` are
+  NEVER prefixed — they stay flush as the parent at depth 0.
+
+  Typical clinical AE shape:
+
+  ```r
+  ae$indent_level <- as.integer(ae$row_type == "pt")
+
+  tabular(ae) |>
+    cols(
+      soc          = col_spec(usage = "group", group_display = "header_row"),
+      label        = col_spec(label = "Category", indent_by = "indent_level"),
+      indent_level = col_spec(visible = FALSE),
+      row_type     = col_spec(visible = FALSE)
+    )
+  # Overall + SOC summary rows stay flush; PT rows indent.
+  ```
+
+  Custom indent characters via `preset(indent_chars = "    ")` (4 spaces),
+  `preset(indent_chars = "> ")` (custom marker), or
+  `preset(indent_chars = "")` (disable). The depth column is
+  auto-hidden — no need to remember `visible = FALSE` on it.
+
+  Works in flat listings too (no `group_display = "header_row"`
+  required) — any column can declare `indent_by` to drive its
+  own per-row depth.
+
+## Breaking changes (default-on indent removed)
+
+* The PR-#2 default-on behaviour ("every data row's host-column
+  text gets a uniform `indent_chars` prefix when
+  `group_display = "header_row"` is active") is removed. Indent now
+  requires explicit `col_spec(indent_by = "<col>")` on the target
+  column. Rationale: the default-on prefix mis-indented overall
+  summary rows and SOC summary rows in the regulatory AE pattern;
+  the new mechanism puts the user in control per row.
+
 ## Breaking changes (Task 4/5 slot cut)
 
 * `preset_spec` class drops the five list-valued slots
