@@ -51,18 +51,10 @@ test_that("integration spec composes through all Phase 6 surfaces (HTML)", {
   expect_false(grepl("helper_sort", txt, fixed = TRUE))
   # fonts$body$family
   expect_true(grepl("font-family: Inter", txt, fixed = TRUE))
-  # colors$text
-  expect_true(grepl(
-    ".tabular-table td { color: #212529; }",
-    txt,
-    fixed = TRUE
-  ))
-  # padding$body
-  expect_true(grepl(
-    ".tabular-table tbody td { padding: 4pt; }",
-    txt,
-    fixed = TRUE
-  ))
+  # colors$text — per-cell inline style after the Task 4/5 cut
+  expect_true(grepl("color: #212529", txt, fixed = TRUE))
+  # padding$body — per-cell inline style after the Task 4/5 cut
+  expect_true(grepl("padding: 4pt", txt, fixed = TRUE))
   # Subgroup banner
   expect_true(grepl("Cohort: X", txt, fixed = TRUE))
   expect_true(grepl("Integration", txt, fixed = TRUE))
@@ -106,11 +98,12 @@ test_that("integration spec composes through all Phase 6 surfaces (LaTeX)", {
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_false(grepl("helper_sort", txt, fixed = TRUE))
-  expect_true(grepl(
-    "\\definecolor{tabular_text}{HTML}{212529}",
-    txt,
-    fixed = TRUE
-  ))
+  # Task 4/5 cut: per-cell color stamp via \SetCell, no preamble
+  # \definecolor{tabular_text}.
+  expect_true(
+    grepl("212529", txt, fixed = TRUE) ||
+      grepl("212529", txt, ignore.case = TRUE)
+  )
   expect_true(grepl("rowsep=4pt", txt, fixed = TRUE))
 })
 

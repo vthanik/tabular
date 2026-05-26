@@ -44,7 +44,8 @@
 
 # Recognised chrome surfaces. Used by `chrome_style()` to seed the
 # borders sub-list with the canonical key set, and by
-# `engine_chrome_borders()` to know what to walk on `preset@borders`.
+# `engine_chrome_borders()` to know what region names the lowered
+# `cells_<chrome surface>()` layers map onto.
 .chrome_border_regions <- c(
   "pagehead_bottom",
   "header_top",

@@ -87,7 +87,7 @@ backend_rtf <- function(grid, file) {
     .rtf_color_table(colors),
     sprintf(
       "\\fs%d",
-      as.integer(round(.effective_font_size(preset, "body") * 2))
+      as.integer(round(.effective_font_size(preset) * 2))
     )
   )
   preamble <- preamble[nzchar(preamble)]
@@ -464,7 +464,7 @@ backend_rtf <- function(grid, file) {
 # Title block: each title line emits as a paragraph whose alignment
 # and text properties cascade from `chrome_style$surfaces$title`
 # (set by `style(at = cells_title(), ...)`) down to
-# `preset@alignment$title_halign` (legacy theme layer). Bold by
+# `chrome_style$surfaces$title@halign` (legacy theme layer). Bold by
 # default; the cascade-default alignment is centre when nothing
 # overrides.
 .render_rtf_title_block <- function(
@@ -521,7 +521,7 @@ backend_rtf <- function(grid, file) {
 # alignment and text props cascade from
 # `chrome_style$surfaces$footer` (set by
 # `style(at = cells_footnotes(), ...)`) down to
-# `preset@alignment$footnote_halign` (legacy theme layer).
+# `chrome_style$surfaces$footer@halign` (legacy theme layer).
 # Slightly smaller font size by default; the cascade default
 # halign is left.
 .render_rtf_footnote_block <- function(
@@ -995,7 +995,7 @@ backend_rtf <- function(grid, file) {
 
 # Column-labels row: one cell per visible column, alignment via
 # the header cascade (col_spec@align / @valign >
-# preset@alignment$header_halign / header_valign > backend
+# chrome_style$surfaces$header@halign / header_valign > backend
 # default), label from `col_labels_ast` (the parsed AST already
 # created by engine_format). Top + bottom rules so the row
 # visually separates the head from the body.
@@ -1096,7 +1096,7 @@ backend_rtf <- function(grid, file) {
 # Body rows: one `\trowd ... \row` per data row, one cell per
 # visible column, alignment via the three-layer cascade
 # (cells_style@halign / @valign > col_spec@align / @valign >
-# preset@alignment$body_halign / body_valign), text from
+# cells_style[r,c]@halign / body_valign), text from
 # `cells_text` (post-engine_decimal). Cells use `\line` for
 # embedded newlines so multi-line cells render without closing the
 # cell (a `\par` would close it).
@@ -1117,8 +1117,8 @@ backend_rtf <- function(grid, file) {
   }
 
   col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
-  trgaph <- .rtf_body_trgaph(preset)
-  cf_tok <- .rtf_body_cf_token(preset, colors)
+  trgaph <- .rtf_body_trgaph(cells_style)
+  cf_tok <- .rtf_body_cf_token(cells_style, colors)
 
   out <- character()
   for (r in seq_len(nrow_data)) {
@@ -1181,36 +1181,32 @@ backend_rtf <- function(grid, file) {
   out
 }
 
-# Resolve the body row's `\trgaph<halfWidth>` value (twips). The
-# legacy default of 108 twips (5.4pt) is preserved when
-# `preset@padding$body` is unset; a numeric override converts pt to
-# twips (1pt = 20 twips); a per-side list collapses to the average
-# of left + right since RTF carries only one gap per row.
-.rtf_body_trgaph <- function(preset) {
-  pad <- .effective_padding(preset, "body")
-  if (is.null(pad)) {
+# Resolve the body row's `\trgaph<halfWidth>` value (twips). Reads
+# the representative [1,1] body cell's @padding (set by the lowered
+# `preset(padding = list(body = N))` knob or `style(at =
+# cells_body(), padding = N)`) and converts pt -> twips (1pt = 20
+# twips). Returns the legacy 108-twip (5.4pt) default when no
+# override is active. RTF carries one gap per row, so per-side
+# padding isn't expressible; the per-cell stamp's scalar value
+# applies.
+.rtf_body_trgaph <- function(cells_style) {
+  pt <- .first_cell_padding(cells_style)
+  if (is.na(pt)) {
     return(108L)
   }
-  if (is.numeric(pad) && length(pad) == 1L) {
-    return(as.integer(round(pad * 20)))
-  }
-  if (is.list(pad)) {
-    lr <- c(
-      if (is.null(pad$left)) 0 else as.numeric(pad$left),
-      if (is.null(pad$right)) 0 else as.numeric(pad$right)
-    )
-    return(as.integer(round(mean(lr) * 20)))
-  }
-  108L
+  as.integer(round(pt * 20))
 }
 
 # Body cell text color token. Empty string when no body-level text
 # color is set anywhere in the cascade; otherwise `\cf<idx> ` with
-# the dynamic-table index. The index is resolved from the
-# `.rtf_collect_colors()` lookup so the slot referenced here is the
-# same one the colortbl emitted at preamble time.
-.rtf_body_cf_token <- function(preset, colors) {
-  text_color <- .effective_color(preset, "text")
+# the dynamic-table index. Reads the representative [1,1] body
+# cell's @color (set by the lowered `preset(colors = list(text = ...))`
+# knob or `style(at = cells_body(), color = ...)`); the per-cell
+# layer cascade stamps the same value on every body cell, so reading
+# any one is canonical. The colortbl index is resolved via the
+# preamble-time `.rtf_collect_colors()` lookup.
+.rtf_body_cf_token <- function(cells_style, colors) {
+  text_color <- .first_cell_color(cells_style)
   if (is.na(text_color) || !nzchar(text_color)) {
     return("")
   }
@@ -1671,10 +1667,6 @@ backend_rtf <- function(grid, file) {
 # 0 is the RTF "auto" sentinel and is reserved.
 .rtf_collect_colors <- function(pages, cs, preset) {
   buf <- character()
-  preset_text <- .effective_color(preset, "text")
-  if (!is.na(preset_text) && nzchar(preset_text)) {
-    buf <- c(buf, preset_text)
-  }
   for (page in pages) {
     cell_styles <- page$cells_style
     if (is.null(cell_styles)) {
@@ -1730,7 +1722,7 @@ backend_rtf <- function(grid, file) {
 # when family is NULL / NA / unrecognised so cells fall through to
 # the body font).
 .rtf_collect_fonts <- function(pages, cs, preset) {
-  body_family <- .effective_font_family(preset, "body")
+  body_family <- .effective_font_family(preset)
   values <- c(body_family, "mono")
   for (page in pages) {
     cell_styles <- page$cells_style

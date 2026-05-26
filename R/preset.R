@@ -47,13 +47,15 @@
   "padding"
 )
 
-# List-valued knobs on `preset_spec` that should SHALLOW-MERGE across
-# successive `preset()` / `set_preset()` calls (last-write-wins per
-# key), rather than the default whole-value replace. Each entry in
-# `knobs[[name]]` is merged onto `prior[[name]]` so a user can layer
-# `preset(alignment = list(title_halign = "left"))` on top of an
-# existing alignment list without erasing the other keys.
-.preset_list_merged_knobs <- c(
+# The five named-list `preset()` knobs that lower to `style_layer`
+# records on `preset_spec@style` (via `.preset_args_to_layers()`)
+# rather than landing on a `preset_spec` slot. Successive calls
+# append layers; layer order is precedence within the cascade
+# (last-write wins per attribute at the cell). Splitting these out
+# from the scalar knob set is the contract `.split_preset_knobs()`
+# enforces; the lower-only flow is the post-Task-4/5 single source
+# of truth for theme-level cell defaults.
+.preset_lowered_knob_names <- c(
   "alignment",
   "borders",
   "fonts",
@@ -78,13 +80,26 @@
 #' table needs a one-off geometry (e.g. landscape A4 for one wide
 #' efficacy summary inside a portfolio of portrait letter tables).
 #'
-#' **Merge, not replace.** A second `preset()` call merges its knobs
-#' onto the spec's existing preset; unspecified knobs keep their prior
-#' value. Pass `reset = TRUE` to discard the existing knobs and start
-#' from `preset_spec()` defaults. `preset(spec, reset = TRUE)` with no
-#' knobs clears the per-spec override entirely (the spec then falls
-#' through to [`set_preset()`] or `preset_spec()` defaults at render
-#' time).
+#' **Merge, not replace.** A second `preset()` call merges its scalar
+#' knobs onto the spec's existing preset; unspecified knobs keep
+#' their prior value. The five named-list knobs (`alignment` /
+#' `borders` / `fonts` / `colors` / `padding`) lower to `style_layer`
+#' records on `preset@style` via [`.preset_args_to_layers()`]
+#' (internal) and append in call order; layer order is precedence
+#' within the engine cascade, so a later `preset()` call's lowered
+#' attribute wins over an earlier one at the cell. Pass `reset = TRUE`
+#' to discard the existing knobs and start from `preset_spec()`
+#' defaults. `preset(spec, reset = TRUE)` with no knobs clears the
+#' per-spec override entirely (the spec then falls through to
+#' [`set_preset()`] or `preset_spec()` defaults at render time).
+#'
+#' **Direct `preset_spec()` calls bypass lowering.** The five
+#' named-list knobs are no longer slots on the `preset_spec` S7
+#' class — they exist only as `preset()` / `set_preset()` arguments
+#' that lower into `@style`. `preset_spec(borders = list(...))`
+#' (and analogous direct calls) raise "unused argument". Wrap such
+#' calls in `tabular(...) |> preset(...)` so the lowering helper
+#' fires and the layers land on `@style`.
 #'
 #' **Cascade with `set_preset()`.** The engine resolves the active
 #' preset in this order: (1) the spec's per-call preset (this verb),
@@ -458,13 +473,16 @@ preset <- function(.spec, ..., template = NULL, style = NULL, reset = FALSE) {
 
   knobs <- rlang::list2(...)
   .check_preset_knob_names(knobs, call = call)
+  .validate_lowered_knobs(knobs, call = call)
   template_knobs <- .extract_template_knobs(template, call = call)
+  template_style_layers <- .extract_template_style_layers(template)
   style_layers <- .extract_style_template_layers(style, call = call)
 
   if (
     reset &&
       length(knobs) == 0L &&
       length(template_knobs) == 0L &&
+      length(template_style_layers) == 0L &&
       length(style_layers) == 0L
   ) {
     return(S7::set_props(.spec, preset = NULL))
@@ -473,6 +491,7 @@ preset <- function(.spec, ..., template = NULL, style = NULL, reset = FALSE) {
     !reset &&
       length(knobs) == 0L &&
       length(template_knobs) == 0L &&
+      length(template_style_layers) == 0L &&
       length(style_layers) == 0L
   ) {
     return(.spec)
@@ -481,46 +500,34 @@ preset <- function(.spec, ..., template = NULL, style = NULL, reset = FALSE) {
   prior <- .spec@preset
   base <- if (reset || !is_preset_spec(prior)) preset_spec() else prior
 
-  # Two-pass application so list-valued knobs (borders / fonts /
-  # colors / padding / alignment) merge cleanly:
-  #
-  #   1. template -> base   (shallow-merge each list-valued knob;
-  #                          scalars replace)
-  #   2. user ...  -> base  (same semantics; user wins for keys
-  #                          they touched, template values for the
-  #                          rest survive)
-  #
-  # This is the ggplot2 `theme(... ) + theme(panel.grid = ...)`
-  # composition pattern: each call adds to what the prior layer
-  # built up, and `borders = list(...)` callers can layer one-off
-  # region overrides onto a house-style template without restating
-  # the others.
-  if (length(template_knobs) > 0L) {
-    base <- .apply_preset_knobs(base, template_knobs, call = call)
+  # After the Task 4/5 slot cut, only the 15 scalar preset_spec
+  # properties (font_size / paper_size / margins / pagehead / …)
+  # survive as slots. The five named-list knobs (`alignment` /
+  # `borders` / `fonts` / `colors` / `padding`) flow exclusively
+  # through `.preset_args_to_layers()` and land on `@style` as
+  # ordered `style_layer` records — there is no slot-side state to
+  # merge anymore. Template knobs lower first so user knobs land
+  # later and win per attribute (layer order is precedence within
+  # the cascade).
+  scalar_template_knobs <- .split_preset_knobs(template_knobs)$scalar
+  scalar_user_knobs <- .split_preset_knobs(knobs)$scalar
+  if (length(scalar_template_knobs) > 0L) {
+    base <- .apply_preset_knobs(base, scalar_template_knobs, call = call)
   }
-  new_preset <- if (length(knobs) > 0L) {
-    .apply_preset_knobs(base, knobs, call = call)
+  new_preset <- if (length(scalar_user_knobs) > 0L) {
+    .apply_preset_knobs(base, scalar_user_knobs, call = call)
   } else {
     base
   }
-  # Lower the five named-list knobs (alignment / borders / fonts /
-  # colors / padding) to style_layer records and append to @style.
-  # Template knobs are lowered first so user knobs land later and win
-  # per attribute (layer order is precedence within the cascade).
   lowered <- c(
     .preset_args_to_layers(template_knobs),
     .preset_args_to_layers(knobs)
   )
-  if (length(lowered) > 0L) {
+  appended <- c(template_style_layers, lowered, style_layers)
+  if (length(appended) > 0L) {
     new_preset <- S7::set_props(
       new_preset,
-      style = c(new_preset@style, lowered)
-    )
-  }
-  if (length(style_layers) > 0L) {
-    new_preset <- S7::set_props(
-      new_preset,
-      style = c(new_preset@style, style_layers)
+      style = c(new_preset@style, appended)
     )
   }
   S7::set_props(.spec, preset = new_preset)
@@ -646,13 +653,16 @@ set_preset <- function(..., template = NULL, style = NULL, reset = FALSE) {
 
   knobs <- rlang::list2(...)
   .check_preset_knob_names(knobs, call = call)
+  .validate_lowered_knobs(knobs, call = call)
   template_knobs <- .extract_template_knobs(template, call = call)
+  template_style_layers <- .extract_template_style_layers(template)
   style_layers <- .extract_style_template_layers(style, call = call)
 
   if (
     reset &&
       length(knobs) == 0L &&
       length(template_knobs) == 0L &&
+      length(template_style_layers) == 0L &&
       length(style_layers) == 0L
   ) {
     .tabular_session$preset <- NULL
@@ -662,30 +672,27 @@ set_preset <- function(..., template = NULL, style = NULL, reset = FALSE) {
   prior <- .tabular_session$preset
   base <- if (reset || !is_preset_spec(prior)) preset_spec() else prior
 
-  if (length(template_knobs) > 0L) {
-    base <- .apply_preset_knobs(base, template_knobs, call = call)
+  # Mirrors `preset()`'s lower-only path for the five named-list
+  # knobs — see the long comment there for the rationale.
+  scalar_template_knobs <- .split_preset_knobs(template_knobs)$scalar
+  scalar_user_knobs <- .split_preset_knobs(knobs)$scalar
+  if (length(scalar_template_knobs) > 0L) {
+    base <- .apply_preset_knobs(base, scalar_template_knobs, call = call)
   }
-  new_preset <- if (length(knobs) > 0L) {
-    .apply_preset_knobs(base, knobs, call = call)
+  new_preset <- if (length(scalar_user_knobs) > 0L) {
+    .apply_preset_knobs(base, scalar_user_knobs, call = call)
   } else {
     base
   }
-  # Lower the five named-list knobs to style_layer records. See the
-  # mirroring block in preset() for ordering rationale.
   lowered <- c(
     .preset_args_to_layers(template_knobs),
     .preset_args_to_layers(knobs)
   )
-  if (length(lowered) > 0L) {
+  appended <- c(template_style_layers, lowered, style_layers)
+  if (length(appended) > 0L) {
     new_preset <- S7::set_props(
       new_preset,
-      style = c(new_preset@style, lowered)
-    )
-  }
-  if (length(style_layers) > 0L) {
-    new_preset <- S7::set_props(
-      new_preset,
-      style = c(new_preset@style, style_layers)
+      style = c(new_preset@style, appended)
     )
   }
   .tabular_session$preset <- new_preset
@@ -790,19 +797,15 @@ get_preset <- function() {
   invisible()
 }
 
-# Merge `knobs` onto a base preset_spec via S7::set_props. Callers
-# only invoke this when `knobs` is non-empty; the no-knobs case is
-# short-circuited upstream. The S7 property validators run on the
-# constructed object; any bad value (wrong enum, wrong length, wrong
-# type) raises a base R error that we re-throw as tabular_error_input
-# with the underlying message.
-#
-# List-valued knobs in `.preset_list_merged_knobs` (e.g. `alignment`)
-# shallow-merge onto the prior list rather than wholesale replace.
-# A value of NULL inside the user's list clears that one key on the
-# merged result without touching the other keys.
+# Merge scalar `knobs` onto a base preset_spec via S7::set_props.
+# Callers must split named-list knobs (`alignment` / `borders` /
+# `fonts` / `colors` / `padding`) out first via `.split_preset_knobs()`
+# — those flow through `.preset_args_to_layers()` and never reach a
+# slot. The S7 property validators run on the constructed object;
+# any bad value (wrong enum, wrong length, wrong type) raises a
+# base R error that we re-throw as tabular_error_input with the
+# underlying message.
 .apply_preset_knobs <- function(base, knobs, call) {
-  knobs <- .preset_merge_list_knobs(base, knobs)
   tryCatch(
     do.call(S7::set_props, c(list(base), knobs)),
     error = function(e) {
@@ -818,13 +821,70 @@ get_preset <- function() {
   )
 }
 
+# Partition a named knob list into the scalar half (slot-bound) and
+# the lowered half (`alignment` / `borders` / `fonts` / `colors` /
+# `padding`). Callers route each half through the matching
+# downstream pipeline.
+.split_preset_knobs <- function(knobs) {
+  if (length(knobs) == 0L) {
+    return(list(scalar = list(), lowered = list()))
+  }
+  is_lowered <- names(knobs) %in% .preset_lowered_knob_names
+  list(
+    scalar = knobs[!is_lowered],
+    lowered = knobs[is_lowered]
+  )
+}
+
+# Run the call-time shape validators for the five lowered knobs.
+# After the Task 4/5 cut, the S7 validator on `preset_spec` no
+# longer sees these values (they bypass the slot path entirely), so
+# the same shape errors that used to surface from `S7::set_props`
+# must be raised here before lowering touches the layer cascade.
+.validate_lowered_knobs <- function(knobs, call) {
+  if (length(knobs) == 0L) {
+    return(invisible())
+  }
+  validators <- list(
+    alignment = .preset_alignment_shape_error,
+    borders = .preset_borders_shape_error,
+    fonts = .preset_fonts_shape_error,
+    colors = .preset_colors_shape_error,
+    padding = .preset_padding_shape_error
+  )
+  for (knob in intersect(names(knobs), names(validators))) {
+    v <- knobs[[knob]]
+    if (is.null(v) || length(v) == 0L) {
+      next
+    }
+    err <- validators[[knob]](v)
+    if (!is.null(err)) {
+      cli::cli_abort(
+        c(
+          "Invalid {.code {knob}} value for {.fn preset}.",
+          "x" = "@{knob} {err}"
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+  }
+  invisible()
+}
+
 # Convert a `preset_spec` template (or NULL) into a named-list of
-# knob values that DIFFER from `preset_spec()` factory defaults.
-# This is what makes `preset(template = ...)` non-destructive: only
-# the template author's deliberate overrides feed into the cascade;
-# factory-default knobs on the template (e.g. `font_size = 9` when
-# the user never customised it) leave the prior preset's value
-# alone.
+# scalar knob values that DIFFER from `preset_spec()` factory
+# defaults. This is what makes `preset(template = ...)`
+# non-destructive: only the template author's deliberate overrides
+# feed into the cascade; factory-default knobs on the template
+# (e.g. `font_size = 9` when the user never customised it) leave
+# the prior preset's value alone.
+#
+# After the Task 4/5 slot cut, the five named-list knobs
+# (`alignment` / `borders` / `fonts` / `colors` / `padding`) have
+# no slot on `preset_spec` to extract from — their template-side
+# state lives entirely on `@style` (one `style_layer` per knob
+# argument) and is propagated by `.extract_template_style_layers()`.
 #
 # Comparison memoises the factory `preset_spec()` once in the
 # session env so we don't reconstruct it on every preset call.
@@ -843,8 +903,9 @@ get_preset <- function() {
     )
   }
   factory <- .preset_factory_default_spec()
+  scalar_names <- setdiff(.preset_knob_names, .preset_lowered_knob_names)
   out <- list()
-  for (nm in .preset_knob_names) {
+  for (nm in scalar_names) {
     v <- S7::prop(template, nm)
     f <- S7::prop(factory, nm)
     if (!identical(v, f)) {
@@ -852,6 +913,19 @@ get_preset <- function() {
     }
   }
   out
+}
+
+# Extract a template `preset_spec`'s `@style` layers — already-lowered
+# `style_layer` records carrying its named-list knob state and any
+# attached `style_template()`. Returns an empty list for NULL.
+# Callers append these onto the prior preset's `@style` before the
+# user's own `...` knobs lower; that ordering preserves the
+# "template defaults, user knobs win" semantics.
+.extract_template_style_layers <- function(template) {
+  if (is.null(template) || !is_preset_spec(template)) {
+    return(list())
+  }
+  template@style
 }
 
 # Extract a list of `style_layer` records from a
@@ -888,92 +962,27 @@ get_preset <- function() {
   .preset_factory_defaults_env$preset
 }
 
-# For each list-valued knob present in `knobs`, replace the incoming
-# value with `modifyList(prior, incoming)` so the existing keys
-# survive an additive call. Passing NULL inside the user's list
-# removes that key from the merged result (modifyList drops it).
-.preset_merge_list_knobs <- function(base, knobs) {
-  for (nm in intersect(names(knobs), .preset_list_merged_knobs)) {
-    incoming <- knobs[[nm]]
-    if (is.null(incoming)) {
-      next
-    }
-    if (!is.list(incoming)) {
-      # Let S7::set_props raise the type error via the validator.
-      next
-    }
-    prior <- S7::prop(base, nm)
-    if (!is.list(prior)) {
-      prior <- list()
-    }
-    knobs[[nm]] <- utils::modifyList(prior, incoming, keep.null = FALSE)
-  }
-  knobs
-}
-
 # ---------------------------------------------------------------------
-# Effective-value helpers for the named-list `preset_spec` knobs
-# (`@fonts`, `@colors`, `@padding`). Each returns the surface- or
-# token-specific value when set, falling back to the legacy scalar
-# (`@font_family`, `@font_size`) or a sentinel (`NA_character_`,
-# `NULL`) when unset. Backend renderers consume these so the
-# named-list knobs override the legacy scalars without any backend
-# caring about
-# the named-list structure.
+# Table-wide font defaults read from the scalar `preset_spec` slots.
+# After the Task 4/5 cut, surface-specific font / colour / padding
+# overrides live on `cells_style[r,c]` and `chrome_style$surfaces`
+# (populated from the lowered layer cascade); these helpers exist
+# only to give the backends a NULL-safe accessor for the table-wide
+# default that flows into preamble / colortbl / `\fontsize` / CSS
+# `<table>`-element-level emission.
 
-.effective_font_family <- function(preset, surface = "body") {
+.effective_font_family <- function(preset) {
   if (!is_preset_spec(preset)) {
-    preset <- preset_spec()
-  }
-  fonts <- preset@fonts
-  if (
-    is.list(fonts) &&
-      !is.null(fonts[[surface]]) &&
-      !is.null(fonts[[surface]]$family)
-  ) {
-    return(fonts[[surface]]$family)
+    return(preset_spec()@font_family)
   }
   preset@font_family
 }
 
-.effective_font_size <- function(preset, surface = "body") {
+.effective_font_size <- function(preset) {
   if (!is_preset_spec(preset)) {
-    preset <- preset_spec()
-  }
-  fonts <- preset@fonts
-  if (
-    is.list(fonts) &&
-      !is.null(fonts[[surface]]) &&
-      !is.null(fonts[[surface]]$size)
-  ) {
-    return(fonts[[surface]]$size)
+    return(preset_spec()@font_size)
   }
   preset@font_size
-}
-
-.effective_color <- function(preset, token) {
-  if (!is_preset_spec(preset)) {
-    return(NA_character_)
-  }
-  colors <- preset@colors
-  if (is.list(colors) && !is.null(colors[[token]])) {
-    return(colors[[token]])
-  }
-  NA_character_
-}
-
-# Returns either NULL (no padding override), a single non-negative
-# numeric (uniform padding in points), or a named list with any of
-# top / right / bottom / left (per-side padding in points).
-.effective_padding <- function(preset, surface = "body") {
-  if (!is_preset_spec(preset)) {
-    return(NULL)
-  }
-  padding <- preset@padding
-  if (is.list(padding) && !is.null(padding[[surface]])) {
-    return(padding[[surface]])
-  }
-  NULL
 }
 
 # ---------------------------------------------------------------------
@@ -1014,10 +1023,6 @@ get_preset <- function() {
 # Per-side padding lists (`padding = list(body = list(top = 1, ...))`)
 # are NOT lowered to per-side scalars (`style_node@padding` is one
 # numeric); the helper averages the four sides as the closest scalar.
-# Vector-form alignment values (`alignment = list(title_halign =
-# c("left", "right"))`) lower to ONE layer using the first value;
-# per-line vector alignment is not expressible via a single
-# `chrome_style$surfaces` node.
 .preset_args_to_layers <- function(args) {
   layers <- list()
   for (knob in c("alignment", "borders", "fonts", "colors", "padding")) {
@@ -1027,9 +1032,7 @@ get_preset <- function() {
     }
     new <- switch(
       knob,
-      alignment = .preset_alignment_to_layers(
-        .preset_alignment_args_lowerable(val)
-      ),
+      alignment = .preset_alignment_to_layers(val),
       borders = .preset_borders_to_layers(val),
       fonts = .preset_fonts_to_layers(val),
       colors = .preset_colors_to_layers(val),
@@ -1040,26 +1043,6 @@ get_preset <- function() {
     }
   }
   layers
-}
-
-# Drop vector-form alignment values from lowering — chrome surfaces
-# carry a SCALAR halign / valign, so a per-line alignment vector
-# (`alignment = list(title_halign = c("left", "right"))`) cannot be
-# expressed via a single style_layer. The legacy preset@alignment
-# path is still active for vector form; this filter keeps the
-# lowered layer set scalar-only so chrome_style$surfaces does not
-# silently lock the wrong value as the table-wide override.
-.preset_alignment_args_lowerable <- function(al) {
-  if (!is.list(al)) {
-    return(al)
-  }
-  for (key in names(al)) {
-    v <- al[[key]]
-    if (!is.null(v) && length(v) > 1L) {
-      al[[key]] <- NULL
-    }
-  }
-  al
 }
 
 # Surface -> `cells_*()` constructor for the per-surface knobs
@@ -1174,26 +1157,24 @@ get_preset <- function() {
   layers
 }
 
-# borders named-list -> per-region border layers. Mirrors the
-# `.resolve_border_regions` body / chrome split: body regions become
-# `cells_table(side=...)` layers; chrome regions become
-# `cells_<chrome surface>()` layers carrying the appropriate
-# `border_<side>_*` triple. The `subgroup` legacy alias for
-# `subgroup_bottom` is emitted FIRST so an explicit
-# `subgroup_bottom` later in the list overrides it (layer order is
-# precedence). The "none" / "off" sentinel passes through via
-# `.normalise_region_value`.
+# borders named-list -> per-region border layers. Splits across the
+# body / chrome region vocabulary:
 #
-# **Body regions are deliberately not lowered yet.** The legacy
-# `engine_borders()` block uses `.set_border_triple()` (skip-if-explicit)
-# so a per-cell predicate border like `border_top_style = "dashed"`
-# survives the preset region overlay. A naive lowered cells_table
-# layer goes through `.stamp_outer_edge_force()` (always-write) and
-# overrides the predicate. Preserving the predicate-respects-preset
-# semantics under the layer cascade requires a separate change to the
-# cells_table layer engine. Until that lands, body borders stay on
-# the legacy slot path only; this helper lowers only the chrome
-# half.
+#   * Body regions (outer, outer_{top/bottom/left/right}, body_top,
+#     body_bottom, body_rows, body_cols) become `cells_table(side=...)`
+#     layers carrying the per-side triple. `engine_borders()` stamps
+#     these onto cells_style after `engine_style()` runs.
+#
+#   * Chrome regions (pagehead_bottom, header_{top/bottom/between},
+#     subgroup_{top/bottom}, footer_{top/bottom}, pagefoot_top) become
+#     `cells_<chrome surface>()` layers carrying the matching
+#     `border_<side>_*` triple. `engine_chrome_borders()` routes
+#     these onto chrome_style.
+#
+# Layer order is precedence within the cascade. Aliases that share
+# a target surface (`subgroup` for `subgroup_bottom`, `body_top` for
+# `outer_top`, `body_bottom` for `outer_bottom`) are emitted FIRST so
+# an explicit canonical key later in the list overrides them.
 .preset_borders_to_layers <- function(br) {
   if (!is.list(br)) {
     return(list())
@@ -1206,11 +1187,55 @@ get_preset <- function() {
   }
   triple_for <- function(key) .normalise_region_value(br[[key]])
 
+  # ---- Body regions ----
+  # The `outer` umbrella stamps all four edges; per-side keys can
+  # then override individual edges. `body_top` / `body_bottom`
+  # aliases collapse onto `outer_top` / `outer_bottom`.
+  if (!is.null(br[["outer"]])) {
+    for (side in c("top", "bottom", "left", "right")) {
+      add(.preset_layer_table_border(
+        side = paste0("outer_", side),
+        triple = triple_for("outer")
+      ))
+    }
+  }
+  for (side_key in c("outer_top", "outer_bottom", "outer_left", "outer_right")) {
+    if (!is.null(br[[side_key]])) {
+      add(.preset_layer_table_border(
+        side = side_key,
+        triple = triple_for(side_key)
+      ))
+    }
+  }
+  if (!is.null(br[["body_top"]])) {
+    add(.preset_layer_table_border(
+      side = "outer_top",
+      triple = triple_for("body_top")
+    ))
+  }
+  if (!is.null(br[["body_bottom"]])) {
+    add(.preset_layer_table_border(
+      side = "outer_bottom",
+      triple = triple_for("body_bottom")
+    ))
+  }
+  if (!is.null(br[["body_rows"]])) {
+    add(.preset_layer_table_border(
+      side = "rows",
+      triple = triple_for("body_rows")
+    ))
+  }
+  if (!is.null(br[["body_cols"]])) {
+    add(.preset_layer_table_border(
+      side = "cols",
+      triple = triple_for("body_cols")
+    ))
+  }
+
   # ---- Chrome regions ----
   # `subgroup` alias for `subgroup_bottom` is emitted FIRST so an
-  # explicit `subgroup_bottom` later wins (the legacy
-  # `.resolve_border_regions` does the same via its second-half
-  # write-if-empty pattern; here we rely on layer order).
+  # explicit `subgroup_bottom` later wins (layer order is
+  # precedence).
   chrome_mapping <- list(
     pagehead_bottom = list(loc = cells_pagehead, side = "bottom"),
     header_top = list(loc = cells_headers, side = "top"),
@@ -1234,6 +1259,37 @@ get_preset <- function() {
     }
   }
   layers
+}
+
+# Build one `cells_table(side = ...)` layer carrying a per-side
+# border triple. The location surface uses the per-side `side` key
+# (`outer_top` / `outer_bottom` / `outer_left` / `outer_right` /
+# `rows` / `cols`) so engine_borders' `.apply_table_layer()` knows
+# which edge / separator family to stamp. The style_node carries
+# the matching `border_<scalar-side>_*` triple — the scalar side is
+# `top` / `bottom` / `left` / `right` (rows/cols decay to top/left).
+.preset_layer_table_border <- function(side, triple) {
+  if (is.null(triple)) {
+    return(NULL)
+  }
+  scalar_side <- switch(
+    side,
+    outer_top = "top",
+    outer_bottom = "bottom",
+    outer_left = "left",
+    outer_right = "right",
+    rows = "top",
+    cols = "left",
+    NULL
+  )
+  if (is.null(scalar_side)) {
+    return(NULL)
+  }
+  .preset_layer_border(
+    location = cells_table(side = side),
+    side = scalar_side,
+    triple = triple
+  )
 }
 
 # fonts named-list -> per-surface font_family / font_size layers.
@@ -1280,12 +1336,14 @@ get_preset <- function() {
   layers
 }
 
-# colors named-list -> cells_body() color / background layers. The
-# `border` / `border_muted` tokens are NOT lowered here for the same
-# reason `borders$outer` is not yet lowered (body-region layers
-# bypass the predicate-respect cascade; see
-# `.preset_borders_to_layers`). `text_muted` is dropped silently —
-# no per-cell semantic on style_node.
+# colors named-list -> cells_body() color / background layers. Only
+# `text` and `background` survive after the Task 4/5 cut; the
+# `border` / `border_muted` (table-wide stroke colour) and
+# `text_muted` (chrome muted-text) tokens are rejected at
+# `.validate_lowered_knobs()` call time. Border colour now belongs
+# to `style(at = cells_table(side = "rows"), border_top = brdr(color = …))`;
+# muted chrome text belongs to `style(at = cells_footnotes(), color = …)`
+# or analogous chrome-surface layers.
 .preset_colors_to_layers <- function(co) {
   if (!is.list(co)) {
     return(list())

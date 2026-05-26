@@ -36,34 +36,44 @@ test_that(".preset_args_to_layers() routes every alignment key to its surface", 
   )
 })
 
-test_that(".preset_args_to_layers() drops vector-form alignment values", {
-  # chrome_style$surfaces carries a SCALAR halign / valign so vector
-  # form can't lower without losing the per-line semantics. The
-  # legacy preset@alignment slot keeps vector form alive while the
-  # lowered set stays scalar-only.
-  layers <- tabular:::.preset_args_to_layers(list(
-    alignment = list(title_halign = c("left", "right"))
-  ))
-  expect_identical(layers, list())
-})
+# Vector-form alignment was rejected at the validator level after
+# the Task 4/5 cut; this lowering helper now only sees scalar values
+# (callers route through `.validate_lowered_knobs()` upstream). For
+# direct-helper coverage we still pass scalars only.
 
 # ---------------------------------------------------------------------
-# borders — body regions are deliberately NOT lowered yet (see
-# .preset_borders_to_layers comment). Confirm the helper skips them.
+# borders — body regions lower to cells_table() layers after the cut
 # ---------------------------------------------------------------------
 
-test_that(".preset_args_to_layers() skips body border regions (outer / body_*)", {
+test_that(".preset_args_to_layers() lowers body border regions to cells_table()", {
   layers <- tabular:::.preset_args_to_layers(list(
     borders = list(
       outer = brdr("thin"),
-      outer_top = brdr("medium"),
-      body_top = brdr(),
-      body_bottom = brdr(),
       body_rows = brdr("hairline"),
       body_cols = brdr("thin")
     )
   ))
-  expect_identical(layers, list())
+  # outer expands to 4 outer_* sides; rows + cols = 6 layers total.
+  expect_length(layers, 6L)
+  sides <- vapply(
+    layers,
+    function(l) as.character(l@location$side %||% "outer"),
+    character(1L)
+  )
+  expect_setequal(
+    sides,
+    c("outer_top", "outer_bottom", "outer_left", "outer_right",
+      "rows", "cols")
+  )
+})
+
+test_that(".preset_args_to_layers() body_top / body_bottom alias outer_top / outer_bottom", {
+  layers <- tabular:::.preset_args_to_layers(list(
+    borders = list(body_top = brdr("medium", "dotted"))
+  ))
+  expect_length(layers, 1L)
+  expect_identical(layers[[1L]]@location$side, "outer_top")
+  expect_identical(layers[[1L]]@style@border_top_style, "dotted")
 })
 
 # ---------------------------------------------------------------------
@@ -153,12 +163,11 @@ test_that(".preset_args_to_layers() lowers colors$text / $background to cells_bo
   expect_true(all(surfaces == "body"))
 })
 
-test_that(".preset_args_to_layers() skips colors$border / $border_muted (body region)", {
-  layers <- tabular:::.preset_args_to_layers(list(
-    colors = list(border = "#212529", border_muted = "#dee2e6")
-  ))
-  expect_identical(layers, list())
-})
+# `colors$border` / `colors$border_muted` / `colors$text_muted`
+# tokens are rejected at validation time after the Task 4/5 cut —
+# the lowering helper no longer sees them. Replace via
+# `style(at = cells_table(side = "rows"), border_top = brdr(color = …))`
+# and friends.
 
 # ---------------------------------------------------------------------
 # padding
@@ -237,13 +246,6 @@ test_that(".preset_args_to_layers() drops NA values without producing a layer", 
 # (NULL / non-list / unknown surface). Each sub-helper is `tabular:::`
 # accessible so the defensive arms are reachable from tests.
 # ---------------------------------------------------------------------
-
-test_that(".preset_alignment_args_lowerable() returns input unchanged when not a list", {
-  expect_identical(
-    tabular:::.preset_alignment_args_lowerable("nope"),
-    "nope"
-  )
-})
 
 test_that(".preset_alignment_to_layers() returns empty list for non-list input", {
   expect_identical(tabular:::.preset_alignment_to_layers("nope"), list())

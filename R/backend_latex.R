@@ -185,7 +185,7 @@ backend_latex <- function(grid, file) {
 # ---------------------------------------------------------------------
 
 # Title block: each title line emits as a bold paragraph whose
-# alignment comes from `preset@alignment$title_halign` (scalar
+# alignment comes from `chrome_style$surfaces$title@halign` (scalar
 # broadcasts; vector zips per-line). Cascade default centre.
 .render_latex_title_block <- function(titles_ast, preset = NULL, cs = NULL) {
   n <- length(titles_ast)
@@ -229,7 +229,7 @@ backend_latex <- function(grid, file) {
 
 # Footnote block: each footnote line emits as a paragraph at
 # slightly smaller font (\small ... \normalsize) whose alignment
-# comes from `preset@alignment$footnote_halign` (scalar broadcasts;
+# comes from `chrome_style$surfaces$footer@halign` (scalar broadcasts;
 # vector zips per-line). Cascade default left.
 .render_latex_footnote_block <- function(
   footnotes_ast,
@@ -344,28 +344,29 @@ backend_latex <- function(grid, file) {
     cs = cs
   )
 
-  # Table-level row baseline from preset@alignment$body_valign
+  # Table-level row baseline from cells_style[r,c]@valign
   # (cascade default top). Per-cell overrides emit `\SetCell{...}`.
   body_valign <- .preset_align(meta$preset, "body_valign")
   if (is.na(body_valign)) {
     body_valign <- "top"
   }
-  # tabularray border manifest from preset@borders regions. Builds
-  # a list of `hline{i}={spec}` / `vline{j}={spec}` directives that
-  # ride alongside the colspec inside the outer longtblr arg.
+  # tabularray border manifest. Reads `meta$body_borders` — the
+  # resolved-triples sidecar built by `body_border_manifest()` from
+  # the spec's cells_table layer cascade — and emits one
+  # `hline{i}={spec}` / `vline{j}={spec}` per non-null side.
   # Header band occupies rows 1..rowhead; first body row index is
   # `rowhead + 1` (offset by the band row count + label row already
   # in `header_rules`). nrow_body / n_cols_vis bound the loops.
   nrow_body <- length(body_rows)
   border_directives <- .latex_border_directives(
-    preset = meta$preset,
+    body_borders = meta$body_borders,
     rowhead = rowhead,
     nrow_body = nrow_body,
     n_cols_vis = length(col_names_vis)
   )
   rows_inner <- c(
     sprintf("valign=%s", .latex_valign_letter(body_valign)),
-    .latex_rowsep_inner(meta$preset)
+    .latex_rowsep_inner(page$cells_style)
   )
   outer_args <- paste(
     c(
@@ -386,74 +387,72 @@ backend_latex <- function(grid, file) {
   )
 }
 
-# Translate `preset@borders` regions (resolved via the same shared
-# `.resolve_border_regions()` helper engine_borders uses) to tabular-
-# ray's `hline{i}={spec}` / `vline{j}={spec}` directives. Returns a
-# character vector (zero or more entries) ready to splice into the
-# outer longtblr arg string.
+# Translate the resolved body-region triples (one slot per side on
+# the `body_borders` sidecar built by `body_border_manifest()`) to
+# tabularray's `hline{i}={spec}` / `vline{j}={spec}` directives.
+# Returns a character vector (zero or more entries) ready to splice
+# into the outer longtblr arg string.
 #
 # Region -> tabularray mapping:
-#   outer_top    -> hline{1}                  (top of body)
-#   outer_bottom -> hline{nrow_body + 1}      (below last body row)
+#   outer_top    -> hline{rowhead + 1}        (top of body)
+#   outer_bottom -> hline{rowhead + nrow + 1} (below last body row)
 #   outer_left   -> vline{1}                  (left of col 1)
 #   outer_right  -> vline{n_cols + 1}         (right of last col)
-#   body_rows    -> hline{2..nrow_body}       (between body rows)
-#   body_cols    -> vline{2..n_cols}          (between body cols)
+#   rows         -> hline{rowhead+2..rowhead+nrow} (between body rows)
+#   cols         -> vline{2..n_cols}          (between body cols)
 #
 # Rows 1..rowhead are the header band; tabularray's hline{N}
 # numbering counts from the table's top row, so the body's first
-# row is at index `rowhead + 1` -- the helper accepts the offset.
-# Per-cell predicate borders from `style()` are NOT routed through
-# this surface; they would require partial hline{N}={col_a-col_b}
-# emissions which Phase 6 leaves to a future revisit. The
-# regions above cover the canonical submission Appendix I baseline cleanly.
-.latex_border_directives <- function(preset, rowhead, nrow_body, n_cols_vis) {
-  if (!is_preset_spec(preset)) {
+# row is at index `rowhead + 1`. Per-cell predicate borders from
+# `style()` against `cells_body()` are NOT routed through this
+# surface; they ride on cells_style[r,c] and are emitted by the
+# per-cell `\SetCell{borders}` path.
+.latex_border_directives <- function(
+  body_borders,
+  rowhead,
+  nrow_body,
+  n_cols_vis
+) {
+  if (!is.list(body_borders) || length(body_borders) == 0L) {
     return(character())
   }
-  borders <- preset@borders
-  if (length(borders) == 0L) {
-    return(character())
-  }
-  resolved <- .resolve_border_regions(borders)
   out <- character()
   body_first <- rowhead + 1L
   body_last <- rowhead + nrow_body
-  if (!is.null(resolved$outer_top)) {
-    spec <- .latex_border_spec(resolved$outer_top)
+  if (!is.null(body_borders$outer_top)) {
+    spec <- .latex_border_spec(body_borders$outer_top)
     if (nzchar(spec)) {
       out <- c(out, sprintf("hline{%d}={%s}", body_first, spec))
     }
   }
-  if (!is.null(resolved$outer_bottom) && nrow_body > 0L) {
-    spec <- .latex_border_spec(resolved$outer_bottom)
+  if (!is.null(body_borders$outer_bottom) && nrow_body > 0L) {
+    spec <- .latex_border_spec(body_borders$outer_bottom)
     if (nzchar(spec)) {
       out <- c(out, sprintf("hline{%d}={%s}", body_last + 1L, spec))
     }
   }
-  if (!is.null(resolved$outer_left)) {
-    spec <- .latex_border_spec(resolved$outer_left)
+  if (!is.null(body_borders$outer_left)) {
+    spec <- .latex_border_spec(body_borders$outer_left)
     if (nzchar(spec)) {
       out <- c(out, sprintf("vline{1}={%s}", spec))
     }
   }
-  if (!is.null(resolved$outer_right)) {
-    spec <- .latex_border_spec(resolved$outer_right)
+  if (!is.null(body_borders$outer_right)) {
+    spec <- .latex_border_spec(body_borders$outer_right)
     if (nzchar(spec)) {
       out <- c(out, sprintf("vline{%d}={%s}", n_cols_vis + 1L, spec))
     }
   }
-  if (!is.null(resolved$body_rows) && nrow_body > 1L) {
-    spec <- .latex_border_spec(resolved$body_rows)
+  if (!is.null(body_borders$rows) && nrow_body > 1L) {
+    spec <- .latex_border_spec(body_borders$rows)
     if (nzchar(spec)) {
-      # Emit one hline for each row boundary between body rows.
       for (i in seq(body_first + 1L, body_last)) {
         out <- c(out, sprintf("hline{%d}={%s}", i, spec))
       }
     }
   }
-  if (!is.null(resolved$body_cols) && n_cols_vis > 1L) {
-    spec <- .latex_border_spec(resolved$body_cols)
+  if (!is.null(body_borders$cols) && n_cols_vis > 1L) {
+    spec <- .latex_border_spec(body_borders$cols)
     if (nzchar(spec)) {
       for (j in seq(2L, n_cols_vis)) {
         out <- c(out, sprintf("vline{%d}={%s}", j, spec))
@@ -897,29 +896,24 @@ backend_latex <- function(grid, file) {
 # resolver, DOCX/RTF/HTML emission); LaTeX gains border emission
 # in Phase 6 when the `brdr()` constructor lets the table-level
 # manifest accumulate per-cell entries cleanly.
-# Emit tabularray `rowsep=Xpt` for the table-level `rows={...}` arg,
-# driven by `preset@padding$body`. Uniform numeric inputs map to a
-# single rowsep; per-side lists average top + bottom (tabularray
-# carries one rowsep per row). Empty character vector when the knob
-# is unset so the longtblr arg stays minimal.
-.latex_rowsep_inner <- function(preset) {
-  pad <- .effective_padding(preset, "body")
-  if (is.null(pad)) {
-    return(character())
-  }
-  pt <- if (is.numeric(pad) && length(pad) == 1L) {
-    as.numeric(pad)
-  } else if (is.list(pad)) {
-    tb <- c(
-      if (is.null(pad$top)) 0 else as.numeric(pad$top),
-      if (is.null(pad$bottom)) 0 else as.numeric(pad$bottom)
-    )
-    mean(tb)
-  } else {
+# Emit tabularray `rowsep=Xpt` for the table-level `rows={...}` arg.
+# After the Task 4/5 cut, body padding rides on cells_style[r,c]@padding
+# — set by `style(at = cells_body(), padding = N)` or by the lowered
+# `preset(padding = list(body = N))`. We peek at the first body cell's
+# @padding as the canonical table-wide value; backends that need a
+# scalar table-level setting (tabularray's rowsep, RTF's \trgaph,
+# Word's tcMar) follow the same pattern.
+#
+# Returns an empty character vector when no padding override is
+# active so the longtblr arg stays minimal.
+.latex_rowsep_inner <- function(cells_style) {
+  pt <- .first_cell_padding(cells_style)
+  if (is.na(pt)) {
     return(character())
   }
   sprintf("rowsep=%spt", format(pt, trim = TRUE, scientific = FALSE))
 }
+
 
 .latex_setcell_alignment <- function(style) {
   if (!is_style_node(style)) {
@@ -1146,13 +1140,18 @@ backend_latex <- function(grid, file) {
     preset <- preset_spec()
   }
   geo <- .latex_geometry_opts(preset)
-  body_font_size <- .effective_font_size(preset, "body")
-  body_font_family <- .effective_font_family(preset, "body")
+  body_font_size <- .effective_font_size(preset)
+  body_font_family <- .effective_font_family(preset)
   class_opt <- .latex_class_size(body_font_size)
   font_lines <- .latex_font_lines(body_font_family, body_font_size)
   chrome <- .latex_pagestyle_block(pagehead_ast, pagefoot_ast, preset)
-  color_lines <- .latex_preset_color_lines(preset)
 
+  # Body-cell text colour is per-cell now via cells_style[r,c]@color
+  # (set by `style(at = cells_body(), color = ...)` or by the lowered
+  # `preset(colors = list(text = ...))` knob). The table-wide
+  # `\definecolor{tabular_text}{HTML}{...} + \AtBeginDocument{\color{...}}`
+  # preamble band was dropped in the Task 4/5 slot cut; the per-cell
+  # stamps carry the visual equivalent.
   c(
     sprintf("\\documentclass[%s]{article}", class_opt),
     sprintf("\\usepackage[%s]{geometry}", geo),
@@ -1171,28 +1170,8 @@ backend_latex <- function(grid, file) {
     "\\UseTblrLibrary{siunitx}",
     chrome$packages,
     font_lines,
-    color_lines,
     "\\setlength{\\parindent}{0pt}",
     chrome$style
-  )
-}
-
-# Emit `\definecolor{tabular_text}{HTML}{RRGGBB}` + a top-level
-# `\AtBeginDocument{\color{tabular_text}}` when `preset@colors$text`
-# is set; empty otherwise. The xcolor package is already loaded
-# unconditionally in the preamble.
-.latex_preset_color_lines <- function(preset) {
-  text_color <- .effective_color(preset, "text")
-  if (is.na(text_color) || !nzchar(text_color)) {
-    return(character())
-  }
-  hex <- toupper(sub("^#", "", as.character(text_color)))
-  if (!grepl("^[0-9A-F]{6}$", hex)) {
-    return(character())
-  }
-  c(
-    sprintf("\\definecolor{tabular_text}{HTML}{%s}", hex),
-    "\\AtBeginDocument{\\color{tabular_text}}"
   )
 }
 

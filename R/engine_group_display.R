@@ -54,7 +54,8 @@ engine_group_display <- function(
   cells_text,
   cells_ast,
   cells_style,
-  cols
+  cols,
+  indent_chars = ""
 ) {
   nrow_data <- nrow(cells_text)
   ncol_data <- ncol(cells_text)
@@ -128,13 +129,38 @@ engine_group_display <- function(
       group_values = cells_text[, header_col],
       group_asts = cells_ast[, header_col],
       host_col = host_col,
-      transitions = which(c(TRUE, diff(outer_run_ids) != 0L))
+      transitions = which(c(TRUE, diff(outer_run_ids) != 0L)),
+      indent_chars = indent_chars
     )
     for (nm in group_names) {
       cs <- cols[[nm]]
       if (identical(cs@group_display, "header_row")) {
         cols[[nm]] <- S7::set_props(cs, visible = FALSE)
       }
+    }
+    # Indent every data row's host-column text + AST by indent_chars.
+    # Synthetic header rows (injected later by
+    # `.inject_header_rows_for_page`) sit ABOVE these data rows and
+    # carry the group value flush-left; the indent on the data row
+    # creates the visual nesting under the synthetic header. The
+    # prefix is a literal `plain` run at the head of the AST so
+    # every backend honours it through the same inline-run pipeline
+    # — no per-backend code.
+    if (
+      !is.na(host_col) &&
+        is.character(indent_chars) &&
+        length(indent_chars) == 1L &&
+        !is.na(indent_chars) &&
+        nzchar(indent_chars)
+    ) {
+      cells_text[, host_col] <- paste0(
+        indent_chars,
+        cells_text[, host_col]
+      )
+      cells_ast[, host_col] <- .indent_host_asts(
+        cells_ast[, host_col],
+        indent_chars
+      )
     }
   }
 
@@ -269,6 +295,30 @@ engine_group_display <- function(
     return(NA_character_)
   }
   candidates[[1L]]
+}
+
+# Prepend an indent prefix to every AST in `asts` (a list-column of
+# `inline_ast` records). The prefix becomes a leading `plain` run on
+# each AST, which every backend already renders verbatim through its
+# inline-run pipeline.
+#
+# NA / NULL / non-inline_ast entries pass through unchanged — the
+# user might have hand-attached a wrapper that doesn't carry runs,
+# and the host column may contain entries from rows the
+# group_display engine doesn't manage.
+.indent_host_asts <- function(asts, indent_chars) {
+  if (length(asts) == 0L || !is.character(indent_chars)) {
+    return(asts)
+  }
+  prefix_run <- list(type = "plain", text = indent_chars)
+  for (i in seq_along(asts)) {
+    a <- asts[[i]]
+    if (!is_inline_ast(a)) {
+      next
+    }
+    asts[[i]] <- inline_ast(runs = c(list(prefix_run), a@runs))
+  }
+  asts
 }
 
 # Per-page header-row injection. Called by `.slice_one_page()` after
