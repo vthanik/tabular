@@ -1290,7 +1290,20 @@ backend_html <- function(grid, file) {
     # the title block above is centred. Under `width_mode = "window"`
     # the table is already 100% of the wrapper, so the auto margins
     # are no-ops; only the content-fitted modes benefit.
-    ".tabular-table { border-collapse: collapse; font-size: .9rem; margin: 0 auto; }",
+    #
+    # `font-size` is emitted in pt from `preset@font_size` (default
+    # 9pt) so the browser renders at the same size the engine's AFM
+    # measurement used (`R/col_width.R::.compute_col_width()`). Any
+    # other unit (rem, em, %) introduces a scaling factor against
+    # the browser's 16px base that the AFM doesn't know about, so
+    # `<col style="width:Nin"/>` widths under-shoot the rendered
+    # content width and cells wrap. pt-units align the two ends of
+    # the pipeline and keep HTML in parity with RTF / LaTeX / PDF /
+    # DOCX, which render literally at `preset@font_size`.
+    sprintf(
+      ".tabular-table { border-collapse: collapse; font-size: %gpt; margin: 0 auto; }",
+      if (is.null(preset)) 9 else preset@font_size
+    ),
     ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }",
     ".tabular-table td { text-align: left; vertical-align: top; }",
     ".tabular-table thead th { border-top: 1px solid #212529; border-bottom: 1px solid #212529; font-weight: 600; text-align: center; vertical-align: bottom; }",

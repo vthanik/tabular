@@ -461,14 +461,31 @@ test_that("width_mode = 'window' flips the <table> to width:100% end-to-end", {
   )
 })
 
-test_that(".tabular-table CSS centres content-fitted tables with margin: 0 auto", {
+test_that(".tabular-table CSS centres content-fitted tables and renders at preset@font_size", {
+  # Default preset: font_size = 9pt. The CSS emits pt-units (not
+  # rem / em / %) so the rendered cell width matches what the
+  # engine's AFM measurement assumed — `<col>` widths land within
+  # a pixel of the actual content box.
   spec <- tabular(data.frame(x = 1L))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(
     txt,
-    ".tabular-table { border-collapse: collapse; font-size: .9rem; margin: 0 auto; }",
+    ".tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }",
+    fixed = TRUE
+  )
+})
+
+test_that(".tabular-table font-size tracks preset(font_size = N)", {
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(font_size = 12)
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(
+    txt,
+    ".tabular-table { border-collapse: collapse; font-size: 12pt; margin: 0 auto; }",
     fixed = TRUE
   )
 })
