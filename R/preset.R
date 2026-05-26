@@ -890,12 +890,13 @@ get_preset <- function() {
 }
 
 # ---------------------------------------------------------------------
-# Effective-value helpers for the Phase 6 named-list knobs
+# Effective-value helpers for the named-list `preset_spec` knobs
 # (`@fonts`, `@colors`, `@padding`). Each returns the surface- or
 # token-specific value when set, falling back to the legacy scalar
 # (`@font_family`, `@font_size`) or a sentinel (`NA_character_`,
-# `NULL`) when unset. Backend renderers consume these so the new
-# knobs override the legacy scalars without any backend caring about
+# `NULL`) when unset. Backend renderers consume these so the
+# named-list knobs override the legacy scalars without any backend
+# caring about
 # the named-list structure.
 
 .effective_font_family <- function(preset, surface = "body") {

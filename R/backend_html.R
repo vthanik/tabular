@@ -1278,7 +1278,7 @@ backend_html <- function(grid, file) {
   c("<style>", body_css, page_rules, preset_rules, "</style>")
 }
 
-# Emit CSS overrides driven by the Phase 6 `preset@colors` and
+# Emit CSS overrides driven by the legacy `preset@colors` and
 # `preset@padding` knobs. Each override is a single ruleset that
 # tightens the baseline `.tabular-table` style above; unset knobs
 # emit nothing so cascade order is preserved and snapshot diffs

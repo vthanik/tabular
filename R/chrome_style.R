@@ -18,13 +18,15 @@
 #   any other value (including the explicit-clear sentinel produced by
 #   `borders = list(<region> = "none")`) overrides the default.
 #
-# Phase 2 scope (reserved, not populated yet) — chrome_style$surfaces.
+# Phase 2 scope — chrome_style$surfaces (live).
 #
 #   Per-surface `style_node` carrying the seven text properties
 #   (font_family, font_size, bold, italic, underline, color, background)
-#   plus alignment. Populated by a future `style(surface = "header",
-#   ...)` predicate path. Backends layer this on top of the body-cell
-#   cascade when rendering header / subgroup / footer cells.
+#   plus alignment and blank-line spacing (blank_above / blank_below).
+#   Populated by `engine_chrome_borders()` from layers attached via
+#   `style(at = cells_*())` and `set_preset(style = template)`.
+#   Every backend layers this on top of its built-in defaults when
+#   rendering header / subgroup / footer / title / page-band cells.
 #
 # Region vocabulary (every key is a chrome surface; body regions stay
 # on `cells_style`):
