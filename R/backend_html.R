@@ -272,13 +272,28 @@ backend_html <- function(grid, file) {
 .render_html_page <- function(page, meta, page_number, total_pages) {
   out <- "<section class=\"tabular-page\">"
   blank_p <- "<p class=\"tabular-pad\">&nbsp;</p>"
-  pad_title_top <- as.integer(meta$preset@title_pad_top)
-  pad_title_bottom <- as.integer(meta$preset@title_pad_bottom)
+  cs <- meta$chrome_style %||% chrome_style()
+  pad_title_top <- .html_blank_count(
+    cs,
+    "title",
+    "above",
+    meta$preset@title_pad_top
+  )
+  pad_title_bottom <- .html_blank_count(
+    cs,
+    "title",
+    "below",
+    meta$preset@title_pad_bottom
+  )
   pad_body_top <- as.integer(meta$preset@body_pad_top)
   pad_body_bottom <- as.integer(meta$preset@body_pad_bottom)
 
   if (page_number == 1L) {
-    titles <- .render_html_title_block(meta$titles_ast, preset = meta$preset)
+    titles <- .render_html_title_block(
+      meta$titles_ast,
+      preset = meta$preset,
+      cs = cs
+    )
     if (length(titles) > 0L) {
       out <- c(
         out,
@@ -304,17 +319,74 @@ backend_html <- function(grid, file) {
   table_lines <- .render_html_table(
     page = page,
     meta = meta,
-    show_header = show_header
+    show_header = show_header,
+    cs = cs
   )
   out <- c(out, table_lines, rep(blank_p, pad_body_bottom))
 
   if (page_number == 1L) {
     out <- c(
       out,
-      .render_html_footnote_block(meta$footnotes_ast, preset = meta$preset)
+      .render_html_footnote_block(
+        meta$footnotes_ast,
+        preset = meta$preset,
+        cs = cs
+      )
     )
   }
   c(out, "</section>")
+}
+
+# Resolve the blank-line count for a chrome surface side. chrome_style
+# wins when the user set `style(blank_above = N, at = cells_title())`;
+# otherwise the legacy preset `*_pad_*` scalar fills in.
+.html_blank_count <- function(cs, surface, side, legacy) {
+  node <- .chrome_surface_at(cs, surface)
+  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
+  if (length(prop) == 1L && !is.na(prop)) {
+    return(max(0L, as.integer(prop)))
+  }
+  max(0L, as.integer(legacy))
+}
+
+# Render the run-level inline-style declarations from a chrome
+# surface style_node. Returns a `style="..."` attribute fragment
+# when any prop is set, else an empty string. Backends append this
+# to the surface element's open tag (`<h1>`, `<p>`, `<th>` etc.).
+.html_chrome_inline_style <- function(node) {
+  if (!is_style_node(node)) {
+    return("")
+  }
+  decls <- character()
+  if (isTRUE(node@bold)) {
+    decls <- c(decls, "font-weight: bold")
+  }
+  if (isTRUE(node@italic)) {
+    decls <- c(decls, "font-style: italic")
+  }
+  if (isTRUE(node@underline)) {
+    decls <- c(decls, "text-decoration: underline")
+  }
+  fs <- node@font_size
+  if (length(fs) == 1L && !is.na(fs) && is.numeric(fs)) {
+    decls <- c(decls, sprintf("font-size: %spt", format(fs, trim = TRUE)))
+  }
+  ff <- node@font_family
+  if (length(ff) == 1L && !is.na(ff) && nzchar(ff)) {
+    decls <- c(decls, sprintf("font-family: %s", ff))
+  }
+  col <- node@color
+  if (length(col) == 1L && !is.na(col) && nzchar(col)) {
+    decls <- c(decls, sprintf("color: %s", col))
+  }
+  bg <- node@background
+  if (length(bg) == 1L && !is.na(bg) && nzchar(bg)) {
+    decls <- c(decls, sprintf("background-color: %s", bg))
+  }
+  if (length(decls) == 0L) {
+    return("")
+  }
+  sprintf(" style=\"%s\"", paste(decls, collapse = "; "))
 }
 
 # ---------------------------------------------------------------------
@@ -326,21 +398,25 @@ backend_html <- function(grid, file) {
 # `preset@alignment$title_halign` (scalar broadcasts; vector zips
 # 1:1 then pads with last). Empty title list returns an empty
 # character vector so the caller can skip the surrounding spacing.
-.render_html_title_block <- function(titles_ast, preset = NULL) {
+.render_html_title_block <- function(titles_ast, preset = NULL, cs = NULL) {
   n <- length(titles_ast)
   if (n == 0L) {
     return(character())
   }
-  # Title CSS baseline: text-align: center (.tabular-title rule).
-  # The cascade resolver returns NA when no preset override is in
-  # play, so the baseline takes over with no extra class. Per-line
-  # vector form on preset@alignment$title_halign zips into per-line
-  # overrides; legacy preset@title_align scalar (factory "center")
-  # is only treated as explicit when changed away from default.
+  surface_node <- .chrome_surface_at(cs, "title")
+  surface_style <- .html_chrome_inline_style(surface_node)
   vapply(
     seq_len(n),
     function(i) {
-      halign <- .effective_title_halign(preset, line_index = i, n_lines = n)
+      halign <- if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        .effective_title_halign(preset, line_index = i, n_lines = n)
+      }
       cls <- "tabular-title"
       if (length(halign) == 1L && !is.na(halign)) {
         extra <- .html_align_class(halign)
@@ -349,8 +425,9 @@ backend_html <- function(grid, file) {
         }
       }
       sprintf(
-        "<h1 class=\"%s\">%s</h1>",
+        "<h1 class=\"%s\"%s>%s</h1>",
         paste(cls, collapse = " "),
+        surface_style,
         .render_html_inline(titles_ast[[i]])
       )
     },
@@ -364,19 +441,33 @@ backend_html <- function(grid, file) {
 # 1:1 then pads with last). Empty list returns an empty character
 # vector. Footnote CSS baseline: text-align: left (browser default);
 # emit override class only when the cascade differs.
-.render_html_footnote_block <- function(footnotes_ast, preset = NULL) {
+.render_html_footnote_block <- function(
+  footnotes_ast,
+  preset = NULL,
+  cs = NULL
+) {
   n <- length(footnotes_ast)
   if (n == 0L) {
     return(character())
   }
+  surface_node <- .chrome_surface_at(cs, "footer")
+  surface_style <- .html_chrome_inline_style(surface_node)
   vapply(
     seq_len(n),
     function(i) {
-      halign <- .effective_footnote_halign(
-        preset,
-        line_index = i,
-        n_lines = n
-      )
+      halign <- if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        .effective_footnote_halign(
+          preset,
+          line_index = i,
+          n_lines = n
+        )
+      }
       cls <- "tabular-footnote"
       if (length(halign) == 1L && !is.na(halign)) {
         extra <- .html_align_class(halign)
@@ -385,8 +476,9 @@ backend_html <- function(grid, file) {
         }
       }
       sprintf(
-        "<p class=\"%s\">%s</p>",
+        "<p class=\"%s\"%s>%s</p>",
         paste(cls, collapse = " "),
+        surface_style,
         .render_html_inline(footnotes_ast[[i]])
       )
     },
@@ -401,7 +493,7 @@ backend_html <- function(grid, file) {
 # Assemble the `<table>` block: optional `<colgroup>` carrying
 # engine-resolved column widths, optional `<thead>` (header bands
 # + column-labels row), then `<tbody>` (one row per data row).
-.render_html_table <- function(page, meta, show_header) {
+.render_html_table <- function(page, meta, show_header, cs = NULL) {
   preset <- meta$preset
   out <- "<table class=\"tabular-table\">"
   out <- c(
@@ -414,7 +506,8 @@ backend_html <- function(grid, file) {
       col_labels_ast = meta$col_labels_ast,
       col_names_visible = page$col_names,
       cols = meta$cols %||% list(),
-      preset = preset
+      preset = preset,
+      cs = cs
     )
     out <- c(out, thead)
   }
@@ -426,7 +519,8 @@ backend_html <- function(grid, file) {
       cols = meta$cols %||% list(),
       cells_style = page$cells_style,
       preset = preset,
-      subgroup_line_ast = page$subgroup_line_ast
+      subgroup_line_ast = page$subgroup_line_ast,
+      cs = cs
     )
   )
   c(out, "</table>")
@@ -439,10 +533,11 @@ backend_html <- function(grid, file) {
   col_labels_ast,
   col_names_visible,
   cols,
-  preset = NULL
+  preset = NULL,
+  cs = NULL
 ) {
   out <- "<thead>"
-  band_rows <- .render_html_header_bands(headers, col_names_visible)
+  band_rows <- .render_html_header_bands(headers, col_names_visible, cs)
   out <- c(out, band_rows)
   out <- c(
     out,
@@ -450,7 +545,8 @@ backend_html <- function(grid, file) {
       col_labels_ast,
       col_names_visible,
       cols,
-      preset = preset
+      preset = preset,
+      cs = cs
     )
   )
   c(out, "</thead>")
@@ -461,10 +557,12 @@ backend_html <- function(grid, file) {
 # contiguous runs sharing the same band label (or no band); each
 # run emits one `<th colspan="N">`. Returns a character vector of
 # zero or more rows (zero when no bands exist).
-.render_html_header_bands <- function(headers, col_names_visible) {
+.render_html_header_bands <- function(headers, col_names_visible, cs = NULL) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(character())
   }
+  surface_node <- .chrome_surface_at(cs, "header")
+  surface_style <- .html_chrome_inline_style(surface_node)
   depths <- sort(unique(headers$depth))
   vapply(
     depths,
@@ -496,8 +594,9 @@ backend_html <- function(grid, file) {
             sprintf("<th colspan=\"%d\"></th>", span)
           } else {
             sprintf(
-              "<th colspan=\"%d\" class=\"tabular-band\">%s</th>",
+              "<th colspan=\"%d\" class=\"tabular-band\"%s>%s</th>",
               span,
+              surface_style,
               .html_escape(lbl)
             )
           }
@@ -519,8 +618,11 @@ backend_html <- function(grid, file) {
   col_labels_ast,
   col_names_visible,
   cols,
-  preset = NULL
+  preset = NULL,
+  cs = NULL
 ) {
+  surface_node <- .chrome_surface_at(cs, "header")
+  surface_style <- .html_chrome_inline_style(surface_node)
   cells <- vapply(
     col_names_visible,
     function(nm) {
@@ -530,11 +632,35 @@ backend_html <- function(grid, file) {
       } else {
         .render_html_inline(ast)
       }
-      cs <- cols[[nm]]
-      halign <- .effective_header_halign(cs, preset)
-      valign <- .effective_header_valign(cs, preset)
+      col <- cols[[nm]]
+      # col_spec wins over chrome surface for header halign (per-
+      # column override); fall back to chrome surface, then preset.
+      halign <- if (
+        is_col_spec(col) &&
+          length(col@align) == 1L &&
+          !is.na(col@align)
+      ) {
+        if (col@align == "decimal") "right" else col@align
+      } else if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        .effective_header_halign(col, preset)
+      }
+      valign <- if (
+        is_col_spec(col) &&
+          length(col@valign) == 1L &&
+          !is.na(col@valign)
+      ) {
+        col@valign
+      } else {
+        .effective_header_valign(col, preset)
+      }
       attr <- .html_cell_class_attr(halign, valign)
-      paste0("<th", attr, ">", label, "</th>")
+      paste0("<th", attr, surface_style, ">", label, "</th>")
     },
     character(1L)
   )
@@ -552,16 +678,18 @@ backend_html <- function(grid, file) {
   cols,
   cells_style = NULL,
   preset = NULL,
-  subgroup_line_ast = NULL
+  subgroup_line_ast = NULL,
+  cs = NULL
 ) {
   out <- "<tbody>"
   # Subgroup banner row — emitted as the first body row when the
-  # page carries subgroup runtime. Aligned per preset@alignment$
-  # subgroup_halign (bold). Mirrors gt's `.gt_group_heading_row`.
+  # page carries subgroup runtime. Aligned per chrome_style$surfaces$
+  # subgroup (bold). Mirrors gt's `.gt_group_heading_row`.
   banner_row <- .render_html_subgroup_banner_row(
     subgroup_line_ast,
     n_cols = length(col_names_visible),
-    preset = preset
+    preset = preset,
+    cs = cs
   )
   if (length(banner_row) > 0L) {
     out <- c(out, banner_row)
@@ -625,7 +753,8 @@ backend_html <- function(grid, file) {
 .render_html_subgroup_banner_row <- function(
   subgroup_line_ast,
   n_cols,
-  preset = NULL
+  preset = NULL,
+  cs = NULL
 ) {
   if (
     is.null(subgroup_line_ast) ||
@@ -635,27 +764,52 @@ backend_html <- function(grid, file) {
     return(character())
   }
   inner <- .render_html_inline(subgroup_line_ast)
-  halign <- .effective_subgroup_halign(preset)
-  valign <- .effective_subgroup_valign(preset)
-  # Subgroup CSS baseline: text-align: center, vertical-align: middle
-  # (see `.tabular-subgroup td` rule). The resolver returns NA when
-  # the preset is silent on subgroup alignment, so the CSS baseline
-  # takes over with no class on the cell.
+  surface_node <- .chrome_surface_at(cs, "subgroup")
+  surface_style <- .html_chrome_inline_style(surface_node)
+  halign <- if (
+    is_style_node(surface_node) &&
+      length(surface_node@halign) == 1L &&
+      !is.na(surface_node@halign)
+  ) {
+    surface_node@halign
+  } else {
+    .effective_subgroup_halign(preset)
+  }
+  valign <- if (
+    is_style_node(surface_node) &&
+      length(surface_node@valign) == 1L &&
+      !is.na(surface_node@valign)
+  ) {
+    surface_node@valign
+  } else {
+    .effective_subgroup_valign(preset)
+  }
   attr <- .html_cell_class_attr(
     halign,
     valign,
     extra_classes = "tabular-subgroup-label"
   )
+  bold_open <- if (
+    is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
+  ) {
+    ""
+  } else {
+    "<strong>"
+  }
+  bold_close <- if (identical(bold_open, "")) "" else "</strong>"
   sprintf(
     paste0(
       "<tr class=\"tabular-subgroup\">",
-      "<td colspan=\"%d\"%s>",
-      "<strong>%s</strong>",
+      "<td colspan=\"%d\"%s%s>",
+      "%s%s%s",
       "</td></tr>"
     ),
     n_cols,
     attr,
-    inner
+    surface_style,
+    bold_open,
+    inner,
+    bold_close
   )
 }
 
