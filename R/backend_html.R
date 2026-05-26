@@ -803,18 +803,23 @@ backend_html <- function(grid, file) {
 # it at emit time so the on-screen preview matches what the
 # paginated output will look like.
 #
-#   "content" / "fixed" -> style="width:<sum>in; table-layout:fixed"
-#   "window"            -> style="width:100%;  table-layout:fixed"
+#   "content" / "fixed" -> style="width:<sum>in"
+#   "window"            -> style="width:100%"
 #
 # Falls back to the bare `<table class="tabular-table">` when no
 # visible column has a resolved numeric width (rare — only when a
 # spec bypasses engine resolution). Keeps the document additive-
 # only against the natural-fit fallback, mirroring `.html_colgroup`.
 #
-# `table-layout: fixed` is intentional in every non-fallback branch
-# — the engine has done the width math; the browser should honour
-# it strictly, the way RTF (`\cellx`) and LaTeX (`Q[<a>,wd=...in]`)
-# already do.
+# No `table-layout: fixed` is emitted. The engine's AFM-measured
+# widths slightly under-count the browser's rendered content width
+# (CSS `.tabular-table` font-size is `.9rem` ≈ 10.8pt vs AFM at
+# `preset@font_size` ≈ 10pt; CSS `padding: .35rem .6rem` ≈ 19pt
+# total vs AFM's 12pt). Under `table-layout: fixed` that gap caused
+# header / cell content to wrap inside too-narrow columns. With the
+# default `table-layout: auto`, the engine widths become hints; the
+# browser expands columns to fit content when needed. Any overflow
+# is absorbed by `.tabular-table-wrap { overflow-x: auto; }`.
 .html_table_open_tag <- function(col_specs, preset) {
   widths <- vapply(
     col_specs,
@@ -833,9 +838,9 @@ backend_html <- function(grid, file) {
   }
   mode <- if (is.null(preset)) "content" else preset@width_mode
   style <- if (identical(mode, "window")) {
-    "width:100%; table-layout:fixed"
+    "width:100%"
   } else {
-    sprintf("width:%fin; table-layout:fixed", sum(widths, na.rm = TRUE))
+    sprintf("width:%fin", sum(widths, na.rm = TRUE))
   }
   sprintf("<table class=\"tabular-table\" style=\"%s\">", style)
 }
@@ -1279,7 +1284,13 @@ backend_html <- function(grid, file) {
     # `overflow-x: visible` (further below) — paginated output has
     # paper geometry and never needs scroll behaviour.
     ".tabular-table-wrap { overflow-x: auto; margin: .75rem 0; }",
-    ".tabular-table { border-collapse: collapse; font-size: .9rem; }",
+    # `margin: 0 auto` horizontally centres the content-fitted
+    # table inside `.tabular-table-wrap` — without it, a block-
+    # level `<table style="width:Nin">` sits flush-left even though
+    # the title block above is centred. Under `width_mode = "window"`
+    # the table is already 100% of the wrapper, so the auto margins
+    # are no-ops; only the content-fitted modes benefit.
+    ".tabular-table { border-collapse: collapse; font-size: .9rem; margin: 0 auto; }",
     ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }",
     ".tabular-table td { text-align: left; vertical-align: top; }",
     ".tabular-table thead th { border-top: 1px solid #212529; border-bottom: 1px solid #212529; font-weight: 600; text-align: center; vertical-align: bottom; }",

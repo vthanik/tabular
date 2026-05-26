@@ -328,7 +328,7 @@ test_that(".html_table_open_tag emits sum-of-widths under width_mode = 'content'
   tag <- tabular:::.html_table_open_tag(col_specs, ps)
   expect_identical(
     tag,
-    "<table class=\"tabular-table\" style=\"width:4.500000in; table-layout:fixed\">"
+    "<table class=\"tabular-table\" style=\"width:4.500000in\">"
   )
 })
 
@@ -341,7 +341,7 @@ test_that(".html_table_open_tag emits width:100% under width_mode = 'window'", {
   tag <- tabular:::.html_table_open_tag(col_specs, ps)
   expect_identical(
     tag,
-    "<table class=\"tabular-table\" style=\"width:100%; table-layout:fixed\">"
+    "<table class=\"tabular-table\" style=\"width:100%\">"
   )
 })
 
@@ -357,7 +357,7 @@ test_that(".html_table_open_tag emits sum-of-widths under width_mode = 'fixed'",
   tag <- tabular:::.html_table_open_tag(col_specs, ps)
   expect_identical(
     tag,
-    "<table class=\"tabular-table\" style=\"width:4.000000in; table-layout:fixed\">"
+    "<table class=\"tabular-table\" style=\"width:4.000000in\">"
   )
 })
 
@@ -434,11 +434,12 @@ test_that("default preset emits a content-fitted <table> end-to-end", {
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
-  # Table opening carries an inline width:<N>in style with
-  # table-layout:fixed (content mode is the preset default).
+  # Table opening carries an inline width:<N>in style (content mode
+  # is the preset default). No `table-layout: fixed` — see comment
+  # on `.html_table_open_tag()` for why.
   expect_match(
     txt,
-    "<table class=\"tabular-table\" style=\"width:[0-9.]+in; table-layout:fixed\">",
+    "<table class=\"tabular-table\" style=\"width:[0-9.]+in\">",
     perl = TRUE
   )
   # No `width: 100%` on `.tabular-table` baseline rule.
@@ -455,7 +456,19 @@ test_that("width_mode = 'window' flips the <table> to width:100% end-to-end", {
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(
     txt,
-    "<table class=\"tabular-table\" style=\"width:100%; table-layout:fixed\">",
+    "<table class=\"tabular-table\" style=\"width:100%\">",
+    fixed = TRUE
+  )
+})
+
+test_that(".tabular-table CSS centres content-fitted tables with margin: 0 auto", {
+  spec <- tabular(data.frame(x = 1L))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(
+    txt,
+    ".tabular-table { border-collapse: collapse; font-size: .9rem; margin: 0 auto; }",
     fixed = TRUE
   )
 })
