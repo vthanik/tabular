@@ -11,19 +11,19 @@ set_preset(..., .template = NULL, .style = NULL, .reset = FALSE)
 that verb for the full list of 13 recognised knobs. Unknown
 names raise \code{tabular_error_input}.}
 
-\item{template}{\emph{A \code{preset_spec} to bulk-apply before \code{...}.}
+\item{.template}{\emph{A \code{preset_spec} to bulk-apply before \code{...}.}
 \verb{<preset_spec | NULL>: default NULL}. Same semantics as
-\code{\link[=preset]{preset()}}'s \code{template}: every knob set away from its factory
+\code{\link[=preset]{preset()}}'s \code{.template}: every knob set away from its factory
 default feeds in as the base layer; user-supplied \code{...} knobs
 then merge on top with shallow-merge per list-valued knob.}
 
-\item{style}{\emph{A \code{style_template()} to layer into the session
+\item{.style}{\emph{A \code{style_template()} to layer into the session
 default.} \verb{<style_template | NULL>: default NULL}. Same
-semantics as \code{\link[=preset]{preset()}}'s \code{style}: the template's accumulated
+semantics as \code{\link[=preset]{preset()}}'s \code{.style}: the template's accumulated
 layers feed in as session-default style, layered before any
 per-spec \code{\link[=style]{style()}} calls.}
 
-\item{reset}{\emph{Discard the existing session preset before applying
+\item{.reset}{\emph{Discard the existing session preset before applying
 \code{...}.} \verb{<logical(1)>: default FALSE}. With no knobs, clears
 the session default back to NULL.}
 }
@@ -48,7 +48,7 @@ default at the top of each analysis script (or in a project-level
 knobs onto the existing session preset; unspecified knobs keep
 their prior value. Pass \code{reset = TRUE} to discard the existing
 session preset and start from \code{preset_spec()} defaults.
-\code{set_preset(reset = TRUE)} with no knobs clears the session
+\code{set_preset(.reset = TRUE)} with no knobs clears the session
 default back to NULL.
 
 \strong{Cascade with \code{preset()}.} A per-spec \code{\link[=preset]{preset()}} always wins
@@ -93,13 +93,13 @@ tabular(
 #
 # The first half of the script produces safety tables at 9pt; the
 # second half produces efficacy tables at 10pt on landscape A4. A
-# single `set_preset(reset = TRUE, ...)` resets the cascade before
+# single `set_preset(.reset = TRUE, ...)` resets the cascade before
 # the second batch starts.
 set_preset(font_size = 9, paper_size = "letter")
 get_preset()@font_size  # 9
 
 set_preset(
-  reset       = TRUE,
+  .reset      = TRUE,
   font_size   = 10,
   orientation = "landscape",
   paper_size  = "a4"
@@ -108,7 +108,7 @@ get_preset()@orientation  # "landscape"
 
 # Reset the session default so subsequent examples / R sessions
 # are not affected.
-set_preset(reset = TRUE)
+set_preset(.reset = TRUE)
 
 }
 \seealso{

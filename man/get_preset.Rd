@@ -48,7 +48,7 @@ tabular(data.frame(x = 1:3)) |>
 
 # Reset the session default so subsequent examples / R sessions
 # are not affected.
-set_preset(reset = TRUE)
+set_preset(.reset = TRUE)
 
 }
 \seealso{

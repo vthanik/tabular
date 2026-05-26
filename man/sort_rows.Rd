@@ -7,6 +7,9 @@
 sort_rows(.spec, by = character(), descending = FALSE)
 }
 \arguments{
+\item{.spec}{\emph{The \code{tabular_spec} to attach the sort to.}
+\verb{<tabular_spec>: required}.}
+
 \item{by}{\emph{Ordered column names to sort by, in precedence order.}
 \verb{<character>: default character()}. Length 0 is accepted (no-op
 sort). May reference columns not declared in \code{\link[=cols]{cols()}} —
@@ -31,9 +34,6 @@ every key.
 \strong{Tip:} For mixed-direction multi-key sorts, pass \code{length(by)}
 values; the engine inverts the \code{xtfrm} rank of each descending
 key and calls \code{order()} once on all keys.}
-
-\item{spec}{\emph{The \code{tabular_spec} to attach the sort to.}
-\verb{<tabular_spec>: required}.}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with

@@ -26,7 +26,7 @@
 #' `stat_label` to a factor with the levels in clinical order
 #' upstream, then `sort_rows(by = "stat_label")` does the rest.
 #'
-#' @param spec *The `tabular_spec` to attach the sort to.*
+#' @param .spec *The `tabular_spec` to attach the sort to.*
 #'   `<tabular_spec>: required`.
 #'
 #' @param by *Ordered column names to sort by, in precedence order.*

@@ -54,7 +54,7 @@
 #' single-var default `"<var>: {<var>}"` does not generalise; raise
 #' `tabular_error_subgroup_label_required` otherwise.
 #'
-#' @param spec *The `tabular_spec` to partition.*
+#' @param .spec *The `tabular_spec` to partition.*
 #'   `<tabular_spec>: required`.
 #'
 #' @param by *Column name(s) to partition by.*

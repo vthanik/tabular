@@ -87,9 +87,9 @@
 #' records on `preset@style` via `.preset_args_to_layers()`
 #' (internal) and append in call order; layer order is precedence
 #' within the engine cascade, so a later `preset()` call's lowered
-#' attribute wins over an earlier one at the cell. Pass `reset = TRUE`
+#' attribute wins over an earlier one at the cell. Pass `.reset = TRUE`
 #' to discard the existing knobs and start from `preset_spec()`
-#' defaults. `preset(spec, reset = TRUE)` with no knobs clears the
+#' defaults. `preset(.spec, .reset = TRUE)` with no knobs clears the
 #' per-spec override entirely (the spec then falls through to
 #' [`set_preset()`] or `preset_spec()` defaults at render time).
 #'
@@ -330,7 +330,7 @@
 #'   )
 #'   ```
 #'
-#' @param template *A `preset_spec` to bulk-apply before `...`.*
+#' @param .template *A `preset_spec` to bulk-apply before `...`.*
 #'   `<preset_spec | NULL>: default NULL`. When supplied, every knob
 #'   the template has set away from its factory default feeds in as
 #'   the base layer; user-supplied `...` knobs then merge on top.
@@ -339,14 +339,14 @@
 #'   to layer a house-style `preset_spec` onto a chain without
 #'   restating its knobs.
 #'
-#' @param style *A `style_template()` to layer onto the cascade.*
+#' @param .style *A `style_template()` to layer onto the cascade.*
 #'   `<style_template | NULL>: default NULL`. When supplied, every
 #'   layer the template has accumulated via [`style()`] is replayed
 #'   in order at engine time, after the per-spec [`style()`] layers
 #'   on `.spec`. Use this to attach a sponsor's reusable house style
 #'   to a chain without restating every per-region rule.
 #'
-#' @param reset *Discard the spec's existing preset before applying
+#' @param .reset *Discard the spec's existing preset before applying
 #'   `...`.* `<logical(1)>: default FALSE`. When `TRUE`, the spec's
 #'   prior `preset_spec` (if any) is dropped and `...` knobs are
 #'   merged onto fresh `preset_spec()` defaults. With no knobs, the
@@ -450,7 +450,7 @@
 #'
 #' # Reset the session default so subsequent examples / R sessions
 #' # are not affected.
-#' set_preset(reset = TRUE)
+#' set_preset(.reset = TRUE)
 #'
 #' @seealso
 #' **Session-scope partners:** [`set_preset()`], [`get_preset()`].
@@ -552,7 +552,7 @@ preset <- function(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE) 
 #' knobs onto the existing session preset; unspecified knobs keep
 #' their prior value. Pass `reset = TRUE` to discard the existing
 #' session preset and start from `preset_spec()` defaults.
-#' `set_preset(reset = TRUE)` with no knobs clears the session
+#' `set_preset(.reset = TRUE)` with no knobs clears the session
 #' default back to NULL.
 #'
 #' **Cascade with `preset()`.** A per-spec [`preset()`] always wins
@@ -563,19 +563,19 @@ preset <- function(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE) 
 #'   that verb for the full list of 13 recognised knobs. Unknown
 #'   names raise `tabular_error_input`.
 #'
-#' @param template *A `preset_spec` to bulk-apply before `...`.*
+#' @param .template *A `preset_spec` to bulk-apply before `...`.*
 #'   `<preset_spec | NULL>: default NULL`. Same semantics as
-#'   [`preset()`]'s `template`: every knob set away from its factory
+#'   [`preset()`]'s `.template`: every knob set away from its factory
 #'   default feeds in as the base layer; user-supplied `...` knobs
 #'   then merge on top with shallow-merge per list-valued knob.
 #'
-#' @param style *A `style_template()` to layer into the session
+#' @param .style *A `style_template()` to layer into the session
 #'   default.* `<style_template | NULL>: default NULL`. Same
-#'   semantics as [`preset()`]'s `style`: the template's accumulated
+#'   semantics as [`preset()`]'s `.style`: the template's accumulated
 #'   layers feed in as session-default style, layered before any
 #'   per-spec [`style()`] calls.
 #'
-#' @param reset *Discard the existing session preset before applying
+#' @param .reset *Discard the existing session preset before applying
 #'   `...`.* `<logical(1)>: default FALSE`. With no knobs, clears
 #'   the session default back to NULL.
 #'
@@ -620,13 +620,13 @@ preset <- function(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE) 
 #' #
 #' # The first half of the script produces safety tables at 9pt; the
 #' # second half produces efficacy tables at 10pt on landscape A4. A
-#' # single `set_preset(reset = TRUE, ...)` resets the cascade before
+#' # single `set_preset(.reset = TRUE, ...)` resets the cascade before
 #' # the second batch starts.
 #' set_preset(font_size = 9, paper_size = "letter")
 #' get_preset()@font_size  # 9
 #'
 #' set_preset(
-#'   reset       = TRUE,
+#'   .reset      = TRUE,
 #'   font_size   = 10,
 #'   orientation = "landscape",
 #'   paper_size  = "a4"
@@ -635,7 +635,7 @@ preset <- function(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE) 
 #'
 #' # Reset the session default so subsequent examples / R sessions
 #' # are not affected.
-#' set_preset(reset = TRUE)
+#' set_preset(.reset = TRUE)
 #'
 #' @seealso
 #' **Per-spec partner:** [`preset()`] — overrides the session
@@ -741,7 +741,7 @@ set_preset <- function(..., .template = NULL, .style = NULL, .reset = FALSE) {
 #'
 #' # Reset the session default so subsequent examples / R sessions
 #' # are not affected.
-#' set_preset(reset = TRUE)
+#' set_preset(.reset = TRUE)
 #'
 #' @seealso
 #' **Session-scope setter:** [`set_preset()`].
