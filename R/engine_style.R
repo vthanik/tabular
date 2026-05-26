@@ -1,18 +1,20 @@
 # engine_style.R — resolve-engine phase that materialises the
-# style cascade on spec into a per-cell style matrix. Step 10
-# implements the predicate layer only (defaults / cols / headers
-# layers will land with preset() and col_spec() integration).
+# style cascade on spec into a per-cell style matrix.
 #
 # Output: a list-matrix with nrow(spec@data) rows and ncol(spec@data)
 # columns, each cell holding one style_node. Cells with no matched
-# predicate carry the default (all-NA) style_node. Backends index
-# this matrix by (row, col) when rendering body cells.
+# layer carry the default (all-NA) style_node. Backends index this
+# matrix by (row, col) when rendering body cells.
 #
-# Cascade within the predicate layer: predicates are applied in
-# declaration order; later predicates override earlier ones for
-# overlapping cells. Within one style_node merge, a non-NA field on
-# the incoming style overrides the existing field; an NA field
-# leaves the existing field intact.
+# Cascade ordering (low -> high priority):
+#   1. Session preset's @style layers   — set via `set_preset(style = ...)`
+#   2. Spec preset's @style layers      — set via `preset(spec, style = ...)`
+#   3. Per-spec @styles@layers          — set via `spec |> style(...)`
+#
+# Layers are applied in source-order within each tier; within one
+# style_node merge a non-NA field on the incoming style overrides
+# the existing field, an NA field leaves it intact. Later layers
+# (higher tiers, or later index within a tier) win per attribute.
 
 #' Resolve the style cascade to a per-cell style matrix
 #'
@@ -36,16 +38,6 @@ engine_style <- function(spec) {
   grid <- .empty_style_grid(nrow_data, ncol_data, col_names)
 
   call <- rlang::caller_env()
-
-  # Cascade ordering (lowest to highest priority):
-  #   1. Session preset's @style layers   — set via `set_preset(style = ...)`
-  #   2. Spec preset's @style layers      — set via `preset(spec, style = ...)`
-  #   3. Per-spec @styles@predicates      — legacy where-predicate path
-  #   4. Per-spec @styles@layers          — new `at = cells_*()` path
-  #
-  # Later layers override earlier ones per attribute via the same
-  # field-level merge contract (`.merge_style_node`). NA fields on a
-  # later layer leave the prior layer's value intact.
 
   session_preset <- get_preset()
   if (is_preset_spec(session_preset) && length(session_preset@style) > 0L) {
@@ -78,15 +70,6 @@ engine_style <- function(spec) {
     return(grid)
   }
 
-  for (pred in styles@predicates) {
-    grid <- .apply_style_predicate(
-      pred = pred,
-      grid = grid,
-      data = data,
-      col_names = col_names,
-      call = call
-    )
-  }
   for (layer in styles@layers) {
     grid <- .apply_style_layer(
       layer = layer,
@@ -110,76 +93,6 @@ engine_style <- function(spec) {
   dim(cells) <- c(nrow_data, ncol_data)
   colnames(cells) <- col_names
   cells
-}
-
-# Apply one style_predicate to the grid. Scope-specific logic:
-# *   "row"  -> all cells in matching rows
-# *   "cell" -> cells in `all.vars(where)` ∩ data cols at matching
-#              rows; falls back to all cols if no data col referenced
-# *   "col"  -> raises tabular_error_input (post-v0.1.0)
-.apply_style_predicate <- function(pred, grid, data, col_names, call) {
-  scope <- pred@scope
-
-  if (scope == "col") {
-    cli::cli_abort(
-      c(
-        '{.code .scope = "col"} is not implemented in this release.',
-        "i" = 'Use {.code .scope = "row"} or {.code .scope = "cell"} for now.'
-      ),
-      class = "tabular_error_input",
-      call = call
-    )
-  }
-
-  result <- .eval_style_where(pred@where, data, call = call)
-  if (!is.logical(result)) {
-    cli::cli_abort(
-      c(
-        "{.fn style} {.arg where} must evaluate to a logical vector.",
-        "x" = "Got {.obj_type_friendly {result}} of length {length(result)}."
-      ),
-      class = "tabular_error_input",
-      call = call
-    )
-  }
-  if (length(result) == 1L && nrow(data) > 1L) {
-    result <- rep(result, nrow(data))
-  }
-  if (length(result) != nrow(data)) {
-    cli::cli_abort(
-      c(
-        "{.fn style} {.arg where} returned length {length(result)}, expected {nrow(data)}.",
-        "i" = "The expression must evaluate to a length-{.code nrow} logical vector (or length 1, which recycles)."
-      ),
-      class = "tabular_error_input",
-      call = call
-    )
-  }
-
-  target_rows <- which(result & !is.na(result))
-  if (length(target_rows) == 0L) {
-    return(grid)
-  }
-
-  if (scope == "row") {
-    target_cols <- seq_along(col_names)
-  } else {
-    refs <- .referenced_symbols(pred@where)
-    matched <- intersect(refs, col_names)
-    target_cols <- if (length(matched) == 0L) {
-      seq_along(col_names)
-    } else {
-      match(matched, col_names)
-    }
-  }
-
-  incoming <- pred@style
-  for (r in target_rows) {
-    for (c in target_cols) {
-      grid[[r, c]] <- .merge_style_node(grid[[r, c]], incoming)
-    }
-  }
-  grid
 }
 
 # Apply one style_layer to the grid. Only body-surface layers
@@ -312,20 +225,16 @@ engine_style <- function(spec) {
   seq_along(col_names)
 }
 
-# Identifiers referenced by a quosure or expression. all.vars() walks
-# the language tree and returns identifier names (including
-# backticked ones), skipping function-position names like `+`. Used
-# by .scope = "cell" to decide which columns the predicate targets.
-.referenced_symbols <- function(expr) {
-  e <- if (rlang::is_quosure(expr)) rlang::quo_get_expr(expr) else expr
-  all.vars(e)
-}
-
 # Evaluate the `where` quosure against the data mask. Errors are
 # rewrapped as tabular_error_input so the verb's class contract
 # holds end-to-end.
 .eval_style_where <- function(quo, data, call) {
-  mask <- as.list(data)
+  # Wrap in a tidyverse data mask so users can write `.data$col` and
+  # `.env$var` pronouns (dplyr-style); bare column references continue
+  # to work because the mask is permissive about implicit lookup.
+  # Missing columns produce a clear "Column `xxx` not found in `.data`"
+  # error courtesy of the rlang mask machinery.
+  mask <- rlang::as_data_mask(as.list(data))
   tryCatch(
     rlang::eval_tidy(quo, data = mask),
     error = function(e) {

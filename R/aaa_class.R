@@ -52,7 +52,6 @@
 .is_auto_width <- function(x) {
   identical(x, "auto")
 }
-.scope_values <- c("cell", "row", "col")
 .orientation_values <- c("portrait", "landscape")
 .paper_size_values <- c("letter", "a4")
 .hlines_values <- c("header", "none", "all")
@@ -631,36 +630,6 @@ style_node <- S7::new_class(
 )
 
 # ---------------------------------------------------------------------
-# style_predicate — predicate + style + scope (legacy; superseded by
-# style_layer but kept while existing tests / integrations migrate.
-# New code paths use style_layer.)
-# ---------------------------------------------------------------------
-
-#' @rdname tabular_classes
-#' @format NULL
-#' @usage NULL
-style_predicate <- S7::new_class(
-  "style_predicate",
-  package = "tabular",
-  properties = list(
-    where = S7::class_any,
-    style = style_node,
-    scope = S7::new_property(S7::class_character, default = "cell")
-  ),
-  validator = function(self) {
-    if (!(self@scope %in% .scope_values)) {
-      return(paste0(
-        "@scope must be one of ",
-        paste(.sh_quote(.scope_values), collapse = ", "),
-        "; got ",
-        .sh_quote(self@scope)
-      ))
-    }
-    NULL
-  }
-)
-
-# ---------------------------------------------------------------------
 # style_layer — one tabular_location + style_node pair, accumulated
 # by every `style()` call against the unified API.
 # ---------------------------------------------------------------------
@@ -691,7 +660,6 @@ style_spec <- S7::new_class(
     defaults = style_node,
     cols = S7::new_property(S7::class_list, default = list()),
     headers = S7::new_property(S7::class_list, default = list()),
-    predicates = S7::new_property(S7::class_list, default = list()),
     layers = S7::new_property(S7::class_list, default = list())
   )
 )
@@ -1106,10 +1074,6 @@ is_sort_spec <- function(x) S7::S7_inherits(x, sort_spec)
 #' @rdname tabular_predicates
 #' @export
 is_style_node <- function(x) S7::S7_inherits(x, style_node)
-
-#' @rdname tabular_predicates
-#' @export
-is_style_predicate <- function(x) S7::S7_inherits(x, style_predicate)
 
 #' @rdname tabular_predicates
 #' @export

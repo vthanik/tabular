@@ -415,7 +415,7 @@ test_that("x-tabular pagination mirrors paginate plan", {
 
 test_that("x-tabular styles captures declared predicates", {
   spec <- tabular(data.frame(x = c(1L, 2L, 3L))) |>
-    style(where = x > 1, bold = TRUE)
+    style( bold = TRUE, .at = cells_body(where = x > 1))
   grid <- as_grid(spec)
   m <- tabular:::.build_manifest(
     spec = spec,
@@ -424,9 +424,9 @@ test_that("x-tabular styles captures declared predicates", {
     format = "md",
     data_file_path = NULL
   )
-  preds <- m[["x-tabular"]]$styles$predicates
-  expect_length(preds, 1L)
-  expect_identical(preds[[1L]]$style$bold, TRUE)
+  layers <- m[["x-tabular"]]$styles$layers
+  expect_length(layers, 1L)
+  expect_identical(layers[[1L]]$style$bold, TRUE)
 })
 
 test_that("x-tabular styles is empty list when no styles attached", {
@@ -439,7 +439,7 @@ test_that("x-tabular styles is empty list when no styles attached", {
     format = "md",
     data_file_path = NULL
   )
-  expect_length(m[["x-tabular"]]$styles$predicates, 0L)
+  expect_length(m[["x-tabular"]]$styles$layers, 0L)
 })
 
 test_that("x-tabular inputProvenance carries data shape", {

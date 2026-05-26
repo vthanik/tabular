@@ -80,7 +80,7 @@ test_that("as_grid() populates pagefoot_ast multi-row with index 1 at body edge"
 })
 
 test_that("as_grid() honours session-default pagehead via cascade", {
-  withr::defer(set_preset(reset = TRUE))
+  withr::defer(set_preset(.reset = TRUE))
   set_preset(pagehead = list(left = "Session protocol"))
   spec <- tabular(data.frame(x = 1:3)) # no per-spec preset
   g <- as_grid(spec)
@@ -154,7 +154,7 @@ test_that("as_grid() carries the resolved header band grid in metadata", {
 
 test_that("as_grid() emits a populated style grid when a predicate fires", {
   d <- data.frame(x = c(1L, 2L, 3L), y = c(10L, 20L, 30L))
-  spec <- tabular(d) |> style(where = x > 1, bold = TRUE)
+  spec <- tabular(d) |> style( bold = TRUE, .at = cells_body(where = x > 1))
   g <- as_grid(spec)
   styles <- g@pages[[1L]]$cells_style
   expect_true(isTRUE(styles[[2L, 1L]]@bold))

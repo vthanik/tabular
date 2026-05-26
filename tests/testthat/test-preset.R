@@ -26,19 +26,19 @@ test_that("preset() merges knobs across repeat calls (no reset)", {
   expect_identical(spec@preset@orientation, "landscape")
 })
 
-test_that("preset(reset = TRUE) discards prior knobs", {
+test_that("preset(.reset = TRUE) discards prior knobs", {
   spec <- tabular(data.frame(x = 1:3)) |>
     preset(font_size = 8, orientation = "landscape") |>
-    preset(font_size = 10, reset = TRUE)
+    preset(font_size = 10, .reset = TRUE)
   expect_identical(spec@preset@font_size, 10)
   # orientation reverts to factory default
   expect_identical(spec@preset@orientation, "portrait")
 })
 
-test_that("preset(reset = TRUE) with no knobs clears the per-spec preset", {
+test_that("preset(.reset = TRUE) with no knobs clears the per-spec preset", {
   spec <- tabular(data.frame(x = 1:3)) |>
     preset(font_size = 8) |>
-    preset(reset = TRUE)
+    preset(.reset = TRUE)
   expect_null(spec@preset)
 })
 
@@ -89,11 +89,11 @@ test_that("preset() accepts margins of length 1 or 4", {
 test_that("preset() rejects non-scalar reset", {
   spec <- tabular(data.frame(x = 1:3))
   expect_error(
-    preset(spec, reset = c(TRUE, FALSE)),
+    preset(spec, .reset = c(TRUE, FALSE)),
     class = "tabular_error_input"
   )
   expect_error(
-    preset(spec, reset = NA),
+    preset(spec, .reset = NA),
     class = "tabular_error_input"
   )
 })
@@ -104,7 +104,7 @@ test_that("preset() rejects non-spec first arg", {
 
 test_that("preset() is visible to engine_paginate via .effective_preset", {
   # Force a tight font + landscape and confirm engine_paginate reads
-  # the per-spec preset (smaller rpp than portrait at the same font).
+  # the per-spec preset(smaller rpp than portrait at the same font).
   spec_p <- tabular(data.frame(x = 1:5)) |>
     preset(orientation = "portrait")
   spec_l <- tabular(data.frame(x = 1:5)) |>
@@ -132,19 +132,19 @@ test_that("preset() snapshot errors", {
 
 # ---------------------------------------------------------------------
 # Title + body pad knobs — superseded. Title pad is now driven by
-# `style(at = cells_title(), blank_above = N)`; body pad is no
+# `style(.at = cells_title(), blank_above = N)`; body pad is no
 # longer a user-tunable surface (factory default 0 / 0 hardcoded
 # per backend).
 # ---------------------------------------------------------------------
 
-test_that("style(at = cells_title(), blank_above = N) reaches the title pad pipeline", {
+test_that("style(.at = cells_title(), blank_above = N) reaches the title pad pipeline", {
   template <- style_template() |>
-    style(at = cells_title(), blank_above = 3L, blank_below = 2L)
+    style(.at = cells_title(), blank_above = 3L, blank_below = 2L)
   spec <- tabular(
     data.frame(x = 1L),
     titles = "Demo"
   ) |>
-    preset(style = template)
+    preset(.style = template)
   expect_silent(as_grid(spec))
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)

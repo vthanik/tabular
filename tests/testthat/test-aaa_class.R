@@ -72,16 +72,6 @@ test_that("style_node(bold = TRUE) holds the value", {
 
 # style_predicate -----------------------------------------------------
 
-test_that("style_predicate() rejects unknown scope", {
-  expect_error(style_predicate(scope = "page"), "must be one of")
-})
-
-test_that("style_predicate() accepts cell/row/col scope", {
-  for (sc in c("cell", "row", "col")) {
-    expect_true(is_style_predicate(style_predicate(scope = sc)))
-  }
-})
-
 # style_spec ----------------------------------------------------------
 
 test_that("style_spec() builds with empty containers", {
@@ -89,7 +79,7 @@ test_that("style_spec() builds with empty containers", {
   expect_true(is_style_spec(s))
   expect_length(s@cols, 0L)
   expect_length(s@headers, 0L)
-  expect_length(s@predicates, 0L)
+  expect_length(s@layers, 0L)
 })
 
 # pagination_spec -----------------------------------------------------

@@ -1,268 +1,162 @@
-# style.R — unified styling verb. Each style() call adds one record
-# to the styles container; multiple calls accumulate; the engine
-# resolves the cascade at render time.
+# style.R — unified styling verb. One call per layer; layers
+# accumulate; the engine resolves the cascade at render time.
 #
-# Two paths share one verb signature:
+# Single API surface:
 #
-#   1. Layer path (preferred). `style(spec, ..., at = cells_*())`
-#      appends a `style_layer` to `spec@styles@layers`. The location
-#      object (`cells_body`, `cells_headers`, `cells_table`, ...) names
-#      the surface; engines switch on `location$surface` to route the
-#      style to the right code path.
+#   style(spec, ..., .at = cells_*())
 #
-#   2. Predicate path (legacy). `style(spec, where = ..., ..., .scope =
-#      ...)` appends a `style_predicate` to `spec@styles@predicates`.
-#      This is the original API — preserved for back-compat while
-#      callers migrate to `cells_body(where = ..., i = ..., j = ...)`.
+# The `at` argument is a `tabular_location` built by one of the
+# `cells_*()` constructors (`cells_body`, `cells_headers`,
+# `cells_table`, etc.). The `...` carries the style attributes
+# (text properties, borders, alignment, padding, blank lines).
+# Each call appends one `style_layer` to `spec@styles@layers`;
+# multiple calls compose by layer order (later calls win per
+# attribute at the merge step).
 #
-# The first argument also accepts a `tabular_style_template` (built
-# by [`style_template()`]). When given, layers accumulate onto the
-# template's `layers` slot instead of a spec. Same verb, same
-# attribute names — symmetric API for per-table vs house-style
+# The first argument also accepts a `tabular_style_template`
+# (built by [`style_template()`]). When given, layers accumulate
+# onto the template's `layers` slot instead of a spec. Same verb,
+# same attribute names — symmetric API for per-table vs house-style
 # composition.
+#
+# `at` defaults to `cells_body()` so the simplest call
+# `style(spec, bold = TRUE)` targets every body cell.
 
-#' Style cells, rows, or columns by predicate
+#' Attach a style layer to a `tabular_spec` or `style_template`
 #'
-#' Attach a `style_predicate` to a `tabular_spec`. The predicate
-#' (`where`) is captured as an rlang quosure and evaluated at engine
-#' time against the post-sort data grid; rows where the predicate
-#' is TRUE pick up the styling attributes given in `...`.
-#' Use this for subtotal-row highlighting, threshold-coloured
-#' p-values, banded-row backgrounds, and any other rule-driven
-#' formatting that depends on cell values rather than position.
+#' One verb, one cascade. Each `style()` call appends a single
+#' `style_layer` (location + style attributes) to the spec or
+#' template. Layers accumulate in declaration order; the engine
+#' merges them at render time so later layers win per attribute,
+#' NA-valued fields leave the prior layer intact.
 #'
 #' @details
 #'
-#' **Multiple calls accumulate.** Each `style()` call adds one
-#' predicate to the spec's predicate list. The engine applies them
-#' in declaration order at render time; later predicates win for
-#' overlapping cells. Field-level merge: only non-NA attributes on
-#' the incoming style override; NA leaves the prior value intact.
+#' **Locations.** The `at` argument selects which surface the layer
+#' targets. Every region of the rendered page has a `cells_*()`
+#' constructor:
 #'
-#' **Cascade order.** The full style cascade (lowest to highest
-#' precedence) is: backend defaults -> preset ->
-#' `style_spec$defaults` -> `style_spec$cols` ->
-#' `style_spec$headers` -> `style_spec$predicates`. `style()`
-#' populates only the predicates layer; the upper layers (defaults /
-#' cols / headers) land with `preset()` and [`col_spec()`]
-#' integration in later steps.
+#'   * `cells_body()`             — body cells (default)
+#'   * `cells_headers()`          — column header band
+#'   * `cells_group_headers()`    — synthetic group-header rows
+#'   * `cells_title()`            — title block
+#'   * `cells_subgroup_labels()`  — subgroup banner row
+#'   * `cells_footnotes()`        — footnote block
+#'   * `cells_pagehead()`         — page-header band
+#'   * `cells_pagefoot()`         — page-footer band
+#'   * `cells_table()`            — table-wide regions (outer
+#'                                  borders, body-row separators)
 #'
-#' @section Scope semantics:
+#' Body filters live on `cells_body()`: `i = 1:3` for integer-index
+#' rows, `j = "Total"` for column-name targeting, `where = <expr>`
+#' for a quosure-captured predicate evaluated against `spec@data`.
 #'
-#' *   **`.scope = "cell"`** (default) — predicate evaluates to a
-#'     length-`nrow` logical. Style applies to cells in the columns
-#'     the `where` expression *references*, intersected with
-#'     `.spec@data` column names. If no data columns are referenced,
-#'     falls back to all columns (same as `"row"`). The natural
-#'     default for value-based highlighting like
-#'     `where = pvalue < 0.05` — only the `pvalue` cells go red.
-#' *   **`.scope = "row"`** — predicate evaluates to a length-`nrow`
-#'     logical. Style applies to EVERY cell in the matching rows.
-#'     Use for whole-row formatting like subtotal bolding or
-#'     alternating-row backgrounds.
-#' *   **`.scope = "col"`** — reserved; raises `tabular_error_input`
-#'     at engine time in the current release. Use a per-[`col_spec()`]
-#'     style declaration (planned post-v0.1.0) for whole-column
-#'     styling.
+#' **Attribute vocabulary.** Each layer carries a `style_node` built
+#' from `...`. Recognised attribute names:
 #'
-#' @param .spec *The `tabular_spec` to attach the predicate to.*
-#'   `<tabular_spec>: required`. Dot-prefixed so R's partial argument
-#'   matching cannot accidentally bind a short attribute name in
-#'   `...` to the spec slot.
+#'   * Text — `bold`, `italic`, `underline`, `color`, `background`,
+#'     `font_family`, `font_size`
+#'   * Alignment — `halign` (`"left" / "center" / "right"`),
+#'     `valign` (`"top" / "middle" / "bottom"`)
+#'   * Borders — `border` (umbrella), `border_top`, `border_bottom`,
+#'     `border_left`, `border_right` (each takes a `brdr()` value
+#'     or the literal `"none"`); per-side scalars
+#'     `border_<side>_{style,width,color}` for finer control
+#'   * Padding — `padding` (CSS-sense interior space)
+#'   * Spacing — `blank_above`, `blank_below` (integer blank lines
+#'     above / below the block — for `cells_title()` /
+#'     `cells_footnotes()` / `cells_subgroup_labels()`)
+#'   * Inline — `pretext`, `posttext` (literal text prepended /
+#'     appended around the cell value)
+#'   * Legacy Boolean rules — `rule_above`, `rule_below`
 #'
-#' @param where *Predicate evaluating to a length-`nrow` logical.*
-#'   `<expression>: required`. Captured as an rlang quosure;
-#'   evaluated at engine time against the post-sort data grid, so
-#'   the predicate may reference any column in `.spec@data`.
+#' Unknown attribute names emit a `cli::cli_warn` and drop from
+#' the constructed node; the engine never sees a foreign property.
 #'
-#'   **Tip:** With `.scope = "cell"` (the default), the engine
-#'   extracts column names referenced by the expression to decide
-#'   which cells to paint. `where = pvalue < 0.05` therefore paints
-#'   only the `pvalue` column's cells in matching rows.
+#' @param .spec *A `tabular_spec` OR a `tabular_style_template`.*
+#'   `<tabular_spec | tabular_style_template>: required`.
+#'   Dot-prefixed so R's partial argument matching cannot
+#'   accidentally bind a short attribute name in `...` to the spec
+#'   slot. When piping through `style_template() |> style(...)`
+#'   layers accumulate onto the template instead of a spec.
 #'
-#' @param ... *Named style attributes.* At least one required.
-#'   Recognised attributes: `bold`, `italic`, `underline`, `color`,
-#'   `background`, `font_family`, `font_size`, `rule_above`,
-#'   `rule_below`, `border_left`, `border_right`, `padding`,
-#'   `blank_above`, `blank_below`, `pretext`, `posttext`, `halign`,
-#'   `valign`, and the per-side border triple
-#'   `border_{top,bottom,left,right}_{style,width,color}` (12
-#'   scalars).
+#' @param ... *Named style attributes.* At least one required. See
+#'   the vocabulary list above for recognised names.
 #'
-#'   `halign` is one of `"left"`, `"center"`, `"right"`. `valign`
-#'   is one of `"top"`, `"middle"`, `"bottom"`. Per-cell alignment
-#'   overrides win over [`col_spec()`] column defaults, which in
-#'   turn override [`preset()`] body defaults.
+#' @param .at *Location object selecting which surface the layer
+#'   targets.* `<tabular_location>: default cells_body()`. Build with
+#'   one of the `cells_*()` constructors; see [`cells_body()`] and
+#'   siblings. Dot-prefixed (tidyverse convention) because it comes
+#'   AFTER `...` — that way a user-passed style attribute can never
+#'   collide with this arg's name.
 #'
-#'   `border_<side>_style` is one of `"solid"`, `"dashed"`,
-#'   `"dotted"`, `"double"`, `"dashdot"`, `"none"`.
-#'   `border_<side>_width` is a non-negative numeric in points
-#'   (typical clinical values: 0.25, 0.5, 1, 1.5).
-#'   `border_<side>_color` is a hex `"#RRGGBB"`, a CSS colour name,
-#'   or `"currentColor"`. The Boolean knobs (`rule_above`,
-#'   `rule_below`, `border_left`, `border_right`) remain available
-#'   as a shorthand for `("solid", 0.5pt, default colour)`.
-#'
-#'   **Note:** Unknown attribute names warn and are silently dropped
-#'   (they do NOT pass through to the backend).
-#'
-#' @param at *Location target via the `cells_*()` vocabulary.*
-#'   `<tabular_location | NULL>: default NULL`. Mutually exclusive
-#'   with `where`. When supplied, the style attributes apply to the
-#'   region named by the location: body cells ([`cells_body()`]),
-#'   column-header bands ([`cells_headers()`]), subgroup banners
-#'   ([`cells_subgroup_labels()`]), title, footnotes, page-head /
-#'   page-foot slots, or table edges ([`cells_table()`]). See
-#'   [`cells`] for the full vocabulary.
-#'
-#' @param .scope *Targeting scope.*
-#'   `<character(1)>: default "cell"`. One of `"cell"`, `"row"`,
-#'   `"col"`. See the Scope semantics section.
-#'
-#'   **Restriction:** `"col"` raises `tabular_error_input` in the
-#'   current release; planned post-v0.1.0.
-#'
-#' @return *The updated `tabular_spec`.* Continue chaining with
-#'   [`paginate()`], [`preset()`], then render via [`emit()`] (or
-#'   resolve without I/O via [`as_grid()`]).
+#' @return The updated `tabular_spec` (or `tabular_style_template`,
+#'   when called against one).
 #'
 #' @examples
-#' # ---- Example 1: Subtotal rows bolded and ruled, overall row shaded ----
-#' #
-#' # AE-by-SOC/PT table where the SOC-level subtotal rows are bolded
-#' # with a top rule (visual separator from the PT-level detail rows
-#' # below) and the overall "TOTAL SUBJECTS WITH AN EVENT" row gets
-#' # bold text on a light-gray background. Two row-scoped predicates
-#' # applied in declaration order.
+#' # ---- AE table by SOC and PT with per-row indent + styled hierarchy ----
 #' ae <- saf_aesocpt
-#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-#' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' ae$indent_level <- as.integer(ae$row_type == "pt")
 #'
-#' tabular(
-#'   ae,
-#'   titles = c(
-#'     "Table 14.3.1",
-#'     "Adverse Events by System Organ Class and Preferred Term",
-#'     sprintf("Safety Population (N=%d)", n["Total"])
-#'   ),
-#'   footnotes = "Subjects are counted once per SOC and once per PT."
-#' ) |>
+#' tabular(ae, titles = "Adverse Events by SOC / PT", footnotes = "") |>
 #'   cols(
-#'     soc      = col_spec(usage = "group", label = "SOC / PT"),
-#'     label       = col_spec(visible = FALSE),
-#'     row_type = col_spec(visible = FALSE),
-#'     n_total  = col_spec(visible = FALSE),
-#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"])),
-#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"])),
-#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"])),
-#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]))
+#'     soc          = col_spec(usage = "group", group_display = "header_row"),
+#'     label        = col_spec(label = "Category",
+#'                              align = "left",
+#'                              indent_by = "indent_level"),
+#'     indent_level = col_spec(visible = FALSE),
+#'     row_type     = col_spec(visible = FALSE),
+#'     placebo      = col_spec(label = "Placebo",  align = "decimal"),
+#'     drug_50      = col_spec(label = "Drug 50",  align = "decimal"),
+#'     drug_100     = col_spec(label = "Drug 100", align = "decimal"),
+#'     Total        = col_spec(label = "Total",    align = "decimal")
 #'   ) |>
-#'   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
-#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
-#'   style(where = row_type == "soc",     bold = TRUE, rule_above = TRUE, .scope = "row") |>
-#'   style(where = row_type == "overall", bold = TRUE, background = "lightgray", .scope = "row")
+#'   # SOC summary rows bolded (depth 0 — flush)
+#'   style(bold = TRUE,
+#'         .at = cells_body(where = row_type == "soc")) |>
+#'   # Overall row gets a light background
+#'   style(background = "#f0f0f0",
+#'         .at = cells_body(where = row_type == "overall"))
 #'
-#' # ---- Example 2: Derived ORR / DCR rows highlighted in efficacy table ----
-#' #
-#' # Efficacy BOR table where the derived ORR / DCR summary rows
-#' # (`row_type == "derived"`) are bolded and ruled above to set them
-#' # apart from the BOR-category rows. Single row-scoped predicate.
-#' bor_levels <- c(
-#'   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
-#'   "Objective Response Rate (CR + PR)",
-#'   "Disease Control Rate (CR + PR + SD)"
-#' )
-#' eff <- eff_resp
-#' eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
-#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+#' # ---- Chrome styling ----
+#' tabular(saf_demo) |>
+#'   style(bold = TRUE, .at = cells_headers()) |>
+#'   style(border_top = brdr("thick", "double"),
+#'         .at = cells_headers()) |>
+#'   style(halign = "left", .at = cells_title()) |>
+#'   style(blank_above = 1, blank_below = 1,
+#'         .at = cells_title())
 #'
-#' tabular(
-#'   eff,
-#'   titles = c(
-#'     "Table 14.2.1",
-#'     "Best Overall Response and Response Rates",
-#'     sprintf("Efficacy Evaluable Population (N=%d)", ne["Total"])
-#'   ),
-#'   footnotes = "Response per RECIST 1.1, investigator assessment."
-#' ) |>
-#'   cols(
-#'     stat_label = col_spec(usage = "group", label = "Response"),
-#'     row_type   = col_spec(visible = FALSE),
-#'     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  ne["placebo"])),
-#'     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  ne["drug_50"])),
-#'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", ne["drug_100"]))
-#'   ) |>
-#'   sort_rows(by = "stat_label") |>
-#'   style(where = row_type == "derived", bold = TRUE, rule_above = TRUE, .scope = "row")
+#' # ---- Table-wide borders ----
+#' tabular(saf_demo) |>
+#'   style(border = brdr("medium"),
+#'         .at = cells_table(side = "outer")) |>
+#'   style(border_top = brdr("hairline", "dotted"),
+#'         .at = cells_table(side = "rows"))
 #'
-#' # ---- Example 3: Per-side cell borders + alignment override ----
-#' #
-#' # Vital-signs summary where the `Mean (SD)` row across all
-#' # parameters carries a thick top border (separating it from the
-#' # `n` row above) and the body of those cells is centre-aligned
-#' # rather than the column-level default. Two style calls in a
-#' # row show the predicate cascade: first call paints the border,
-#' # second adds the per-cell halign override on the same predicate.
-#' vit <- saf_vital
-#'
-#' tabular(
-#'   vit,
-#'   titles = c("Table 14.4.1", "Vital Signs Summary at Each Visit")
-#' ) |>
-#'   cols(
-#'     param      = col_spec(usage = "group", label = "Parameter"),
-#'     paramcd    = col_spec(visible = FALSE),
-#'     visit      = col_spec(usage = "group", label = "Visit"),
-#'     stat_label = col_spec(label = "Statistic"),
-#'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
-#'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-#'     drug_100   = col_spec(label = "Drug 100", align = "decimal")
-#'   ) |>
-#'   style(
-#'     where = stat_label == "Mean (SD)",
-#'     border_top_style = "solid",
-#'     border_top_width = 1,
-#'     .scope = "row"
-#'   ) |>
-#'   style(
-#'     where = stat_label == "Mean (SD)",
-#'     halign = "center",
-#'     .scope = "row"
-#'   )
-#'
-#' # ---- Example 4: Banded-row backgrounds via row-scope predicate ----
-#' #
-#' # Apply a soft grey background to every other body row. The
-#' # predicate runs against the data grid (`seq_len(nrow(.spec@data))`
-#' # mod 2), and `.scope = "row"` paints the matching rows wall-to-wall.
-#' # Standard zebra-striping pattern for long tables.
-#' tabular(saf_demo, titles = "Demographics with banded rows") |>
-#'   cols(
-#'     variable   = col_spec(usage = "group", label = "Characteristic"),
-#'     stat_label = col_spec(label = "Statistic"),
-#'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
-#'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-#'     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
-#'     Total      = col_spec(label = "Total",    align = "decimal")
-#'   ) |>
-#'   style(
-#'     where = seq_len(nrow(saf_demo)) %% 2 == 0,
-#'     background = "#f2f2f2",
-#'     .scope = "row"
-#'   )
+#' # ---- House style via style_template() ----
+#' house <- style_template() |>
+#'   style(bold = TRUE, .at = cells_headers()) |>
+#'   style(border_top = brdr("thick"), .at = cells_headers()) |>
+#'   style(border_bottom = brdr("thick"), .at = cells_headers()) |>
+#'   style(border_bottom = brdr("medium"),
+#'         .at = cells_table(side = "outer_bottom"))
+#' # Attach once via set_preset(); every tabular() chain inherits.
+#' # set_preset(style = house, font_size = 9)
 #'
 #' @seealso
-#' **Sibling build verbs:** [`cols()`] / [`col_spec()`],
-#' [`headers()`], [`sort_rows()`], [`paginate()`], [`preset()`].
+#' **Companion verbs:** [`cols()`], [`headers()`], [`preset()`],
+#' [`set_preset()`].
 #'
-#' **Entry / terminal verbs:** [`tabular()`], [`emit()`],
-#' [`as_grid()`].
+#' **Location constructors:** [`cells_body()`], [`cells_headers()`],
+#' [`cells_group_headers()`], [`cells_title()`],
+#' [`cells_subgroup_labels()`], [`cells_footnotes()`],
+#' [`cells_pagehead()`], [`cells_pagefoot()`], [`cells_table()`].
 #'
-#' **Inline pretext / posttext formatting:** [`md()`], [`html()`].
+#' **Style values:** [`brdr()`], [`style_template()`].
 #'
 #' @export
-style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
+style <- function(.spec, ..., .at = cells_body()) {
   call <- rlang::caller_env()
 
   is_template <- is_style_template(.spec)
@@ -270,33 +164,17 @@ style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
     check_tabular_spec(.spec, call = call)
   }
 
-  where_quo <- rlang::enquo(where)
-  has_where <- !rlang::quo_is_missing(where_quo)
-  has_at <- !is.null(at)
-
-  if (has_at && has_where) {
+  if (!is_tabular_location(.at)) {
+    at_value <- .at
     cli::cli_abort(
       c(
-        "Pass only one of {.arg at} and {.arg where}.",
-        "i" = "Use {.arg at} for the location vocabulary, {.arg where} for the legacy predicate path."
+        "{.arg .at} must be a {.cls tabular_location}.",
+        "x" = "You supplied {.obj_type_friendly {at_value}}.",
+        "i" = "Build one with {.fn cells_body} / {.fn cells_headers} / etc."
       ),
       class = "tabular_error_input",
       call = call
     )
-  }
-
-  if (has_at) {
-    if (!is_tabular_location(at)) {
-      cli::cli_abort(
-        c(
-          "{.arg at} must be a {.cls tabular_location}.",
-          "x" = "You supplied {.obj_type_friendly {at}}.",
-          "i" = "Build one with {.fn cells_body} / {.fn cells_headers} / etc."
-        ),
-        class = "tabular_error_input",
-        call = call
-      )
-    }
   }
 
   attrs <- rlang::list2(...)
@@ -326,60 +204,19 @@ style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
   attrs <- .expand_brdr_shorthand(attrs, call = call)
   node <- .build_style_node(attrs, call = call)
 
-  if (has_at) {
-    layer <- style_layer(location = at, style = node)
-    if (is_template) {
-      return(.style_template_add_layer(.spec, layer))
-    }
-    current <- .spec@styles
-    if (!is_style_spec(current)) {
-      current <- style_spec()
-    }
-    updated <- S7::set_props(
-      current,
-      layers = c(current@layers, list(layer))
-    )
-    return(S7::set_props(.spec, styles = updated))
-  }
+  layer <- style_layer(location = .at, style = node)
 
   if (is_template) {
-    cli::cli_abort(
-      c(
-        "{.arg at} is required when piping through a {.cls tabular_style_template}.",
-        "i" = "The legacy {.arg where} path is for {.cls tabular_spec} only."
-      ),
-      class = "tabular_error_input",
-      call = call
-    )
+    return(.style_template_add_layer(.spec, layer))
   }
-
-  if (!has_where) {
-    cli::cli_abort(
-      c(
-        "Specify one of {.arg at} or {.arg where}.",
-        "i" = "Use {.code at = cells_body()} (preferred) or {.code where = <predicate>}."
-      ),
-      class = "tabular_error_input",
-      call = call
-    )
-  }
-
-  scope_val <- check_enum(.scope, .scope_values, arg = ".scope", call = call)
-  pred <- style_predicate(
-    where = where_quo,
-    style = node,
-    scope = scope_val
-  )
-
   current <- .spec@styles
   if (!is_style_spec(current)) {
     current <- style_spec()
   }
   updated <- S7::set_props(
     current,
-    predicates = c(current@predicates, list(pred))
+    layers = c(current@layers, list(layer))
   )
-
   S7::set_props(.spec, styles = updated)
 }
 
@@ -425,7 +262,7 @@ style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
 
 # Expand `brdr()`-shorthand entries in the user's attribute list.
 #
-# Convenience sugar: a user writing
+# A user writing
 #   style(border_top = brdr("thick", "double"), ...)
 # wants the three scalars `border_top_style` / `border_top_width` /
 # `border_top_color` populated from one brdr value. Same for
@@ -437,8 +274,6 @@ style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
 # the border on this side" — expands to (style = "none", width = 0).
 .expand_brdr_shorthand <- function(attrs, call) {
   sides <- c("top", "bottom", "left", "right")
-  # Umbrella `border = ...` — set all four sides if user didn't
-  # already pass a per-side override.
   if (!is.null(attrs[["border"]])) {
     val <- attrs[["border"]]
     attrs[["border"]] <- NULL
@@ -449,7 +284,6 @@ style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
       }
     }
   }
-  # Per-side `border_top = brdr(...)` / `border_top = "none"` etc.
   for (side in sides) {
     key <- paste0("border_", side)
     val <- attrs[[key]]
@@ -474,8 +308,6 @@ style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
       attrs[[paste0(key, "_width")]] <- 0
       next
     }
-    # Leave alone — could still be a legacy Boolean ("rule_above" et
-    # al. flow through here unchanged on the Boolean knobs).
   }
   attrs
 }
@@ -499,8 +331,6 @@ style <- function(.spec, where, ..., at = NULL, .scope = "cell") {
   }
   recognised <- intersect(attr_names, .style_node_fields)
   values <- attrs[recognised]
-  # Coerce numeric -> integer for integer-typed slots so users can
-  # write `blank_above = 1` without a literal `1L`.
   for (nm in intersect(
     names(values),
     c("blank_above", "blank_below")

@@ -187,14 +187,14 @@
 #' [`as_grid()`].
 #'
 #' @export
-sort_rows <- function(spec, by = character(), descending = FALSE) {
+sort_rows <- function(.spec, by = character(), descending = FALSE) {
   call <- rlang::caller_env()
-  check_tabular_spec(spec, call = call)
+  check_tabular_spec(.spec, call = call)
   check_chr(by, call = call)
   check_lgl(descending, call = call)
 
   if (length(by) > 0L) {
-    data_cols <- names(spec@data)
+    data_cols <- names(.spec@data)
     missing <- setdiff(by, data_cols)
     if (length(missing) > 0L) {
       cli::cli_abort(
@@ -208,7 +208,7 @@ sort_rows <- function(spec, by = character(), descending = FALSE) {
       )
     }
 
-    across_cols <- .across_col_names(spec@data)
+    across_cols <- .across_col_names(.spec@data)
     bad_across <- intersect(by, across_cols)
     if (length(bad_across) > 0L) {
       cli::cli_abort(
@@ -237,7 +237,7 @@ sort_rows <- function(spec, by = character(), descending = FALSE) {
   }
 
   new_sort <- sort_spec(by = by, descending = descending)
-  S7::set_props(spec, sort = new_sort)
+  S7::set_props(.spec, sort = new_sort)
 }
 
 # ---------------------------------------------------------------------

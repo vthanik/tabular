@@ -23,22 +23,22 @@ test_that("print() on a 0-layer template shows the header line only", {
 
 test_that("print() on a 1-layer template shows '1 layer' and the surface", {
   t <- style_template() |>
-    style(at = cells_headers(), bold = TRUE)
+    style(.at = cells_headers(), bold = TRUE)
   expect_snapshot(print(t))
 })
 
 test_that("print() on a multi-layer template enumerates each surface", {
   t <- style_template() |>
-    style(at = cells_headers(), bold = TRUE) |>
-    style(at = cells_title(), halign = "left") |>
-    style(at = cells_footnotes(), italic = TRUE)
+    style(.at = cells_headers(), bold = TRUE) |>
+    style(.at = cells_title(), halign = "left") |>
+    style(.at = cells_footnotes(), italic = TRUE)
   expect_snapshot(print(t))
 })
 
 test_that("style() on a template accumulates layers in declaration order", {
   t <- style_template() |>
-    style(at = cells_headers(), bold = TRUE) |>
-    style(at = cells_title(), halign = "left")
+    style(.at = cells_headers(), bold = TRUE) |>
+    style(.at = cells_title(), halign = "left")
   expect_length(t$layers, 2L)
   expect_identical(t$layers[[1]]@location$surface, "headers")
   expect_identical(t$layers[[2]]@location$surface, "title")

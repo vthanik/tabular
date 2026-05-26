@@ -166,7 +166,7 @@ test_that(".preset_args_to_layers() lowers colors$text / $background to cells_bo
 # `colors$border` / `colors$border_muted` / `colors$text_muted`
 # tokens are rejected at validation time after the Task 4/5 cut —
 # the lowering helper no longer sees them. Replace via
-# `style(at = cells_table(side = "rows"), border_top = brdr(color = …))`
+# `style(.at = cells_table(side = "rows"), border_top = brdr(color = …))`
 # and friends.
 
 # ---------------------------------------------------------------------
@@ -304,7 +304,7 @@ test_that(".preset_layer_border() returns NULL for NULL location / triple", {
 # ---------------------------------------------------------------------
 
 test_that("set_preset() lowers named-list knobs onto the session-default @style", {
-  withr::defer(set_preset(reset = TRUE))
+  withr::defer(set_preset(.reset = TRUE))
   set_preset(
     alignment = list(title_halign = "left"),
     fonts = list(body = list(family = "Inter"))
@@ -320,10 +320,10 @@ test_that("set_preset() lowers named-list knobs onto the session-default @style"
   expect_in("body", surfaces)
 })
 
-test_that("set_preset(reset = TRUE) clears lowered layers along with the session default", {
-  withr::defer(set_preset(reset = TRUE))
+test_that("set_preset(.reset = TRUE) clears lowered layers along with the session default", {
+  withr::defer(set_preset(.reset = TRUE))
   set_preset(alignment = list(title_halign = "left"))
   expect_true(length(get_preset()@style) >= 1L)
-  set_preset(reset = TRUE)
+  set_preset(.reset = TRUE)
   expect_null(get_preset())
 })
