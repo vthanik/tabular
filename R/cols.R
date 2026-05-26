@@ -326,5 +326,8 @@ cols <- function(.spec, ...) {
   if (!identical(new@na_text, "")) {
     out <- S7::set_props(out, na_text = new@na_text)
   }
+  if (!is.na(new@indent_by)) {
+    out <- S7::set_props(out, indent_by = new@indent_by)
+  }
   out
 }

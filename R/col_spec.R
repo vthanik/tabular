@@ -269,6 +269,37 @@
 #'   would be ambiguous, e.g. when "not applicable" and "not
 #'   reported" both render blank.
 #'
+#' @param indent_by *Name of a column in `spec@data` whose per-row
+#'   integer / logical values drive indent depth on this column.*
+#'   `<character(1)>: default NA_character_`. When set, the engine
+#'   reads `spec@data[[indent_by]]` and prefixes this column's text
+#'   + AST in each row with
+#'   `paste(rep(preset@indent_chars, depth), collapse = "")`. The
+#'   referenced depth column is auto-hidden — no need to set
+#'   `visible = FALSE` on it.
+#'
+#'   Typical SOC / PT pattern:
+#'
+#'   ```r
+#'   ae$indent_level <- as.integer(ae$row_type == "pt")
+#'   cols(
+#'     label        = col_spec(label = "Category",
+#'                              indent_by = "indent_level"),
+#'     indent_level = col_spec(visible = FALSE)  # belt + braces
+#'   )
+#'   ```
+#'
+#'   Multi-depth nesting works the same way — values
+#'   `c(0L, 1L, 2L, …)` produce `0`, `1`, `2`, … copies of
+#'   `preset@indent_chars`. Negative values clamp to 0 (warn);
+#'   fractional numerics floor (warn); NA → 0 (silent).
+#'
+#'   Composes orthogonally with `group_display = "header_row"`:
+#'   synthetic group headers (depth 0) stay flush as parents; data
+#'   rows under them carry their column's declared depth. Works in
+#'   flat listings too — `indent_by` does not require any
+#'   `usage = "group"` columns.
+#'
 #' @return *A `col_spec` S7 object.* Pass it to [`cols()`] keyed by
 #'   the input column name; the constructor itself does not stamp
 #'   a name.
@@ -434,7 +465,8 @@ col_spec <- function(
   group_skip = NA,
   align = NULL,
   valign = NULL,
-  na_text = ""
+  na_text = "",
+  indent_by = NA_character_
 ) {
   call <- rlang::caller_env()
 
@@ -448,6 +480,7 @@ col_spec <- function(
   group_skip_val <- .check_col_group_skip(group_skip, call = call)
   .check_col_na_text(na_text, call = call)
   .check_col_format(format, call = call)
+  indent_by_val <- .check_col_indent_by(indent_by, call = call)
 
   .col_spec_class(
     name = NA_character_,
@@ -460,8 +493,42 @@ col_spec <- function(
     group_skip = group_skip_val,
     align = align_val,
     valign = valign_val,
-    na_text = na_text
+    na_text = na_text,
+    indent_by = indent_by_val
   )
+}
+
+# Validate the `indent_by` argument. Accepts a single character
+# value (column name to look up in `spec@data` at resolve time) or
+# `NA_character_` for "no per-row indent on this column" (the
+# default). Empty strings and length != 1 are hard errors — both
+# would silently mis-route at resolve time.
+.check_col_indent_by <- function(x, call) {
+  if (is.null(x)) {
+    return(NA_character_)
+  }
+  if (length(x) != 1L || !is.character(x)) {
+    cli::cli_abort(
+      c(
+        "Bad {.arg indent_by}.",
+        "x" = "Must be a single character (column name) or {.code NA}.",
+        "i" = "Got {.obj_type_friendly {x}} of length {length(x)}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  if (!is.na(x) && !nzchar(x)) {
+    cli::cli_abort(
+      c(
+        "Bad {.arg indent_by}.",
+        "x" = "Empty string is not a valid column name; use {.code NA} to clear."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  as.character(x)
 }
 
 .check_col_group_skip <- function(x, call) {
