@@ -574,10 +574,24 @@ backend_docx <- function(grid, file) {
       end <- cursor + span - 1L
       cell_w <- sum(widths_twips[cursor:end])
       label <- run$value
+      # Band cells carry a bottom border (cmidrule(lr) cell semantics);
+      # blank flanking cells over unmapped columns are borderless so
+      # the band rule does not extend across the full header width.
+      tc_borders <- if (!is.na(label)) {
+        paste0(
+          "<w:tcBorders>",
+          "<w:bottom w:val=\"single\" w:sz=\"4\" w:space=\"0\" ",
+          "w:color=\"adb5bd\"/>",
+          "</w:tcBorders>"
+        )
+      } else {
+        ""
+      }
       tc_pr <- paste0(
         "<w:tcPr>",
         sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", cell_w),
         if (span > 1L) sprintf("<w:gridSpan w:val=\"%d\"/>", span) else "",
+        tc_borders,
         "</w:tcPr>"
       )
       content <- if (is.na(label)) {

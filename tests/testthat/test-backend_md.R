@@ -584,3 +584,17 @@ test_that("Markdown nested bands: band-1 header bold flush, band-2 header bold +
   # inside the bold span).
   expect_match(md, "| **  AE** | &nbsp; |", fixed = TRUE)
 })
+
+# --- header-band label scope (text-only; MD has no border concept) ---
+
+test_that("MD scenario G: label repeats over the two drug arms (no border concept)", {
+  md <- band_emit("G", "md")
+  # Pipe-delimited GFM row: blank cells, then label twice (drug_50 +
+  # drug_100), then blank. Tolerant regex over whitespace and label
+  # text so the assertion does not depend on column-padding widths.
+  expect_match(
+    md,
+    "Active Treatment[^|]*\\|[^|]*Active Treatment",
+    perl = TRUE
+  )
+})

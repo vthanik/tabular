@@ -1196,3 +1196,38 @@ test_that("DOCX nested bands: band-1 header no <w:ind>, band-2 header <w:ind w:l
     perl = TRUE
   )
 })
+
+# --- header-band rule scope (cmidrule(lr) semantics) ----------------
+
+test_that("DOCX scenario G: band cell tcPr carries w:tcBorders w:bottom; blanks do not", {
+  doc <- band_emit("G", "docx")
+  expect_match(doc, "<w:gridSpan w:val=\"2\"/>")
+  expect_match(
+    doc,
+    "<w:t xml:space=\"preserve\">Active Treatment</w:t>",
+    fixed = TRUE
+  )
+  expect_match(doc, "<w:tcBorders><w:bottom w:val=\"single\"")
+  # Extract the band row and confirm only the cell containing
+  # "Active Treatment" carries tcBorders; the two blank flanking
+  # cells (3-cell left run, 1-cell right run) do not.
+  band_row <- regmatches(
+    doc,
+    regexpr(
+      "<w:tr><w:trPr><w:tblHeader/></w:trPr>(?:(?!</w:tr>).)*Active Treatment(?:(?!</w:tr>).)*</w:tr>",
+      doc,
+      perl = TRUE
+    )
+  )
+  tcs <- regmatches(
+    band_row,
+    gregexpr("<w:tc>.*?</w:tc>", band_row, perl = TRUE)
+  )[[1L]]
+  expect_length(tcs, 3L)
+  band_idx <- grep("Active Treatment", tcs, fixed = TRUE)
+  blank_idx <- setdiff(seq_along(tcs), band_idx)
+  expect_match(tcs[band_idx], "<w:tcBorders>")
+  for (i in blank_idx) {
+    expect_no_match(tcs[i], "<w:tcBorders>")
+  }
+})
