@@ -322,6 +322,13 @@
 #'       drive the layout under `"window"` / `"fixed"`. Under
 #'       `"content"`, pins still take priority over auto columns.
 #'
+#'       **HTML backend.** `width_mode` drives paper backends
+#'       (LaTeX / RTF / PDF / DOCX) only. HTML is unconditionally
+#'       responsive — the table always fills its parent and
+#'       columns wrap when the viewport narrows, regardless of
+#'       `width_mode`. Per-column widths (`col_spec(width)`) emit
+#'       verbatim into the HTML colgroup per the gt convention.
+#'
 #'   ```r
 #'   # Landscape A4, 8pt body, slim margins for one wide table.
 #'   preset(

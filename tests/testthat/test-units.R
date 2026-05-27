@@ -96,11 +96,19 @@ test_that(".parse_dim rejects unparseable strings", {
 test_that(".parse_dim rejects unsupported units without allow_percent", {
   expect_error(tabular:::.parse_dim("30%"), class = "tabular_error_input")
   expect_error(tabular:::.parse_dim("5em"), class = "tabular_error_input")
-  expect_error(tabular:::.parse_dim("10px"), class = "tabular_error_input")
   expect_error(tabular:::.parse_dim("2rem"), class = "tabular_error_input")
 })
 
-test_that(".parse_dim with allow_percent accepts percent + still rejects em/px", {
+test_that(".parse_dim accepts px (gt convention: 96px = 1in)", {
+  # Added per the gt convention so HTML can emit and paper backends
+  # can convert. 10px = 10/96 in via .tabular_unit_inches.
+  expect_identical(
+    tabular:::.parse_dim("10px"),
+    list(value = 10, unit = "px")
+  )
+})
+
+test_that(".parse_dim with allow_percent accepts percent + still rejects em/rem", {
   expect_identical(
     tabular:::.parse_dim("30%", allow_percent = TRUE),
     list(value = 30, unit = "%")
@@ -110,7 +118,7 @@ test_that(".parse_dim with allow_percent accepts percent + still rejects em/px",
     class = "tabular_error_input"
   )
   expect_error(
-    tabular:::.parse_dim("10px", allow_percent = TRUE),
+    tabular:::.parse_dim("2rem", allow_percent = TRUE),
     class = "tabular_error_input"
   )
 })

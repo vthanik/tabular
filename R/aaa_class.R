@@ -294,6 +294,16 @@ NULL
       S7::class_any,
       default = "auto"
     ),
+    # Immutable snapshot of the user-supplied `width` value. Set
+    # once by `col_spec()`; never mutated by `.resolve_col_widths()`
+    # (which converts `width` to inch-resolved numeric for paper
+    # backends). The HTML backend reads `width_user` to detect
+    # percent-string intent (e.g. "40%") and emit responsive
+    # `<col style="width:40%"/>` instead of the inch fallback.
+    width_user = S7::new_property(
+      S7::class_any,
+      default = "auto"
+    ),
     group_display = S7::new_property(
       S7::class_character,
       default = "header_row"

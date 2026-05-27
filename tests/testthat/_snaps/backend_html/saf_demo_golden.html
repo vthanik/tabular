@@ -5,10 +5,10 @@
 <title>Table 14.1.1</title>
 <style>
 .tabular-doc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-.tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-.tabular-content--window { width: 100%; }
+.tabular-content { width: 100%; }
 .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-.tabular-table-wrap { overflow-x: auto; margin: .75rem 0; }
+.tabular-pad { margin: 0; }
+.tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 .tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }
 .tabular-table th, .tabular-table td { padding: .35rem .6rem; }
 .tabular-table td { text-align: left; vertical-align: top; }
@@ -22,6 +22,9 @@
 .text-left { text-align: left; }
 .text-center { text-align: center; }
 .text-right { text-align: right; }
+.tabular-table thead th.text-left { text-align: left; }
+.tabular-table thead th.text-center { text-align: center; }
+.tabular-table thead th.text-right { text-align: right; }
 .valign-top { vertical-align: top; }
 .valign-middle { vertical-align: middle; }
 .valign-bottom { vertical-align: bottom; }
@@ -46,16 +49,9 @@
 <h1 class="tabular-title">Safety Population</h1>
 <p class="tabular-pad">&nbsp;</p>
 <div class="tabular-table-wrap">
-<table class="tabular-table" style="width:7.133333in">
-<colgroup>
-<col style="width:2.566667in"/>
-<col style="width:1.141667in"/>
-<col style="width:1.141667in"/>
-<col style="width:1.141667in"/>
-<col style="width:1.141667in"/>
-</colgroup>
+<table class="tabular-table" style="width:100%">
 <thead>
-<tr><th>Statistic</th><th class="text-right">Placebo<br/>N=86</th><th class="text-right">High Dose<br/>N=72</th><th class="text-right">Low Dose<br/>N=96</th><th class="text-right">Total<br/>N=254</th></tr>
+<tr><th>Statistic</th><th class="text-center">Placebo<br/>N=86</th><th class="text-center">High Dose<br/>N=72</th><th class="text-center">Low Dose<br/>N=96</th><th class="text-center">Total<br/>N=254</th></tr>
 </thead>
 <tbody>
 <tr><td>Age (years)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>

@@ -216,6 +216,13 @@ sliver. Word's "Fixed Column Width".
 \strong{Interaction:} Pair with \code{col_spec(width = ...)} pins to
 drive the layout under \code{"window"} / \code{"fixed"}. Under
 \code{"content"}, pins still take priority over auto columns.
+
+\strong{HTML backend.} \code{width_mode} drives paper backends
+(LaTeX / RTF / PDF / DOCX) only. HTML is unconditionally
+responsive — the table always fills its parent and
+columns wrap when the viewport narrows, regardless of
+\code{width_mode}. Per-column widths (\code{col_spec(width)}) emit
+verbatim into the HTML colgroup per the gt convention.
 }
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Landscape A4, 8pt body, slim margins for one wide table.

@@ -299,76 +299,44 @@ test_that(".html_colgroup returns character(0) when no column has a numeric widt
   )
 })
 
-test_that("auto-resolved widths land in <colgroup> end-to-end via emit()", {
+test_that("HTML colgroup omits widths when the user wrote none (gt-style auto)", {
+  # Per the gt convention: HTML only emits widths the user
+  # explicitly set via `col_spec(width = ...)`. With no widths
+  # set, no `<colgroup>` ships -- the browser auto-sizes columns
+  # from cell content, and cells wrap responsively when the
+  # viewport narrows. This is the "responsive by default"
+  # guarantee that fixed the viewer-pane-not-reactive bug.
   spec <- tabular(data.frame(x = "x", y = "y"))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
-  # colgroup present, two col children with width:Xin
-  expect_match(txt, "<colgroup>", fixed = TRUE)
-  expect_match(txt, "</colgroup>", fixed = TRUE)
-  cols_found <- regmatches(
-    txt,
-    gregexpr("<col style=\"width:[0-9.]+in\"/>", txt)
-  )[[1L]]
-  expect_length(cols_found, 2L)
+  # No colgroup at all -- engine-computed widths must not leak.
+  expect_no_match(txt, "<colgroup>", fixed = TRUE)
+  expect_no_match(txt, "<col style=\"width:", fixed = TRUE)
 })
 
 # ---------------------------------------------------------------------
-# Table width — width_mode dispatch + scroll wrapper
+# Table width — HTML is unconditionally responsive
 # ---------------------------------------------------------------------
 
-test_that(".html_table_open_tag emits sum-of-widths under width_mode = 'content'", {
-  col_specs <- list(
-    col_spec(width = 1.5),
-    col_spec(width = 2.25),
-    col_spec(width = 0.75)
-  )
-  ps <- tabular:::preset_spec(width_mode = "content")
-  tag <- tabular:::.html_table_open_tag(col_specs, ps)
-  expect_identical(
-    tag,
-    "<table class=\"tabular-table\" style=\"width:4.500000in\">"
-  )
-})
-
-test_that(".html_table_open_tag emits width:100% under width_mode = 'window'", {
-  col_specs <- list(
-    col_spec(width = 1.5),
-    col_spec(width = 2.25)
-  )
-  ps <- tabular:::preset_spec(width_mode = "window")
-  tag <- tabular:::.html_table_open_tag(col_specs, ps)
-  expect_identical(
-    tag,
-    "<table class=\"tabular-table\" style=\"width:100%\">"
-  )
-})
-
-test_that(".html_table_open_tag emits sum-of-widths under width_mode = 'fixed'", {
-  # Same emission path as "content"; the distinction lives upstream
-  # in `.distribute_widths()` which collapses auto cols to the
-  # minimum sliver under "fixed".
-  col_specs <- list(
-    col_spec(width = 3),
-    col_spec(width = 1)
-  )
-  ps <- tabular:::preset_spec(width_mode = "fixed")
-  tag <- tabular:::.html_table_open_tag(col_specs, ps)
-  expect_identical(
-    tag,
-    "<table class=\"tabular-table\" style=\"width:4.000000in\">"
-  )
-})
-
-test_that(".html_table_open_tag falls back to bare <table> when no widths resolved", {
-  # Defensive fallback: when a spec bypasses engine resolution and
-  # no visible column carries a numeric width, emit the unstyled
-  # tag so the natural-fit browser layout still works.
-  col_specs <- list(NULL, NULL)
-  ps <- tabular:::preset_spec()
-  tag <- tabular:::.html_table_open_tag(col_specs, ps)
-  expect_identical(tag, "<table class=\"tabular-table\">")
+test_that(".html_table_open_tag is always width:100% regardless of widths or width_mode", {
+  # HTML is unconditionally responsive: table always fills 100%
+  # of its wrapper. width_mode is paper-backend-only.
+  for (mode in c("content", "window", "fixed")) {
+    ps <- tabular:::preset_spec(width_mode = mode)
+    for (col_specs in list(
+      list(col_spec(width = 1.5), col_spec(width = 2.25)),
+      list(col_spec(width = "40%"), col_spec(width = "60%")),
+      list(NULL, NULL)
+    )) {
+      tag <- tabular:::.html_table_open_tag(col_specs, ps)
+      expect_identical(
+        tag,
+        "<table class=\"tabular-table\" style=\"width:100%\">",
+        info = sprintf("mode = %s", mode)
+      )
+    }
+  }
 })
 
 test_that("each <table> is wrapped in <div class=\"tabular-table-wrap\">", {
@@ -417,7 +385,10 @@ test_that("horizontal panels each get their own scroll wrapper", {
   )
 })
 
-test_that("default preset emits a content-fitted <table> end-to-end", {
+test_that("default preset emits an always-responsive <table> end-to-end", {
+  # HTML is unconditionally responsive: table always carries the
+  # `width:100%` inline style regardless of preset @width_mode or
+  # any per-column widths. width_mode drives paper backends only.
   spec <- tabular(
     saf_demo,
     titles = "Demographics",
@@ -434,19 +405,22 @@ test_that("default preset emits a content-fitted <table> end-to-end", {
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
-  # Table opening carries an inline width:<N>in style (content mode
-  # is the preset default). No `table-layout: fixed` — see comment
-  # on `.html_table_open_tag()` for why.
   expect_match(
+    txt,
+    "<table class=\"tabular-table\" style=\"width:100%\">",
+    fixed = TRUE
+  )
+  # The previous engine-computed inch widths must not recur.
+  expect_no_match(
     txt,
     "<table class=\"tabular-table\" style=\"width:[0-9.]+in\">",
     perl = TRUE
   )
-  # No `width: 100%` on `.tabular-table` baseline rule.
-  expect_false(grepl(".tabular-table { width: 100%", txt, fixed = TRUE))
 })
 
-test_that("width_mode = 'window' flips the <table> to width:100% end-to-end", {
+test_that("width_mode = 'window' preserves the always-100% table emit", {
+  # width_mode is paper-backend-only; "window" doesn't change HTML
+  # behaviour (HTML is unconditionally 100%).
   spec <- tabular(
     data.frame(x = c(1L, 2L), y = c("a", "b"))
   ) |>
@@ -557,34 +531,36 @@ test_that("body content sits inside a single <div class=\"tabular-content\"> wra
   expect_true(i_foot < i_close)
 })
 
-test_that("preset(width_mode = 'window') flips the wrapper to the --window modifier", {
+test_that("preset(width_mode = 'window') leaves the wrapper at the base .tabular-content (HTML always responsive)", {
+  # width_mode is paper-backend-only; on HTML the wrapper is
+  # always `.tabular-content` (which itself fills 100% width).
+  # The `--window` modifier class no longer exists.
   spec <- tabular(data.frame(x = 1L)) |>
     preset(width_mode = "window")
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
-  expect_match(
+  expect_match(txt, "<div class=\"tabular-content\">", fixed = TRUE)
+  expect_no_match(
     txt,
     "<div class=\"tabular-content tabular-content--window\">",
-    fixed = TRUE
+    perl = TRUE
   )
 })
 
-test_that(".tabular-content CSS rules are present in the stylesheet", {
+test_that(".tabular-content CSS rule is present and at width:100% (gt-style unconditional)", {
   spec <- tabular(data.frame(x = 1L))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(
     txt,
-    ".tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }",
+    ".tabular-content { width: 100%; }",
     fixed = TRUE
   )
-  expect_match(
-    txt,
-    ".tabular-content--window { width: 100%; }",
-    fixed = TRUE
-  )
+  # The legacy fit-content / --window modifier rules are gone.
+  expect_no_match(txt, "fit-content", perl = TRUE)
+  expect_no_match(txt, ".tabular-content--window", perl = TRUE)
 })
 
 test_that("empty-input emit still wraps content in .tabular-content", {
@@ -612,9 +588,11 @@ test_that(".tabular-table-wrap CSS is present and resets under @media print", {
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
   # Screen rule: horizontal scroll fallback for narrow viewports.
+  # Margin matches `.tabular-title`'s `.2rem` so the title-pad gap is
+  # symmetric above and below the pad (variant α).
   expect_match(
     txt,
-    ".tabular-table-wrap { overflow-x: auto; margin: .75rem 0; }",
+    ".tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }",
     fixed = TRUE
   )
   # Print rule: reset to visible overflow so paper output is
@@ -626,14 +604,14 @@ test_that(".tabular-table-wrap CSS is present and resets under @media print", {
   )
 })
 
-test_that("HTML / LaTeX / RTF / DOCX widths agree byte-for-byte (cross-backend parity)", {
-  # The quality-bar claim — engine-resolved widths render identically
-  # across every backend. Build the golden saf_demo pipeline once,
-  # emit all four widthful backends, parse widths, assert vector
-  # equality (converted to a common unit: inches to 6 decimals).
-  # Pinned to portrait so the cellx parsing finds the row boundary
-  # at the expected position; the parity claim is geometry-agnostic
-  # (verified separately under landscape via the golden snapshots).
+test_that("LaTeX / RTF / DOCX widths agree byte-for-byte; HTML is responsive (no inches)", {
+  # Engine-resolved widths render identically across the three
+  # PAPER backends (LaTeX / RTF / DOCX). HTML opts out of the
+  # inch-width path entirely per the gt convention -- it's
+  # unconditionally responsive (no `<col style="width:Xin">`,
+  # no `<table style="width:Yin">`). HTML's responsive emit is
+  # asserted separately by `'HTML <table> is always width:100%'`
+  # and `'HTML colgroup omits widths when user wrote none'`.
   spec <- tabular(
     saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
@@ -667,45 +645,41 @@ test_that("HTML / LaTeX / RTF / DOCX widths agree byte-for-byte (cross-backend p
     collapse = "\n"
   )
 
-  html_in <- as.numeric(regmatches(
+  # HTML: responsive, no inch widths anywhere.
+  expect_no_match(
     html_txt,
-    gregexpr(
-      "(?<=<col style=\"width:)[0-9.]+(?=in\"/>)",
-      html_txt,
-      perl = TRUE
-    )
-  )[[1L]])
+    "<col style=\"width:[0-9.]+in\"/>",
+    perl = TRUE
+  )
+  expect_no_match(
+    html_txt,
+    "<table[^>]*style=\"width:[0-9.]+in\"",
+    perl = TRUE
+  )
+
+  # Paper-backend parity (LaTeX float vs RTF/DOCX twips).
   tex_in <- as.numeric(regmatches(
     tex_txt,
     gregexpr("(?<=wd=)[0-9.]+(?=in)", tex_txt, perl = TRUE)
   )[[1L]])
-  # RTF carries cumulative \cellx positions in twips; diff to get
-  # per-column widths, divide by 1440 -> inches.
   rtf_cellx <- as.integer(regmatches(
     rtf_txt,
     gregexpr("(?<=\\\\cellx)[0-9]+", rtf_txt, perl = TRUE)
   )[[1L]])
-  # cellx repeats per row; first N entries = first row's columns.
-  ncol_vis <- length(html_in)
+  ncol_vis <- length(tex_in)
   rtf_in <- diff(c(0L, rtf_cellx[seq_len(ncol_vis)])) / 1440
-  # DOCX <w:gridCol w:w="..."> in twips
   docx_tw <- as.integer(regmatches(
     docx_txt,
     gregexpr("(?<=<w:gridCol w:w=\")[0-9]+(?=\"/>)", docx_txt, perl = TRUE)
   )[[1L]])
   docx_in <- docx_tw / 1440
 
-  expect_gt(length(html_in), 0L)
-  # HTML and LaTeX render the engine float at %f precision -- byte-
-  # for-byte identical.
-  expect_identical(round(html_in, 6L), round(tex_in, 6L))
-  # RTF and DOCX both snap to integer twips at cumulative boundaries
-  # so they are byte-for-byte identical as integer twip vectors.
+  expect_gt(length(tex_in), 0L)
+  # RTF and DOCX both snap to integer twips at cumulative
+  # boundaries so they are byte-for-byte identical as twip vectors.
   expect_identical(round(rtf_in * 1440), round(docx_in * 1440))
-  # Across the float vs twip pair, agreement is tight to the twip
-  # granularity (1/1440 in ~= 0.0007 in). Any larger drift would
-  # signal an engine-resolution divergence between backends.
-  expect_true(all(abs(html_in - docx_in) <= 1 / 1440))
+  # LaTeX (float-inch) agrees with RTF/DOCX to the twip granularity.
+  expect_true(all(abs(tex_in - docx_in) <= 1 / 1440))
 })
 
 # ---------------------------------------------------------------------
@@ -773,14 +747,16 @@ test_that("multi-page emit produces a single continuous table with print-only pa
   emit(spec, out)
   lines <- readLines(out)
   txt <- paste(lines, collapse = "\n")
-  # Exactly one continuous <table> / <colgroup> / <thead> / <tbody>.
+  # Exactly one continuous <table> / <thead> / <tbody>. Per gt
+  # convention, no <colgroup> is emitted when the user wrote no
+  # per-column widths (browser auto-sizes responsively).
   expect_identical(
     length(grep("<table class=\"tabular-table\"", lines)),
     1L
   )
   expect_identical(
     length(grep("<colgroup>", lines, fixed = TRUE)),
-    1L
+    0L
   )
   expect_identical(length(grep("<thead>", lines, fixed = TRUE)), 1L)
   expect_identical(length(grep("<tbody>", lines, fixed = TRUE)), 1L)
@@ -1371,4 +1347,660 @@ test_that("as.tags.tabular_spec wrapping div carries .tabular-doc class", {
 
   # Wrapping div has the scoping class.
   expect_match(rendered, "class=\"tabular-doc\"", fixed = TRUE)
+})
+
+# ---------------------------------------------------------------------
+# Regression: title-block padding paragraph margin
+#
+# Bug: `<p class="tabular-pad">&nbsp;</p>` spacers around the title
+# block had no CSS rule, so the browser default `<p>` margin (16px 0)
+# applied -- stacking with the &nbsp; line-height to ~48 px per spacer.
+# Fix zeroes the pad margin so each `<p class="tabular-pad">` collapses
+# to exactly one preset-driven line of height.
+# ---------------------------------------------------------------------
+
+test_that(".tabular-pad has margin: 0 so title spacer is one line tall", {
+  spec <- tabular(data.frame(x = 1L), titles = "Demo")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # CSS rule is present in the inline stylesheet.
+  expect_match(
+    html,
+    "\\.tabular-pad\\s*\\{[^}]*margin:\\s*0",
+    perl = TRUE
+  )
+
+  # The spacer paragraph still emits (preset blank-line count drives
+  # how many appear); only its margin is collapsed.
+  expect_match(html, "<p class=\"tabular-pad\">&nbsp;</p>", fixed = TRUE)
+})
+
+# ---------------------------------------------------------------------
+# Regression: visible indent on `indent_by` columns in HTML
+#
+# Bug: the engine prepends `preset@indent_chars` per depth level to
+# cell text, but browsers collapse runs of leading whitespace inside
+# `<td>` -- so the indent was invisible. Fix: HTML backend strips the
+# engine prefix and re-expresses the indent as CSS `padding-left`.
+# ---------------------------------------------------------------------
+
+test_that("HTML indent_by cells emit padding-left and strip engine prefix", {
+  df <- data.frame(
+    soc = c("CARDIAC", "CARDIAC", "GI", "GI"),
+    label = c("CARDIAC", "Atrial fib", "GI", "Nausea"),
+    row_type = c("soc", "pt", "soc", "pt"),
+    indent_level = c(0L, 1L, 0L, 1L),
+    n = c(5L, 3L, 10L, 6L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "AE") |>
+    cols(
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Category", indent_by = "indent_level"),
+      indent_level = col_spec(visible = FALSE),
+      row_type = col_spec(visible = FALSE),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # PT rows: padding-left present at depth-1, text de-prefixed. The
+  # value is AFM-derived from the default body font (Liberation Mono
+  # / Courier): "  " is 1200/1000-em -> 1.2em per depth level. The
+  # CSS `calc(.6rem + 1.2em)` is ADDITIVE over the baseline
+  # `.tabular-table td { padding: .35rem .6rem }` left slot so the
+  # PT cell sits a full 1.2em beyond the SOC cell (not just
+  # 1.2em - .6rem). `%g` format trims trailing zeros.
+  expect_true(grepl(
+    "<td style=\"padding-left: calc(.6rem + 1.2em);\">Atrial fib</td>",
+    txt,
+    fixed = TRUE
+  ))
+  expect_true(grepl(
+    "<td style=\"padding-left: calc(.6rem + 1.2em);\">Nausea</td>",
+    txt,
+    fixed = TRUE
+  ))
+
+  # Bug condition (engine prefix surviving into the rendered cell)
+  # must NOT recur.
+  expect_false(grepl("<td>  Atrial fib", txt, fixed = TRUE))
+  expect_false(grepl("<td>  Nausea", txt, fixed = TRUE))
+
+  # Depth-0 rows do NOT get a padding-left style.
+  expect_true(grepl("<td>CARDIAC</td>", txt, fixed = TRUE))
+  expect_true(grepl("<td>GI</td>", txt, fixed = TRUE))
+})
+
+# ---------------------------------------------------------------------
+# Regression: title-pad vertical symmetry
+#
+# Bug: the gap below the title's <p class="tabular-pad"> was visibly
+# larger than the gap above it, because `.tabular-table-wrap` had a
+# `.75rem` top margin while `.tabular-title` had only a `.2rem` bottom
+# margin. Symmetry-around-the-pad requires `wrap.margin-top ==
+# title.margin-bottom`, and the user constraint requires `wrap.margin-
+# top == wrap.margin-bottom`. Variant α picks `.2rem` for all three.
+# ---------------------------------------------------------------------
+
+test_that(".tabular-table-wrap top + bottom margins are symmetric (variant α)", {
+  spec <- tabular(data.frame(x = 1L), titles = "Demo")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # Symmetric wrap margins (user constraint).
+  expect_match(
+    html,
+    "\\.tabular-table-wrap \\{ overflow-x: auto; margin: \\.2rem 0; \\}",
+    perl = TRUE
+  )
+
+  # Wrap top margin equals title bottom margin -> gap above and below
+  # the title-pad is identical.
+  expect_match(
+    html,
+    "\\.tabular-title \\{[^}]*margin:\\s*\\.2rem 0",
+    perl = TRUE
+  )
+
+  # The old asymmetric .75rem top must not be re-emerging.
+  expect_false(grepl(
+    ".tabular-table-wrap { overflow-x: auto; margin: .75rem 0; }",
+    html,
+    fixed = TRUE
+  ))
+})
+
+# ---------------------------------------------------------------------
+# Regression: AFM-true padding-left for indented cells
+#
+# Bug: padding-left was hardcoded to `depth × 1.5em` — accurate for no
+# font in particular. Fix: read the AFM glyph-advance width of
+# `preset@indent_chars` for the active body font and use that as the
+# per-level em unit. Liberation Mono / Courier: space = 600/1000 em,
+# so `"  "` at depth 1 = 1.2em (not 1.5em). Helvetica: space = 278/1000
+# em, so `"  "` at depth 1 = ~0.556em.
+# ---------------------------------------------------------------------
+
+test_that("indent padding-left is AFM-derived per preset font", {
+  df <- data.frame(
+    soc = c("CARDIAC", "CARDIAC", "GI", "GI"),
+    label = c("CARDIAC", "Atrial fib", "GI", "Nausea"),
+    row_type = c("soc", "pt", "soc", "pt"),
+    indent_level = c(0L, 1L, 0L, 1L),
+    n = c(5L, 3L, 10L, 6L),
+    stringsAsFactors = FALSE
+  )
+  make_spec <- function(font_family) {
+    tabular(df, titles = "AE") |>
+      preset(font_family = font_family) |>
+      cols(
+        soc = col_spec(usage = "group", group_display = "header_row"),
+        label = col_spec(label = "Category", indent_by = "indent_level"),
+        indent_level = col_spec(visible = FALSE),
+        row_type = col_spec(visible = FALSE),
+        n = col_spec(label = "N")
+      )
+  }
+
+  # Courier: "  " is 1200/1000-em -> 1.2em at depth 1, additive
+  # over the baseline `.6rem` cell pad.
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(make_spec("Courier"), out)
+  txt_courier <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(
+    txt_courier,
+    "<td style=\"padding-left: calc\\(\\.6rem \\+ 1\\.2em\\);\">Atrial fib</td>",
+    perl = TRUE
+  )
+
+  # Helvetica: "  " is 556/1000-em -> 0.556em at depth 1.
+  out2 <- withr::local_tempfile(fileext = ".html")
+  emit(make_spec("Helvetica"), out2)
+  txt_helv <- paste(readLines(out2, warn = FALSE), collapse = "\n")
+  expect_match(
+    txt_helv,
+    "<td style=\"padding-left: calc\\(\\.6rem \\+ 0\\.556em\\);\">Atrial fib</td>",
+    perl = TRUE
+  )
+
+  # The old hardcoded 1.50em and the non-additive 1.2000em are
+  # both gone from both renderings.
+  expect_false(grepl("padding-left: 1.50em", txt_courier, fixed = TRUE))
+  expect_false(grepl("padding-left: 1.50em", txt_helv, fixed = TRUE))
+  expect_false(grepl("padding-left: 1.2000em", txt_courier, fixed = TRUE))
+  expect_false(grepl("padding-left: 0.5560em", txt_helv, fixed = TRUE))
+})
+
+# ---------------------------------------------------------------------
+# Regression: header alignment via col_spec(align = ...) on <th>
+#
+# Bug: the baseline `.tabular-table thead th { text-align: center }`
+# (specificity 0,1,2) was overriding the per-cell `.text-left` /
+# `.text-right` classes (specificity 0,1,0) — so every `<th>` rendered
+# centered regardless of what `col_spec.align` said. Fix:
+#   (3a) Add `.tabular-table thead th.text-*` rules to bump specificity
+#        to (0,2,2) so per-cell classes win.
+#   (3b) Change the header-side projection for `decimal` from "right"
+#        to "center" — decimal-aligned body has its visual centroid
+#        around the decimal point, so the header centers (TFL
+#        convention).
+# ---------------------------------------------------------------------
+
+test_that("col_spec(align) routes through to <th> per the convention rule", {
+  df <- data.frame(
+    L = "left body",
+    C = "center body",
+    R = "right body",
+    D = "1.23",
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      L = col_spec(label = "L", align = "left"),
+      C = col_spec(label = "C", align = "center"),
+      R = col_spec(label = "R", align = "right"),
+      D = col_spec(label = "D", align = "decimal")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # Specificity-bump CSS rules exist.
+  expect_match(
+    txt,
+    "\\.tabular-table thead th\\.text-left\\s*\\{[^}]*text-align:\\s*left",
+    perl = TRUE
+  )
+  expect_match(
+    txt,
+    "\\.tabular-table thead th\\.text-center\\s*\\{[^}]*text-align:\\s*center",
+    perl = TRUE
+  )
+  expect_match(
+    txt,
+    "\\.tabular-table thead th\\.text-right\\s*\\{[^}]*text-align:\\s*right",
+    perl = TRUE
+  )
+
+  # Header <th> classes match the rule table. The cells are emitted in
+  # column order; pull each <th class="..."> by its label text.
+  thead <- regmatches(txt, regexpr("<thead>.*?</thead>", txt))
+  expect_match(thead, "<th[^>]*class=\"text-left[^\"]*\"[^>]*>L</th>")
+  expect_match(thead, "<th[^>]*class=\"text-center[^\"]*\"[^>]*>C</th>")
+  expect_match(thead, "<th[^>]*class=\"text-right[^\"]*\"[^>]*>R</th>")
+  # decimal projects to CENTER on the header (TFL centroid
+  # convention -- BMS / GSK / Lilly ARS / gt). The body cells
+  # are right-aligned with engine_decimal NBSP padding; the
+  # visible content's centre of mass sits inside the cell, not
+  # at the right edge. Centered header sits over that centroid.
+  expect_match(thead, "<th[^>]*class=\"text-center[^\"]*\"[^>]*>D</th>")
+  expect_no_match(thead, "<th[^>]*class=\"text-right[^\"]*\"[^>]*>D</th>")
+})
+
+# ---------------------------------------------------------------------
+# Regression: indent padding-left is ADDITIVE over the baseline cell
+# pad, and emits with `%g`-trimmed format (no trailing zeros).
+#
+# Bug: `padding-left: 1.2000em` REPLACED the `.tabular-table td
+# { padding: .35rem .6rem }` left slot, so a PT cell visually sat
+# only `1.2em - .6rem` (~4.8px in 12px Courier) further right than
+# its parent SOC cell -- sub-character, basically invisible. Fix:
+# emit `padding-left: calc(.6rem + Xem)` so the AFM-derived indent
+# ADDS to the baseline. Also switch `%.4f` -> `%g` to strip noise.
+# ---------------------------------------------------------------------
+
+test_that("indent padding-left is additive via calc + uses %g format", {
+  df <- data.frame(
+    soc = c("CARDIAC", "CARDIAC", "GI", "GI"),
+    label = c("CARDIAC", "Atrial fib", "GI", "Nausea"),
+    row_type = c("soc", "pt", "soc", "pt"),
+    indent_level = c(0L, 1L, 0L, 1L),
+    n = c(5L, 3L, 10L, 6L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "AE") |>
+    preset(font_family = "Courier") |>
+    cols(
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Category", indent_by = "indent_level"),
+      indent_level = col_spec(visible = FALSE),
+      row_type = col_spec(visible = FALSE),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # PT cells now ADD the AFM indent on top of the baseline `.6rem`
+  # left pad. `%g` trims trailing zeros: `1.2em`, not `1.2000em`.
+  expect_true(grepl(
+    "<td style=\"padding-left: calc(.6rem + 1.2em);\">Atrial fib</td>",
+    txt,
+    fixed = TRUE
+  ))
+  expect_true(grepl(
+    "<td style=\"padding-left: calc(.6rem + 1.2em);\">Nausea</td>",
+    txt,
+    fixed = TRUE
+  ))
+
+  # The non-additive hardcoded variants must NOT recur.
+  expect_false(grepl("padding-left: 1.2000em", txt, fixed = TRUE))
+  expect_false(grepl("padding-left: 1.2em;\"", txt, fixed = TRUE))
+
+  # Depth-0 SOC cells carry NO padding-left override (baseline wins).
+  expect_true(grepl("<td>CARDIAC</td>", txt, fixed = TRUE))
+  expect_true(grepl("<td>GI</td>", txt, fixed = TRUE))
+})
+
+test_that("indent calc trims trailing zeros for proportional fonts too", {
+  df <- data.frame(
+    soc = c("CARDIAC", "CARDIAC"),
+    label = c("CARDIAC", "Atrial fib"),
+    row_type = c("soc", "pt"),
+    indent_level = c(0L, 1L),
+    n = c(5L, 3L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "AE") |>
+    preset(font_family = "Helvetica") |>
+    cols(
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Category", indent_by = "indent_level"),
+      indent_level = col_spec(visible = FALSE),
+      row_type = col_spec(visible = FALSE),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # Helvetica space = 556/1000em -> `0.556em` per depth (NOT 0.5560).
+  expect_true(grepl(
+    "<td style=\"padding-left: calc(.6rem + 0.556em);\">Atrial fib</td>",
+    txt,
+    fixed = TRUE
+  ))
+  expect_false(grepl("0.5560em", txt, fixed = TRUE))
+})
+
+# ---------------------------------------------------------------------
+# Regression: width_user S7 property preserves the user's width spec
+# through the engine pipeline.
+#
+# Bug: `.resolve_col_widths()` (R/col_width.R:240) mutates `col@width`
+# from the user's string ("40%") to inch-resolved numeric via
+# `S7::set_props()`, so by HTML emit time the percent intent is gone
+# and `<col style="width:40%"/>` can never land. Fix: add a parallel
+# S7 property `width_user` on `col_spec` that mirrors the constructor
+# input and is never touched by resolve. HTML reads `width_user`;
+# paper backends keep reading `width` (inch-resolved).
+# ---------------------------------------------------------------------
+
+test_that("col_spec.width_user survives .resolve_col_widths mutation", {
+  spec <- tabular(data.frame(a = 1, b = 2)) |>
+    cols(
+      a = col_spec(width = "40%"),
+      b = col_spec(width = "60%")
+    )
+  g <- as_grid(spec)
+  cols_post <- g@metadata$cols
+  # `width` is now numeric inches (engine resolved).
+  expect_type(cols_post$a@width, "double")
+  expect_type(cols_post$b@width, "double")
+  # `width_user` retains the user's original string.
+  expect_identical(cols_post$a@width_user, "40%")
+  expect_identical(cols_post$b@width_user, "60%")
+})
+
+# ---------------------------------------------------------------------
+# Regression: percent col widths trigger gt-style responsive layout.
+#
+# Bug: `col_spec(width = "X%")` was silently converted to inches by
+# `.distribute_widths()`, so the rendered HTML was locked to fixed
+# pixel widths and couldn't wrap or shrink with the viewport. Fix:
+# HTML emit reads `col@width_user`; when any visible column is a
+# percent, emit verbatim `<col style="width:X%"/>`, set table
+# `width:100%`, and auto-promote the wrapper to the `--window`
+# modifier (which the existing CSS already drives to 100% wide).
+# ---------------------------------------------------------------------
+
+test_that("percent widths emit verbatim in colgroup + always-100% table + plain wrapper", {
+  spec <- tabular(data.frame(a = 1, b = 2)) |>
+    cols(
+      a = col_spec(width = "40%"),
+      b = col_spec(width = "60%")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # <col> widths emit verbatim as percentages (gt convention).
+  expect_match(txt, "<col style=\"width:40%\"/>", fixed = TRUE)
+  expect_match(txt, "<col style=\"width:60%\"/>", fixed = TRUE)
+  # No inch-resolved widths leak into the <colgroup>.
+  expect_no_match(txt, "<col style=\"width:[0-9.]+in\"/>", perl = TRUE)
+
+  # Table is always 100%, regardless of column units.
+  expect_match(
+    txt,
+    "<table class=\"tabular-table\" style=\"width:100%\">",
+    fixed = TRUE
+  )
+  # Wrapper is always plain `.tabular-content` (no --window).
+  expect_match(txt, "<div class=\"tabular-content\">", fixed = TRUE)
+  expect_no_match(
+    txt,
+    "<div class=\"tabular-content tabular-content--window\">",
+    perl = TRUE
+  )
+})
+
+test_that("inch widths emit verbatim in HTML per gt convention", {
+  # CSS supports `in` natively; HTML emits whatever the user wrote.
+  # Same gt-style pass-through as percent / px / pt / cm / mm.
+  spec <- tabular(data.frame(a = 1, b = 2)) |>
+    cols(
+      a = col_spec(width = "2.5in"),
+      b = col_spec(width = "3.0in")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # User's inch values land in the <col> verbatim.
+  expect_match(txt, "<col style=\"width:2.5in\"/>", fixed = TRUE)
+  expect_match(txt, "<col style=\"width:3.0in\"/>", fixed = TRUE)
+  # Table is always 100% (the old sum-of-inches `width:5.5in` is gone).
+  expect_match(
+    txt,
+    "<table class=\"tabular-table\" style=\"width:100%\">",
+    fixed = TRUE
+  )
+  expect_no_match(
+    txt,
+    "<table[^>]*style=\"width:[0-9.]+in\"",
+    perl = TRUE
+  )
+  # Wrapper plain (no --window modifier).
+  expect_match(txt, "<div class=\"tabular-content\">", fixed = TRUE)
+  expect_no_match(
+    txt,
+    "<div class=\"tabular-content tabular-content--window\">",
+    perl = TRUE
+  )
+})
+
+test_that("percent widths flow through to LaTeX as resolved INCHES, not %", {
+  # Paper backends still need a concrete dimension. width_user is the
+  # HTML-only channel; LaTeX (and RTF/PDF/DOCX) keep reading
+  # col@width, which .resolve_col_widths() has converted to inches.
+  spec <- tabular(data.frame(a = 1, b = 2)) |>
+    cols(
+      a = col_spec(width = "40%"),
+      b = col_spec(width = "60%")
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # No literal `%` width tokens leak into the .tex source.
+  expect_no_match(txt, "40%", perl = TRUE)
+  expect_no_match(txt, "60%", perl = TRUE)
+  # Inch-resolved widths are present (tabularray uses `in` or
+  # converts to pt; both forms are numeric, never `%`).
+  expect_match(txt, "[0-9]\\.[0-9]+(in|pt)", perl = TRUE)
+})
+
+# ---------------------------------------------------------------------
+# Regression: decimal header centers over the body's visible centroid
+# (TFL convention -- BMS Global Requirements TLG-RTF-101, GSK, Lilly
+# ARS; gt's default for numeric columns).
+#
+# Body cells in a decimal column render as `class="text-right"` PLUS
+# engine_decimal NBSP padding that aligns decimal points across rows.
+# The visible content occupies a fixed-width padded block; its centre
+# sits INSIDE the cell, not at the cell's right edge. A centered
+# header sits roughly over that visible centroid (matches the
+# dominant clinical-TFL convention). A right-aligned header would
+# match only the cell's right padding, not the visible centroid.
+#
+# This rule has flip-flopped across sessions. The current decision
+# is "center"; both positive (text-center present) AND negative
+# (text-right absent) assertions are pinned so any silent revert
+# fails RED.
+# ---------------------------------------------------------------------
+
+test_that("decimal header projects to center (TFL centroid convention)", {
+  spec <- tabular(data.frame(N = c(1.23, 4.56))) |>
+    cols(N = col_spec(label = "N", align = "decimal"))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # Header <th> projects decimal -> center.
+  expect_match(
+    txt,
+    "<th[^>]*class=\"text-center[^\"]*\"[^>]*>N</th>",
+    perl = TRUE
+  )
+  # The previous (now-reverted) right projection must not recur.
+  expect_no_match(
+    txt,
+    "<th[^>]*class=\"text-right[^\"]*\"[^>]*>N</th>",
+    perl = TRUE
+  )
+  # Body <td>s still carry text-right -- only the header projection
+  # changes; body alignment is unaffected.
+  expect_match(
+    txt,
+    "<td[^>]*class=\"text-right[^\"]*\"[^>]*>",
+    perl = TRUE
+  )
+})
+
+# ---------------------------------------------------------------------
+# Regression: HTML is unconditionally responsive, regardless of unit.
+#
+# Bug: previous design had `if (any_pct)` / `if (mode == "window")`
+# branches that gated whether the wrapper / table emitted at 100%
+# or at fixed engine-computed inches. That made HTML's responsive
+# behaviour opt-in via percent widths only -- the user's
+# `col_spec()` with no width fell through to inches and locked the
+# viewer pane. Fix: HTML always emits `width:100%` table and
+# `.tabular-content` wrapper, regardless of any column's unit.
+#
+# The tests below loop over EVERY CSS-supported unit so the
+# guarantee is unit-agnostic; no special-casing of inches or pct.
+# ---------------------------------------------------------------------
+
+.test_html_for_width <- function(width_value) {
+  spec <- tabular(data.frame(a = 1, b = 2)) |>
+    cols(
+      a = col_spec(width = width_value),
+      b = col_spec(width = width_value)
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  paste(readLines(out, warn = FALSE), collapse = "\n")
+}
+
+.css_width_units <- c(
+  "40%",
+  "2.5in",
+  "200px",
+  "180pt",
+  "5cm",
+  "60mm"
+)
+
+test_that("HTML <table> is always width:100% across every CSS unit", {
+  for (w in .css_width_units) {
+    txt <- .test_html_for_width(w)
+    expect_match(
+      txt,
+      "<table class=\"tabular-table\" style=\"width:100%\">",
+      fixed = TRUE,
+      info = sprintf("user width = %s", w)
+    )
+  }
+  # And the same when the user wrote no widths at all.
+  spec_blank <- tabular(data.frame(a = 1, b = 2))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec_blank, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(
+    txt,
+    "<table class=\"tabular-table\" style=\"width:100%\">",
+    fixed = TRUE
+  )
+})
+
+test_that("HTML <col> emits user width verbatim across every CSS unit", {
+  for (w in .css_width_units) {
+    txt <- .test_html_for_width(w)
+    expected <- sprintf("<col style=\"width:%s\"/>", w)
+    expect_true(
+      grepl(expected, txt, fixed = TRUE),
+      info = sprintf("user width = %s; expected %s", w, expected)
+    )
+  }
+})
+
+test_that("HTML colgroup omits widths when user wrote none (responsive by default)", {
+  spec <- tabular(data.frame(a = 1, b = 2, c = 3))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # No engine-computed inch widths leak into the colgroup.
+  expect_no_match(txt, "<col style=\"width:[0-9.]+in\"/>", perl = TRUE)
+  # And no other unit appears either (the "all bare" check
+  # collapses the colgroup so nothing ships, OR bare <col/> only).
+  expect_no_match(txt, "<col style=", fixed = TRUE)
+})
+
+test_that("HTML wrapper is always .tabular-content (no --window) across every CSS unit", {
+  for (w in c(.css_width_units, NA_character_)) {
+    spec <- if (is.na(w)) {
+      tabular(data.frame(a = 1, b = 2))
+    } else {
+      tabular(data.frame(a = 1, b = 2)) |>
+        cols(a = col_spec(width = w), b = col_spec(width = w))
+    }
+    out <- withr::local_tempfile(fileext = ".html")
+    emit(spec, out)
+    txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+    expect_match(
+      txt,
+      "<div class=\"tabular-content\">",
+      fixed = TRUE,
+      info = sprintf("user width = %s", w %||% "<none>")
+    )
+    # The --window modifier class must not appear on the wrapper
+    # DIV anywhere in the emitted HTML.
+    expect_no_match(
+      txt,
+      "<div class=\"tabular-content tabular-content--window\">",
+      perl = TRUE,
+      info = sprintf("user width = %s", w %||% "<none>")
+    )
+  }
+})
+
+test_that("CSS drops .tabular-content--window rule; .tabular-content is width:100%", {
+  spec <- tabular(data.frame(a = 1, b = 2))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  expect_match(
+    txt,
+    "\\.tabular-content\\s*\\{\\s*width:\\s*100%",
+    perl = TRUE
+  )
+  expect_no_match(txt, "\\.tabular-content--window", perl = TRUE)
+})
+
+test_that("paper backend (LaTeX) cross-format check across every CSS unit", {
+  # We don't pin specific output units (LaTeX backend owns its
+  # conversion via gt-style convert_to_pt). Just confirm the
+  # paper-side pipeline still produces a well-formed .tex file
+  # regardless of what unit the user picked on the HTML side.
+  for (w in .css_width_units) {
+    spec <- tabular(data.frame(a = 1, b = 2)) |>
+      cols(a = col_spec(width = w), b = col_spec(width = w))
+    out <- withr::local_tempfile(fileext = ".tex")
+    expect_silent(emit(spec, out))
+    expect_true(
+      file.exists(out) && file.info(out)$size > 0L,
+      info = sprintf("user width = %s; .tex empty", w)
+    )
+  }
 })

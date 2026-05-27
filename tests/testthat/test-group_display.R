@@ -442,8 +442,23 @@ test_that("HTML emit indents data-row host-col cells under header_row mode", {
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_true(grepl("<td>  Atrial fib</td>", txt, fixed = TRUE))
-  expect_true(grepl("<td>  Nausea</td>", txt, fixed = TRUE))
+  # HTML re-expresses the engine-prepended indent as CSS
+  # `padding-left` so the indent actually renders (browsers
+  # collapse runs of leading whitespace inside `<td>`). Width is
+  # AFM-derived from the active body font, ADDITIVE over the
+  # baseline `.6rem` cell pad via CSS `calc()`. Default preset uses
+  # Liberation Mono → Courier AFM; `"  "` at Courier is 1200/1000-
+  # em → 1.2em per depth level.
+  expect_true(grepl(
+    "<td style=\"padding-left: calc(.6rem + 1.2em);\">Atrial fib</td>",
+    txt,
+    fixed = TRUE
+  ))
+  expect_true(grepl(
+    "<td style=\"padding-left: calc(.6rem + 1.2em);\">Nausea</td>",
+    txt,
+    fixed = TRUE
+  ))
   # The synthetic CARDIAC / GI header rows DO NOT carry the prefix.
   expect_true(grepl("<td>CARDIAC</td>", txt, fixed = TRUE))
   expect_true(grepl("<td>GI</td>", txt, fixed = TRUE))

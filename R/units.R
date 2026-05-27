@@ -31,7 +31,11 @@
   "cm" = 1440 / 2.54,
   "mm" = 1440 / 25.4,
   "pt" = 20,
-  "pc" = 240
+  "pc" = 240,
+  # CSS px: 96 px = 1 in by CSS spec, so 1 px = 15 twips
+  # (matches gt's `convert_to_pt()` factor of 0.75 pt/px in
+  # gt/R/utils_render_latex.R).
+  "px" = 15
 )
 
 # Parse one dimension string into `list(value, unit)`. Accepts

@@ -156,12 +156,12 @@ backend_html <- function(grid, file) {
   # to the table's left edge. The `--window` BEM modifier flips
   # the wrapper to full width so `width_mode = "window"` tables
   # fill the viewport. The CSS rules live in `.html_inline_style()`.
-  mode <- if (is_preset_spec(preset)) preset@width_mode else "content"
-  content_open <- if (identical(mode, "window")) {
-    "<div class=\"tabular-content tabular-content--window\">"
-  } else {
-    "<div class=\"tabular-content\">"
-  }
+  # HTML is unconditionally responsive: the content wrapper
+  # always fills its parent (viewer pane / browser viewport /
+  # Quarto chunk / Shiny UI cell) via the base `.tabular-content`
+  # rule (`width: 100%`). No `--window` modifier; no `width_mode`
+  # branch; one code path regardless of `col_spec(width)` units.
+  content_open <- "<div class=\"tabular-content\">"
 
   if (total == 0L) {
     body_inner <- c(
@@ -556,19 +556,87 @@ backend_html <- function(grid, file) {
   if (nrow_data == 0L) {
     return(out)
   }
+  # Indent unit (engine prefix width per depth level). Defaults to
+  # `preset@indent_chars` ("  " = 2 spaces); used to recover the
+  # per-cell depth from the engine-prepended whitespace below.
+  indent_chars <- if (is_preset_spec(preset)) preset@indent_chars else "  "
+  indent_unit <- nchar(indent_chars %||% "")
+  # Per-level indent width in `em` units, AFM-derived from the active
+  # body font so the rendered `padding-left` matches the engine's
+  # text-prefix width verbatim. Mirrors the `.resolve_afm_name()` +
+  # `.text_width_em()` pair that `engine_decimal()` already uses
+  # (R/engine_decimal.R:214-242). `.text_width_em()` returns advance
+  # widths in 1/1000-em units; dividing by 1000 yields the CSS `em`
+  # value directly (no further font_size scaling needed -- the
+  # browser multiplies by current font-size at render time).
+  indent_em_per_level <- if (indent_unit > 0L) {
+    afm_name <- .resolve_afm_name(.effective_font_family(preset))
+    as.numeric(.text_width_em(indent_chars, afm_name)) / 1000
+  } else {
+    0
+  }
+  # Which visible columns carry an `indent_by` spec? Looking this up
+  # once per panel avoids a per-cell branch on something that never
+  # changes across the body.
+  has_indent_by <- vapply(
+    col_specs,
+    function(spec) {
+      is_col_spec(spec) &&
+        length(spec@indent_by) == 1L &&
+        !is.na(spec@indent_by) &&
+        nzchar(spec@indent_by)
+    },
+    logical(1L)
+  )
   rows <- vapply(
     seq_len(nrow_data),
     function(i) {
       cells <- vapply(
         seq_along(col_names_visible),
         function(j) {
-          text <- .html_escape_cell(cells_text[i, j])
+          raw <- cells_text[i, j]
           spec <- col_specs[[j]]
+          # When the column has `indent_by`, the engine has already
+          # baked the indent into the cell text as a run of leading
+          # spaces. Browsers collapse runs of whitespace inside
+          # `<td>`, so re-express the indent semantically as CSS
+          # `padding-left` (AFM-derived em) and strip the prefix
+          # from the text.
+          indent_decl <- NULL
+          if (has_indent_by[[j]] && indent_unit > 0L && !is.na(raw)) {
+            n_leading <- attr(regexpr("^ +", raw), "match.length")
+            if (n_leading > 0L) {
+              depth <- n_leading %/% indent_unit
+              if (depth > 0L) {
+                raw <- substr(raw, n_leading + 1L, nchar(raw))
+                # ADDITIVE over the baseline `.tabular-table td
+                # { padding: .35rem .6rem }` left slot via CSS
+                # `calc()` -- if we emit `padding-left: Xem` alone
+                # the browser REPLACES the .6rem with Xem, so a
+                # depth-1 PT cell ends up only Xem - .6rem to the
+                # right of its parent SOC cell (sub-character for
+                # the typical AFM-derived X). `calc(.6rem + Xem)`
+                # puts the full AFM indent ON TOP of the baseline
+                # pad. `%g` trims trailing zeros (1.2 stays 1.2,
+                # 0.556 stays 0.556 -- no .4f-style .2000 noise).
+                # Caveat: the .6rem literal mirrors the value in
+                # `.html_inline_style()`; keep in sync.
+                indent_decl <- sprintf(
+                  "padding-left: calc(.6rem + %gem);",
+                  indent_em_per_level * depth
+                )
+              }
+            }
+          }
+          text <- .html_escape_cell(raw)
           sn <- .cell_style_at(cells_style, i, col_names_visible[[j]])
           halign <- .effective_body_halign(sn, spec, preset)
           valign <- .effective_body_valign(sn, spec, preset)
           class_attr <- .html_cell_class_attr(halign, valign)
-          style_attr <- .html_cell_inline_style_attr(sn)
+          style_attr <- .html_cell_inline_style_attr(
+            sn,
+            extra_decls = indent_decl
+          )
           paste0("<td", class_attr, style_attr, ">", text, "</td>")
         },
         character(1L)
@@ -689,12 +757,22 @@ backend_html <- function(grid, file) {
       col <- cols[[nm]]
       # col_spec wins over chrome surface for header halign (per-
       # column override); fall back to chrome surface, then preset.
+      # `decimal` is the ONE carve-out: body cells render
+      # `text-right` with engine_decimal NBSP padding that aligns
+      # decimal points across rows, so the visible content's
+      # centre of mass sits INSIDE the cell (at the decimal point),
+      # not flush against the cell border. A CENTERED header sits
+      # over that centroid -- the dominant clinical-TFL convention
+      # (BMS Global Requirements TLG-RTF-101, GSK, Lilly ARS) and
+      # gt's default for numeric columns. Other body alignments
+      # (left / center / right) map straight through to the same
+      # value on the header.
       halign <- if (
         is_col_spec(col) &&
           length(col@align) == 1L &&
           !is.na(col@align)
       ) {
-        if (col@align == "decimal") "right" else col@align
+        if (col@align == "decimal") "center" else col@align
       } else if (
         is_style_node(surface_node) &&
           length(surface_node@halign) == 1L &&
@@ -838,28 +916,14 @@ backend_html <- function(grid, file) {
 # browser expands columns to fit content when needed. Any overflow
 # is absorbed by `.tabular-table-wrap { overflow-x: auto; }`.
 .html_table_open_tag <- function(col_specs, preset) {
-  widths <- vapply(
-    col_specs,
-    function(cs) {
-      w <- if (is_col_spec(cs)) cs@width else NA_real_
-      if (is.numeric(w) && length(w) == 1L && !is.na(w)) {
-        as.numeric(w)
-      } else {
-        NA_real_
-      }
-    },
-    numeric(1L)
-  )
-  if (!any(!is.na(widths))) {
-    return("<table class=\"tabular-table\">")
-  }
-  mode <- if (is.null(preset)) "content" else preset@width_mode
-  style <- if (identical(mode, "window")) {
-    "width:100%"
-  } else {
-    sprintf("width:%fin", sum(widths, na.rm = TRUE))
-  }
-  sprintf("<table class=\"tabular-table\" style=\"%s\">", style)
+  # HTML is unconditionally responsive: table always fills 100% of
+  # its wrapper, regardless of `col_spec(width)` units or
+  # `preset@width_mode`. Per-column widths (when the user set
+  # them) ship in `<colgroup>` via `.html_colgroup()`; the table
+  # itself never carries an inch-based width style. Width is the
+  # viewport's concern, not paper's. `col_specs` and `preset` are
+  # ignored here -- kept on the signature for call-site stability.
+  "<table class=\"tabular-table\" style=\"width:100%\">"
 }
 
 # Emit a `<colgroup>` block carrying the engine-resolved column
@@ -875,34 +939,62 @@ backend_html <- function(grid, file) {
 # at all, return character(0) — emit no `<colgroup>`, keeping the
 # document additive-only against the natural-fit fallback.
 .html_colgroup <- function(col_names_visible, cols) {
-  widths <- vapply(
-    col_names_visible,
-    function(nm) {
-      cs <- cols[[nm]]
-      w <- if (is_col_spec(cs)) cs@width else NA_real_
-      if (is.numeric(w) && length(w) == 1L && !is.na(w)) {
-        as.numeric(w)
-      } else {
-        NA_real_
-      }
-    },
-    numeric(1L)
-  )
-  if (!any(!is.na(widths))) {
+  if (length(col_names_visible) == 0L) {
     return(character())
   }
+  # gt convention: emit whatever the user supplied via
+  # `col_spec(width = ...)` verbatim. Read `col@width_user` (the
+  # immutable mirror of the constructor input), not `col@width`
+  # (which `.resolve_col_widths()` overwrites with inch-resolved
+  # numeric for paper backends). CSS accepts every dimension unit
+  # natively (px / % / in / em / pt / cm / mm); the browser
+  # parses, the package doesn't validate.
   cells <- vapply(
-    widths,
-    function(w) {
-      if (is.na(w)) {
-        "<col/>"
-      } else {
-        sprintf("<col style=\"width:%fin\"/>", w)
-      }
+    col_names_visible,
+    function(nm) {
+      .html_col_tag(cols[[nm]])
     },
     character(1L)
   )
+  # When the user wrote no widths at all, every cell is `<col/>`
+  # and we suppress the whole `<colgroup>` to keep the document
+  # bare -- the browser auto-sizes from cell content (gt's
+  # default responsive behaviour).
+  if (all(cells == "<col/>")) {
+    return(character())
+  }
   c("<colgroup>", cells, "</colgroup>")
+}
+
+# Format one `<col>` tag from a `col_spec` per gt's emit
+# convention. Reads `width_user` (the immutable user-supplied
+# spec); auto / NA / unknown yield bare `<col/>` so the browser
+# auto-sizes. Mirrors gt's `validate_css_lengths()` pass-through
+# at `inst/gt/utils_render_html.R::create_columns_component_h`.
+.html_col_tag <- function(cs) {
+  if (!is_col_spec(cs)) {
+    return("<col/>")
+  }
+  uw <- cs@width_user
+  if (length(uw) != 1L) {
+    return("<col/>")
+  }
+  if (is.numeric(uw)) {
+    if (is.na(uw)) {
+      return("<col/>")
+    }
+    # Bare numeric -> inches (matches `.parse_dim()` default).
+    return(sprintf("<col style=\"width:%fin\"/>", uw))
+  }
+  if (
+    is.character(uw) &&
+      !is.na(uw) &&
+      nzchar(uw) &&
+      !identical(uw, "auto")
+  ) {
+    return(sprintf("<col style=\"width:%s\"/>", uw))
+  }
+  "<col/>"
 }
 
 # Map an `align` value to a CSS alignment class. Defaults to the
@@ -1049,8 +1141,9 @@ backend_html <- function(grid, file) {
 # in one attribute (HTML allows only one `style` attribute per
 # element). Returns `""` when both subhelpers return empty so the
 # rendered `<td>` stays minimal.
-.html_cell_inline_style_attr <- function(cell_style) {
+.html_cell_inline_style_attr <- function(cell_style, extra_decls = NULL) {
   decls <- c(
+    extra_decls,
     .html_cell_border_decls(cell_style),
     .html_cell_text_decls(cell_style)
   )
@@ -1298,23 +1391,24 @@ backend_html <- function(grid, file) {
       .html_font_family_css(preset)
     ),
     # `.tabular-content` wraps title + tables + footnote in one
-    # shrink-wrapped centred box. `width: fit-content` sizes the
-    # wrapper to the widest child — the table — so the title
-    # block centres above the table and the footnote sits flush
-    # to the table's left edge (canonical clinical TFL layout).
-    # `max-width: 100%` keeps the wrapper inside the page gutter
-    # on narrow viewports; per-table overflow remains the job of
-    # `.tabular-table-wrap { overflow-x: auto; }`.
-    ".tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }",
-    # BEM modifier: `width_mode = "window"` flips the wrapper to
-    # full width so the inner `<table style="width:100%">` fills
-    # the viewport. Selector specificity matches `.tabular-content`
-    # so the rule order here (modifier AFTER base) is what wins.
-    ".tabular-content--window { width: 100%; }",
+    # full-width container that always fills its parent (viewer
+    # pane / browser viewport / Quarto chunk / Shiny UI cell).
+    # The inner `<table style="width:100%">` (from
+    # `.html_table_open_tag()`) fills the wrapper; per-column
+    # `<col style="width:X">` widths flow through verbatim per
+    # the gt convention. HTML is unconditionally responsive --
+    # no `--window` modifier, no `width_mode` branch.
+    ".tabular-content { width: 100%; }",
     sprintf(
       ".tabular-title { font-size: %gpt; font-weight: 600; text-align: center; margin: .2rem 0; }",
       fs
     ),
+    # `<p class="tabular-pad">&nbsp;</p>` spacers around the title
+    # block carry only one line of preset-driven line-height. Zero
+    # the browser-default `<p>` margin (16px 0) so each pad collapses
+    # to exactly the blank-line count set in
+    # `preset@title_pad_top` / `preset@title_pad_bottom`.
+    ".tabular-pad { margin: 0; }",
     # Wrapper around each `<table>` panel. The table's own inline
     # `width:<N>in` / `width:100%` rides on the `<table>` itself (see
     # `.html_table_open_tag()` in this file). The wrapper provides
@@ -1324,7 +1418,7 @@ backend_html <- function(grid, file) {
     # while only the table scrolls. Print mode resets to
     # `overflow-x: visible` (further below) — paginated output has
     # paper geometry and never needs scroll behaviour.
-    ".tabular-table-wrap { overflow-x: auto; margin: .75rem 0; }",
+    ".tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }",
     # `margin: 0 auto` is a no-op in the single-panel case (the
     # `.tabular-content` wrapper already shrinks to the table
     # width) but matters for multi-panel layouts (`paginate(panels
@@ -1356,6 +1450,17 @@ backend_html <- function(grid, file) {
     ".text-left { text-align: left; }",
     ".text-center { text-align: center; }",
     ".text-right { text-align: right; }",
+    # Specificity bump for `<th>` cells. The baseline rule
+    # `.tabular-table thead th { ... text-align: center }` has
+    # selector specificity (0,1,2), which outranks the plain
+    # `.text-*` classes (0,1,0). Repeating each class under the
+    # `thead th` prefix lifts specificity to (0,2,2) so per-cell
+    # alignment classes actually win on header cells. Body `<td>`
+    # cells do not need this because their baseline is the same
+    # specificity as `.text-*` and class source order wins.
+    ".tabular-table thead th.text-left { text-align: left; }",
+    ".tabular-table thead th.text-center { text-align: center; }",
+    ".tabular-table thead th.text-right { text-align: right; }",
     ".valign-top { vertical-align: top; }",
     ".valign-middle { vertical-align: middle; }",
     ".valign-bottom { vertical-align: bottom; }",

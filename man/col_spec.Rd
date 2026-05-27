@@ -144,9 +144,18 @@ engine warns and leaves \code{"auto"} columns at their natural fit
 (layout may overflow).
 
 \strong{Restriction:} Must be positive. Percent values must fall
-in \verb{[0, 100]}. Font-relative units (\code{em}, \code{ex}, \code{rem}) and
-screen-relative \code{px} are rejected — column widths live in
-print geometry, not text flow.
+in \verb{[0, 100]}. Font-relative units (\code{em}, \code{ex}, \code{rem}) are
+rejected (no font-size context at parse time).
+
+\strong{Cross-format semantics (gt convention).} The width value
+is the user's source-of-truth. HTML emits it verbatim into
+\verb{<col style="width:...">} (CSS accepts every unit: \verb{\%},
+\verb{in}, \code{px}, \code{pt}, \code{cm}, \code{mm}). Paper backends (LaTeX / RTF /
+PDF / DOCX) convert to their native unit via the AFM /
+distribute-widths pipeline. HTML is unconditionally
+responsive: when \code{width = "auto"} (default), the browser
+auto-sizes the column and cells wrap when the viewport
+narrows.
 
 \strong{Note:} \code{NA} and \code{NULL} are rejected. In pre-v0.1.0
 tabular \code{NA} deferred to backend auto-fit; that path was
@@ -239,7 +248,21 @@ the baked default \code{"left"}.
 so the decimal mark falls on a single column-wide anchor.
 The active preset's \code{decimal_metrics} knob is reserved for
 future em-aware padding refinement (see \code{\link[=preset]{preset()}}); the
-current engine pads by character count.}
+current engine pads by character count.
+
+\strong{Default behaviour.} When \code{align} is unset (\code{NULL} / \code{NA}),
+every column emits with body left-aligned and header centred,
+regardless of the column's R data type. tabular's canonical
+input is pre-summarised wide data frames where numeric content
+is already formatted as character strings (e.g. \code{"52 (60.5)"}),
+so \code{is.numeric()}-based auto-detection would mis-classify those
+columns as text and align them left — the opposite of intent.
+Use explicit \code{align = "decimal"} for NBSP-padded numeric
+columns (centred header over the padded centroid) or
+\code{align = "right"} for plain right-aligned numeric columns.
+The default cascade is body → \code{preset(alignment = list( body_halign = ...))} → CSS \code{text-align: left}; header →
+\code{preset(alignment = list(header_halign = ...))} → CSS
+\code{text-align: center}.}
 
 \item{valign}{\emph{Vertical alignment within the cell.}
 \verb{<character(1) | NULL>: default NULL}. One of \code{"top"},

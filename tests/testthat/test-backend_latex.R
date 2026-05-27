@@ -505,8 +505,9 @@ test_that("auto + pinned mix: pinned wins, auto distributes remainder", {
 
 test_that("col_spec width rejects bad units / negative / >100%", {
   expect_error(col_spec(width = -1), class = "tabular_error_input")
+  # em / rem still rejected: no font-size context at parse time.
   expect_error(col_spec(width = "5em"), class = "tabular_error_input")
-  expect_error(col_spec(width = "10px"), class = "tabular_error_input")
+  expect_error(col_spec(width = "2rem"), class = "tabular_error_input")
   expect_error(col_spec(width = "150%"), class = "tabular_error_input")
   expect_error(col_spec(width = "nonsense"), class = "tabular_error_input")
 })

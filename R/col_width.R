@@ -81,7 +81,10 @@
   "cm" = 1 / 2.54,
   "mm" = 1 / 25.4,
   "pt" = 1 / 72,
-  "pc" = 12 / 72
+  "pc" = 12 / 72,
+  # CSS px: 96 px = 1 in by spec. Matches gt's px-to-pt
+  # conversion factor of 0.75 in `convert_to_pt()`.
+  "px" = 1 / 96
 )
 
 # ---------------------------------------------------------------------

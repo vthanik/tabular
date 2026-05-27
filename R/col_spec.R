@@ -159,9 +159,18 @@
 #'   (layout may overflow).
 #'
 #'   **Restriction:** Must be positive. Percent values must fall
-#'   in `[0, 100]`. Font-relative units (`em`, `ex`, `rem`) and
-#'   screen-relative `px` are rejected — column widths live in
-#'   print geometry, not text flow.
+#'   in `[0, 100]`. Font-relative units (`em`, `ex`, `rem`) are
+#'   rejected (no font-size context at parse time).
+#'
+#'   **Cross-format semantics (gt convention).** The width value
+#'   is the user's source-of-truth. HTML emits it verbatim into
+#'   `<col style="width:...">` (CSS accepts every unit: `%`,
+#'   `in`, `px`, `pt`, `cm`, `mm`). Paper backends (LaTeX / RTF /
+#'   PDF / DOCX) convert to their native unit via the AFM /
+#'   distribute-widths pipeline. HTML is unconditionally
+#'   responsive: when `width = "auto"` (default), the browser
+#'   auto-sizes the column and cells wrap when the viewport
+#'   narrows.
 #'
 #'   **Note:** `NA` and `NULL` are rejected. In pre-v0.1.0
 #'   tabular `NA` deferred to backend auto-fit; that path was
@@ -255,6 +264,21 @@
 #'   The active preset's `decimal_metrics` knob is reserved for
 #'   future em-aware padding refinement (see [`preset()`]); the
 #'   current engine pads by character count.
+#'
+#'   **Default behaviour.** When `align` is unset (`NULL` / `NA`),
+#'   every column emits with body left-aligned and header centred,
+#'   regardless of the column's R data type. tabular's canonical
+#'   input is pre-summarised wide data frames where numeric content
+#'   is already formatted as character strings (e.g. `"52 (60.5)"`),
+#'   so `is.numeric()`-based auto-detection would mis-classify those
+#'   columns as text and align them left — the opposite of intent.
+#'   Use explicit `align = "decimal"` for NBSP-padded numeric
+#'   columns (centred header over the padded centroid) or
+#'   `align = "right"` for plain right-aligned numeric columns.
+#'   The default cascade is body → `preset(alignment = list(
+#'   body_halign = ...))` → CSS `text-align: left`; header →
+#'   `preset(alignment = list(header_halign = ...))` → CSS
+#'   `text-align: center`.
 #'
 #' @param valign *Vertical alignment within the cell.*
 #'   `<character(1) | NULL>: default NULL`. One of `"top"`,
@@ -498,6 +522,12 @@ col_spec <- function(
     format = format,
     visible = visible,
     width = width,
+    # Immutable mirror of the user's width spec. Resolution in
+    # `.resolve_col_widths()` (R/col_width.R) overwrites `width`
+    # with inch-resolved numeric for paper backends; `width_user`
+    # stays as the original string ("40%", "2.5in", "auto", ...)
+    # so the HTML backend can detect percent intent at emit time.
+    width_user = width,
     group_display = group_display_val,
     group_skip = group_skip_val,
     align = align_val,
