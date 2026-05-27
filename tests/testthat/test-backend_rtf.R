@@ -669,3 +669,19 @@ test_that("RTF nested bands: band-1 header has no \\li, band-2 header has \\liN 
     perl = TRUE
   )
 })
+
+# --- header-band rule scope (cmidrule(lr) semantics) ----------------
+
+test_that("RTF scenario G: band cells carry rule; blank flanking cells emit \\brdrnone", {
+  rtf <- band_emit("G", "rtf")
+  expect_match(rtf, "\\{\\\\b Active Treatment\\}", perl = TRUE)
+  # Band cell (drug_50+drug_100 colspan) carries solid bottom border.
+  expect_match(rtf, "\\\\clbrdrb\\\\brdrs", perl = TRUE)
+  # Blank flanking cells (label+soc_n+placebo and Total) carry
+  # \brdrnone on top and bottom.
+  expect_match(
+    rtf,
+    "\\\\clbrdrt\\\\brdrnone\\\\clbrdrb\\\\brdrnone",
+    perl = TRUE
+  )
+})

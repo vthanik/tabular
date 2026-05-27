@@ -951,9 +951,16 @@ backend_rtf <- function(grid, file) {
     run <- runs[[i]]
     col_end <- col_end + run$length
     pos <- cellx[[col_end]]
+    # Cell-border ownership per cmidrule(lr) semantics: only band
+    # cells carry the chrome top + bottom rules; blank flanking cells
+    # over unmapped columns are borderless so the band rule does not
+    # extend across the full header width.
+    is_band <- !is.na(run$value)
+    top_tok_i <- if (is_band) top_tok else "\\clbrdrt\\brdrnone"
+    bot_tok_i <- if (is_band) bot_tok else "\\clbrdrb\\brdrnone"
     cellx_lines[[i]] <- paste0(
-      top_tok,
-      bot_tok,
+      top_tok_i,
+      bot_tok_i,
       "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
       shading,
       sprintf("\\cellx%d", as.integer(pos))
