@@ -677,20 +677,24 @@ backend_latex <- function(grid, file) {
 }
 
 # Turn a list of `{value, length}` runs into a single tblr row
-# string. Each run becomes a `\SetCell[c=N]{c} <label>` (when
-# the band is named) or a bare empty cell (when NA). Cells are
-# `&`-joined; trailing `\\` terminates the row.
+# string plus one `\cmidrule(lr){m-n}` line per named run. Each run
+# becomes a `\SetCell[c=N]{c} <label>` (named) or a bare empty cell
+# (NA). Cells are `&`-joined and the row terminates with `\\`. A
+# trailing newline + one `\cmidrule(lr){start-end}` per named run
+# emits the booktabs trim under the band's visible-column range,
+# so adjacent bands meet but do not visually touch.
+#
+# Returned as ONE string with embedded newlines so the caller's
+# `length(band_rows) + 1L` rowhead arithmetic stays a count of
+# table rows (not lines).
 .runs_to_band_row <- function(runs, surface_node = NULL) {
   cells <- character()
-  bold_open <- if (
-    is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
-  ) {
-    ""
-  } else {
-    ""
-  }
+  rules <- character()
+  cursor <- 1L
   for (run in runs) {
     span <- run$length
+    start <- cursor
+    end <- cursor + span - 1L
     if (is.na(run$value)) {
       cells <- c(cells, rep("", span))
     } else {
@@ -704,9 +708,15 @@ backend_latex <- function(grid, file) {
           rep("", span - 1L)
         )
       }
+      rules <- c(rules, sprintf("\\cmidrule(lr){%d-%d}", start, end))
     }
+    cursor <- end + 1L
   }
-  paste0(paste(cells, collapse = " & "), " \\\\")
+  row <- paste0(paste(cells, collapse = " & "), " \\\\")
+  if (length(rules) == 0L) {
+    return(row)
+  }
+  paste(c(row, rules), collapse = "\n")
 }
 
 # Render the column-labels row: one cell per visible column,

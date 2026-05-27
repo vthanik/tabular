@@ -951,3 +951,17 @@ test_that("LaTeX nested bands: band-1 header bare {l}, band-2 header gets leftse
     perl = TRUE
   )
 })
+
+# --- header-band rule scope (cmidrule(lr) semantics) ----------------
+
+test_that("LaTeX scenario G: band emits cmidrule(lr){4-5} under the two drug arms", {
+  tex <- band_emit("G", "tex")
+  # SetCell colspan over visible columns 4-5 (drug_50 + drug_100).
+  expect_match(
+    tex,
+    "\\\\SetCell\\[c=2\\]\\{c\\} Active Treatment",
+    perl = TRUE
+  )
+  # Trimmed midrule under the same two columns.
+  expect_match(tex, "\\\\cmidrule\\(lr\\)\\{4-5\\}", perl = TRUE)
+})
