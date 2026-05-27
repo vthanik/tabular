@@ -555,7 +555,12 @@ bor_counts <- adrs_bor |>
 bor_wide <- bor_counts |>
   select(ARM, AVALC, value) |>
   pivot_wider(names_from = ARM, values_from = value) |>
-  mutate(row_type = "category", .after = AVALC)
+  mutate(
+    row_type = "category",
+    groupid = 1L,
+    group_label = "Best Overall Response",
+    .after = AVALC
+  )
 
 # Exact (Clopper-Pearson) 95% CI on a binomial rate.
 ci95_chr <- function(x, n) {
@@ -566,7 +571,14 @@ ci95_chr <- function(x, n) {
   sprintf("(%.1f, %.1f)", ci[1] * 100, ci[2] * 100)
 }
 
-derive_rate <- function(data, categories, label, ci_label) {
+# Derive an ORR / CBR / DCR rate row + its paired 95% CI row. The
+# `groupid` integer is the engine sort key; `group_label` repeats across
+# both rows in the group so `usage = "group"` synthesises one section
+# header per groupid block. `stat_label` carries the short rate label on
+# the derived row and the full CI prose on the CI row -- no leading-
+# space indent, since `usage = "indent"` on stat_label at render time
+# adds the depth uniformly via native padding-left.
+derive_rate <- function(data, categories, label, groupid, group_label) {
   by_arm <- data |>
     filter(AVALC %in% categories) |>
     group_by(ARM) |>
@@ -579,14 +591,22 @@ derive_rate <- function(data, categories, label, ci_label) {
   rate_row <- by_arm |>
     select(ARM, rate_value) |>
     pivot_wider(names_from = ARM, values_from = rate_value) |>
-    mutate(AVALC = label, row_type = "derived", .before = 1)
+    mutate(
+      AVALC = label,
+      row_type = "derived",
+      groupid = groupid,
+      group_label = group_label,
+      .before = 1
+    )
 
   ci_row <- by_arm |>
     select(ARM, ci_value) |>
     pivot_wider(names_from = ARM, values_from = ci_value) |>
     mutate(
-      AVALC = ci_label,
+      AVALC = "95% CI (Clopper-Pearson)",
       row_type = "ci",
+      groupid = groupid,
+      group_label = group_label,
       .before = 1
     )
 
@@ -596,20 +616,23 @@ derive_rate <- function(data, categories, label, ci_label) {
 orr <- derive_rate(
   bor_counts,
   c("CR", "PR"),
-  "Objective Response Rate (CR + PR)",
-  "  95% CI (Clopper-Pearson)"
+  "ORR (CR + PR)",
+  2L,
+  "Objective Response Rate"
 )
 cbr <- derive_rate(
   bor_counts,
   c("CR", "PR", "SD"),
-  "Clinical Benefit Rate (CR + PR + SD)",
-  "  95% CI (Clopper-Pearson)"
+  "CBR (CR + PR + SD)",
+  3L,
+  "Clinical Benefit Rate"
 )
 dcr <- derive_rate(
   bor_counts,
   c("CR", "PR", "SD", "NON-CR/NON-PD"),
-  "Disease Control Rate (CR + PR + SD + NON-CR/NON-PD)",
-  "  95% CI (Clopper-Pearson)"
+  "DCR (CR + PR + SD + NON-CR/NON-PD)",
+  4L,
+  "Disease Control Rate"
 )
 
 # Adopt arms set actually present in adrs_onco (subset of full arm_levels)
@@ -618,13 +641,25 @@ bor_arms_present <- intersect(arm_levels, names(bor_wide))
 eff_resp <- bind_rows(bor_wide, orr, cbr, dcr) |>
   rename(stat_label = AVALC) |>
   mutate(stat_label = as.character(stat_label)) |>
-  select(stat_label, row_type, all_of(bor_arms_present))
+  select(
+    stat_label,
+    row_type,
+    all_of(bor_arms_present),
+    groupid,
+    group_label
+  )
 
 # Add any missing arm columns as "" so all 5 datasets share placebo/drug_*/...
 for (a in setdiff(arm_levels, bor_arms_present)) {
   eff_resp[[a]] <- ""
 }
-eff_resp <- eff_resp[, c("stat_label", "row_type", arm_levels)]
+eff_resp <- eff_resp[, c(
+  "stat_label",
+  "row_type",
+  arm_levels,
+  "groupid",
+  "group_label"
+)]
 eff_resp <- rename_arms(eff_resp) |> as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────

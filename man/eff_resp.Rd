@@ -5,22 +5,29 @@
 \alias{eff_resp}
 \title{Best Overall Response and Response Rates}
 \format{
-A data frame with 13 rows and 5 columns:
+A data frame with 13 rows and 7 columns:
 \describe{
 \item{\code{stat_label}}{Row label
 (\code{"CR"}, \code{"PR"}, \code{"SD"}, \code{"NON-CR/NON-PD"}, \code{"PD"}, \code{"NE"},
-\code{"MISSING"}, \code{"Objective Response Rate (CR + PR)"},
-\code{"  95\% CI (Clopper-Pearson)"},
-\code{"Clinical Benefit Rate (CR + PR + SD)"},
-\code{"  95\% CI (Clopper-Pearson)"},
-\code{"Disease Control Rate (CR + PR + SD + NON-CR/NON-PD)"},
-\code{"  95\% CI (Clopper-Pearson)"}).}
+\code{"MISSING"}, \code{"ORR (CR + PR)"}, \code{"95\% CI (Clopper-Pearson)"},
+\code{"CBR (CR + PR + SD)"}, \code{"95\% CI (Clopper-Pearson)"},
+\code{"DCR (CR + PR + SD + NON-CR/NON-PD)"},
+\code{"95\% CI (Clopper-Pearson)"}).}
 \item{\code{row_type}}{\code{"category"} for BOR categorical rows,
 \code{"derived"} for ORR / CBR / DCR rate rows, \code{"ci"} for the
 paired confidence-interval rows. Hide via
-\code{col_spec(visible = FALSE)} or use as a sort tie-breaker.}
+\code{col_spec(visible = FALSE)}.}
 \item{\code{placebo}, \code{drug_50}, \code{drug_100}}{Per-arm cell text
 (\code{"n (pct)"} on rate rows, \code{"(lower, upper)"} on CI rows).}
+\item{\code{groupid}}{Integer section id (1 = Best Overall Response,
+2 = Objective Response Rate, 3 = Clinical Benefit Rate,
+4 = Disease Control Rate). Hide via \code{col_spec(visible = FALSE)};
+used as the section sort / partition key.}
+\item{\code{group_label}}{Character section label, repeating across
+every row of its groupid block ("Best Overall Response" x7,
+"Objective Response Rate" x2, ...). Drives the engine's
+\code{usage = "group"} header_row synthesis when paired with
+\code{group_display = "header_row"}.}
 }
 }
 \source{
@@ -34,15 +41,21 @@ eff_resp
 Pre-summarised efficacy table. Per-arm counts of best overall
 response (BOR) per CDISC category, plus derived ORR, CBR, and DCR
 rate rows each followed by an exact (Clopper-Pearson) 95\% CI row.
-Order is naturally categorical-then-derived; coerce \code{stat_label}
-to a factor with the CDISC level order before \code{sort_rows()} to
-lock in the canonical display sequence.
+Four sections (Best Overall Response, Objective Response Rate,
+Clinical Benefit Rate, Disease Control Rate) are encoded via the
+\code{groupid} + \code{group_label} pair so a single \code{usage = "group"} /
+\code{group_display = "header_row"} on \code{group_label} synthesises one
+bold section band per groupid block; the body rows render below
+each band via \code{usage = "indent"} on \code{stat_label}.
 }
 \examples{
-# 95\% efficacy pattern: BOR categories in CDISC response order,
-# followed by derived ORR / CBR / DCR rate rows each paired with
-# an exact 95\% CI row. The source already ships in the right
-# display order, so no sort step is needed.
+# 95\% efficacy pattern: four bold section bands (Best Overall
+# Response / Objective Response Rate / Clinical Benefit Rate /
+# Disease Control Rate), each followed by indented stat rows. The
+# source already ships in the right display order, so no sort step
+# is needed; `group_label` repeats across every row of its section
+# so the engine's `header_row` mode emits exactly one band per
+# section.
 ne <- stats::setNames(eff_n$n, eff_n$arm_short)
 tabular(
   eff_resp,
@@ -53,17 +66,19 @@ tabular(
   )
 ) |>
   cols(
-    stat_label = col_spec(usage = "group", label = "Response"),
-    row_type   = col_spec(visible = FALSE),
-    placebo    = col_spec(
+    group_label = col_spec(usage = "group", group_display = "header_row"),
+    stat_label  = col_spec(usage = "indent", label = "Response"),
+    groupid     = col_spec(visible = FALSE),
+    row_type    = col_spec(visible = FALSE),
+    placebo     = col_spec(
       label = sprintf("Placebo\nN=\%d", ne["placebo"]),
       align = "decimal"
     ),
-    drug_50    = col_spec(
+    drug_50     = col_spec(
       label = sprintf("Drug 50\nN=\%d", ne["drug_50"]),
       align = "decimal"
     ),
-    drug_100   = col_spec(
+    drug_100    = col_spec(
       label = sprintf("Drug 100\nN=\%d", ne["drug_100"]),
       align = "decimal"
     )
