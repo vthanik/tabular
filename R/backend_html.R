@@ -1435,12 +1435,17 @@ backend_html <- function(grid, file) {
     ),
     ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }",
     ".tabular-table td { text-align: left; vertical-align: top; }",
-    # Top rule sits above the entire thead block (band-row 1).
+    # Top rule sits above the entire thead block — scoped to the
+    # FIRST thead row only. A blanket `thead th { border-top }` would
+    # also paint a heavy rule above the col-labels row (second thead
+    # row when bands exist), masking the scoped .tabular-band underline
+    # and making the band appear to span the full table width.
     # Heavy bottom rule sits above tbody (on the col-labels row, i.e.
     # the LAST thead row). Band underline applies ONLY to .tabular-band
     # cells so blank flanking cells over unmapped columns do not extend
     # the rule full width — cmidrule(lr) cell-border semantics.
-    ".tabular-table thead th { border-top: 1px solid #212529; font-weight: 600; text-align: center; vertical-align: bottom; }",
+    ".tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }",
+    ".tabular-table thead tr:first-child th { border-top: 1px solid #212529; }",
     ".tabular-table thead tr:last-child th { border-bottom: 1px solid #212529; }",
     ".tabular-table thead .tabular-band { border-bottom: 1px solid #adb5bd; }",
     ".tabular-table tbody tr td { border-top: none; }",

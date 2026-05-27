@@ -2167,3 +2167,31 @@ test_that("HTML scenario G: band underline scopes to .tabular-band cells only", 
   )
   expect_match(html, "\\.tabular-band \\{ border-bottom")
 })
+
+test_that("HTML band: top rule scopes to first thead row only (col-labels row has no extra border-top)", {
+  # Regression: a blanket `.tabular-table thead th { border-top: ... }`
+  # rule applied a heavy 1px rule to every <th> in <thead>, including
+  # the col-labels row that sits BELOW the band row. The col-labels
+  # row's border-top extended full width and masked the scoped
+  # .tabular-band cmidrule(lr) underline — the band appeared to span
+  # the whole table left-to-right instead of just the band columns.
+  #
+  # Covers both single-band-row (scenario G: "Active Treatment" over
+  # the two drug columns) and nested-band-row (scenario J: outer
+  # "Treatment" → inner "Control" / "Active", 2 band rows + col-labels
+  # = 3 thead rows). The scoped selector must hold for both shapes.
+  for (scen in c("G", "J")) {
+    html <- band_emit(scen, "html")
+    # Top rule must be scoped to the FIRST thead row, not every row.
+    expect_match(
+      html,
+      "\\.tabular-table thead tr:first-child th \\{ border-top: 1px solid",
+      info = paste("scenario", scen)
+    )
+    expect_no_match(
+      html,
+      "\\.tabular-table thead th \\{ border-top: 1px solid",
+      info = paste("scenario", scen)
+    )
+  }
+})
