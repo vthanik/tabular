@@ -5,7 +5,9 @@
 <title>Table 14.1.1</title>
 <style>
 .tabular-doc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-.tabular-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin: .2rem 0; }
+.tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+.tabular-content--window { width: 100%; }
+.tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
 .tabular-table-wrap { overflow-x: auto; margin: .75rem 0; }
 .tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }
 .tabular-table th, .tabular-table td { padding: .35rem .6rem; }
@@ -23,7 +25,7 @@
 .valign-top { vertical-align: top; }
 .valign-middle { vertical-align: middle; }
 .valign-bottom { vertical-align: bottom; }
-.tabular-footnote { font-size: .85rem; color: #495057; margin: .25rem 0; }
+.tabular-footnote { font-size: 9pt; color: #495057; margin: .25rem 0; }
 .tabular-empty { font-style: italic; color: #6c757d; }
 .tabular-page-break-row { display: none; }
 :root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
@@ -37,6 +39,7 @@
 </style>
 </head>
 <body class="tabular-doc">
+<div class="tabular-content">
 <p class="tabular-pad">&nbsp;</p>
 <h1 class="tabular-title">Table 14.1.1</h1>
 <h1 class="tabular-title">Demographics</h1>
@@ -111,5 +114,6 @@
 </table>
 </div>
 <p class="tabular-footnote">Source: ADSL.</p>
+</div>
 </body>
 </html>

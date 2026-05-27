@@ -150,11 +150,26 @@ backend_html <- function(grid, file) {
     cs = cs
   )
 
+  # `.tabular-content` wraps title + tables + footnotes in one
+  # centred container sized to the widest table (`width:
+  # fit-content`). Title text centres above; footnote sits flush
+  # to the table's left edge. The `--window` BEM modifier flips
+  # the wrapper to full width so `width_mode = "window"` tables
+  # fill the viewport. The CSS rules live in `.html_inline_style()`.
+  mode <- if (is_preset_spec(preset)) preset@width_mode else "content"
+  content_open <- if (identical(mode, "window")) {
+    "<div class=\"tabular-content tabular-content--window\">"
+  } else {
+    "<div class=\"tabular-content\">"
+  }
+
   if (total == 0L) {
     body_inner <- c(
+      content_open,
       title_block,
       "<p class=\"tabular-empty\">(no rows)</p>",
-      footnote_block
+      footnote_block,
+      "</div>"
     )
     return(c(head, onscreen_header, body_inner, onscreen_footer, tail))
   }
@@ -181,9 +196,11 @@ backend_html <- function(grid, file) {
     )
   }
   body_inner <- c(
+    content_open,
     title_block,
     unlist(tables, use.names = FALSE),
-    footnote_block
+    footnote_block,
+    "</div>"
   )
   c(head, onscreen_header, body_inner, onscreen_footer, tail)
 }
@@ -1268,12 +1285,36 @@ backend_html <- function(grid, file) {
   pagehead_ast = NULL,
   pagefoot_ast = NULL
 ) {
+  # `fs` drives every font-size emitted in pt below — title,
+  # table, footnote. Sourcing the size from one local keeps the
+  # three rules trivially in sync and lets `preset(font_size = N)`
+  # cascade across the whole document. Default 9pt matches
+  # `preset_spec@font_size`'s default in `R/aaa_class.R`.
+  fs <- if (is.null(preset)) 9 else preset@font_size
+
   body_css <- c(
     sprintf(
       ".tabular-doc { font-family: %s; color: #212529; margin: 1.5rem; }",
       .html_font_family_css(preset)
     ),
-    ".tabular-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin: .2rem 0; }",
+    # `.tabular-content` wraps title + tables + footnote in one
+    # shrink-wrapped centred box. `width: fit-content` sizes the
+    # wrapper to the widest child — the table — so the title
+    # block centres above the table and the footnote sits flush
+    # to the table's left edge (canonical clinical TFL layout).
+    # `max-width: 100%` keeps the wrapper inside the page gutter
+    # on narrow viewports; per-table overflow remains the job of
+    # `.tabular-table-wrap { overflow-x: auto; }`.
+    ".tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }",
+    # BEM modifier: `width_mode = "window"` flips the wrapper to
+    # full width so the inner `<table style="width:100%">` fills
+    # the viewport. Selector specificity matches `.tabular-content`
+    # so the rule order here (modifier AFTER base) is what wins.
+    ".tabular-content--window { width: 100%; }",
+    sprintf(
+      ".tabular-title { font-size: %gpt; font-weight: 600; text-align: center; margin: .2rem 0; }",
+      fs
+    ),
     # Wrapper around each `<table>` panel. The table's own inline
     # `width:<N>in` / `width:100%` rides on the `<table>` itself (see
     # `.html_table_open_tag()` in this file). The wrapper provides
@@ -1284,12 +1325,11 @@ backend_html <- function(grid, file) {
     # `overflow-x: visible` (further below) — paginated output has
     # paper geometry and never needs scroll behaviour.
     ".tabular-table-wrap { overflow-x: auto; margin: .75rem 0; }",
-    # `margin: 0 auto` horizontally centres the content-fitted
-    # table inside `.tabular-table-wrap` — without it, a block-
-    # level `<table style="width:Nin">` sits flush-left even though
-    # the title block above is centred. Under `width_mode = "window"`
-    # the table is already 100% of the wrapper, so the auto margins
-    # are no-ops; only the content-fitted modes benefit.
+    # `margin: 0 auto` is a no-op in the single-panel case (the
+    # `.tabular-content` wrapper already shrinks to the table
+    # width) but matters for multi-panel layouts (`paginate(panels
+    # = N)`) where narrower panels sit centred inside a wrapper
+    # sized to the widest panel.
     #
     # `font-size` is emitted in pt from `preset@font_size` (default
     # 9pt) so the browser renders at the same size the engine's AFM
@@ -1302,7 +1342,7 @@ backend_html <- function(grid, file) {
     # DOCX, which render literally at `preset@font_size`.
     sprintf(
       ".tabular-table { border-collapse: collapse; font-size: %gpt; margin: 0 auto; }",
-      if (is.null(preset)) 9 else preset@font_size
+      fs
     ),
     ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }",
     ".tabular-table td { text-align: left; vertical-align: top; }",
@@ -1319,7 +1359,10 @@ backend_html <- function(grid, file) {
     ".valign-top { vertical-align: top; }",
     ".valign-middle { vertical-align: middle; }",
     ".valign-bottom { vertical-align: bottom; }",
-    ".tabular-footnote { font-size: .85rem; color: #495057; margin: .25rem 0; }",
+    sprintf(
+      ".tabular-footnote { font-size: %gpt; color: #495057; margin: .25rem 0; }",
+      fs
+    ),
     ".tabular-empty { font-style: italic; color: #6c757d; }",
     # Print-only page-break marker `<tr>` — invisible on screen,
     # forces a hard page break under `@media print` so a single

@@ -490,6 +490,122 @@ test_that(".tabular-table font-size tracks preset(font_size = N)", {
   )
 })
 
+test_that(".tabular-title + .tabular-footnote also render at preset@font_size", {
+  # Title / footnote share the body's pt size so the preview reads
+  # at submission-grade consistency (canonical: title bold, footnote
+  # plain, both same pt as body).
+  spec <- tabular(data.frame(x = 1L))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(
+    txt,
+    ".tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }",
+    fixed = TRUE
+  )
+  expect_match(
+    txt,
+    ".tabular-footnote { font-size: 9pt; color: #495057; margin: .25rem 0; }",
+    fixed = TRUE
+  )
+})
+
+test_that("preset(font_size = N) cascades to title + footnote rules too", {
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(font_size = 12)
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(
+    txt,
+    ".tabular-title { font-size: 12pt; font-weight: 600; text-align: center; margin: .2rem 0; }",
+    fixed = TRUE
+  )
+  expect_match(
+    txt,
+    ".tabular-footnote { font-size: 12pt; color: #495057; margin: .25rem 0; }",
+    fixed = TRUE
+  )
+})
+
+test_that("body content sits inside a single <div class=\"tabular-content\"> wrapper", {
+  # title + table(s) + footnote share one centred container so the
+  # footnote aligns with the table's left edge instead of the page
+  # gutter.
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = "T",
+    footnotes = "F"
+  )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  lines <- readLines(out)
+  # Exactly one wrapper open (no `--window` modifier at the default
+  # `width_mode = "content"`).
+  expect_identical(
+    length(grep("<div class=\"tabular-content\">", lines, fixed = TRUE)),
+    1L
+  )
+  # Wrapper open precedes the title; wrapper close follows the
+  # footnote. Both inside the document body.
+  i_open <- grep("<div class=\"tabular-content\">", lines, fixed = TRUE)
+  i_title <- grep("<h1 class=\"tabular-title\">T</h1>", lines, fixed = TRUE)
+  i_foot <- grep("<p class=\"tabular-footnote\">F</p>", lines, fixed = TRUE)
+  i_close <- tail(grep("^</div>", lines), 1L)
+  expect_true(i_open < i_title)
+  expect_true(i_title < i_foot)
+  expect_true(i_foot < i_close)
+})
+
+test_that("preset(width_mode = 'window') flips the wrapper to the --window modifier", {
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(width_mode = "window")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(
+    txt,
+    "<div class=\"tabular-content tabular-content--window\">",
+    fixed = TRUE
+  )
+})
+
+test_that(".tabular-content CSS rules are present in the stylesheet", {
+  spec <- tabular(data.frame(x = 1L))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(
+    txt,
+    ".tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }",
+    fixed = TRUE
+  )
+  expect_match(
+    txt,
+    ".tabular-content--window { width: 100%; }",
+    fixed = TRUE
+  )
+})
+
+test_that("empty-input emit still wraps content in .tabular-content", {
+  # Zero-row data emits exactly one wrapper too — `total > 0` here
+  # because a one-page empty table is still a page, but the wrapper
+  # invariant must hold across both the early-return path and the
+  # populated path.
+  spec <- tabular(
+    data.frame(x = integer()),
+    titles = "T",
+    footnotes = "F"
+  )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  lines <- readLines(out)
+  expect_identical(
+    length(grep("<div class=\"tabular-content\">", lines, fixed = TRUE)),
+    1L
+  )
+})
+
 test_that(".tabular-table-wrap CSS is present and resets under @media print", {
   spec <- tabular(data.frame(x = 1L))
   out <- withr::local_tempfile(fileext = ".html")
