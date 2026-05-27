@@ -805,8 +805,7 @@ backend_html <- function(grid, file) {
       # centre of mass sits INSIDE the cell (at the decimal point),
       # not flush against the cell border. A CENTERED header sits
       # over that centroid -- the dominant clinical-TFL convention
-      # (BMS Global Requirements TLG-RTF-101, GSK, Lilly ARS) and
-      # gt's default for numeric columns. Other body alignments
+      # and gt's default for numeric columns. Other body alignments
       # (left / center / right) map straight through to the same
       # value on the header.
       halign <- if (

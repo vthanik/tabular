@@ -1594,11 +1594,11 @@ test_that("col_spec(align) routes through to <th> per the convention rule", {
   expect_match(thead, "<th[^>]*class=\"text-left[^\"]*\"[^>]*>L</th>")
   expect_match(thead, "<th[^>]*class=\"text-center[^\"]*\"[^>]*>C</th>")
   expect_match(thead, "<th[^>]*class=\"text-right[^\"]*\"[^>]*>R</th>")
-  # decimal projects to CENTER on the header (TFL centroid
-  # convention -- BMS / GSK / Lilly ARS / gt). The body cells
-  # are right-aligned with engine_decimal NBSP padding; the
-  # visible content's centre of mass sits inside the cell, not
-  # at the right edge. Centered header sits over that centroid.
+  # decimal projects to CENTER on the header (clinical-TFL centroid
+  # convention; matches gt's default for numeric columns). The body
+  # cells are right-aligned with engine_decimal NBSP padding; the
+  # visible content's centre of mass sits inside the cell, not at
+  # the right edge. Centered header sits over that centroid.
   expect_match(thead, "<th[^>]*class=\"text-center[^\"]*\"[^>]*>D</th>")
   expect_no_match(thead, "<th[^>]*class=\"text-right[^\"]*\"[^>]*>D</th>")
 })
@@ -1820,8 +1820,7 @@ test_that("percent widths flow through to LaTeX as resolved INCHES, not %", {
 
 # ---------------------------------------------------------------------
 # Regression: decimal header centers over the body's visible centroid
-# (TFL convention -- BMS Global Requirements TLG-RTF-101, GSK, Lilly
-# ARS; gt's default for numeric columns).
+# (clinical-TFL convention; matches gt's default for numeric columns).
 #
 # Body cells in a decimal column render as `class="text-right"` PLUS
 # engine_decimal NBSP padding that aligns decimal points across rows.
