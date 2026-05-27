@@ -161,3 +161,54 @@ test_that("sort_rows() error snapshots", {
       )
   )
 })
+
+# ---------------------------------------------------------------------
+# Regression: cards-style hierarchical sort on saf_aesocpt
+#
+# Bug: `sort_rows(by = c("row_type", "n_total"), descending = c(FALSE,
+# TRUE))` flattened the SOC -> PT hierarchy because the engine sort is
+# pure lexicographic (no group awareness). Fix bakes a parent-broadcast
+# `soc_n` + per-row `n_total` into `saf_aesocpt` so the two-key sort
+# `(desc(soc_n), desc(n_total))` keeps PTs clustered under their parent
+# SOC and orders both levels by descending count.
+# ---------------------------------------------------------------------
+
+test_that("saf_aesocpt body is cards-sorted: SOC clusters intact, PT desc within", {
+  ae <- saf_aesocpt
+
+  # Overall row floats to the top (carries overall TEAE count on both
+  # keys).
+  expect_identical(ae$row_type[1L], "overall")
+
+  # Every PT row's `soc_n` equals its parent SOC row's `soc_n` -- the
+  # broadcast that keeps clusters from interleaving under a flat sort.
+  for (s in unique(ae$soc[ae$row_type == "soc"])) {
+    soc_row_n <- ae$soc_n[ae$row_type == "soc" & ae$soc == s]
+    pt_rows_n <- ae$soc_n[ae$row_type == "pt" & ae$soc == s]
+    expect_identical(unique(pt_rows_n), soc_row_n)
+  }
+
+  # Within each SOC cluster, PT rows are sorted by `n_total` desc.
+  for (s in unique(ae$soc[ae$row_type == "pt"])) {
+    pt_n <- ae$n_total[ae$row_type == "pt" & ae$soc == s]
+    expect_identical(pt_n, sort(pt_n, decreasing = TRUE))
+  }
+
+  # SOC clusters themselves are ordered by `soc_n` desc.
+  soc_n_vec <- ae$soc_n[ae$row_type == "soc"]
+  expect_identical(soc_n_vec, sort(soc_n_vec, decreasing = TRUE))
+})
+
+test_that("sort_rows(soc_n, n_total) on saf_aesocpt preserves cards order", {
+  # The render-time sort using the two new keys must reproduce the
+  # baked order (it does because the engine's `order()` is stable and
+  # the data ships in the canonical sort already).
+  spec <- tabular(saf_aesocpt) |>
+    sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
+  sorted <- engine_sort(spec)@data
+  expect_identical(sorted$row_type[1L], "overall")
+  # The first SOC cluster is immediately followed by its PT rows, not
+  # by another SOC row -- the cards-style hierarchy is preserved.
+  first_soc_idx <- which(sorted$row_type == "soc")[1L]
+  expect_identical(sorted$row_type[first_soc_idx + 1L], "pt")
+})

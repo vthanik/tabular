@@ -384,7 +384,11 @@ any_row <- bind_cols(
     row_type = "overall"
   ),
   any_arm,
-  tibble(Total = n_pct(any_total, N_total))
+  tibble(
+    Total = n_pct(any_total, N_total),
+    n_total = any_total,
+    soc_n = any_total
+  )
 )
 
 # SOC level (one subject per SOC)
@@ -396,11 +400,16 @@ soc_arm <- adae_trim |>
   select(TRT01A, AEBODSYS, value) |>
   pivot_wider(names_from = TRT01A, values_from = value)
 
+# `n_total` is the SOC's own subject count; `soc_n` is the same
+# value, kept as a separate column so it can be broadcast onto the
+# child PT rows below (the cards `sort_ard_hierarchical()` pattern).
 soc_total <- adae_trim |>
   distinct(USUBJID, AEBODSYS) |>
-  count(AEBODSYS) |>
-  mutate(Total = n_pct(n, N_total)) |>
-  select(AEBODSYS, Total)
+  count(AEBODSYS, name = "n_total") |>
+  mutate(
+    Total = n_pct(n_total, N_total),
+    soc_n = n_total
+  )
 
 soc_wide <- left_join(soc_arm, soc_total, by = "AEBODSYS") |>
   mutate(soc = AEBODSYS, label = AEBODSYS, row_type = "soc", .before = 1) |>
@@ -419,31 +428,32 @@ pt_arm <- adae_trim |>
   select(TRT01A, AEBODSYS, AEDECOD, value) |>
   pivot_wider(names_from = TRT01A, values_from = value)
 
+# `n_total` is the PT's own subject count; `soc_n` will be filled
+# from the parent SOC below so every PT row carries the broadcast
+# parent count that the render-time sort keys on.
 pt_total <- adae_trim |>
   distinct(USUBJID, AEBODSYS, AEDECOD) |>
-  count(AEBODSYS, AEDECOD) |>
-  mutate(Total = n_pct(n, N_total)) |>
-  select(AEBODSYS, AEDECOD, Total)
+  count(AEBODSYS, AEDECOD, name = "n_total") |>
+  mutate(Total = n_pct(n_total, N_total))
 
-pt_wide <- left_join(pt_arm, pt_total, by = c("AEBODSYS", "AEDECOD")) |>
+pt_wide <- pt_arm |>
+  left_join(pt_total, by = c("AEBODSYS", "AEDECOD")) |>
+  left_join(select(soc_total, AEBODSYS, soc_n), by = "AEBODSYS") |>
   mutate(soc = AEBODSYS, label = AEDECOD, row_type = "pt", .before = 1) |>
   select(-AEBODSYS, -AEDECOD)
 
-# Interleave: any-row, then per-SOC (soc-row + its PTs, sorted by SOC freq)
-soc_freq <- adae_trim |>
-  distinct(USUBJID, AEBODSYS) |>
-  count(AEBODSYS, sort = TRUE) |>
-  pull(AEBODSYS)
+# Cards-style two-level hierarchical sort baked into the body:
+# outer key `soc_n` clusters PTs under their parent SOC and orders
+# clusters by SOC frequency descending; inner key `n_total` orders
+# rows within a cluster. The SOC row carries `n_total == soc_n`, so
+# it always sits at the top of its own cluster (highest n_total in
+# the cluster). `soc` is the tertiary tiebreaker between two SOCs
+# whose subject counts happen to tie. The overall row is bound on
+# top so it sits above the body without competing on the keys.
+body_sorted <- bind_rows(soc_wide, pt_wide) |>
+  arrange(desc(soc_n), soc, desc(n_total))
 
-saf_aesocpt <- bind_rows(
-  any_row,
-  bind_rows(lapply(soc_freq, function(s) {
-    bind_rows(
-      filter(soc_wide, soc == s),
-      filter(pt_wide, soc == s)
-    )
-  }))
-) |>
+saf_aesocpt <- bind_rows(any_row, body_sorted) |>
   rename_arms() |>
   as.data.frame()
 
@@ -452,8 +462,16 @@ saf_aesocpt <- bind_rows(
 # rows, 1 on PT rows. Use as `col_spec(label, indent_by = "indent_level")`.
 saf_aesocpt$indent_level <- as.integer(saf_aesocpt$row_type == "pt")
 saf_aesocpt <- saf_aesocpt[, c(
-  "soc", "label", "row_type", "indent_level",
-  "placebo", "drug_50", "drug_100", "Total"
+  "soc",
+  "label",
+  "row_type",
+  "indent_level",
+  "n_total",
+  "soc_n",
+  "placebo",
+  "drug_50",
+  "drug_100",
+  "Total"
 )]
 
 # ────────────────────────────────────────────────────────────────────────
@@ -617,7 +635,10 @@ eff_resp <- rename_arms(eff_resp) |> as.data.frame()
 # (Systolic BP, Diastolic BP) at End of Treatment keep the dataset
 # small while exercising the multi-variable partition cross.
 # ────────────────────────────────────────────────────────────────────────
-subgroup_params <- c(SYSBP = "Systolic BP (mmHg)", DIABP = "Diastolic BP (mmHg)")
+subgroup_params <- c(
+  SYSBP = "Systolic BP (mmHg)",
+  DIABP = "Diastolic BP (mmHg)"
+)
 
 advs_subgroup <- pharmaverseadam::advs |>
   blank_to_na() |>
@@ -714,8 +735,17 @@ saf_subgroup <- left_join(
     ~ tidyr::replace_na(.x, "")
   )) |>
   select(
-    sex, agegr, sex_n, agegr_n, paramcd, param, stat_label,
-    placebo, drug_50, drug_100, Total
+    sex,
+    agegr,
+    sex_n,
+    agegr_n,
+    paramcd,
+    param,
+    stat_label,
+    placebo,
+    drug_50,
+    drug_100,
+    Total
   ) |>
   arrange(sex, agegr, paramcd) |>
   as.data.frame()

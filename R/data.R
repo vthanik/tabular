@@ -151,7 +151,7 @@
 #' [paginate()] and the engine's horizontal-panel splitter end-to-end
 #' on a realistic submission shell.
 #'
-#' @format A data frame with 61 rows and 8 columns:
+#' @format A data frame with 61 rows and 10 columns:
 #' \describe{
 #'   \item{`soc`}{System Organ Class label. Repeats across the SOC's
 #'     PT rows; hide via `col_spec(visible = FALSE)` once `label`
@@ -161,12 +161,20 @@
 #'     on PT detail rows. Promoted to the primary display column —
 #'     pair with `indent_by = "indent_level"` to drive the SOC -> PT
 #'     indent.}
-#'   \item{`row_type`}{One of `"overall"`, `"soc"`, `"pt"`. Sort key
-#'     and partition key; hide via `col_spec(visible = FALSE)`.}
+#'   \item{`row_type`}{One of `"overall"`, `"soc"`, `"pt"`. Partition
+#'     marker; hide via `col_spec(visible = FALSE)`.}
 #'   \item{`indent_level`}{Integer depth (0 on overall and SOC rows,
 #'     1 on PT rows). Consumed by `col_spec(indent_by = "indent_level")`
 #'     on the `label` column; the engine auto-hides this column at
 #'     resolve time.}
+#'   \item{`n_total`}{Integer. The row's own subject count — overall
+#'     TEAE count on the overall row, the SOC's count on each SOC row,
+#'     the PT's count on each PT row. Inner sort key.}
+#'   \item{`soc_n`}{Integer. The parent SOC's count, broadcast to every
+#'     row in that SOC's cluster (SOC row + its PT children) so a
+#'     descending sort on `soc_n` keeps PTs grouped under their parent.
+#'     On the overall row, equal to the overall TEAE count. Outer sort
+#'     key.}
 #'   \item{`placebo`}{Placebo arm cell text (`"n (pct)"`).}
 #'   \item{`drug_50`, `drug_100`}{Drug arms cell text.}
 #'   \item{`Total`}{Pooled-across-arms cell text.}
@@ -174,7 +182,12 @@
 #'
 #' @source Derived in `data-raw/bundle-demo.R` from
 #'   `pharmaverseadam::adae`. Filtered to the top 10 SOCs by total
-#'   incidence and the top 5 PTs per SOC.
+#'   incidence and the top 5 PTs per SOC. Body rows are pre-sorted
+#'   with the cards-style two-level rule
+#'   (`arrange(desc(soc_n), soc, desc(n_total))`) so the canonical
+#'   render order is already baked in; the render-time
+#'   `sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))`
+#'   reproduces it via stable sort.
 #'
 #' @seealso [saf_aesocpt_card] for the hierarchical long ARD;
 #'   [saf_n] for BigN denominators.
@@ -182,15 +195,13 @@
 #' @examples
 #' # 95% safety pattern: SOC/PT table where `label` carries SOC text
 #' # on SOC rows and PT text on PT rows, indented by `indent_level`.
-#' # `soc` and `row_type` ride along as hidden sort / partition keys;
-#' # `n_total` is the numeric rank derived from `Total` cell text.
-#' ae <- saf_aesocpt
-#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-#' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
+#' # `soc` / `row_type` / `n_total` / `soc_n` ride along as hidden
+#' # partition + sort keys. `sort_rows(soc_n, n_total)` clusters PTs
+#' # under their parent SOC and orders both levels by descending count.
 #' n <- stats::setNames(saf_n$n, saf_n$arm_short)
 #'
 #' tabular(
-#'   ae,
+#'   saf_aesocpt,
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by SOC and Preferred Term",
@@ -198,10 +209,15 @@
 #'   )
 #' ) |>
 #'   cols(
-#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     label    = col_spec(
+#'       label = "SOC / PT",
+#'       indent_by = "indent_level",
+#'       align = "left"
+#'     ),
 #'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
+#'     soc_n    = col_spec(visible = FALSE),
 #'     placebo  = col_spec(
 #'       label = sprintf("Placebo\nN=%d", n["placebo"]),
 #'       align = "decimal"
@@ -220,8 +236,8 @@
 #'     )
 #'   ) |>
 #'   sort_rows(
-#'     by = c("row_type", "n_total"),
-#'     descending = c(FALSE, TRUE)
+#'     by = c("soc_n", "n_total"),
+#'     descending = c(TRUE, TRUE)
 #'   )
 "saf_aesocpt"
 
