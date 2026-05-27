@@ -154,3 +154,88 @@ test_that("engine_headers() error snapshot", {
     headers("Bad" = c("placebo", "Total"))
   expect_snapshot(error = TRUE, tabular:::engine_headers(spec))
 })
+
+# --- .band_labels_for_depth() ---------------------------------------
+
+test_that(".band_labels_for_depth() returns all-NA when no bands exist", {
+  empty <- tabular:::.empty_header_grid()
+  out <- tabular:::.band_labels_for_depth(empty, 1L, c("a", "b", "c"))
+  expect_identical(out, rep(NA_character_, 3L))
+})
+
+test_that(".band_labels_for_depth() labels each spanned visible column", {
+  spec <- tabular(saf_demo) |>
+    headers("Treatment" = c("placebo", "drug_50", "drug_100", "Total"))
+  headers <- tabular:::engine_headers(spec)
+  out <- tabular:::.band_labels_for_depth(
+    headers,
+    1L,
+    c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")
+  )
+  expect_identical(
+    out,
+    c(NA, NA, "Treatment", "Treatment", "Treatment", "Treatment")
+  )
+})
+
+test_that(".band_labels_for_depth() silently drops hidden columns inside a span", {
+  spec <- tabular(saf_demo) |>
+    headers("Treatment" = c("placebo", "drug_50", "drug_100", "Total"))
+  headers <- tabular:::engine_headers(spec)
+  out <- tabular:::.band_labels_for_depth(
+    headers,
+    1L,
+    c("placebo", "Total") # drug_50 and drug_100 hidden
+  )
+  expect_identical(out, c("Treatment", "Treatment"))
+})
+
+test_that(".band_labels_for_depth() returns NA for columns not in any span", {
+  spec <- tabular(saf_demo) |>
+    headers("Arms" = c("placebo", "drug_50", "drug_100"))
+  headers <- tabular:::engine_headers(spec)
+  out <- tabular:::.band_labels_for_depth(
+    headers,
+    1L,
+    c("variable", "placebo", "drug_50", "drug_100", "Total")
+  )
+  expect_identical(out, c(NA, "Arms", "Arms", "Arms", NA))
+})
+
+test_that(".band_labels_for_depth() handles two peer bands at same depth", {
+  spec <- tabular(saf_demo) |>
+    headers(
+      "A" = "placebo",
+      "B" = c("drug_50", "drug_100")
+    )
+  headers <- tabular:::engine_headers(spec)
+  out <- tabular:::.band_labels_for_depth(
+    headers,
+    1L,
+    c("variable", "placebo", "drug_50", "drug_100", "Total")
+  )
+  expect_identical(out, c(NA, "A", "B", "B", NA))
+})
+
+test_that(".band_labels_for_depth() selects per-depth bands independently", {
+  spec <- tabular(saf_demo) |>
+    headers(
+      "Treatment" = list(
+        "Control" = "placebo",
+        "Active" = c("drug_50", "drug_100")
+      )
+    )
+  headers <- tabular:::engine_headers(spec)
+  d1 <- tabular:::.band_labels_for_depth(
+    headers,
+    1L,
+    c("variable", "placebo", "drug_50", "drug_100", "Total")
+  )
+  d2 <- tabular:::.band_labels_for_depth(
+    headers,
+    2L,
+    c("variable", "placebo", "drug_50", "drug_100", "Total")
+  )
+  expect_identical(d1, c(NA, "Treatment", "Treatment", "Treatment", NA))
+  expect_identical(d2, c(NA, "Control", "Active", "Active", NA))
+})
