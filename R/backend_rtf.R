@@ -887,7 +887,7 @@ backend_rtf <- function(grid, file) {
       },
       character(1L)
     )
-    runs <- .rtf_group_contiguous_runs(labels)
+    runs <- .group_contiguous_runs(labels)
     out <- c(out, .rtf_band_row(runs, cellx, cs, colors, fonts))
   }
   out
@@ -1474,37 +1474,6 @@ backend_rtf <- function(grid, file) {
   )
   twips <- max(1L, as.integer(round(brd$width * 20)))
   paste0(prefix, style_tok, sprintf("\\brdrw%d", twips))
-}
-
-# Group a vector into runs of consecutive equal values, including
-# NA-as-equal-to-NA. Returns a list of `{value, length}` records.
-# Same algorithm as `.group_contiguous_runs` in backend_html.R;
-# kept local per the per-backend self-containment convention.
-.rtf_group_contiguous_runs <- function(x) {
-  n <- length(x)
-  if (n == 0L) {
-    return(list())
-  }
-  runs <- list()
-  start <- 1L
-  for (i in seq_len(n)[-1L]) {
-    cur <- x[[i]]
-    prev <- x[[i - 1L]]
-    same <- (is.na(cur) && is.na(prev)) ||
-      (!is.na(cur) && !is.na(prev) && identical(cur, prev))
-    if (!same) {
-      runs[[length(runs) + 1L]] <- list(
-        value = x[[start]],
-        length = i - start
-      )
-      start <- i
-    }
-  }
-  runs[[length(runs) + 1L]] <- list(
-    value = x[[start]],
-    length = n - start + 1L
-  )
-  runs
 }
 
 # ---------------------------------------------------------------------

@@ -1179,37 +1179,6 @@ backend_latex <- function(grid, file) {
   href
 }
 
-# Group a vector into runs of consecutive equal values
-# (NA-equal-to-NA). Returns a list of `{value, length}`
-# records. Used by the header-band renderer to compute
-# `\SetCell` colspans.
-.group_contiguous_runs <- function(x) {
-  n <- length(x)
-  if (n == 0L) {
-    return(list())
-  }
-  runs <- list()
-  start <- 1L
-  for (i in seq_len(n)[-1L]) {
-    cur <- x[[i]]
-    prev <- x[[i - 1L]]
-    same <- (is.na(cur) && is.na(prev)) ||
-      (!is.na(cur) && !is.na(prev) && identical(cur, prev))
-    if (!same) {
-      runs[[length(runs) + 1L]] <- list(
-        value = x[[start]],
-        length = i - start
-      )
-      start <- i
-    }
-  }
-  runs[[length(runs) + 1L]] <- list(
-    value = x[[start]],
-    length = n - start + 1L
-  )
-  runs
-}
-
 # ---------------------------------------------------------------------
 # Preamble — minimum tabularray + hyperref + geometry + utf8
 # ---------------------------------------------------------------------

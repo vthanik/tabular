@@ -1349,36 +1349,6 @@ backend_html <- function(grid, file) {
   text
 }
 
-# Group a vector into runs of consecutive equal values, including
-# NA-as-equal-to-NA. Returns a list of `{value, length}` records.
-# Used by the header-band renderer to compute `colspan` widths.
-.group_contiguous_runs <- function(x) {
-  n <- length(x)
-  if (n == 0L) {
-    return(list())
-  }
-  runs <- list()
-  start <- 1L
-  for (i in seq_len(n)[-1L]) {
-    cur <- x[[i]]
-    prev <- x[[i - 1L]]
-    same <- (is.na(cur) && is.na(prev)) ||
-      (!is.na(cur) && !is.na(prev) && identical(cur, prev))
-    if (!same) {
-      runs[[length(runs) + 1L]] <- list(
-        value = x[[start]],
-        length = i - start
-      )
-      start <- i
-    }
-  }
-  runs[[length(runs) + 1L]] <- list(
-    value = x[[start]],
-    length = n - start + 1L
-  )
-  runs
-}
-
 # Document `<title>` derived from the first title AST when
 # available; falls back to "tabular" so the browser tab always
 # has something readable.
