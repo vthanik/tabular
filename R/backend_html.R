@@ -731,23 +731,7 @@ backend_html <- function(grid, file) {
   vapply(
     depths,
     function(d) {
-      band_at_depth <- headers[headers$depth == d, , drop = FALSE]
-      labels <- vapply(
-        col_names_visible,
-        function(nm) {
-          hit <- vapply(
-            seq_len(nrow(band_at_depth)),
-            function(i) nm %in% band_at_depth$span_cols[[i]],
-            logical(1L)
-          )
-          if (any(hit)) {
-            band_at_depth$label[which(hit)[1L]]
-          } else {
-            NA_character_
-          }
-        },
-        character(1L)
-      )
+      labels <- .band_labels_for_depth(headers, d, col_names_visible)
       runs <- .group_contiguous_runs(labels)
       cells <- vapply(
         runs,

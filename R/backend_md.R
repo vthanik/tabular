@@ -312,21 +312,10 @@ backend_md <- function(grid, file) {
   vapply(
     depths,
     function(d) {
-      band_at_depth <- headers[headers$depth == d, , drop = FALSE]
+      labels <- .band_labels_for_depth(headers, d, col_names_visible)
       cells <- vapply(
-        col_names_visible,
-        function(nm) {
-          hit <- vapply(
-            seq_len(nrow(band_at_depth)),
-            function(i) nm %in% band_at_depth$span_cols[[i]],
-            logical(1L)
-          )
-          if (any(hit)) {
-            .md_escape_cell(band_at_depth$label[which(hit)[1L]])
-          } else {
-            ""
-          }
-        },
+        labels,
+        function(l) if (is.na(l)) "" else .md_escape_cell(l),
         character(1L)
       )
       .md_pipe_row(cells)

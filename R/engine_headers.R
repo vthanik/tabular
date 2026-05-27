@@ -118,6 +118,34 @@ engine_headers <- function(spec) {
   rbind(this_row, child_rows)
 }
 
+# Build the per-visible-column band-label vector for one depth.
+# Returns `character(length(col_names_visible))` with `NA_character_`
+# over columns not under any band at this depth. Replaces the
+# nested-vapply duplicate that every backend renderer used to carry.
+#
+# Complexity: O(total_spans + visible_cols). Columns inside a span
+# but absent from `col_names_visible` (i.e. hidden) silently drop;
+# the band renders over its visible subset only.
+#
+# @keywords internal
+# @noRd
+.band_labels_for_depth <- function(headers, depth, col_names_visible) {
+  band_at_depth <- headers[headers$depth == depth, , drop = FALSE]
+  if (nrow(band_at_depth) == 0L) {
+    return(rep(NA_character_, length(col_names_visible)))
+  }
+  lookup <- stats::setNames(
+    rep(NA_character_, length(col_names_visible)),
+    col_names_visible
+  )
+  for (i in seq_len(nrow(band_at_depth))) {
+    spans <- band_at_depth$span_cols[[i]]
+    visible_spans <- intersect(spans, col_names_visible)
+    lookup[visible_spans] <- band_at_depth$label[[i]]
+  }
+  unname(lookup)
+}
+
 # Empty header-grid skeleton — matches the populated frame's schema
 # so backends can iterate uniformly when no header tree is set.
 .empty_header_grid <- function() {

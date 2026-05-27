@@ -564,23 +564,7 @@ backend_docx <- function(grid, file) {
   depths <- sort(unique(headers$depth))
   out <- character()
   for (d in depths) {
-    band_at_depth <- headers[headers$depth == d, , drop = FALSE]
-    labels <- vapply(
-      col_names_vis,
-      function(nm) {
-        hit <- vapply(
-          seq_len(nrow(band_at_depth)),
-          function(i) nm %in% band_at_depth$span_cols[[i]],
-          logical(1L)
-        )
-        if (any(hit)) {
-          band_at_depth$label[which(hit)[1L]]
-        } else {
-          NA_character_
-        }
-      },
-      character(1L)
-    )
+    labels <- .band_labels_for_depth(headers, d, col_names_vis)
     runs <- .group_contiguous_runs(labels)
     cells <- character(length(runs))
     cursor <- 1L
