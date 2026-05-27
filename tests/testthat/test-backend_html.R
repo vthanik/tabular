@@ -2146,3 +2146,24 @@ test_that("HTML nested bands: band-1 header flush, band-2 header indented (Chang
     perl = TRUE
   )
 })
+
+# --- header-band rule scope (cmidrule(lr) semantics) ----------------
+
+test_that("HTML scenario G: band underline scopes to .tabular-band cells only", {
+  html <- band_emit("G", "html")
+  # Band cell exists with colspan over the two drug columns.
+  expect_match(
+    html,
+    "<th colspan=\"2\" class=\"tabular-band\"[^>]*>Active Treatment</th>"
+  )
+  # Run-grouping collapses contiguous NA runs: three blanks on the
+  # left (label, soc_n, placebo), one on the right (Total).
+  expect_match(html, "<th colspan=\"3\"></th>")
+  expect_match(html, "<th colspan=\"1\"></th>")
+  # CSS: old blanket rule gone, new band-scoped rule present.
+  expect_no_match(
+    html,
+    ".tabular-table thead tr:not\\(:last-child\\) th \\{ border-bottom"
+  )
+  expect_match(html, "\\.tabular-band \\{ border-bottom")
+})

@@ -1435,8 +1435,14 @@ backend_html <- function(grid, file) {
     ),
     ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }",
     ".tabular-table td { text-align: left; vertical-align: top; }",
-    ".tabular-table thead th { border-top: 1px solid #212529; border-bottom: 1px solid #212529; font-weight: 600; text-align: center; vertical-align: bottom; }",
-    ".tabular-table thead tr:not(:last-child) th { border-bottom: 1px solid #adb5bd; }",
+    # Top rule sits above the entire thead block (band-row 1).
+    # Heavy bottom rule sits above tbody (on the col-labels row, i.e.
+    # the LAST thead row). Band underline applies ONLY to .tabular-band
+    # cells so blank flanking cells over unmapped columns do not extend
+    # the rule full width — cmidrule(lr) cell-border semantics.
+    ".tabular-table thead th { border-top: 1px solid #212529; font-weight: 600; text-align: center; vertical-align: bottom; }",
+    ".tabular-table thead tr:last-child th { border-bottom: 1px solid #212529; }",
+    ".tabular-table thead .tabular-band { border-bottom: 1px solid #adb5bd; }",
     ".tabular-table tbody tr td { border-top: none; }",
     ".tabular-table tbody tr:last-child td { border-bottom: 1px solid #212529; }",
     ".tabular-band { text-align: center; }",
