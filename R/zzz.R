@@ -8,6 +8,25 @@
 # environments.
 
 .onLoad <- function(libname, pkgname) {
+  # `S7::method(print, tabular_spec) <- ...` in R/print.R imports
+  # `print` into tabular's namespace as a local binding. NAMESPACE's
+  # `S3method(print, <class>)` then registers against that local
+  # binding rather than `base::print`, so dispatch from user code
+  # (which resolves `print` to `base::print`) misses the methods.
+  # Re-register against `baseenv()` so `print(brdr(...))` etc. find
+  # the per-class S3 method.
+  for (cls in c(
+    "tabular_brdr",
+    "tabular_location",
+    "tabular_style_template"
+  )) {
+    registerS3method(
+      "print",
+      cls,
+      get(paste0("print.", cls), envir = asNamespace(pkgname)),
+      envir = baseenv()
+    )
+  }
   # S7 stamps class strings with the namespace prefix
   # ("tabular::tabular_spec") so S3 dispatch on the bare name
   # ("tabular_spec") would miss. Register against both so
