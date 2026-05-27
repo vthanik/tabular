@@ -24,7 +24,7 @@
 # every validator emits stable single-quoted output regardless of OS.
 .sh_quote <- function(x) shQuote(x, type = "sh")
 
-.col_usage_values <- c("display", "group")
+.col_usage_values <- c("display", "group", "indent")
 
 # Recognised values for `col_spec@group_display`. Active only when
 # `col_spec@usage = "group"`; ignored otherwise. Controls how the
@@ -330,9 +330,9 @@ NULL
     # per-row indent. When set, the engine reads
     # `spec@data[[indent_by]]` at resolve time, coerces each row's
     # value to a non-negative integer N, and prefixes this column's
-    # text + AST in that row with `paste(rep(preset@indent_chars, N),
-    # collapse = "")`. The referenced column is auto-hidden unless
-    # the user explicitly set its `visible = TRUE`.
+    # text + AST in that row with `strrep(" ", preset@indent_size * N)`.
+    # The referenced column is auto-hidden unless the user explicitly
+    # set its `visible = TRUE`.
     indent_by = S7::new_property(
       S7::class_character,
       default = NA_character_
@@ -733,7 +733,7 @@ preset_spec <- S7::new_class(
     pagehead = S7::new_property(S7::class_list, default = list()),
     pagefoot = S7::new_property(S7::class_list, default = list()),
     hlines = S7::new_property(S7::class_character, default = "header"),
-    indent_chars = S7::new_property(S7::class_character, default = "  "),
+    indent_size = S7::new_property(S7::class_integer, default = 2L),
     title_align = S7::new_property(
       S7::class_character,
       default = "center"
@@ -809,6 +809,13 @@ preset_spec <- S7::new_class(
         "; got ",
         .sh_quote(self@width_mode)
       ))
+    }
+    if (
+      length(self@indent_size) != 1L ||
+        is.na(self@indent_size) ||
+        self@indent_size < 0L
+    ) {
+      return("@indent_size must be a single non-negative integer")
     }
     if (!(length(self@margins) %in% c(1L, 2L, 4L))) {
       return(paste0(

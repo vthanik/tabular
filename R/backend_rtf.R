@@ -705,6 +705,10 @@ backend_rtf <- function(grid, file) {
     cols,
     cellx,
     cells_style = page$cells_style,
+    cells_indent = page$cells_indent,
+    is_header_row = page$is_header_row,
+    is_blank_row = page$is_blank_row,
+    host_col = page$host_col,
     preset = preset,
     cs = cs,
     colors = colors,
@@ -1106,6 +1110,10 @@ backend_rtf <- function(grid, file) {
   cols,
   cellx,
   cells_style = NULL,
+  cells_indent = NULL,
+  is_header_row = NULL,
+  is_blank_row = NULL,
+  host_col = NA_character_,
   preset = NULL,
   cs = NULL,
   colors = NULL,
@@ -1119,9 +1127,96 @@ backend_rtf <- function(grid, file) {
   col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
   trgaph <- .rtf_body_trgaph(cells_style)
   cf_tok <- .rtf_body_cf_token(cells_style, colors)
+  # Engine sidecar + row-type flags default to no-op shape for any
+  # caller that bypasses as_grid.
+  ncol_data <- length(col_names_vis)
+  if (is.null(cells_indent)) {
+    cells_indent <- matrix(0L, nrow = nrow_data, ncol = ncol_data)
+  }
+  is_header_row <- is_header_row %||% rep(FALSE, nrow_data)
+  is_blank_row <- is_blank_row %||% rep(FALSE, nrow_data)
+  indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
+  indent_unit <- nchar(.indent_text_unit(indent_size))
+  indent_twips_per_level <- .indent_native_twips_per_level(preset)
+
+  # Final-twip edge for synthesised section-header / blank-gap rows.
+  # Single `\cellx` at the right edge so the row spans all columns
+  # (mirrors the subgroup-banner emitter).
+  final_cellx <- if (length(cellx) > 0L) {
+    as.integer(cellx[[length(cellx)]])
+  } else {
+    0L
+  }
 
   out <- character()
   for (r in seq_len(nrow_data)) {
+    if (isTRUE(is_blank_row[[r]])) {
+      out <- c(
+        out,
+        "\\trowd\\trgaph108",
+        paste0(
+          .rtf_border_seg("top", NULL, "none"),
+          .rtf_border_seg("bottom", NULL, "none"),
+          .rtf_border_seg("left", NULL, "none"),
+          .rtf_border_seg("right", NULL, "none"),
+          sprintf("\\cellx%d", final_cellx)
+        ),
+        "\\pard\\plain\\intbl\\ql \\cell",
+        "\\row"
+      )
+      next
+    }
+    if (isTRUE(is_header_row[[r]])) {
+      host_text <- ""
+      host_idx <- NA_integer_
+      for (jj in seq_along(col_names_vis)) {
+        val <- cells_text[r, jj]
+        if (!is.na(val) && nzchar(val)) {
+          host_text <- val
+          host_idx <- jj
+          break
+        }
+      }
+      # Band-depth padding on the header-row paragraph via `\liN`
+      # (twips). Band-1 (depth 0) -> no `\li`; band-2+ -> `\liN`
+      # BEFORE the alignment token so RTF readers honour the cell-
+      # side left indent.
+      header_li_tok <- ""
+      if (!is.na(host_idx)) {
+        header_depth <- cells_indent[r, host_idx]
+        if (
+          isTRUE(header_depth > 0L) &&
+            indent_twips_per_level > 0L
+        ) {
+          header_li_tok <- sprintf(
+            "\\li%d",
+            indent_twips_per_level * header_depth
+          )
+        }
+      }
+      out <- c(
+        out,
+        "\\trowd\\trgaph108",
+        paste0(
+          .rtf_border_seg("top", NULL, "none"),
+          .rtf_border_seg("bottom", NULL, "none"),
+          .rtf_border_seg("left", NULL, "none"),
+          .rtf_border_seg("right", NULL, "none"),
+          sprintf("\\cellx%d", final_cellx)
+        ),
+        paste0(
+          "\\pard\\plain\\intbl",
+          header_li_tok,
+          "\\ql ",
+          "{\\b ",
+          .rtf_escape_cell(host_text),
+          "}",
+          "\\cell"
+        ),
+        "\\row"
+      )
+      next
+    }
     cellx_lines <- character(length(col_names_vis))
     cell_bodies <- character(length(col_names_vis))
     is_last_row <- (r == nrow_data)
@@ -1157,11 +1252,36 @@ backend_rtf <- function(grid, file) {
         valign_tok,
         sprintf("\\cellx%d", as.integer(cellx[[i]]))
       )
-      text <- .rtf_escape_cell(cells_text[r, i])
+      # Per-cell native left indent: strip the engine-baked leading
+      # spaces and emit `\liN` (twips) on the paragraph BEFORE the
+      # alignment token. RTF readers honour `\li` as the cell-side
+      # left indent, so wrapped continuation lines inside a narrow
+      # column align with the indented baseline.
+      raw <- cells_text[r, i]
+      depth <- cells_indent[r, i]
+      li_tok <- ""
+      if (
+        isTRUE(depth > 0L) &&
+          indent_unit > 0L &&
+          !is.na(raw)
+      ) {
+        n_leading <- indent_unit * depth
+        if (
+          nchar(raw) >= n_leading &&
+            startsWith(raw, strrep(" ", n_leading))
+        ) {
+          raw <- substr(raw, n_leading + 1L, nchar(raw))
+        }
+        if (indent_twips_per_level > 0L) {
+          li_tok <- sprintf("\\li%d", indent_twips_per_level * depth)
+        }
+      }
+      text <- .rtf_escape_cell(raw)
       text_props <- .rtf_cell_text_props(sn, colors, fonts)
       cell_bodies[[i]] <- paste0(
         "\\pard\\plain\\intbl ",
         keepn_tok,
+        li_tok,
         align_tok,
         " ",
         cf_tok,

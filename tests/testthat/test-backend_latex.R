@@ -827,3 +827,127 @@ test_that("style(.at = cells_title(), blank_above = 3) emits three blank lines b
   # lines preceding `\begin{center}` (the default title env).
   expect_match(tex, "\\n\\n\\n", fixed = FALSE)
 })
+
+# ---------------------------------------------------------------------
+# Change C: cells_indent sidecar -> tabularray \SetCell{leftsep+=Xpt}
+# ---------------------------------------------------------------------
+
+test_that("LaTeX emits leftsep+= on data rows but NOT on header rows (Change C)", {
+  df <- data.frame(
+    soc = c("CARDIAC", "CARDIAC", "GI", "GI"),
+    label = c(
+      "CARDIAC",
+      "Atrial fibrillation with rapid ventricular response",
+      "GI",
+      "Nausea and vomiting episodes"
+    ),
+    row_type = c("soc", "pt", "soc", "pt"),
+    indent_level = c(0L, 1L, 0L, 1L),
+    n = c(5L, 3L, 10L, 6L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "AE") |>
+    cols(
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(
+        label = "Category",
+        indent_by = "indent_level",
+        width = "1in"
+      ),
+      indent_level = col_spec(visible = FALSE),
+      row_type = col_spec(visible = FALSE),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Data row PT cells carry `\SetCell{leftsep+=Xpt}` BEFORE the label.
+  expect_match(
+    tex,
+    "\\\\SetCell\\{leftsep\\+=[0-9.]+pt\\}[^&]*Atrial",
+    perl = TRUE
+  )
+  # Header row (the synthesised CARDIAC band) does NOT carry leftsep+=.
+  expect_false(grepl(
+    "leftsep+=",
+    sub(".*(CARDIAC[^&]*).*", "\\1", tex),
+    fixed = TRUE
+  ))
+})
+
+# ---------------------------------------------------------------------
+# Change D: is_header_row / is_blank_row branching in LaTeX
+# ---------------------------------------------------------------------
+
+test_that("LaTeX emits \\SetCell[c=N]{l} \\textbf{...} for synthesised header rows (Change D)", {
+  df <- data.frame(
+    group_label = c(
+      "Best Overall Response",
+      "Best Overall Response",
+      "Objective Response Rate",
+      "Objective Response Rate"
+    ),
+    stat_label = c("CR", "PR", "ORR (CR + PR)", "95% CI"),
+    placebo = c("1", "1", "2", "(0.3, 8.1)"),
+    drug_50 = c("1", "0", "1", "(0.0, 6.5)"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Eff") |>
+    cols(
+      group_label = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(usage = "indent", label = "Response"),
+      placebo = col_spec(label = "Placebo"),
+      drug_50 = col_spec(label = "Drug 50")
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # 3 visible columns -> `\SetCell[c=3]{l} \textbf{...}` with 2
+  # trailing `&` placeholders for tabularray column-count balance.
+  expect_match(
+    tex,
+    "\\\\SetCell\\[c=3\\]\\{l\\} \\\\textbf\\{Best Overall Response\\} & & \\\\\\\\",
+    perl = TRUE
+  )
+  expect_match(
+    tex,
+    "\\\\SetCell\\[c=3\\]\\{l\\} \\\\textbf\\{Objective Response Rate\\} & &",
+    perl = TRUE
+  )
+})
+
+# ---------------------------------------------------------------------
+# Change D: nested band headers render with depth-aware leftsep+=
+# ---------------------------------------------------------------------
+
+test_that("LaTeX nested bands: band-1 header bare {l}, band-2 header gets leftsep+= (Change D)", {
+  df <- data.frame(
+    section = c("Safety", "Safety", "Efficacy", "Efficacy"),
+    subsection = c("AE", "AE", "ORR", "ORR"),
+    label = c("Any", "SAE", "Confirmed", "Unconfirmed"),
+    n = c("100", "10", "20", "15"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Nested") |>
+    cols(
+      section = col_spec(usage = "group", group_display = "header_row"),
+      subsection = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Item"),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Band 1 ("Safety", depth 0) -> `\SetCell[c=2]{l} \textbf{Safety}`.
+  expect_match(
+    tex,
+    "\\\\SetCell\\[c=2\\]\\{l\\} \\\\textbf\\{Safety\\}",
+    perl = TRUE
+  )
+  # Band 2 ("AE", depth 1) -> `\SetCell[c=2]{l, leftsep+=Xpt} \textbf{AE}`.
+  expect_match(
+    tex,
+    "\\\\SetCell\\[c=2\\]\\{l, leftsep\\+=[0-9.]+pt\\} \\\\textbf\\{AE\\}",
+    perl = TRUE
+  )
+})

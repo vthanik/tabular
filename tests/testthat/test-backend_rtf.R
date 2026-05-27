@@ -550,3 +550,122 @@ test_that("a body cell font_family registers as \\f2+ in the dynamic fonttbl", {
   # \f0 is body; \f1 is mono; Inter registers at index 2 or above.
   expect_match(rtf, "\\{\\\\f[2-9][^{]*Inter", fixed = FALSE)
 })
+
+# ---------------------------------------------------------------------
+# Change C: cells_indent sidecar -> RTF \li<twips>
+# ---------------------------------------------------------------------
+
+test_that("RTF emits \\li on data rows but NOT on header rows (Change C)", {
+  df <- data.frame(
+    soc = c("CARDIAC", "CARDIAC", "GI", "GI"),
+    label = c(
+      "CARDIAC",
+      "Atrial fibrillation with rapid ventricular response",
+      "GI",
+      "Nausea and vomiting episodes"
+    ),
+    row_type = c("soc", "pt", "soc", "pt"),
+    indent_level = c(0L, 1L, 0L, 1L),
+    n = c(5L, 3L, 10L, 6L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "AE") |>
+    cols(
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(
+        label = "Category",
+        indent_by = "indent_level",
+        width = "1in"
+      ),
+      indent_level = col_spec(visible = FALSE),
+      row_type = col_spec(visible = FALSE),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Data rows carry `\liN` on the paragraph BEFORE the alignment token.
+  expect_match(rtf, "\\\\li[0-9]+[^A-Za-z][^N]*Atrial", perl = TRUE)
+  # Header rows (CARDIAC / GI band cells) do NOT carry `\li`.
+  header_chunk <- sub(".*(CARDIAC\\\\cell).*", "\\1", rtf)
+  expect_false(grepl("\\li", header_chunk, fixed = TRUE))
+})
+
+# ---------------------------------------------------------------------
+# Change D: is_header_row / is_blank_row branching in RTF
+# ---------------------------------------------------------------------
+
+test_that("RTF emits single-\\cellx merged-cell row for section headers (Change D)", {
+  df <- data.frame(
+    group_label = c(
+      "Best Overall Response",
+      "Best Overall Response",
+      "Objective Response Rate",
+      "Objective Response Rate"
+    ),
+    stat_label = c("CR", "PR", "ORR (CR + PR)", "95% CI"),
+    placebo = c("1", "1", "2", "(0.3, 8.1)"),
+    drug_50 = c("1", "0", "1", "(0.0, 6.5)"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Eff") |>
+    cols(
+      group_label = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(usage = "indent", label = "Response"),
+      placebo = col_spec(label = "Placebo"),
+      drug_50 = col_spec(label = "Drug 50")
+    )
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Header rows render as a bolded merged cell `{\b ...}\cell` followed
+  # by `\row` (newline between the two tokens — they're emitted on
+  # separate output lines by the row builder).
+  expect_match(
+    rtf,
+    "\\{\\\\b Best Overall Response\\}\\\\cell\\s*\\\\row",
+    perl = TRUE
+  )
+  expect_match(
+    rtf,
+    "\\{\\\\b Objective Response Rate\\}\\\\cell\\s*\\\\row",
+    perl = TRUE
+  )
+})
+
+# ---------------------------------------------------------------------
+# Change D: nested band headers render with depth-aware \li
+# ---------------------------------------------------------------------
+
+test_that("RTF nested bands: band-1 header has no \\li, band-2 header has \\liN (Change D)", {
+  df <- data.frame(
+    section = c("Safety", "Safety", "Efficacy", "Efficacy"),
+    subsection = c("AE", "AE", "ORR", "ORR"),
+    label = c("Any", "SAE", "Confirmed", "Unconfirmed"),
+    n = c("100", "10", "20", "15"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Nested") |>
+    cols(
+      section = col_spec(usage = "group", group_display = "header_row"),
+      subsection = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Item"),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Band 1 ("Safety", depth 0) -> `\pard\plain\intbl\ql {\b Safety}`
+  # (no \li before \ql).
+  expect_match(
+    rtf,
+    "\\\\pard\\\\plain\\\\intbl\\\\ql \\{\\\\b Safety\\}",
+    perl = TRUE
+  )
+  # Band 2 ("AE", depth 1) -> `\pard\plain\intbl\liN\ql {\b AE}`.
+  expect_match(
+    rtf,
+    "\\\\pard\\\\plain\\\\intbl\\\\li[0-9]+\\\\ql \\{\\\\b AE\\}",
+    perl = TRUE
+  )
+})

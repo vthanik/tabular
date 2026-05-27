@@ -161,8 +161,14 @@ fallback \code{"<interactive>"}.
 \item \strong{\code{hlines}} — horizontal-rule policy.
 \verb{<character(1)>}. One of \code{"header"} (default), \code{"none"},
 \code{"all"}.
-\item \strong{\code{indent_chars}} — row-label indent prefix.
-\verb{<character(1)>}. Default \code{"  "}.
+\item \strong{\code{indent_size}} — row-label indent width, in monospace-
+space units. \verb{<integer(1)>}. Default \code{2L}. Each indent level
+adds this many space-widths of left padding to the cell.
+\code{0L} disables the indent prefix entirely. Backends with
+native padding-left semantics (HTML / LaTeX / RTF / DOCX /
+PDF) emit this as cell padding so wrapped continuation lines
+align with the indented baseline; Markdown carries the literal
+space-prefix.
 \item \strong{\code{title_align}}, \strong{\code{footnote_align}} — block alignment.
 \verb{<character(1)>}. One of \code{"left"}, \code{"center"}, \code{"right"}.
 \item \strong{\code{title_pad_top}}, \strong{\code{title_pad_bottom}} — blank-line

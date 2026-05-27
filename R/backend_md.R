@@ -154,7 +154,10 @@ backend_md <- function(grid, file) {
         )
       )
       for (page in panel_pages) {
-        panel_lines <- c(panel_lines, .render_md_page_body_rows(page))
+        panel_lines <- c(
+          panel_lines,
+          .render_md_page_body_rows(page, preset = meta$preset)
+        )
       }
       if (k > 1L) {
         out[[length(out) + 1L]] <- ""
@@ -178,10 +181,16 @@ backend_md <- function(grid, file) {
 # Render one page slice's body lines: an optional subgroup banner
 # (bold) followed by one pipe-table row per data row. Returns
 # character(0) when the slice is empty (no banner, zero rows).
-.render_md_page_body_rows <- function(page) {
+.render_md_page_body_rows <- function(page, preset = NULL) {
   c(
     .render_md_subgroup_banner(page),
-    .render_md_body_rows(page$cells_text)
+    .render_md_body_rows(
+      page$cells_text,
+      is_header_row = page$is_header_row,
+      is_blank_row = page$is_blank_row,
+      cells_indent = page$cells_indent,
+      preset = preset
+    )
   )
 }
 
@@ -403,16 +412,67 @@ backend_md <- function(grid, file) {
 # engine_decimal `cells_text` slice; we route it through
 # `.md_escape_cell()` so embedded `|` and newlines do not break
 # the pipe-table parser.
-.render_md_body_rows <- function(cells_text) {
+.render_md_body_rows <- function(
+  cells_text,
+  is_header_row = NULL,
+  is_blank_row = NULL,
+  cells_indent = NULL,
+  preset = NULL
+) {
   nrow_data <- nrow(cells_text)
   if (nrow_data == 0L) {
     return(character())
   }
+  ncols <- ncol(cells_text)
+  is_header_row <- is_header_row %||% rep(FALSE, nrow_data)
+  is_blank_row <- is_blank_row %||% rep(FALSE, nrow_data)
+  if (is.null(cells_indent)) {
+    cells_indent <- matrix(0L, nrow = nrow_data, ncol = ncols)
+  }
+  indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
+  indent_unit_text <- .indent_text_unit(indent_size)
   vapply(
     seq_len(nrow_data),
     function(i) {
+      # fallback: GFM has no row-spanning. Synthesised section-header
+      # rows render the group text bolded in cell 1 with the trailing
+      # cells held by `&nbsp;` so renderers (GitHub / pandoc / Quarto)
+      # don't collapse the row into a blank line. Blank-gap rows do
+      # the same with empty bolded cell 1. Band-2+ headers (depth > 0)
+      # prepend `strrep(" ", indent_size * depth)` to the bold text so
+      # nested bands render visibly nested in markdown -- the only
+      # backend without native padding-left support.
+      if (isTRUE(is_blank_row[[i]])) {
+        return(.md_pipe_row(rep("&nbsp;", ncols)))
+      }
+      if (isTRUE(is_header_row[[i]])) {
+        host_text <- ""
+        host_idx <- NA_integer_
+        for (jj in seq_len(ncols)) {
+          val <- cells_text[i, jj]
+          if (!is.na(val) && nzchar(val)) {
+            host_text <- val
+            host_idx <- jj
+            break
+          }
+        }
+        header_prefix <- ""
+        if (!is.na(host_idx) && nzchar(indent_unit_text)) {
+          header_depth <- cells_indent[i, host_idx]
+          if (isTRUE(header_depth > 0L)) {
+            header_prefix <- strrep(indent_unit_text, header_depth)
+          }
+        }
+        first_cell <- paste0(
+          "**",
+          header_prefix,
+          .md_escape_cell(host_text),
+          "**"
+        )
+        return(.md_pipe_row(c(first_cell, rep("&nbsp;", ncols - 1L))))
+      }
       cells <- vapply(
-        seq_len(ncol(cells_text)),
+        seq_len(ncols),
         function(j) .md_escape_cell(cells_text[i, j]),
         character(1L)
       )

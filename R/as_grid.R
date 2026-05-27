@@ -331,8 +331,9 @@ as_grid <- function(spec) {
   # no-op. The phase may augment the cells matrices with new
   # synthesised rows + hide source group columns from the visible
   # body. When `header_row` mode is active, every data row's
-  # host-column text is prefixed with `preset@indent_chars` so the
-  # data rows visually nest under their synthetic section header.
+  # host-column text is prefixed with `strrep(" ", preset@indent_size)`
+  # so the data rows visually nest under their synthetic section
+  # header.
   gd_preset <- .effective_preset(spec)
   gd <- engine_group_display(
     cells_text = fmt$cells_text,
@@ -340,16 +341,17 @@ as_grid <- function(spec) {
     cells_style = style_mat,
     cols = .cols_by_name(spec@cols, names(spec@data)),
     data = spec@data,
-    indent_chars = if (is_preset_spec(gd_preset)) {
-      gd_preset@indent_chars
+    indent_size = if (is_preset_spec(gd_preset)) {
+      gd_preset@indent_size
     } else {
-      preset_spec()@indent_chars
+      preset_spec()@indent_size
     },
     subgroup_hide_cols = .subgroup_auto_hide_cols(spec)
   )
   fmt$cells_text <- gd$cells_text
   fmt$cells_ast <- gd$cells_ast
   style_mat <- gd$cells_style
+  cells_indent <- gd$cells_indent
   spec_cols_post <- gd$cols
   # Merge visibility updates back onto spec@cols so downstream
   # `engine_paginate()` (which filters via `.visible_col_names()`)
@@ -397,6 +399,7 @@ as_grid <- function(spec) {
     cells_text = cells_text,
     cells_ast = fmt$cells_ast,
     cells_style = style_mat,
+    cells_indent = cells_indent,
     col_labels_ast = fmt$col_labels_ast,
     col_names = names(spec@data),
     header_row_plan = gd$header_row_plan,
@@ -550,6 +553,7 @@ as_grid <- function(spec) {
   cells_text,
   cells_ast,
   cells_style,
+  cells_indent = NULL,
   col_labels_ast,
   col_names,
   header_row_plan = NULL,
@@ -561,6 +565,7 @@ as_grid <- function(spec) {
       cells_text = cells_text,
       cells_ast = cells_ast,
       cells_style = cells_style,
+      cells_indent = cells_indent,
       col_labels_ast = col_labels_ast,
       col_names = col_names,
       header_row_plan = header_row_plan,
@@ -569,17 +574,19 @@ as_grid <- function(spec) {
   })
 }
 
-# Slice a single page. The cell / style matrices and the col-label
-# list all share the same column-name ordering, so a single
+# Slice a single page. The cell / style / indent matrices and the
+# col-label list all share the same column-name ordering, so a single
 # `col_indices` projection keeps them coherent. When a
 # `header_row_plan` is non-NULL, header rows are injected into the
 # sliced matrices for any group-value transitions that fall within
-# this page's row range.
+# this page's row range. The `cells_indent` sidecar travels through
+# unchanged for data rows; injected header / blank rows carry depth 0.
 .slice_one_page <- function(
   p,
   cells_text,
   cells_ast,
   cells_style,
+  cells_indent = NULL,
   col_labels_ast,
   col_names,
   header_row_plan = NULL,
@@ -592,6 +599,19 @@ as_grid <- function(spec) {
   text_slice <- .slice_matrix(cells_text, ri, ci)
   ast_slice <- .slice_list_matrix(cells_ast, ri, ci)
   style_slice <- .slice_list_matrix(cells_style, ri, ci)
+  # `cells_indent` is optional — callers that haven't been threaded
+  # yet (or fixtures that synthesise pages by hand) get a zero matrix
+  # so the sidecar always has the right shape.
+  indent_slice <- if (is.null(cells_indent)) {
+    matrix(
+      0L,
+      nrow = length(ri),
+      ncol = length(ci),
+      dimnames = list(NULL, visible)
+    )
+  } else {
+    .slice_matrix(cells_indent, ri, ci)
+  }
 
   has_any_plan <- !is.null(header_row_plan) || length(skip_transitions) > 0L
   if (has_any_plan) {
@@ -599,6 +619,7 @@ as_grid <- function(spec) {
       cells_text = text_slice,
       cells_ast = ast_slice,
       cells_style = style_slice,
+      cells_indent = indent_slice,
       row_indices = ri,
       visible_col_names = visible,
       header_row_plan = header_row_plan,
@@ -607,6 +628,7 @@ as_grid <- function(spec) {
     text_slice <- injected$cells_text
     ast_slice <- injected$cells_ast
     style_slice <- injected$cells_style
+    indent_slice <- injected$cells_indent
     is_header_row <- injected$is_header_row
     is_blank_row <- injected$is_blank_row
   } else {
@@ -626,8 +648,14 @@ as_grid <- function(spec) {
     cells_text = text_slice,
     cells_ast = ast_slice,
     cells_style = style_slice,
+    cells_indent = indent_slice,
     is_header_row = is_header_row,
     is_blank_row = is_blank_row,
+    host_col = if (is.null(header_row_plan)) {
+      NA_character_
+    } else {
+      header_row_plan$host_col
+    },
     col_labels_ast = col_labels_ast[visible]
   )
 }

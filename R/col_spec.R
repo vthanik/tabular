@@ -39,6 +39,16 @@
 #'   *   **`"group"`** — row-label with repeat-suppression and
 #'       continuation-page repeat keys. Use for `variable`, `soc`,
 #'       `stat_label`.
+#'   *   **`"indent"`** — prefix every body cell of this column with
+#'       one indent level (`preset@indent_size` space-widths). Composes
+#'       additively with `indent_by` (a column with both gets
+#'       `depth_by + 1` indent levels per row). Backends with native
+#'       padding-left semantics (HTML / LaTeX / RTF / DOCX / PDF)
+#'       emit this as cell padding so wrapped continuation lines align
+#'       with the indented baseline; Markdown carries the literal
+#'       space-prefix. Synthesised group-header rows (under
+#'       `group_display = "header_row"`) are NEVER indented — they're
+#'       the parent at depth 0.
 #'   *   **`NULL`** — inferred as `"display"` in [`cols()`].
 #'
 #'   ```r
@@ -48,6 +58,17 @@
 #'     stat_label = col_spec(usage = "group"),
 #'     placebo    = col_spec(),
 #'     drug_50    = col_spec()
+#'   )
+#'   ```
+#'
+#'   ```r
+#'   # Section-band table: the `group_label` column drives section
+#'   # headers; `stat_label` body rows auto-indent under each header
+#'   # without an explicit depth column.
+#'   cols(
+#'     group_label = col_spec(usage = "group",  group_display = "header_row"),
+#'     stat_label  = col_spec(usage = "indent", label = "Response"),
+#'     placebo     = col_spec(align = "decimal")
 #'   )
 #'   ```
 #'
@@ -303,9 +324,8 @@
 #'   integer / logical values drive indent depth on this column.*
 #'   `<character(1)>: default NA_character_`. When set, the engine
 #'   reads `spec@data[[indent_by]]` and prefixes this column's text
-#'   + AST in each row with
-#'   `paste(rep(preset@indent_chars, depth), collapse = "")`. The
-#'   referenced depth column is auto-hidden — no need to set
+#'   + AST in each row with `strrep(" ", preset@indent_size * depth)`.
+#'   The referenced depth column is auto-hidden — no need to set
 #'   `visible = FALSE` on it.
 #'
 #'   Typical SOC / PT pattern (the bundled `saf_aesocpt` ships with
@@ -321,9 +341,9 @@
 #'   ```
 #'
 #'   Multi-depth nesting works the same way — values
-#'   `c(0L, 1L, 2L, …)` produce `0`, `1`, `2`, … copies of
-#'   `preset@indent_chars`. Negative values clamp to 0 (warn);
-#'   fractional numerics floor (warn); NA → 0 (silent).
+#'   `c(0L, 1L, 2L, …)` produce `0`, `1`, `2`, … indent levels of
+#'   `preset@indent_size` space-widths each. Negative values clamp
+#'   to 0 (warn); fractional numerics floor (warn); NA → 0 (silent).
 #'
 #'   Composes orthogonally with `group_display = "header_row"`:
 #'   synthetic group headers (depth 0) stay flush as parents; data

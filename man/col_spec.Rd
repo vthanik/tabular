@@ -26,6 +26,16 @@ col_spec(
 \item \strong{\code{"group"}} — row-label with repeat-suppression and
 continuation-page repeat keys. Use for \code{variable}, \code{soc},
 \code{stat_label}.
+\item \strong{\code{"indent"}} — prefix every body cell of this column with
+one indent level (\code{preset@indent_size} space-widths). Composes
+additively with \code{indent_by} (a column with both gets
+\code{depth_by + 1} indent levels per row). Backends with native
+padding-left semantics (HTML / LaTeX / RTF / DOCX / PDF)
+emit this as cell padding so wrapped continuation lines align
+with the indented baseline; Markdown carries the literal
+space-prefix. Synthesised group-header rows (under
+\code{group_display = "header_row"}) are NEVER indented — they're
+the parent at depth 0.
 \item \strong{\code{NULL}} — inferred as \code{"display"} in \code{\link[=cols]{cols()}}.
 }
 
@@ -35,6 +45,16 @@ cols(
   stat_label = col_spec(usage = "group"),
   placebo    = col_spec(),
   drug_50    = col_spec()
+)
+}\if{html}{\out{</div>}}
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Section-band table: the `group_label` column drives section
+# headers; `stat_label` body rows auto-indent under each header
+# without an explicit depth column.
+cols(
+  group_label = col_spec(usage = "group",  group_display = "header_row"),
+  stat_label  = col_spec(usage = "indent", label = "Response"),
+  placebo     = col_spec(align = "decimal")
 )
 }\if{html}{\out{</div>}}
 
@@ -288,9 +308,8 @@ integer / logical values drive indent depth on this column.}
 \verb{<character(1)>: default NA_character_}. When set, the engine
 reads \code{spec@data[[indent_by]]} and prefixes this column's text
 \itemize{
-\item AST in each row with
-\code{paste(rep(preset@indent_chars, depth), collapse = "")}. The
-referenced depth column is auto-hidden — no need to set
+\item AST in each row with \code{strrep(" ", preset@indent_size * depth)}.
+The referenced depth column is auto-hidden — no need to set
 \code{visible = FALSE} on it.
 }
 
@@ -306,9 +325,9 @@ construction is needed):
 }\if{html}{\out{</div>}}
 
 Multi-depth nesting works the same way — values
-\verb{c(0L, 1L, 2L, …)} produce \code{0}, \code{1}, \code{2}, … copies of
-\code{preset@indent_chars}. Negative values clamp to 0 (warn);
-fractional numerics floor (warn); NA → 0 (silent).
+\verb{c(0L, 1L, 2L, …)} produce \code{0}, \code{1}, \code{2}, … indent levels of
+\code{preset@indent_size} space-widths each. Negative values clamp
+to 0 (warn); fractional numerics floor (warn); NA → 0 (silent).
 
 Composes orthogonally with \code{group_display = "header_row"}:
 synthetic group headers (depth 0) stay flush as parents; data

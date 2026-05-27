@@ -225,9 +225,16 @@ test_that("multi-page emit produces a single continuous pipe table", {
   # header block emits ONCE for the panel, not once per vertical
   # page.
   expect_identical(length(grep("^\\| :", lines)), 1L)
-  # Every numeric data row from the input appears in the body.
+  # Every numeric data row from the input appears in the body. The
+  # body cell may carry leading whitespace from auto group-band
+  # indent (data_depth = 1 under the single `usage = "group"`
+  # column), so match the numeric followed by `|` rather than the
+  # cell-aligned literal.
   for (n in seq_len(24L)) {
-    expect_true(any(grepl(sprintf("| %d |", n), lines, fixed = TRUE)))
+    expect_true(
+      any(grepl(sprintf("\\b%d\\b *\\|", n), lines, perl = TRUE)),
+      info = sprintf("missing row n = %d", n)
+    )
   }
 })
 
@@ -470,4 +477,110 @@ test_that("style(.at = cells_title(), blank_above = 3) emits three blank lines a
   # before the `# Demo` line.
   pre_title <- sub("(.*?)# Demo.*", "\\1", md)
   expect_match(pre_title, "\\n\\n\\n", fixed = FALSE)
+})
+
+# ---------------------------------------------------------------------
+# Change C: Markdown keeps the engine text-prefix (no native padding)
+# ---------------------------------------------------------------------
+
+test_that("Markdown preserves leading-space prefix on indented data rows (Change C)", {
+  df <- data.frame(
+    soc = c("CARDIAC", "CARDIAC", "GI", "GI"),
+    label = c(
+      "CARDIAC",
+      "Atrial fibrillation",
+      "GI",
+      "Nausea"
+    ),
+    row_type = c("soc", "pt", "soc", "pt"),
+    indent_level = c(0L, 1L, 0L, 1L),
+    n = c(5L, 3L, 10L, 6L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "AE") |>
+    cols(
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Category", indent_by = "indent_level"),
+      indent_level = col_spec(visible = FALSE),
+      row_type = col_spec(visible = FALSE),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  md <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # PT rows keep the engine-baked 2-space prefix in the rendered cell.
+  expect_true(grepl("Atrial fibrillation", md, fixed = TRUE))
+  expect_match(md, "  Atrial fibrillation", perl = FALSE)
+  # Header rows (CARDIAC / GI) carry NO leading-space prefix.
+  expect_match(md, "(?m)^\\| CARDIAC ", perl = TRUE)
+})
+
+# ---------------------------------------------------------------------
+# Change D: is_header_row / is_blank_row branching in Markdown (GFM
+# fallback — no native row-spanning; bold cell 1 + &nbsp; trailing).
+# ---------------------------------------------------------------------
+
+test_that("Markdown emits bold cell-1 + &nbsp; trailing for header rows (Change D)", {
+  df <- data.frame(
+    group_label = c(
+      "Best Overall Response",
+      "Best Overall Response",
+      "Objective Response Rate",
+      "Objective Response Rate"
+    ),
+    stat_label = c("CR", "PR", "ORR (CR + PR)", "95% CI"),
+    placebo = c("1", "1", "2", "(0.3, 8.1)"),
+    drug_50 = c("1", "0", "1", "(0.0, 6.5)"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Eff") |>
+    cols(
+      group_label = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(usage = "indent", label = "Response"),
+      placebo = col_spec(label = "Placebo"),
+      drug_50 = col_spec(label = "Drug 50")
+    )
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  md <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Header rows: bold cell 1, &nbsp; in trailing cells.
+  expect_match(
+    md,
+    "| **Best Overall Response** | &nbsp; | &nbsp; |",
+    fixed = TRUE
+  )
+  expect_match(
+    md,
+    "| **Objective Response Rate** | &nbsp; | &nbsp; |",
+    fixed = TRUE
+  )
+})
+
+# ---------------------------------------------------------------------
+# Change D: nested band headers prepend space-prefix on band-2+
+# ---------------------------------------------------------------------
+
+test_that("Markdown nested bands: band-1 header bold flush, band-2 header bold + space prefix (Change D)", {
+  df <- data.frame(
+    section = c("Safety", "Safety", "Efficacy", "Efficacy"),
+    subsection = c("AE", "AE", "ORR", "ORR"),
+    label = c("Any", "SAE", "Confirmed", "Unconfirmed"),
+    n = c("100", "10", "20", "15"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Nested") |>
+    cols(
+      section = col_spec(usage = "group", group_display = "header_row"),
+      subsection = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Item"),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  md <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Band 1 ("Safety", depth 0) -> `| **Safety** | &nbsp; |`.
+  expect_match(md, "| **Safety** | &nbsp; |", fixed = TRUE)
+  # Band 2 ("AE", depth 1) -> `| **  AE** | &nbsp; |` (2-space prefix
+  # inside the bold span).
+  expect_match(md, "| **  AE** | &nbsp; |", fixed = TRUE)
 })

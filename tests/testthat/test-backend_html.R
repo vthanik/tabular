@@ -1380,8 +1380,8 @@ test_that(".tabular-pad has margin: 0 so title spacer is one line tall", {
 # ---------------------------------------------------------------------
 # Regression: visible indent on `indent_by` columns in HTML
 #
-# Bug: the engine prepends `preset@indent_chars` per depth level to
-# cell text, but browsers collapse runs of leading whitespace inside
+# Bug: the engine prepends `preset@indent_size` spaces per depth level
+# to cell text, but browsers collapse runs of leading whitespace inside
 # `<td>` -- so the indent was invisible. Fix: HTML backend strips the
 # engine prefix and re-expresses the indent as CSS `padding-left`.
 # ---------------------------------------------------------------------
@@ -1480,10 +1480,11 @@ test_that(".tabular-table-wrap top + bottom margins are symmetric (variant α)",
 #
 # Bug: padding-left was hardcoded to `depth × 1.5em` — accurate for no
 # font in particular. Fix: read the AFM glyph-advance width of
-# `preset@indent_chars` for the active body font and use that as the
-# per-level em unit. Liberation Mono / Courier: space = 600/1000 em,
-# so `"  "` at depth 1 = 1.2em (not 1.5em). Helvetica: space = 278/1000
-# em, so `"  "` at depth 1 = ~0.556em.
+# `strrep(" ", preset@indent_size)` for the active body font and use
+# that as the per-level em unit. Liberation Mono / Courier:
+# space = 600/1000 em, so `indent_size = 2L` at depth 1 = 1.2em (not
+# 1.5em). Helvetica: space = 278/1000 em, so the same at depth 1 is
+# ~0.556em.
 # ---------------------------------------------------------------------
 
 test_that("indent padding-left is AFM-derived per preset font", {
@@ -2003,4 +2004,146 @@ test_that("paper backend (LaTeX) cross-format check across every CSS unit", {
       info = sprintf("user width = %s; .tex empty", w)
     )
   }
+})
+
+# ---------------------------------------------------------------------
+# Change C: cells_indent sidecar -> CSS padding-left
+#
+# Shared 4-row fixture: 2 synthesised header rows (depth 0), 2 indented
+# data rows (depth 1), narrow `width = "1in"` on the indented column +
+# a wrapping label so the rendered cell wraps. Asserts the native
+# padding marker lands on data rows only.
+# ---------------------------------------------------------------------
+
+mk_wrap_indent_spec <- function() {
+  df <- data.frame(
+    soc = c("CARDIAC", "CARDIAC", "GI", "GI"),
+    label = c(
+      "CARDIAC",
+      "Atrial fibrillation with rapid ventricular response",
+      "GI",
+      "Nausea and vomiting episodes"
+    ),
+    row_type = c("soc", "pt", "soc", "pt"),
+    indent_level = c(0L, 1L, 0L, 1L),
+    n = c(5L, 3L, 10L, 6L),
+    stringsAsFactors = FALSE
+  )
+  tabular(df, titles = "AE") |>
+    cols(
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(
+        label = "Category",
+        indent_by = "indent_level",
+        width = "1in"
+      ),
+      indent_level = col_spec(visible = FALSE),
+      row_type = col_spec(visible = FALSE),
+      n = col_spec(label = "N")
+    )
+}
+
+test_that("HTML emits padding-left on data rows but NOT on header rows (Change C)", {
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(mk_wrap_indent_spec(), out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Data rows (depth 1) carry `padding-left: calc(.6rem + Xem)`.
+  expect_match(
+    txt,
+    "padding-left: calc\\(\\.6rem \\+ [0-9.]+em\\);[^>]*>Atrial",
+    perl = TRUE
+  )
+  # Header rows (depth 0, the synthesised CARDIAC / GI rows) carry
+  # the plain group value with NO padding-left declaration.
+  header_cell <- sub(".*(<td[^>]*>CARDIAC</td>).*", "\\1", txt)
+  expect_false(grepl("padding-left", header_cell, fixed = TRUE))
+})
+
+# ---------------------------------------------------------------------
+# Change D: is_header_row / is_blank_row branching in HTML
+# ---------------------------------------------------------------------
+
+test_that("HTML emits <tr class='tabular-group-header'> with bold spanning cell (Change D)", {
+  df <- data.frame(
+    group_label = c(
+      "Best Overall Response",
+      "Best Overall Response",
+      "Objective Response Rate",
+      "Objective Response Rate"
+    ),
+    stat_label = c("CR", "PR", "ORR (CR + PR)", "95% CI"),
+    placebo = c("1 (1.2)", "1 (1.2)", "2 (2.3)", "(0.3, 8.1)"),
+    drug_50 = c("1 (1.2)", "0", "1 (1.2)", "(0.0, 6.5)"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Eff") |>
+    cols(
+      group_label = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(usage = "indent", label = "Response"),
+      placebo = col_spec(label = "Placebo", align = "decimal"),
+      drug_50 = col_spec(label = "Drug 50", align = "decimal")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Section bands emit as `<tr class="tabular-group-header"><td colspan="N"><strong>...</strong></td></tr>`.
+  expect_match(
+    txt,
+    "<tr class=\"tabular-group-header\"><td colspan=\"3\"><strong>Best Overall Response</strong></td></tr>",
+    fixed = TRUE
+  )
+  expect_match(
+    txt,
+    "<tr class=\"tabular-group-header\"><td colspan=\"3\"><strong>Objective Response Rate</strong></td></tr>",
+    fixed = TRUE
+  )
+  # Blank-gap row between sections.
+  expect_match(
+    txt,
+    "<tr class=\"tabular-blank-row\"><td colspan=\"3\">&nbsp;</td></tr>",
+    fixed = TRUE
+  )
+  # CSS rules for both classes ship in the inline stylesheet.
+  expect_match(
+    txt,
+    ".tabular-group-header td { font-weight: 600;",
+    fixed = TRUE
+  )
+})
+
+# ---------------------------------------------------------------------
+# Change D: nested band headers render with depth-aware padding-left
+# ---------------------------------------------------------------------
+
+test_that("HTML nested bands: band-1 header flush, band-2 header indented (Change D)", {
+  df <- data.frame(
+    section = c("Safety", "Safety", "Efficacy", "Efficacy"),
+    subsection = c("AE", "AE", "ORR", "ORR"),
+    label = c("Any", "SAE", "Confirmed", "Unconfirmed"),
+    n = c("100", "10", "20", "15"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Nested") |>
+    cols(
+      section = col_spec(usage = "group", group_display = "header_row"),
+      subsection = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Item"),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Band 1 ("Safety", depth 0) has NO inline padding-left style on
+  # the spanning cell.
+  expect_match(
+    html,
+    "<tr class=\"tabular-group-header\"><td colspan=\"2\"><strong>Safety</strong>",
+    fixed = TRUE
+  )
+  # Band 2 ("AE", depth 1) HAS padding-left calc on the spanning cell.
+  expect_match(
+    html,
+    "<tr class=\"tabular-group-header\"><td colspan=\"2\" style=\"padding-left: calc\\(\\.6rem \\+ [0-9.]+em\\);\"><strong>AE</strong>",
+    perl = TRUE
+  )
 })

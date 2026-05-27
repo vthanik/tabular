@@ -19,6 +19,8 @@
 .tabular-band { text-align: center; }
 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
 .tabular-subgroup-label { font-weight: 600; }
+.tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+.tabular-blank-row td { padding: .25rem .6rem; border: none; }
 .text-left { text-align: left; }
 .text-center { text-align: center; }
 .text-right { text-align: right; }
@@ -54,58 +56,58 @@
 <tr><th>Statistic</th><th class="text-center">Placebo<br/>N=86</th><th class="text-center">High Dose<br/>N=72</th><th class="text-center">Low Dose<br/>N=96</th><th class="text-center">Total<br/>N=254</th></tr>
 </thead>
 <tbody>
-<tr><td>Age (years)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>n</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 96          </td><td class="text-right">254          </td></tr>
-<tr><td>Mean (SD)</td><td class="text-right"> 75.2 ( 8.59)</td><td class="text-right"> 73.8 ( 7.94)</td><td class="text-right"> 76.0 ( 8.11)</td><td class="text-right"> 75.1 ( 8.25)</td></tr>
-<tr><td>Median</td><td class="text-right"> 76.0        </td><td class="text-right"> 75.5        </td><td class="text-right"> 78.0        </td><td class="text-right"> 77.0        </td></tr>
-<tr><td>Q1, Q3</td><td class="text-right"> 69.2, 81.8  </td><td class="text-right"> 70.5, 79.0  </td><td class="text-right"> 71.0, 82.0  </td><td class="text-right"> 70.0, 81.0  </td></tr>
-<tr><td>Min, Max</td><td class="text-right"> 52  , 89    </td><td class="text-right"> 56  , 88    </td><td class="text-right"> 51  , 88    </td><td class="text-right"> 51  , 89    </td></tr>
-<tr><td></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>Age Group, n (%)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>18-64</td><td class="text-right"> 14   (16.3 )</td><td class="text-right"> 11   (15.3 )</td><td class="text-right">  8   ( 8.3 )</td><td class="text-right"> 33   (13.0 )</td></tr>
-<tr><td>&gt;64</td><td class="text-right"> 72   (83.7 )</td><td class="text-right"> 61   (84.7 )</td><td class="text-right"> 88   (91.7 )</td><td class="text-right">221   (87.0 )</td></tr>
-<tr><td></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>Sex, n (%)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>F</td><td class="text-right"> 53   (61.6 )</td><td class="text-right"> 35   (48.6 )</td><td class="text-right"> 55   (57.3 )</td><td class="text-right">143   (56.3 )</td></tr>
-<tr><td>M</td><td class="text-right"> 33   (38.4 )</td><td class="text-right"> 37   (51.4 )</td><td class="text-right"> 41   (42.7 )</td><td class="text-right">111   (43.7 )</td></tr>
-<tr><td></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>Race, n (%)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>WHITE</td><td class="text-right"> 78   (90.7 )</td><td class="text-right"> 62   (86.1 )</td><td class="text-right"> 90   (93.8 )</td><td class="text-right">230   (90.6 )</td></tr>
-<tr><td>BLACK OR AFRICAN AMERICAN</td><td class="text-right">  8   ( 9.3 )</td><td class="text-right">  9   (12.5 )</td><td class="text-right">  6   ( 6.2 )</td><td class="text-right"> 23   ( 9.1 )</td></tr>
-<tr><td>ASIAN</td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td></tr>
-<tr><td>AMERICAN INDIAN OR ALASKA NATIVE</td><td class="text-right">  0          </td><td class="text-right">  1   ( 1.4 )</td><td class="text-right">  0          </td><td class="text-right">  1   ( 0.4 )</td></tr>
-<tr><td></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>Ethnicity, n (%)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>HISPANIC OR LATINO</td><td class="text-right">  3   ( 3.5 )</td><td class="text-right">  3   ( 4.2 )</td><td class="text-right">  6   ( 6.2 )</td><td class="text-right"> 12   ( 4.7 )</td></tr>
-<tr><td>NOT HISPANIC OR LATINO</td><td class="text-right"> 83   (96.5 )</td><td class="text-right"> 69   (95.8 )</td><td class="text-right"> 90   (93.8 )</td><td class="text-right">242   (95.3 )</td></tr>
-<tr><td>NOT REPORTED</td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td></tr>
-<tr><td></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>Weight (kg)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>n</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 95          </td><td class="text-right">253          </td></tr>
-<tr><td>Mean (SD)</td><td class="text-right"> 62.8 (12.77)</td><td class="text-right"> 69.5 (14.35)</td><td class="text-right"> 68.0 (14.50)</td><td class="text-right"> 66.6 (14.13)</td></tr>
-<tr><td>Median</td><td class="text-right"> 60.6        </td><td class="text-right"> 69.0        </td><td class="text-right"> 66.7        </td><td class="text-right"> 66.7        </td></tr>
-<tr><td>Q1, Q3</td><td class="text-right"> 53.6, 74.2  </td><td class="text-right"> 56.9, 80.3  </td><td class="text-right"> 56.0, 78.2  </td><td class="text-right"> 55.3, 77.1  </td></tr>
-<tr><td>Min, Max</td><td class="text-right"> 34  , 86    </td><td class="text-right"> 44  , 108   </td><td class="text-right"> 42  , 106   </td><td class="text-right"> 34  , 108   </td></tr>
-<tr><td></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>Height (cm)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>n</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 96          </td><td class="text-right">254          </td></tr>
-<tr><td>Mean (SD)</td><td class="text-right">162.6 (11.52)</td><td class="text-right">165.9 (10.28)</td><td class="text-right">163.7 (10.30)</td><td class="text-right">163.9 (10.76)</td></tr>
-<tr><td>Median</td><td class="text-right">162.6        </td><td class="text-right">165.1        </td><td class="text-right">162.6        </td><td class="text-right">162.8        </td></tr>
-<tr><td>Q1, Q3</td><td class="text-right">154.0, 171.1 </td><td class="text-right">157.5, 172.8 </td><td class="text-right">157.5, 170.2 </td><td class="text-right">156.2, 171.4 </td></tr>
-<tr><td>Min, Max</td><td class="text-right">137  , 185   </td><td class="text-right">146  , 190   </td><td class="text-right">136  , 196   </td><td class="text-right">136  , 196   </td></tr>
-<tr><td></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>BMI (kg/m^2)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>n</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 95          </td><td class="text-right">253          </td></tr>
-<tr><td>Mean (SD)</td><td class="text-right"> 23.6 ( 3.67)</td><td class="text-right"> 25.2 ( 3.97)</td><td class="text-right"> 25.2 ( 4.40)</td><td class="text-right"> 24.7 ( 4.09)</td></tr>
-<tr><td>Median</td><td class="text-right"> 23.4        </td><td class="text-right"> 24.8        </td><td class="text-right"> 24.8        </td><td class="text-right"> 24.2        </td></tr>
-<tr><td>Q1, Q3</td><td class="text-right"> 21.2, 25.6  </td><td class="text-right"> 22.7, 27.6  </td><td class="text-right"> 22.3, 28.2  </td><td class="text-right"> 21.9, 27.3  </td></tr>
-<tr><td>Min, Max</td><td class="text-right"> 15  , 33    </td><td class="text-right"> 14  , 35    </td><td class="text-right"> 15  , 40    </td><td class="text-right"> 14  , 40    </td></tr>
+<tr class="tabular-group-header"><td colspan="5"><strong>Age (years)</strong></td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">n</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 96          </td><td class="text-right">254          </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Mean (SD)</td><td class="text-right"> 75.2 ( 8.59)</td><td class="text-right"> 73.8 ( 7.94)</td><td class="text-right"> 76.0 ( 8.11)</td><td class="text-right"> 75.1 ( 8.25)</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Median</td><td class="text-right"> 76.0        </td><td class="text-right"> 75.5        </td><td class="text-right"> 78.0        </td><td class="text-right"> 77.0        </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Q1, Q3</td><td class="text-right"> 69.2, 81.8  </td><td class="text-right"> 70.5, 79.0  </td><td class="text-right"> 71.0, 82.0  </td><td class="text-right"> 70.0, 81.0  </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Min, Max</td><td class="text-right"> 52  , 89    </td><td class="text-right"> 56  , 88    </td><td class="text-right"> 51  , 88    </td><td class="text-right"> 51  , 89    </td></tr>
+<tr class="tabular-blank-row"><td colspan="5">&nbsp;</td></tr>
+<tr class="tabular-group-header"><td colspan="5"><strong>Age Group, n (%)</strong></td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">18-64</td><td class="text-right"> 14   (16.3 )</td><td class="text-right"> 11   (15.3 )</td><td class="text-right">  8   ( 8.3 )</td><td class="text-right"> 33   (13.0 )</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">&gt;64</td><td class="text-right"> 72   (83.7 )</td><td class="text-right"> 61   (84.7 )</td><td class="text-right"> 88   (91.7 )</td><td class="text-right">221   (87.0 )</td></tr>
+<tr class="tabular-blank-row"><td colspan="5">&nbsp;</td></tr>
+<tr class="tabular-group-header"><td colspan="5"><strong>Sex, n (%)</strong></td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">F</td><td class="text-right"> 53   (61.6 )</td><td class="text-right"> 35   (48.6 )</td><td class="text-right"> 55   (57.3 )</td><td class="text-right">143   (56.3 )</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">M</td><td class="text-right"> 33   (38.4 )</td><td class="text-right"> 37   (51.4 )</td><td class="text-right"> 41   (42.7 )</td><td class="text-right">111   (43.7 )</td></tr>
+<tr class="tabular-blank-row"><td colspan="5">&nbsp;</td></tr>
+<tr class="tabular-group-header"><td colspan="5"><strong>Race, n (%)</strong></td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">WHITE</td><td class="text-right"> 78   (90.7 )</td><td class="text-right"> 62   (86.1 )</td><td class="text-right"> 90   (93.8 )</td><td class="text-right">230   (90.6 )</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">BLACK OR AFRICAN AMERICAN</td><td class="text-right">  8   ( 9.3 )</td><td class="text-right">  9   (12.5 )</td><td class="text-right">  6   ( 6.2 )</td><td class="text-right"> 23   ( 9.1 )</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">ASIAN</td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">AMERICAN INDIAN OR ALASKA NATIVE</td><td class="text-right">  0          </td><td class="text-right">  1   ( 1.4 )</td><td class="text-right">  0          </td><td class="text-right">  1   ( 0.4 )</td></tr>
+<tr class="tabular-blank-row"><td colspan="5">&nbsp;</td></tr>
+<tr class="tabular-group-header"><td colspan="5"><strong>Ethnicity, n (%)</strong></td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">HISPANIC OR LATINO</td><td class="text-right">  3   ( 3.5 )</td><td class="text-right">  3   ( 4.2 )</td><td class="text-right">  6   ( 6.2 )</td><td class="text-right"> 12   ( 4.7 )</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">NOT HISPANIC OR LATINO</td><td class="text-right"> 83   (96.5 )</td><td class="text-right"> 69   (95.8 )</td><td class="text-right"> 90   (93.8 )</td><td class="text-right">242   (95.3 )</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">NOT REPORTED</td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td></tr>
+<tr class="tabular-blank-row"><td colspan="5">&nbsp;</td></tr>
+<tr class="tabular-group-header"><td colspan="5"><strong>Weight (kg)</strong></td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">n</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 95          </td><td class="text-right">253          </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Mean (SD)</td><td class="text-right"> 62.8 (12.77)</td><td class="text-right"> 69.5 (14.35)</td><td class="text-right"> 68.0 (14.50)</td><td class="text-right"> 66.6 (14.13)</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Median</td><td class="text-right"> 60.6        </td><td class="text-right"> 69.0        </td><td class="text-right"> 66.7        </td><td class="text-right"> 66.7        </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Q1, Q3</td><td class="text-right"> 53.6, 74.2  </td><td class="text-right"> 56.9, 80.3  </td><td class="text-right"> 56.0, 78.2  </td><td class="text-right"> 55.3, 77.1  </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Min, Max</td><td class="text-right"> 34  , 86    </td><td class="text-right"> 44  , 108   </td><td class="text-right"> 42  , 106   </td><td class="text-right"> 34  , 108   </td></tr>
+<tr class="tabular-blank-row"><td colspan="5">&nbsp;</td></tr>
+<tr class="tabular-group-header"><td colspan="5"><strong>Height (cm)</strong></td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">n</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 96          </td><td class="text-right">254          </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Mean (SD)</td><td class="text-right">162.6 (11.52)</td><td class="text-right">165.9 (10.28)</td><td class="text-right">163.7 (10.30)</td><td class="text-right">163.9 (10.76)</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Median</td><td class="text-right">162.6        </td><td class="text-right">165.1        </td><td class="text-right">162.6        </td><td class="text-right">162.8        </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Q1, Q3</td><td class="text-right">154.0, 171.1 </td><td class="text-right">157.5, 172.8 </td><td class="text-right">157.5, 170.2 </td><td class="text-right">156.2, 171.4 </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Min, Max</td><td class="text-right">137  , 185   </td><td class="text-right">146  , 190   </td><td class="text-right">136  , 196   </td><td class="text-right">136  , 196   </td></tr>
+<tr class="tabular-blank-row"><td colspan="5">&nbsp;</td></tr>
+<tr class="tabular-group-header"><td colspan="5"><strong>BMI (kg/m^2)</strong></td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">n</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 95          </td><td class="text-right">253          </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Mean (SD)</td><td class="text-right"> 23.6 ( 3.67)</td><td class="text-right"> 25.2 ( 3.97)</td><td class="text-right"> 25.2 ( 4.40)</td><td class="text-right"> 24.7 ( 4.09)</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Median</td><td class="text-right"> 23.4        </td><td class="text-right"> 24.8        </td><td class="text-right"> 24.8        </td><td class="text-right"> 24.2        </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Q1, Q3</td><td class="text-right"> 21.2, 25.6  </td><td class="text-right"> 22.7, 27.6  </td><td class="text-right"> 22.3, 28.2  </td><td class="text-right"> 21.9, 27.3  </td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Min, Max</td><td class="text-right"> 15  , 33    </td><td class="text-right"> 14  , 35    </td><td class="text-right"> 15  , 40    </td><td class="text-right"> 14  , 40    </td></tr>
 <tr class="tabular-page-break-row" aria-hidden="true"><td colspan="5"></td></tr>
-<tr><td>BMI Category, n (%)</td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"></td></tr>
-<tr><td>Underweight (&lt;18.5)</td><td class="text-right">  3   ( 3.5 )</td><td class="text-right">  1   ( 1.4 )</td><td class="text-right">  4   ( 4.2 )</td><td class="text-right">  8   ( 3.1 )</td></tr>
-<tr><td>Normal (18.5-24.9)</td><td class="text-right"> 57   (66.3 )</td><td class="text-right"> 39   (54.2 )</td><td class="text-right"> 46   (47.9 )</td><td class="text-right">142   (55.9 )</td></tr>
-<tr><td>Overweight (25-29.9)</td><td class="text-right"> 20   (23.3 )</td><td class="text-right"> 23   (31.9 )</td><td class="text-right"> 32   (33.3 )</td><td class="text-right"> 75   (29.5 )</td></tr>
-<tr><td>Obese (&gt;=30)</td><td class="text-right">  6   ( 7.0 )</td><td class="text-right">  9   (12.5 )</td><td class="text-right"> 13   (13.5 )</td><td class="text-right"> 28   (11.0 )</td></tr>
+<tr class="tabular-group-header"><td colspan="5"><strong>BMI Category, n (%)</strong></td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Underweight (&lt;18.5)</td><td class="text-right">  3   ( 3.5 )</td><td class="text-right">  1   ( 1.4 )</td><td class="text-right">  4   ( 4.2 )</td><td class="text-right">  8   ( 3.1 )</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Normal (18.5-24.9)</td><td class="text-right"> 57   (66.3 )</td><td class="text-right"> 39   (54.2 )</td><td class="text-right"> 46   (47.9 )</td><td class="text-right">142   (55.9 )</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Overweight (25-29.9)</td><td class="text-right"> 20   (23.3 )</td><td class="text-right"> 23   (31.9 )</td><td class="text-right"> 32   (33.3 )</td><td class="text-right"> 75   (29.5 )</td></tr>
+<tr><td style="padding-left: calc(.6rem + 1.2em);">Obese (&gt;=30)</td><td class="text-right">  6   ( 7.0 )</td><td class="text-right">  9   (12.5 )</td><td class="text-right"> 13   (13.5 )</td><td class="text-right"> 28   (11.0 )</td></tr>
 </tbody>
 </table>
 </div>

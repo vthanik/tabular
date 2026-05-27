@@ -240,3 +240,20 @@ test_that("col_spec(group_skip = c(TRUE, FALSE)) is rejected (length 1)", {
     class = "tabular_error_input"
   )
 })
+
+# ---------------------------------------------------------------------
+# `usage = "indent"` — third enum value, fixed depth-1 prefix
+# ---------------------------------------------------------------------
+
+test_that("col_spec(usage = 'indent') stores the new enum value", {
+  cs <- col_spec(usage = "indent")
+  expect_identical(cs@usage, "indent")
+})
+
+test_that("col_spec(usage = 'indent') is accepted alongside indent_by", {
+  # Composes orthogonally — the engine adds the depths (per-row from
+  # indent_by) and the fixed +1 (from usage = "indent").
+  cs <- col_spec(usage = "indent", indent_by = "depth")
+  expect_identical(cs@usage, "indent")
+  expect_identical(cs@indent_by, "depth")
+})

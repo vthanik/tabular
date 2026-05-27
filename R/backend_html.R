@@ -556,77 +556,119 @@ backend_html <- function(grid, file) {
   if (nrow_data == 0L) {
     return(out)
   }
-  # Indent unit (engine prefix width per depth level). Defaults to
-  # `preset@indent_chars` ("  " = 2 spaces); used to recover the
-  # per-cell depth from the engine-prepended whitespace below.
-  indent_chars <- if (is_preset_spec(preset)) preset@indent_chars else "  "
-  indent_unit <- nchar(indent_chars %||% "")
-  # Per-level indent width in `em` units, AFM-derived from the active
-  # body font so the rendered `padding-left` matches the engine's
-  # text-prefix width verbatim. Mirrors the `.resolve_afm_name()` +
-  # `.text_width_em()` pair that `engine_decimal()` already uses
-  # (R/engine_decimal.R:214-242). `.text_width_em()` returns advance
-  # widths in 1/1000-em units; dividing by 1000 yields the CSS `em`
-  # value directly (no further font_size scaling needed -- the
-  # browser multiplies by current font-size at render time).
-  indent_em_per_level <- if (indent_unit > 0L) {
-    afm_name <- .resolve_afm_name(.effective_font_family(preset))
-    as.numeric(.text_width_em(indent_chars, afm_name)) / 1000
-  } else {
-    0
-  }
-  # Which visible columns carry an `indent_by` spec? Looking this up
-  # once per panel avoids a per-cell branch on something that never
-  # changes across the body.
-  has_indent_by <- vapply(
-    col_specs,
-    function(spec) {
-      is_col_spec(spec) &&
-        length(spec@indent_by) == 1L &&
-        !is.na(spec@indent_by) &&
-        nzchar(spec@indent_by)
-    },
-    logical(1L)
-  )
+  # Per-cell indent depth comes from the engine sidecar -- both
+  # `indent_by` and `usage = "indent"` contribute additively. Default
+  # to a zero matrix so fixtures that bypass the engine (older tests,
+  # ad-hoc page synthesis) still work.
+  cells_indent <- page$cells_indent %||%
+    matrix(
+      0L,
+      nrow = nrow_data,
+      ncol = length(col_names_visible),
+      dimnames = list(NULL, col_names_visible)
+    )
+  # One indent level = N space-widths of the active body font, in CSS
+  # `em` units. `.indent_em_per_level()` is the single source of truth
+  # (R/font_metrics.R) -- the leading-space strip below uses the same
+  # `indent_size` to recover N for trimming the engine-baked prefix.
+  indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
+  indent_unit <- nchar(.indent_text_unit(indent_size))
+  indent_em_per_level <- .indent_em_per_level(preset)
+  # Synthesised section-header rows + blank-gap rows from the engine
+  # `group_display = "header_row"` plan. The host column carries the
+  # group value; other cells are blank. Render as a single colspan'd
+  # cell so the header band reads as a unit, not a row of empty cells.
+  is_header_row <- page$is_header_row %||% rep(FALSE, nrow_data)
+  is_blank_row <- page$is_blank_row %||% rep(FALSE, nrow_data)
+  ncols_vis <- length(col_names_visible)
   rows <- vapply(
     seq_len(nrow_data),
     function(i) {
+      if (isTRUE(is_blank_row[[i]])) {
+        return(sprintf(
+          "<tr class=\"tabular-blank-row\"><td colspan=\"%d\">&nbsp;</td></tr>",
+          ncols_vis
+        ))
+      }
+      if (isTRUE(is_header_row[[i]])) {
+        # The engine placed the group value in the host column; every
+        # other cell is blank. Pull the first non-empty cell as the
+        # header text — robust whether the host column ships verbatim
+        # or with the dimname-attribute quirk. Track the cell's
+        # column index so we can read the per-band depth from
+        # cells_indent[i, host_idx] (band-2 header sits one level
+        # indented under band-1 etc.).
+        host_text <- ""
+        host_idx <- NA_integer_
+        for (jj in seq_along(col_names_visible)) {
+          val <- cells_text[i, jj]
+          if (!is.na(val) && nzchar(val)) {
+            host_text <- val
+            host_idx <- jj
+            break
+          }
+        }
+        # Band-depth padding on the spanning cell. depth = 0 -> no
+        # extra style; depth > 0 -> `padding-left: calc(.6rem + Xem)`.
+        header_style <- ""
+        if (!is.na(host_idx)) {
+          header_depth <- cells_indent[i, host_idx]
+          if (isTRUE(header_depth > 0L) && indent_em_per_level > 0) {
+            header_style <- sprintf(
+              " style=\"padding-left: calc(.6rem + %gem);\"",
+              indent_em_per_level * header_depth
+            )
+          }
+        }
+        return(sprintf(
+          paste0(
+            "<tr class=\"tabular-group-header\">",
+            "<td colspan=\"%d\"%s><strong>%s</strong></td>",
+            "</tr>"
+          ),
+          ncols_vis,
+          header_style,
+          .html_escape_cell(host_text)
+        ))
+      }
       cells <- vapply(
         seq_along(col_names_visible),
         function(j) {
           raw <- cells_text[i, j]
           spec <- col_specs[[j]]
-          # When the column has `indent_by`, the engine has already
-          # baked the indent into the cell text as a run of leading
-          # spaces. Browsers collapse runs of whitespace inside
-          # `<td>`, so re-express the indent semantically as CSS
-          # `padding-left` (AFM-derived em) and strip the prefix
-          # from the text.
+          # Read per-cell depth from the engine sidecar. Browsers
+          # collapse runs of whitespace inside `<td>`, so re-express
+          # the engine-baked indent as CSS `padding-left` and strip
+          # the leading spaces from the cell text.
+          depth <- cells_indent[i, j]
           indent_decl <- NULL
-          if (has_indent_by[[j]] && indent_unit > 0L && !is.na(raw)) {
-            n_leading <- attr(regexpr("^ +", raw), "match.length")
-            if (n_leading > 0L) {
-              depth <- n_leading %/% indent_unit
-              if (depth > 0L) {
-                raw <- substr(raw, n_leading + 1L, nchar(raw))
-                # ADDITIVE over the baseline `.tabular-table td
-                # { padding: .35rem .6rem }` left slot via CSS
-                # `calc()` -- if we emit `padding-left: Xem` alone
-                # the browser REPLACES the .6rem with Xem, so a
-                # depth-1 PT cell ends up only Xem - .6rem to the
-                # right of its parent SOC cell (sub-character for
-                # the typical AFM-derived X). `calc(.6rem + Xem)`
-                # puts the full AFM indent ON TOP of the baseline
-                # pad. `%g` trims trailing zeros (1.2 stays 1.2,
-                # 0.556 stays 0.556 -- no .4f-style .2000 noise).
-                # Caveat: the .6rem literal mirrors the value in
-                # `.html_inline_style()`; keep in sync.
-                indent_decl <- sprintf(
-                  "padding-left: calc(.6rem + %gem);",
-                  indent_em_per_level * depth
-                )
-              }
+          if (
+            isTRUE(depth > 0L) &&
+              indent_unit > 0L &&
+              !is.na(raw)
+          ) {
+            n_leading <- indent_unit * depth
+            # Strip the engine's leading-space prefix iff present.
+            # `startsWith()` ignores attributes (matrix `[i, j]` access
+            # carries the column dimname onto the scalar, which would
+            # spuriously break `identical()`).
+            if (
+              nchar(raw) >= n_leading &&
+                startsWith(raw, strrep(" ", n_leading))
+            ) {
+              raw <- substr(raw, n_leading + 1L, nchar(raw))
             }
+            # ADDITIVE over the baseline `.tabular-table td
+            # { padding: .35rem .6rem }` left slot via CSS `calc()`
+            # -- a bare `padding-left: Xem` would REPLACE the .6rem
+            # baseline. `calc(.6rem + Xem)` puts the indent ON TOP.
+            # `%g` trims trailing zeros (1.2 stays 1.2). Caveat: the
+            # .6rem literal mirrors the value in `.html_inline_style()`;
+            # keep in sync.
+            indent_decl <- sprintf(
+              "padding-left: calc(.6rem + %gem);",
+              indent_em_per_level * depth
+            )
           }
           text <- .html_escape_cell(raw)
           sn <- .cell_style_at(cells_style, i, col_names_visible[[j]])
@@ -1447,6 +1489,12 @@ backend_html <- function(grid, file) {
     ".tabular-band { text-align: center; }",
     ".tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }",
     ".tabular-subgroup-label { font-weight: 600; }",
+    # Synthesised section-header rows (col_spec(usage = "group",
+    # group_display = "header_row")) — bold, flush-left, slight extra
+    # padding above so each band reads as a unit. Blank-gap rows: a
+    # thin spacer (no borders) between consecutive sections.
+    ".tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }",
+    ".tabular-blank-row td { padding: .25rem .6rem; border: none; }",
     ".text-left { text-align: left; }",
     ".text-center { text-align: center; }",
     ".text-right { text-align: right; }",

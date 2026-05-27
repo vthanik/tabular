@@ -165,3 +165,109 @@ test_that("preset() no longer accepts title_pad_top / body_pad_bottom (cut in v0
     class = "tabular_error_input"
   )
 })
+
+# ---------------------------------------------------------------------
+# `preset@indent_size` (integer rename of the old character `indent_chars`)
+# ---------------------------------------------------------------------
+
+test_that("preset_spec default indent_size is 2L", {
+  expect_identical(preset_spec()@indent_size, 2L)
+})
+
+test_that("preset(indent_size = N) round-trips for valid non-negative integers", {
+  spec <- tabular(data.frame(x = 1L))
+  for (n in c(0L, 1L, 2L, 4L, 8L)) {
+    out <- preset(spec, indent_size = n)
+    expect_identical(out@preset@indent_size, n, info = paste0("n = ", n))
+  }
+})
+
+test_that("preset_spec validator rejects NA indent_size", {
+  expect_error(
+    preset_spec(indent_size = NA_integer_),
+    "indent_size"
+  )
+})
+
+test_that("preset_spec validator rejects negative indent_size", {
+  expect_error(
+    preset_spec(indent_size = -1L),
+    "indent_size"
+  )
+})
+
+test_that("preset_spec validator rejects length>1 indent_size", {
+  expect_error(
+    preset_spec(indent_size = c(2L, 3L)),
+    "indent_size"
+  )
+})
+
+# `.indent_text_unit()` is the single source of truth for translating
+# the integer knob into the monospace text-prefix unit; every guard in
+# the engine + every backend leading-strip pass routes through it.
+test_that(".indent_text_unit(0L) returns empty string", {
+  expect_identical(tabular:::.indent_text_unit(0L), "")
+})
+
+test_that(".indent_text_unit(N) returns N spaces for positive N", {
+  expect_identical(tabular:::.indent_text_unit(1L), " ")
+  expect_identical(tabular:::.indent_text_unit(2L), "  ")
+  expect_identical(tabular:::.indent_text_unit(4L), "    ")
+})
+
+test_that(".indent_text_unit() returns empty string for NA / negative / length>1", {
+  expect_identical(tabular:::.indent_text_unit(NA_integer_), "")
+  expect_identical(tabular:::.indent_text_unit(-1L), "")
+  expect_identical(tabular:::.indent_text_unit(integer(0L)), "")
+  expect_identical(tabular:::.indent_text_unit(c(2L, 3L)), "")
+})
+
+# ---------------------------------------------------------------------
+# Indent-unit helpers in R/font_metrics.R (Change C)
+# ---------------------------------------------------------------------
+
+test_that(".indent_em_per_level returns 0 when indent_size is 0L", {
+  expect_identical(
+    tabular:::.indent_em_per_level(preset_spec(indent_size = 0L)),
+    0
+  )
+})
+
+test_that(".indent_em_per_level is positive at default 2L preset", {
+  expect_gt(tabular:::.indent_em_per_level(preset_spec()), 0)
+})
+
+test_that(".indent_em_per_level reads default (NULL preset) as size 2L", {
+  expect_gt(tabular:::.indent_em_per_level(NULL), 0)
+})
+
+test_that(".indent_native_pt_per_level returns 0 when indent_size is 0L", {
+  expect_identical(
+    tabular:::.indent_native_pt_per_level(preset_spec(indent_size = 0L)),
+    0
+  )
+})
+
+test_that(".indent_native_pt_per_level scales with font_size", {
+  small <- tabular:::.indent_native_pt_per_level(
+    preset_spec(font_size = 8)
+  )
+  large <- tabular:::.indent_native_pt_per_level(
+    preset_spec(font_size = 16)
+  )
+  expect_gt(large, small)
+})
+
+test_that(".indent_native_twips_per_level returns 0L when indent_size is 0L", {
+  expect_identical(
+    tabular:::.indent_native_twips_per_level(preset_spec(indent_size = 0L)),
+    0L
+  )
+})
+
+test_that(".indent_native_twips_per_level returns an integer count", {
+  out <- tabular:::.indent_native_twips_per_level(preset_spec())
+  expect_type(out, "integer")
+  expect_gt(out, 0L)
+})

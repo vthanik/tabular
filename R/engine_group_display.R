@@ -56,9 +56,10 @@ engine_group_display <- function(
   cells_style,
   cols,
   data = NULL,
-  indent_chars = "",
+  indent_size = 0L,
   subgroup_hide_cols = character(0L)
 ) {
+  indent_unit <- .indent_text_unit(indent_size)
   nrow_data <- nrow(cells_text)
   ncol_data <- ncol(cells_text)
   col_names <- colnames(cells_text)
@@ -66,11 +67,28 @@ engine_group_display <- function(
     col_names <- character(0L)
   }
 
+  # Sidecar matrix carrying per-cell indent depth in integer levels.
+  # Both `indent_by` (per-row variable depth) and `usage = "indent"`
+  # (fixed +1 per row) write to it additively. Header / blank rows
+  # injected later by `.inject_header_rows_for_page()` carry depth 0L
+  # on every column (the parent at depth 0 — never indented). Each
+  # backend reads this matrix and emits native padding-left in its
+  # own unit (HTML: em; LaTeX: pt; RTF / DOCX: twips). Markdown is the
+  # exception — it keeps the engine text-prefix and ignores the
+  # sidecar.
+  cells_indent <- matrix(
+    0L,
+    nrow = nrow_data,
+    ncol = ncol_data,
+    dimnames = list(NULL, col_names)
+  )
+
   if (nrow_data == 0L || ncol_data == 0L) {
     return(list(
       cells_text = cells_text,
       cells_ast = cells_ast,
       cells_style = cells_style,
+      cells_indent = cells_indent,
       cols = cols,
       header_row_plan = NULL
     ))
@@ -80,9 +98,10 @@ engine_group_display <- function(
   # mode processing. Each target column with `indent_by = "<name>"`
   # set picks up per-row depths from `data[[<name>]]`; the target
   # column's text + AST is prefixed in-place with
-  # `paste(rep(indent_chars, depth), collapse = "")`. The
-  # referenced depth column gets its `visible` auto-flipped to FALSE
-  # (unless the user set it explicitly) so depth values don't render.
+  # `strrep(indent_unit, depth)` where `indent_unit` is
+  # `strrep(" ", indent_size)`. The referenced depth column gets its
+  # `visible` auto-flipped to FALSE (unless the user set it
+  # explicitly) so depth values don't render.
   #
   # Independent of `group_display = "header_row"` — works in plain
   # listings (no group cols) just as well as in SOC/PT tables.
@@ -91,10 +110,10 @@ engine_group_display <- function(
     col_names = col_names,
     data = data,
     nrow_data = nrow_data,
-    indent_chars = indent_chars,
+    indent_size = indent_size,
     call = rlang::caller_env()
   )
-  if (length(indent_apply$targets) > 0L && nzchar(indent_chars %||% "")) {
+  if (length(indent_apply$targets) > 0L && nzchar(indent_unit)) {
     for (target in indent_apply$targets) {
       cells_text[, target$col] <- paste0(
         target$prefixes,
@@ -104,8 +123,30 @@ engine_group_display <- function(
         cells_ast[, target$col],
         target$prefixes
       )
+      cells_indent[, target$col] <- cells_indent[, target$col] +
+        as.integer(target$depths)
     }
   }
+
+  # Phase: `usage = "indent"` columns — every body cell in the column
+  # gets prefixed with one indent level (`preset@indent_size`
+  # space-widths). Composes additively with `indent_by` above (which
+  # ran first); a column with both gets `depth_by + 1` indent levels
+  # per row. Synthesised header rows skip the prefix because they are
+  # injected post-prefix by `.inject_header_rows_for_page()`.
+  indent_usage_cols <- .indent_usage_columns(cols, col_names)
+  if (length(indent_usage_cols) > 0L && nzchar(indent_unit)) {
+    prefix_one_level <- rep(indent_unit, nrow_data)
+    for (nm in indent_usage_cols) {
+      cells_text[, nm] <- paste0(indent_unit, cells_text[, nm])
+      cells_ast[, nm] <- .indent_host_asts_per_row(
+        cells_ast[, nm],
+        prefix_one_level
+      )
+      cells_indent[, nm] <- cells_indent[, nm] + 1L
+    }
+  }
+
   # Apply the visibility auto-hide on the depth columns that
   # `.resolve_indent_targets()` flagged AND on the subgroup
   # partition / template-ref columns the caller pre-computed via
@@ -128,17 +169,21 @@ engine_group_display <- function(
       cells_text = cells_text,
       cells_ast = cells_ast,
       cells_style = cells_style,
+      cells_indent = cells_indent,
       cols = cols,
       header_row_plan = NULL
     ))
   }
 
-  # Find the first group column using "header_row" mode. Drives
-  # both the per-row transition sidecar AND the visibility flip on
-  # source columns.
-  header_col <- .first_header_row_column(cols, group_names)
+  # Identify every group column declaring `header_row` mode, in
+  # declaration order. Outer = index 1. Each becomes one band in the
+  # header-row plan below.
+  header_cols <- .header_row_columns(cols, group_names)
+  header_col <- if (length(header_cols) > 0L) header_cols[[1L]] else NULL
 
-  # Outer-group run ids — drives column-mode suppression reset.
+  # Outer-group run ids — drives column-mode suppression reset. Use
+  # the OUTERMOST header_row column when one exists; otherwise fall
+  # back to the first group column.
   outer_run_ids <- if (!is.null(header_col)) {
     .runs_grouping(cells_text[, header_col])
   } else {
@@ -161,28 +206,97 @@ engine_group_display <- function(
     }
   }
 
-  # Phase 2: build the header-row plan + the blank-skip plan + hide
-  # source columns. Only the FIRST header_row group column produces
-  # a header plan (multi-header nesting is a follow-up). Per-column
-  # `group_skip` (TRUE / FALSE / NA-defaulting-via-group_display)
-  # drives the blank-row plan independently — every group column
-  # whose `.effective_group_skip()` resolves TRUE contributes its
-  # transition row indices.
+  # Phase 2: build the multi-band header-row plan + the blank-skip
+  # plan + hide source columns. EVERY `header_row` group column
+  # contributes a band; bands nest by declaration order (outer first).
+  # Per-band transitions are computed from a composite-key run
+  # grouping over bands 1..b joined with the ASCII unit separator
+  # `\x1F`, so an inner band re-emits whenever its OWN value changes
+  # OR any outer band's value changes (canonical "subsection resets
+  # when section changes" semantic).
+  #
+  # `data_depth = length(bands)` is added to `cells_indent[, host_col]`
+  # for every body row -- UNLESS the host column itself declares
+  # `indent_by`, in which case the user's per-row depth wins and the
+  # auto-contribution is suppressed (preserves saf_aesocpt's SOC/PT
+  # rendering exactly).
+  #
+  # Per-column `group_skip` (TRUE / FALSE / NA-defaulting-via-
+  # `group_display`) drives the blank-row plan independently — every
+  # group column whose `.effective_group_skip()` resolves TRUE
+  # contributes its transition row indices.
   header_row_plan <- NULL
-  if (!is.null(header_col)) {
+  if (length(header_cols) > 0L) {
     host_col <- .header_row_host_column(col_names, group_names, cols)
+    bands <- vector("list", length(header_cols))
+    for (b in seq_along(header_cols)) {
+      composite <- do.call(
+        paste,
+        c(
+          lapply(
+            seq_len(b),
+            function(i) as.character(cells_text[, header_cols[[i]]])
+          ),
+          list(sep = "\x1F")
+        )
+      )
+      run_ids <- .runs_grouping(composite)
+      bands[[b]] <- list(
+        group_col = header_cols[[b]],
+        group_values = cells_text[, header_cols[[b]]],
+        group_asts = cells_ast[, header_cols[[b]]],
+        transitions = which(c(TRUE, diff(run_ids) != 0L)),
+        depth = b - 1L
+      )
+    }
+    data_depth <- length(bands)
     header_row_plan <- list(
-      group_col = header_col,
-      group_values = cells_text[, header_col],
-      group_asts = cells_ast[, header_col],
+      bands = bands,
       host_col = host_col,
-      transitions = which(c(TRUE, diff(outer_run_ids) != 0L))
+      data_depth = data_depth
     )
-    for (nm in group_names) {
-      cs <- cols[[nm]]
-      if (identical(cs@group_display, "header_row")) {
-        cols[[nm]] <- S7::set_props(cs, visible = FALSE)
+
+    # Conditional auto-indent on the host column's body cells:
+    # suppressed when the host already carries `indent_by` (user's
+    # per-row depth metadata wins). Composes additively with the
+    # `indent_by` / `usage = "indent"` contributions that the engine
+    # has already written into `cells_indent` above.
+    #
+    # **Invariant**: the leading-space count in `cells_text[, col]`
+    # must equal `indent_unit * cells_indent[i, col]`. We bump BOTH
+    # the matrix AND the text-prefix together so backends can
+    # blindly strip `indent_unit * cells_indent[i, j]` chars on
+    # paper backends (HTML/LaTeX/RTF/DOCX emit native padding) and
+    # markdown can render the prefix verbatim (markdown has no
+    # native padding-left).
+    if (
+      !is.na(host_col) &&
+        host_col %in% colnames(cells_indent) &&
+        data_depth > 0L
+    ) {
+      host_col_spec <- cols[[host_col]]
+      host_has_indent_by <- is_col_spec(host_col_spec) &&
+        length(host_col_spec@indent_by) == 1L &&
+        !is.na(host_col_spec@indent_by) &&
+        nzchar(host_col_spec@indent_by)
+      if (!host_has_indent_by) {
+        cells_indent[, host_col] <- cells_indent[, host_col] + data_depth
+        if (nzchar(indent_unit)) {
+          data_prefix <- strrep(indent_unit, data_depth)
+          cells_text[, host_col] <- paste0(
+            data_prefix,
+            cells_text[, host_col]
+          )
+          cells_ast[, host_col] <- .indent_host_asts_per_row(
+            cells_ast[, host_col],
+            rep(data_prefix, nrow_data)
+          )
+        }
       }
+    }
+
+    for (nm in header_cols) {
+      cols[[nm]] <- S7::set_props(cols[[nm]], visible = FALSE)
     }
   }
 
@@ -205,6 +319,7 @@ engine_group_display <- function(
     cells_text = cells_text,
     cells_ast = cells_ast,
     cells_style = cells_style,
+    cells_indent = cells_indent,
     cols = cols,
     header_row_plan = header_row_plan,
     skip_transitions = skip_transitions
@@ -225,16 +340,31 @@ engine_group_display <- function(
   col_names[keep]
 }
 
-# First group column with group_display == "header_row", in
-# declaration order. Returns NULL when none.
-.first_header_row_column <- function(cols, group_names) {
-  for (nm in group_names) {
-    cs <- cols[[nm]]
-    if (identical(cs@group_display, "header_row")) {
-      return(nm)
-    }
-  }
-  NULL
+# `usage = "indent"` columns in declaration order. Used by the
+# engine indent phase to apply a fixed depth-1 indent to every body
+# cell in each such column. Mirrors `.group_display_columns()`.
+.indent_usage_columns <- function(cols, col_names) {
+  keep <- vapply(
+    col_names,
+    function(nm) {
+      cs <- cols[[nm]]
+      is_col_spec(cs) && !is.na(cs@usage) && cs@usage == "indent"
+    },
+    logical(1L)
+  )
+  col_names[keep]
+}
+
+# Group columns whose `group_display == "header_row"`, in declaration
+# order. Returns a character vector (possibly empty). Index 1 is the
+# OUTERMOST band; later entries nest inside.
+.header_row_columns <- function(cols, group_names) {
+  keep <- vapply(
+    group_names,
+    function(nm) identical(cols[[nm]]@group_display, "header_row"),
+    logical(1L)
+  )
+  group_names[keep]
 }
 
 # Run-length grouping. Returns an integer vector the same length
@@ -328,11 +458,12 @@ engine_group_display <- function(
 # user might have hand-attached a wrapper that doesn't carry runs,
 # and the host column may contain entries from rows the
 # group_display engine doesn't manage.
-.indent_host_asts <- function(asts, indent_chars) {
-  if (length(asts) == 0L || !is.character(indent_chars)) {
+.indent_host_asts <- function(asts, indent_size) {
+  indent_unit <- .indent_text_unit(indent_size)
+  if (length(asts) == 0L || !nzchar(indent_unit)) {
     return(asts)
   }
-  prefix_run <- list(type = "plain", text = indent_chars)
+  prefix_run <- list(type = "plain", text = indent_unit)
   for (i in seq_along(asts)) {
     a <- asts[[i]]
     if (!is_inline_ast(a)) {
@@ -397,7 +528,7 @@ engine_group_display <- function(
   col_names,
   data,
   nrow_data,
-  indent_chars,
+  indent_size,
   call
 ) {
   out <- list(targets = list(), hide_cols = character(0L))
@@ -442,11 +573,12 @@ engine_group_display <- function(
       )
     }
     depths <- .coerce_indent_depths(raw, by, call = call)
-    prefixes <- .build_indent_prefixes(depths, indent_chars)
+    prefixes <- .build_indent_prefixes(depths, indent_size)
     out$targets[[length(out$targets) + 1L]] <- list(
       col = nm,
       depth_col = by,
-      prefixes = prefixes
+      prefixes = prefixes,
+      depths = depths
     )
     if (!(by %in% out$hide_cols)) {
       out$hide_cols <- c(out$hide_cols, by)
@@ -494,17 +626,29 @@ engine_group_display <- function(
   )
 }
 
+# Convert a `preset@indent_size` integer count to its monospace
+# text-prefix unit (one indent level). `0L` / `NA` / negative all
+# yield "" so callers can `nzchar()`-gate on the result without a
+# special-case branch. Single source of truth for any code path
+# that needs to translate the integer knob into characters for
+# `cells_text` (the engine prefix pass, `.indent_host_asts*`,
+# `.build_indent_prefixes`, and every backend leading-strip pass).
+.indent_text_unit <- function(indent_size) {
+  size <- suppressWarnings(as.integer(indent_size))
+  if (length(size) != 1L || is.na(size) || size <= 0L) {
+    return("")
+  }
+  strrep(" ", size)
+}
+
 # Map an integer depth vector to a parallel character prefix
-# vector. Empty string for depth 0; `paste(rep(indent_chars, N),
-# collapse = "")` for depth N. The caller injects these on
-# `cells_text[, target]` and on `cells_ast[, target]`.
-.build_indent_prefixes <- function(depths, indent_chars) {
-  if (
-    !is.character(indent_chars) ||
-      length(indent_chars) != 1L ||
-      is.na(indent_chars) ||
-      !nzchar(indent_chars)
-  ) {
+# vector. Empty string for depth 0; `strrep(indent_unit, N)` for
+# depth N, where `indent_unit` is `strrep(" ", indent_size)`. The
+# caller injects these on `cells_text[, target]` and on
+# `cells_ast[, target]`.
+.build_indent_prefixes <- function(depths, indent_size) {
+  indent_unit <- .indent_text_unit(indent_size)
+  if (!nzchar(indent_unit)) {
     return(rep("", length(depths)))
   }
   vapply(
@@ -513,7 +657,7 @@ engine_group_display <- function(
       if (d <= 0L) {
         return("")
       }
-      paste(rep(indent_chars, d), collapse = "")
+      strrep(indent_unit, d)
     },
     character(1L)
   )
@@ -529,22 +673,42 @@ engine_group_display <- function(
   cells_text,
   cells_ast,
   cells_style,
+  cells_indent = NULL,
   row_indices,
   visible_col_names,
   header_row_plan,
   skip_transitions = integer(0L),
   call = rlang::caller_env()
 ) {
+  # `cells_indent` defaults to a zero matrix of the right shape so
+  # callers that bypass the engine (older fixtures, ad-hoc test
+  # builds) still get a usable sidecar with no native padding.
+  if (is.null(cells_indent)) {
+    cells_indent <- matrix(
+      0L,
+      nrow = nrow(cells_text),
+      ncol = ncol(cells_text),
+      dimnames = list(NULL, colnames(cells_text))
+    )
+  }
+
   # Header transitions (drive section-header row injection) and
   # blank transitions (drive blank-row injection) are computed
-  # independently. Header transitions come from the outer
-  # `header_row` group column; blank transitions come from every
-  # group column whose effective `group_skip` resolves TRUE.
-  header_transitions <- if (is.null(header_row_plan)) {
-    integer(0L)
+  # independently. Header transitions are computed PER BAND from
+  # `header_row_plan$bands`; the union across bands is used only for
+  # the early-return short-circuit and output sizing. Blank
+  # transitions come from every group column whose effective
+  # `group_skip` resolves TRUE.
+  bands <- if (is.null(header_row_plan)) NULL else header_row_plan$bands
+  band_transitions_on_page <- if (is.null(bands)) {
+    list()
   } else {
-    intersect(header_row_plan$transitions, row_indices)
+    lapply(bands, function(band) intersect(band$transitions, row_indices))
   }
+  header_transitions <- unique(unlist(
+    band_transitions_on_page,
+    use.names = FALSE
+  ))
   blank_transitions <- intersect(skip_transitions, row_indices)
 
   has_header_plan <- !is.null(header_row_plan) &&
@@ -556,6 +720,7 @@ engine_group_display <- function(
       cells_text = cells_text,
       cells_ast = cells_ast,
       cells_style = cells_style,
+      cells_indent = cells_indent,
       is_header_row = rep(FALSE, length(row_indices)),
       is_blank_row = rep(FALSE, length(row_indices))
     ))
@@ -574,9 +739,17 @@ engine_group_display <- function(
   default_node <- style_node()
 
   n_page <- length(row_indices)
-  total_out_max <- n_page +
-    length(header_transitions) +
-    length(blank_transitions)
+  # Output-row upper bound: data rows + one row per band-transition
+  # (some rows have multiple bands firing simultaneously, each gets
+  # its own header row) + one blank row per blank-transition. Sum
+  # band transition counts; the inner `+ length(blank_transitions)`
+  # term handles the blank rows.
+  total_header_rows <- sum(vapply(
+    band_transitions_on_page,
+    length,
+    integer(1L)
+  ))
+  total_out_max <- n_page + total_header_rows + length(blank_transitions)
   text_out <- matrix(
     "",
     nrow = total_out_max,
@@ -587,6 +760,17 @@ engine_group_display <- function(
   style_out <- matrix(list(), nrow = total_out_max, ncol = ncol_visible)
   colnames(ast_out) <- visible_col_names
   colnames(style_out) <- visible_col_names
+  # Sidecar travels with the matrices. Data rows copy from
+  # `cells_indent`; header rows are zero on every column except
+  # host_col, where the BAND's own depth lands (band 1 = 0, band 2
+  # = 1, ...) so backends can paint the band-N header at the right
+  # native padding-left.
+  indent_out <- matrix(
+    0L,
+    nrow = total_out_max,
+    ncol = ncol_visible,
+    dimnames = list(NULL, visible_col_names)
+  )
   is_header_row <- logical(total_out_max)
   is_blank_row <- logical(total_out_max)
 
@@ -604,22 +788,36 @@ engine_group_display <- function(
       }
       is_blank_row[[out_pos]] <- TRUE
     }
-    if (has_header_plan && data_idx %in% header_transitions) {
-      out_pos <- out_pos + 1L
-      text_out[out_pos, host_idx] <- header_row_plan$group_values[[data_idx]]
-      for (j in seq_len(ncol_visible)) {
-        ast_out[[out_pos, j]] <- if (j == host_idx) {
-          header_row_plan$group_asts[[data_idx]]
-        } else {
-          blank_ast
+    # Walk bands in OUTER-to-INNER order; each band that transitions
+    # at this row emits its own header row. Multiple bands firing at
+    # the same data_idx stack (outer band header, then inner band
+    # header, then the data row).
+    if (has_header_plan) {
+      for (band in bands) {
+        if (!(data_idx %in% band$transitions)) {
+          next
         }
-        style_out[[out_pos, j]] <- default_node
+        out_pos <- out_pos + 1L
+        text_out[out_pos, host_idx] <- band$group_values[[data_idx]]
+        for (j in seq_len(ncol_visible)) {
+          ast_out[[out_pos, j]] <- if (j == host_idx) {
+            band$group_asts[[data_idx]]
+          } else {
+            blank_ast
+          }
+          style_out[[out_pos, j]] <- default_node
+        }
+        # Band depth lives on the host column so backends can read
+        # `cells_indent[i, host_idx]` and paint native padding.
+        # Other columns stay at 0 (the matrix init).
+        indent_out[out_pos, host_idx] <- band$depth
+        is_header_row[[out_pos]] <- TRUE
+        first_emit <- FALSE
       }
-      is_header_row[[out_pos]] <- TRUE
-      first_emit <- FALSE
     }
     out_pos <- out_pos + 1L
     text_out[out_pos, ] <- cells_text[k, ]
+    indent_out[out_pos, ] <- cells_indent[k, ]
     for (j in seq_len(ncol_visible)) {
       ast_out[[out_pos, j]] <- cells_ast[[k, j]]
       style_out[[out_pos, j]] <- cells_style[[k, j]]
@@ -634,6 +832,7 @@ engine_group_display <- function(
     cells_text = text_out[seq_len(total_out), , drop = FALSE],
     cells_ast = ast_out[seq_len(total_out), , drop = FALSE],
     cells_style = style_out[seq_len(total_out), , drop = FALSE],
+    cells_indent = indent_out[seq_len(total_out), , drop = FALSE],
     is_header_row = is_header_row[seq_len(total_out)],
     is_blank_row = is_blank_row[seq_len(total_out)]
   )

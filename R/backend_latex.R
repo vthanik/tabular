@@ -327,6 +327,10 @@ backend_latex <- function(grid, file) {
     page$cells_text,
     col_names_vis = col_names_vis,
     cells_style = page$cells_style,
+    cells_indent = page$cells_indent,
+    is_header_row = page$is_header_row,
+    is_blank_row = page$is_blank_row,
+    host_col = page$host_col,
     cols = cols,
     preset = meta$preset
   )
@@ -761,6 +765,10 @@ backend_latex <- function(grid, file) {
   cells_text,
   col_names_vis = NULL,
   cells_style = NULL,
+  cells_indent = NULL,
+  is_header_row = NULL,
+  is_blank_row = NULL,
+  host_col = NA_character_,
   cols = NULL,
   preset = NULL
 ) {
@@ -770,13 +778,108 @@ backend_latex <- function(grid, file) {
   }
   ncol_data <- ncol(cells_text)
   col_names_vis <- col_names_vis %||% rep(NA_character_, ncol_data)
+  # Default the indent sidecar + row-type flags to no-op shape so any
+  # caller that bypasses the engine still works.
+  if (is.null(cells_indent)) {
+    cells_indent <- matrix(0L, nrow = nrow_data, ncol = ncol_data)
+  }
+  is_header_row <- is_header_row %||% rep(FALSE, nrow_data)
+  is_blank_row <- is_blank_row %||% rep(FALSE, nrow_data)
+  # Per-level native padding in `pt` (LaTeX's tabularray takes pt for
+  # `leftsep+=`). `.indent_native_pt_per_level()` is the single source
+  # of truth shared with the leading-space strip below.
+  indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
+  indent_unit <- nchar(.indent_text_unit(indent_size))
+  indent_pt_per_level <- .indent_native_pt_per_level(preset)
   vapply(
     seq_len(nrow_data),
     function(i) {
+      # Synthesised section-header / blank-gap rows render as a single
+      # spanning cell mirroring the subgroup-banner shape — tabularray
+      # requires (N-1) trailing `&` placeholders so the column count
+      # stays consistent with the rest of the body.
+      if (isTRUE(is_blank_row[[i]])) {
+        return(paste0(
+          if (ncol_data == 1L) {
+            " "
+          } else {
+            paste(rep(" &", ncol_data - 1L), collapse = "")
+          },
+          " \\\\*"
+        ))
+      }
+      if (isTRUE(is_header_row[[i]])) {
+        host_text <- ""
+        host_idx <- NA_integer_
+        for (jj in seq_len(ncol_data)) {
+          val <- cells_text[i, jj]
+          if (!is.na(val) && nzchar(val)) {
+            host_text <- val
+            host_idx <- jj
+            break
+          }
+        }
+        # Band-depth padding on the spanning cell via tabularray's
+        # `leftsep+=` cell option. Band-1 (depth 0) gets the bare
+        # `\SetCell[c=N]{l}`; band-2+ adds `, leftsep+=Xpt`.
+        setcell_opts <- "l"
+        if (!is.na(host_idx)) {
+          header_depth <- cells_indent[i, host_idx]
+          if (isTRUE(header_depth > 0L) && indent_pt_per_level > 0) {
+            setcell_opts <- sprintf(
+              "l, leftsep+=%gpt",
+              indent_pt_per_level * header_depth
+            )
+          }
+        }
+        body <- paste0("\\textbf{", .latex_escape_cell(host_text), "}")
+        terminator <- if (i == nrow_data) " \\\\" else " \\\\*"
+        if (ncol_data == 1L) {
+          return(paste0(
+            sprintf("\\SetCell{halign=%s} ", setcell_opts),
+            body,
+            terminator
+          ))
+        }
+        return(paste0(
+          sprintf("\\SetCell[c=%d]{%s} ", ncol_data, setcell_opts),
+          body,
+          paste(rep(" &", ncol_data - 1L), collapse = ""),
+          terminator
+        ))
+      }
       cells <- vapply(
         seq_len(ncol_data),
         function(j) {
-          text <- .latex_escape_cell(cells_text[i, j])
+          raw <- cells_text[i, j]
+          # Read per-cell depth from the engine sidecar. The engine
+          # baked one indent level of spaces into the cell text per
+          # depth unit; strip exactly that many leading spaces so
+          # `leftsep+=` carries the indent semantically (wrapped
+          # continuation lines align with the indented baseline,
+          # matching the SAS PADDINGLEFT contract).
+          depth <- cells_indent[i, j]
+          extra_prefix <- NULL
+          if (
+            isTRUE(depth > 0L) &&
+              indent_unit > 0L &&
+              !is.na(raw)
+          ) {
+            n_leading <- indent_unit * depth
+            if (
+              nchar(raw) >= n_leading &&
+                startsWith(raw, strrep(" ", n_leading))
+            ) {
+              raw <- substr(raw, n_leading + 1L, nchar(raw))
+            }
+            if (indent_pt_per_level > 0) {
+              extra_prefix <- sprintf(
+                "\\SetCell{leftsep+=%gpt} ",
+                indent_pt_per_level * depth
+              )
+            }
+          }
+          text <- .latex_escape_cell(raw)
           nm <- col_names_vis[[j]]
           sn <- if (is.character(nm) && !is.na(nm)) {
             .cell_style_at(cells_style, i, nm)
@@ -785,7 +888,7 @@ backend_latex <- function(grid, file) {
           }
           prefix <- .latex_setcell_alignment(sn)
           wrapped <- .latex_wrap_text_props(text, sn)
-          paste0(prefix, wrapped)
+          paste0(extra_prefix %||% "", prefix, wrapped)
         },
         character(1L)
       )

@@ -33,7 +33,7 @@
   "pagehead",
   "pagefoot",
   "hlines",
-  "indent_chars",
+  "indent_size",
   "title_align",
   "footnote_align",
   "na_text",
@@ -266,8 +266,14 @@
 #'   *   **`hlines`** — horizontal-rule policy.
 #'       `<character(1)>`. One of `"header"` (default), `"none"`,
 #'       `"all"`.
-#'   *   **`indent_chars`** — row-label indent prefix.
-#'       `<character(1)>`. Default `"  "`.
+#'   *   **`indent_size`** — row-label indent width, in monospace-
+#'       space units. `<integer(1)>`. Default `2L`. Each indent level
+#'       adds this many space-widths of left padding to the cell.
+#'       `0L` disables the indent prefix entirely. Backends with
+#'       native padding-left semantics (HTML / LaTeX / RTF / DOCX /
+#'       PDF) emit this as cell padding so wrapped continuation lines
+#'       align with the indented baseline; Markdown carries the literal
+#'       space-prefix.
 #'   *   **`title_align`**, **`footnote_align`** — block alignment.
 #'       `<character(1)>`. One of `"left"`, `"center"`, `"right"`.
 #'   *   **`title_pad_top`**, **`title_pad_bottom`** — blank-line

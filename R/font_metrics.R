@@ -440,3 +440,53 @@
     USE.NAMES = FALSE
   )
 }
+
+# ---------------------------------------------------------------------
+# Indent unit helpers — backend-native padding-left, per depth level
+# ---------------------------------------------------------------------
+#
+# Single source of truth for the per-depth-level indent magnitude in
+# each backend's native unit. All three read `preset@indent_size` and
+# AFM-derive one space-width of the active body font, then convert to
+# the backend's unit. Backends multiply the result by per-cell depth
+# (from `page$cells_indent`) at emit time.
+#
+# Returns 0 when `preset@indent_size <= 0L` so the backends can skip
+# native padding emission without a branch.
+
+# `em` per indent level. HTML reads this and emits
+# `padding-left: calc(.6rem + Xem)` where X = level * depth. CSS `em`
+# is browser-resolved at render time against the current font-size,
+# so no further font_size scaling is needed.
+.indent_em_per_level <- function(preset) {
+  size <- if (is_preset_spec(preset)) preset@indent_size else 2L
+  unit_text <- .indent_text_unit(size)
+  if (!nzchar(unit_text)) {
+    return(0)
+  }
+  afm_name <- .resolve_afm_name(.effective_font_family(preset))
+  as.numeric(.text_width_em(unit_text, afm_name)) / 1000
+}
+
+# `pt` per indent level. LaTeX reads this and emits
+# `\SetCell{leftsep+=Xpt}` per cell. AFM width is in 1/1000-em units;
+# multiplied by the body font size in pt to get absolute pt.
+.indent_native_pt_per_level <- function(preset) {
+  em <- .indent_em_per_level(preset)
+  if (em == 0) {
+    return(0)
+  }
+  font_pt <- if (is_preset_spec(preset)) preset@font_size else 9
+  em * font_pt
+}
+
+# Twips per indent level. RTF emits `\liN`, DOCX emits
+# `<w:ind w:left="N"/>`. 1 pt = 20 twips. Result rounds to the nearest
+# whole twip so backends can paste an integer string.
+.indent_native_twips_per_level <- function(preset) {
+  pt <- .indent_native_pt_per_level(preset)
+  if (pt == 0) {
+    return(0L)
+  }
+  as.integer(round(pt * 20))
+}

@@ -1059,3 +1059,140 @@ test_that("style(.at = cells_title(), blank_above = 3) emits three blank paragra
   blanks <- length(gregexpr("<w:p/>", pre_title, fixed = TRUE)[[1]])
   expect_gte(blanks, 3L)
 })
+
+# ---------------------------------------------------------------------
+# Change C: cells_indent sidecar -> DOCX <w:ind w:left="N"/>
+# ---------------------------------------------------------------------
+
+test_that("DOCX emits <w:ind w:left=...> on data rows but NOT on header rows (Change C)", {
+  df <- data.frame(
+    soc = c("CARDIAC", "CARDIAC", "GI", "GI"),
+    label = c(
+      "CARDIAC",
+      "Atrial fibrillation with rapid ventricular response",
+      "GI",
+      "Nausea and vomiting episodes"
+    ),
+    row_type = c("soc", "pt", "soc", "pt"),
+    indent_level = c(0L, 1L, 0L, 1L),
+    n = c(5L, 3L, 10L, 6L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "AE") |>
+    cols(
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(
+        label = "Category",
+        indent_by = "indent_level",
+        width = "1in"
+      ),
+      indent_level = col_spec(visible = FALSE),
+      row_type = col_spec(visible = FALSE),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  td <- withr::local_tempdir()
+  utils::unzip(out, exdir = td)
+  doc <- paste(
+    readLines(file.path(td, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  # Data row paragraphs carry `<w:ind w:left="N"/>` BEFORE `<w:jc>`
+  # inside the same `<w:pPr>` that wraps the Atrial cell text.
+  expect_match(
+    doc,
+    "<w:ind w:left=\"[0-9]+\"/><w:jc[^>]*></w:pPr><w:r><w:t[^>]*>Atrial",
+    perl = TRUE
+  )
+  # Header band cells DO NOT carry `<w:ind w:left=...>`.
+  header_chunk <- sub(".*(<w:t[^>]*>CARDIAC</w:t>).*", "\\1", doc)
+  expect_false(grepl("<w:ind w:left", header_chunk, fixed = TRUE))
+})
+
+# ---------------------------------------------------------------------
+# Change D: is_header_row / is_blank_row branching in DOCX
+# ---------------------------------------------------------------------
+
+test_that("DOCX emits <w:gridSpan> + <w:b/> on synthesised header rows (Change D)", {
+  df <- data.frame(
+    group_label = c(
+      "Best Overall Response",
+      "Best Overall Response",
+      "Objective Response Rate",
+      "Objective Response Rate"
+    ),
+    stat_label = c("CR", "PR", "ORR (CR + PR)", "95% CI"),
+    placebo = c("1", "1", "2", "(0.3, 8.1)"),
+    drug_50 = c("1", "0", "1", "(0.0, 6.5)"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Eff") |>
+    cols(
+      group_label = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(usage = "indent", label = "Response"),
+      placebo = col_spec(label = "Placebo"),
+      drug_50 = col_spec(label = "Drug 50")
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  td <- withr::local_tempdir()
+  utils::unzip(out, exdir = td)
+  doc <- paste(
+    readLines(file.path(td, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  # Header row: single <w:tc> with <w:gridSpan w:val="3"/> + <w:b/>.
+  expect_match(
+    doc,
+    "<w:gridSpan w:val=\"3\"/></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Best Overall Response</w:t>",
+    fixed = TRUE
+  )
+  expect_match(
+    doc,
+    "<w:gridSpan w:val=\"3\"/></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Objective Response Rate</w:t>",
+    fixed = TRUE
+  )
+})
+
+# ---------------------------------------------------------------------
+# Change D: nested band headers render with depth-aware <w:ind>
+# ---------------------------------------------------------------------
+
+test_that("DOCX nested bands: band-1 header no <w:ind>, band-2 header <w:ind w:left=N> (Change D)", {
+  df <- data.frame(
+    section = c("Safety", "Safety", "Efficacy", "Efficacy"),
+    subsection = c("AE", "AE", "ORR", "ORR"),
+    label = c("Any", "SAE", "Confirmed", "Unconfirmed"),
+    n = c("100", "10", "20", "15"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Nested") |>
+    cols(
+      section = col_spec(usage = "group", group_display = "header_row"),
+      subsection = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Item"),
+      n = col_spec(label = "N")
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  td <- withr::local_tempdir()
+  utils::unzip(out, exdir = td)
+  doc <- paste(
+    readLines(file.path(td, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  # Band 1 ("Safety", depth 0) -> the spanning paragraph's <w:pPr>
+  # carries <w:jc w:val="left"/> WITHOUT a preceding <w:ind>.
+  expect_match(
+    doc,
+    "<w:pPr><w:jc w:val=\"left\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Safety</w:t>",
+    fixed = TRUE
+  )
+  # Band 2 ("AE", depth 1) -> <w:ind w:left="N"/> BEFORE <w:jc>.
+  expect_match(
+    doc,
+    "<w:pPr><w:ind w:left=\"[0-9]+\"/><w:jc w:val=\"left\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">AE</w:t>",
+    perl = TRUE
+  )
+})

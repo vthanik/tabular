@@ -733,6 +733,9 @@ backend_docx <- function(grid, file) {
 ) {
   col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
   n_cols_vis <- length(col_names_vis)
+  indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
+  indent_unit <- nchar(.indent_text_unit(indent_size))
+  indent_twips_per_level <- .indent_native_twips_per_level(preset)
   out <- character()
   prev_subgroup_index <- NULL
   for (page in pages) {
@@ -754,11 +757,82 @@ backend_docx <- function(grid, file) {
     }
     ct <- page$cells_text
     cs_mat <- page$cells_style
+    cells_indent <- page$cells_indent
     nrows <- nrow(ct)
     if (is.null(nrows) || nrows == 0L) {
       next
     }
+    if (is.null(cells_indent)) {
+      cells_indent <- matrix(0L, nrow = nrows, ncol = n_cols_vis)
+    }
+    is_header_row_vec <- page$is_header_row %||% rep(FALSE, nrows)
+    is_blank_row_vec <- page$is_blank_row %||% rep(FALSE, nrows)
+    span_total_twips <- sum(as.integer(widths_twips))
     for (i in seq_len(nrows)) {
+      if (isTRUE(is_blank_row_vec[[i]])) {
+        out <- c(
+          out,
+          paste0(
+            "<w:tr><w:trPr><w:cantSplit/></w:trPr>",
+            "<w:tc><w:tcPr>",
+            sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_total_twips),
+            sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols_vis),
+            "</w:tcPr>",
+            "<w:p><w:pPr></w:pPr><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p>",
+            "</w:tc></w:tr>"
+          )
+        )
+        next
+      }
+      if (isTRUE(is_header_row_vec[[i]])) {
+        host_text <- ""
+        host_idx <- NA_integer_
+        for (jj in seq_along(col_names_vis)) {
+          val <- page$cells_text[i, jj]
+          if (!is.na(val) && nzchar(val)) {
+            host_text <- val
+            host_idx <- jj
+            break
+          }
+        }
+        # Band-depth padding on the header paragraph via
+        # `<w:ind w:left="N"/>` (twips) BEFORE `<w:jc>`. Band-1
+        # (depth 0) emits no `<w:ind>`; band-2+ stamps the cell-side
+        # left indent so the band-N header sits visibly nested under
+        # band-(N-1).
+        header_ind_tok <- ""
+        if (!is.na(host_idx)) {
+          header_depth <- cells_indent[i, host_idx]
+          if (
+            isTRUE(header_depth > 0L) &&
+              indent_twips_per_level > 0L
+          ) {
+            header_ind_tok <- sprintf(
+              "<w:ind w:left=\"%d\"/>",
+              indent_twips_per_level * header_depth
+            )
+          }
+        }
+        out <- c(
+          out,
+          paste0(
+            "<w:tr><w:trPr><w:cantSplit/></w:trPr>",
+            "<w:tc><w:tcPr>",
+            sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_total_twips),
+            sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols_vis),
+            "</w:tcPr>",
+            "<w:p><w:pPr>",
+            header_ind_tok,
+            "<w:jc w:val=\"left\"/></w:pPr>",
+            "<w:r><w:rPr><w:b/></w:rPr>",
+            "<w:t xml:space=\"preserve\">",
+            .docx_escape(host_text),
+            "</w:t></w:r></w:p>",
+            "</w:tc></w:tr>"
+          )
+        )
+        next
+      }
       # Word-side keep-with-next: `<w:keepNext/>` is a paragraph
       # property that glues a paragraph to the next paragraph on
       # the same page. Stamping it inside every cell's `<w:pPr>`
@@ -789,16 +863,44 @@ backend_docx <- function(grid, file) {
           } else {
             ""
           }
+          # Per-cell native left indent from the engine sidecar. Strip
+          # the engine-baked leading spaces and emit
+          # `<w:ind w:left="N"/>` inside `<w:pPr>` BEFORE `<w:jc>` so
+          # Word honours the cell-side left indent (wrapped continuation
+          # lines align with the indented baseline).
+          raw <- ct[i, j]
+          depth <- cells_indent[i, j]
+          ind_tok <- ""
+          if (
+            isTRUE(depth > 0L) &&
+              indent_unit > 0L &&
+              !is.na(raw)
+          ) {
+            n_leading <- indent_unit * depth
+            if (
+              nchar(raw) >= n_leading &&
+                startsWith(raw, strrep(" ", n_leading))
+            ) {
+              raw <- substr(raw, n_leading + 1L, nchar(raw))
+            }
+            if (indent_twips_per_level > 0L) {
+              ind_tok <- sprintf(
+                "<w:ind w:left=\"%d\"/>",
+                indent_twips_per_level * depth
+              )
+            }
+          }
           paste0(
             "<w:tc>",
             tc_pr,
             "<w:p><w:pPr>",
             keep_next_tok,
+            ind_tok,
             align_tok,
             "</w:pPr><w:r>",
             r_pr,
             "<w:t xml:space=\"preserve\">",
-            .docx_escape(ct[i, j]),
+            .docx_escape(raw),
             "</w:t></w:r></w:p></w:tc>"
           )
         },
