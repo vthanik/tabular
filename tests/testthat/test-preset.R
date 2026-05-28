@@ -149,8 +149,12 @@ test_that("style(.at = cells_title(), blank_above = N) reaches the title pad pip
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  # blank_above = 3 emits >= 3 leading `\pard\plain\par` paragraphs.
-  blanks <- length(gregexpr("\\\\pard\\\\plain\\\\par", rtf)[[1L]])
+  # Repeating titles put spacing inside the table as blank \trhdr merged
+  # rows (empty `\pard\plain\intbl\fsN\cell`). blank_above = 3 +
+  # blank_below = 2 emits >= 3 such blank spacing rows.
+  blanks <- length(
+    gregexpr("\\\\pard\\\\plain\\\\intbl\\\\fs[0-9]+\\\\cell", rtf)[[1L]]
+  )
   expect_gte(blanks, 3L)
 })
 

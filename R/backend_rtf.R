@@ -63,11 +63,17 @@ backend_rtf <- function(grid, file) {
 # ---------------------------------------------------------------------
 
 # Compose the full RTF document: `{\rtf1` header, font table, one
-# section per page, closing `}`. Returns a character vector of
+# section per render panel, closing `}`. Returns a character vector of
 # lines ready for `writeLines()`. Pure — no I/O.
+#
+# Galley one-table model: the engine's per-page descriptors are grouped
+# into render panels keyed by `(subgroup, horizontal panel)`. Each panel
+# becomes ONE continuous RTF table whose title + spanner + column-label
+# rows carry `\trhdr`, so Word repeats them at every page break it
+# chooses and paginates the body natively. `\sect` (with `\sbkpage`)
+# separates panels only.
 .render_rtf_doc <- function(grid) {
   pages <- grid@pages
-  total <- length(pages)
   meta <- grid@metadata
   preset <- .rtf_resolve_preset(meta$preset)
   cs <- meta$chrome_style %||% chrome_style()
@@ -92,25 +98,48 @@ backend_rtf <- function(grid, file) {
   )
   preamble <- preamble[nzchar(preamble)]
 
-  if (total == 0L) {
+  if (length(pages) == 0L) {
     section <- .render_rtf_empty(grid, preset, cs, colors, fonts)
     return(c(preamble, section, "}"))
   }
 
-  body <- list()
-  for (i in seq_along(pages)) {
-    body[[i]] <- .render_rtf_page(
-      page = pages[[i]],
+  panels <- .rtf_group_pages_into_panels(pages)
+  body <- lapply(panels, function(panel_pages) {
+    .render_rtf_panel(
+      panel_pages = panel_pages,
       meta = meta,
       preset = preset,
       cs = cs,
       colors = colors,
-      fonts = fonts,
-      page_number = i,
-      total_pages = total
+      fonts = fonts
     )
-  }
+  })
   c(preamble, unlist(body, use.names = FALSE), "}")
+}
+
+# Group the engine's flat page list into render panels keyed by
+# `(subgroup_index, panel_index)`, each sorted by `page_index`. For a
+# native (unsplit) grid each group is a single page; for a split
+# inspection grid the group's pages are concatenated downstream into one
+# continuous table. First-appearance order of groups is preserved.
+.rtf_group_pages_into_panels <- function(pages) {
+  keys <- vapply(
+    pages,
+    function(p) {
+      sg <- p$subgroup_index %||% 0L
+      sprintf("%d\x1f%d", as.integer(sg), as.integer(p$panel_index %||% 1L))
+    },
+    character(1L)
+  )
+  lapply(unique(keys), function(k) {
+    grp <- pages[keys == k]
+    idx <- vapply(
+      grp,
+      function(p) as.integer(p$page_index %||% 1L),
+      integer(1L)
+    )
+    grp[order(idx)]
+  })
 }
 
 # Render the RTF skeleton for a spec whose grid has zero pages
@@ -131,73 +160,82 @@ backend_rtf <- function(grid, file) {
   )
 }
 
-# Render one page as one RTF section. Carries its own section
-# definition (so per-page geometry stays self-contained), optional
-# header / footer groups, page-1 title block, optional continuation
-# marker on pages 2+, the table, and the page-1 footnote block.
-.render_rtf_page <- function(
-  page,
-  meta,
-  preset,
-  cs,
-  colors,
-  fonts,
-  page_number,
-  total_pages
-) {
+# Render one panel as one RTF section + one continuous table. The
+# section carries its own geometry; `{\header}` (pagehead) and
+# `{\footer}` (program-path band + repeating footnotes) repeat on every
+# Word page. The table's title + spanner + column-label + subgroup-banner
+# rows carry `\trhdr` when their `repeat_*` flag is set, so Word redraws
+# them at every page break and paginates the body itself. `\pard\par`
+# exits table context before the closing `\sect`.
+.render_rtf_panel <- function(panel_pages, meta, preset, cs, colors, fonts) {
+  first <- panel_pages[[1L]]
+  col_names_vis <- first$col_names
+  cols <- meta$cols %||% list()
+  cellx <- .rtf_cellx_positions(col_names_vis, cols, preset)
+  .rtf_warn_cellx_overflow(cellx, preset)
+
+  # Default to "everything repeats" (the regulatory norm) when a grid
+  # carries no repeat flags (e.g. a hand-built fixture).
+  rep_titles <- meta$repeat_titles %||% TRUE
+  rep_headers <- meta$repeat_headers %||% TRUE
+  rep_footnotes <- meta$repeat_footnotes %||% TRUE
+
+  is_cont_panel <- isTRUE((first$panel_index %||% 1L) > 1L)
+  continuation <- first$continuation
+  has_cont <- is_cont_panel && length(continuation) > 0L
+
   has_ph <- .page_band_is_populated(meta$pagehead_ast)
   has_pf <- .page_band_is_populated(meta$pagefoot_ast)
-
-  # Footnotes ride the `{\footer}` group (above the program-path band)
-  # on every page where show_footnotes_here is TRUE. The footer sits at
-  # `\footery = bottom margin` and flows downward; Word expands it
-  # upward into the body when the footnote block is tall, so the page
-  # margin is never enlarged (galley's model).
+  has_titles <- length(meta$titles_ast) > 0L
   has_footnotes <- length(meta$footnotes_ast) > 0L
-  footnotes_here <- has_footnotes && isTRUE(page$show_footnotes_here)
-  footer_active <- has_pf || footnotes_here
-  footnote_lines <- if (footnotes_here) {
+
+  # Footnotes ride the repeating `{\footer}` group when repeat_content
+  # includes "footnotes"; otherwise they trail the table as paragraphs
+  # (landing on the final Word page only). The program-path band always
+  # rides `{\footer}`.
+  footer_footnotes <- has_footnotes && isTRUE(rep_footnotes)
+  trailing_footnotes <- has_footnotes && !isTRUE(rep_footnotes)
+  footer_active <- has_pf || footer_footnotes
+  footnote_lines <- if (footer_footnotes) {
     .render_rtf_footnote_block(meta$footnotes_ast, preset, cs, colors, fonts)
   } else {
     character()
   }
 
-  out <- character()
-  out <- c(
-    out,
-    .rtf_section_def(
-      preset,
-      has_pagehead = has_ph,
-      has_pagefoot = footer_active
-    )
+  out <- list()
+  out[[length(out) + 1L]] <- .rtf_section_def(
+    preset,
+    has_pagehead = has_ph,
+    has_pagefoot = footer_active
   )
   if (has_ph) {
-    out <- c(
-      out,
-      .rtf_header_group(meta$pagehead_ast, preset, cs, colors, fonts)
+    out[[length(out) + 1L]] <- .rtf_header_group(
+      meta$pagehead_ast,
+      preset,
+      cs,
+      colors,
+      fonts
     )
   }
   if (footer_active) {
-    out <- c(
-      out,
-      .rtf_footer_group(
-        meta$pagefoot_ast,
-        footnote_lines,
-        preset,
-        cs,
-        colors,
-        fonts
-      )
+    out[[length(out) + 1L]] <- .rtf_footer_group(
+      meta$pagefoot_ast,
+      footnote_lines,
+      preset,
+      cs,
+      colors,
+      fonts
     )
   }
 
-  blank_par <- "\\pard\\plain\\par"
-  pad_title_top <- .rtf_blank_count(cs, "title", "above", 1L)
-  pad_title_bottom <- .rtf_blank_count(cs, "title", "below", 1L)
-  pad_body_top <- 0L
-  pad_body_bottom <- 0L
+  pad_top <- .rtf_blank_count(cs, "title", "above", 1L)
+  pad_bottom <- .rtf_blank_count(cs, "title", "below", 1L)
 
-  if (isTRUE(page$show_titles)) {
+  # Non-repeating titles: paragraphs ABOVE the table (panel 1 only, so
+  # they appear once). The continuation marker, when titles do not
+  # repeat, is a standalone right-aligned paragraph on panels 2+.
+  cont_in_title <- isTRUE(rep_titles) && has_titles
+  if (!isTRUE(rep_titles) && has_titles && !is_cont_panel) {
     titles <- .render_rtf_title_block(
       meta$titles_ast,
       preset,
@@ -206,33 +244,340 @@ backend_rtf <- function(grid, file) {
       fonts
     )
     if (length(titles) > 0L) {
-      out <- c(
-        out,
-        rep(blank_par, pad_title_top),
+      blank_par <- "\\pard\\plain\\par"
+      out[[length(out) + 1L]] <- c(
+        rep(blank_par, pad_top),
         titles,
-        rep(blank_par, pad_title_bottom)
+        rep(blank_par, pad_bottom)
       )
     }
-  } else if (length(page$continuation) > 0L) {
-    out <- c(
-      out,
-      paste0(
-        paste0("\\pard\\plain", .rtf_body_fs(preset), "\\qr {\\i "),
-        .rtf_escape(as.character(page$continuation)),
-        "}\\par"
-      )
+  }
+  if (has_cont && !cont_in_title) {
+    out[[length(out) + 1L]] <- paste0(
+      "\\pard\\plain",
+      .rtf_body_fs(preset),
+      "\\qr {\\i ",
+      .rtf_escape(as.character(continuation)),
+      "}\\par"
     )
   }
 
-  out <- c(out, rep(blank_par, pad_body_top))
-  out <- c(out, .render_rtf_table(page, meta, preset, cs, colors, fonts))
-  out <- c(out, rep(blank_par, pad_body_bottom))
+  # ---- the one continuous table ----
+  table_rows <- list()
 
-  # Footnotes are emitted in the `{\footer}` group above, not in the
-  # body, so they pin to the page bottom on every page.
+  # Repeating titles -> `\trhdr` merged rows + `\trhdr` blank spacing rows
+  # so the title block and its spacing repeat with the header at every
+  # Word page break. The continuation marker rides the first title cell
+  # on panels 2+.
+  if (isTRUE(rep_titles) && has_titles) {
+    table_rows[[length(table_rows) + 1L]] <- .rtf_blank_trhdr_rows(
+      pad_top,
+      cellx,
+      preset
+    )
+    table_rows[[length(table_rows) + 1L]] <- .rtf_title_header_rows(
+      meta$titles_ast,
+      cellx,
+      preset,
+      cs,
+      colors,
+      fonts,
+      continuation = if (has_cont) continuation else character(),
+      mark_continuation = has_cont
+    )
+    table_rows[[length(table_rows) + 1L]] <- .rtf_blank_trhdr_rows(
+      pad_bottom,
+      cellx,
+      preset
+    )
+  }
 
-  out <- c(out, "\\sect")
-  out
+  table_rows[[length(table_rows) + 1L]] <- .render_rtf_header_bands(
+    meta$headers,
+    col_names_vis,
+    cols,
+    cellx,
+    preset,
+    cs,
+    colors,
+    fonts,
+    trhdr = rep_headers
+  )
+  # The full-width header top rule rides the topmost header row. When
+  # spanner bands are present they own it; otherwise the column-labels
+  # row is the top row and carries it.
+  has_bands <- is.data.frame(meta$headers) && nrow(meta$headers) > 0L
+  table_rows[[length(table_rows) + 1L]] <- .render_rtf_col_labels_row(
+    meta$col_labels_ast,
+    col_names_vis,
+    cols,
+    cellx,
+    preset,
+    cs,
+    colors,
+    fonts,
+    trhdr = rep_headers,
+    outer_top = !has_bands
+  )
+  table_rows[[length(table_rows) + 1L]] <- .render_rtf_subgroup_banner_row(
+    first$subgroup_line_ast,
+    cellx = cellx,
+    preset = preset,
+    cs = cs,
+    colors = colors,
+    fonts = fonts,
+    trhdr = rep_headers
+  )
+
+  body <- .rtf_concat_panel_body(panel_pages)
+  table_rows[[length(table_rows) + 1L]] <- .render_rtf_body_rows(
+    body$cells_text,
+    col_names_vis,
+    cols,
+    cellx,
+    cells_style = body$cells_style,
+    cells_indent = body$cells_indent,
+    is_header_row = body$is_header_row,
+    is_blank_row = body$is_blank_row,
+    host_col = body$host_col,
+    keep_with_next = body$keep_with_next,
+    preset = preset,
+    cs = cs,
+    colors = colors,
+    fonts = fonts
+  )
+
+  out[[length(out) + 1L]] <- unlist(table_rows, use.names = FALSE)
+
+  # Non-repeating footnotes trail the table as paragraphs (final page).
+  if (trailing_footnotes) {
+    out[[length(out) + 1L]] <- .render_rtf_footnote_block(
+      meta$footnotes_ast,
+      preset,
+      cs,
+      colors,
+      fonts
+    )
+  }
+
+  # `\pard\par` exits the table context so Word does not merge this
+  # panel's table with the next section's; `\sect` closes the section.
+  out[[length(out) + 1L]] <- c("\\pard\\par", "\\sect")
+  unlist(out, use.names = FALSE)
+}
+
+# Concatenate a panel's page slices into one body. For a native (unsplit)
+# grid this is a single page (pass-through); for a split inspection grid
+# it stitches the per-page slices back into one continuous table. rbinds
+# the cell-text + sidecar matrices (column names preserved so
+# `.cell_style_at` keeps indexing by name) and concatenates the parallel
+# row vectors in render order.
+.rtf_concat_panel_body <- function(panel_pages) {
+  first <- panel_pages[[1L]]
+  if (length(panel_pages) == 1L) {
+    return(list(
+      cells_text = first$cells_text,
+      cells_style = first$cells_style,
+      cells_indent = first$cells_indent,
+      is_header_row = first$is_header_row,
+      is_blank_row = first$is_blank_row,
+      keep_with_next = first$keep_with_next,
+      host_col = first$host_col
+    ))
+  }
+  list(
+    cells_text = do.call(
+      rbind,
+      lapply(panel_pages, function(p) p$cells_text)
+    ),
+    cells_style = do.call(
+      rbind,
+      lapply(panel_pages, function(p) p$cells_style)
+    ),
+    cells_indent = do.call(
+      rbind,
+      lapply(panel_pages, function(p) p$cells_indent)
+    ),
+    is_header_row = unlist(
+      lapply(panel_pages, function(p) p$is_header_row),
+      use.names = FALSE
+    ),
+    is_blank_row = unlist(
+      lapply(panel_pages, function(p) p$is_blank_row),
+      use.names = FALSE
+    ),
+    keep_with_next = unlist(
+      lapply(panel_pages, function(p) p$keep_with_next),
+      use.names = FALSE
+    ),
+    host_col = first$host_col
+  )
+}
+
+# `\trhdr` row-prelude token. Marks a table row as a repeating header so
+# Word redraws it at the top of every page the table spans.
+.rtf_trhdr <- function(trhdr) {
+  if (isTRUE(trhdr)) "\\trhdr" else ""
+}
+
+# Emit one full-width merged row on the body `\cellx` grid (galley's
+# `\clmgf` / `\clmrg` model). Cell 1 carries `\clmgf` + the shared cell
+# prelude (borders / shading / valign) + `\cellx[1]`; cells 2..N carry
+# `\clmrg` + the same prelude + `\cellx[i]`. Keeping all N boundaries
+# identical to the body grid lets Word treat the panel as one coherent
+# table (a single trailing `\cellx` would desync the column model).
+# `first_body` is the fully-rendered first-cell paragraph (without the
+# trailing `\cell`); the remaining cells are empty. `trhdr` marks a
+# repeating header row; `keep` adds `\trkeep` / and the caller threads
+# `\keepn` into `first_body`.
+.rtf_merged_row <- function(
+  first_body,
+  cellx,
+  preset,
+  trhdr = FALSE,
+  keep = FALSE,
+  prelude = "",
+  trgaph = 108L
+) {
+  n <- length(cellx)
+  if (n == 0L) {
+    return(character())
+  }
+  cell_defs <- character(n)
+  cell_defs[[1L]] <- paste0(
+    prelude,
+    "\\clmgf",
+    sprintf("\\cellx%d", as.integer(cellx[[1L]]))
+  )
+  if (n > 1L) {
+    for (i in seq.int(2L, n)) {
+      cell_defs[[i]] <- paste0(
+        prelude,
+        "\\clmrg",
+        sprintf("\\cellx%d", as.integer(cellx[[i]]))
+      )
+    }
+  }
+  cell_bodies <- c(
+    paste0(first_body, "\\cell"),
+    rep("\\pard\\plain\\intbl\\cell", n - 1L)
+  )
+  c(
+    paste0(
+      "\\trowd",
+      .rtf_trhdr(trhdr),
+      sprintf("\\trgaph%d\\trqc", as.integer(trgaph)),
+      .rtf_row_height_str(preset),
+      if (isTRUE(keep)) "\\trkeep" else ""
+    ),
+    cell_defs,
+    cell_bodies,
+    "\\row"
+  )
+}
+
+# Render the title block as `\trhdr` merged rows (one per title line),
+# centred + bold by the title-surface cascade. The continuation marker,
+# when present, is appended to the FIRST title line's text on panels 2+.
+.rtf_title_header_rows <- function(
+  titles_ast,
+  cellx,
+  preset,
+  cs,
+  colors,
+  fonts,
+  continuation = character(),
+  mark_continuation = FALSE
+) {
+  n <- length(titles_ast)
+  if (n == 0L || length(cellx) == 0L) {
+    return(character())
+  }
+  surface_node <- .chrome_surface_at(cs, "title")
+  surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
+  bold_open <- if (
+    is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
+  ) {
+    ""
+  } else {
+    "{\\b "
+  }
+  bold_close <- if (identical(bold_open, "")) "" else "}"
+  rows <- vector("list", n)
+  for (i in seq_len(n)) {
+    halign <- if (
+      is_style_node(surface_node) &&
+        length(surface_node@halign) == 1L &&
+        !is.na(surface_node@halign)
+    ) {
+      surface_node@halign
+    } else {
+      h <- .effective_title_halign(preset, line_index = i, n_lines = n)
+      if (is.na(h)) "center" else h
+    }
+    inner <- .render_rtf_inline(titles_ast[[i]])
+    if (i == 1L && isTRUE(mark_continuation) && length(continuation) > 0L) {
+      inner <- paste0(
+        inner,
+        " ",
+        .rtf_escape(as.character(continuation))
+      )
+    }
+    first_body <- paste0(
+      "\\pard\\plain\\intbl",
+      .rtf_body_fs(preset),
+      .rtf_align_token(halign),
+      surface_props,
+      " ",
+      bold_open,
+      inner,
+      bold_close
+    )
+    rows[[i]] <- .rtf_merged_row(first_body, cellx, preset, trhdr = TRUE)
+  }
+  unlist(rows, use.names = FALSE)
+}
+
+# Emit `n` blank `\trhdr` merged rows for vertical spacing inside the
+# repeating header block (so the gap repeats with the header at every
+# Word page break).
+.rtf_blank_trhdr_rows <- function(n, cellx, preset) {
+  if (n <= 0L || length(cellx) == 0L) {
+    return(character())
+  }
+  one <- .rtf_merged_row(
+    paste0("\\pard\\plain\\intbl", .rtf_body_fs(preset)),
+    cellx,
+    preset,
+    trhdr = TRUE
+  )
+  rep(one, n)
+}
+
+# Warn once per panel when the rightmost `\cellx` overruns the printable
+# area (paper width minus left/right margins): Word renders the overflow
+# off-page. Neither r2rtf nor galley diagnoses this; surfacing it lets
+# the user widen the page or shrink columns before shipping.
+.rtf_warn_cellx_overflow <- function(cellx, preset) {
+  if (length(cellx) == 0L) {
+    return(invisible())
+  }
+  paper <- .rtf_paper_twips(preset@paper_size, preset@orientation)
+  margins <- .rtf_margins_twips(preset@margins)
+  printable <- paper$width - margins$left - margins$right
+  last <- as.integer(cellx[[length(cellx)]])
+  if (last > printable) {
+    over_in <- round((last - printable) / .tabular_unit_twips[["in"]], 2)
+    cli::cli_warn(
+      c(
+        "Table is wider than the printable area.",
+        "x" = "Columns overrun the page by {over_in} in; the overflow renders off-page in Word.",
+        "i" = "Widen the page, shrink margins, or set narrower {.code col_spec(width = ...)}."
+      ),
+      class = "tabular_warning_layout"
+    )
+  }
+  invisible()
 }
 
 # Resolve the blank-line count for a chrome surface side. chrome_style
@@ -362,15 +707,18 @@ backend_rtf <- function(grid, file) {
 # up at the bottom of the header zone, closest to the table body.
 .rtf_header_group <- function(pagehead_ast, preset, cs, colors, fonts) {
   nrow_band <- .page_band_nrow(pagehead_ast)
-  rows <- character()
-  for (i in rev(seq_len(nrow_band))) {
-    row_ast <- .page_band_row(pagehead_ast, i)
-    rows <- c(
-      rows,
-      .rtf_chrome_row(row_ast, preset, cs, "pagehead", colors, fonts)
+  order <- rev(seq_len(nrow_band))
+  rows <- lapply(order, function(i) {
+    .rtf_chrome_row(
+      .page_band_row(pagehead_ast, i),
+      preset,
+      cs,
+      "pagehead",
+      colors,
+      fonts
     )
-  }
-  c("{\\header", rows, "}")
+  })
+  c("{\\header", unlist(rows, use.names = FALSE), "}")
 }
 
 # `{\footer ...}` group. Emits one invisible 1-row 3-cell table
@@ -385,17 +733,19 @@ backend_rtf <- function(grid, file) {
   fonts
 ) {
   nrow_band <- .page_band_nrow(pagefoot_ast)
-  rows <- character()
-  for (i in seq_len(nrow_band)) {
-    row_ast <- .page_band_row(pagefoot_ast, i)
-    rows <- c(
-      rows,
-      .rtf_chrome_row(row_ast, preset, cs, "pagefoot", colors, fonts)
+  rows <- lapply(seq_len(nrow_band), function(i) {
+    .rtf_chrome_row(
+      .page_band_row(pagefoot_ast, i),
+      preset,
+      cs,
+      "pagefoot",
+      colors,
+      fonts
     )
-  }
+  })
   # Footnote paragraphs sit ABOVE the program-path band so the footer
   # reads footnotes-then-program-path top to bottom (BMS Appendix I).
-  c("{\\footer", footnote_lines, rows, "}")
+  c("{\\footer", footnote_lines, unlist(rows, use.names = FALSE), "}")
 }
 
 # Render ONE band row as an invisible 3-cell table (Left / Center
@@ -710,89 +1060,11 @@ backend_rtf <- function(grid, file) {
 # Table assembly
 # ---------------------------------------------------------------------
 
-# Render one page's table. Multi-level header bands emit first
-# (each band depth = one `\trowd\...\row`), then the column-labels
-# row, then the body rows. Cell widths route through
-# `.rtf_cellx_positions` to compute cumulative `\cellx` values.
-.render_rtf_table <- function(
-  page,
-  meta,
-  preset,
-  cs = NULL,
-  colors = NULL,
-  fonts = NULL
-) {
-  col_names_vis <- page$col_names
-  cols <- meta$cols %||% list()
-  cellx <- .rtf_cellx_positions(col_names_vis, cols, preset)
-
-  # The header band + column-labels row show on page 1 always, and on
-  # continuation pages only when repeat_headers is in repeat_content.
-  show_header <- isTRUE(page$page_index == 1L) || isTRUE(page$repeat_headers)
-  band_rows <- if (show_header) {
-    .render_rtf_header_bands(
-      meta$headers,
-      col_names_vis,
-      cols,
-      cellx,
-      preset,
-      cs,
-      colors,
-      fonts
-    )
-  } else {
-    character()
-  }
-  label_row <- if (show_header) {
-    .render_rtf_col_labels_row(
-      meta$col_labels_ast,
-      col_names_vis,
-      cols,
-      cellx,
-      preset,
-      cs,
-      colors,
-      fonts
-    )
-  } else {
-    character()
-  }
-  # Subgroup banner row — single merged cell spanning every visible
-  # column, centred and bold, with a top + bottom rule for visual
-  # separation from the column-header band above and the body rows
-  # below. Inserted between the column-labels row and the first
-  # body row. Empty when the page carries no subgroup runtime.
-  banner_row <- .render_rtf_subgroup_banner_row(
-    page$subgroup_line_ast,
-    cellx = cellx,
-    preset = preset,
-    cs = cs,
-    colors = colors,
-    fonts = fonts
-  )
-
-  body_rows <- .render_rtf_body_rows(
-    page$cells_text,
-    col_names_vis,
-    cols,
-    cellx,
-    cells_style = page$cells_style,
-    cells_indent = page$cells_indent,
-    is_header_row = page$is_header_row,
-    is_blank_row = page$is_blank_row,
-    host_col = page$host_col,
-    preset = preset,
-    cs = cs,
-    colors = colors,
-    fonts = fonts
-  )
-
-  c(band_rows, label_row, banner_row, body_rows)
-}
-
-# Render the subgroup banner as a single merged-cell RTF row. Right
-# edge sits at the table's final `\cellx` so the cell spans every
-# visible column. Returns character(0) when the page carries no
+# Render the subgroup banner as a full-width merged row on the body
+# `\cellx` grid (`\clmgf` / `\clmrg`), centred + bold, with a top +
+# bottom rule for visual separation from the column-header band above and
+# the body rows below. `trhdr` repeats the banner as a header within the
+# subgroup's pages. Returns character(0) when the page carries no
 # subgroup runtime.
 .render_rtf_subgroup_banner_row <- function(
   subgroup_line_ast,
@@ -800,7 +1072,8 @@ backend_rtf <- function(grid, file) {
   preset = NULL,
   cs = NULL,
   colors = NULL,
-  fonts = NULL
+  fonts = NULL,
+  trhdr = FALSE
 ) {
   if (
     is.null(subgroup_line_ast) ||
@@ -835,18 +1108,18 @@ backend_rtf <- function(grid, file) {
   align_tok <- .rtf_align_token(halign)
   valign_tok <- .rtf_valign_token(valign)
   # Subgroup banner chrome rules: chrome_style$borders takes priority
-  # over the legacy `solid top / solid bottom` backend defaults.
+  # over the legacy `solid top / solid bottom` backend defaults. The
+  # prelude rides every merged cell so the rules span the full width.
   top_tok <- .rtf_chrome_border_seg(cs, "subgroup_top", "top", "solid")
   bot_tok <- .rtf_chrome_border_seg(cs, "subgroup_bottom", "bottom", "solid")
   shading <- .rtf_cell_shading(surface_node, colors)
-  cellx_line <- paste0(
+  prelude <- paste0(
     top_tok,
     bot_tok,
     .rtf_border_seg("left", NULL, "none"),
     .rtf_border_seg("right", NULL, "none"),
     shading,
-    valign_tok,
-    sprintf("\\cellx%d", as.integer(cellx[[length(cellx)]]))
+    valign_tok
   )
   bold_open <- if (
     is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
@@ -856,7 +1129,7 @@ backend_rtf <- function(grid, file) {
     "{\\b "
   }
   bold_close <- if (identical(bold_open, "")) "" else "}"
-  cell_body <- paste0(
+  first_body <- paste0(
     "\\pard\\plain\\intbl",
     .rtf_body_fs(preset),
     align_tok,
@@ -864,14 +1137,14 @@ backend_rtf <- function(grid, file) {
     " ",
     bold_open,
     inner,
-    bold_close,
-    "\\cell"
+    bold_close
   )
-  c(
-    paste0("\\trowd\\trgaph108\\trqc", .rtf_row_height_str(preset)),
-    cellx_line,
-    cell_body,
-    "\\row"
+  .rtf_merged_row(
+    first_body,
+    cellx,
+    preset,
+    trhdr = trhdr,
+    prelude = prelude
   )
 }
 
@@ -935,19 +1208,30 @@ backend_rtf <- function(grid, file) {
   preset,
   cs = NULL,
   colors = NULL,
-  fonts = NULL
+  fonts = NULL,
+  trhdr = FALSE
 ) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(character())
   }
   depths <- sort(unique(headers$depth))
-  out <- character()
-  for (d in depths) {
-    labels <- .band_labels_for_depth(headers, d, col_names_vis)
+  out <- vector("list", length(depths))
+  for (k in seq_along(depths)) {
+    labels <- .band_labels_for_depth(headers, depths[[k]], col_names_vis)
     runs <- .group_contiguous_runs(labels)
-    out <- c(out, .rtf_band_row(runs, cellx, preset, cs, colors, fonts))
+    # The first (topmost) band row carries the full-width header top rule.
+    out[[k]] <- .rtf_band_row(
+      runs,
+      cellx,
+      preset,
+      cs,
+      colors,
+      fonts,
+      trhdr,
+      outer_top = (k == 1L)
+    )
   }
-  out
+  unlist(out, use.names = FALSE)
 }
 
 # Resolve a chrome border region into an RTF cell-prelude border
@@ -982,22 +1266,31 @@ backend_rtf <- function(grid, file) {
   paste0(prefix, style_tok, sprintf("\\brdrw%d", twips))
 }
 
-# Emit one band row given the contiguous-run groups + the
-# cumulative `\cellx` positions for the visible columns. Each run
-# emits one cell with its right edge at `cellx[run$end]`. Cells
-# carry bold + centre alignment + a top + bottom rule (chrome
-# style for band headers).
+# Emit one band row on the body `\cellx` grid. Each contiguous run of
+# columns sharing a band label becomes one merged cell (`\clmgf` on the
+# run's first column, `\clmrg` on the rest) carrying the label; a
+# single-column run is a plain cell. Every column gets a `\cellx`
+# boundary equal to the body grid, so the band row stays column-aligned
+# with the data rows in the one continuous table. The full-width header
+# top rule rides the TOPMOST header row only (`outer_top = TRUE`), across
+# every column (the "long" rule above all spanning headers). Each band's
+# OWN bottom rule is a cmidrule(lr): only band cells carry it; flanking
+# cells over unmapped columns stay borderless. `trhdr` marks the row
+# repeating so Word redraws it at every page break.
 .rtf_band_row <- function(
   runs,
   cellx,
   preset = NULL,
   cs = NULL,
   colors = NULL,
-  fonts = NULL
+  fonts = NULL,
+  trhdr = FALSE,
+  outer_top = FALSE
 ) {
-  cellx_lines <- character(length(runs))
-  cell_bodies <- character(length(runs))
-  col_end <- 0L
+  ncol <- length(cellx)
+  if (ncol == 0L) {
+    return(character())
+  }
   surface_node <- .chrome_surface_at(cs, "header")
   surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
   shading <- .rtf_cell_shading(surface_node, colors)
@@ -1021,43 +1314,76 @@ backend_rtf <- function(grid, file) {
     "{\\b "
   }
   bold_close <- if (identical(bold_open, "")) "" else "}"
-  for (i in seq_along(runs)) {
-    run <- runs[[i]]
-    col_end <- col_end + run$length
-    pos <- cellx[[col_end]]
-    # Cell-border ownership per cmidrule(lr) semantics: only band
-    # cells carry the chrome top + bottom rules; blank flanking cells
-    # over unmapped columns are borderless so the band rule does not
-    # extend across the full header width.
+
+  cell_defs <- character(ncol)
+  cell_bodies <- character(ncol)
+  col <- 1L
+  for (run in runs) {
+    run_len <- run$length
     is_band <- !is.na(run$value)
-    top_tok_i <- if (is_band) top_tok else "\\clbrdrt\\brdrnone"
+    # Top rule is the full-width header rule, emitted only on the topmost
+    # header row (across band AND flanking cells). The bottom rule is the
+    # band's cmidrule(lr): only band cells carry it; flanking cells stay
+    # borderless so the spanner underline does not run the full width.
+    top_tok_i <- if (isTRUE(outer_top)) top_tok else "\\clbrdrt\\brdrnone"
     bot_tok_i <- if (is_band) bot_tok else "\\clbrdrb\\brdrnone"
-    cellx_lines[[i]] <- paste0(
+    prelude <- paste0(
       top_tok_i,
       bot_tok_i,
       "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
-      shading,
-      sprintf("\\cellx%d", as.integer(pos))
+      shading
     )
-    label <- run$value
-    body <- if (is.na(label)) {
-      ""
+    label_body <- if (is_band) {
+      paste0(
+        "\\pard\\plain\\intbl",
+        .rtf_body_fs(preset),
+        align_tok,
+        surface_props,
+        " ",
+        bold_open,
+        .rtf_escape(run$value),
+        bold_close,
+        "\\cell"
+      )
     } else {
-      paste0(bold_open, .rtf_escape(label), bold_close)
+      paste0(
+        "\\pard\\plain\\intbl",
+        .rtf_body_fs(preset),
+        align_tok,
+        surface_props,
+        " \\cell"
+      )
     }
-    cell_bodies[[i]] <- paste0(
-      "\\pard\\plain\\intbl",
-      .rtf_body_fs(preset),
-      align_tok,
-      surface_props,
-      " ",
-      body,
-      "\\cell"
-    )
+    for (k in seq_len(run_len)) {
+      idx <- col + k - 1L
+      merge_tok <- if (run_len == 1L) {
+        ""
+      } else if (k == 1L) {
+        "\\clmgf"
+      } else {
+        "\\clmrg"
+      }
+      cell_defs[[idx]] <- paste0(
+        prelude,
+        merge_tok,
+        sprintf("\\cellx%d", as.integer(cellx[[idx]]))
+      )
+      cell_bodies[[idx]] <- if (k == 1L) {
+        label_body
+      } else {
+        "\\pard\\plain\\intbl\\cell"
+      }
+    }
+    col <- col + run_len
   }
   c(
-    paste0("\\trowd\\trgaph108\\trqc", .rtf_row_height_str(preset)),
-    cellx_lines,
+    paste0(
+      "\\trowd",
+      .rtf_trhdr(trhdr),
+      "\\trgaph108\\trqc",
+      .rtf_row_height_str(preset)
+    ),
+    cell_defs,
     cell_bodies,
     "\\row"
   )
@@ -1067,8 +1393,10 @@ backend_rtf <- function(grid, file) {
 # the header cascade (col_spec@align / @valign >
 # chrome_style$surfaces$header@halign / header_valign > backend
 # default), label from `col_labels_ast` (the parsed AST already
-# created by engine_format). Top + bottom rules so the row
-# visually separates the head from the body.
+# created by engine_format). The full-width header bottom rule always
+# closes this row; the full-width header top rule is emitted only when
+# this row is the topmost header row (`outer_top = TRUE`, i.e. no spanner
+# bands sit above it) so the "long" top rule is not doubled under a band.
 .render_rtf_col_labels_row <- function(
   col_labels_ast,
   col_names_vis,
@@ -1077,14 +1405,20 @@ backend_rtf <- function(grid, file) {
   preset,
   cs = NULL,
   colors = NULL,
-  fonts = NULL
+  fonts = NULL,
+  trhdr = FALSE,
+  outer_top = TRUE
 ) {
   cellx_lines <- character(length(col_names_vis))
   cell_bodies <- character(length(col_names_vis))
   surface_node <- .chrome_surface_at(cs, "header")
   surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
   shading <- .rtf_cell_shading(surface_node, colors)
-  top_tok <- .rtf_chrome_border_seg(cs, "header_top", "top", "solid")
+  top_tok <- if (isTRUE(outer_top)) {
+    .rtf_chrome_border_seg(cs, "header_top", "top", "solid")
+  } else {
+    "\\clbrdrt\\brdrnone"
+  }
   bot_tok <- .rtf_chrome_border_seg(cs, "header_bottom", "bottom", "solid")
   bold_open <- if (
     is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
@@ -1106,7 +1440,9 @@ backend_rtf <- function(grid, file) {
         length(col@align) == 1L &&
         !is.na(col@align)
     ) {
-      if (col@align == "decimal") "right" else col@align
+      # A decimal column's header centres over the column (TFL centroid
+      # convention, HTML parity); the body stays decimal / right-aligned.
+      if (col@align == "decimal") "center" else col@align
     } else if (
       is_style_node(surface_node) &&
         length(surface_node@halign) == 1L &&
@@ -1130,6 +1466,12 @@ backend_rtf <- function(grid, file) {
       surface_node@valign
     } else {
       .effective_header_valign(col, preset)
+    }
+    # Header cells default to bottom valign (HTML parity) only when
+    # nothing in the cascade set one, so a wrapped multi-line header sits
+    # flush with single-line neighbours.
+    if (is.na(valign)) {
+      valign <- "bottom"
     }
     align_tok <- .rtf_align_token(halign)
     valign_tok <- .rtf_valign_token(valign)
@@ -1157,7 +1499,12 @@ backend_rtf <- function(grid, file) {
     )
   }
   c(
-    paste0("\\trowd\\trgaph108\\trqc", .rtf_row_height_str(preset)),
+    paste0(
+      "\\trowd",
+      .rtf_trhdr(trhdr),
+      "\\trgaph108\\trqc",
+      .rtf_row_height_str(preset)
+    ),
     cellx_lines,
     cell_bodies,
     "\\row"
@@ -1181,6 +1528,8 @@ backend_rtf <- function(grid, file) {
   is_header_row = NULL,
   is_blank_row = NULL,
   host_col = NA_character_,
+  keep_with_next = NULL,
+  close_bottom_rule = TRUE,
   preset = NULL,
   cs = NULL,
   colors = NULL,
@@ -1206,30 +1555,46 @@ backend_rtf <- function(grid, file) {
   indent_unit <- nchar(.indent_text_unit(indent_size))
   indent_twips_per_level <- .indent_native_twips_per_level(preset)
 
-  # Final-twip edge for synthesised section-header / blank-gap rows.
-  # Single `\cellx` at the right edge so the row spans all columns
-  # (mirrors the subgroup-banner emitter).
-  final_cellx <- if (length(cellx) > 0L) {
-    as.integer(cellx[[length(cellx)]])
+  # Group-aware keep mask (per rendered row). Under native pagination the
+  # `keep_with_next` vector (built in `.attach_keep_with_next`) is what
+  # tells Word which rows must NOT break apart: keep_together groups glue
+  # fully, oversized groups protect only their orphan/widow edges,
+  # section headers glue to their following row, blanks break freely.
+  # Fallback (NULL, e.g. a hand-built grid) glues every row but the last,
+  # the legacy single-page behaviour.
+  keep_vec <- if (is.null(keep_with_next)) {
+    c(rep(TRUE, max(0L, nrow_data - 1L)), FALSE)[seq_len(nrow_data)]
   } else {
-    0L
+    vapply(
+      seq_len(nrow_data),
+      function(r) isTRUE(keep_with_next[[r]]),
+      logical(1L)
+    )
   }
 
-  out <- character()
+  # Borderless prelude shared by synthesised section-header / blank rows.
+  blank_prelude <- paste0(
+    .rtf_border_seg("top", NULL, "none"),
+    .rtf_border_seg("bottom", NULL, "none"),
+    .rtf_border_seg("left", NULL, "none"),
+    .rtf_border_seg("right", NULL, "none")
+  )
+
+  out <- vector("list", nrow_data)
   for (r in seq_len(nrow_data)) {
+    keep_row <- keep_vec[[r]]
+    keepn_tok <- if (keep_row) "\\keepn" else ""
+
     if (isTRUE(is_blank_row[[r]])) {
-      out <- c(
-        out,
-        paste0("\\trowd\\trgaph108\\trqc", .rtf_row_height_str(preset)),
-        paste0(
-          .rtf_border_seg("top", NULL, "none"),
-          .rtf_border_seg("bottom", NULL, "none"),
-          .rtf_border_seg("left", NULL, "none"),
-          .rtf_border_seg("right", NULL, "none"),
-          sprintf("\\cellx%d", final_cellx)
-        ),
-        "\\pard\\plain\\intbl\\ql \\cell",
-        "\\row"
+      # Blank-gap row: a full-width merged row so it keeps the body
+      # column grid (a single trailing \cellx would desync the table).
+      out[[r]] <- .rtf_merged_row(
+        paste0("\\pard\\plain\\intbl", keepn_tok, "\\ql"),
+        cellx,
+        preset,
+        trhdr = FALSE,
+        keep = keep_row,
+        prelude = blank_prelude
       )
       next
     }
@@ -1245,58 +1610,41 @@ backend_rtf <- function(grid, file) {
         }
       }
       # Band-depth padding on the header-row paragraph via `\liN`
-      # (twips). Band-1 (depth 0) -> no `\li`; band-2+ -> `\liN`
-      # BEFORE the alignment token so RTF readers honour the cell-
-      # side left indent.
+      # (twips). Band-1 (depth 0) -> no `\li`; band-2+ -> `\liN` BEFORE
+      # the alignment token so RTF readers honour the cell-side indent.
       header_li_tok <- ""
       if (!is.na(host_idx)) {
         header_depth <- cells_indent[r, host_idx]
-        if (
-          isTRUE(header_depth > 0L) &&
-            indent_twips_per_level > 0L
-        ) {
+        if (isTRUE(header_depth > 0L) && indent_twips_per_level > 0L) {
           header_li_tok <- sprintf(
             "\\li%d",
             indent_twips_per_level * header_depth
           )
         }
       }
-      out <- c(
-        out,
-        paste0("\\trowd\\trgaph108\\trqc", .rtf_row_height_str(preset)),
-        paste0(
-          .rtf_border_seg("top", NULL, "none"),
-          .rtf_border_seg("bottom", NULL, "none"),
-          .rtf_border_seg("left", NULL, "none"),
-          .rtf_border_seg("right", NULL, "none"),
-          sprintf("\\cellx%d", final_cellx)
-        ),
+      out[[r]] <- .rtf_merged_row(
         paste0(
           "\\pard\\plain\\intbl",
           .rtf_body_fs(preset),
+          keepn_tok,
           header_li_tok,
           "\\ql ",
           "{\\b ",
           .rtf_escape_cell(host_text),
-          "}",
-          "\\cell"
+          "}"
         ),
-        "\\row"
+        cellx,
+        preset,
+        trhdr = FALSE,
+        keep = keep_row,
+        prelude = blank_prelude
       )
       next
     }
-    cellx_lines <- character(length(col_names_vis))
-    cell_bodies <- character(length(col_names_vis))
+    cellx_lines <- character(ncol_data)
+    cell_bodies <- character(ncol_data)
     is_last_row <- (r == nrow_data)
-    # Word-side keep-with-next: every row except the last on the
-    # page emits \trkeep at the row level and \keepn inside each
-    # cell paragraph so Word never re-paginates inside the page
-    # tabular has already split. Galley pattern lifted to tabular's
-    # manual-pagination model — defense-in-depth against viewer-
-    # side re-flow (font substitution, DPI change, locale).
-    keep_row <- !is_last_row
     trkeep_tok <- if (keep_row) "\\trkeep" else ""
-    keepn_tok <- if (keep_row) "\\keepn" else ""
     for (i in seq_along(col_names_vis)) {
       sn <- .cell_style_at(cells_style, r, col_names_vis[[i]])
       col <- col_specs[[i]]
@@ -1304,12 +1652,16 @@ backend_rtf <- function(grid, file) {
       valign <- .effective_body_valign(sn, col, preset)
       align_tok <- .rtf_align_token(halign)
       valign_tok <- .rtf_valign_token(valign)
-      # Backend default per-side borders for a body cell: top and
-      # left and right are clear; bottom carries the solid rule only
-      # on the final body row of the page (matches the canonical submission Appendix I's
+      # Backend default per-side borders for a body cell: top and left
+      # and right are clear; bottom carries the closing solid rule only
+      # on the table's final rendered row (the canonical Appendix I
       # closing rule). The cascade resolver overrides these defaults
       # when the user has set explicit border_<side>_style / etc.
-      bottom_default <- if (is_last_row) "solid" else "none"
+      bottom_default <- if (is_last_row && isTRUE(close_bottom_rule)) {
+        "solid"
+      } else {
+        "none"
+      }
       shading <- .rtf_cell_shading(sn, colors)
       cellx_lines[[i]] <- paste0(
         .rtf_border_seg("top", sn, "none"),
@@ -1322,17 +1674,13 @@ backend_rtf <- function(grid, file) {
       )
       # Per-cell native left indent: strip the engine-baked leading
       # spaces and emit `\liN` (twips) on the paragraph BEFORE the
-      # alignment token. RTF readers honour `\li` as the cell-side
-      # left indent, so wrapped continuation lines inside a narrow
-      # column align with the indented baseline.
+      # alignment token. RTF readers honour `\li` as the cell-side left
+      # indent, so wrapped continuation lines inside a narrow column
+      # align with the indented baseline.
       raw <- cells_text[r, i]
       depth <- cells_indent[r, i]
       li_tok <- ""
-      if (
-        isTRUE(depth > 0L) &&
-          indent_unit > 0L &&
-          !is.na(raw)
-      ) {
+      if (isTRUE(depth > 0L) && indent_unit > 0L && !is.na(raw)) {
         n_leading <- indent_unit * depth
         if (
           nchar(raw) >= n_leading &&
@@ -1359,8 +1707,7 @@ backend_rtf <- function(grid, file) {
         "\\cell"
       )
     }
-    out <- c(
-      out,
+    out[[r]] <- c(
       paste0(
         sprintf("\\trowd\\trgaph%d\\trqc", trgaph),
         .rtf_row_height_str(preset),
@@ -1371,7 +1718,7 @@ backend_rtf <- function(grid, file) {
       "\\row"
     )
   }
-  out
+  unlist(out, use.names = FALSE)
 }
 
 # Resolve the body row's `\trgaph<halfWidth>` value (twips). Reads
@@ -1669,8 +2016,17 @@ backend_rtf <- function(grid, file) {
   if (length(text) == 0L) {
     return(text)
   }
-  vapply(
-    text,
+  # Vectorized pre-filter: the surrogate-pair walker is only needed for
+  # strings that actually carry a non-ASCII byte. A single C-level
+  # `grepl` over the whole vector lets the all-ASCII common case (the
+  # vast majority of clinical cells) skip the per-character split +
+  # `utf8ToInt` entirely.
+  needs <- grepl("[^\x01-\x7f]", text, perl = TRUE)
+  if (!any(needs)) {
+    return(text)
+  }
+  text[needs] <- vapply(
+    text[needs],
     function(s) {
       chars <- strsplit(s, "", fixed = TRUE)[[1L]]
       cp <- utf8ToInt(s)
@@ -1700,6 +2056,7 @@ backend_rtf <- function(grid, file) {
     character(1L),
     USE.NAMES = FALSE
   )
+  text
 }
 
 # Convert an unsigned 16-bit Unicode value to its RTF signed-16
@@ -1826,45 +2183,47 @@ backend_rtf <- function(grid, file) {
 # Color / font collectors — Phase 2b: scan resolved styles
 # ---------------------------------------------------------------------
 
+# Flatten a list of per-element property vectors (color / background /
+# font_family pulled off style_nodes) to the valid scalar character
+# values: non-NA, non-empty. Used by the color / font collectors so the
+# final `unique()` sees only real values.
+.rtf_valid_props <- function(prop_lists) {
+  vals <- unlist(prop_lists, use.names = FALSE)
+  if (length(vals) == 0L) {
+    return(character())
+  }
+  vals[!is.na(vals) & nzchar(vals)]
+}
+
 # Walk every style_node that might contribute a color to the
 # rendered document. Returns a deduplicated character vector of
 # "#RRGGBB" hex codes plus a `lookup(hex) -> integer` closure that
 # resolves a hex string to its 1-indexed slot in `\colortbl`. Slot
 # 0 is the RTF "auto" sentinel and is reserved.
 .rtf_collect_colors <- function(pages, cs, preset) {
-  buf <- character()
-  for (page in pages) {
+  # One vector per page, unlisted + deduplicated once at the end (the
+  # per-cell `c(buf, ...)` accumulation was quadratic on large tables).
+  buf <- lapply(pages, function(page) {
     cell_styles <- page$cells_style
     if (is.null(cell_styles)) {
-      next
+      return(character())
     }
-    for (i in seq_len(nrow(cell_styles))) {
-      for (j in seq_len(ncol(cell_styles))) {
-        sn <- cell_styles[[i, j]]
-        if (!is_style_node(sn)) {
-          next
-        }
-        for (prop in c(sn@color, sn@background)) {
-          if (length(prop) == 1L && !is.na(prop) && nzchar(prop)) {
-            buf <- c(buf, prop)
-          }
-        }
+    .rtf_valid_props(lapply(
+      cell_styles,
+      function(sn) {
+        if (is_style_node(sn)) c(sn@color, sn@background) else NULL
       }
-    }
-  }
+    ))
+  })
   if (is.list(cs) && is.list(cs$surfaces)) {
-    for (node in cs$surfaces) {
-      if (!is_style_node(node)) {
-        next
+    buf[[length(buf) + 1L]] <- .rtf_valid_props(lapply(
+      cs$surfaces,
+      function(node) {
+        if (is_style_node(node)) c(node@color, node@background) else NULL
       }
-      for (prop in c(node@color, node@background)) {
-        if (length(prop) == 1L && !is.na(prop) && nzchar(prop)) {
-          buf <- c(buf, prop)
-        }
-      }
-    }
+    ))
   }
-  values <- unique(buf)
+  values <- unique(unlist(buf, use.names = FALSE))
   lookup <- function(hex) {
     if (
       is.null(hex) ||
@@ -1889,46 +2248,32 @@ backend_rtf <- function(grid, file) {
 # the body font).
 .rtf_collect_fonts <- function(pages, cs, preset) {
   body_family <- .effective_font_family(preset)
-  values <- c(body_family, "mono")
-  for (page in pages) {
+  # Seed body + mono first; collect cell + surface families once and
+  # dedup preserving the seed order (the per-cell `c(values, ...)` append
+  # was quadratic on large tables).
+  buf <- lapply(pages, function(page) {
     cell_styles <- page$cells_style
     if (is.null(cell_styles)) {
-      next
+      return(character())
     }
-    for (i in seq_len(nrow(cell_styles))) {
-      for (j in seq_len(ncol(cell_styles))) {
-        sn <- cell_styles[[i, j]]
-        if (!is_style_node(sn)) {
-          next
-        }
-        ff <- sn@font_family
-        if (
-          length(ff) == 1L &&
-            !is.na(ff) &&
-            nzchar(ff) &&
-            !(ff %in% values)
-        ) {
-          values <- c(values, ff)
-        }
-      }
-    }
-  }
+    .rtf_valid_props(lapply(
+      cell_styles,
+      function(sn) if (is_style_node(sn)) sn@font_family else NULL
+    ))
+  })
   if (is.list(cs) && is.list(cs$surfaces)) {
-    for (node in cs$surfaces) {
-      if (!is_style_node(node)) {
-        next
-      }
-      ff <- node@font_family
-      if (
-        length(ff) == 1L &&
-          !is.na(ff) &&
-          nzchar(ff) &&
-          !(ff %in% values)
-      ) {
-        values <- c(values, ff)
-      }
-    }
+    buf[[length(buf) + 1L]] <- .rtf_valid_props(lapply(
+      cs$surfaces,
+      function(node) if (is_style_node(node)) node@font_family else NULL
+    ))
   }
+  # `\f0` (body) and `\f1` (mono) are POSITIONAL slots that must both
+  # exist even when the body family is itself "mono"; only the extra
+  # families (registering at `\f2+`) are deduplicated, and against the
+  # seed so a cell font equal to the body resolves back to `\f0`.
+  extras <- unique(unlist(buf, use.names = FALSE))
+  extras <- extras[!(extras %in% c(body_family, "mono"))]
+  values <- c(body_family, "mono", extras)
   lookup <- function(family) {
     if (
       is.null(family) ||

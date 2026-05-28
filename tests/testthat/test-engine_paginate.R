@@ -430,6 +430,57 @@ test_that("engine_paginate() applies edge protection on an oversized group", {
   expect_false(m[[12L]])
 })
 
+test_that("engine_paginate(native = TRUE) emits one vertical page per panel", {
+  # 40 rows that would split across many pages at 24pt; native skips the
+  # vertical split so the single panel rides ONE page covering all rows
+  # (Word paginates the body).
+  df <- data.frame(grp = rep(c("A", "B"), each = 20L), val = 1:40)
+  spec <- tabular(df) |>
+    cols(grp = col_spec(usage = "group", label = "Group")) |>
+    preset(orientation = "portrait", font_size = 24)
+
+  split <- tabular:::engine_paginate(spec, native = FALSE)
+  native <- tabular:::engine_paginate(spec, native = TRUE)
+
+  expect_gt(split$total_pages, 1L) # non-native splits vertically
+  expect_identical(native$total_pages, 1L) # native: one page per panel
+  expect_length(native$pages[[1L]]$row_indices, 40L)
+  # rpp and the keep mask are still computed from the physical budget.
+  expect_identical(native$rows_per_page, split$rows_per_page)
+  expect_identical(native$keep_with_next, split$keep_with_next)
+})
+
+test_that("engine_paginate() returns repeat_titles/headers/footnotes flags", {
+  df <- data.frame(grp = c("A", "B"), val = 1:2)
+  spec <- tabular(df) |>
+    cols(grp = col_spec(usage = "group", label = "Group")) |>
+    paginate(repeat_content = c("titles", "headers"))
+  plan <- tabular:::engine_paginate(spec)
+  expect_true(plan$repeat_titles)
+  expect_true(plan$repeat_headers)
+  expect_false(plan$repeat_footnotes)
+})
+
+test_that(".compute_rows_per_page(native = TRUE) floors instead of aborting", {
+  # Chrome taller than the page: non-native aborts; native floors to the
+  # minimum so the keep mask still has a budget (Word paginates).
+  df <- data.frame(x = 1:3)
+  spec <- tabular(
+    df,
+    titles = rep("t", 40L),
+    footnotes = rep("f", 10L)
+  ) |>
+    preset(orientation = "portrait", font_size = 24)
+  expect_error(
+    tabular:::.compute_rows_per_page(spec, native = FALSE),
+    class = "tabular_error_layout"
+  )
+  expect_identical(
+    tabular:::.compute_rows_per_page(spec, native = TRUE),
+    tabular:::.min_rows_per_page
+  )
+})
+
 test_that("RTF backend emits \\trkeep + \\keepn on non-last body rows", {
   df <- data.frame(grp = c("A", "A", "B"), val = c("1", "2", "3"))
   spec <- tabular(df) |>

@@ -260,6 +260,14 @@ as_grid <- function(spec) {
 # Engine pipeline
 # ---------------------------------------------------------------------
 
+# Backends that paginate the body themselves (the consuming application
+# decides vertical page breaks) receive an UNSPLIT grid: one vertical
+# page per `(subgroup x horizontal panel)`. The RTF backend emits one
+# continuous Word table per panel with `\trhdr` repeating header rows;
+# DOCX will reuse this hook. Every other backend (and `as_grid()` with
+# `format = NA`) keeps tabular's estimated vertical split.
+.native_pagination_formats <- c("rtf")
+
 # Compose every engine_* phase. Returns a fully populated
 # `tabular_grid`. `format` is stamped into metadata so emit() can
 # carry the resolved backend tag through to the manifest layer;
@@ -409,7 +417,12 @@ as_grid <- function(spec) {
     cells_style = style_mat
   )
 
-  pag <- engine_paginate(spec)
+  # Native-pagination backends (RTF/Word, DOCX later) receive an unsplit
+  # grid: one vertical page per panel, so Word paginates the body and the
+  # `\trhdr` header repeats natively. `as_grid()` (format = NA) stays
+  # non-native (split pages) for inspection.
+  native <- isTRUE(format %in% .native_pagination_formats)
+  pag <- engine_paginate(spec, native = native)
 
   pages <- .build_pages(
     pag = pag,
@@ -427,6 +440,14 @@ as_grid <- function(spec) {
   # Backends key on `page$subgroup_line_ast` to decide whether to
   # emit the centred banner row above the column-header rule.
   pages <- .stamp_subgroup_runtime(pages, runtime = runtime, call = call)
+
+  # Attach a per-rendered-row keep vector to every page WHILE
+  # `pag$keep_with_next` is still group-local (each sub-spec resolves
+  # independently). Native backends read `page$keep_with_next` to drive
+  # `\trkeep` / `\keepn`; doing it here keeps subgroups correct without an
+  # out-of-bounds guard against the merged (first-subgroup-only) metadata
+  # mask.
+  pages <- .attach_keep_with_next(pages, pag$keep_with_next)
 
   # Page chrome (header / footer bands) — resolved against the
   # cascade-effective preset so the session default's pagehead /
@@ -454,6 +475,9 @@ as_grid <- function(spec) {
       total_pages = pag$total_pages,
       total_panels = pag$total_panels,
       keep_with_next = pag$keep_with_next,
+      repeat_titles = pag$repeat_titles,
+      repeat_headers = pag$repeat_headers,
+      repeat_footnotes = pag$repeat_footnotes,
       nrow_data = nrow(spec@data),
       ncol_data = ncol(spec@data),
       col_names = names(spec@data),
@@ -492,6 +516,53 @@ as_grid <- function(spec) {
     p$subgroup_total <- runtime$total
     p$subgroup_banner_text <- runtime$banner_text
     p$subgroup_line_ast <- banner_ast
+    p
+  })
+}
+
+# Attach a per-rendered-row keep-with-next logical to every page. The
+# engine's `keep_mask` is indexed by SOURCE data row (post-sort,
+# pre-injection); this maps it onto the page's RENDERED rows (which
+# interleave injected section-header and blank rows). Walk each page's
+# rendered rows, advancing a pointer into `row_indices` only on data rows
+# (a row is synthetic iff `is_header_row` or `is_blank_row`):
+#
+#   - data row          -> keep_mask[row_indices[ptr]]  (group glue)
+#   - section-header row -> TRUE                          (never orphan a
+#                                                          header from its
+#                                                          first child)
+#   - blank row          -> FALSE                         (natural break)
+#
+# The final rendered row of every page is forced FALSE (nothing follows
+# it on the page). Called per (sub-)spec while `keep_mask` is still
+# group-local, so subgroup grids stay correct.
+.attach_keep_with_next <- function(pages, keep_mask) {
+  lapply(pages, function(p) {
+    n_rendered <- nrow(p$cells_text)
+    if (is.null(n_rendered) || n_rendered == 0L) {
+      p$keep_with_next <- logical(0L)
+      return(p)
+    }
+    is_hdr <- p$is_header_row %||% rep(FALSE, n_rendered)
+    is_blk <- p$is_blank_row %||% rep(FALSE, n_rendered)
+    ri <- p$row_indices
+    keep <- logical(n_rendered)
+    ptr <- 0L
+    for (r in seq_len(n_rendered)) {
+      if (isTRUE(is_blk[[r]])) {
+        keep[[r]] <- FALSE
+      } else if (isTRUE(is_hdr[[r]])) {
+        keep[[r]] <- TRUE
+      } else {
+        ptr <- ptr + 1L
+        src <- if (ptr <= length(ri)) ri[[ptr]] else NA_integer_
+        keep[[r]] <- !is.na(src) &&
+          src <= length(keep_mask) &&
+          isTRUE(keep_mask[[src]])
+      }
+    }
+    keep[[n_rendered]] <- FALSE
+    p$keep_with_next <- keep
     p
   })
 }

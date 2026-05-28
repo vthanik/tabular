@@ -410,23 +410,165 @@ test_that(".rtf_escape_cell turns embedded newline into \\line", {
 })
 
 # ---------------------------------------------------------------------
-# Pagination — one \sect per page
+# Pagination — one \sect per render panel (native Word pagination)
 # ---------------------------------------------------------------------
 
-test_that("multi-page spec emits one \\sect per grid@pages entry", {
-  # paginate() computes rows_per_page from preset geometry. Use a
-  # large data set + small font / margins to force multiple pages.
+test_that("native RTF emits one \\sect per render panel, not per vertical page", {
+  # Single panel: Word paginates the one continuous table natively, so
+  # tabular emits exactly one section however many vertical pages the
+  # body spans (the old model forced one \sect per estimated page).
   spec <- tabular(data.frame(x = 1:500)) |>
     preset(font_size = 9, margins = 0.5) |>
     paginate()
-  grid <- as_grid(spec)
-  expected_pages <- length(grid@pages)
-  expect_gt(expected_pages, 1L)
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
   sect_count <- length(gregexpr("\\\\sect\\b", rtf, perl = TRUE)[[1L]])
-  expect_identical(sect_count, expected_pages)
+  expect_identical(sect_count, 1L)
+
+  # Two horizontal panels -> two sections (Word cannot reflow columns,
+  # so the column split is a genuine section break).
+  wide <- tabular(data.frame(a = 1:3, b = 1:3, c = 1:3, d = 1:3)) |>
+    paginate(panels = 2)
+  out2 <- withr::local_tempfile(fileext = ".rtf")
+  emit(wide, out2)
+  rtf2 <- paste(readLines(out2, warn = FALSE), collapse = "\n")
+  sect2 <- length(gregexpr("\\\\sect\\b", rtf2, perl = TRUE)[[1L]])
+  expect_identical(sect2, 2L)
+})
+
+test_that("native RTF emits one continuous table (no per-vertical-page \\sbkpage) (#2)", {
+  # A long single-panel table is ONE section: exactly one \sectd\sbkpage,
+  # not one per estimated vertical page. Word breaks the body itself.
+  spec <- tabular(data.frame(x = 1:500)) |>
+    preset(font_size = 9, margins = 0.5) |>
+    paginate()
+  rtf <- .rtf_emit_text(spec)
+  sbk <- length(gregexpr("\\\\sbkpage", rtf, perl = TRUE)[[1L]])
+  expect_identical(sbk, 1L)
+})
+
+test_that("spanner band carries \\trhdr so Word repeats it on every page (#1)", {
+  spec <- tabular(data.frame(a = "x", b = "y")) |>
+    cols(a = col_spec(label = "A"), b = col_spec(label = "B")) |>
+    headers("Active Treatment" = c("a", "b"))
+  rtf <- .rtf_emit_text(spec)
+  # The band row that carries the spanner label is a \trhdr row.
+  lines <- strsplit(rtf, "\n")[[1L]]
+  band_line <- grep("Active Treatment", lines)[[1L]]
+  trowd_before <- max(grep("\\\\trowd", lines[seq_len(band_line)]))
+  expect_match(lines[[trowd_before]], "\\\\trhdr", fixed = FALSE)
+})
+
+test_that("merged rows keep the body \\cellx grid (\\clmgf/\\clmrg)", {
+  # A spanner band over two columns merges via \clmgf + \clmrg and keeps
+  # the same number of \cellx boundaries as a body row, so Word treats
+  # the panel as one coherent table.
+  spec <- tabular(data.frame(a = "x", b = "y")) |>
+    cols(a = col_spec(label = "A"), b = col_spec(label = "B")) |>
+    headers("Active Treatment" = c("a", "b"))
+  rtf <- .rtf_emit_text(spec)
+  lines <- strsplit(rtf, "\n")[[1L]]
+  band_line <- grep("Active Treatment", lines)[[1L]]
+  trowd_before <- max(grep("\\\\trowd", lines[seq_len(band_line)]))
+  row_end <- trowd_before -
+    1L +
+    grep(
+      "\\\\row",
+      lines[trowd_before:length(lines)]
+    )[[1L]]
+  band_block <- lines[trowd_before:row_end]
+  cellx_count <- sum(grepl("\\\\cellx", band_block))
+  expect_identical(cellx_count, 2L) # both column boundaries present
+  expect_true(any(grepl("\\\\clmgf", band_block)))
+  expect_true(any(grepl("\\\\clmrg", band_block)))
+})
+
+test_that("group-aware keep: \\trkeep follows keep_with_next, not every row", {
+  # keep_together glues a group; a row at a group boundary (keep FALSE)
+  # carries no \trkeep, letting Word break there.
+  df <- data.frame(
+    soc = c("A", "A", "B", "B"),
+    val = as.character(1:4),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    paginate(keep_together = "soc")
+  g <- tabular:::.resolve_spec_to_grid(
+    spec,
+    format = "rtf",
+    call = rlang::caller_env()
+  )
+  keep <- g@pages[[1L]]$keep_with_next
+  # Per-rendered-row keep: TRUE inside a group, FALSE at the boundary
+  # between A and B and on the final row.
+  expect_type(keep, "logical")
+  expect_false(keep[[length(keep)]]) # last row never glues
+  expect_true(any(!keep)) # at least one break point exists
+})
+
+test_that("table wider than the printable area warns", {
+  spec <- tabular(data.frame(x = "a")) |>
+    cols(x = col_spec(width = "20in")) |>
+    preset(paper_size = "letter", margins = 1)
+  expect_warning(
+    .rtf_emit_text(spec),
+    class = "tabular_warning_layout"
+  )
+})
+
+test_that("split (non-native) grid concatenates into one continuous table", {
+  # as_grid() (format = NA) keeps tabular's vertical split, so a tall
+  # spec yields a multi-page grid. The RTF backend groups those pages
+  # back into ONE continuous table per panel (the concat fallback path
+  # the native emit() path never exercises, since it is unsplit).
+  df <- data.frame(
+    grp = rep(c("A", "B"), each = 20L),
+    val = as.character(1:40)
+  )
+  spec <- tabular(df) |>
+    cols(grp = col_spec(usage = "group", label = "SOC")) |>
+    preset(orientation = "portrait", font_size = 24) |>
+    paginate()
+  grid <- as_grid(spec) # non-native split: > 1 page
+  expect_gt(length(grid@pages), 1L)
+  rtf <- paste(tabular:::.render_rtf_doc(grid), collapse = "\n")
+  # One section despite the multi-page grid, and the last data value
+  # (page-N) survives the concatenation into the single table.
+  sect <- length(gregexpr("\\\\sect\\b", rtf, perl = TRUE)[[1L]])
+  expect_identical(sect, 1L)
+  expect_match(rtf, "\\b40\\b", perl = TRUE)
+})
+
+test_that("continuation marker rides the first title cell on panel 2 when titles repeat", {
+  # Default repeat_content repeats titles, so on panel 2+ the marker is
+  # appended to the first title cell (not a standalone paragraph).
+  spec <- tabular(
+    data.frame(a = 1:3, b = 1:3, c = 1:3, d = 1:3),
+    titles = "Tbl Z"
+  ) |>
+    paginate(panels = 2, continuation = "(cont.)")
+  txt <- .rtf_emit_text(spec)
+  expect_match(txt, "Tbl Z \\(cont\\.\\)", perl = TRUE)
+})
+
+test_that("RTF merged-row helpers guard empty cellx / zero count", {
+  p <- preset_spec()
+  expect_identical(
+    tabular:::.rtf_merged_row("x", integer(0), p),
+    character(0)
+  )
+  expect_identical(
+    tabular:::.rtf_blank_trhdr_rows(0L, 100L, p),
+    character(0)
+  )
+  expect_identical(
+    tabular:::.rtf_blank_trhdr_rows(2L, integer(0), p),
+    character(0)
+  )
+  expect_silent(tabular:::.rtf_warn_cellx_overflow(integer(0), p))
+  expect_silent(tabular:::.rtf_warn_cellx_overflow(1000L, p))
 })
 
 # ---------------------------------------------------------------------
@@ -484,11 +626,11 @@ test_that("style(.at = cells_title(), halign = 'left') emits \\ql on the title p
   ) |>
     preset(.style = template)
   rtf <- .rtf_emit_text(spec)
-  # The chrome surface halign overrides the default center alignment
-  # for the title paragraph.
+  # The chrome surface halign overrides the default centre alignment for
+  # the title, now rendered inside a \trhdr merged cell.
   expect_match(
     rtf,
-    "\\\\pard\\\\plain\\\\fs[0-9]+\\\\ql.*Demographics",
+    "\\\\pard\\\\plain\\\\intbl\\\\fs[0-9]+\\\\ql.*Demographics",
     fixed = FALSE
   )
 })
@@ -523,9 +665,13 @@ test_that("style(.at = cells_title(), blank_above = 3) overrides preset@title_pa
   ) |>
     preset(.style = template)
   rtf <- .rtf_emit_text(spec)
-  # Three blank paragraphs above the title (versus the preset
-  # default of 1).
-  blanks <- length(gregexpr("\\\\pard\\\\plain\\\\par", rtf)[[1]])
+  # Repeating titles put their spacing inside the table as blank \trhdr
+  # merged rows (empty `\pard\plain\intbl\fsN\cell`), so the gap repeats
+  # with the header. blank_above = 3 (+ default blank_below = 1) yields
+  # at least 3 blank spacing rows.
+  blanks <- length(
+    gregexpr("\\\\pard\\\\plain\\\\intbl\\\\fs[0-9]+\\\\cell", rtf)[[1]]
+  )
   expect_gte(blanks, 3L)
 })
 
@@ -622,19 +768,16 @@ test_that("RTF emits single-\\cellx merged-cell row for section headers (Change 
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  # Header rows render as a bolded merged cell `{\b ...}\cell` followed
-  # by `\row` (newline between the two tokens — they're emitted on
-  # separate output lines by the row builder).
+  # Section headers render as a full-width \clmgf/\clmrg merged row: the
+  # bolded label rides the first (merged) cell; trailing columns are
+  # empty merge targets keeping the body \cellx grid.
+  expect_match(rtf, "\\{\\\\b Best Overall Response\\}\\\\cell", perl = TRUE)
   expect_match(
     rtf,
-    "\\{\\\\b Best Overall Response\\}\\\\cell\\s*\\\\row",
+    "\\{\\\\b Objective Response Rate\\}\\\\cell",
     perl = TRUE
   )
-  expect_match(
-    rtf,
-    "\\{\\\\b Objective Response Rate\\}\\\\cell\\s*\\\\row",
-    perl = TRUE
-  )
+  expect_match(rtf, "\\\\clmgf", perl = TRUE)
 })
 
 # ---------------------------------------------------------------------
@@ -659,35 +802,70 @@ test_that("RTF nested bands: band-1 header has no \\li, band-2 header has \\liN 
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  # Band 1 ("Safety", depth 0) -> `\pard\plain\intbl\fsN\ql {\b Safety}`
-  # (no \li before \ql).
+  # Section-header rows glue to the following row (\keepn), so the
+  # paragraph carries `\fsN\keepn` before the indent + alignment.
+  # Band 1 ("Safety", depth 0) -> no \li before \ql.
   expect_match(
     rtf,
-    "\\\\pard\\\\plain\\\\intbl\\\\fs[0-9]+\\\\ql \\{\\\\b Safety\\}",
+    "\\\\pard\\\\plain\\\\intbl\\\\fs[0-9]+\\\\keepn\\\\ql \\{\\\\b Safety\\}",
     perl = TRUE
   )
-  # Band 2 ("AE", depth 1) -> `\pard\plain\intbl\fsN\liN\ql {\b AE}`.
+  # Band 2 ("AE", depth 1) -> `\fsN\keepn\liN\ql {\b AE}`.
   expect_match(
     rtf,
-    "\\\\pard\\\\plain\\\\intbl\\\\fs[0-9]+\\\\li[0-9]+\\\\ql \\{\\\\b AE\\}",
+    "\\\\pard\\\\plain\\\\intbl\\\\fs[0-9]+\\\\keepn\\\\li[0-9]+\\\\ql \\{\\\\b AE\\}",
     perl = TRUE
   )
 })
 
 # --- header-band rule scope (cmidrule(lr) semantics) ----------------
 
-test_that("RTF scenario G: band cells carry rule; blank flanking cells emit \\brdrnone", {
+test_that("RTF scenario G: cmidrule under band cells only; full-width top rule", {
   rtf <- band_emit("G", "rtf")
   expect_match(rtf, "\\{\\\\b Active Treatment\\}", perl = TRUE)
-  # Band cell (drug_50+drug_100 colspan) carries solid bottom border.
+  # Band cell (drug_50+drug_100 colspan) carries the solid bottom rule
+  # (cmidrule under the spanner).
   expect_match(rtf, "\\\\clbrdrb\\\\brdrs", perl = TRUE)
-  # Blank flanking cells (label+soc_n+placebo and Total) carry
-  # \brdrnone on top and bottom.
+  # The top rule is the full-width header rule (rides every cell of the
+  # topmost band, including flanking cells); a flanking cell carries that
+  # top rule but NO cmidrule on the bottom.
   expect_match(
     rtf,
-    "\\\\clbrdrt\\\\brdrnone\\\\clbrdrb\\\\brdrnone",
+    "\\\\clbrdrt\\\\brdrs\\\\brdrw10\\\\clbrdrb\\\\brdrnone",
     perl = TRUE
   )
+})
+
+test_that("spanner band carries a full-width top rule; cmidrule scoped to spanned cols (#3)", {
+  # The long header rule sits on top of ALL columns (over the flanking
+  # Characteristic / Statistic / Total as well as the spanned arms),
+  # while the spanner's own underline (cmidrule) covers only the spanned
+  # columns. The column-labels row below then carries NO top rule (not
+  # doubled under the band) but keeps the full-width bottom rule.
+  spec <- tabular(data.frame(grp = "x", lo = "1", hi = "2", tot = "3")) |>
+    cols(
+      grp = col_spec(label = "Characteristic"),
+      lo = col_spec(label = "Low"),
+      hi = col_spec(label = "High"),
+      tot = col_spec(label = "Total")
+    ) |>
+    headers("Active" = c("lo", "hi"))
+  rtf <- .rtf_emit_text(spec)
+  lines <- strsplit(rtf, "\n")[[1L]]
+  band_label <- grep("\\{\\\\b Active\\}", lines)[[1L]]
+  band_trowd <- max(grep("\\\\trowd", lines[seq_len(band_label)]))
+  band_block <- lines[band_trowd:(band_label - 1L)]
+  # Every cell-def in the band row carries the full-width top rule.
+  defs <- grep("\\\\cellx", band_block, value = TRUE)
+  expect_true(all(grepl("\\\\clbrdrt\\\\brdrs", defs)))
+  # Only the spanned cells carry the bottom cmidrule.
+  expect_equal(sum(grepl("\\\\clbrdrb\\\\brdrs", defs)), 2L)
+  # The column-labels row (with "Characteristic") drops its top rule.
+  cl_label <- grep("\\{\\\\b Characteristic\\}", lines)[[1L]]
+  cl_trowd <- max(grep("\\\\trowd", lines[seq_len(cl_label)]))
+  cl_defs <- grep("\\\\cellx", lines[cl_trowd:(cl_label - 1L)], value = TRUE)
+  expect_true(all(grepl("\\\\clbrdrt\\\\brdrnone", cl_defs)))
+  expect_true(all(grepl("\\\\clbrdrb\\\\brdrs", cl_defs)))
 })
 
 test_that("cell_padding_h drives RTF \\trgaph horizontal gap (padding SSOT)", {
@@ -730,7 +908,7 @@ test_that("repeat_content drops title + header repeat on continuation pages", {
   expect_equal(lengths(regmatches(txt, gregexpr("Tbl X", txt)))[[1L]], 1L)
 })
 
-test_that("repeat_content default repeats titles across pages", {
+test_that("default repeat_content emits the title as a repeating \\trhdr row", {
   df <- data.frame(
     soc = rep(c("A", "B"), each = 20L),
     val = as.character(seq_len(40L))
@@ -739,8 +917,14 @@ test_that("repeat_content default repeats titles across pages", {
     cols(soc = col_spec(usage = "group", label = "SOC")) |>
     preset(orientation = "portrait", font_size = 24)
   txt <- .rtf_emit_text(spec)
-  # Multi-page table -> title appears on more than one page by default.
-  expect_gt(lengths(regmatches(txt, gregexpr("Tbl Y", txt)))[[1L]], 1L)
+  # Native pagination: the title is emitted ONCE as a \trhdr merged row;
+  # Word redraws it at every page break it chooses (so the byte stream
+  # carries it once, not once per estimated page).
+  expect_equal(lengths(regmatches(txt, gregexpr("Tbl Y", txt)))[[1L]], 1L)
+  lines <- strsplit(txt, "\n")[[1L]]
+  title_line <- grep("Tbl Y", lines)[[1L]]
+  trowd_before <- max(grep("\\\\trowd", lines[seq_len(title_line)]))
+  expect_match(lines[[trowd_before]], "\\\\trhdr", fixed = FALSE)
 })
 
 test_that("footnotes are page-anchored in the {\\footer} group, not the body", {
@@ -755,8 +939,9 @@ test_that("footnotes are page-anchored in the {\\footer} group, not the body", {
   txt <- .rtf_emit_text(spec)
   # Footnote text appears inside a {\footer} group.
   expect_match(txt, "\\{\\\\footer[^}]*Source: ADSL")
-  # Multi-page table -> footer repeats footnotes on more than one page.
-  expect_gt(
+  # Native pagination: one {\footer} group in the byte stream (one
+  # section per panel); Word repeats it on every page it renders.
+  expect_equal(
     lengths(regmatches(txt, gregexpr("\\{\\\\footer", txt)))[[1L]],
     1L
   )
@@ -797,13 +982,15 @@ test_that("RTF backend renders an empty (zero-page) grid with a (no rows) marker
   expect_match(txt, "No data.", fixed = TRUE)
 })
 
-test_that("RTF backend emits the continuation marker on pages 2+ when titles do not repeat", {
+test_that("RTF backend emits the continuation marker on panel boundaries", {
+  # Native Word pagination owns vertical breaks, so the continuation
+  # marker rides horizontal panel boundaries (where tabular emits an
+  # explicit \sect). Panel 2 carries the marker.
   spec <- tabular(
-    data.frame(soc = rep(c("A", "B"), each = 20L), val = as.character(1:40))
+    data.frame(a = 1:3, b = 1:3, c = 1:3, d = 1:3)
   ) |>
-    cols(soc = col_spec(usage = "group", label = "SOC")) |>
-    preset(orientation = "portrait", font_size = 24) |>
     paginate(
+      panels = 2,
       repeat_content = c("headers", "footnotes"),
       continuation = "(continued)"
     )
@@ -884,4 +1071,41 @@ test_that("RTF backend renders styled multi-level headers with per-column valign
     style(bold = TRUE, halign = "center", .at = cells_headers())
   txt <- .rtf_emit_text(spec)
   expect_match(txt, "Treatment Group", fixed = TRUE)
+})
+
+# ---------------------------------------------------------------------
+# Column-header alignment — decimal -> centre header, default bottom
+# valign (HTML parity)
+# ---------------------------------------------------------------------
+
+test_that("decimal column header centres (\\qc) while the body stays right (\\qr)", {
+  spec <- tabular(data.frame(grp = "A", n = "12.3")) |>
+    cols(
+      grp = col_spec(label = "Group"),
+      n = col_spec(label = "N", align = "decimal")
+    )
+  txt <- .rtf_emit_text(spec)
+  # Header label "N" centred.
+  expect_match(txt, "\\\\qc[^A-Za-z]*\\{\\\\b N\\}", perl = TRUE)
+  # Body decimal cell right-aligned.
+  expect_match(txt, "\\\\qr[^A-Za-z]*12.3", perl = TRUE)
+})
+
+test_that("column header defaults to bottom valign (\\clvertalb)", {
+  spec <- tabular(data.frame(x = "a")) |> cols(x = col_spec(label = "X"))
+  txt <- .rtf_emit_text(spec)
+  expect_match(txt, "\\\\clvertalb", perl = TRUE)
+})
+
+test_that("col_spec(valign = 'top') header keeps top, not the bottom default", {
+  spec <- tabular(data.frame(x = "a")) |>
+    cols(x = col_spec(label = "X", valign = "top"))
+  txt <- .rtf_emit_text(spec)
+  # The column-label row carries \clvertalt, not the bottom default.
+  lines <- strsplit(txt, "\n")[[1L]]
+  hdr_line <- grep("\\{\\\\b X\\}", lines)[[1L]]
+  trowd_before <- max(grep("\\\\trowd", lines[seq_len(hdr_line)]))
+  block <- lines[trowd_before:hdr_line]
+  expect_true(any(grepl("\\\\clvertalt", block)))
+  expect_false(any(grepl("\\\\clvertalb", block)))
 })

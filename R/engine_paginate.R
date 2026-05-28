@@ -59,11 +59,27 @@
 #' one-page plan covering every row and column with
 #' `is_continuation = FALSE`.
 #'
+#' **Native pagination.** When `native = TRUE` (backends that delegate
+#' vertical pagination to the consuming application, e.g. RTF/Word), the
+#' vertical split is skipped: each `(subgroup x horizontal panel)` rides
+#' on ONE page covering every row, and `total_pages` therefore reports the
+#' rendered section count (one per panel), not an estimated vertical-page
+#' count. Horizontal panels are still split (the consumer cannot reflow
+#' columns). `rows_per_page` and `keep_with_next` are still computed from
+#' the physical page budget so the keep mask keeps its group-fit-vs-edge
+#' semantics; the consumer reads `keep_with_next` to choose its own break
+#' points.
+#'
 #' @param spec A `tabular_spec`.
-#' @return A pagination plan as described above.
+#' @param native Skip the vertical split (one page per panel) for backends
+#'   that paginate natively. Defaults to `FALSE` (tabular estimates the
+#'   split itself).
+#' @return A pagination plan as described above, plus `repeat_titles` /
+#'   `repeat_headers` / `repeat_footnotes` (the resolved `repeat_content`
+#'   membership) so native backends know which chrome rows repeat.
 #' @keywords internal
 #' @noRd
-engine_paginate <- function(spec) {
+engine_paginate <- function(spec, native = FALSE) {
   data <- spec@data
   nrow_data <- nrow(data)
   col_names <- names(data)
@@ -85,18 +101,27 @@ engine_paginate <- function(spec) {
   cont <- if (pag_set) pag@continuation else character()
   kt <- if (pag_set) pag@keep_together else character()
 
-  rpp <- .compute_rows_per_page(spec)
+  rpp <- .compute_rows_per_page(spec, native = native)
 
   kt_idx <- if (length(kt) > 0L) match(kt, col_names) else integer()
 
-  row_pages <- .compute_vertical_pages(
-    nrow_data = nrow_data,
-    rpp = rpp,
-    kt_idx = kt_idx,
-    data = data,
-    orphan_floor = orphan,
-    widow_floor = widow
-  )
+  # Native backends (RTF/Word) paginate the body themselves: skip the
+  # vertical split so every row rides one page per panel and the
+  # section-header / blank-row injection runs once over the full range.
+  # The keep mask below is still computed from the physical budget so the
+  # consumer's break points honour keep_together.
+  row_pages <- if (native) {
+    if (nrow_data == 0L) list(integer()) else list(seq_len(nrow_data))
+  } else {
+    .compute_vertical_pages(
+      nrow_data = nrow_data,
+      rpp = rpp,
+      kt_idx = kt_idx,
+      data = data,
+      orphan_floor = orphan,
+      widow_floor = widow
+    )
+  }
 
   # Keep-with-next mask drives the RTF and LaTeX backend's native
   # pagination hints (`\trkeep` + `\keepn` in RTF, `\nopagebreak[4]`
@@ -168,7 +193,10 @@ engine_paginate <- function(spec) {
     total_pages = as.integer(total_pages),
     total_panels = as.integer(n_horiz),
     pages = pages,
-    keep_with_next = keep_with_next
+    keep_with_next = keep_with_next,
+    repeat_titles = rep_titles,
+    repeat_headers = rep_headers,
+    repeat_footnotes = rep_footnotes
   )
 }
 
@@ -189,7 +217,11 @@ engine_paginate <- function(spec) {
 
 # Compute the per-page body-row budget from the active preset and
 # the spec's title / header / footnote chrome. Returns an integer.
-.compute_rows_per_page <- function(spec) {
+# Under `native = TRUE` the budget is only used to size the
+# keep_with_next mask (the consumer paginates), so a chrome block taller
+# than the printable area floors to `.min_rows_per_page` instead of
+# aborting, which the non-native split path does.
+.compute_rows_per_page <- function(spec, native = FALSE) {
   preset <- .effective_preset(spec)
 
   dims <- .paper_dims_twips(preset@paper_size, preset@orientation)
@@ -218,6 +250,13 @@ engine_paginate <- function(spec) {
 
   available <- page_height - margin_total - chrome_rows * one_row
   if (available <= 0L) {
+    # Native backends paginate the body themselves, so chrome taller than
+    # the page is not fatal; floor the mask budget and let the consumer
+    # break. The non-native split path still aborts (data rows would
+    # otherwise print on top of the chrome).
+    if (isTRUE(native)) {
+      return(.min_rows_per_page)
+    }
     # Titles + header band + footnotes alone exceed the printable
     # height, so no data row can fit. Abort loudly rather than
     # silently flooring to .min_rows_per_page (which would print data
