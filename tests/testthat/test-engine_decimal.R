@@ -1222,12 +1222,12 @@ test_that("preset(decimal_markers=) rejects NA", {
 test_that("comparator folds into the int field, no sibling space (#image3)", {
   v <- c("218 ( 86%)", "23 ( 9%)", "12 ( 5%)", "1 ( <1%)")
   out <- align(v)
-  # "<1" hugs its digit.
+  # The engine owns the bracketed field: upstream over-padding (the
+  # space after "(") is normalised away, then re-padded by the engine,
+  # so alignment never depends on how the caller pre-padded the percent.
+  expect_equal(out, c("218 (86%)", " 23 ( 9%)", " 12 ( 5%)", "  1 (<1%)"))
+  # "<1" hugs its digit; the comparator does not reserve a sibling column.
   expect_match(out[[4L]], "<1%")
-  # The Caucasian-style row keeps a SINGLE space after "(", because the
-  # comparator no longer reserves its own column on the siblings.
-  expect_match(out[[1L]], "\\( 86%\\)")
-  expect_false(grepl("\\(  ", out[[1L]]))
   expect_true(all(nchar(out) == nchar(out[[1L]])))
 })
 
@@ -1274,4 +1274,147 @@ test_that("a comma-space range is NOT swallowed as a thousands integer", {
   # Two distinct floats per row: the comma stays a range delimiter.
   expect_true(all(grepl(",", out)))
   expect_true(all(nchar(out) == nchar(out[[1L]])))
+})
+
+# ---------------------------------------------------------------------
+# Layer 14 — bracket-family hardening (NBSP, hyphen, engine-owned fields)
+#
+# First-principles pass over every bracket family — mean (sd),
+# (min, max), (min-max), n/N (pct%), (CI, CI), [CI, CI] — so each cell's
+# alignment comes from the engine, never from upstream padding. Three
+# fixes underlie this layer: input normalisation (collapses any
+# ASCII/NBSP space run to one ASCII space and drops a single space after
+# "(" / "["), an NBSP-aware outer trim, and a hyphen-as-separator
+# tokeniser guard. Expected strings were captured from the post-fix
+# engine, not hand-traced.
+# ---------------------------------------------------------------------
+
+# --- A: per-family canonical -----------------------------------------
+
+test_that("mean (sd) float family aligns both slots on the decimal mark", {
+  out <- align(c("75.2 (8.59)", "136.8 (17.61)", "-0.0 (1.47)"))
+  expect_equal(out, c(" 75.2 ( 8.59)", "136.8 (17.61)", " -0.0 ( 1.47)"))
+  # Slot-1 decimal marks align across signed, unsigned, and wide ints.
+  dot_pos <- regexpr("\\.", out)
+  expect_true(all(dot_pos == dot_pos[[1L]]))
+})
+
+test_that("mean (n) integer family aligns the n and the spread field", {
+  out <- align(c("75 (9)", "8 (10)", "100 (3)"))
+  expect_equal(out, c(" 75 ( 9)", "  8 (10)", "100 ( 3)"))
+})
+
+test_that("(min, max) range right-aligns the max, bare and parenthesised", {
+  expect_equal(align(c("61, 88", "5, 100")), c("61,  88", " 5, 100"))
+  expect_equal(align(c("(61, 88)", "(5, 100)")), c("(61,  88)", "( 5, 100)"))
+})
+
+test_that("(min-max) unspaced hyphen is a range separator, not a sign", {
+  # On the committed engine `61-88` mis-parses to floats `61` and `-88`,
+  # rendering the max negative ("61 -88"). The negative lookbehind in
+  # .float_token_re makes a digit-preceded hyphen a literal separator, so
+  # the max stays positive and the "-" lands in the inter-float literal.
+  out <- align(c("61-88", "1-180"))
+  expect_equal(out, c("61- 88", " 1-180"))
+})
+
+test_that("spaced int range is unchanged by the hyphen fix", {
+  expect_equal(align(c("1 - 180", "10 - 365")), c(" 1 - 180", "10 - 365"))
+})
+
+test_that("n/N (pct%) right-aligns the numerator and engine-aligns the pct", {
+  out <- align(c("3/45 (6.7%)", "42/84 (50.0%)"))
+  # Numerator right-aligns; "/" preserved; percent decimal mark aligns.
+  expect_match(out[[1L]], "^ 3/45")
+  expect_true(all(grepl("/", out)))
+  dot_pos <- regexpr("\\.", out)
+  expect_true(all(dot_pos == dot_pos[[1L]]))
+  # N-denominator left-alignment inside the compound shape is a deferred
+  # galley-GAP (needs the family classifier); not asserted here.
+})
+
+test_that("(CI) and [CI] interval families align all three slots", {
+  paren <- align(c("1.45 (1.20, 1.70)", "10.30 (9.85, 10.80)"))
+  expect_equal(paren, c(" 1.45 (1.20,  1.70)", "10.30 (9.85, 10.80)"))
+  brack <- align(c("53.0 [45.0, 60.0]", "102.0 [88.4, 116.2]"))
+  expect_equal(brack, c(" 53.0 [45.0,  60.0]", "102.0 [88.4, 116.2]"))
+})
+
+# --- B: decimal / non-decimal mixed in one column --------------------
+
+test_that("integer and float rows share one decimal anchor (reserved dec slot)", {
+  out <- align(c("75 (9)", "8.5 (10.2)", "100 (3)"))
+  expect_equal(out, c(" 75   ( 9  )", "  8.5 (10.2)", "100   ( 3  )"))
+  # The float row's decimal-mark column is reserved on the integer rows,
+  # so each integer's units digit sits directly above the float's units
+  # digit (the dec slot is empty, not collapsed).
+  dot_pos <- regexpr("\\.", out[[2L]])
+  expect_equal(substr(out[[1L]], dot_pos, dot_pos), " ")
+  expect_equal(substr(out[[3L]], dot_pos, dot_pos), " ")
+})
+
+# --- C: NBSP robustness ----------------------------------------------
+
+test_that("NBSP-padded and mixed-pad input align identically to ASCII", {
+  nbsp <- " "
+  ascii <- c("75.2 (8.59)", "8 (9%)", "61, 88")
+  full <- gsub(" ", nbsp, ascii)
+  mixed <- c(
+    paste0("75.2", nbsp, "(8.59)"),
+    "8 (9%)",
+    paste0("61,", nbsp, "88")
+  )
+  expect_equal(align(full), align(ascii))
+  expect_equal(align(mixed), align(ascii))
+})
+
+test_that("outer NBSP is trimmed (trimws alone leaves it)", {
+  nbsp <- " "
+  out <- align(c(paste0(nbsp, nbsp, "75.2 (8.59)", nbsp), "136.8 (17.61)"))
+  expect_false(grepl(paste0("^", nbsp, "|", nbsp, "$"), out[[1L]]))
+  expect_equal(out[[1L]], " 75.2 ( 8.59)")
+})
+
+test_that("production NBSP pad aligns a fully-NBSP-padded column", {
+  nbsp <- " "
+  full <- gsub(" ", nbsp, c("75.2 (8.59)", "8 (9%)"))
+  out <- tabular:::.align_decimal_column(
+    full,
+    pad = nbsp,
+    zero_suppress = FALSE,
+    edge_trim = FALSE
+  )
+  # No signature fragmentation: both rows reach equal column width.
+  expect_true(all(nchar(out) == nchar(out[[1L]])))
+})
+
+# --- D: original n_pct engine-owned + guards -------------------------
+
+test_that("n_pct with mixed comparators and pad widths aligns uniformly", {
+  out <- align(c("100 (100%)", "99 (>99%)", "60 ( 60%)", "7 (7%)", "1 (<1%)"))
+  expect_equal(
+    out,
+    c("100 (100%)", " 99 (>99%)", " 60 ( 60%)", "  7 (  7%)", "  1 ( <1%)")
+  )
+})
+
+test_that("upstream over-padding inside parens is normalised, engine re-pads", {
+  out <- align(c("75 ( 87%)", "8 (  9%)", "3 (  3%)", "0"))
+  expect_equal(out, c("75 (87%)", " 8 ( 9%)", " 3 ( 3%)", " 0      "))
+})
+
+test_that("comma-space ranges are untouched by bracket normalisation", {
+  expect_equal(
+    align(c("69.2, 81.8", "5.0, 100.0")),
+    c("69.2,  81.8", " 5.0, 100.0")
+  )
+})
+
+# --- E: hyphen-fix regression guard ----------------------------------
+
+test_that("legitimate negatives survive the hyphen fix", {
+  # A leading "-" (token start or after "(") is still a sign; only a
+  # digit-preceded "-" becomes a literal.
+  out <- align(c("-5.3, 12.1", "-0.0 (1.47)"))
+  expect_equal(out, c("-5.3, 12.1 ", "-0.0 (1.47)"))
 })

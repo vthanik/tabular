@@ -82,6 +82,21 @@
 # debugging. The character-count alignment is the canonical
 # invariant; backends translate the pad runs to font-metric padding
 # (RTF dec-tabs, LaTeX \phantom, HTML width-set spans) at emit time.
+#
+# Deferred to the parked family-classifier follow-up (documented
+# galley-GAPs, intentionally NOT handled here):
+#   * Cross-family disambiguation in UNSECTIONED columns. When an
+#     est_spread, a range, and an n_pct row share a float count in one
+#     unsectioned column, they align per-dominant-signature and can read
+#     ragged. Resolving this needs a family classifier (attempted once,
+#     reverted as too hard). Sectioned columns are unaffected.
+#   * Compound-shape refinement: N-denominator left-alignment inside
+#     `n/N (pct%)`, trailing-value columns (`est (ci) pval`), and an
+#     embedded missing token inside a CI (`(11.2, NR)`).
+#   * A Min/Max integer row sharing a section with a Mean (SD) / Q1, Q3
+#     float row reserves an empty decimal slot (so the integer's units
+#     digit aligns under the float's units digit). This is
+#     decimal-correct and kept as-is.
 
 # ---------------------------------------------------------------------
 # Constants
@@ -92,7 +107,7 @@
 # fractional part. Perl regex so the non-capturing groups parse
 # cleanly.
 #
-# Two clinical edge cases the bare `\d+(\.\d+)?` form got wrong:
+# Three clinical edge cases the bare `\d+(\.\d+)?` form got wrong:
 #   * leading-dot p-values: SAS prints `<.0001` / `.5934` with no
 #     leading zero. The `\.\d+` alternative lets the decimal point
 #     align with `0.5934` instead of treating `.` as a literal.
@@ -100,8 +115,14 @@
 #     a `1` / `234` range. `\d{1,3}(?:,\d{3})+` claims it as a single
 #     int token; a range comma (`2.0, 45.0`, comma-space) is left
 #     alone because the group needs `,` immediately before 3 digits.
+#   * range hyphens: an unspaced `61-88` Min-Max range is two POSITIVE
+#     floats joined by a literal `-`, not `61` and `-88`. The negative
+#     lookbehind `(?<![0-9])` blocks the sign when a digit immediately
+#     precedes the `-`, so the hyphen stays in the inter-float literal.
+#     A leading `-` (token start, or after `(` / `,` / space) is still a
+#     sign, so genuine negatives (`-5.3`, `-0.0`, `(-0.21`) survive.
 .float_token_re <-
-  "(?:[<>=]?)(?:-?)(?:(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?|\\.\\d+)"
+  "(?:[<>=]?)(?:(?<![0-9])-?)(?:(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?|\\.\\d+)"
 
 # Capturing version for parsing one token into components. Group 1
 # is the comparator prefix; group 2 is the sign; group 3 is the
@@ -282,6 +303,27 @@ engine_decimal <- function(
 #   * every other slot width (slot-1 dec_w / has_dec, slots 2..K)
 #     is computed INSIDE each section independently.
 # When `sections = NULL` the entire column is one section.
+
+# Canonicalise cell spacing before tokenisation so a family's rows share
+# one signature regardless of how the upstream formatter padded them.
+#
+#   1. Collapse any run of ASCII spaces and / or U+00A0 NBSP to a single
+#      ASCII space. This unifies ASCII-only, fully-NBSP, and mixed-pad
+#      input (the engine re-pads its output with the configured `pad`,
+#      so the collapse is idempotent against production NBSP padding).
+#      It also turns outer NBSP into ASCII space so the caller's
+#      `trimws()` can strip it (`trimws()` ignores NBSP).
+#   2. Drop a single space immediately after `(` or `[` so the bracketed
+#      field is flush. The engine's `int_w` / `dec_w` then fully own that
+#      field's width and right-pad it; alignment never depends on caller
+#      pre-padding. The structural n-to-`(` space is the LEADING char of
+#      the `" ("` literal (before the bracket) and is preserved; a range
+#      `", "` is a space not after a bracket and is untouched.
+.normalize_decimal_input <- function(x) {
+  x <- gsub("[ \u00a0]+", " ", x)
+  gsub("([([]) ", "\\1", x)
+}
+
 .align_decimal_column <- function(
   values,
   sections = NULL,
@@ -302,9 +344,13 @@ engine_decimal <- function(
   # Preserve NA positions; they round-trip unchanged.
   na_mask <- is.na(values)
 
-  # Normalise: trim outer whitespace before tokenising.
+  # Normalise spacing, then trim outer whitespace, before tokenising.
+  # Normalisation runs FIRST so the opaque-detection and column-floor
+  # passes below see the canonical form; it also rewrites outer NBSP to
+  # ASCII space so `trimws()` (which ignores NBSP) can strip it.
   v <- character(n)
-  v[!na_mask] <- trimws(values[!na_mask], which = "both")
+  v[!na_mask] <- .normalize_decimal_input(values[!na_mask])
+  v[!na_mask] <- trimws(v[!na_mask], which = "both")
 
   # Identify opaque cells — those whose trimmed value matches any
   # token in `not_considered`. Opaque cells bypass alignment and do
