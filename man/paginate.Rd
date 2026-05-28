@@ -10,7 +10,7 @@ paginate(
   panels = 1,
   orphan_floor = 3,
   widow_floor = 2,
-  repeat_headers = TRUE,
+  repeat_content = c("titles", "headers", "footnotes"),
   continuation = NULL
 )
 }
@@ -55,13 +55,30 @@ the previous page (page overflow accepted). Avoids the
 "one-row-orphaned-on-page-N" look without complicating the
 primary split rule.}
 
-\item{repeat_headers}{\emph{Repeat the column-header band on every
-continuation page.} \verb{<logical(1)>: default TRUE}. \code{FALSE} shows
-the header band on page 1 only; submission-grade tables almost
-always want \code{TRUE}. \strong{HTML / MD:} ignored. HTML renders one
-continuous \verb{<table>} and browsers natively repeat \verb{<thead>} on
-print; MD has no print model. Effective only for the page-
-oriented backends (RTF, PDF, LaTeX, DOCX).}
+\item{repeat_content}{\emph{Which page chrome repeats on every page.}
+\verb{<character>: default c("titles", "headers", "footnotes")}. A
+subset of those three values; each is governed independently:
+\itemize{
+\item \strong{\code{"titles"}} — title block on every page (else page 1 only).
+\item \strong{\code{"headers"}} — column-header band on every page (else
+page 1 only).
+\item \strong{\code{"footnotes"}} — footnote block on every page (else last
+page only).
+}
+
+The default repeats all three so each page is self-contained per
+the submission layout contract. Pass a subset to drop one (e.g.
+\code{c("headers", "footnotes")} keeps the title on page 1 only), or
+\code{character()} to repeat nothing.
+
+\strong{Note:} Footnotes are always anchored to the page foot when
+present; membership only chooses every-page vs last-page-only,
+never table-body placement.
+
+\strong{HTML / MD:} ignored. HTML renders one continuous \verb{<table>}
+and browsers natively repeat \verb{<thead>} on print; MD has no print
+model. Effective only for the page-oriented backends (RTF, PDF,
+LaTeX, DOCX).}
 
 \item{continuation}{\emph{Marker text appended after a continuing
 table's title block.} \verb{<character(1) | NULL>: default NULL}.
@@ -158,7 +175,7 @@ tabular(
   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
   paginate(
     keep_together = "soc",
-    repeat_headers = TRUE,
+    repeat_content = c("titles", "headers", "footnotes"),
     continuation = "(continued)"
   )
 
@@ -195,7 +212,7 @@ tabular(
     drug_100   = col_spec(label = sprintf("Drug 100\nN=\%d", ne["drug_100"]))
   ) |>
   sort_rows(by = "stat_label") |>
-  paginate(panels = 2, repeat_headers = TRUE)
+  paginate(panels = 2, repeat_content = c("titles", "headers", "footnotes"))
 
 # ---- Example 3: Orphan / widow floors + continuation marker ----
 #

@@ -91,7 +91,7 @@ test_that("pagination_spec() defaults", {
   expect_identical(p@panels, 1L)
   expect_identical(p@orphan_floor, 3L)
   expect_identical(p@widow_floor, 2L)
-  expect_true(p@repeat_headers)
+  expect_identical(p@repeat_content, c("titles", "headers", "footnotes"))
   expect_identical(p@continuation, character())
 })
 

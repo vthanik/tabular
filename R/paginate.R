@@ -98,13 +98,29 @@
 #'   "one-row-orphaned-on-page-N" look without complicating the
 #'   primary split rule.
 #'
-#' @param repeat_headers *Repeat the column-header band on every
-#'   continuation page.* `<logical(1)>: default TRUE`. `FALSE` shows
-#'   the header band on page 1 only; submission-grade tables almost
-#'   always want `TRUE`. **HTML / MD:** ignored. HTML renders one
-#'   continuous `<table>` and browsers natively repeat `<thead>` on
-#'   print; MD has no print model. Effective only for the page-
-#'   oriented backends (RTF, PDF, LaTeX, DOCX).
+#' @param repeat_content *Which page chrome repeats on every page.*
+#'   `<character>: default c("titles", "headers", "footnotes")`. A
+#'   subset of those three values; each is governed independently:
+#'
+#'   *   **`"titles"`** — title block on every page (else page 1 only).
+#'   *   **`"headers"`** — column-header band on every page (else
+#'       page 1 only).
+#'   *   **`"footnotes"`** — footnote block on every page (else last
+#'       page only).
+#'
+#'   The default repeats all three so each page is self-contained per
+#'   the submission layout contract. Pass a subset to drop one (e.g.
+#'   `c("headers", "footnotes")` keeps the title on page 1 only), or
+#'   `character()` to repeat nothing.
+#'
+#'   **Note:** Footnotes are always anchored to the page foot when
+#'   present; membership only chooses every-page vs last-page-only,
+#'   never table-body placement.
+#'
+#'   **HTML / MD:** ignored. HTML renders one continuous `<table>`
+#'   and browsers natively repeat `<thead>` on print; MD has no print
+#'   model. Effective only for the page-oriented backends (RTF, PDF,
+#'   LaTeX, DOCX).
 #'
 #' @param continuation *Marker text appended after a continuing
 #'   table's title block.* `<character(1) | NULL>: default NULL`.
@@ -157,7 +173,7 @@
 #'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
 #'   paginate(
 #'     keep_together = "soc",
-#'     repeat_headers = TRUE,
+#'     repeat_content = c("titles", "headers", "footnotes"),
 #'     continuation = "(continued)"
 #'   )
 #'
@@ -194,7 +210,7 @@
 #'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", ne["drug_100"]))
 #'   ) |>
 #'   sort_rows(by = "stat_label") |>
-#'   paginate(panels = 2, repeat_headers = TRUE)
+#'   paginate(panels = 2, repeat_content = c("titles", "headers", "footnotes"))
 #'
 #' # ---- Example 3: Orphan / widow floors + continuation marker ----
 #' #
@@ -269,7 +285,7 @@ paginate <- function(
   panels = 1,
   orphan_floor = 3,
   widow_floor = 2,
-  repeat_headers = TRUE,
+  repeat_content = c("titles", "headers", "footnotes"),
   continuation = NULL
 ) {
   call <- rlang::caller_env()
@@ -279,11 +295,7 @@ paginate <- function(
   panels_val <- .check_panels(panels, call = call)
   of <- check_pos_int(orphan_floor, arg = "orphan_floor", call = call)
   wf <- check_pos_int(widow_floor, arg = "widow_floor", call = call)
-  rh <- .check_scalar_lgl(
-    repeat_headers,
-    arg = "repeat_headers",
-    call = call
-  )
+  rc <- .check_repeat_content(repeat_content, call = call)
   cont <- .check_continuation(continuation, call = call)
 
   if (length(keep_together) > 0L) {
@@ -320,7 +332,7 @@ paginate <- function(
     panels = panels_val,
     orphan_floor = of,
     widow_floor = wf,
-    repeat_headers = rh,
+    repeat_content = rc,
     continuation = cont
   )
   S7::set_props(spec, pagination = new_pag)
@@ -390,6 +402,29 @@ paginate <- function(
     class = "tabular_error_input",
     call = call
   )
+}
+
+# Validate `repeat_content`: a character subset of
+# c("titles", "headers", "footnotes"), deduplicated. `NULL` and
+# `character()` both mean "repeat nothing". Order-insensitive.
+.check_repeat_content <- function(x, call) {
+  if (is.null(x)) {
+    return(character())
+  }
+  check_chr(x, arg = "repeat_content", call = call)
+  known <- .repeat_content_values
+  bad <- setdiff(x, known)
+  if (length(bad) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg repeat_content} must be a subset of {.val {known}}.",
+        "x" = "Unknown value{?s}: {.val {bad}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  unique(x)
 }
 
 # Return the names of `usage = "group"` columns from a cols list.

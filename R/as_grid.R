@@ -88,7 +88,8 @@
 #'   * `@pages` — a list of one entry per display page. Each entry is
 #'     a named list with pagination fields (`page_index`,
 #'     `panel_index`, `is_continuation`, `continuation`,
-#'     `repeat_headers`), row + column slice indices
+#'     `show_titles`, `repeat_headers`, `show_footnotes_here`),
+#'     row + column slice indices
 #'     (`row_indices`, `col_indices`, `col_names`), the sliced
 #'     cell text (`cells_text` — character matrix), sliced inline
 #'     ASTs (`cells_ast` — list-matrix of [`inline_ast`]), sliced
@@ -668,7 +669,9 @@ as_grid <- function(spec) {
     panel_index = p$panel_index,
     is_continuation = p$is_continuation,
     continuation = p$continuation,
+    show_titles = p$show_titles,
     repeat_headers = p$repeat_headers,
+    show_footnotes_here = p$show_footnotes_here,
     row_indices = ri,
     col_indices = ci,
     col_names = visible,

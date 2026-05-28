@@ -80,14 +80,25 @@ test_that("engine_paginate() row budget shrinks as more titles / footnotes consu
   expect_gt(plan_bare$rows_per_page, plan_heavy$rows_per_page)
 })
 
-test_that("engine_paginate() floors at min rows per page even under extreme chrome", {
-  # Huge font + many titles -> chrome would push budget negative, but
-  # the engine floors at the documented minimum (5).
+test_that("engine_paginate() aborts when chrome is taller than the page", {
+  # Huge font + many titles -> chrome alone exceeds the printable
+  # height, so no data row fits. The engine aborts rather than
+  # printing data on top of the chrome.
   spec <- make_paginated_spec(
     1L,
     font_size = 72,
     titles = rep("T", 50L)
   )
+  expect_error(
+    tabular:::engine_paginate(spec),
+    class = "tabular_error_layout"
+  )
+})
+
+test_that("engine_paginate() floors rows_per_page at the minimum on a tight budget", {
+  # Large font with minimal chrome (header only) leaves a small but
+  # positive budget; the engine floors at the documented minimum (5).
+  spec <- make_paginated_spec(1L, font_size = 120)
   plan <- tabular:::engine_paginate(spec)
   expect_gte(plan$rows_per_page, 5L)
 })
@@ -246,12 +257,39 @@ test_that("engine_paginate() preserves an empty continuation (no marker)", {
   }
 })
 
-test_that("engine_paginate() preserves repeat_headers", {
-  spec <- make_paginated_spec(30L, font_size = 24, repeat_headers = FALSE)
+test_that("engine_paginate() derives per-page chrome booleans from repeat_content", {
+  # Drop "headers" -> repeat_headers FALSE on every page; "titles"
+  # and "footnotes" still in the set so their per-page flags stay TRUE
+  # on every page.
+  spec <- make_paginated_spec(
+    30L,
+    font_size = 24,
+    repeat_content = c("titles", "footnotes")
+  )
   plan <- tabular:::engine_paginate(spec)
   for (p in plan$pages) {
     expect_false(p$repeat_headers)
+    expect_true(p$show_titles)
+    expect_true(p$show_footnotes_here)
   }
+})
+
+test_that("engine_paginate() with repeat_content=character() restricts chrome to edges", {
+  spec <- make_paginated_spec(
+    30L,
+    font_size = 24,
+    repeat_content = character()
+  )
+  plan <- tabular:::engine_paginate(spec)
+  n <- length(plan$pages)
+  expect_gt(n, 1L)
+  # Titles only on the first page; footnotes only on the last; headers
+  # never repeat.
+  expect_true(plan$pages[[1L]]$show_titles)
+  expect_false(plan$pages[[2L]]$show_titles)
+  expect_false(plan$pages[[1L]]$repeat_headers)
+  expect_true(plan$pages[[n]]$show_footnotes_here)
+  expect_false(plan$pages[[1L]]$show_footnotes_here)
 })
 
 test_that("engine_paginate() works on a spec with no group columns", {

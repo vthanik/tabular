@@ -46,7 +46,9 @@
 #'       col_indices     = integer(),
 #'       is_continuation = logical(1),
 #'       continuation    = character(0|1),
-#'       repeat_headers  = logical(1)
+#'       show_titles         = logical(1),
+#'       repeat_headers      = logical(1),
+#'       show_footnotes_here = logical(1)
 #'     ),
 #'     ...
 #'   )
@@ -72,7 +74,14 @@ engine_paginate <- function(spec) {
   orphan <- if (pag_set) pag@orphan_floor else .default_orphan_floor
   widow <- if (pag_set) pag@widow_floor else .default_widow_floor
   panels <- if (pag_set) pag@panels else 1L
-  repeat_h <- if (pag_set) pag@repeat_headers else TRUE
+  rc <- if (pag_set) {
+    pag@repeat_content
+  } else {
+    c("titles", "headers", "footnotes")
+  }
+  rep_titles <- "titles" %in% rc
+  rep_headers <- "headers" %in% rc
+  rep_footnotes <- "footnotes" %in% rc
   cont <- if (pag_set) pag@continuation else character()
   kt <- if (pag_set) pag@keep_together else character()
 
@@ -132,6 +141,13 @@ engine_paginate <- function(spec) {
   k <- 1L
   for (panel_i in seq_len(n_horiz)) {
     for (vert_i in seq_len(n_vert)) {
+      # Per-page chrome booleans derived from repeat_content so each
+      # backend reads simple flags. Each physical page (including
+      # panel pages) is self-contained: page 1 of every panel shows
+      # titles; the last vertical page of every panel shows last-page
+      # footnotes. Headers repeat per the flag.
+      is_first <- vert_i == 1L
+      is_last <- vert_i == n_vert
       pages[[k]] <- list(
         page_index = vert_i,
         panel_index = panel_i,
@@ -139,7 +155,9 @@ engine_paginate <- function(spec) {
         col_indices = col_panels[[panel_i]],
         is_continuation = vert_i > 1L || panel_i > 1L,
         continuation = cont,
-        repeat_headers = repeat_h
+        show_titles = rep_titles || is_first,
+        repeat_headers = rep_headers,
+        show_footnotes_here = rep_footnotes || is_last
       )
       k <- k + 1L
     }
@@ -199,6 +217,22 @@ engine_paginate <- function(spec) {
     footnote_spacing
 
   available <- page_height - margin_total - chrome_rows * one_row
+  if (available <= 0L) {
+    # Titles + header band + footnotes alone exceed the printable
+    # height, so no data row can fit. Abort loudly rather than
+    # silently flooring to .min_rows_per_page (which would print data
+    # rows on top of the chrome).
+    usable_rows <- as.integer((page_height - margin_total) %/% one_row)
+    cli::cli_abort(
+      c(
+        "Page chrome is taller than the printable area.",
+        "x" = "Titles, header band, and footnotes need {chrome_rows} row{?s}; the page holds {usable_rows}.",
+        "i" = "Reduce title or footnote lines, shrink {.code preset(font_size = ...)}, or widen the page or margins."
+      ),
+      class = "tabular_error_layout",
+      call = rlang::caller_env()
+    )
+  }
   rpp <- as.integer(available %/% one_row)
   max(.min_rows_per_page, rpp)
 }

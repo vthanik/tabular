@@ -681,6 +681,11 @@ style_spec <- S7::new_class(
 #' @rdname tabular_classes
 #' @format NULL
 #' @usage NULL
+# Chrome elements that may repeat on every display page. The
+# `pagination_spec@repeat_content` subset selects which appear on
+# continuation pages (vs page-1 / last-page only).
+.repeat_content_values <- c("titles", "headers", "footnotes")
+
 pagination_spec <- S7::new_class(
   "pagination_spec",
   package = "tabular",
@@ -692,12 +697,34 @@ pagination_spec <- S7::new_class(
     panels = S7::new_property(S7::class_any, default = 1L),
     orphan_floor = S7::new_property(S7::class_integer, default = 3L),
     widow_floor = S7::new_property(S7::class_integer, default = 2L),
-    repeat_headers = S7::new_property(S7::class_logical, default = TRUE),
+    # Which page chrome repeats on every page. Subset of
+    # `c("titles", "headers", "footnotes")`; default all three (each
+    # page self-contained per the BMS Appendix I layout contract).
+    # `character()` repeats nothing (titles + headers page 1 only,
+    # footnotes last page only). Footnotes are always page-anchored
+    # (page foot) when present; membership only governs every-page
+    # vs last-page-only.
+    repeat_content = S7::new_property(
+      S7::class_character,
+      default = c("titles", "headers", "footnotes")
+    ),
     continuation = S7::new_property(
       S7::class_character,
       default = character()
     )
-  )
+  ),
+  validator = function(self) {
+    bad <- setdiff(self@repeat_content, .repeat_content_values)
+    if (length(bad) > 0L) {
+      return(paste0(
+        "@repeat_content must be a subset of ",
+        paste(.sh_quote(.repeat_content_values), collapse = ", "),
+        "; got ",
+        paste(.sh_quote(bad), collapse = ", ")
+      ))
+    }
+    NULL
+  }
 )
 
 # ---------------------------------------------------------------------

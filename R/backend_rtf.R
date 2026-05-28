@@ -144,10 +144,35 @@ backend_rtf <- function(grid, file) {
   has_ph <- .page_band_is_populated(meta$pagehead_ast)
   has_pf <- .page_band_is_populated(meta$pagefoot_ast)
 
+  # Footnotes are page-anchored: they ride the `{\footer}` group (above
+  # the program-path band) on every page where show_footnotes_here is
+  # TRUE, so they pin to the page bottom even on a short last page. The
+  # engine already reserved the footnote zone in the row budget, so the
+  # bottom margin is enlarged by that zone to hold the footer without
+  # overlapping the body.
+  has_footnotes <- length(meta$footnotes_ast) > 0L
+  footnotes_here <- has_footnotes && isTRUE(page$show_footnotes_here)
+  footer_active <- has_pf || footnotes_here
+  footnote_lines <- if (footnotes_here) {
+    .render_rtf_footnote_block(meta$footnotes_ast, preset, cs, colors, fonts)
+  } else {
+    character()
+  }
+  footer_extra <- if (footnotes_here) {
+    (length(meta$footnotes_ast) + 1L) * .row_height_twips(preset@font_size)
+  } else {
+    0L
+  }
+
   out <- character()
   out <- c(
     out,
-    .rtf_section_def(preset, has_pagehead = has_ph, has_pagefoot = has_pf)
+    .rtf_section_def(
+      preset,
+      has_pagehead = has_ph,
+      has_pagefoot = footer_active,
+      footer_extra_twips = footer_extra
+    )
   )
   if (has_ph) {
     out <- c(
@@ -155,10 +180,17 @@ backend_rtf <- function(grid, file) {
       .rtf_header_group(meta$pagehead_ast, preset, cs, colors, fonts)
     )
   }
-  if (has_pf) {
+  if (footer_active) {
     out <- c(
       out,
-      .rtf_footer_group(meta$pagefoot_ast, preset, cs, colors, fonts)
+      .rtf_footer_group(
+        meta$pagefoot_ast,
+        footnote_lines,
+        preset,
+        cs,
+        colors,
+        fonts
+      )
     )
   }
 
@@ -168,7 +200,7 @@ backend_rtf <- function(grid, file) {
   pad_body_top <- 0L
   pad_body_bottom <- 0L
 
-  if (page_number == 1L) {
+  if (isTRUE(page$show_titles)) {
     titles <- .render_rtf_title_block(
       meta$titles_ast,
       preset,
@@ -199,18 +231,8 @@ backend_rtf <- function(grid, file) {
   out <- c(out, .render_rtf_table(page, meta, preset, cs, colors, fonts))
   out <- c(out, rep(blank_par, pad_body_bottom))
 
-  if (page_number == 1L) {
-    out <- c(
-      out,
-      .render_rtf_footnote_block(
-        meta$footnotes_ast,
-        preset,
-        cs,
-        colors,
-        fonts
-      )
-    )
-  }
+  # Footnotes are emitted in the `{\footer}` group above, not in the
+  # body, so they pin to the page bottom on every page.
 
   out <- c(out, "\\sect")
   out
@@ -245,9 +267,19 @@ backend_rtf <- function(grid, file) {
 # (from preset@margins via the .parse_dim / .dim_to_twips pipe),
 # `\lndscpsxn` for landscape, `\headery` / `\footery` only when a
 # page band is populated (saves dead-space reservation otherwise).
-.rtf_section_def <- function(preset, has_pagehead, has_pagefoot) {
+.rtf_section_def <- function(
+  preset,
+  has_pagehead,
+  has_pagefoot,
+  footer_extra_twips = 0L
+) {
   paper <- .rtf_paper_twips(preset@paper_size, preset@orientation)
   margins <- .rtf_margins_twips(preset@margins)
+
+  # When footnotes ride the footer, the bottom margin grows by the
+  # footnote zone (already reserved in the engine row budget) so the
+  # body stops above the footer and footnotes pin to the page bottom.
+  margb_eff <- margins$bottom + as.integer(footer_extra_twips)
 
   parts <- c(
     "\\sectd\\sbkpage",
@@ -256,7 +288,7 @@ backend_rtf <- function(grid, file) {
     sprintf(
       "\\margt%d\\margb%d\\margl%d\\margr%d",
       margins$top,
-      margins$bottom,
+      margb_eff,
       margins$left,
       margins$right
     )
@@ -270,7 +302,9 @@ backend_rtf <- function(grid, file) {
     parts <- c(parts, sprintf("\\headery%d", headery))
   }
   if (has_pagefoot) {
-    parts <- c(parts, sprintf("\\footery%d", margins$bottom))
+    # Footer content (footnotes, then program-path band) flows down
+    # from \footery, which sits at the enlarged bottom-margin line.
+    parts <- c(parts, sprintf("\\footery%d", margb_eff))
   }
   paste(parts[nzchar(parts)], collapse = "")
 }
@@ -346,7 +380,14 @@ backend_rtf <- function(grid, file) {
 # `{\footer ...}` group. Emits one invisible 1-row 3-cell table
 # per band row, in FORWARD index order so row 1 (body-edge) ends
 # up at the top of the footer zone.
-.rtf_footer_group <- function(pagefoot_ast, preset, cs, colors, fonts) {
+.rtf_footer_group <- function(
+  pagefoot_ast,
+  footnote_lines,
+  preset,
+  cs,
+  colors,
+  fonts
+) {
   nrow_band <- .page_band_nrow(pagefoot_ast)
   rows <- character()
   for (i in seq_len(nrow_band)) {
@@ -356,7 +397,9 @@ backend_rtf <- function(grid, file) {
       .rtf_chrome_row(row_ast, preset, cs, "pagefoot", colors, fonts)
     )
   }
-  c("{\\footer", rows, "}")
+  # Footnote paragraphs sit ABOVE the program-path band so the footer
+  # reads footnotes-then-program-path top to bottom (BMS Appendix I).
+  c("{\\footer", footnote_lines, rows, "}")
 }
 
 # Render ONE band row as an invisible 3-cell table (Left / Center
@@ -665,26 +708,37 @@ backend_rtf <- function(grid, file) {
   cols <- meta$cols %||% list()
   cellx <- .rtf_cellx_positions(col_names_vis, cols, preset)
 
-  band_rows <- .render_rtf_header_bands(
-    meta$headers,
-    col_names_vis,
-    cols,
-    cellx,
-    preset,
-    cs,
-    colors,
-    fonts
-  )
-  label_row <- .render_rtf_col_labels_row(
-    meta$col_labels_ast,
-    col_names_vis,
-    cols,
-    cellx,
-    preset,
-    cs,
-    colors,
-    fonts
-  )
+  # The header band + column-labels row show on page 1 always, and on
+  # continuation pages only when repeat_headers is in repeat_content.
+  show_header <- isTRUE(page$page_index == 1L) || isTRUE(page$repeat_headers)
+  band_rows <- if (show_header) {
+    .render_rtf_header_bands(
+      meta$headers,
+      col_names_vis,
+      cols,
+      cellx,
+      preset,
+      cs,
+      colors,
+      fonts
+    )
+  } else {
+    character()
+  }
+  label_row <- if (show_header) {
+    .render_rtf_col_labels_row(
+      meta$col_labels_ast,
+      col_names_vis,
+      cols,
+      cellx,
+      preset,
+      cs,
+      colors,
+      fonts
+    )
+  } else {
+    character()
+  }
   # Subgroup banner row — single merged cell spanning every visible
   # column, centred and bold, with a top + bottom rule for visual
   # separation from the column-header band above and the body rows

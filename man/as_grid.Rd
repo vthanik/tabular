@@ -18,7 +18,8 @@ as_grid(spec)
 \item \verb{@pages} — a list of one entry per display page. Each entry is
 a named list with pagination fields (\code{page_index},
 \code{panel_index}, \code{is_continuation}, \code{continuation},
-\code{repeat_headers}), row + column slice indices
+\code{show_titles}, \code{repeat_headers}, \code{show_footnotes_here}),
+row + column slice indices
 (\code{row_indices}, \code{col_indices}, \code{col_names}), the sliced
 cell text (\code{cells_text} — character matrix), sliced inline
 ASTs (\code{cells_ast} — list-matrix of \code{\link{inline_ast}}), sliced

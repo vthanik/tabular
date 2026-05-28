@@ -700,3 +700,67 @@ test_that(".rtf_body_trgaph falls back to 5.4pt default when preset is NULL", {
   cs <- matrix(list(tabular:::style_node()), nrow = 1L)
   expect_identical(tabular:::.rtf_body_trgaph(cs, preset = NULL), 108L)
 })
+
+test_that("repeat_content drops title + header repeat on continuation pages", {
+  # Default repeat_content repeats titles + headers on every page;
+  # excluding them shows titles + the header band on page 1 only.
+  df <- data.frame(
+    soc = rep(c("A", "B"), each = 20L),
+    val = as.character(seq_len(40L))
+  )
+  spec <- tabular(df, titles = "Tbl X") |>
+    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    preset(orientation = "portrait", font_size = 24) |>
+    paginate(repeat_content = character())
+  txt <- .rtf_emit_text(spec)
+  # Title text appears exactly once (page 1 only), not once per page.
+  expect_equal(lengths(regmatches(txt, gregexpr("Tbl X", txt)))[[1L]], 1L)
+})
+
+test_that("repeat_content default repeats titles across pages", {
+  df <- data.frame(
+    soc = rep(c("A", "B"), each = 20L),
+    val = as.character(seq_len(40L))
+  )
+  spec <- tabular(df, titles = "Tbl Y") |>
+    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    preset(orientation = "portrait", font_size = 24)
+  txt <- .rtf_emit_text(spec)
+  # Multi-page table -> title appears on more than one page by default.
+  expect_gt(lengths(regmatches(txt, gregexpr("Tbl Y", txt)))[[1L]], 1L)
+})
+
+test_that("footnotes are page-anchored in the {\\footer} group, not the body", {
+  # Footnotes ride the page footer (pinned to the page bottom) rather
+  # than the body, and the bottom margin grows to hold the footer.
+  spec <- tabular(
+    data.frame(soc = rep(c("A", "B"), each = 20L), val = as.character(1:40)),
+    footnotes = "Source: ADSL."
+  ) |>
+    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    preset(orientation = "portrait", font_size = 24)
+  txt <- .rtf_emit_text(spec)
+  # Footnote text appears inside a {\footer} group.
+  expect_match(txt, "\\{\\\\footer[^}]*Source: ADSL")
+  # Multi-page table -> footer repeats footnotes on more than one page.
+  expect_gt(
+    lengths(regmatches(txt, gregexpr("\\{\\\\footer", txt)))[[1L]],
+    1L
+  )
+})
+
+test_that("repeat_content without footnotes shows them on the last page only", {
+  spec <- tabular(
+    data.frame(soc = rep(c("A", "B"), each = 20L), val = as.character(1:40)),
+    footnotes = "Source: ADSL."
+  ) |>
+    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    preset(orientation = "portrait", font_size = 24) |>
+    paginate(repeat_content = c("titles", "headers"))
+  txt <- .rtf_emit_text(spec)
+  # Footnote appears exactly once (last page footer only).
+  expect_equal(
+    lengths(regmatches(txt, gregexpr("Source: ADSL", txt)))[[1L]],
+    1L
+  )
+})

@@ -32,7 +32,7 @@ test_that("paginate() with all defaults stores defaults", {
   expect_identical(pag@panels, 1L)
   expect_identical(pag@orphan_floor, 3L)
   expect_identical(pag@widow_floor, 2L)
-  expect_true(pag@repeat_headers)
+  expect_identical(pag@repeat_content, c("titles", "headers", "footnotes"))
   expect_identical(pag@continuation, character())
 })
 
@@ -116,20 +116,25 @@ test_that("paginate() rejects widow_floor = -1", {
   )
 })
 
-test_that("paginate() rejects non-scalar repeat_headers", {
+test_that("paginate() rejects unknown repeat_content values", {
   spec <- make_spec(10L)
   expect_error(
-    paginate(spec, repeat_headers = c(TRUE, FALSE)),
+    paginate(spec, repeat_content = "header"), # typo for "headers"
     class = "tabular_error_input"
   )
 })
 
-test_that("paginate() rejects NA repeat_headers", {
+test_that("paginate() accepts a repeat_content subset and character()", {
   spec <- make_spec(10L)
-  expect_error(
-    paginate(spec, repeat_headers = NA),
-    class = "tabular_error_input"
-  )
+  sub <- paginate(spec, repeat_content = c("headers", "footnotes"))
+  expect_identical(sub@pagination@repeat_content, c("headers", "footnotes"))
+
+  none <- paginate(spec, repeat_content = character())
+  expect_identical(none@pagination@repeat_content, character())
+
+  # NULL is accepted and means "repeat nothing".
+  null_rc <- paginate(spec, repeat_content = NULL)
+  expect_identical(null_rc@pagination@repeat_content, character())
 })
 
 test_that("paginate() rejects non-scalar continuation", {
