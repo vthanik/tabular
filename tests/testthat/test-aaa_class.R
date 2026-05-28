@@ -174,3 +174,57 @@ test_that("predicates never error and return FALSE for non-matches", {
   expect_false(is_pagination_spec(42L))
   expect_false(is_preset_spec(NA))
 })
+
+# ---------------------------------------------------------------------
+# S7 validator branches (last-line-of-defense, reached by constructing
+# the raw classes directly; the user-facing verbs cli-check first).
+# ---------------------------------------------------------------------
+
+test_that(".col_spec_class validator rejects malformed width", {
+  expect_error(tabular:::.col_spec_class(width = NA), "cannot be NA or NULL")
+  expect_error(
+    tabular:::.col_spec_class(width = NULL),
+    "cannot be NA or NULL"
+  )
+  expect_error(
+    tabular:::.col_spec_class(width = "bogus"),
+    "object is invalid"
+  )
+  expect_error(
+    tabular:::.col_spec_class(width = "0pt"),
+    "must be positive when set"
+  )
+})
+
+test_that(".col_spec_class validator rejects malformed scalar props", {
+  expect_error(
+    tabular:::.col_spec_class(na_text = c("a", "b")),
+    "@na_text must be length 1"
+  )
+  expect_error(
+    tabular:::.col_spec_class(group_display = "bogus"),
+    "@group_display must be one of"
+  )
+  expect_error(
+    tabular:::.col_spec_class(group_skip = c(TRUE, FALSE)),
+    "@group_skip must be length 1"
+  )
+  expect_error(
+    tabular:::.col_spec_class(indent_by = c("a", "b")),
+    "@indent_by must be length 1"
+  )
+})
+
+test_that("pagination_spec validator rejects unknown repeat_content", {
+  expect_error(
+    pagination_spec(repeat_content = "bogus"),
+    "@repeat_content must be a subset of"
+  )
+})
+
+test_that("preset_spec validator surfaces a malformed pagefoot shape", {
+  expect_error(
+    preset_spec(pagefoot = list(1, 2)),
+    "@pagefoot"
+  )
+})

@@ -764,3 +764,111 @@ test_that("repeat_content without footnotes shows them on the last page only", {
     1L
   )
 })
+
+test_that("RTF backend renders an empty (zero-page) grid with a (no rows) marker", {
+  # The zero-page branch (.render_rtf_empty) is defensive: a normal
+  # spec always yields >= 1 page, so build a grid then blank its pages.
+  g <- as_grid(
+    tabular(
+      data.frame(x = "a"),
+      titles = "Empty Table",
+      footnotes = "No data."
+    )
+  )
+  g0 <- S7::set_props(g, pages = list())
+  out <- withr::local_tempfile(fileext = ".rtf")
+  tabular:::backend_rtf(g0, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(txt, "(no rows)", fixed = TRUE)
+  expect_match(txt, "Empty Table", fixed = TRUE)
+  expect_match(txt, "No data.", fixed = TRUE)
+})
+
+test_that("RTF backend emits the continuation marker on pages 2+ when titles do not repeat", {
+  spec <- tabular(
+    data.frame(soc = rep(c("A", "B"), each = 20L), val = as.character(1:40))
+  ) |>
+    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    preset(orientation = "portrait", font_size = 24) |>
+    paginate(
+      repeat_content = c("headers", "footnotes"),
+      continuation = "(continued)"
+    )
+  txt <- .rtf_emit_text(spec)
+  expect_match(txt, "\\(continued\\)")
+})
+
+test_that("RTF backend renders inline sup / sub / code / link markup", {
+  # md() markup is preserved on column labels (a data.frame column
+  # would strip the class via c()); labels render through the same
+  # inline path as every other surface.
+  spec <- tabular(data.frame(a = "x", b = "y", c = "z", d = "w")) |>
+    cols(
+      a = col_spec(label = md("cm^2^")),
+      b = col_spec(label = md("H~2~O")),
+      c = col_spec(label = md("`ADSL`")),
+      d = col_spec(label = md("[ref](https://example.org)"))
+    )
+  txt <- .rtf_emit_text(spec)
+  expect_match(txt, "{\\super ", fixed = TRUE)
+  expect_match(txt, "{\\sub ", fixed = TRUE)
+  expect_match(txt, "HYPERLINK", fixed = TRUE)
+  expect_match(txt, "{\\f1 ", fixed = TRUE) # code -> mono font
+})
+
+test_that("RTF backend collects + emits per-cell colours", {
+  spec <- tabular(data.frame(x = c("a", "b"))) |>
+    style(color = "#FF0000", background = "#00FF00", .at = cells_body())
+  txt <- .rtf_emit_text(spec)
+  # Colour table + a foreground colour token on the coloured cells.
+  expect_match(txt, "\\\\colortbl")
+  expect_match(txt, "\\\\cf[0-9]")
+})
+
+test_that("RTF backend resolves an explicit multi-font family stack", {
+  spec <- tabular(data.frame(x = "a")) |>
+    preset(font_family = c("Courier New", "mono"))
+  txt <- .rtf_emit_text(spec)
+  expect_match(txt, "fmodern|froman|fswiss")
+})
+
+test_that("RTF backend honours 2- and 4-length margin shorthand", {
+  spec2 <- tabular(data.frame(x = "a")) |> preset(margins = c(1, 0.5))
+  spec4 <- tabular(data.frame(x = "a")) |>
+    preset(margins = c(1, 0.5, 1.25, 0.75))
+  # 2-length c(top/bottom, left/right): left = 0.5in = 720 twips.
+  expect_match(.rtf_emit_text(spec2), "\\\\margl720")
+  # 4-length c(top, right, bottom, left): bottom = 1.25in = 1800 twips,
+  # left = 0.75in = 1080 twips.
+  s4 <- .rtf_emit_text(spec4)
+  expect_match(s4, "\\\\margb1800")
+  expect_match(s4, "\\\\margl1080")
+})
+
+test_that("RTF backend renders pagehead + pagefoot bands with page tokens", {
+  spec <- tabular(data.frame(x = c("a", "b"))) |>
+    preset(
+      pagehead = list(
+        left = "Protocol: XYZ",
+        right = "Page {page} of {npages}"
+      ),
+      pagefoot = list(left = "Program: t_demo.R")
+    )
+  txt <- .rtf_emit_text(spec)
+  expect_match(txt, "{\\header", fixed = TRUE)
+  expect_match(txt, "{\\footer", fixed = TRUE)
+  expect_match(txt, "Protocol: XYZ", fixed = TRUE)
+  expect_match(txt, "Program: t_demo.R", fixed = TRUE)
+})
+
+test_that("RTF backend renders styled multi-level headers with per-column valign", {
+  spec <- tabular(data.frame(a = "x", b = "y")) |>
+    cols(
+      a = col_spec(label = "A", valign = "top"),
+      b = col_spec(label = "B", valign = "bottom")
+    ) |>
+    headers("Treatment Group" = c("a", "b")) |>
+    style(bold = TRUE, halign = "center", .at = cells_headers())
+  txt <- .rtf_emit_text(spec)
+  expect_match(txt, "Treatment Group", fixed = TRUE)
+})
