@@ -747,6 +747,10 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "chars"
     ),
+    decimal_markers = S7::new_property(
+      S7::class_character,
+      default = c("NR", "NE", "NC", "ND", "BLQ")
+    ),
     chrome_onscreen = S7::new_property(
       S7::class_character,
       default = "auto"
@@ -798,6 +802,9 @@ preset_spec <- S7::new_class(
         "@decimal_metrics must be one of ",
         paste(.sh_quote(.decimal_metrics_values), collapse = ", ")
       ))
+    }
+    if (anyNA(self@decimal_markers)) {
+      return("@decimal_markers must not contain NA")
     }
     if (!(self@chrome_onscreen %in% .chrome_onscreen_values)) {
       return("@chrome_onscreen must be auto or off")

@@ -1188,3 +1188,90 @@ test_that("preset_spec accepts all three decimal_metrics values", {
     expect_equal(ps@decimal_metrics, m, info = m)
   }
 })
+
+test_that("preset_spec@decimal_markers default + preset() override flows to as_grid", {
+  expect_equal(
+    preset_spec()@decimal_markers,
+    c("NR", "NE", "NC", "ND", "BLQ")
+  )
+  spec <- tabular(data.frame(x = "1")) |>
+    cols(x = col_spec(align = "decimal")) |>
+    preset(decimal_markers = c("ND", "UNK"))
+  expect_equal(
+    tabular:::.effective_preset(spec)@decimal_markers,
+    c("ND", "UNK")
+  )
+})
+
+test_that("preset(decimal_markers=) rejects NA", {
+  expect_error(
+    tabular(data.frame(x = "1")) |> preset(decimal_markers = c("NR", NA)),
+    class = "tabular_error_input"
+  )
+})
+
+# ---------------------------------------------------------------------
+# Layer 12 — comparator / sign fold (image #3 bug)
+#
+# A leading comparator (< > =) or sign (-) must hug its digit and live
+# INSIDE the integer field, not in a separate left-padded column. A
+# `<1` percent must not push every sibling row's percent one column to
+# the right (the `( <1%)` -> `(  86%)` sibling-space bug).
+# ---------------------------------------------------------------------
+
+test_that("comparator folds into the int field, no sibling space (#image3)", {
+  v <- c("218 ( 86%)", "23 ( 9%)", "12 ( 5%)", "1 ( <1%)")
+  out <- align(v)
+  # "<1" hugs its digit.
+  expect_match(out[[4L]], "<1%")
+  # The Caucasian-style row keeps a SINGLE space after "(", because the
+  # comparator no longer reserves its own column on the siblings.
+  expect_match(out[[1L]], "\\( 86%\\)")
+  expect_false(grepl("\\(  ", out[[1L]]))
+  expect_true(all(nchar(out) == nchar(out[[1L]])))
+})
+
+test_that("a negative sign folds into the int field like a comparator", {
+  v <- c("-1.2 (0.34)", "12.4 (1.50)", "-0.3 (0.10)")
+  out <- align(v)
+  # Decimal points of the primary float align across signed / unsigned.
+  dot_pos <- regexpr("\\.", out)
+  expect_true(all(dot_pos == dot_pos[[1L]]))
+  expect_true(all(nchar(out) == nchar(out[[1L]])))
+})
+
+# ---------------------------------------------------------------------
+# Layer 13 — tokenizer correctness (galley deviations, documented)
+#
+# galley's regex requires a digit before "." and splits thousands
+# separators. tabular deviates: leading-dot p-values align their
+# decimal mark, and a thousands-grouped integer stays one token.
+# ---------------------------------------------------------------------
+
+test_that("leading-dot p-values align decimal with 0.x p-values (galley deviation)", {
+  # SAS emits `<.0001` / `.5934` with no leading zero. The decimal
+  # mark must still line up with `0.5934`.
+  v <- c("<.0001", "0.5934", "0.0030", ">.99")
+  out <- align(v)
+  dot_pos <- regexpr("\\.", out)
+  expect_true(all(dot_pos == dot_pos[[1L]]))
+  expect_match(out[[1L]], "<\\.0001")
+  expect_true(all(nchar(out) == nchar(out[[1L]])))
+})
+
+test_that("thousands separators stay one integer, not a comma range (galley deviation)", {
+  v <- c("1,234", "567", "23")
+  out <- align(v)
+  expect_match(out[[1L]], "1,234")
+  expect_true(all(nchar(out) == nchar(out[[1L]])))
+  # No range split: the comma is internal, never a `, ` delimiter.
+  expect_false(any(grepl(", ", out)))
+})
+
+test_that("a comma-space range is NOT swallowed as a thousands integer", {
+  v <- c("2.0, 45.0", "65.0, 88.0")
+  out <- align(v)
+  # Two distinct floats per row: the comma stays a range delimiter.
+  expect_true(all(grepl(",", out)))
+  expect_true(all(nchar(out) == nchar(out[[1L]])))
+})

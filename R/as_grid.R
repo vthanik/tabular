@@ -372,9 +372,24 @@ as_grid <- function(spec) {
   } else {
     NA_character_
   }
+  # Section the decimal aligner on the same group_skip blank-line
+  # transitions the body uses, so each block (e.g. continuous stats
+  # vs categorical n_pct) aligns in isolation and a continuous
+  # decimal slot never leaks onto an integer count in the next block.
+  # Empty transitions -> one section -> the historic single-column
+  # behaviour. `not_considered` lets the preset's missing-value
+  # markers (NR / NE / ...) be shown and slot-aligned.
+  decimal_transitions <- gd$skip_transitions %||% integer(0L)
+  decimal_sections <- if (length(decimal_transitions) > 0L) {
+    .decimal_sections(nrow(fmt$cells_text), decimal_transitions)
+  } else {
+    NULL
+  }
   cells_text <- engine_decimal(
     fmt$cells_text,
     cols = cols_named,
+    sections = decimal_sections,
+    not_considered = .effective_preset(spec)@decimal_markers,
     metrics = decimal_metrics,
     afm_name = afm_name
   )
@@ -539,6 +554,17 @@ as_grid <- function(spec) {
     return(list())
   }
   cols
+}
+
+# Map a vector of group_skip transition rows (1-based indices where a
+# new block begins) to a length-`n` section id vector for the decimal
+# aligner. Each transition row starts a new section; the count rises
+# by one at every transition. `c(1, 3)` over n = 4 -> c(1, 1, 2, 2).
+.decimal_sections <- function(n, transitions) {
+  if (n == 0L) {
+    return(integer(0L))
+  }
+  cumsum(seq_len(n) %in% transitions)
 }
 
 # ---------------------------------------------------------------------

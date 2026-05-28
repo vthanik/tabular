@@ -38,6 +38,7 @@
   "footnote_align",
   "na_text",
   "decimal_metrics",
+  "decimal_markers",
   "chrome_onscreen",
   "width_mode",
   "alignment",
@@ -311,6 +312,18 @@
 #'       rendering; the engine pads decimal columns by character
 #'       count regardless. Roadmapped for em-unit prefix
 #'       measurement in a later release.
+#'   *   **`decimal_markers`** — missing-value tokens recognised by
+#'       `col_spec(align = "decimal")`. `<character>`. Default
+#'       `c("NR", "NE", "NC", "ND", "BLQ")`. A cell whose trimmed
+#'       value is one of these is treated as a non-numeric *marker*:
+#'       it is shown and right-aligned in the column rather than
+#'       parsed as a number, and a marker appearing inside a
+#'       compound (e.g. the upper bound of `14.3 (11.2, NR)`) is
+#'       preserved and slot-aligned. Excludes `"-"`, `"NA"`, and
+#'       `"INF"`/`"-INF"` by default: `"-"` collides with range
+#'       separators, `"NA"` is handled by `na_text`, and infinities
+#'       are real values. Set to `character(0)` to disable marker
+#'       handling.
 #'   *   **`width_mode`** — table-level column-sizing policy. Mirrors
 #'       Word's Table Layout menu. `<character(1)>`. One of:
 #'

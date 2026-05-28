@@ -45,14 +45,16 @@
 #      number of aligned slots.
 #
 #   5. WIDTHS — per slot k = 1..K_dominant compute:
-#        int_w[k]    : max nchar(sign+int) across cells whose own
-#                      slot-k float exists. Slot 1 is also floored
-#                      by the column-wide value when sections-mode
-#                      is active.
+#        int_w[k]    : max nchar(comparator+sign+int) across cells
+#                      whose own slot-k float exists. The comparator
+#                      (< > =) and sign fold INTO this field, so a
+#                      leading symbol hugs its digit instead of
+#                      reserving a separate column. Slot 1 is also
+#                      floored by the column-wide value when
+#                      sections-mode is active.
 #        has_dec[k]  : any cell has a non-empty dec at slot k.
 #        dec_w[k]    : max nchar(dec) across cells with non-empty
 #                      dec at slot k.
-#        prefix_w[k] : max comparator-prefix width at slot k.
 #
 #   6. RENDER — for each cell, one of:
 #        OPAQUE          -> raw text (will be right-padded later).
@@ -86,14 +88,27 @@
 # ---------------------------------------------------------------------
 
 # A float token: optional comparator prefix (< > =), optional sign,
-# one or more digits, optional fractional part. Perl regex so the
-# non-capturing groups parse cleanly.
-.float_token_re <- "(?:[<>=]?)(?:-?)\\d+(?:\\.\\d+)?"
+# an integer part (with optional thousands separators) and / or a
+# fractional part. Perl regex so the non-capturing groups parse
+# cleanly.
+#
+# Two clinical edge cases the bare `\d+(\.\d+)?` form got wrong:
+#   * leading-dot p-values: SAS prints `<.0001` / `.5934` with no
+#     leading zero. The `\.\d+` alternative lets the decimal point
+#     align with `0.5934` instead of treating `.` as a literal.
+#   * thousands separators: a big-N count `1,234` is ONE integer, not
+#     a `1` / `234` range. `\d{1,3}(?:,\d{3})+` claims it as a single
+#     int token; a range comma (`2.0, 45.0`, comma-space) is left
+#     alone because the group needs `,` immediately before 3 digits.
+.float_token_re <-
+  "(?:[<>=]?)(?:-?)(?:(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?|\\.\\d+)"
 
 # Capturing version for parsing one token into components. Group 1
 # is the comparator prefix; group 2 is the sign; group 3 is the
-# integer part; group 4 is the optional decimal part.
-.float_parse_re <- "^([<>=]?)(-?)(\\d+)(?:\\.(\\d+))?$"
+# integer part (may be empty for leading-dot values, may carry
+# thousands commas); group 4 is the optional decimal part.
+.float_parse_re <-
+  "^([<>=]?)(-?)((?:\\d{1,3}(?:,\\d{3})+|\\d+)?)(?:\\.(\\d+))?$"
 
 # Default pad character for the public API: Unicode NBSP (U+00A0).
 # Survives RTF / HTML / DOCX cell rendering where ASCII space gets
@@ -460,15 +475,14 @@ engine_decimal <- function(
 
 # Compute the column-wide slot-1 floor across every contributing
 # (non-NA, non-opaque) cell. Returns a list with:
-#   int_w    : max nchar(sign + int) of the FIRST float token
-#   prefix_w : max nchar(comparator prefix) of the FIRST float token
+#   int_w : max nchar(comparator + sign + int) of the FIRST float
+#           token (the comparator and sign fold into this field).
 # Returns NULL if no cell has any float token.
 .compute_column_floor <- function(
   values,
   measure = function(s) nchar(s, type = "chars")
 ) {
   int_w <- 0L
-  prefix_w <- 0L
   any_float <- FALSE
   for (val in values) {
     tok <- .tokenize_cell(val)
@@ -477,13 +491,15 @@ engine_decimal <- function(
     }
     any_float <- TRUE
     p <- tok$parsed[[1L]]
-    prefix_w <- max(prefix_w, measure(p$prefix))
-    int_w <- max(int_w, measure(paste0(p$sign, p$int)))
+    # Comparator / sign fold into the int field (one right-aligned
+    # unit), so `<1` hugs its digit and never reserves a column on
+    # rows that lack a comparator.
+    int_w <- max(int_w, measure(paste0(p$prefix, p$sign, p$int)))
   }
   if (!any_float) {
     return(NULL)
   }
-  list(int_w = int_w, prefix_w = prefix_w)
+  list(int_w = int_w)
 }
 
 # ---------------------------------------------------------------------
@@ -616,14 +632,14 @@ engine_decimal <- function(
 # Compute per-slot widths in the dominant layout. Returns a list
 # with named integer vectors:
 #
-#   int_w[k]    width of the (sign + int) span at slot k.
+#   int_w[k]    width of the (comparator + sign + int) span at slot
+#               k. The comparator and sign fold into this field.
 #   has_dec[k]  TRUE if any cell has a non-empty dec at slot k.
 #   dec_w[k]    max width of the dec span at slot k (0 if none).
-#   prefix_w[k] width of the comparator-prefix span at slot k.
 #
-# When `column_floor` is non-NULL, slot 1's `int_w` and `prefix_w`
-# are floored by the column-wide values, so the leftmost integer
-# column aligns across all sections in the column.
+# When `column_floor` is non-NULL, slot 1's `int_w` is floored by the
+# column-wide value, so the leftmost integer column aligns across all
+# sections in the column.
 #
 # When no dominant signature exists (section is text-only), returns
 # NULL.
@@ -641,7 +657,6 @@ engine_decimal <- function(
   int_w <- integer(k_dom)
   dec_w <- integer(k_dom)
   has_dec <- logical(k_dom)
-  prefix_w <- integer(k_dom)
 
   for (i in seq_along(tokens)) {
     tok <- tokens[[i]]
@@ -658,8 +673,9 @@ engine_decimal <- function(
     k_contrib <- min(k_contrib, k_dom)
     for (k in seq_len(k_contrib)) {
       p <- tok$parsed[[k]]
-      prefix_w[[k]] <- max(prefix_w[[k]], measure(p$prefix))
-      int_w[[k]] <- max(int_w[[k]], measure(paste0(p$sign, p$int)))
+      # Comparator + sign fold into the int field (one right-aligned
+      # unit): `<1` and `-2` hug their digits.
+      int_w[[k]] <- max(int_w[[k]], measure(paste0(p$prefix, p$sign, p$int)))
       if (nzchar(p$dec)) {
         has_dec[[k]] <- TRUE
         dec_w[[k]] <- max(dec_w[[k]], measure(p$dec))
@@ -670,14 +686,12 @@ engine_decimal <- function(
   # Apply the column-wide floor for slot 1 only.
   if (!is.null(column_floor) && k_dom >= 1L) {
     int_w[[1L]] <- max(int_w[[1L]], column_floor$int_w)
-    prefix_w[[1L]] <- max(prefix_w[[1L]], column_floor$prefix_w)
   }
 
   list(
     int_w = int_w,
     dec_w = dec_w,
-    has_dec = has_dec,
-    prefix_w = prefix_w
+    has_dec = has_dec
   )
 }
 
@@ -787,7 +801,6 @@ engine_decimal <- function(
       sign = p$sign,
       int = p$int,
       dec = p$dec,
-      prefix_w = widths$prefix_w[[j]],
       int_w = widths$int_w[[j]],
       has_dec = widths$has_dec[[j]],
       dec_w = widths$dec_w[[j]],
@@ -816,7 +829,6 @@ engine_decimal <- function(
     sign = p$sign,
     int = p$int,
     dec = p$dec,
-    prefix_w = widths$prefix_w[[1L]],
     int_w = widths$int_w[[1L]],
     has_dec = widths$has_dec[[1L]],
     dec_w = widths$dec_w[[1L]],
@@ -831,7 +843,6 @@ engine_decimal <- function(
   for (j in seq.int(2L, k)) {
     remaining_w <- remaining_w +
       measure(dominant$literals[[j]]) +
-      widths$prefix_w[[j]] +
       widths$int_w[[j]] +
       (if (widths$has_dec[[j]]) 1L + widths$dec_w[[j]] else 0L)
   }
@@ -863,7 +874,6 @@ engine_decimal <- function(
     sign = p$sign,
     int = p$int,
     dec = p$dec,
-    prefix_w = widths$prefix_w[[1L]],
     int_w = widths$int_w[[1L]],
     has_dec = widths$has_dec[[1L]],
     dec_w = widths$dec_w[[1L]],
@@ -877,34 +887,34 @@ engine_decimal <- function(
   )
 }
 
-# Render one slot: [pad-left(prefix, prefix_w)] + [pad-left(sign+int,
-# int_w)] + [dot or pad, only if column has decimals at this slot] +
-# [pad-right(dec, dec_w)].
+# Render one slot: [pad-left(prefix+sign+int, int_w)] + [dot or pad,
+# only if column has decimals at this slot] + [pad-right(dec, dec_w)].
+# The comparator + sign fold into the left-aligned int unit.
 .render_slot <- function(
   prefix,
   sign,
   int,
   dec,
-  prefix_w,
   int_w,
   has_dec,
   dec_w,
   pad,
   measure = function(s) nchar(s, type = "chars")
 ) {
-  si_str <- paste0(sign, int)
+  # Comparator + sign + int are one right-aligned unit: the leading
+  # symbol hugs its digit (no separate, sibling-widening column).
+  si_str <- paste0(prefix, sign, int)
   si_padded <- .pad_left(si_str, int_w, pad = pad, measure = measure)
-  pre_padded <- .pad_left(prefix, prefix_w, pad = pad, measure = measure)
 
   if (has_dec) {
     if (nzchar(dec)) {
       dec_padded <- .pad_right(dec, dec_w, pad = pad, measure = measure)
-      paste0(pre_padded, si_padded, ".", dec_padded)
+      paste0(si_padded, ".", dec_padded)
     } else {
-      paste0(pre_padded, si_padded, pad, strrep(pad, dec_w))
+      paste0(si_padded, pad, strrep(pad, dec_w))
     }
   } else {
-    paste0(pre_padded, si_padded)
+    si_padded
   }
 }
 

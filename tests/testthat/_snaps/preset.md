@@ -5,7 +5,7 @@
     Condition
       Error:
       ! Unknown preset knob: "font_zize".
-      i Recognised knobs: "font_size", "font_family", "orientation", "paper_size", "margins", "pagehead", "pagefoot", "hlines", "indent_size", "title_align", "footnote_align", "na_text", "decimal_metrics", "chrome_onscreen", "width_mode", "alignment", "borders", "fonts", "colors", and "padding".
+      i Recognised knobs: "font_size", "font_family", "orientation", "paper_size", "margins", "pagehead", "pagefoot", "hlines", "indent_size", "title_align", "footnote_align", "na_text", "decimal_metrics", "decimal_markers", "chrome_onscreen", "width_mode", "alignment", "borders", ..., "colors", and "padding".
 
 ---
 

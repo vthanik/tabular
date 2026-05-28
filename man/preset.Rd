@@ -205,6 +205,18 @@ for future em-aware decimal-padding refinement.
 rendering; the engine pads decimal columns by character
 count regardless. Roadmapped for em-unit prefix
 measurement in a later release.
+\item \strong{\code{decimal_markers}} — missing-value tokens recognised by
+\code{col_spec(align = "decimal")}. \verb{<character>}. Default
+\code{c("NR", "NE", "NC", "ND", "BLQ")}. A cell whose trimmed
+value is one of these is treated as a non-numeric \emph{marker}:
+it is shown and right-aligned in the column rather than
+parsed as a number, and a marker appearing inside a
+compound (e.g. the upper bound of \code{14.3 (11.2, NR)}) is
+preserved and slot-aligned. Excludes \code{"-"}, \code{"NA"}, and
+\code{"INF"}/\code{"-INF"} by default: \code{"-"} collides with range
+separators, \code{"NA"} is handled by \code{na_text}, and infinities
+are real values. Set to \code{character(0)} to disable marker
+handling.
 \item \strong{\code{width_mode}} — table-level column-sizing policy. Mirrors
 Word's Table Layout menu. \verb{<character(1)>}. One of:
 \itemize{

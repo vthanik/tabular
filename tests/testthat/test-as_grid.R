@@ -124,6 +124,32 @@ test_that("as_grid() applies col_spec decimal alignment", {
   expect_true(length(unique(widths)) == 1L)
 })
 
+test_that("as_grid() sections decimal columns on group_skip so n_pct stays tight (#image3)", {
+  # A continuous block (est_spread with decimals) followed by a
+  # categorical n_pct block, under a group_skip-firing group column.
+  # Without sectioning, the continuous decimal slot leaks onto the
+  # n_pct integer count: "14 (16.3)" renders "14  (16.3 )" (gap).
+  # With sectioning, the n_pct block aligns in isolation: tight.
+  d <- data.frame(
+    variable = c("Age", "Age", "Sex", "Sex"),
+    stat = c("Mean (SD)", "Median", "F", "M"),
+    arm = c("75.2 (8.59)", "76.0", "14 (16.3)", "72 (83.7)")
+  )
+  spec <- tabular(d) |>
+    cols(
+      variable = col_spec(usage = "group"),
+      stat = col_spec(),
+      arm = col_spec(align = "decimal")
+    )
+  g <- as_grid(spec)
+  out <- g@pages[[1L]]$cells_text[, "arm"]
+  sex_rows <- out[grepl("16\\.3|83\\.7", out)]
+  expect_length(sex_rows, 2L)
+  # n_pct count sits one space before "(", no leaked decimal slot.
+  expect_true(all(grepl("[0-9] \\([0-9]", trimws(sex_rows, "right"))))
+  expect_false(any(grepl("[0-9]  +\\(", sex_rows)))
+})
+
 test_that("as_grid() returns empty list-matrices for zero-row data", {
   spec <- tabular(data.frame(x = integer(0L), y = character(0L)))
   g <- as_grid(spec)
