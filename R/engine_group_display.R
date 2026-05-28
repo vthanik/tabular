@@ -67,6 +67,21 @@ engine_group_display <- function(
     col_names <- character(0L)
   }
 
+  # Snapshot the user's DECLARED visibility before the auto-hide block
+  # below mutates it. A `usage = "group"` column the user hid is
+  # break-only (contributes group_skip transitions but no header rows),
+  # so `.header_row_columns()` must gate on user intent, not on the
+  # post-auto-hide flag (indent / subgroup columns are flipped to
+  # FALSE below, and header_row's own auto-hide happens later still).
+  user_visible <- vapply(
+    col_names,
+    function(nm) {
+      cs <- cols[[nm]]
+      !is_col_spec(cs) || isTRUE(cs@visible)
+    },
+    logical(1L)
+  )
+
   # Sidecar matrix carrying per-cell indent depth in integer levels.
   # Both `indent_by` (per-row variable depth) and `usage = "indent"`
   # (fixed +1 per row) write to it additively. Header / blank rows
@@ -175,10 +190,39 @@ engine_group_display <- function(
     ))
   }
 
+  # Per-column group_skip plan. A blank row is inserted BEFORE any
+  # row that is a transition (on the data row scale) for any group
+  # column whose effective `group_skip` resolves TRUE. The first
+  # transition on the page never gets a leading blank.
+  #
+  # Computed HERE, before Phase 1 column-mode suppression, so the
+  # run grouping sees the LOGICAL group values. Reading post-
+  # suppression text turns "Age", "", "" into a phantom run boundary
+  # at row 2 and injects a stray blank after each group's first row.
+  skip_transitions <- integer(0L)
+  for (nm in group_names) {
+    cs <- cols[[nm]]
+    if (.effective_group_skip(cs)) {
+      run_ids <- .runs_grouping(cells_text[, nm])
+      col_trans <- which(c(TRUE, diff(run_ids) != 0L))
+      skip_transitions <- union(skip_transitions, col_trans)
+    }
+  }
+  skip_transitions <- sort(as.integer(skip_transitions))
+
   # Identify every group column declaring `header_row` mode, in
   # declaration order. Outer = index 1. Each becomes one band in the
   # header-row plan below.
   header_cols <- .header_row_columns(cols, group_names)
+  # A group column the user hid is break-only: drop it from the
+  # header-row plan so its values never render as section headers.
+  # It stays in `group_names`, so its `group_skip` transitions (above)
+  # still fire; its body is filtered by `.visible_col_names()`.
+  header_cols <- header_cols[vapply(
+    header_cols,
+    function(nm) isTRUE(user_visible[[nm]]),
+    logical(1L)
+  )]
   header_col <- if (length(header_cols) > 0L) header_cols[[1L]] else NULL
 
   # Outer-group run ids — drives column-mode suppression reset. Use
@@ -299,21 +343,6 @@ engine_group_display <- function(
       cols[[nm]] <- S7::set_props(cols[[nm]], visible = FALSE)
     }
   }
-
-  # Per-column group_skip plan. A blank row is inserted BEFORE any
-  # row that is a transition (on the data row scale) for any group
-  # column whose effective `group_skip` resolves TRUE. The first
-  # transition on the page never gets a leading blank.
-  skip_transitions <- integer(0L)
-  for (nm in group_names) {
-    cs <- cols[[nm]]
-    if (.effective_group_skip(cs)) {
-      run_ids <- .runs_grouping(cells_text[, nm])
-      col_trans <- which(c(TRUE, diff(run_ids) != 0L))
-      skip_transitions <- union(skip_transitions, col_trans)
-    }
-  }
-  skip_transitions <- sort(as.integer(skip_transitions))
 
   list(
     cells_text = cells_text,

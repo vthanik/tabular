@@ -136,7 +136,15 @@ counts behind formatted-text percentage cells.
 column named by \code{\link[=subgroup]{subgroup(by = ...)}} or referenced
 via a \code{{col}} placeholder in the subgroup banner template are
 flipped to \code{visible = FALSE} automatically at engine time —
-restating it here is redundant.}
+restating it here is redundant.
+
+\strong{Break-only group column.} A hidden \code{usage = "group"} column
+emits no header rows and no in-column text; it contributes only
+its \code{group_skip} transitions, so \code{group_display} is ignored while
+hidden. This is the canonical "spacer" that drops a blank line
+wherever a marker value changes (e.g. continuous stats vs.
+categorical groups inside one characteristic):
+\code{col_spec(usage = "group", group_skip = TRUE, visible = FALSE)}.}
 
 \item{width}{\emph{Column width — auto-sized, pinned, or proportional.}
 \verb{<character(1) | numeric(1)>: default "auto"}.
@@ -248,6 +256,11 @@ col_spec(usage = "group", group_display = "column", group_skip = TRUE)
 # Override: section headers without the blank-row separator
 # (denser layout, used when vertical space is tight).
 col_spec(usage = "group", group_display = "header_row", group_skip = FALSE)
+
+# Break-only "spacer": pairs with visible = FALSE to drop a blank
+# line wherever a hidden marker changes, without rendering the
+# column or any header row. group_display is ignored when hidden.
+col_spec(usage = "group", group_skip = TRUE, visible = FALSE)
 }\if{html}{\out{</div>}}}
 
 \item{align}{\emph{Horizontal alignment within the column.}
