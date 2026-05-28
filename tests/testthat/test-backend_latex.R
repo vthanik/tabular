@@ -1045,3 +1045,10 @@ test_that("LaTeX multi-page banded table compiles cleanly (regression: cmidrule 
   # exercise tabularray's rowhead replay (the thing that crashed).
   expect_gt(pages, 1L)
 })
+
+test_that("cell_padding_x drives LaTeX colsep (padding SSOT)", {
+  spec <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
+    preset(cell_padding_x = 10)
+  tex <- render_tex(spec)
+  expect_match(tex, "colsep=10pt", fixed = TRUE)
+})

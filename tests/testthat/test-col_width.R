@@ -122,6 +122,81 @@ test_that(".compute_col_width uses bold AFM for header", {
   expect_true(hdr_only > body_only)
 })
 
+test_that("preset_spec carries cell_padding_x default 5.4 (padding SSOT)", {
+  expect_equal(preset_spec()@cell_padding_x, 5.4)
+})
+
+test_that("cell_padding_x is settable via preset() (padding SSOT)", {
+  p <- preset(tabular(data.frame(x = 1)), cell_padding_x = 3)
+  expect_equal(p@preset@cell_padding_x, 3)
+})
+
+test_that(".compute_col_width adds 2x cell_padding_x, overridable (padding SSOT)", {
+  # Measurement padding is the SINGLE SOURCE OF TRUTH preset@cell_padding_x
+  # (per side), not a hardcoded constant. Width gains 2 * pad_x_pt / 72 in.
+  p <- preset_spec(font_family = "serif", font_size = 10)
+  w_default <- tabular:::.compute_col_width(c("Placebo"), header = "", p)
+  w_explicit <- tabular:::.compute_col_width(
+    c("Placebo"),
+    header = "",
+    p,
+    pad_x_pt = 5.4
+  )
+  expect_equal(w_default, w_explicit)
+
+  # Doubling the per-side padding widens the column by 2 * (10.8 - 5.4) / 72.
+  w_wide <- tabular:::.compute_col_width(
+    c("Placebo"),
+    header = "",
+    p,
+    pad_x_pt = 10.8
+  )
+  expect_equal(w_wide - w_default, 2 * (10.8 - 5.4) / 72, tolerance = 1e-9)
+})
+
+test_that(".resolve_col_widths measures with body padding override (padding SSOT)", {
+  # A body @padding override (preset(padding = list(body = N)) or
+  # style(at = cells_body(), padding = N)) must drive measurement, not just
+  # render. `.resolve_col_widths` reads the resolved cells_style padding so
+  # auto widths track the rendered cell margin.
+  spec <- tabular(data.frame(grp = c("A", "B"), n = c("10", "20"))) |>
+    cols(grp = col_spec(width = "auto"), n = col_spec(width = "auto"))
+  cells_text <- matrix(
+    c("A", "B", "10", "20"),
+    nrow = 2,
+    dimnames = list(NULL, c("grp", "n"))
+  )
+  labels <- list(
+    grp = tabular:::parse_inline("grp"),
+    n = tabular:::parse_inline("n")
+  )
+
+  none <- tabular:::.resolve_col_widths(spec, cells_text, labels)
+
+  pad20 <- matrix(
+    list(
+      tabular:::style_node(padding = 20),
+      tabular:::style_node(padding = 20),
+      tabular:::style_node(padding = 20),
+      tabular:::style_node(padding = 20)
+    ),
+    nrow = 2
+  )
+  widened <- tabular:::.resolve_col_widths(
+    spec,
+    cells_text,
+    labels,
+    cells_style = pad20
+  )
+
+  # 20pt/side vs 5.4pt default -> each auto col gains 2 * (20 - 5.4) / 72 in.
+  expect_equal(
+    widened[["grp"]]@width - none[["grp"]]@width,
+    2 * (20 - 5.4) / 72,
+    tolerance = 1e-9
+  )
+})
+
 test_that(".distribute_widths is no-op when sum of pinned fits", {
   widths <- list(
     a = list(kind = "pin", value = 2),
@@ -143,28 +218,40 @@ test_that(".distribute_widths is no-op when sum of auto fits", {
   expect_equal(unname(result), c(2, 1.5, 1))
 })
 
-test_that(".distribute_widths shrinks auto proportionally on overflow", {
+test_that(".distribute_widths keeps natural auto width on overflow + warns", {
   widths <- list(
     a = list(kind = "auto", value = 4),
     b = list(kind = "auto", value = 4),
     c = list(kind = "auto", value = 2)
   )
-  # Sum is 10, available 5 -> shrink by half.
-  result <- tabular:::.distribute_widths(widths, available = 5)
-  expect_equal(unname(result), c(2, 2, 1))
-  expect_equal(sum(result), 5)
+  # Sum 10 > available 5: Word AutoFit-to-Contents keeps natural
+  # widths and warns instead of shrinking.
+  expect_warning(
+    tabular:::.distribute_widths(widths, available = 5),
+    class = "tabular_warn_layout"
+  )
+  result <- suppressWarnings(
+    tabular:::.distribute_widths(widths, available = 5)
+  )
+  expect_equal(unname(result), c(4, 4, 2))
 })
 
-test_that(".distribute_widths preserves pinned + shrinks auto on remainder", {
+test_that(".distribute_widths preserves pinned, keeps natural auto on remainder", {
   widths <- list(
     pinned = list(kind = "pin", value = 3),
     a = list(kind = "auto", value = 3),
     b = list(kind = "auto", value = 3)
   )
-  # available = 5, pinned = 3, remaining = 2, auto sum = 6,
-  # shrink autos to 1 each.
-  result <- tabular:::.distribute_widths(widths, available = 5)
-  expect_equal(unname(result), c(3, 1, 1))
+  # available = 5, pinned = 3, remaining = 2, auto sum = 6 > 2:
+  # autos keep natural width (3 each) and the call warns.
+  expect_warning(
+    tabular:::.distribute_widths(widths, available = 5),
+    class = "tabular_warn_layout"
+  )
+  result <- suppressWarnings(
+    tabular:::.distribute_widths(widths, available = 5)
+  )
+  expect_equal(unname(result), c(3, 3, 3))
 })
 
 test_that(".distribute_widths resolves percent against available", {
@@ -213,4 +300,10 @@ test_that(".ast_flatten_text drops markup, preserves text", {
 test_that(".ast_flatten_text returns empty string for non-AST input", {
   expect_equal(tabular:::.ast_flatten_text(NULL), "")
   expect_equal(tabular:::.ast_flatten_text("not an ast"), "")
+})
+
+test_that("preset_spec rejects invalid cell_padding_x (padding SSOT)", {
+  expect_error(preset_spec(cell_padding_x = -1), "cell_padding_x")
+  expect_error(preset_spec(cell_padding_x = c(1, 2)), "cell_padding_x")
+  expect_error(preset_spec(cell_padding_x = NA_real_), "cell_padding_x")
 })

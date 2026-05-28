@@ -41,6 +41,7 @@
   "decimal_markers",
   "chrome_onscreen",
   "width_mode",
+  "cell_padding_x",
   "alignment",
   "borders",
   "fonts",
@@ -347,6 +348,18 @@
 #'       columns wrap when the viewport narrows, regardless of
 #'       `width_mode`. Per-column widths (`col_spec(width)`) emit
 #'       verbatim into the HTML colgroup per the gt convention.
+#'
+#'   *   **`cell_padding_x`** — per-side horizontal cell padding in
+#'       points. `<numeric(1)>: default 5.4`. The single source of
+#'       truth for both auto column-width measurement and every
+#'       backend's horizontal cell margin, so measured and rendered
+#'       widths agree. Default 5.4pt/side matches Word's ~0.075in
+#'       cell margin.
+#'
+#'       **Interaction:** A body padding override
+#'       (`preset(padding = list(body = N))` or
+#'       `style(at = cells_body(), padding = N)`) takes precedence at
+#'       both measurement and render.
 #'
 #'   ```r
 #'   # Landscape A4, 8pt body, slim margins for one wide table.

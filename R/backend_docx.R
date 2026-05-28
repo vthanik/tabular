@@ -1733,7 +1733,7 @@ backend_docx <- function(grid, file) {
   if (!is.na(gridspan) && gridspan > 1L) {
     parts <- c(parts, sprintf("<w:gridSpan w:val=\"%d\"/>", gridspan))
   }
-  tc_mar <- .docx_tcMar_from_style(style)
+  tc_mar <- .docx_tcMar_from_style(style, preset)
   if (nzchar(tc_mar)) {
     parts <- c(parts, tc_mar)
   }
@@ -1893,22 +1893,30 @@ backend_docx <- function(grid, file) {
 # 4/5 cut, body padding lives on `cells_style[r,c]@padding` (a
 # single numeric — the lowered `preset(padding = list(body = N))`
 # knob stamps the same value on every body cell). All four sides
-# share that scalar; the four-sided shape isn't expressible at the
-# layer surface. Returns "" when no override is set.
-.docx_tcMar_from_style <- function(style) {
-  if (!is_style_node(style)) {
+# share that scalar. When no override is set, fall back to the
+# horizontal cell-padding SSOT `preset@cell_padding_x` on the LEFT /
+# RIGHT sides only (so the rendered margin matches the measured
+# column width) while leaving the vertical margin to Word's default.
+.docx_tcMar_from_style <- function(style, preset = NULL) {
+  pad <- if (is_style_node(style)) style@padding else NA_real_
+  if (length(pad) == 1L && !is.na(pad)) {
+    n <- as.integer(round(as.numeric(pad) * 20))
+    return(paste0(
+      "<w:tcMar>",
+      sprintf("<w:top w:w=\"%d\" w:type=\"dxa\"/>", n),
+      sprintf("<w:left w:w=\"%d\" w:type=\"dxa\"/>", n),
+      sprintf("<w:bottom w:w=\"%d\" w:type=\"dxa\"/>", n),
+      sprintf("<w:right w:w=\"%d\" w:type=\"dxa\"/>", n),
+      "</w:tcMar>"
+    ))
+  }
+  if (!is_preset_spec(preset)) {
     return("")
   }
-  pad <- style@padding
-  if (length(pad) != 1L || is.na(pad)) {
-    return("")
-  }
-  n <- as.integer(round(as.numeric(pad) * 20))
+  n <- as.integer(round(preset@cell_padding_x * 20))
   paste0(
     "<w:tcMar>",
-    sprintf("<w:top w:w=\"%d\" w:type=\"dxa\"/>", n),
     sprintf("<w:left w:w=\"%d\" w:type=\"dxa\"/>", n),
-    sprintf("<w:bottom w:w=\"%d\" w:type=\"dxa\"/>", n),
     sprintf("<w:right w:w=\"%d\" w:type=\"dxa\"/>", n),
     "</w:tcMar>"
   )

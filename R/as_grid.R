@@ -404,7 +404,8 @@ as_grid <- function(spec) {
     spec,
     cells_text = cells_text,
     col_labels_ast = fmt$col_labels_ast,
-    cols_override = spec_cols_post
+    cols_override = spec_cols_post,
+    cells_style = style_mat
   )
 
   pag <- engine_paginate(spec)

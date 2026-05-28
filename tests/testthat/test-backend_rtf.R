@@ -685,3 +685,18 @@ test_that("RTF scenario G: band cells carry rule; blank flanking cells emit \\br
     perl = TRUE
   )
 })
+
+test_that("cell_padding_x drives RTF \\trgaph horizontal gap (padding SSOT)", {
+  # The horizontal cell-padding SSOT preset@cell_padding_x feeds both
+  # column-width measurement and the rendered \trgaph, so they agree.
+  spec <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
+    preset(cell_padding_x = 10)
+  txt <- .rtf_emit_text(spec)
+  expect_match(txt, "\\\\trgaph200") # 10pt * 20 = 200 twips
+})
+
+test_that(".rtf_body_trgaph falls back to 5.4pt default when preset is NULL", {
+  # Headless callers (no preset) get the legacy 108-twip default.
+  cs <- matrix(list(tabular:::style_node()), nrow = 1L)
+  expect_identical(tabular:::.rtf_body_trgaph(cs, preset = NULL), 108L)
+})

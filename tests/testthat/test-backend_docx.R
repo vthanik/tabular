@@ -506,10 +506,11 @@ test_that("emit(.docx) writes <w:tbl> with <w:tblGrid>, <w:tr>, <w:tc> for data 
 
 test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (boundary-snapped)", {
   # Saf_demo widths under the golden pipeline are content-derived.
-  # Diffs sum to the printable area (9360 twips on US Letter portrait
-  # at 1in margins). Per-column rounding can over- or under-count by
-  # 1 twip; boundary-snapping reconciles to keep the cumulative sum
-  # exact (matches RTF \cellx).
+  # Under content mode (Word AutoFit-to-Contents) auto columns keep
+  # their natural width and are NOT shrunk to fit, so this wide
+  # demographics table overflows the 9360-twip printable area on US
+  # Letter portrait (the engine warns; landscape is the fix). The
+  # widths therefore sum to the natural total, not the page width.
   spec <- tabular(
     saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
@@ -529,7 +530,7 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
       Total = col_spec(label = "Total\nN=254", align = "decimal")
     )
   out <- withr::local_tempfile(fileext = ".docx")
-  emit(spec, out)
+  suppressWarnings(emit(spec, out))
   unzipped <- .unzip_docx(out)
   doc <- paste(
     readLines(file.path(unzipped, "word/document.xml")),
@@ -539,8 +540,8 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
     doc,
     gregexpr("(?<=<w:gridCol w:w=\")[0-9]+(?=\"/>)", doc, perl = TRUE)
   )[[1L]])
-  expect_identical(widths_twips, c(1616L, 3332L, 1103L, 1103L, 1103L, 1103L))
-  expect_identical(sum(widths_twips), 9360L)
+  expect_identical(widths_twips, c(1756L, 3645L, 1191L, 1191L, 1191L, 1191L))
+  expect_identical(sum(widths_twips), 10165L)
 })
 
 test_that("col_spec@align surfaces as <w:jc> on data cells", {
@@ -1230,4 +1231,21 @@ test_that("DOCX scenario G: band cell tcPr carries w:tcBorders w:bottom; blanks 
   for (i in blank_idx) {
     expect_no_match(tcs[i], "<w:tcBorders>")
   }
+})
+
+test_that("cell_padding_x emits horizontal w:tcMar fallback (padding SSOT)", {
+  # With no body padding override, DOCX emits left/right tcMar from
+  # the horizontal SSOT so the rendered margin matches the measured
+  # column width; vertical margin stays Word's default.
+  spec <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
+    preset(cell_padding_x = 10)
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  expect_match(doc, "<w:left w:w=\"200\" w:type=\"dxa\"/>", fixed = TRUE)
+  expect_match(doc, "<w:right w:w=\"200\" w:type=\"dxa\"/>", fixed = TRUE)
 })

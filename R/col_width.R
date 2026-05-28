@@ -13,7 +13,9 @@
 #
 #   .distribute_widths(widths, available, ...) -> numeric inches
 #     Combine pinned / auto / percent widths into a final vector.
-#     Auto widths shrink proportionally if sum overflows.
+#     In "content" mode auto widths keep their natural size and warn
+#     on overflow (Word AutoFit-to-Contents); "window" fills, "fixed"
+#     collapses auto cols to the minimum.
 #
 # Engine-side wiring lives in `R/as_grid.R::.resolve_spec_to_grid`.
 # Pure helpers in this file — no S7 mutation, no I/O.
@@ -28,11 +30,6 @@
   letter = c(width = 8.5, height = 11),
   a4 = c(width = 8.27, height = 11.69)
 )
-
-# Hardcoded cell padding (left + right combined, in pt). Lifts
-# to `preset@cell_padding` in a future plan; until then 6pt per
-# side is the LaTeX `\arraystretch` ballpark default.
-.cell_padding_pt <- 12
 
 # Minimum auto-resolved column width in inches. Below this, a
 # column collapses to an unreadable sliver — clamp up so the
@@ -104,10 +101,20 @@
 #             markdown / HTML markup). Pass "" if column has no
 #             header.
 #   preset    `preset_spec` for font_family + font_size.
+#   pad_x_pt  numeric(1). Per-side horizontal cell padding in pt
+#             (the SSOT). Measurement adds `2 *` this for the
+#             left + right margins. Defaults to
+#             `preset@cell_padding_x`; callers pass the resolved
+#             body override (see `.resolve_col_widths`).
 #
 # Returns numeric(1) inches. Floor at `.min_auto_width_in` so
 # the column doesn't collapse.
-.compute_col_width <- function(cells, header, preset) {
+.compute_col_width <- function(
+  cells,
+  header,
+  preset,
+  pad_x_pt = preset@cell_padding_x
+) {
   body_afm <- .resolve_afm_name(preset@font_family, bold = FALSE)
   head_afm <- .resolve_afm_name(preset@font_family, bold = TRUE)
   font_size <- preset@font_size
@@ -132,8 +139,8 @@
   }
 
   max_em <- max(body_em, head_em)
-  # em -> pt -> inches; add cell padding (already pt).
-  width_in <- (max_em / 1000) * font_size / 72 + .cell_padding_pt / 72
+  # em -> pt -> inches; add left + right cell padding (per-side pt).
+  width_in <- (max_em / 1000) * font_size / 72 + 2 * pad_x_pt / 72
   max(width_in, .min_auto_width_in)
 }
 
@@ -206,7 +213,8 @@
   spec,
   cells_text,
   col_labels_ast,
-  cols_override = NULL
+  cols_override = NULL,
+  cells_style = NULL
 ) {
   col_names <- names(spec@data)
   full_cols <- if (!is.null(cols_override)) {
@@ -219,6 +227,18 @@
   }
   preset <- .effective_preset(spec)
   available <- .available_content_width(preset)
+
+  # Horizontal cell-padding SSOT: a resolved body @padding override
+  # (from preset(padding=list(body=)) / style(at=cells_body())) drives
+  # measurement so auto widths track the rendered cell margin; else the
+  # preset default. This is the SAME scalar `.first_cell_padding()`
+  # returns to the backends at render time.
+  override_pad <- if (is.null(cells_style)) {
+    NA_real_
+  } else {
+    .first_cell_padding(cells_style)
+  }
+  pad_x <- if (is.na(override_pad)) preset@cell_padding_x else override_pad
 
   visible <- vapply(
     full_cols,
@@ -234,7 +254,14 @@
   names(widths) <- vis_names
   for (nm in vis_names) {
     w <- full_cols[[nm]]@width
-    widths[[nm]] <- .classify_width(w, cells_text, col_labels_ast, nm, preset)
+    widths[[nm]] <- .classify_width(
+      w,
+      cells_text,
+      col_labels_ast,
+      nm,
+      preset,
+      pad_x
+    )
   }
 
   resolved <- .distribute_widths(widths, available, mode = preset@width_mode)
@@ -252,7 +279,14 @@
 # record `.distribute_widths()` consumes. Auto values are
 # resolved to numeric inches via `.compute_col_width()` here so
 # the distributor sees a numeric for every entry.
-.classify_width <- function(w, cells_text, col_labels_ast, col_name, preset) {
+.classify_width <- function(
+  w,
+  cells_text,
+  col_labels_ast,
+  col_name,
+  preset,
+  pad_x_pt = preset@cell_padding_x
+) {
   if (.is_auto_width(w)) {
     cells <- if (col_name %in% colnames(cells_text)) {
       cells_text[, col_name]
@@ -262,7 +296,7 @@
     header <- .ast_flatten_text(col_labels_ast[[col_name]])
     list(
       kind = "auto",
-      value = .compute_col_width(cells, header, preset)
+      value = .compute_col_width(cells, header, preset, pad_x_pt)
     )
   } else if (is.numeric(w)) {
     list(kind = "pin", value = as.numeric(w))
@@ -299,10 +333,10 @@
 #   - If remaining <= 0: pinned overflow. Warn (class
 #     "tabular_warn_layout") and return widths as-is (auto values
 #     unchanged, percent values resolved).
-#   - If sum(auto) <= remaining: keep auto widths as-is. Natural
-#     fit semantics; don't expand to fill.
-#   - If sum(auto) >  remaining: shrink auto proportionally so
-#     sum(auto) == remaining.
+#   - "content" mode: keep auto widths as-is (Word AutoFit-to-
+#     Contents). Don't expand to fill; don't shrink on overflow.
+#     Warn (class "tabular_warn_layout") when the natural total
+#     exceeds the page so the user can pin widths or switch mode.
 .distribute_widths <- function(widths, available, mode = "content") {
   if (length(widths) == 0L) {
     return(numeric(0L))
@@ -351,12 +385,20 @@
     return(resolved)
   }
 
-  # mode == "content" (default): natural fit. Don't expand to fill;
-  # shrink proportionally only if auto total exceeds remaining.
+  # mode == "content" (default): Word AutoFit-to-Contents. Each auto
+  # column keeps its natural measured width, never silently shrunk. If
+  # the natural total overflows, warn and overflow rather than
+  # cramming text into too-narrow columns.
   sum_auto <- sum(values[is_auto])
-  if (sum_auto <= remaining) {
-    return(resolved)
+  if (sum_auto > remaining) {
+    cli::cli_warn(
+      c(
+        "Auto-sized columns exceed the available content width.",
+        "i" = "Natural width {round(reserved + sum_auto, 2)} in; available {round(available, 2)} in.",
+        "i" = "Columns kept at natural width; the table will overflow. Set {.code col_spec(width = ...)} or {.code preset(width_mode = \"fixed\")} to constrain it."
+      ),
+      class = "tabular_warn_layout"
+    )
   }
-  resolved[is_auto] <- values[is_auto] * remaining / sum_auto
   resolved
 }

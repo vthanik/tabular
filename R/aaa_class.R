@@ -759,6 +759,19 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "content"
     ),
+    # Per-side horizontal cell padding in points. SINGLE SOURCE OF
+    # TRUTH for column-width measurement (`.compute_col_width` reads
+    # `2 *` this) and for every backend's horizontal cell-margin
+    # emitter. A body `@padding` override (via
+    # `preset(padding = list(body = N))` or
+    # `style(at = cells_body(), padding = N)`) takes precedence at
+    # BOTH surfaces, so measurement and render always agree. Default
+    # 5.4pt/side (10.8pt total) matches Word's ~0.075in default and
+    # RTF's legacy `\trgaph 108`.
+    cell_padding_x = S7::new_property(
+      S7::class_numeric,
+      default = 5.4
+    ),
     # @style — ordered list of `style_layer` records that flow into
     # every spec rendered against this preset. Populated by:
     #   * `preset()` / `set_preset()` named-list knobs (`alignment` /
@@ -816,6 +829,13 @@ preset_spec <- S7::new_class(
         "; got ",
         .sh_quote(self@width_mode)
       ))
+    }
+    if (
+      length(self@cell_padding_x) != 1L ||
+        is.na(self@cell_padding_x) ||
+        self@cell_padding_x < 0
+    ) {
+      return("@cell_padding_x must be a single non-negative number")
     }
     if (
       length(self@indent_size) != 1L ||

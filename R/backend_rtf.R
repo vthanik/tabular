@@ -1116,7 +1116,7 @@ backend_rtf <- function(grid, file) {
   }
 
   col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
-  trgaph <- .rtf_body_trgaph(cells_style)
+  trgaph <- .rtf_body_trgaph(cells_style, preset)
   cf_tok <- .rtf_body_cf_token(cells_style, colors)
   # Engine sidecar + row-type flags default to no-op shape for any
   # caller that bypasses as_grid.
@@ -1300,10 +1300,13 @@ backend_rtf <- function(grid, file) {
 # override is active. RTF carries one gap per row, so per-side
 # padding isn't expressible; the per-cell stamp's scalar value
 # applies.
-.rtf_body_trgaph <- function(cells_style) {
+.rtf_body_trgaph <- function(cells_style, preset = NULL) {
   pt <- .first_cell_padding(cells_style)
   if (is.na(pt)) {
-    return(108L)
+    # Fall back to the horizontal cell-padding SSOT so the measured
+    # column width and the rendered gap agree. Default 5.4pt -> 108
+    # twips (the legacy default), so unset presets stay byte-stable.
+    pt <- if (is_preset_spec(preset)) preset@cell_padding_x else 5.4
   }
   as.integer(round(pt * 20))
 }

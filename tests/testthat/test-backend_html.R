@@ -630,10 +630,15 @@ test_that("LaTeX / RTF / DOCX widths agree byte-for-byte; HTML is responsive (no
   tex_file <- withr::local_tempfile(fileext = ".tex")
   rtf_file <- withr::local_tempfile(fileext = ".rtf")
   docx_file <- withr::local_tempfile(fileext = ".docx")
-  emit(spec, html_file)
-  emit(spec, tex_file)
-  emit(spec, rtf_file)
-  emit(spec, docx_file)
+  # This wide demographics table overflows the portrait page under
+  # content mode (no shrink); the overflow warning is incidental to
+  # the cross-backend output checks below.
+  suppressWarnings({
+    emit(spec, html_file)
+    emit(spec, tex_file)
+    emit(spec, rtf_file)
+    emit(spec, docx_file)
+  })
 
   html_txt <- paste(readLines(html_file), collapse = "\n")
   tex_txt <- paste(readLines(tex_file), collapse = "\n")

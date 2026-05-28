@@ -89,21 +89,28 @@ test_that(".distribute_widths() mode='fixed' collapses auto cols to the minimum 
   expect_equal(unname(out["b"]), tabular:::.min_auto_width_in)
 })
 
-test_that(".distribute_widths() mode='content' shrinks auto cols proportionally when overflowing", {
+test_that(".distribute_widths() mode='content' keeps natural width on overflow + warns", {
+  # Word AutoFit-to-Contents: auto columns are NEVER silently shrunk.
+  # When the natural total overflows the page, columns keep their
+  # measured width and a tabular_warn_layout fires so the user can
+  # set explicit widths or switch width_mode.
   widths <- list(
     a = list(kind = "pin", value = 3.0),
     b = list(kind = "auto", value = 4.0),
     c = list(kind = "auto", value = 6.0)
   )
-  out <- tabular:::.distribute_widths(
-    widths,
-    available = 10.0,
-    mode = "content"
+  expect_warning(
+    tabular:::.distribute_widths(widths, available = 10.0, mode = "content"),
+    class = "tabular_warn_layout"
   )
-  # Remaining = 10 - 3 = 7 in; auto sum = 10; shrink each proportionally.
+  out <- suppressWarnings(
+    tabular:::.distribute_widths(widths, available = 10.0, mode = "content")
+  )
+  # No shrink: auto columns keep their natural widths; the table
+  # overflows (3 + 4 + 6 = 13 > 10).
   expect_equal(unname(out["a"]), 3.0)
-  expect_equal(unname(out["b"]), 4 * 7 / 10)
-  expect_equal(unname(out["c"]), 6 * 7 / 10)
+  expect_equal(unname(out["b"]), 4.0)
+  expect_equal(unname(out["c"]), 6.0)
 })
 
 # ---------------------------------------------------------------------

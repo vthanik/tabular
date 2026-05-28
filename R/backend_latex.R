@@ -377,6 +377,7 @@ backend_latex <- function(grid, file) {
     c(
       sprintf("colspec={%s}", colspec),
       sprintf("rowhead=%d", rowhead),
+      .latex_colsep_inner(meta$preset),
       sprintf("rows={%s}", paste(rows_inner, collapse = ", ")),
       border_directives,
       bands$band_hlines
@@ -1039,6 +1040,20 @@ backend_latex <- function(grid, file) {
     return(character())
   }
   sprintf("rowsep=%spt", format(pt, trim = TRUE, scientific = FALSE))
+}
+
+# Emit tabularray `colsep=Xpt` from the horizontal cell-padding SSOT
+# so LaTeX's inter-column gap matches the measured column width
+# (`.compute_col_width` adds `2 * preset@cell_padding_x`). tabularray
+# applies `colsep` as the half-gap on each side, mirroring the
+# per-side semantics of `preset@cell_padding_x`. Returns character(0)
+# when no preset is available so headless callers stay byte-stable.
+.latex_colsep_inner <- function(preset = NULL) {
+  if (!is_preset_spec(preset)) {
+    return(character())
+  }
+  x <- preset@cell_padding_x
+  sprintf("colsep=%spt", format(x, trim = TRUE, scientific = FALSE))
 }
 
 
