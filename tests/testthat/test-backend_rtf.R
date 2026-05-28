@@ -486,7 +486,11 @@ test_that("style(.at = cells_title(), halign = 'left') emits \\ql on the title p
   rtf <- .rtf_emit_text(spec)
   # The chrome surface halign overrides the default center alignment
   # for the title paragraph.
-  expect_match(rtf, "\\\\pard\\\\plain\\\\ql.*Demographics", fixed = FALSE)
+  expect_match(
+    rtf,
+    "\\\\pard\\\\plain\\\\fs[0-9]+\\\\ql.*Demographics",
+    fixed = FALSE
+  )
 })
 
 test_that("style(.at = cells_footnotes(), italic = TRUE) emits \\i on the footnote paragraph", {
@@ -655,17 +659,17 @@ test_that("RTF nested bands: band-1 header has no \\li, band-2 header has \\liN 
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  # Band 1 ("Safety", depth 0) -> `\pard\plain\intbl\ql {\b Safety}`
+  # Band 1 ("Safety", depth 0) -> `\pard\plain\intbl\fsN\ql {\b Safety}`
   # (no \li before \ql).
   expect_match(
     rtf,
-    "\\\\pard\\\\plain\\\\intbl\\\\ql \\{\\\\b Safety\\}",
+    "\\\\pard\\\\plain\\\\intbl\\\\fs[0-9]+\\\\ql \\{\\\\b Safety\\}",
     perl = TRUE
   )
-  # Band 2 ("AE", depth 1) -> `\pard\plain\intbl\liN\ql {\b AE}`.
+  # Band 2 ("AE", depth 1) -> `\pard\plain\intbl\fsN\liN\ql {\b AE}`.
   expect_match(
     rtf,
-    "\\\\pard\\\\plain\\\\intbl\\\\li[0-9]+\\\\ql \\{\\\\b AE\\}",
+    "\\\\pard\\\\plain\\\\intbl\\\\fs[0-9]+\\\\li[0-9]+\\\\ql \\{\\\\b AE\\}",
     perl = TRUE
   )
 })

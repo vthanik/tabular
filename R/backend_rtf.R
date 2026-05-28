@@ -122,7 +122,11 @@ backend_rtf <- function(grid, file) {
   c(
     .rtf_section_def(preset, has_pagehead = FALSE, has_pagefoot = FALSE),
     .render_rtf_title_block(meta$titles_ast, preset, cs, colors, fonts),
-    "\\pard\\plain\\qc {\\i (no rows)}\\par",
+    paste0(
+      "\\pard\\plain",
+      .rtf_body_fs(preset),
+      "\\qc {\\i (no rows)}\\par"
+    ),
     .render_rtf_footnote_block(meta$footnotes_ast, preset, cs, colors, fonts)
   )
 }
@@ -144,12 +148,11 @@ backend_rtf <- function(grid, file) {
   has_ph <- .page_band_is_populated(meta$pagehead_ast)
   has_pf <- .page_band_is_populated(meta$pagefoot_ast)
 
-  # Footnotes are page-anchored: they ride the `{\footer}` group (above
-  # the program-path band) on every page where show_footnotes_here is
-  # TRUE, so they pin to the page bottom even on a short last page. The
-  # engine already reserved the footnote zone in the row budget, so the
-  # bottom margin is enlarged by that zone to hold the footer without
-  # overlapping the body.
+  # Footnotes ride the `{\footer}` group (above the program-path band)
+  # on every page where show_footnotes_here is TRUE. The footer sits at
+  # `\footery = bottom margin` and flows downward; Word expands it
+  # upward into the body when the footnote block is tall, so the page
+  # margin is never enlarged (galley's model).
   has_footnotes <- length(meta$footnotes_ast) > 0L
   footnotes_here <- has_footnotes && isTRUE(page$show_footnotes_here)
   footer_active <- has_pf || footnotes_here
@@ -158,11 +161,6 @@ backend_rtf <- function(grid, file) {
   } else {
     character()
   }
-  footer_extra <- if (footnotes_here) {
-    (length(meta$footnotes_ast) + 1L) * .row_height_twips(preset@font_size)
-  } else {
-    0L
-  }
 
   out <- character()
   out <- c(
@@ -170,8 +168,7 @@ backend_rtf <- function(grid, file) {
     .rtf_section_def(
       preset,
       has_pagehead = has_ph,
-      has_pagefoot = footer_active,
-      footer_extra_twips = footer_extra
+      has_pagefoot = footer_active
     )
   )
   if (has_ph) {
@@ -220,7 +217,7 @@ backend_rtf <- function(grid, file) {
     out <- c(
       out,
       paste0(
-        "\\pard\\plain\\qr {\\i ",
+        paste0("\\pard\\plain", .rtf_body_fs(preset), "\\qr {\\i "),
         .rtf_escape(as.character(page$continuation)),
         "}\\par"
       )
@@ -270,17 +267,17 @@ backend_rtf <- function(grid, file) {
 .rtf_section_def <- function(
   preset,
   has_pagehead,
-  has_pagefoot,
-  footer_extra_twips = 0L
+  has_pagefoot
 ) {
   paper <- .rtf_paper_twips(preset@paper_size, preset@orientation)
   margins <- .rtf_margins_twips(preset@margins)
 
-  # When footnotes ride the footer, the bottom margin grows by the
-  # footnote zone (already reserved in the engine row budget) so the
-  # body stops above the footer and footnotes pin to the page bottom.
-  margb_eff <- margins$bottom + as.integer(footer_extra_twips)
-
+  # Margins are exactly the preset values, never enlarged. The footer
+  # (footnotes + program-path band) sits at `\footery = bottom margin`
+  # and flows DOWNWARD; the header at `\headery` flows UPWARD. Word
+  # auto-expands either band into the body when its content exceeds
+  # the margin, so a tall footnote block eats body space instead of
+  # growing the page margin (galley's model).
   parts <- c(
     "\\sectd\\sbkpage",
     if (identical(preset@orientation, "landscape")) "\\lndscpsxn" else "",
@@ -288,23 +285,22 @@ backend_rtf <- function(grid, file) {
     sprintf(
       "\\margt%d\\margb%d\\margl%d\\margr%d",
       margins$top,
-      margb_eff,
+      margins$bottom,
       margins$left,
       margins$right
     )
   )
 
   if (has_pagehead) {
-    # Reserve roughly two body-line heights for the header zone;
-    # \fs is in half-points, twips at 6pt body lead = 240 twips.
+    # Header starts one body line above the top margin and flows up.
     head_line <- as.integer(round(preset@font_size * 28))
     headery <- max(360L, margins$top - head_line)
     parts <- c(parts, sprintf("\\headery%d", headery))
   }
   if (has_pagefoot) {
-    # Footer content (footnotes, then program-path band) flows down
-    # from \footery, which sits at the enlarged bottom-margin line.
-    parts <- c(parts, sprintf("\\footery%d", margb_eff))
+    # Footer sits at the bottom-margin line and flows downward; Word
+    # expands it upward into the body when footnotes are tall.
+    parts <- c(parts, sprintf("\\footery%d", margins$bottom))
   }
   paste(parts[nzchar(parts)], collapse = "")
 }
@@ -510,6 +506,15 @@ backend_rtf <- function(grid, file) {
 # `chrome_style$surfaces$title@halign` (legacy theme layer). Bold by
 # default; the cascade-default alignment is centre when nothing
 # overrides.
+# Body font-size token (`\fsN`, N = 2 * point size). RTF's `\plain`
+# resets the character font size to its 12pt default, so every
+# paragraph must re-emit this for a uniform size across titles, body,
+# and footnotes (galley's model). A per-surface font_size override
+# emitted after this token wins.
+.rtf_body_fs <- function(preset) {
+  sprintf("\\fs%d", as.integer(round(.effective_font_size(preset) * 2)))
+}
+
 .render_rtf_title_block <- function(
   titles_ast,
   preset,
@@ -547,6 +552,7 @@ backend_rtf <- function(grid, file) {
       bold_close <- if (identical(bold_open, "")) "" else "}"
       paste0(
         "\\pard\\plain",
+        .rtf_body_fs(preset),
         align_tok,
         surface_props,
         " ",
@@ -579,7 +585,9 @@ backend_rtf <- function(grid, file) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "footer")
-  # Footer font size cascade: chrome_style@font_size > preset@font_size - 1
+  # Footer font size cascade: chrome_style@font_size > body font_size.
+  # Footnotes default to the SAME size as the body (uniform typography);
+  # a per-surface override still wins.
   fs_pt <- if (
     is_style_node(surface_node) &&
       length(surface_node@font_size) == 1L &&
@@ -587,7 +595,7 @@ backend_rtf <- function(grid, file) {
   ) {
     as.numeric(surface_node@font_size)
   } else {
-    max(preset@font_size - 1, 7)
+    .effective_font_size(preset)
   }
   fs_half <- as.integer(round(fs_pt * 2))
   # Strip the font_size token from surface_props since we emit it
@@ -840,6 +848,7 @@ backend_rtf <- function(grid, file) {
   bold_close <- if (identical(bold_open, "")) "" else "}"
   cell_body <- paste0(
     "\\pard\\plain\\intbl",
+    .rtf_body_fs(preset),
     align_tok,
     surface_props,
     " ",
@@ -849,7 +858,7 @@ backend_rtf <- function(grid, file) {
     "\\cell"
   )
   c(
-    "\\trowd\\trgaph108",
+    "\\trowd\\trgaph108\\trqc",
     cellx_line,
     cell_body,
     "\\row"
@@ -926,7 +935,7 @@ backend_rtf <- function(grid, file) {
   for (d in depths) {
     labels <- .band_labels_for_depth(headers, d, col_names_vis)
     runs <- .group_contiguous_runs(labels)
-    out <- c(out, .rtf_band_row(runs, cellx, cs, colors, fonts))
+    out <- c(out, .rtf_band_row(runs, cellx, preset, cs, colors, fonts))
   }
   out
 }
@@ -971,6 +980,7 @@ backend_rtf <- function(grid, file) {
 .rtf_band_row <- function(
   runs,
   cellx,
+  preset = NULL,
   cs = NULL,
   colors = NULL,
   fonts = NULL
@@ -1027,6 +1037,7 @@ backend_rtf <- function(grid, file) {
     }
     cell_bodies[[i]] <- paste0(
       "\\pard\\plain\\intbl",
+      .rtf_body_fs(preset),
       align_tok,
       surface_props,
       " ",
@@ -1035,7 +1046,7 @@ backend_rtf <- function(grid, file) {
     )
   }
   c(
-    "\\trowd\\trgaph108",
+    "\\trowd\\trgaph108\\trqc",
     cellx_lines,
     cell_bodies,
     "\\row"
@@ -1125,6 +1136,7 @@ backend_rtf <- function(grid, file) {
     label <- if (is.null(ast)) .rtf_escape(nm) else .render_rtf_inline(ast)
     cell_bodies[[i]] <- paste0(
       "\\pard\\plain\\intbl ",
+      .rtf_body_fs(preset),
       align_tok,
       surface_props,
       " ",
@@ -1135,7 +1147,7 @@ backend_rtf <- function(grid, file) {
     )
   }
   c(
-    "\\trowd\\trgaph108",
+    "\\trowd\\trgaph108\\trqc",
     cellx_lines,
     cell_bodies,
     "\\row"
@@ -1198,7 +1210,7 @@ backend_rtf <- function(grid, file) {
     if (isTRUE(is_blank_row[[r]])) {
       out <- c(
         out,
-        "\\trowd\\trgaph108",
+        "\\trowd\\trgaph108\\trqc",
         paste0(
           .rtf_border_seg("top", NULL, "none"),
           .rtf_border_seg("bottom", NULL, "none"),
@@ -1241,7 +1253,7 @@ backend_rtf <- function(grid, file) {
       }
       out <- c(
         out,
-        "\\trowd\\trgaph108",
+        "\\trowd\\trgaph108\\trqc",
         paste0(
           .rtf_border_seg("top", NULL, "none"),
           .rtf_border_seg("bottom", NULL, "none"),
@@ -1251,6 +1263,7 @@ backend_rtf <- function(grid, file) {
         ),
         paste0(
           "\\pard\\plain\\intbl",
+          .rtf_body_fs(preset),
           header_li_tok,
           "\\ql ",
           "{\\b ",
@@ -1325,6 +1338,7 @@ backend_rtf <- function(grid, file) {
       text_props <- .rtf_cell_text_props(sn, colors, fonts)
       cell_bodies[[i]] <- paste0(
         "\\pard\\plain\\intbl ",
+        .rtf_body_fs(preset),
         keepn_tok,
         li_tok,
         align_tok,
@@ -1337,7 +1351,7 @@ backend_rtf <- function(grid, file) {
     }
     out <- c(
       out,
-      paste0(sprintf("\\trowd\\trgaph%d", trgaph), trkeep_tok),
+      paste0(sprintf("\\trowd\\trgaph%d\\trqc", trgaph), trkeep_tok),
       cellx_lines,
       cell_bodies,
       "\\row"
