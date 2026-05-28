@@ -170,3 +170,33 @@ test_that("cols() merges na_text (non-empty second call overrides)", {
     cols(drug_a = col_spec(na_text = "-"))
   expect_identical(s@cols$drug_a@na_text, "-")
 })
+
+# Dynamic names: rlang `:=` and `!!!` splice --------------------------
+# Programmatic column names (built from a variable, looped, or spliced
+# from a list) must work the way they do in dplyr. Regression for the
+# bare `list(...)` capture that swallowed injection operators.
+
+test_that("cols() accepts a dynamic name via :=", {
+  nm <- "drug_a"
+  s <- mk_spec() |> cols(!!nm := col_spec(label = "Programmatic"))
+  expect_identical(s@cols$drug_a@label, "Programmatic")
+  expect_identical(s@cols$drug_a@name, "drug_a")
+})
+
+test_that("cols() accepts a named list spliced with !!!", {
+  specs <- list(
+    param = col_spec(usage = "group"),
+    drug_a = col_spec(label = "A")
+  )
+  s <- mk_spec() |> cols(!!!specs)
+  expect_named(s@cols, c("param", "drug_a"))
+  expect_identical(s@cols$param@usage, "group")
+  expect_identical(s@cols$drug_a@label, "A")
+})
+
+test_that("cols() still rejects an unnamed !!! splice", {
+  expect_error(
+    mk_spec() |> cols(!!!list(col_spec(usage = "group"))),
+    class = "tabular_error_input"
+  )
+})

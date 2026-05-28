@@ -163,6 +163,34 @@ test_that("headers() rejects duplicate band labels in one call", {
   )
 })
 
+# ---- dynamic names: rlang := and !!! splice -------------------------
+# A band label built from a variable (or spliced from a named list)
+# must work the way it does in dplyr. Regression for the bare
+# `list(...)` capture that swallowed injection operators.
+
+test_that("headers() accepts a dynamic band label via :=", {
+  lbl <- "Treatment Group"
+  spec <- tabular(saf_demo) |>
+    headers(!!lbl := c("placebo", "drug_50", "drug_100", "Total"))
+  expect_length(spec@headers, 1L)
+  expect_identical(spec@headers[[1]]@label, "Treatment Group")
+  expect_identical(
+    spec@headers[[1]]@span,
+    c("placebo", "drug_50", "drug_100", "Total")
+  )
+})
+
+test_that("headers() accepts a named list spliced with !!!", {
+  bands <- list(
+    "Control" = "placebo",
+    "Active" = c("drug_50", "drug_100")
+  )
+  spec <- tabular(saf_demo) |> headers(!!!bands)
+  expect_length(spec@headers, 2L)
+  expect_identical(spec@headers[[1]]@label, "Control")
+  expect_identical(spec@headers[[2]]@span, c("drug_50", "drug_100"))
+})
+
 # ---- blank / NA / whitespace labels are rejected at every level ----
 
 test_that("headers() rejects a whitespace-only top-level label", {

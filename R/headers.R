@@ -214,7 +214,7 @@ headers <- function(.spec, ...) {
   call <- rlang::caller_env()
   check_tabular_spec(.spec, call = call)
 
-  args <- list(...)
+  args <- rlang::list2(...)
   if (length(args) == 0L) {
     return(S7::set_props(.spec, headers = list()))
   }
