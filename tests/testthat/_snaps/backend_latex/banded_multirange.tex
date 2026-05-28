@@ -1,0 +1,38 @@
+\documentclass[10pt]{article}
+\usepackage[letterpaper, margin=1in, landscape]{geometry}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\fi
+\usepackage{tabularray}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\UseTblrLibrary{siunitx}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage{tgcursor}
+\else
+  \usepackage{fontspec}
+  \IfFontExistsTF{Liberation Mono}{\setmainfont{Liberation Mono}}{\IfFontExistsTF{Courier New}{\setmainfont{Courier New}}{\IfFontExistsTF{Courier}{\setmainfont{Courier}}{\IfFontExistsTF{TeX Gyre Cursor}{\setmainfont{TeX Gyre Cursor}}{\setmainfont{Latin Modern Mono}}}}}
+\fi
+\fontsize{9}{10.8}\selectfont
+\setlength{\parindent}{0pt}
+\begin{document}
+
+\begin{center}
+{\bfseries Banded snapshot}\par
+\end{center}
+
+\begin{longtblr}[caption={}, label={}]{colspec={Q[l,wd=0.541667in] Q[l,wd=0.316667in] Q[l,wd=0.316667in] Q[l,wd=0.316667in] Q[l,wd=0.316667in]}, rowhead=2, rows={valign=t}, hline{2}={2-3,4-5}{0.4pt, solid, leftpos=-1, rightpos=-1}}
+\hline
+ & \SetCell[c=2]{c} Group A &  & \SetCell[c=2]{c} Group B &  \\
+Param & C1 & C2 & C3 & C4 \\
+\hline
+Age & 1 & 4 & 7 & 10 \\*
+Sex & 2 & 5 & 8 & 11 \\*
+BMI & 3 & 6 & 9 & 12 \\
+\hline
+\end{longtblr}
+\end{document}

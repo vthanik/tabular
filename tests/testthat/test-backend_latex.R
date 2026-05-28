@@ -954,7 +954,7 @@ test_that("LaTeX nested bands: band-1 header bare {l}, band-2 header gets leftse
 
 # --- header-band rule scope (cmidrule(lr) semantics) ----------------
 
-test_that("LaTeX scenario G: band emits cmidrule(lr){4-5} under the two drug arms", {
+test_that("LaTeX scenario G: band emits an outer hline under the two drug arms", {
   tex <- band_emit("G", "tex")
   # SetCell colspan over visible columns 4-5 (drug_50 + drug_100).
   expect_match(
@@ -962,6 +962,86 @@ test_that("LaTeX scenario G: band emits cmidrule(lr){4-5} under the two drug arm
     "\\\\SetCell\\[c=2\\]\\{c\\} Active Treatment",
     perl = TRUE
   )
-  # Trimmed midrule under the same two columns.
-  expect_match(tex, "\\\\cmidrule\\(lr\\)\\{4-5\\}", perl = TRUE)
+  # Trimmed band underline under the same two columns, emitted as a
+  # tabularray-native outer hline directive (pagination-safe) rather
+  # than an inline booktabs \cmidrule.
+  expect_match(tex, "hline\\{2\\}=\\{4-5\\}", perl = TRUE)
+  expect_no_match(tex, "\\cmidrule", fixed = TRUE)
+})
+
+# --- header-band rule survives longtblr pagination (#multi-page) -----
+# Regression: a banded table that overflows one physical page used to
+# crash xelatex with `! Undefined control sequence \cmidrule`. The
+# band underline lived in the rowhead block that tabularray replays on
+# continuation pages, where the inline \cmidrule sugar is no longer a
+# live control sequence. The underline now rides on the outer longtblr
+# `hline{i}={cols}{spec}` directive, which is pagination-aware.
+
+mk_multipage_band_spec <- function(n = 80L) {
+  df <- data.frame(
+    param = sprintf("Item %d", seq_len(n)),
+    a = seq_len(n),
+    b = seq_len(n) * 2L,
+    c = seq_len(n) * 3L,
+    d = seq_len(n) * 4L
+  )
+  tabular(df, titles = "Multi-page banded table") |>
+    cols(
+      param = col_spec(label = "Param"),
+      a = col_spec(label = "C1"),
+      b = col_spec(label = "C2"),
+      c = col_spec(label = "C3"),
+      d = col_spec(label = "C4")
+    ) |>
+    headers("Group A" = c("a", "b"), "Group B" = c("c", "d"))
+}
+
+test_that("LaTeX band underline rides an outer multi-range hline (no inline cmidrule)", {
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(mk_multipage_band_spec(), out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_no_match(tex, "\\cmidrule", fixed = TRUE)
+  # Cols: param=1, a=2, b=3, c=4, d=5 -> Group A {2-3}, Group B {4-5}
+  # collapse to one multi-range hline below the single band row.
+  expect_match(tex, "hline\\{2\\}=\\{2-3,4-5\\}", perl = TRUE)
+})
+
+test_that("banded .tex output matches snapshot (band SetCell + outer hline)", {
+  df <- data.frame(
+    param = c("Age", "Sex", "BMI"),
+    a = 1:3,
+    b = 4:6,
+    c = 7:9,
+    d = 10:12
+  )
+  spec <- tabular(df, titles = "Banded snapshot") |>
+    cols(
+      param = col_spec(label = "Param"),
+      a = col_spec(label = "C1"),
+      b = col_spec(label = "C2"),
+      c = col_spec(label = "C3"),
+      d = col_spec(label = "C4")
+    ) |>
+    headers("Group A" = c("a", "b"), "Group B" = c("c", "d"))
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  expect_snapshot_file(out, "banded_multirange.tex")
+})
+
+test_that("LaTeX multi-page banded table compiles cleanly (regression: cmidrule replay)", {
+  skip_if_not(tinytex::is_tinytex())
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(mk_multipage_band_spec(), out)
+  # On main this aborts with `! Undefined control sequence \cmidrule`
+  # at \end{longtblr} once the body overflows onto a second page.
+  pdf <- tinytex::xelatex(out)
+  withr::defer(unlink(pdf))
+  expect_true(file.exists(pdf))
+  info <- suppressWarnings(
+    system2("pdfinfo", pdf, stdout = TRUE, stderr = FALSE)
+  )
+  pages <- as.integer(sub(".*:\\s*", "", grep("^Pages:", info, value = TRUE)))
+  # The fixture must actually span >1 physical page, else it would not
+  # exercise tabularray's rowhead replay (the thing that crashed).
+  expect_gt(pages, 1L)
 })

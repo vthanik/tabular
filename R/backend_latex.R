@@ -300,7 +300,8 @@ backend_latex <- function(grid, file) {
   cols <- meta$cols %||% list()
   colspec <- .latex_colspec(col_names_vis, cols)
 
-  band_rows <- .render_latex_header_bands(meta$headers, col_names_vis, cs)
+  bands <- .render_latex_header_bands(meta$headers, col_names_vis, cs)
+  band_rows <- bands$rows
   label_row <- .render_latex_col_labels_row(
     meta$col_labels_ast,
     col_names_vis,
@@ -377,7 +378,8 @@ backend_latex <- function(grid, file) {
       sprintf("colspec={%s}", colspec),
       sprintf("rowhead=%d", rowhead),
       sprintf("rows={%s}", paste(rows_inner, collapse = ", ")),
-      border_directives
+      border_directives,
+      bands$band_hlines
     ),
     collapse = ", "
   )
@@ -649,47 +651,78 @@ backend_latex <- function(grid, file) {
   )
 }
 
-# Render multi-level header bands using real `\SetCell` colspan.
-# For each band-row depth we walk visible columns left-to-right
-# and group contiguous runs sharing the same band label (or
-# none); each run emits one `\SetCell[c=N]{c}` cell. Returns a
-# character vector of zero or more rows (zero when no bands
-# exist).
+# Render multi-level header bands using real `\SetCell` colspan, plus
+# the tabularray-native `hline` directives that underline each band.
+# For each band-row depth (top first) we walk visible columns left to
+# right, group contiguous runs sharing the same band label (or none),
+# and emit one `\SetCell[c=N]{c}` cell per run. The band at 1-based
+# position `k` is content row `k`; its underline sits at `hline{k+1}`,
+# scoped to the run's column range(s) via `{m-n,...}` (one band can own
+# several disjoint runs when a non-member column splits it) and trimmed
+# to the booktabs `\cmidrule(lr)` look.
+#
+# Returns `list(rows = <chr, one per depth>, band_hlines = <chr, the
+# outer hline directives>)`; both empty when no bands exist. The outer
+# directive survives longtblr's rowhead replay across pages, where an
+# inline `\cmidrule` in the band row would not (see
+# `.runs_to_band_row`).
 .render_latex_header_bands <- function(
   headers,
   col_names_visible,
   cs = NULL
 ) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
-    return(character())
+    return(list(rows = character(), band_hlines = character()))
   }
   surface_node <- .chrome_surface_at(cs, "header")
   depths <- sort(unique(headers$depth))
-  vapply(
-    depths,
-    function(d) {
-      labels <- .band_labels_for_depth(headers, d, col_names_visible)
-      runs <- .group_contiguous_runs(labels)
-      .runs_to_band_row(runs, surface_node)
-    },
-    character(1L)
-  )
+  rows <- character(length(depths))
+  band_hlines <- character()
+  # Thin solid rule with a both-ends inset matching booktabs
+  # `\cmidrule(lr)`. leftpos / rightpos = -1 pull the rule in at each
+  # end so adjacent bands meet but do not visually touch.
+  band_spec <- "0.4pt, solid, leftpos=-1, rightpos=-1"
+  for (k in seq_along(depths)) {
+    labels <- .band_labels_for_depth(headers, depths[[k]], col_names_visible)
+    runs <- .group_contiguous_runs(labels)
+    band <- .runs_to_band_row(runs, surface_node)
+    rows[[k]] <- band$row
+    if (length(band$ranges) > 0L) {
+      cols_spec <- paste(
+        vapply(
+          band$ranges,
+          function(r) sprintf("%d-%d", r[[1L]], r[[2L]]),
+          character(1L)
+        ),
+        collapse = ","
+      )
+      band_hlines <- c(
+        band_hlines,
+        sprintf("hline{%d}={%s}{%s}", k + 1L, cols_spec, band_spec)
+      )
+    }
+  }
+  list(rows = rows, band_hlines = band_hlines)
 }
 
-# Turn a list of `{value, length}` runs into a single tblr row
-# string plus one `\cmidrule(lr){m-n}` line per named run. Each run
-# becomes a `\SetCell[c=N]{c} <label>` (named) or a bare empty cell
-# (NA). Cells are `&`-joined and the row terminates with `\\`. A
-# trailing newline + one `\cmidrule(lr){start-end}` per named run
-# emits the booktabs trim under the band's visible-column range,
-# so adjacent bands meet but do not visually touch.
+# Turn a list of `{value, length}` runs into one tblr band row plus
+# the column ranges that should be underlined. Each named run becomes
+# a `\SetCell[c=N]{c} <label>` (or a bare label when the span is 1);
+# NA runs become bare empty cells. Cells are `&`-joined and the row
+# terminates with `\\`.
 #
-# Returned as ONE string with embedded newlines so the caller's
-# `length(band_rows) + 1L` rowhead arithmetic stays a count of
-# table rows (not lines).
+# Returns `list(row = <one-line string>, ranges = list(c(start, end),
+# ...))` — one range per NAMED run (NA runs contribute none). The
+# caller turns the ranges into a tabularray-native outer
+# `hline{i}={m-n}{spec}` directive. We deliberately do NOT emit a
+# booktabs `\cmidrule` here: that macro would live in the band row,
+# which sits in the `rowhead` block tabularray replays on continuation
+# pages, where `\cmidrule` is no longer a live control sequence (->
+# `! Undefined control sequence` at `\end{longtblr}`). The outer hline
+# directive is pagination-aware and survives the replay.
 .runs_to_band_row <- function(runs, surface_node = NULL) {
   cells <- character()
-  rules <- character()
+  ranges <- list()
   cursor <- 1L
   for (run in runs) {
     span <- run$length
@@ -708,15 +741,12 @@ backend_latex <- function(grid, file) {
           rep("", span - 1L)
         )
       }
-      rules <- c(rules, sprintf("\\cmidrule(lr){%d-%d}", start, end))
+      ranges <- c(ranges, list(c(start, end)))
     }
     cursor <- end + 1L
   }
   row <- paste0(paste(cells, collapse = " & "), " \\\\")
-  if (length(rules) == 0L) {
-    return(row)
-  }
-  paste(c(row, rules), collapse = "\n")
+  list(row = row, ranges = ranges)
 }
 
 # Render the column-labels row: one cell per visible column,
