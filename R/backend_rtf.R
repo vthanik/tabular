@@ -515,6 +515,16 @@ backend_rtf <- function(grid, file) {
   sprintf("\\fs%d", as.integer(round(.effective_font_size(preset) * 2)))
 }
 
+# Row-height + zero-vertical-padding token (galley's model). Pins a
+# uniform minimum row height (`\trrh`, grows for multi-line cells) and
+# strips Word's default top/bottom cell margins, so every row renders
+# at the same compact height regardless of content (continuous-stat
+# rows no longer sit taller than categorical rows).
+.rtf_row_height_str <- function(preset) {
+  rh <- .row_height_twips(.effective_font_size(preset))
+  sprintf("\\trrh%d\\trpaddt0\\trpaddft3\\trpaddb0\\trpaddfb3", rh)
+}
+
 .render_rtf_title_block <- function(
   titles_ast,
   preset,
@@ -858,7 +868,7 @@ backend_rtf <- function(grid, file) {
     "\\cell"
   )
   c(
-    "\\trowd\\trgaph108\\trqc",
+    paste0("\\trowd\\trgaph108\\trqc", .rtf_row_height_str(preset)),
     cellx_line,
     cell_body,
     "\\row"
@@ -1046,7 +1056,7 @@ backend_rtf <- function(grid, file) {
     )
   }
   c(
-    "\\trowd\\trgaph108\\trqc",
+    paste0("\\trowd\\trgaph108\\trqc", .rtf_row_height_str(preset)),
     cellx_lines,
     cell_bodies,
     "\\row"
@@ -1147,7 +1157,7 @@ backend_rtf <- function(grid, file) {
     )
   }
   c(
-    "\\trowd\\trgaph108\\trqc",
+    paste0("\\trowd\\trgaph108\\trqc", .rtf_row_height_str(preset)),
     cellx_lines,
     cell_bodies,
     "\\row"
@@ -1210,7 +1220,7 @@ backend_rtf <- function(grid, file) {
     if (isTRUE(is_blank_row[[r]])) {
       out <- c(
         out,
-        "\\trowd\\trgaph108\\trqc",
+        paste0("\\trowd\\trgaph108\\trqc", .rtf_row_height_str(preset)),
         paste0(
           .rtf_border_seg("top", NULL, "none"),
           .rtf_border_seg("bottom", NULL, "none"),
@@ -1253,7 +1263,7 @@ backend_rtf <- function(grid, file) {
       }
       out <- c(
         out,
-        "\\trowd\\trgaph108\\trqc",
+        paste0("\\trowd\\trgaph108\\trqc", .rtf_row_height_str(preset)),
         paste0(
           .rtf_border_seg("top", NULL, "none"),
           .rtf_border_seg("bottom", NULL, "none"),
@@ -1351,7 +1361,11 @@ backend_rtf <- function(grid, file) {
     }
     out <- c(
       out,
-      paste0(sprintf("\\trowd\\trgaph%d\\trqc", trgaph), trkeep_tok),
+      paste0(
+        sprintf("\\trowd\\trgaph%d\\trqc", trgaph),
+        .rtf_row_height_str(preset),
+        trkeep_tok
+      ),
       cellx_lines,
       cell_bodies,
       "\\row"
