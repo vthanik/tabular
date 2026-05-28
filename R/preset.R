@@ -41,7 +41,7 @@
   "decimal_markers",
   "chrome_onscreen",
   "width_mode",
-  "cell_padding_x",
+  "cell_padding_h",
   "alignment",
   "borders",
   "fonts",
@@ -349,17 +349,23 @@
 #'       `width_mode`. Per-column widths (`col_spec(width)`) emit
 #'       verbatim into the HTML colgroup per the gt convention.
 #'
-#'   *   **`cell_padding_x`** — per-side horizontal cell padding in
-#'       points. `<numeric(1)>: default 5.4`. The single source of
-#'       truth for both auto column-width measurement and every
-#'       backend's horizontal cell margin, so measured and rendered
-#'       widths agree. Default 5.4pt/side matches Word's ~0.075in
-#'       cell margin.
+#'   *   **`cell_padding_h`** — horizontal cell padding (left / right
+#'       sides) in points, the `h` analogue of `halign`.
+#'       `<numeric(1) | numeric(2)>: default 5.4`. Length 1 sets both
+#'       sides; length 2 is `c(left, right)`. The single source of
+#'       truth for both auto column-width measurement (left + right)
+#'       and every backend's horizontal cell margin, so measured and
+#'       rendered widths agree. Default 5.4pt/side matches Word's
+#'       ~0.075in cell margin.
 #'
 #'       **Interaction:** A body padding override
 #'       (`preset(padding = list(body = N))` or
 #'       `style(at = cells_body(), padding = N)`) takes precedence at
 #'       both measurement and render.
+#'
+#'       **Note:** DOCX and LaTeX render `c(left, right)` exactly; RTF
+#'       (`\\trgaph` is one symmetric gap) renders the average, so the
+#'       total width still matches but the two sides look equal.
 #'
 #'   ```r
 #'   # Landscape A4, 8pt body, slim margins for one wide table.

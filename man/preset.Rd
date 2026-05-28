@@ -241,17 +241,23 @@ responsive — the table always fills its parent and
 columns wrap when the viewport narrows, regardless of
 \code{width_mode}. Per-column widths (\code{col_spec(width)}) emit
 verbatim into the HTML colgroup per the gt convention.
-\item \strong{\code{cell_padding_x}} — per-side horizontal cell padding in
-points. \verb{<numeric(1)>: default 5.4}. The single source of
-truth for both auto column-width measurement and every
-backend's horizontal cell margin, so measured and rendered
-widths agree. Default 5.4pt/side matches Word's ~0.075in
-cell margin.
+\item \strong{\code{cell_padding_h}} — horizontal cell padding (left / right
+sides) in points, the \code{h} analogue of \code{halign}.
+\verb{<numeric(1) | numeric(2)>: default 5.4}. Length 1 sets both
+sides; length 2 is \code{c(left, right)}. The single source of
+truth for both auto column-width measurement (left + right)
+and every backend's horizontal cell margin, so measured and
+rendered widths agree. Default 5.4pt/side matches Word's
+~0.075in cell margin.
 
 \strong{Interaction:} A body padding override
 (\code{preset(padding = list(body = N))} or
 \code{style(at = cells_body(), padding = N)}) takes precedence at
 both measurement and render.
+
+\strong{Note:} DOCX and LaTeX render \code{c(left, right)} exactly; RTF
+(\verb{\\\\trgaph} is one symmetric gap) renders the average, so the
+total width still matches but the two sides look equal.
 }
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Landscape A4, 8pt body, slim margins for one wide table.

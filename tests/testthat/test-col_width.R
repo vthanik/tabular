@@ -122,36 +122,49 @@ test_that(".compute_col_width uses bold AFM for header", {
   expect_true(hdr_only > body_only)
 })
 
-test_that("preset_spec carries cell_padding_x default 5.4 (padding SSOT)", {
-  expect_equal(preset_spec()@cell_padding_x, 5.4)
+test_that("preset_spec carries cell_padding_h default 5.4 (padding SSOT)", {
+  expect_equal(preset_spec()@cell_padding_h, 5.4)
 })
 
-test_that("cell_padding_x is settable via preset() (padding SSOT)", {
-  p <- preset(tabular(data.frame(x = 1)), cell_padding_x = 3)
-  expect_equal(p@preset@cell_padding_x, 3)
+test_that("cell_padding_h is settable via preset(), scalar or c(left, right)", {
+  p1 <- preset(tabular(data.frame(x = 1)), cell_padding_h = 3)
+  expect_equal(p1@preset@cell_padding_h, 3)
+  p2 <- preset(tabular(data.frame(x = 1)), cell_padding_h = c(2, 4))
+  expect_equal(p2@preset@cell_padding_h, c(2, 4))
 })
 
-test_that(".compute_col_width adds 2x cell_padding_x, overridable (padding SSOT)", {
-  # Measurement padding is the SINGLE SOURCE OF TRUTH preset@cell_padding_x
-  # (per side), not a hardcoded constant. Width gains 2 * pad_x_pt / 72 in.
+test_that(".cell_padding_lr broadcasts a scalar and passes a pair through", {
+  expect_equal(tabular:::.cell_padding_lr(preset_spec()), c(5.4, 5.4))
+  expect_equal(
+    tabular:::.cell_padding_lr(preset_spec(cell_padding_h = c(2, 4))),
+    c(2, 4)
+  )
+})
+
+test_that(".compute_col_width adds the total horizontal padding (padding SSOT)", {
+  # Measurement adds left + right from cell_padding_h, not a hardcoded
+  # constant. Width gains pad_h_pt / 72 inches.
   p <- preset_spec(font_family = "serif", font_size = 10)
   w_default <- tabular:::.compute_col_width(c("Placebo"), header = "", p)
   w_explicit <- tabular:::.compute_col_width(
     c("Placebo"),
     header = "",
     p,
-    pad_x_pt = 5.4
+    pad_h_pt = 10.8 # 2 * 5.4
   )
   expect_equal(w_default, w_explicit)
 
-  # Doubling the per-side padding widens the column by 2 * (10.8 - 5.4) / 72.
-  w_wide <- tabular:::.compute_col_width(
-    c("Placebo"),
-    header = "",
-    p,
-    pad_x_pt = 10.8
+  # A c(left, right) preset sums to the same total as a scalar of the
+  # average, so the measured width matches.
+  p_pair <- preset_spec(
+    font_family = "serif",
+    font_size = 10,
+    cell_padding_h = c(2, 4)
   )
-  expect_equal(w_wide - w_default, 2 * (10.8 - 5.4) / 72, tolerance = 1e-9)
+  expect_equal(
+    tabular:::.compute_col_width(c("Placebo"), header = "", p_pair),
+    tabular:::.compute_col_width(c("Placebo"), header = "", p, pad_h_pt = 6)
+  )
 })
 
 test_that(".resolve_col_widths measures with body padding override (padding SSOT)", {
@@ -302,8 +315,12 @@ test_that(".ast_flatten_text returns empty string for non-AST input", {
   expect_equal(tabular:::.ast_flatten_text("not an ast"), "")
 })
 
-test_that("preset_spec rejects invalid cell_padding_x (padding SSOT)", {
-  expect_error(preset_spec(cell_padding_x = -1), "cell_padding_x")
-  expect_error(preset_spec(cell_padding_x = c(1, 2)), "cell_padding_x")
-  expect_error(preset_spec(cell_padding_x = NA_real_), "cell_padding_x")
+test_that("preset_spec validates cell_padding_h length + sign (padding SSOT)", {
+  # Length 1 (both sides) and 2 (left, right) are valid.
+  expect_true(is_preset_spec(preset_spec(cell_padding_h = 4)))
+  expect_true(is_preset_spec(preset_spec(cell_padding_h = c(2, 4))))
+  # Length 3, negative, or NA are rejected.
+  expect_error(preset_spec(cell_padding_h = c(1, 2, 3)), "cell_padding_h")
+  expect_error(preset_spec(cell_padding_h = -1), "cell_padding_h")
+  expect_error(preset_spec(cell_padding_h = c(1, NA)), "cell_padding_h")
 })

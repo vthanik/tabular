@@ -786,16 +786,17 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "content"
     ),
-    # Per-side horizontal cell padding in points. SINGLE SOURCE OF
-    # TRUTH for column-width measurement (`.compute_col_width` reads
-    # `2 *` this) and for every backend's horizontal cell-margin
-    # emitter. A body `@padding` override (via
-    # `preset(padding = list(body = N))` or
-    # `style(at = cells_body(), padding = N)`) takes precedence at
-    # BOTH surfaces, so measurement and render always agree. Default
-    # 5.4pt/side (10.8pt total) matches Word's ~0.075in default and
-    # RTF's legacy `\trgaph 108`.
-    cell_padding_x = S7::new_property(
+    # Horizontal cell padding in points (left / right sides) — the h
+    # analogue of `halign`. SINGLE SOURCE OF TRUTH for column-width
+    # measurement (`.compute_col_width` adds left + right) and for
+    # every backend's horizontal cell-margin emitter. Length 1 sets
+    # both sides; length 2 is `c(left, right)`. A body `@padding`
+    # override (`preset(padding = list(body = N))` /
+    # `style(at = cells_body(), padding = N)`) wins at both surfaces,
+    # so measurement and render always agree. Default 5.4pt/side
+    # (10.8pt total) matches Word's ~0.075in default and RTF's legacy
+    # `\trgaph 108`.
+    cell_padding_h = S7::new_property(
       S7::class_numeric,
       default = 5.4
     ),
@@ -858,11 +859,14 @@ preset_spec <- S7::new_class(
       ))
     }
     if (
-      length(self@cell_padding_x) != 1L ||
-        is.na(self@cell_padding_x) ||
-        self@cell_padding_x < 0
+      !(length(self@cell_padding_h) %in% c(1L, 2L)) ||
+        anyNA(self@cell_padding_h) ||
+        any(self@cell_padding_h < 0)
     ) {
-      return("@cell_padding_x must be a single non-negative number")
+      return(paste0(
+        "@cell_padding_h must be a non-negative numeric of length 1 ",
+        "(both sides) or 2 (left, right)"
+      ))
     }
     if (
       length(self@indent_size) != 1L ||

@@ -101,11 +101,11 @@
 #             markdown / HTML markup). Pass "" if column has no
 #             header.
 #   preset    `preset_spec` for font_family + font_size.
-#   pad_x_pt  numeric(1). Per-side horizontal cell padding in pt
-#             (the SSOT). Measurement adds `2 *` this for the
-#             left + right margins. Defaults to
-#             `preset@cell_padding_x`; callers pass the resolved
-#             body override (see `.resolve_col_widths`).
+#   pad_h_pt  numeric(1). TOTAL horizontal cell padding in pt
+#             (left + right), added to the measured text width. The
+#             SSOT; defaults to `sum(.cell_padding_lr(preset))`.
+#             Callers pass the resolved body override (see
+#             `.resolve_col_widths`).
 #
 # Returns numeric(1) inches. Floor at `.min_auto_width_in` so
 # the column doesn't collapse.
@@ -113,7 +113,7 @@
   cells,
   header,
   preset,
-  pad_x_pt = preset@cell_padding_x
+  pad_h_pt = sum(.cell_padding_lr(preset))
 ) {
   body_afm <- .resolve_afm_name(preset@font_family, bold = FALSE)
   head_afm <- .resolve_afm_name(preset@font_family, bold = TRUE)
@@ -139,9 +139,30 @@
   }
 
   max_em <- max(body_em, head_em)
-  # em -> pt -> inches; add left + right cell padding (per-side pt).
-  width_in <- (max_em / 1000) * font_size / 72 + 2 * pad_x_pt / 72
+  # em -> pt -> inches; add the total (left + right) cell padding.
+  width_in <- (max_em / 1000) * font_size / 72 + pad_h_pt / 72
   max(width_in, .min_auto_width_in)
+}
+
+# Resolve `preset@cell_padding_h` to a length-2 c(left, right) in pt.
+# A length-1 value broadcasts to both sides; length 2 is taken
+# verbatim. The single source of truth for horizontal cell padding,
+# read by measurement (summed) and every backend (per side).
+.cell_padding_lr <- function(preset) {
+  h <- preset@cell_padding_h
+  if (length(h) == 1L) c(h, h) else h
+}
+
+# Render-time horizontal padding c(left, right) in pt: a scalar body
+# `@padding` override (from the resolved `cells_style`) wins on both
+# sides; otherwise the configured `cell_padding_h` pair. Backends call
+# this so the rendered margin matches the measured column width.
+.resolve_cell_padding_lr <- function(cells_style, preset) {
+  p <- .first_cell_padding(cells_style)
+  if (length(p) == 1L && !is.na(p)) {
+    return(c(p, p))
+  }
+  .cell_padding_lr(preset)
 }
 
 # ---------------------------------------------------------------------
@@ -238,7 +259,14 @@
   } else {
     .first_cell_padding(cells_style)
   }
-  pad_x <- if (is.na(override_pad)) preset@cell_padding_x else override_pad
+  # Total horizontal padding (left + right) the column is measured for.
+  # A scalar body override applies to both sides; else sum the
+  # configured cell_padding_h pair.
+  pad_h <- if (is.na(override_pad)) {
+    sum(.cell_padding_lr(preset))
+  } else {
+    2 * override_pad
+  }
 
   visible <- vapply(
     full_cols,
@@ -260,7 +288,7 @@
       col_labels_ast,
       nm,
       preset,
-      pad_x
+      pad_h
     )
   }
 
@@ -285,7 +313,7 @@
   col_labels_ast,
   col_name,
   preset,
-  pad_x_pt = preset@cell_padding_x
+  pad_h_pt = sum(.cell_padding_lr(preset))
 ) {
   if (.is_auto_width(w)) {
     cells <- if (col_name %in% colnames(cells_text)) {
@@ -296,7 +324,7 @@
     header <- .ast_flatten_text(col_labels_ast[[col_name]])
     list(
       kind = "auto",
-      value = .compute_col_width(cells, header, preset, pad_x_pt)
+      value = .compute_col_width(cells, header, preset, pad_h_pt)
     )
   } else if (is.numeric(w)) {
     list(kind = "pin", value = as.numeric(w))

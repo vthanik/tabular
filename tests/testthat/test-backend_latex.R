@@ -1046,9 +1046,21 @@ test_that("LaTeX multi-page banded table compiles cleanly (regression: cmidrule 
   expect_gt(pages, 1L)
 })
 
-test_that("cell_padding_x drives LaTeX colsep (padding SSOT)", {
-  spec <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
-    preset(cell_padding_x = 10)
-  tex <- render_tex(spec)
-  expect_match(tex, "colsep=10pt", fixed = TRUE)
+test_that("cell_padding_h drives LaTeX per-side leftsep/rightsep (padding SSOT)", {
+  # Scalar -> equal left/right; c(left, right) -> exact per side.
+  spec1 <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
+    preset(cell_padding_h = 10)
+  expect_match(
+    render_tex(spec1),
+    "leftsep=10pt, rightsep=10pt",
+    fixed = TRUE
+  )
+
+  spec2 <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
+    preset(cell_padding_h = c(3, 7))
+  expect_match(
+    render_tex(spec2),
+    "leftsep=3pt, rightsep=7pt",
+    fixed = TRUE
+  )
 })

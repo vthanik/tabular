@@ -1350,19 +1350,20 @@ backend_rtf <- function(grid, file) {
 # the representative [1,1] body cell's @padding (set by the lowered
 # `preset(padding = list(body = N))` knob or `style(at =
 # cells_body(), padding = N)`) and converts pt -> twips (1pt = 20
-# twips). Returns the legacy 108-twip (5.4pt) default when no
-# override is active. RTF carries one gap per row, so per-side
-# padding isn't expressible; the per-cell stamp's scalar value
-# applies.
+# twips). RTF's `\trgaph` is a single symmetric gap per row, so an
+# asymmetric `cell_padding_h = c(left, right)` is rendered as its
+# average; the TOTAL (left + right) still equals what the column was
+# measured for, so column widths stay correct. Default 5.4pt -> 108
+# twips (the legacy value), so unset presets stay byte-stable.
+# (DOCX and LaTeX render left / right exactly.)
 .rtf_body_trgaph <- function(cells_style, preset = NULL) {
-  pt <- .first_cell_padding(cells_style)
-  if (is.na(pt)) {
-    # Fall back to the horizontal cell-padding SSOT so the measured
-    # column width and the rendered gap agree. Default 5.4pt -> 108
-    # twips (the legacy default), so unset presets stay byte-stable.
-    pt <- if (is_preset_spec(preset)) preset@cell_padding_x else 5.4
+  lr <- if (is_preset_spec(preset)) {
+    .resolve_cell_padding_lr(cells_style, preset)
+  } else {
+    p <- .first_cell_padding(cells_style)
+    if (length(p) == 1L && !is.na(p)) c(p, p) else c(5.4, 5.4)
   }
-  as.integer(round(pt * 20))
+  as.integer(round(mean(lr) * 20))
 }
 
 # Body cell text color token. Empty string when no body-level text

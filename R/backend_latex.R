@@ -377,7 +377,7 @@ backend_latex <- function(grid, file) {
     c(
       sprintf("colspec={%s}", colspec),
       sprintf("rowhead=%d", rowhead),
-      .latex_colsep_inner(meta$preset),
+      .latex_cellsep_inner(page$cells_style, meta$preset),
       sprintf("rows={%s}", paste(rows_inner, collapse = ", ")),
       border_directives,
       bands$band_hlines
@@ -1042,18 +1042,25 @@ backend_latex <- function(grid, file) {
   sprintf("rowsep=%spt", format(pt, trim = TRUE, scientific = FALSE))
 }
 
-# Emit tabularray `colsep=Xpt` from the horizontal cell-padding SSOT
-# so LaTeX's inter-column gap matches the measured column width
-# (`.compute_col_width` adds `2 * preset@cell_padding_x`). tabularray
-# applies `colsep` as the half-gap on each side, mirroring the
-# per-side semantics of `preset@cell_padding_x`. Returns character(0)
-# when no preset is available so headless callers stay byte-stable.
-.latex_colsep_inner <- function(preset = NULL) {
+# Emit tabularray table-level `leftsep=Lpt, rightsep=Rpt` from the
+# horizontal cell-padding SSOT so the rendered per-side margin matches
+# the measured column width (`.compute_col_width` adds left + right).
+# These are outer-spec keys (the per-side analogue of the symmetric
+# `colsep`); per-cell indent (`\SetCell{leftsep+=...}`) adds on top.
+# A scalar body `@padding` override (from `cells_style`) wins on both
+# sides; else the configured `cell_padding_h` pair. Returns
+# character(0) when no preset is available so headless callers stay
+# byte-stable.
+.latex_cellsep_inner <- function(cells_style = NULL, preset = NULL) {
   if (!is_preset_spec(preset)) {
     return(character())
   }
-  x <- preset@cell_padding_x
-  sprintf("colsep=%spt", format(x, trim = TRUE, scientific = FALSE))
+  lr <- .resolve_cell_padding_lr(cells_style, preset)
+  sprintf(
+    "leftsep=%spt, rightsep=%spt",
+    format(lr[[1L]], trim = TRUE, scientific = FALSE),
+    format(lr[[2L]], trim = TRUE, scientific = FALSE)
+  )
 }
 
 

@@ -686,13 +686,22 @@ test_that("RTF scenario G: band cells carry rule; blank flanking cells emit \\br
   )
 })
 
-test_that("cell_padding_x drives RTF \\trgaph horizontal gap (padding SSOT)", {
-  # The horizontal cell-padding SSOT preset@cell_padding_x feeds both
+test_that("cell_padding_h drives RTF \\trgaph horizontal gap (padding SSOT)", {
+  # The horizontal cell-padding SSOT preset@cell_padding_h feeds both
   # column-width measurement and the rendered \trgaph, so they agree.
   spec <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
-    preset(cell_padding_x = 10)
+    preset(cell_padding_h = 10)
   txt <- .rtf_emit_text(spec)
   expect_match(txt, "\\\\trgaph200") # 10pt * 20 = 200 twips
+})
+
+test_that("RTF renders asymmetric cell_padding_h as its symmetric average", {
+  # RTF's \trgaph is one gap; c(left, right) renders as the average
+  # (total width still matches measurement). c(4, 8) -> mean 6 -> 120.
+  spec <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
+    preset(cell_padding_h = c(4, 8))
+  txt <- .rtf_emit_text(spec)
+  expect_match(txt, "\\\\trgaph120")
 })
 
 test_that(".rtf_body_trgaph falls back to 5.4pt default when preset is NULL", {

@@ -1894,9 +1894,10 @@ backend_docx <- function(grid, file) {
 # single numeric — the lowered `preset(padding = list(body = N))`
 # knob stamps the same value on every body cell). All four sides
 # share that scalar. When no override is set, fall back to the
-# horizontal cell-padding SSOT `preset@cell_padding_x` on the LEFT /
-# RIGHT sides only (so the rendered margin matches the measured
-# column width) while leaving the vertical margin to Word's default.
+# horizontal cell-padding SSOT `preset@cell_padding_h` on the LEFT /
+# RIGHT sides (exact per side, so an asymmetric `c(left, right)`
+# renders faithfully and matches the measured column width) while
+# leaving the vertical margin to Word's default.
 .docx_tcMar_from_style <- function(style, preset = NULL) {
   pad <- if (is_style_node(style)) style@padding else NA_real_
   if (length(pad) == 1L && !is.na(pad)) {
@@ -1913,11 +1914,17 @@ backend_docx <- function(grid, file) {
   if (!is_preset_spec(preset)) {
     return("")
   }
-  n <- as.integer(round(preset@cell_padding_x * 20))
+  lr <- .cell_padding_lr(preset)
   paste0(
     "<w:tcMar>",
-    sprintf("<w:left w:w=\"%d\" w:type=\"dxa\"/>", n),
-    sprintf("<w:right w:w=\"%d\" w:type=\"dxa\"/>", n),
+    sprintf(
+      "<w:left w:w=\"%d\" w:type=\"dxa\"/>",
+      as.integer(round(lr[[1L]] * 20))
+    ),
+    sprintf(
+      "<w:right w:w=\"%d\" w:type=\"dxa\"/>",
+      as.integer(round(lr[[2L]] * 20))
+    ),
     "</w:tcMar>"
   )
 }

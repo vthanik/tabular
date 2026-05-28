@@ -1233,12 +1233,13 @@ test_that("DOCX scenario G: band cell tcPr carries w:tcBorders w:bottom; blanks 
   }
 })
 
-test_that("cell_padding_x emits horizontal w:tcMar fallback (padding SSOT)", {
+test_that("cell_padding_h emits per-side w:tcMar (padding SSOT)", {
   # With no body padding override, DOCX emits left/right tcMar from
   # the horizontal SSOT so the rendered margin matches the measured
-  # column width; vertical margin stays Word's default.
+  # column width; vertical margin stays Word's default. c(left, right)
+  # renders exactly per side.
   spec <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
-    preset(cell_padding_x = 10)
+    preset(cell_padding_h = c(5, 15))
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   unzipped <- .unzip_docx(out)
@@ -1246,6 +1247,6 @@ test_that("cell_padding_x emits horizontal w:tcMar fallback (padding SSOT)", {
     readLines(file.path(unzipped, "word/document.xml")),
     collapse = ""
   )
-  expect_match(doc, "<w:left w:w=\"200\" w:type=\"dxa\"/>", fixed = TRUE)
-  expect_match(doc, "<w:right w:w=\"200\" w:type=\"dxa\"/>", fixed = TRUE)
+  expect_match(doc, "<w:left w:w=\"100\" w:type=\"dxa\"/>", fixed = TRUE) # 5pt
+  expect_match(doc, "<w:right w:w=\"300\" w:type=\"dxa\"/>", fixed = TRUE) # 15pt
 })
