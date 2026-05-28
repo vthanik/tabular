@@ -152,8 +152,12 @@ categorical groups inside one characteristic):
 \item \strong{\code{"auto"}} \emph{(default)} — engine measures the widest
 cell (header + body) using bundled Adobe AFM Core 13
 glyph metrics and distributes against the available
-content width. No wrapping: a wide cell produces a wide
-column. Pin a numeric width to force wrap inside.
+content width. The \strong{header} is sized to its widest
+\emph{word}, so a multi-word header (e.g. \code{"n, median"}) wraps at
+spaces; a non-breaking space (\verb{ }) keeps a run whole. The
+\strong{body} is sized to its widest \emph{line} and never wraps, so
+numeric values stay intact. Pin a numeric width to wrap the
+body too.
 \item \strong{\verb{<number>}} — pinned in inches. Backends wrap content
 inside the pinned width (tabularray \code{Q[wd=...]}, HTML
 \code{style="width:..."}, RTF / DOCX after twips conversion).

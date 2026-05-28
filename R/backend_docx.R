@@ -665,7 +665,9 @@ backend_docx <- function(grid, file) {
           length(col@align) == 1L &&
           !is.na(col@align)
       ) {
-        if (col@align == "decimal") "right" else col@align
+        # Decimal column header centres over the column (HTML parity);
+        # the body stays decimal / right-aligned.
+        if (col@align == "decimal") "center" else col@align
       } else if (
         is_style_node(surface_node) &&
           length(surface_node@halign) == 1L &&
@@ -675,14 +677,27 @@ backend_docx <- function(grid, file) {
       } else {
         .effective_header_halign(col, preset)
       }
+      # Valign cascade mirrors RTF: col_spec > surface > preset, then a
+      # bottom default (HTML parity) when nothing set one. (Adding the
+      # surface tier also closes a prior gap where
+      # `preset(alignment = list(header_valign = ...))` was ignored here.)
       valign <- if (
         is_col_spec(col) &&
           length(col@valign) == 1L &&
           !is.na(col@valign)
       ) {
         col@valign
+      } else if (
+        is_style_node(surface_node) &&
+          length(surface_node@valign) == 1L &&
+          !is.na(surface_node@valign)
+      ) {
+        surface_node@valign
       } else {
         .effective_header_valign(col, preset)
+      }
+      if (is.na(valign)) {
+        valign <- "bottom"
       }
       jc <- .docx_align_token(halign)
       valign_tok <- .docx_valign_token(valign)

@@ -9,7 +9,10 @@
 #   .compute_col_width(cells, header_text, preset) -> inches
 #     Measure widest cell (header + body) via AFM Core 13 and
 #     return inches at the preset's font_size, with cell padding
-#     added.
+#     added. Auto-fit is "by word" for the HEADER (the column sizes to
+#     its widest word, so a multi-word header wraps at spaces) and "by
+#     line" for the BODY (the column never narrower than the widest body
+#     line, so numeric cells never wrap). NBSP is non-breaking in both.
 #
 #   .distribute_widths(widths, available, ...) -> numeric inches
 #     Combine pinned / auto / percent widths into a final vector.
@@ -134,8 +137,22 @@
   head_em <- if (!nzchar(header)) {
     0L
   } else {
+    # Auto-fit "by word" (HTML parity): a header wraps at regular spaces,
+    # so its width contribution is the widest single WORD, not the full
+    # line. Newlines are author hard breaks (split first); then split on
+    # runs of ASCII space / tab. NBSP (U+00A0) is NOT a break point and
+    # is excluded by `[ \t]`, so engine_decimal padding and intentional
+    # non-breaking runs (e.g. "Mean (SD)" with NBSP) stay whole. The
+    # resolved width is still max(widest body line, widest header word,
+    # floor), so the body never overflows; only the header wraps.
     head_lines <- unlist(strsplit(header, "\n", fixed = TRUE))
-    max(.text_width_em(head_lines, head_afm))
+    head_words <- unlist(strsplit(head_lines, "[ \t]+"))
+    head_words <- head_words[nzchar(head_words)]
+    if (length(head_words) == 0L) {
+      0L
+    } else {
+      max(.text_width_em(head_words, head_afm))
+    }
   }
 
   max_em <- max(body_em, head_em)

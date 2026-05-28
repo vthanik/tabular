@@ -630,7 +630,13 @@ test_that("zero-row spec renders the longtblr with no body rows", {
   spec <- tabular(data.frame(x = integer(0L), y = character(0L)))
   txt <- render_tex(spec)
   expect_match(txt, "\\begin{longtblr}", fixed = TRUE)
-  expect_match(txt, "x & y \\\\", fixed = TRUE)
+  # Header cells carry a per-cell \SetCell{valign=b} (bottom-valign
+  # default, HTML parity); non-decimal columns inherit colspec halign.
+  expect_match(
+    txt,
+    "\\SetCell{valign=b} x & \\SetCell{valign=b} y \\\\",
+    fixed = TRUE
+  )
 })
 
 # ---------------------------------------------------------------------
@@ -664,7 +670,23 @@ test_that(".render_latex_col_labels_row falls back to column name on missing AST
     col_names_visible = c("x", "y"),
     cols = list()
   )
-  expect_identical(out, "x & y \\\\")
+  expect_identical(out, "\\SetCell{valign=b} x & \\SetCell{valign=b} y \\\\")
+})
+
+test_that("decimal column header gets \\SetCell{halign=c,valign=b}; non-decimal gets valign only", {
+  out <- tabular:::.render_latex_col_labels_row(
+    col_labels_ast = list(),
+    col_names_visible = c("grp", "n"),
+    cols = list(
+      grp = col_spec(label = "Group"),
+      n = col_spec(label = "N", align = "decimal")
+    )
+  )
+  # Decimal header centres + bottom; non-decimal omits halign (inherits
+  # the Q[...] colspec) but still gets the bottom valign default.
+  expect_match(out, "\\SetCell{halign=c,valign=b} n", fixed = TRUE)
+  expect_match(out, "\\SetCell{valign=b} grp", fixed = TRUE)
+  expect_false(grepl("halign=c,valign=b} grp", out, fixed = TRUE))
 })
 
 test_that("backend_latex() is callable directly with a grid + file", {

@@ -113,13 +113,70 @@ test_that(".compute_col_width uses bold AFM for header", {
   # When body is empty and header is the only content, bold
   # variant width is used. Helvetica-Bold em widths exceed
   # Helvetica regular widths -> bold header is wider for the same
-  # text. Use a long-enough string so the .min_auto_width_in
-  # floor doesn't clamp both to the same value.
+  # text. Use a long single word (no ASCII space) so header-by-word
+  # auto-fit measures the whole string against the full-line body, and
+  # the string is long enough that the .min_auto_width_in floor doesn't
+  # clamp both to the same value.
   p <- preset_spec(font_family = "sans", font_size = 10)
-  txt <- "Treatment-Emergent Adverse Events"
+  txt <- "Treatment-Emergent-Adverse-Events"
   hdr_only <- tabular:::.compute_col_width(character(0L), header = txt, p)
   body_only <- tabular:::.compute_col_width(c(txt), header = "", p)
   expect_true(hdr_only > body_only)
+})
+
+# ---------------------------------------------------------------------
+# Auto-fit "by word" (header) — HTML parity (wraps at ASCII spaces;
+# NBSP non-breaking; body never wraps)
+# ---------------------------------------------------------------------
+
+test_that(".compute_col_width sizes the header to its widest WORD, not its line", {
+  p <- preset_spec()
+  # "n, median" wraps at the ASCII space, so the column sizes to the
+  # widest word ("median"), letting Word/LaTeX wrap the header.
+  w_phrase <- tabular:::.compute_col_width(c("12", "45.6"), "n, median", p)
+  w_word <- tabular:::.compute_col_width(c("12", "45.6"), "median", p)
+  expect_equal(w_phrase, w_word)
+})
+
+test_that(".compute_col_width keeps an NBSP header whole (non-breaking)", {
+  p <- preset_spec()
+  nbsp <- " "
+  w_nbsp <- tabular:::.compute_col_width(
+    "12",
+    paste0("Mean", nbsp, "(SD)"),
+    p
+  )
+  w_space <- tabular:::.compute_col_width("12", "Mean (SD)", p)
+  # NBSP is not a break point, so the column must hold the full string;
+  # the space-separated variant only needs its widest word.
+  expect_gt(w_nbsp, w_space)
+})
+
+test_that(".compute_col_width never word-splits BODY cells (numerics never wrap)", {
+  p <- preset_spec()
+  # A body value with a space sizes the column to its full width (no
+  # word-split), so it never wraps; the header is empty here.
+  w_body <- tabular:::.compute_col_width("Active 100 mg", "", p)
+  w_word <- tabular:::.compute_col_width("Active", "", p)
+  expect_gt(w_body, w_word)
+})
+
+test_that(".compute_col_width floors an empty / whitespace-only header", {
+  p <- preset_spec()
+  w_empty <- tabular:::.compute_col_width("1", "", p)
+  w_spaces <- tabular:::.compute_col_width("1", "   ", p)
+  # Whitespace-only header contributes no word width; both fall back to
+  # the body / floor and agree.
+  expect_equal(w_empty, w_spaces)
+})
+
+test_that(".compute_col_width breaks a multi-line header on \\n (author break)", {
+  p <- preset_spec()
+  # "Difference\nN=12" -> author break -> widest word is "Difference",
+  # narrower than the same characters as one unbroken word.
+  w_ml <- tabular:::.compute_col_width("1", "Difference\nN=12", p)
+  w_joined <- tabular:::.compute_col_width("1", "DifferenceN=12", p)
+  expect_lt(w_ml, w_joined)
 })
 
 test_that("preset_spec carries cell_padding_h default 5.4 (padding SSOT)", {

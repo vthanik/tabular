@@ -588,6 +588,39 @@ test_that("multi-level header bands render as <w:tr> with <w:gridSpan>", {
   expect_match(doc, "Treatment Arm", fixed = TRUE)
 })
 
+test_that("decimal column header centres + defaults to bottom valign (HTML parity)", {
+  spec <- tabular(data.frame(grp = "A", n = "12.3")) |>
+    cols(
+      grp = col_spec(label = "Group"),
+      n = col_spec(label = "N", align = "decimal")
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  doc <- paste(
+    readLines(file.path(.unzip_docx(out), "word/document.xml")),
+    collapse = ""
+  )
+  # Header cells centre + bottom-align; the decimal body cell stays right.
+  expect_match(doc, "<w:jc w:val=\"center\"/>", fixed = TRUE)
+  expect_match(doc, "<w:vAlign w:val=\"bottom\"/>", fixed = TRUE)
+  expect_match(doc, "<w:jc w:val=\"right\"/>", fixed = TRUE)
+})
+
+test_that("preset header_valign override is honoured in the DOCX header row", {
+  spec <- tabular(data.frame(x = "a")) |>
+    cols(x = col_spec(label = "X")) |>
+    preset(alignment = list(header_valign = "middle"))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  doc <- paste(
+    readLines(file.path(.unzip_docx(out), "word/document.xml")),
+    collapse = ""
+  )
+  # Surface/preset valign (middle -> OOXML "center") wins over the
+  # bottom default.
+  expect_match(doc, "<w:vAlign w:val=\"center\"/>", fixed = TRUE)
+})
+
 test_that(".render_docx_table emits the no-rows marker when the grid has zero pages", {
   # The engine always produces >=1 page even for empty data, so
   # exercise the empty-pages branch by handing the renderer a grid

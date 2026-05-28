@@ -169,8 +169,12 @@
 #'   *   **`"auto"`** *(default)* — engine measures the widest
 #'       cell (header + body) using bundled Adobe AFM Core 13
 #'       glyph metrics and distributes against the available
-#'       content width. No wrapping: a wide cell produces a wide
-#'       column. Pin a numeric width to force wrap inside.
+#'       content width. The **header** is sized to its widest
+#'       *word*, so a multi-word header (e.g. `"n, median"`) wraps at
+#'       spaces; a non-breaking space (` `) keeps a run whole. The
+#'       **body** is sized to its widest *line* and never wraps, so
+#'       numeric values stay intact. Pin a numeric width to wrap the
+#'       body too.
 #'   *   **`<number>`** — pinned in inches. Backends wrap content
 #'       inside the pinned width (tabularray `Q[wd=...]`, HTML
 #'       `style="width:..."`, RTF / DOCX after twips conversion).

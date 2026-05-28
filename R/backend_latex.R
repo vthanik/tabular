@@ -306,7 +306,8 @@ backend_latex <- function(grid, file) {
     meta$col_labels_ast,
     col_names_vis,
     cols,
-    cs
+    cs,
+    preset = meta$preset
   )
   rowhead <- length(band_rows) + 1L
 
@@ -757,7 +758,8 @@ backend_latex <- function(grid, file) {
   col_labels_ast,
   col_names_visible,
   cols,
-  cs = NULL
+  cs = NULL,
+  preset = NULL
 ) {
   surface_node <- .chrome_surface_at(cs, "header")
   cells <- vapply(
@@ -769,7 +771,43 @@ backend_latex <- function(grid, file) {
       } else {
         .render_latex_inline(ast)
       }
-      .latex_wrap_text_props(raw, surface_node)
+      body <- .latex_wrap_text_props(raw, surface_node)
+      col <- cols[[nm]]
+      # Valign cascade (HTML parity): col_spec > surface > preset, then a
+      # bottom default so a wrapped multi-line header sits flush with
+      # single-line neighbours. Always emit `valign` (the longtblr row
+      # baseline is body_valign, so the header needs its own).
+      valign <- if (
+        is_col_spec(col) &&
+          length(col@valign) == 1L &&
+          !is.na(col@valign)
+      ) {
+        col@valign
+      } else if (
+        is_style_node(surface_node) &&
+          length(surface_node@valign) == 1L &&
+          !is.na(surface_node@valign)
+      ) {
+        surface_node@valign
+      } else {
+        .effective_header_valign(col, preset)
+      }
+      if (is.na(valign)) {
+        valign <- "bottom"
+      }
+      parts <- sprintf("valign=%s", .latex_valign_letter(valign))
+      # Override halign to centre ONLY for a decimal column (HTML parity);
+      # other columns inherit their `Q[...]` colspec alignment, so no
+      # `halign` is emitted (keeps prior output verbatim).
+      if (
+        is_col_spec(col) &&
+          length(col@align) == 1L &&
+          !is.na(col@align) &&
+          col@align == "decimal"
+      ) {
+        parts <- paste0("halign=c,", parts)
+      }
+      sprintf("\\SetCell{%s} %s", parts, body)
     },
     character(1L)
   )
