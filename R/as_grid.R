@@ -734,6 +734,20 @@ as_grid <- function(spec) {
   pages
 }
 
+# Safe lookup of one physical inter-section gap (from `gap_counts()`)
+# off grid metadata. `meta$gaps` is absent on hand-built fixtures and
+# NA-keyed gaps fall back to `default`. Backends use this as the
+# blank-line fallback so the `spacing` knob (which feeds `meta$gaps`)
+# drives inter-section spacing, while a per-surface `style()` blank
+# count still overrides it.
+.meta_gap <- function(meta, key, default = 0L) {
+  g <- meta$gaps
+  if (is.null(g) || is.null(g[[key]]) || is.na(g[[key]])) {
+    return(as.integer(default))
+  }
+  as.integer(g[[key]])
+}
+
 .slice_one_page <- function(
   p,
   cells_text,

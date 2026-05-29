@@ -149,8 +149,18 @@ backend_html <- function(grid, file) {
   # blank-paragraph padding from `chrome_style$surfaces$title`
   # (blank_above / blank_below).
   blank_p <- "<p class=\"tabular-pad\">&nbsp;</p>"
-  pad_title_top <- .html_blank_count(cs, "title", "above", 1L)
-  pad_title_bottom <- .html_blank_count(cs, "title", "below", 1L)
+  pad_title_top <- .html_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_title_bottom <- .html_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
   titles <- .render_html_title_block(
     meta$titles_ast,
     preset = preset,

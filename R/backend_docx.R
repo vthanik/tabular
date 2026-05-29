@@ -229,8 +229,18 @@ backend_docx <- function(grid, file) {
   meta <- grid@metadata
   cs <- meta$chrome_style %||% chrome_style()
   blank_p <- "<w:p/>"
-  pad_title_top <- .docx_blank_count(cs, "title", "above", 1L)
-  pad_title_bottom <- .docx_blank_count(cs, "title", "below", 1L)
+  pad_title_top <- .docx_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_title_bottom <- .docx_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
   pad_body_top <- 0L
   pad_body_bottom <- 0L
 

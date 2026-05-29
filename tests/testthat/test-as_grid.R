@@ -242,3 +242,47 @@ test_that("stripe never overwrites an explicit per-cell background", {
   # Row 2 would be the even (filled) row, but the explicit red wins.
   expect_identical(st[[2L, "lbl"]]@background, "#ff0000")
 })
+
+# ---------------------------------------------------------------------
+# spacing knob drives inter-section blank lines (meta$gaps)
+# ---------------------------------------------------------------------
+
+test_that("the spacing knob changes the rendered title blank lines (HTML)", {
+  mk <- function(sp) {
+    s <- tabular(data.frame(x = 1L), titles = "T")
+    if (!is.null(sp)) {
+      s <- s |> preset(spacing = sp)
+    }
+    s
+  }
+  npad <- function(spec) {
+    f <- withr::local_tempfile(
+      fileext = ".html",
+      .local_envir = parent.frame()
+    )
+    emit(spec, f)
+    sum(grepl("tabular-pad", readLines(f, warn = FALSE)))
+  }
+  base <- npad(mk(NULL))
+  # Raising the above-title gap adds blank-pad paragraphs; zeroing both
+  # title gaps removes them. The knob was previously dead (resolved into
+  # meta$gaps but ignored by the backends).
+  expect_gt(npad(mk(list(title = c(above = 3)))), base)
+  expect_lt(npad(mk(list(title = c(above = 0, below = 0)))), base)
+})
+
+test_that("a per-surface style() blank count overrides the spacing knob", {
+  spec <- tabular(data.frame(x = 1L), titles = "T") |>
+    preset(spacing = list(title = c(above = 3))) |>
+    style(blank_above = 0L, .at = cells_title())
+  f <- withr::local_tempfile(fileext = ".html")
+  emit(spec, f)
+  high <- tabular(data.frame(x = 1L), titles = "T") |>
+    preset(spacing = list(title = c(above = 3)))
+  f2 <- withr::local_tempfile(fileext = ".html")
+  emit(high, f2)
+  expect_lt(
+    sum(grepl("tabular-pad", readLines(f, warn = FALSE))),
+    sum(grepl("tabular-pad", readLines(f2, warn = FALSE)))
+  )
+})

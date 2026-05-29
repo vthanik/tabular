@@ -226,7 +226,9 @@ backend_latex <- function(grid, file) {
     is_cont_panel = is_cont_panel,
     rep_titles = rep_titles,
     preset = meta$preset,
-    cs = cs
+    cs = cs,
+    gap_above = .meta_gap(meta, "above_title", 1L),
+    gap_below = .meta_gap(meta, "title_to_body", 1L)
   )
   foot_tpl <- .latex_foot_template(
     meta$footnotes_ast,
@@ -429,7 +431,9 @@ backend_latex <- function(grid, file) {
   is_cont_panel = FALSE,
   rep_titles = TRUE,
   preset = NULL,
-  cs = NULL
+  cs = NULL,
+  gap_above = 1L,
+  gap_below = 1L
 ) {
   titles <- .render_latex_title_block(titles_ast, preset = preset, cs = cs)
   has_titles <- length(titles) > 0L
@@ -437,8 +441,8 @@ backend_latex <- function(grid, file) {
   # .at = cells_title())`, else the legacy single blank line) wraps the
   # title block so the spacing repeats with the titles on every page.
   if (has_titles) {
-    pad_top <- .latex_blank_count(cs, "title", "above", 1L)
-    pad_bottom <- .latex_blank_count(cs, "title", "below", 1L)
+    pad_top <- .latex_blank_count(cs, "title", "above", gap_above)
+    pad_bottom <- .latex_blank_count(cs, "title", "below", gap_below)
     # Real blank lines, NOT empty strings: an empty TeX paragraph has
     # zero height under `\parskip=0pt`, so `rep("", n)` produced no
     # visible gap. `{\strut\par}` is one full-height blank line each,

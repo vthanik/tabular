@@ -235,8 +235,18 @@ backend_rtf <- function(grid, file) {
     )
   }
 
-  pad_top <- .rtf_blank_count(cs, "title", "above", 1L)
-  pad_bottom <- .rtf_blank_count(cs, "title", "below", 1L)
+  pad_top <- .rtf_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_bottom <- .rtf_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
 
   # Non-repeating titles: paragraphs ABOVE the table (panel 1 only, so
   # they appear once). The continuation marker, when titles do not
