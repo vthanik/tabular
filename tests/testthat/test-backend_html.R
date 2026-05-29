@@ -476,7 +476,7 @@ test_that(".tabular-title + .tabular-footnote also render at preset@font_size", 
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(
     txt,
-    ".tabular-title { font-size: 9pt; font-weight: bold; text-align: center; margin: .2rem 0; }",
+    ".tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }",
     fixed = TRUE
   )
   expect_match(
@@ -494,7 +494,7 @@ test_that("preset(font_size = N) cascades to title + footnote rules too", {
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(
     txt,
-    ".tabular-title { font-size: 12pt; font-weight: bold; text-align: center; margin: .2rem 0; }",
+    ".tabular-title { font-size: 12pt; font-weight: 600; text-align: center; margin: .2rem 0; }",
     fixed = TRUE
   )
   expect_match(
@@ -2114,7 +2114,7 @@ test_that("HTML emits <tr class='tabular-group-header'> with bold spanning cell 
   # CSS rules for both classes ship in the inline stylesheet.
   expect_match(
     txt,
-    ".tabular-group-header td { font-weight: bold;",
+    ".tabular-group-header td { font-weight: 600;",
     fixed = TRUE
   )
 })
