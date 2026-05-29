@@ -286,3 +286,131 @@ test_that("a per-surface style() blank count overrides the spacing knob", {
     sum(grepl("tabular-pad", readLines(f2, warn = FALSE)))
   )
 })
+
+# ---------------------------------------------------------------------
+# Group-header style stamp (cells_group_headers cascade -> header rows)
+# ---------------------------------------------------------------------
+
+mk_band_spec <- function() {
+  d <- data.frame(
+    soc = c("Infections", "Infections", "Cardiac", "Cardiac"),
+    label = c("Pneumonia", "Sepsis", "MI", "AF"),
+    placebo = c("1", "2", "3", "4")
+  )
+  tabular(d) |>
+    cols(
+      label = col_spec(label = "PT"),
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      placebo = col_spec(label = "Placebo")
+    )
+}
+
+test_that("header_meta carries group_col + data_idx on header rows, NULL elsewhere", {
+  p <- as_grid(mk_band_spec())@pages[[1L]]
+  hdr <- which(p$is_header_row)
+  expect_gt(length(hdr), 0L)
+  for (r in hdr) {
+    expect_true(is.list(p$header_meta[[r]]))
+    expect_identical(p$header_meta[[r]]$group_col, "soc")
+    expect_true(is.numeric(p$header_meta[[r]]$data_idx))
+  }
+  # Data rows carry no header_meta.
+  data_rows <- setdiff(seq_len(nrow(p$cells_style)), hdr)
+  expect_true(all(vapply(p$header_meta[data_rows], is.null, logical(1L))))
+})
+
+test_that("the stamp leaves header-row bold NA when no group_headers layer is set", {
+  p <- as_grid(mk_band_spec())@pages[[1L]]
+  for (r in which(p$is_header_row)) {
+    expect_true(is.na(p$cells_style[[r, 1L]]@bold))
+  }
+})
+
+test_that("cells_group_headers(bold = FALSE) stamps bold = FALSE on header-row cells", {
+  p <- as_grid(
+    mk_band_spec() |> style(bold = FALSE, .at = cells_group_headers())
+  )@pages[[1L]]
+  hdr <- which(p$is_header_row)
+  for (r in hdr) {
+    for (cn in colnames(p$cells_style)) {
+      expect_false(isTRUE(p$cells_style[[r, cn]]@bold))
+      expect_identical(p$cells_style[[r, cn]]@bold, FALSE)
+    }
+  }
+})
+
+test_that("the stamp sets only the requested field, never clobbering other cell attrs", {
+  # A group_headers layer that sets ONLY italic must leave bold NA.
+  p <- as_grid(
+    mk_band_spec() |> style(italic = TRUE, .at = cells_group_headers())
+  )@pages[[1L]]
+  r <- which(p$is_header_row)[[1L]]
+  expect_true(isTRUE(p$cells_style[[r, 1L]]@italic))
+  expect_true(is.na(p$cells_style[[r, 1L]]@bold))
+  expect_true(is.na(p$cells_style[[r, 1L]]@background))
+})
+
+test_that("cells_group_headers(j = ) restricts the override to the matching band", {
+  p <- as_grid(
+    mk_band_spec() |>
+      style(bold = FALSE, .at = cells_group_headers(j = "soc"))
+  )@pages[[1L]]
+  for (r in which(p$is_header_row)) {
+    # Every header row in this spec is a `soc` band, so all match.
+    expect_identical(p$cells_style[[r, 1L]]@bold, FALSE)
+  }
+  # A j that matches no band leaves every header row untouched.
+  p2 <- as_grid(
+    mk_band_spec() |>
+      style(bold = FALSE, .at = cells_group_headers(j = "placebo"))
+  )@pages[[1L]]
+  for (r in which(p2$is_header_row)) {
+    expect_true(is.na(p2$cells_style[[r, 1L]]@bold))
+  }
+})
+
+test_that("cells_group_headers(where = ) selects header rows by source data row", {
+  p <- as_grid(
+    mk_band_spec() |>
+      style(bold = FALSE, .at = cells_group_headers(where = soc == "Cardiac"))
+  )@pages[[1L]]
+  hdr <- which(p$is_header_row)
+  for (r in hdr) {
+    txt <- p$cells_text[r, ][nzchar(p$cells_text[r, ])][[1L]]
+    if (identical(txt, "Cardiac")) {
+      expect_identical(p$cells_style[[r, 1L]]@bold, FALSE)
+    } else {
+      expect_true(is.na(p$cells_style[[r, 1L]]@bold))
+    }
+  }
+})
+
+test_that("a non-logical cells_group_headers(where = ) raises tabular_error_input", {
+  expect_error(
+    as_grid(
+      mk_band_spec() |>
+        style(bold = FALSE, .at = cells_group_headers(where = soc))
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("a length-1 cells_group_headers(where = ) recycles to every header row", {
+  p <- as_grid(
+    mk_band_spec() |>
+      style(bold = FALSE, .at = cells_group_headers(where = TRUE))
+  )@pages[[1L]]
+  for (r in which(p$is_header_row)) {
+    expect_identical(p$cells_style[[r, 1L]]@bold, FALSE)
+  }
+})
+
+test_that("a wrong-length cells_group_headers(where = ) raises tabular_error_input", {
+  expect_error(
+    as_grid(
+      mk_band_spec() |>
+        style(bold = FALSE, .at = cells_group_headers(where = c(TRUE, FALSE)))
+    ),
+    class = "tabular_error_input"
+  )
+})

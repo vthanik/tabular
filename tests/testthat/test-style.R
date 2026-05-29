@@ -106,3 +106,30 @@ test_that("style() error snapshots", {
     tabular(saf_demo) |> style(bold = TRUE, .at = "not a location")
   )
 })
+
+test_that("a whole-number double blank_above is coerced to integer", {
+  spec <- tabular(saf_demo, titles = "T") |>
+    style(blank_above = 2, .at = cells_title())
+  node <- spec@styles@layers[[1L]]@style
+  expect_identical(node@blank_above, 2L)
+})
+
+test_that("a scalar padding broadcasts to all four per-side fields", {
+  spec <- tabular(saf_demo) |>
+    style(padding = 3, .at = cells_body())
+  node <- spec@styles@layers[[1L]]@style
+  expect_identical(node@padding_top, 3)
+  expect_identical(node@padding_right, 3)
+  expect_identical(node@padding_bottom, 3)
+  expect_identical(node@padding_left, 3)
+})
+
+test_that("a named padding vector sets only the listed per-side fields", {
+  spec <- tabular(saf_demo) |>
+    style(padding = c(top = 1, left = 2), .at = cells_body())
+  node <- spec@styles@layers[[1L]]@style
+  expect_identical(node@padding_top, 1)
+  expect_identical(node@padding_left, 2)
+  expect_true(is.na(node@padding_right))
+  expect_true(is.na(node@padding_bottom))
+})

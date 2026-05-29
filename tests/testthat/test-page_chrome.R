@@ -472,3 +472,69 @@ test_that(".substitute_engine_tokens swaps both program and program_path", {
   )
   expect_match(result, "demo.R at /work/demo.R on 27MAY2026", fixed = TRUE)
 })
+
+# ---- coverage: .resolve_source_path 5-mode detection chain ----------
+
+test_that(".resolve_source_path mode 1 reads the RStudio editor context", {
+  skip_if_not_installed("rstudioapi")
+  testthat::local_mocked_bindings(
+    isAvailable = function(...) TRUE,
+    getSourceEditorContext = function(...) list(path = "/work/edit.R"),
+    .package = "rstudioapi"
+  )
+  expect_identical(tabular:::.resolve_source_path(), "/work/edit.R")
+})
+
+test_that(".resolve_source_path mode 2 finds a source() `ofile` frame", {
+  skip_if_not_installed("rstudioapi")
+  testthat::local_mocked_bindings(
+    isAvailable = function(...) FALSE,
+    .package = "rstudioapi"
+  )
+  f <- function() {
+    ofile <- "/work/sourced.R"
+    tabular:::.resolve_source_path()
+  }
+  expect_identical(f(), "/work/sourced.R")
+})
+
+test_that(".resolve_source_path mode 3 reads Rscript --file= and -f", {
+  skip_if_not_installed("rstudioapi")
+  testthat::local_mocked_bindings(
+    isAvailable = function(...) FALSE,
+    .package = "rstudioapi"
+  )
+  expect_match(
+    tabular:::.resolve_source_path(c("R", "--file=/work/batch.R")),
+    "batch\\.R$"
+  )
+  expect_match(
+    tabular:::.resolve_source_path(c("R", "-f", "/work/dashf.R")),
+    "dashf\\.R$"
+  )
+})
+
+test_that(".resolve_source_path mode 4 reads knitr::current_input", {
+  skip_if_not_installed("rstudioapi")
+  skip_if_not_installed("knitr")
+  testthat::local_mocked_bindings(
+    isAvailable = function(...) FALSE,
+    .package = "rstudioapi"
+  )
+  testthat::local_mocked_bindings(
+    current_input = function(...) "report.qmd",
+    .package = "knitr"
+  )
+  # cmd_args carries no --file= / -f, so detection falls to knitr.
+  expect_identical(tabular:::.resolve_source_path("R"), "report.qmd")
+})
+
+test_that(".resolve_page_band passes a pre-parsed inline_ast cell through", {
+  band <- tabular:::.resolve_page_band(
+    list(left = parse_inline("hi")),
+    program = "p",
+    program_path = "pp",
+    datetime = "dt"
+  )
+  expect_true(is_inline_ast(band$left[[1L]]))
+})

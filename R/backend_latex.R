@@ -1393,7 +1393,27 @@ backend_latex <- function(grid, file) {
             header_indent_pt <- indent_pt_per_level * header_depth
           }
         }
-        body <- paste0("\\textbf{", .latex_escape_cell(host_text), "}")
+        # Group-header weight + text props come from the host cell's
+        # resolved style_node (stamped by `.stamp_group_headers()`):
+        # NA bold == bold (default), `isFALSE` == off. Same idiom as the
+        # subgroup banner above.
+        host_node <- if (!is.null(cells_style) && !is.na(host_idx)) {
+          cells_style[[i, host_idx]]
+        } else {
+          NULL
+        }
+        bold_open <- if (
+          is_style_node(host_node) && isTRUE(host_node@bold == FALSE)
+        ) {
+          ""
+        } else {
+          "\\textbf{"
+        }
+        bold_close <- if (identical(bold_open, "")) "" else "}"
+        body <- .latex_wrap_text_props(
+          paste0(bold_open, .latex_escape_cell(host_text), bold_close),
+          host_node
+        )
         body <- .latex_indent_wrap(body, header_indent_pt)
         terminator <- row_term(i)
         if (ncol_data == 1L) {

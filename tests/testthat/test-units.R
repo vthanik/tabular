@@ -329,3 +329,26 @@ test_that(".resolve_unit returns NULL on NULL or unparseable input", {
   expect_null(tabular:::.resolve_unit(NULL, "pt"))
   expect_null(tabular:::.resolve_unit("nope", "pt"))
 })
+
+# ---- coverage: bare-number default unit, bad numeric, printer -------
+
+test_that(".parse_dim defaults a unit-less number to inches", {
+  parsed <- tabular:::.parse_dim("5")
+  expect_identical(tabular:::.dim_to_inches(parsed), 5)
+})
+
+test_that(".parse_dim rejects an unparseable dimension", {
+  expect_error(tabular:::.parse_dim("-5in"), class = "tabular_error_input")
+  expect_error(tabular:::.parse_dim("Infin"), class = "tabular_error_input")
+})
+
+test_that(".parse_dim rejects a parsed-but-non-finite numeric value", {
+  # A digit string long enough to overflow to Inf parses past the
+  # regex, then trips the finite / non-negative guard.
+  huge <- paste0(strrep("9", 400L), "in")
+  expect_error(tabular:::.parse_dim(huge), class = "tabular_error_input")
+})
+
+test_that("print.tabular_unit prints a compact one-liner", {
+  expect_output(tabular:::print.tabular_unit(pt(5)), "<tabular_unit> 5pt")
+})

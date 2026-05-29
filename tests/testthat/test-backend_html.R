@@ -2151,7 +2151,7 @@ test_that("HTML nested bands: band-1 header flush, band-2 header indented (Chang
   # Band 2 ("AE", depth 1) HAS padding-left calc on the spanning cell.
   expect_match(
     html,
-    "<tr class=\"tabular-group-header\"><td colspan=\"2\" style=\"padding-left: calc\\(\\.6rem \\+ [0-9.]+em\\);\"><strong>AE</strong>",
+    "<tr class=\"tabular-group-header\"><td colspan=\"2\" style=\"padding-left: calc\\(\\.6rem \\+ [0-9.]+em\\)\"><strong>AE</strong>",
     perl = TRUE
   )
 })

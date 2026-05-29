@@ -897,6 +897,24 @@ backend_docx <- function(grid, file) {
             )
           }
         }
+        # Group-header weight + text props from the host cell's stamped
+        # style_node: NA bold == bold (default), `isFALSE` == off. The
+        # run-property builder is shared with the subgroup banner.
+        host_node <- if (!is.null(page$cells_style) && !is.na(host_idx)) {
+          page$cells_style[[i, host_idx]]
+        } else {
+          NULL
+        }
+        rpr_inner <- .docx_rPr_from_style(
+          host_node,
+          preset,
+          bold_default = TRUE
+        )
+        header_rpr <- if (nzchar(rpr_inner)) {
+          paste0("<w:rPr>", rpr_inner, "</w:rPr>")
+        } else {
+          ""
+        }
         out <- c(
           out,
           paste0(
@@ -908,7 +926,8 @@ backend_docx <- function(grid, file) {
             "<w:p><w:pPr>",
             header_ind_tok,
             "<w:jc w:val=\"left\"/></w:pPr>",
-            "<w:r><w:rPr><w:b/></w:rPr>",
+            "<w:r>",
+            header_rpr,
             "<w:t xml:space=\"preserve\">",
             .docx_escape(host_text),
             "</w:t></w:r></w:p>",
@@ -1042,16 +1061,25 @@ backend_docx <- function(grid, file) {
     return(character())
   }
   span_w <- sum(as.integer(widths_twips))
+  surface_node <- .chrome_surface_at(cs, "subgroup")
+  # Subgroup banner weight + text props from the resolved surface node:
+  # NA bold == bold (default), `isFALSE` == off. Shares the run-property
+  # builder with the group-header rows; previously hardcoded `<w:b/>`,
+  # ignoring an overriding bold / italic / color / font on the node.
+  default_rpr <- .docx_rPr_from_style(
+    surface_node,
+    preset,
+    bold_default = TRUE
+  )
   inner_runs <- .render_docx_inline(
     subgroup_line_ast,
-    default_rpr = "<w:b/>"
+    default_rpr = default_rpr
   )
   page_break <- if (isTRUE(page_break_before)) {
     "<w:pageBreakBefore/>"
   } else {
     ""
   }
-  surface_node <- .chrome_surface_at(cs, "subgroup")
   halign <- if (
     is_style_node(surface_node) &&
       length(surface_node@halign) == 1L &&
@@ -1924,7 +1952,7 @@ backend_docx <- function(grid, file) {
 #
 # Emission order is stable (declaration order in style_node) so
 # byte-determinism is trivial.
-.docx_rPr_from_style <- function(style, preset = NULL) {
+.docx_rPr_from_style <- function(style, preset = NULL, bold_default = FALSE) {
   if (!is_style_node(style)) {
     style <- style_node()
   }
@@ -1940,7 +1968,15 @@ backend_docx <- function(grid, file) {
       )
     )
   }
-  if (isTRUE(style@bold)) {
+  # `bold_default = TRUE` (group-header / subgroup surfaces): bold unless
+  # explicitly turned off (NA == bold). Otherwise (body cells): bold only
+  # when explicitly set TRUE.
+  bold_on <- if (bold_default) {
+    !isFALSE(style@bold)
+  } else {
+    isTRUE(style@bold)
+  }
+  if (bold_on) {
     parts <- c(parts, "<w:b/>")
   }
   if (isTRUE(style@italic)) {

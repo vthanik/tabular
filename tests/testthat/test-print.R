@@ -440,3 +440,55 @@ test_that("knit_print.tabular_spec returns asis text under pandoc_to = 'rtf'", {
   result <- knit_print.tabular_spec(s)
   expect_s3_class(result, "knit_asis")
 })
+
+# ---------------------------------------------------------------------
+# Coverage — direct .tabular_spec_print branches covr can instrument
+# (the S7 print() dispatch path above is NOT instrumented, so these
+# call the helper directly).
+# ---------------------------------------------------------------------
+
+test_that("output = 'latex' routes to the md source preview (instrumented)", {
+  spec <- tabular(data.frame(x = 1L), titles = "T")
+  expect_output(
+    tabular:::.tabular_spec_print(spec, output = "latex", view = FALSE)
+  )
+})
+
+test_that("an unknown well-typed output falls through to the cli summary", {
+  spec <- tabular(data.frame(x = 1L), titles = "T")
+  # The cli summary writes to the message stream, not stdout; the point
+  # is that the switch default branch executes without error.
+  expect_no_error(
+    suppressMessages(
+      tabular:::.tabular_spec_print(spec, output = "zzz", view = FALSE)
+    )
+  )
+})
+
+test_that("the Databricks path routes through displayHTML when detected", {
+  skip_if_not_installed("htmltools")
+  spec <- tabular(data.frame(x = 1L))
+  testthat::local_mocked_bindings(.is_databricks = function() TRUE)
+  shown <- NULL
+  # `rlang::exec("displayHTML", html)` resolves the name off the search
+  # path; provide it in the global env for the duration of the test.
+  assign("displayHTML", function(html) shown <<- html, envir = globalenv())
+  withr::defer(rm("displayHTML", envir = globalenv()))
+  tabular:::.tabular_spec_print(spec, view = FALSE)
+  expect_true(is.character(shown) && nzchar(shown))
+})
+
+test_that("a broken HTML render falls back to the cli summary with a warning", {
+  skip_if_not_installed("htmltools")
+  spec <- tabular(data.frame(x = 1L))
+  testthat::local_mocked_bindings(
+    as.tags = function(...) stop("boom"),
+    .package = "htmltools"
+  )
+  # The fallback warns ("HTML preview failed") then prints the cli
+  # summary to the message stream.
+  expect_warning(
+    suppressMessages(tabular:::.tabular_spec_print(spec, view = FALSE)),
+    "HTML preview failed"
+  )
+})

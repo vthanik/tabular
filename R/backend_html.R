@@ -646,27 +646,51 @@ backend_html <- function(grid, file) {
             break
           }
         }
-        # Band-depth padding on the spanning cell. depth = 0 -> no
-        # extra style; depth > 0 -> `padding-left: calc(.6rem + Xem)`.
-        header_style <- ""
+        # Group-header weight + text props come from the host cell's
+        # resolved style_node (stamped by `.stamp_group_headers()`):
+        # NA bold == bold (keep `<strong>`), `isFALSE` == off (drop
+        # `<strong>` and emit `font-weight: normal`, which beats the
+        # `.tabular-group-header td { 600 }` class). The chrome inline
+        # decls (`.html_chrome_inline_style`, the subgroup-banner helper)
+        # are merged with the band-depth padding into one `style=`.
+        host_node <- if (!is.null(page$cells_style) && !is.na(host_idx)) {
+          page$cells_style[[i, host_idx]]
+        } else {
+          NULL
+        }
+        is_bold <- !(is_style_node(host_node) && isFALSE(host_node@bold))
+        decls <- character()
         if (!is.na(host_idx)) {
           header_depth <- cells_indent[i, host_idx]
           if (isTRUE(header_depth > 0L) && indent_em_per_level > 0) {
-            header_style <- sprintf(
-              " style=\"padding-left: calc(.6rem + %gem);\"",
-              indent_em_per_level * header_depth
+            decls <- c(
+              decls,
+              sprintf(
+                "padding-left: calc(.6rem + %gem)",
+                indent_em_per_level * header_depth
+              )
             )
           }
         }
+        chrome_frag <- .html_chrome_inline_style(host_node)
+        if (nzchar(chrome_frag)) {
+          decls <- c(decls, sub('^ style="(.*)"$', "\\1", chrome_frag))
+        }
+        header_style <- if (length(decls) > 0L) {
+          sprintf(" style=\"%s\"", paste(decls, collapse = "; "))
+        } else {
+          ""
+        }
+        inner <- if (is_bold) {
+          paste0("<strong>", .html_escape_cell(host_text), "</strong>")
+        } else {
+          .html_escape_cell(host_text)
+        }
         return(sprintf(
-          paste0(
-            "<tr class=\"tabular-group-header\">",
-            "<td colspan=\"%d\"%s><strong>%s</strong></td>",
-            "</tr>"
-          ),
+          "<tr class=\"tabular-group-header\"><td colspan=\"%d\"%s>%s</td></tr>",
           ncols_vis,
           header_style,
-          .html_escape_cell(host_text)
+          inner
         ))
       }
       cells <- vapply(

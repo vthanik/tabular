@@ -156,7 +156,7 @@ backend_md <- function(grid, file) {
       for (page in panel_pages) {
         panel_lines <- c(
           panel_lines,
-          .render_md_page_body_rows(page, preset = meta$preset)
+          .render_md_page_body_rows(page, preset = meta$preset, cs = cs)
         )
       }
       if (k > 1L) {
@@ -181,15 +181,16 @@ backend_md <- function(grid, file) {
 # Render one page slice's body lines: an optional subgroup banner
 # (bold) followed by one pipe-table row per data row. Returns
 # character(0) when the slice is empty (no banner, zero rows).
-.render_md_page_body_rows <- function(page, preset = NULL) {
+.render_md_page_body_rows <- function(page, preset = NULL, cs = NULL) {
   c(
-    .render_md_subgroup_banner(page),
+    .render_md_subgroup_banner(page, cs),
     .render_md_body_rows(
       page$cells_text,
       is_header_row = page$is_header_row,
       is_blank_row = page$is_blank_row,
       cells_indent = page$cells_indent,
-      preset = preset
+      preset = preset,
+      cells_style = page$cells_style
     )
   )
 }
@@ -209,12 +210,17 @@ backend_md <- function(grid, file) {
 # Render the subgroup banner (e.g. "Treatment Arm: Placebo") as one
 # bold line. Returns character(0) when the page has no subgroup
 # runtime, so callers can collapse cleanly.
-.render_md_subgroup_banner <- function(page) {
+.render_md_subgroup_banner <- function(page, cs = NULL) {
   ast <- page$subgroup_line_ast
   if (is.null(ast) || !is_inline_ast(ast) || length(ast@runs) == 0L) {
     return(character())
   }
-  paste0("**", .render_md_inline(ast), "**")
+  # Weight + emphasis from the subgroup chrome surface node: NA bold ==
+  # bold (default `**`), `isFALSE` == off; italic adds `*`. Colour /
+  # background / font are not representable in GFM (one-shot warn).
+  surface_node <- .chrome_surface_at(cs, "subgroup")
+  .md_warn_dropped_text_props(surface_node, "subgroup banner")
+  .md_emphasize(.render_md_inline(ast), surface_node)
 }
 
 # Render one chrome band (pagehead or pagefoot) as a character
@@ -401,12 +407,59 @@ backend_md <- function(grid, file) {
 # engine_decimal `cells_text` slice; we route it through
 # `.md_escape_cell()` so embedded `|` and newlines do not break
 # the pipe-table parser.
+# Wrap GFM emphasis around `text` from a host `style_node`: NA bold ==
+# bold (default), `isFALSE` == off; italic adds `*`. `**bold**`,
+# `*italic*`, `***both***`, or plain text.
+.md_emphasize <- function(text, node) {
+  is_bold <- !(is_style_node(node) && isFALSE(node@bold))
+  is_italic <- is_style_node(node) && isTRUE(node@italic)
+  out <- text
+  if (is_italic) {
+    out <- paste0("*", out, "*")
+  }
+  if (is_bold) {
+    out <- paste0("**", out, "**")
+  }
+  out
+}
+
+# Markdown (GFM) cannot represent colour, background, or font on a
+# surface. Emit a one-shot fidelity warning per (Markdown, attribute)
+# per render when the resolved node carries one. Shared by the
+# group-header and subgroup paths.
+.md_warn_dropped_text_props <- function(node, surface) {
+  if (!is_style_node(node)) {
+    return(invisible(NULL))
+  }
+  checks <- list(
+    color = node@color,
+    background = node@background,
+    `font family` = node@font_family,
+    `font size` = node@font_size
+  )
+  for (feature in names(checks)) {
+    v <- checks[[feature]]
+    has <- length(v) == 1L &&
+      !is.na(v) &&
+      (is.numeric(v) || (is.character(v) && nzchar(v)))
+    if (isTRUE(has)) {
+      .fidelity_warn(
+        paste(surface, feature),
+        "Markdown",
+        detail = "GFM has no syntax for colour / background / font; rendered without it."
+      )
+    }
+  }
+  invisible(NULL)
+}
+
 .render_md_body_rows <- function(
   cells_text,
   is_header_row = NULL,
   is_blank_row = NULL,
   cells_indent = NULL,
-  preset = NULL
+  preset = NULL,
+  cells_style = NULL
 ) {
   nrow_data <- nrow(cells_text)
   if (nrow_data == 0L) {
@@ -452,11 +505,19 @@ backend_md <- function(grid, file) {
             header_prefix <- strrep(indent_unit_text, header_depth)
           }
         }
-        first_cell <- paste0(
-          "**",
-          header_prefix,
-          .md_escape_cell(host_text),
-          "**"
+        # Group-header weight + emphasis from the host cell's stamped
+        # style_node: NA bold == bold (default `**`), `isFALSE` == off;
+        # italic adds `*`. GFM cannot represent colour / background /
+        # font, so those degrade with a one-shot fidelity warning.
+        host_node <- if (!is.null(cells_style) && !is.na(host_idx)) {
+          cells_style[[i, host_idx]]
+        } else {
+          NULL
+        }
+        .md_warn_dropped_text_props(host_node, "group header")
+        first_cell <- .md_emphasize(
+          paste0(header_prefix, .md_escape_cell(host_text)),
+          host_node
         )
         return(.md_pipe_row(c(first_cell, rep("&nbsp;", ncols - 1L))))
       }

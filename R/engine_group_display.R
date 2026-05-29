@@ -751,7 +751,8 @@ engine_group_display <- function(
       cells_style = cells_style,
       cells_indent = cells_indent,
       is_header_row = rep(FALSE, length(row_indices)),
-      is_blank_row = rep(FALSE, length(row_indices))
+      is_blank_row = rep(FALSE, length(row_indices)),
+      header_meta = vector("list", length(row_indices))
     ))
   }
 
@@ -802,6 +803,12 @@ engine_group_display <- function(
   )
   is_header_row <- logical(total_out_max)
   is_blank_row <- logical(total_out_max)
+  # Per-row provenance for the group-header style stamp: NULL on data /
+  # blank rows, list(group_col, data_idx) on each injected header row so
+  # `.stamp_group_headers()` can match `cells_group_headers(j = )` against
+  # the band's group column and evaluate `where = ` against the source
+  # data row.
+  header_meta <- vector("list", total_out_max)
 
   out_pos <- 0L
   first_emit <- TRUE
@@ -841,6 +848,10 @@ engine_group_display <- function(
         # Other columns stay at 0 (the matrix init).
         indent_out[out_pos, host_idx] <- band$depth
         is_header_row[[out_pos]] <- TRUE
+        header_meta[[out_pos]] <- list(
+          group_col = band$group_col,
+          data_idx = data_idx
+        )
         first_emit <- FALSE
       }
     }
@@ -863,6 +874,7 @@ engine_group_display <- function(
     cells_style = style_out[seq_len(total_out), , drop = FALSE],
     cells_indent = indent_out[seq_len(total_out), , drop = FALSE],
     is_header_row = is_header_row[seq_len(total_out)],
-    is_blank_row = is_blank_row[seq_len(total_out)]
+    is_blank_row = is_blank_row[seq_len(total_out)],
+    header_meta = header_meta[seq_len(total_out)]
   )
 }

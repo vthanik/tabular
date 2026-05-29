@@ -335,6 +335,11 @@ emit <- function(
 
   grid <- .resolve_spec_to_grid(spec, format = format, call = call)
 
+  # Clear the per-render fidelity-warning dedup set so each backend
+  # emulation drop (e.g. a colour on a Markdown surface) warns at most
+  # once per `emit()`, but a second render in the same session warns
+  # again.
+  .fidelity_warn_reset()
   backend(grid, file)
 
   data_file_path <- NULL

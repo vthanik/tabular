@@ -189,7 +189,9 @@
 # Returns the full path (normalised where the source layer gave us
 # enough). `.resolve_program_token` and `.resolve_program_path_token`
 # wrap this for the `{program}` / `{program_path}` user surface.
-.resolve_source_path <- function() {
+.resolve_source_path <- function(
+  cmd_args = commandArgs(trailingOnly = FALSE)
+) {
   # 1. RStudio API — interactive in RStudio / Positron.
   rs_path <- tryCatch(
     {
@@ -224,8 +226,9 @@
 
   # 3. Rscript / R CMD BATCH — Domino, CI, Linux batch jobs all
   # land here because they ultimately invoke `Rscript script.R`
-  # (`--file=` long form) or `R -f script.R` (short form).
-  cmd_args <- commandArgs(trailingOnly = FALSE)
+  # (`--file=` long form) or `R -f script.R` (short form). `cmd_args`
+  # is an injectable parameter (defaults to the live `commandArgs()`)
+  # so the batch-detection branch is unit-testable.
   file_arg <- grep("^--file=", cmd_args, value = TRUE)
   if (length(file_arg) > 0L) {
     return(normalizePath(

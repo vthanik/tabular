@@ -230,3 +230,59 @@ test_that(".fidelity_warn warns once per (feature, backend) per render", {
   )
   tabular:::.fidelity_warn_reset()
 })
+
+# ---- resolver edge branches (coverage) ------------------------------
+
+test_that(".resolve_rule_color passes NA / NULL / non-token through", {
+  expect_true(is.na(tabular:::.resolve_rule_color(NA_character_)))
+  expect_null(tabular:::.resolve_rule_color(NULL))
+  expect_identical(tabular:::.resolve_rule_color("#abcdef"), "#abcdef")
+  expect_identical(
+    tabular:::.resolve_rule_color("ink"),
+    tabular:::.tabular_ink
+  )
+})
+
+test_that(".rule_entry_to_triple accepts a bare list(style, width, color)", {
+  out <- tabular:::.rule_entry_to_triple(
+    list(style = "solid", width = 0.5, color = "ink")
+  )
+  expect_identical(out$style, "solid")
+  # A bare list whose style is 'none' clears the rule.
+  expect_null(
+    tabular:::.rule_entry_to_triple(
+      list(style = "none", width = 0.5, color = "ink")
+    )
+  )
+})
+
+test_that("resolve_spacing rejects a non-list spacing", {
+  expect_error(
+    tabular:::resolve_spacing(1L),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("resolve_stripe rejects a non-character / NA stripe", {
+  expect_error(tabular:::resolve_stripe(1L), class = "tabular_error_input")
+  expect_error(
+    tabular:::resolve_stripe(NA_character_),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("gap_counts treats a missing region side as a zero gap", {
+  # A pre-resolved spacing list with `body` missing its `above` side:
+  # the `g()` lookup returns NULL and collapses to 0L.
+  # `body` as an empty list -> the `g()` lookup returns NULL (not an
+  # out-of-bounds error) and collapses to a 0L gap.
+  sp <- list(
+    title = c(above = 1L, below = 1L),
+    body = list(),
+    subgroup = c(above = 0L, below = 0L),
+    footnote = c(above = 0L)
+  )
+  g <- gap_counts(sp)
+  expect_identical(unname(g[["above_title"]]), 1L)
+  expect_identical(unname(g[["title_to_body"]]), 1L)
+})

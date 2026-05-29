@@ -333,6 +333,62 @@ test_that("subgroup banner emits inline as a bold line before its row block", {
   expect_true(any(grepl("\\*\\*.+\\*\\*", lines)))
 })
 
+test_that("subgroup banner weight follows cells_subgroup_labels() (#edge12)", {
+  d <- data.frame(g = c("A", "A", "B", "B"), x = 1:4)
+  off <- tabular(d) |>
+    subgroup("g") |>
+    style(bold = FALSE, .at = cells_subgroup_labels())
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(off, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  # bold = FALSE drops the `**` emphasis on the banner.
+  expect_false(grepl("\\*\\*", txt))
+  # italic = TRUE adds single-`*` emphasis.
+  ital <- tabular(d) |>
+    subgroup("g") |>
+    style(bold = FALSE, italic = TRUE, .at = cells_subgroup_labels())
+  out2 <- withr::local_tempfile(fileext = ".md")
+  emit(ital, out2)
+  expect_match(paste(readLines(out2), collapse = "\n"), "\\*[^*]+\\*")
+})
+
+test_that("Markdown warns once per render when a group-header carries colour (#edge13)", {
+  d <- data.frame(
+    soc = c("Infections", "Infections"),
+    label = c("Pneumonia", "Sepsis"),
+    x = 1:2
+  )
+  spec <- tabular(d) |>
+    cols(
+      label = col_spec(label = "PT"),
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      x = col_spec()
+    ) |>
+    style(color = "#FF0000", .at = cells_group_headers())
+  out <- withr::local_tempfile(fileext = ".md")
+  warns <- character()
+  withCallingHandlers(
+    emit(spec, out),
+    tabular_warning_fidelity = function(w) {
+      warns <<- c(warns, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  # Two header rows, one colour each, but dedup -> a single warning.
+  expect_length(warns, 1L)
+  # A second render in the same session warns again (reset at emit entry).
+  out2 <- withr::local_tempfile(fileext = ".md")
+  warns2 <- character()
+  withCallingHandlers(
+    emit(spec, out2),
+    tabular_warning_fidelity = function(w) {
+      warns2 <<- c(warns2, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_length(warns2, 1L)
+})
+
 # ---------------------------------------------------------------------
 # Edge: zero-row data
 # ---------------------------------------------------------------------

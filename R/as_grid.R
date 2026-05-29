@@ -476,6 +476,17 @@ as_grid <- function(spec) {
   # leaves the pages untouched.
   pages <- .stamp_stripe(pages, resolve_stripe(eff_preset@stripe))
 
+  # Group-header styling: route `cells_group_headers()` cascade layers
+  # onto the synthesized section-header rows (disjoint from the stripe's
+  # data rows, so order is irrelevant). `bold = FALSE` here is what
+  # `preset_minimal()` uses to render section labels in normal weight.
+  pages <- .stamp_group_headers(
+    pages,
+    .collect_group_header_layers(spec),
+    spec@data,
+    call = call
+  )
+
   tabular_grid(
     pages = pages,
     metadata = list(
@@ -697,6 +708,149 @@ as_grid <- function(spec) {
 # skipped; the odd / even parity counts data rows continuously across
 # pages. An explicit per-cell background (from the `colors` knob /
 # `style()`) is never overwritten -- the stripe is a default fill only.
+# Collect every `cells_group_headers()` style layer in the three-tier
+# cascade, in priority order (session preset -> spec preset -> per-spec
+# layers; later layers win per attribute). Mirrors
+# `.collect_chrome_layers()` in R/engine_borders.R but for the
+# `group_headers` surface, which `engine_style()` deliberately drops
+# (those rows do not exist until pagination). Returns an ordered list.
+.collect_group_header_layers <- function(spec) {
+  sources <- list()
+  session <- get_preset()
+  if (is_preset_spec(session)) {
+    sources <- c(sources, session@style)
+  }
+  if (is_preset_spec(spec@preset)) {
+    sources <- c(sources, spec@preset@style)
+  }
+  if (is_style_spec(spec@styles)) {
+    sources <- c(sources, spec@styles@layers)
+  }
+  if (length(sources) == 0L) {
+    return(list())
+  }
+  keep <- vapply(
+    sources,
+    function(layer) {
+      loc <- layer@location
+      !is.null(loc) && identical(loc$surface, "group_headers")
+    },
+    logical(1L)
+  )
+  sources[keep]
+}
+
+# Stamp the resolved `cells_group_headers()` cascade onto the synthetic
+# section-header rows. Header rows are injected at pagination with an
+# all-NA `style_node`; this is where their style override lands (the
+# backends then read the host cell's node, NA bold == bold, FALSE ==
+# off). Mirrors `.stamp_stripe()`: post-pagination, per-cell merge that
+# only overrides non-NA incoming fields (so it never clobbers a stripe
+# background).
+#
+# Each layer is resolved ONCE up front (not per row): `j` to a set of
+# column names, `where` to a single vectorized `logical(nrow(data))`
+# mask via the same one-shot eval `engine_style()` uses. Per header row
+# then collapses to a band-column membership test plus a mask index --
+# no predicate eval, no allocation, in the page/row loops.
+.stamp_group_headers <- function(
+  pages,
+  layers,
+  data,
+  call = rlang::caller_env()
+) {
+  if (length(layers) == 0L || length(pages) == 0L) {
+    return(pages)
+  }
+  col_names <- names(data)
+  # Pre-resolve every layer's column + row predicates once.
+  resolved <- lapply(layers, function(layer) {
+    loc <- layer@location
+    cols_mask <- if (is.null(loc$j)) {
+      NULL
+    } else {
+      col_names[.resolve_layer_cols(loc, col_names, call = call)]
+    }
+    where_mask <- if (is.null(loc$where)) {
+      NULL
+    } else {
+      .group_header_where_mask(loc$where, data, call = call)
+    }
+    list(style = layer@style, cols_mask = cols_mask, where_mask = where_mask)
+  })
+
+  for (pi in seq_along(pages)) {
+    mat <- pages[[pi]]$cells_style
+    if (is.null(mat) || nrow(mat) == 0L || ncol(mat) == 0L) {
+      next
+    }
+    is_hdr <- pages[[pi]]$is_header_row %||% rep(FALSE, nrow(mat))
+    meta <- pages[[pi]]$header_meta %||% vector("list", nrow(mat))
+    for (r in seq_len(nrow(mat))) {
+      if (!isTRUE(is_hdr[[r]])) {
+        next
+      }
+      m <- meta[[r]]
+      for (res in resolved) {
+        if (
+          !is.null(res$cols_mask) &&
+            !(is.list(m) && m$group_col %in% res$cols_mask)
+        ) {
+          next
+        }
+        if (
+          !is.null(res$where_mask) &&
+            !(is.list(m) && isTRUE(res$where_mask[[m$data_idx]]))
+        ) {
+          next
+        }
+        for (cn in colnames(mat)) {
+          sn <- mat[[r, cn]]
+          if (!is_style_node(sn)) {
+            sn <- style_node()
+          }
+          mat[[r, cn]] <- .merge_style_node(sn, res$style)
+        }
+      }
+    }
+    pages[[pi]]$cells_style <- mat
+  }
+  pages
+}
+
+# Evaluate a `cells_group_headers(where = )` predicate against the
+# source data, returning a `logical(nrow(data))` mask. Reuses the
+# `engine_style()` contract: `.eval_style_where()` for the data-mask
+# eval, length-1 recycling, and a `tabular_error_input` on a
+# non-logical result.
+.group_header_where_mask <- function(quo, data, call) {
+  result <- .eval_style_where(quo, data, call = call)
+  if (!is.logical(result)) {
+    cli::cli_abort(
+      c(
+        "{.fn cells_group_headers} {.arg where} must evaluate to a logical vector.",
+        "x" = "Got {.obj_type_friendly {result}} of length {length(result)}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  if (length(result) == 1L && nrow(data) > 1L) {
+    result <- rep(result, nrow(data))
+  }
+  if (length(result) != nrow(data)) {
+    cli::cli_abort(
+      c(
+        "{.fn cells_group_headers} {.arg where} returned length {length(result)}, expected {nrow(data)}.",
+        "i" = "The expression must evaluate to a length-{.code nrow} logical vector (or length 1)."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  result
+}
+
 .stamp_stripe <- function(pages, stripe) {
   if (is.null(stripe) || length(pages) == 0L) {
     return(pages)
@@ -798,9 +952,11 @@ as_grid <- function(spec) {
     indent_slice <- injected$cells_indent
     is_header_row <- injected$is_header_row
     is_blank_row <- injected$is_blank_row
+    header_meta <- injected$header_meta
   } else {
     is_header_row <- rep(FALSE, length(ri))
     is_blank_row <- rep(FALSE, length(ri))
+    header_meta <- vector("list", length(ri))
   }
 
   list(
@@ -820,6 +976,7 @@ as_grid <- function(spec) {
     cells_indent = indent_slice,
     is_header_row = is_header_row,
     is_blank_row = is_blank_row,
+    header_meta = header_meta,
     host_col = if (is.null(header_row_plan)) {
       NA_character_
     } else {

@@ -1389,3 +1389,82 @@ test_that("cell_padding emits per-side w:tcMar (padding SSOT)", {
   expect_match(doc, "<w:left w:w=\"100\" w:type=\"dxa\"/>", fixed = TRUE) # 5pt
   expect_match(doc, "<w:right w:w=\"300\" w:type=\"dxa\"/>", fixed = TRUE) # 15pt
 })
+
+# --- group-header + subgroup weight follows the style cascade --------
+
+.docx_group_spec <- function() {
+  d <- data.frame(
+    soc = c("Infections", "Infections"),
+    label = c("Pneumonia", "Sepsis"),
+    x = c("1", "2")
+  )
+  tabular(d) |>
+    cols(
+      label = col_spec(label = "PT"),
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      x = col_spec()
+    )
+}
+
+.docx_doc_xml <- function(spec) {
+  out <- withr::local_tempfile(
+    fileext = ".docx",
+    .local_envir = parent.frame()
+  )
+  emit(spec, out)
+  paste(
+    readLines(file.path(.unzip_docx(out), "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+}
+
+test_that("group-header rows are bold by default (#edge1)", {
+  doc <- .docx_doc_xml(.docx_group_spec())
+  expect_match(
+    doc,
+    "<w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Infections"
+  )
+})
+
+test_that("cells_group_headers(bold = FALSE) drops <w:b/> on section rows (#edge2)", {
+  doc <- .docx_doc_xml(
+    .docx_group_spec() |> style(bold = FALSE, .at = cells_group_headers())
+  )
+  seg <- regmatches(doc, regexpr("<w:r>.{0,60}?Infections", doc))
+  expect_false(grepl("<w:b/>", seg, fixed = TRUE))
+})
+
+test_that("cells_group_headers() carries italic + colour onto section rows (#edge3)", {
+  doc <- .docx_doc_xml(
+    .docx_group_spec() |>
+      style(
+        bold = FALSE,
+        italic = TRUE,
+        color = "#FF0000",
+        .at = cells_group_headers()
+      )
+  )
+  seg <- regmatches(
+    doc,
+    regexpr("<w:rPr>.{0,80}?</w:rPr><w:t[^>]*>Infections", doc)
+  )
+  expect_match(seg, "<w:i/>")
+  expect_match(seg, "<w:color w:val=\"FF0000\"/>")
+  expect_false(grepl("<w:b/>", seg, fixed = TRUE))
+})
+
+test_that("subgroup banner weight follows cells_subgroup_labels() (#edge12)", {
+  d <- data.frame(g = c("A", "A", "B", "B"), x = 1:4)
+  nb <- function(xml) length(gregexpr("<w:b/>", xml, fixed = TRUE)[[1]])
+  def <- .docx_doc_xml(tabular(d) |> subgroup("g"))
+  off <- .docx_doc_xml(
+    tabular(d) |>
+      subgroup("g") |>
+      style(bold = FALSE, italic = TRUE, .at = cells_subgroup_labels())
+  )
+  # Two banner rows (A, B) are bold by default; `bold = FALSE` de-bolds
+  # both (the residual `<w:b/>` is the column-label header, untouched).
+  expect_gt(nb(def), nb(off))
+  # `italic = TRUE` adds `<w:i/>` to each banner run.
+  expect_match(off, "<w:i/>")
+})

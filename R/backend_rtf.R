@@ -1681,6 +1681,31 @@ backend_rtf <- function(grid, file) {
           )
         }
       }
+      # Group-header weight + text props from the host cell's stamped
+      # style_node: NA bold == bold (default), `isFALSE` == off. Mirrors
+      # the subgroup-banner idiom (chrome text props + cell shading);
+      # `skip = "bold"` defers the weight to the explicit `bold_open`
+      # gate so there is no double `\b`.
+      host_node <- if (!is.null(cells_style) && !is.na(host_idx)) {
+        cells_style[[r, host_idx]]
+      } else {
+        NULL
+      }
+      host_props <- .rtf_chrome_text_props(
+        host_node,
+        colors,
+        fonts,
+        skip = "bold"
+      )
+      header_shading <- .rtf_cell_shading(host_node, colors)
+      bold_open <- if (
+        is_style_node(host_node) && isTRUE(host_node@bold == FALSE)
+      ) {
+        ""
+      } else {
+        "{\\b "
+      }
+      bold_close <- if (identical(bold_open, "")) "" else "}"
       out[[r]] <- .rtf_merged_row(
         paste0(
           "\\pard\\plain\\intbl",
@@ -1688,15 +1713,16 @@ backend_rtf <- function(grid, file) {
           keepn_tok,
           header_li_tok,
           "\\ql ",
-          "{\\b ",
+          host_props,
+          bold_open,
           .rtf_escape_cell(host_text),
-          "}"
+          bold_close
         ),
         cellx,
         preset,
         trhdr = FALSE,
         keep = keep_row,
-        prelude = blank_prelude
+        prelude = paste0(blank_prelude, header_shading)
       )
       next
     }
