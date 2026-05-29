@@ -2294,3 +2294,42 @@ test_that("HTML folds footnoterule into the bottomrule (continuous format, no fo
   # No inline `border-bottom: none` left to defeat the folded rule.
   expect_no_match(html, "border-bottom: none", fixed = TRUE)
 })
+
+test_that("HTML bold follows the user option: bold = FALSE renders normal, not the class default", {
+  # Regression: the title / header / subgroup CSS classes carry a
+  # `font-weight: 600` default. A user `style(bold = FALSE, ...)` must
+  # win -- the surface emits an inline `font-weight: normal` that
+  # overrides the class. (Unset bold inherits the 600 class default.)
+  base <- tabular(saf_demo, titles = "My Title") |>
+    cols(
+      variable = col_spec(usage = "group", label = "Char"),
+      stat_label = col_spec(label = "Stat"),
+      placebo = col_spec(label = "PBO"),
+      drug_50 = col_spec(label = "D50"),
+      drug_100 = col_spec(label = "D100"),
+      Total = col_spec(label = "Tot")
+    )
+  emit_str <- function(spec) {
+    f <- withr::local_tempfile(
+      fileext = ".html",
+      .local_envir = parent.frame()
+    )
+    emit(spec, f)
+    paste(readLines(f, warn = FALSE), collapse = "\n")
+  }
+
+  # Default: no inline normal override (class 600 default applies).
+  expect_no_match(emit_str(base), "font-weight: normal", fixed = TRUE)
+
+  # bold = FALSE on the header surface -> th cells carry inline normal.
+  hdr <- emit_str(base |> style(bold = FALSE, .at = cells_headers()))
+  expect_match(hdr, "<th style=\"font-weight: normal\"", fixed = TRUE)
+
+  # bold = FALSE on the title surface -> the <h1> carries inline normal.
+  ttl <- emit_str(base |> style(bold = FALSE, .at = cells_title()))
+  expect_match(
+    ttl,
+    "<h1 class=\"tabular-title\" style=\"font-weight: normal\"",
+    fixed = TRUE
+  )
+})

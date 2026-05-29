@@ -359,8 +359,14 @@ backend_html <- function(grid, file) {
     return("")
   }
   decls <- character()
+  # Emit an explicit weight whenever the user set bold either way, so it
+  # overrides the class-level default (`.tabular-title` etc. carry
+  # `font-weight: 600`). An unset (`NA`) bold emits nothing and inherits
+  # the class default.
   if (isTRUE(node@bold)) {
     decls <- c(decls, "font-weight: bold")
+  } else if (isFALSE(node@bold)) {
+    decls <- c(decls, "font-weight: normal")
   }
   if (isTRUE(node@italic)) {
     decls <- c(decls, "font-style: italic")
