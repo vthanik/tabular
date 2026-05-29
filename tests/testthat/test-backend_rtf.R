@@ -1109,3 +1109,16 @@ test_that("col_spec(valign = 'top') header keeps top, not the bottom default", {
   expect_true(any(grepl("\\\\clvertalt", block)))
   expect_false(any(grepl("\\\\clvertalb", block)))
 })
+
+test_that("footnote section opens with a top solid rule (BMS TL-RTF-112) (#rtf-footrule)", {
+  # The first footnote paragraph carries a top border so a separator
+  # rule sits above the footnotes, matching the LaTeX foot-template rule.
+  spec <- tabular(
+    data.frame(g = "A", x = "1"),
+    footnotes = c("Note 1", "Note 2")
+  )
+  f <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_match(rtf, "\\brdrt\\brdrs\\brdrw10", fixed = TRUE)
+})

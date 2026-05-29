@@ -985,8 +985,15 @@ backend_rtf <- function(grid, file) {
         if (is.na(h)) "left" else h
       }
       align_tok <- .rtf_align_token(halign)
+      # The footnote section opens with a top solid rule (BMS Appendix I
+      # TL-RTF-112), drawn as a top paragraph border on the FIRST footnote
+      # line so it repeats with the `{\footer}` group on every page, the
+      # RTF analogue of the LaTeX foot-template `\rule`. `\brsp` spaces the
+      # rule above the footnote text.
+      rule_tok <- if (i == 1L) "\\brdrt\\brdrs\\brdrw10\\brsp20" else ""
       paste0(
         "\\pard\\plain",
+        rule_tok,
         align_tok,
         sprintf("\\fs%d ", fs_half),
         surface_props_no_fs,
