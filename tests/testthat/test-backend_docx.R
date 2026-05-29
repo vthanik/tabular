@@ -99,6 +99,61 @@ test_that("emit(.docx) renders title + footnote text into word/document.xml", {
   expect_match(doc, "Source: ADSL.", fixed = TRUE)
 })
 
+test_that("DOCX header-band underline is the SSOT spanrule (override + 'none' honoured)", {
+  # Regression: the band bottom border was hardcoded `w:sz="4"
+  # w:color="adb5bd"`, so `preset(rules = list(spanrule = ...))`
+  # overrides were ignored on DOCX. It now resolves through the
+  # chrome_style `header_between` region.
+  base <- tabular(saf_demo) |>
+    cols(
+      variable = col_spec(usage = "group", label = "C"),
+      stat_label = col_spec(label = "S"),
+      placebo = col_spec(label = "PBO"),
+      drug_50 = col_spec(label = "D50"),
+      drug_100 = col_spec(label = "D100"),
+      Total = col_spec(label = "Tot")
+    ) |>
+    headers("Active" = c("drug_50", "drug_100"))
+  band_xml <- function(spec) {
+    out <- withr::local_tempfile(
+      fileext = ".docx",
+      .local_envir = parent.frame()
+    )
+    emit(spec, out)
+    paste(
+      readLines(
+        file.path(.unzip_docx(out), "word/document.xml"),
+        warn = FALSE
+      ),
+      collapse = ""
+    )
+  }
+
+  # Default: muted 0.5pt band (w:sz = 4 eighths, #adb5bd).
+  expect_match(
+    band_xml(base),
+    "<w:bottom w:space=\"0\" w:val=\"single\" w:sz=\"4\" w:color=\"ADB5BD\"/>",
+    fixed = TRUE
+  )
+  # Override changes the rendered width + colour.
+  expect_match(
+    band_xml(
+      base |>
+        preset(
+          rules = list(spanrule = brdr(width = "thick", color = "#ff0000"))
+        )
+    ),
+    "w:sz=\"12\" w:color=\"FF0000\"",
+    fixed = TRUE
+  )
+  # "none" drops the band underline entirely.
+  expect_no_match(
+    band_xml(base |> preset(rules = list(spanrule = "none"))),
+    "w:bottom w:space=\"0\" w:val=\"single\"",
+    fixed = TRUE
+  )
+})
+
 test_that("emit(.docx) writes no header1.xml / footer1.xml when pagehead / pagefoot are empty", {
   spec <- tabular(data.frame(x = 1L))
   out <- withr::local_tempfile(fileext = ".docx")

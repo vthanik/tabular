@@ -563,6 +563,21 @@ backend_docx <- function(grid, file) {
   }
   depths <- sort(unique(headers$depth))
   out <- character()
+  # Band underline = the SSOT `spanrule` (chrome region `header_between`,
+  # muted by default), so band overrides + the "none" clear take effect
+  # and DOCX matches the LaTeX / HTML muted band. NULL / "none" -> the
+  # band cells stay borderless.
+  span_triple <- .chrome_border_at(cs, "header_between")
+  span_border <- if (
+    is.null(span_triple) || identical(span_triple$style, "none")
+  ) {
+    ""
+  } else {
+    sprintf(
+      "<w:tcBorders><w:bottom w:space=\"0\" %s/></w:tcBorders>",
+      .docx_border_attrs(span_triple)
+    )
+  }
   for (d in depths) {
     labels <- .band_labels_for_depth(headers, d, col_names_vis)
     runs <- .group_contiguous_runs(labels)
@@ -574,16 +589,11 @@ backend_docx <- function(grid, file) {
       end <- cursor + span - 1L
       cell_w <- sum(widths_twips[cursor:end])
       label <- run$value
-      # Band cells carry a bottom border (cmidrule(lr) cell semantics);
-      # blank flanking cells over unmapped columns are borderless so
-      # the band rule does not extend across the full header width.
+      # Band cells carry the span-rule bottom border (cmidrule(lr) cell
+      # semantics); blank flanking cells over unmapped columns are
+      # borderless so the rule does not extend across the full width.
       tc_borders <- if (!is.na(label)) {
-        paste0(
-          "<w:tcBorders>",
-          "<w:bottom w:val=\"single\" w:sz=\"4\" w:space=\"0\" ",
-          "w:color=\"adb5bd\"/>",
-          "</w:tcBorders>"
-        )
+        span_border
       } else {
         ""
       }
