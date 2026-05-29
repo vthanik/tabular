@@ -1501,7 +1501,7 @@ backend_html <- function(grid, file) {
     # no `--window` modifier, no `width_mode` branch.
     ".tabular-content { width: 100%; }",
     sprintf(
-      ".tabular-title { font-size: %gpt; font-weight: 600; text-align: center; margin: .2rem 0; }",
+      ".tabular-title { font-size: %gpt; font-weight: bold; text-align: center; margin: .2rem 0; }",
       fs
     ),
     # `<p class="tabular-pad">&nbsp;</p>` spacers around the title
@@ -1550,19 +1550,19 @@ backend_html <- function(grid, file) {
     # the LAST thead row). Band underline applies ONLY to .tabular-band
     # cells so blank flanking cells over unmapped columns do not extend
     # the rule full width — cmidrule(lr) cell-border semantics.
-    ".tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }",
+    ".tabular-table thead th { font-weight: bold; text-align: center; vertical-align: bottom; }",
     # Structural toprule / midrule / spanrule (thead) + bottomrule
     # (tbody) -- generated from the SSOT just above; off rules drop out.
     structural_rules,
     ".tabular-table tbody tr td { border-top: none; }",
     ".tabular-band { text-align: center; }",
     ".tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }",
-    ".tabular-subgroup-label { font-weight: 600; }",
+    ".tabular-subgroup-label { font-weight: bold; }",
     # Synthesised section-header rows (col_spec(usage = "group",
     # group_display = "header_row")) — bold, flush-left, slight extra
     # padding above so each band reads as a unit. Blank-gap rows: a
     # thin spacer (no borders) between consecutive sections.
-    ".tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }",
+    ".tabular-group-header td { font-weight: bold; text-align: left; padding-top: .55rem; }",
     ".tabular-blank-row td { padding: .25rem .6rem; border: none; }",
     ".text-left { text-align: left; }",
     ".text-center { text-align: center; }",
