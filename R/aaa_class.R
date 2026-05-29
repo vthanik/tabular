@@ -699,7 +699,7 @@ pagination_spec <- S7::new_class(
     widow_floor = S7::new_property(S7::class_integer, default = 2L),
     # Which page chrome repeats on every page. Subset of
     # `c("titles", "headers", "footnotes")`; default all three (each
-    # page self-contained per the BMS Appendix I layout contract).
+    # page self-contained per the regulatory layout contract).
     # `character()` repeats nothing (titles + headers page 1 only,
     # footnotes last page only). Footnotes are always page-anchored
     # (page foot) when present; membership only governs every-page

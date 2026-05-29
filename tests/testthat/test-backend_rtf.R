@@ -1110,7 +1110,7 @@ test_that("col_spec(valign = 'top') header keeps top, not the bottom default", {
   expect_false(any(grepl("\\\\clvertalb", block)))
 })
 
-test_that("footnote section opens with a top solid rule (BMS TL-RTF-112) (#rtf-footrule)", {
+test_that("footnote section opens with a top solid rule (regulatory layout contract) (#rtf-footrule)", {
   # The first footnote paragraph carries a top border so a separator
   # rule sits above the footnotes, matching the LaTeX foot-template rule.
   spec <- tabular(
