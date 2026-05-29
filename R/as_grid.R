@@ -469,6 +469,13 @@ as_grid <- function(spec) {
     call = call
   )
 
+  # Zebra striping: stamp the resolved stripe fill onto data-row cell
+  # backgrounds (skipping synthetic header / blank rows) wherever no
+  # explicit background is already set, so every backend renders it via
+  # its existing per-cell background path. `stripe = NULL` (the default)
+  # leaves the pages untouched.
+  pages <- .stamp_stripe(pages, resolve_stripe(eff_preset@stripe))
+
   tabular_grid(
     pages = pages,
     metadata = list(
@@ -685,6 +692,48 @@ as_grid <- function(spec) {
 # sliced matrices for any group-value transitions that fall within
 # this page's row range. The `cells_indent` sidecar travels through
 # unchanged for data rows; injected header / blank rows carry depth 0.
+# Stamp the resolved zebra `stripe` (`c(odd, even)` fills, NA = none)
+# onto data-row cell backgrounds. Synthetic header / blank rows are
+# skipped; the odd / even parity counts data rows continuously across
+# pages. An explicit per-cell background (from the `colors` knob /
+# `style()`) is never overwritten -- the stripe is a default fill only.
+.stamp_stripe <- function(pages, stripe) {
+  if (is.null(stripe) || length(pages) == 0L) {
+    return(pages)
+  }
+  data_idx <- 0L
+  for (pi in seq_along(pages)) {
+    mat <- pages[[pi]]$cells_style
+    if (is.null(mat) || nrow(mat) == 0L || ncol(mat) == 0L) {
+      next
+    }
+    is_hdr <- pages[[pi]]$is_header_row %||% rep(FALSE, nrow(mat))
+    is_blk <- pages[[pi]]$is_blank_row %||% rep(FALSE, nrow(mat))
+    for (r in seq_len(nrow(mat))) {
+      if (isTRUE(is_hdr[[r]]) || isTRUE(is_blk[[r]])) {
+        next
+      }
+      data_idx <- data_idx + 1L
+      fill <- if (data_idx %% 2L == 1L) stripe[["odd"]] else stripe[["even"]]
+      if (is.na(fill)) {
+        next
+      }
+      for (cn in colnames(mat)) {
+        sn <- mat[[r, cn]]
+        if (!is_style_node(sn)) {
+          sn <- style_node()
+        }
+        bg <- sn@background
+        if (length(bg) == 0L || is.na(bg)) {
+          mat[[r, cn]] <- S7::set_props(sn, background = fill)
+        }
+      }
+    }
+    pages[[pi]]$cells_style <- mat
+  }
+  pages
+}
+
 .slice_one_page <- function(
   p,
   cells_text,

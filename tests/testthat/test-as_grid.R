@@ -208,3 +208,37 @@ test_that("as_grid() splits across pages when pagination forces it", {
   all_rows <- unlist(lapply(g@pages, function(p) p$row_indices))
   expect_setequal(all_rows, seq_len(24L))
 })
+
+# ---------------------------------------------------------------------
+# Zebra striping stamps data-row cell backgrounds
+# ---------------------------------------------------------------------
+
+test_that("stripe stamps the zebra fill on even data rows, leaving odd rows transparent", {
+  d <- data.frame(lbl = c("r1", "r2", "r3", "r4"), val = 1:4)
+  g <- as_grid(tabular(d) |> preset(stripe = "#eeeeee"))
+  st <- g@pages[[1L]]$cells_style
+  # Single-colour stripe -> odd data rows transparent, even rows filled.
+  expect_true(is.na(st[[1L, "lbl"]]@background))
+  expect_identical(st[[2L, "lbl"]]@background, "#eeeeee")
+  expect_true(is.na(st[[3L, "lbl"]]@background))
+  expect_identical(st[[4L, "lbl"]]@background, "#eeeeee")
+})
+
+test_that("stripe is off by default (no background stamped)", {
+  g <- as_grid(tabular(data.frame(lbl = c("r1", "r2"), val = 1:2)))
+  st <- g@pages[[1L]]$cells_style
+  expect_true(is.na(st[[1L, "lbl"]]@background))
+  expect_true(is.na(st[[2L, "lbl"]]@background))
+})
+
+test_that("stripe never overwrites an explicit per-cell background", {
+  d <- data.frame(lbl = c("r1", "r2"), val = 1:2)
+  g <- as_grid(
+    tabular(d) |>
+      preset(stripe = "#eeeeee") |>
+      style(background = "#ff0000", .at = cells_body())
+  )
+  st <- g@pages[[1L]]$cells_style
+  # Row 2 would be the even (filled) row, but the explicit red wins.
+  expect_identical(st[[2L, "lbl"]]@background, "#ff0000")
+})
