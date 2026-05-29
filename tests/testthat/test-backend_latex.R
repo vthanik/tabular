@@ -54,7 +54,7 @@ test_that("emit(.tex) renders saf_demo golden pipeline end to end", {
   txt <- render_tex(spec)
   expect_match(txt, "Demographics", fixed = TRUE)
   # `\n` in col labels becomes ` \\ ` (LaTeX in-cell line break).
-  expect_match(txt, "Placebo \\\\ N=86", fixed = TRUE)
+  expect_match(txt, "Placebo \\\\{} N=86", fixed = TRUE)
   expect_match(txt, "Source: ADSL.", fixed = TRUE)
 })
 
@@ -329,7 +329,7 @@ test_that("sup / sub / link map to \\textsuperscript / \\textsubscript / \\href"
 test_that("embedded \\n in cell text becomes LaTeX in-cell line break", {
   spec <- tabular(data.frame(x = "line1\nline2"), titles = "T")
   txt <- render_tex(spec)
-  expect_match(txt, "line1 \\\\ line2", fixed = TRUE)
+  expect_match(txt, "line1 \\\\{} line2", fixed = TRUE)
 })
 
 # ---------------------------------------------------------------------
@@ -352,9 +352,9 @@ test_that(".latex_escape handles all 10 LaTeX special characters", {
 })
 
 test_that(".latex_escape_cell adds in-cell line break for \\n", {
-  expect_identical(tabular:::.latex_escape_cell("a\nb"), "a \\\\ b")
-  expect_identical(tabular:::.latex_escape_cell("a\r\nb"), "a \\\\ b")
-  expect_identical(tabular:::.latex_escape_cell("a&b\nc"), "a\\&b \\\\ c")
+  expect_identical(tabular:::.latex_escape_cell("a\nb"), "a \\\\{} b")
+  expect_identical(tabular:::.latex_escape_cell("a\r\nb"), "a \\\\{} b")
+  expect_identical(tabular:::.latex_escape_cell("a&b\nc"), "a\\&b \\\\{} c")
   expect_identical(tabular:::.latex_escape_cell(NA_character_), "")
   expect_identical(tabular:::.latex_escape_cell(NULL), "")
 })
@@ -856,9 +856,13 @@ test_that("style(.at = cells_title(), blank_above = 3) emits three blank lines b
   ) |>
     preset(.style = template)
   tex <- render_tex(spec)
-  # Pad section just before the title block — count newline-only
-  # lines preceding `\begin{center}` (the default title env).
-  expect_match(tex, "\\n\\n\\n", fixed = FALSE)
+  # Three full-height strut paragraphs pad above the title block
+  # (empty strings would collapse to zero height under \parskip=0pt).
+  expect_match(
+    tex,
+    "{\\strut\\par}\n{\\strut\\par}\n{\\strut\\par}",
+    fixed = TRUE
+  )
 })
 
 # ---------------------------------------------------------------------
@@ -1495,4 +1499,96 @@ test_that("~400-row table compiles (tabularray whole-table cost benchmark)", {
     "benchmark: 400-row xelatex compile = %.1fs",
     elapsed
   ))
+})
+
+test_that("multi-line cell whose next line starts with '[' is bracket-safe (#latex-brackets)", {
+  # A wrapped column header whose continuation line is a footnote marker
+  # ("[1]") must not let LaTeX read the bracket as `\\`'s optional
+  # `\\[<dimen>]` argument, which raised "Illegal unit of measure" and
+  # aborted xelatex. The in-cell break is emitted as `\\{}` so the
+  # following `[` can never be mistaken for the optional argument.
+  df <- data.frame(
+    g = c("A", "A"),
+    stat = c("n", "Mean"),
+    x = c("10", "5.2"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "T", footnotes = "F") |>
+    cols(
+      g = col_spec(
+        usage = "group",
+        group_display = "column",
+        label = "Char",
+        align = "left"
+      ),
+      stat = col_spec(label = "Statistic", align = "left"),
+      x = col_spec(label = "p-value\n[1]", align = "decimal")
+    )
+  f <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, f)
+  tex <- paste(readLines(f), collapse = "\n")
+
+  expect_true(grepl("\\\\{}", tex, fixed = TRUE)) # in-cell break protected
+  expect_false(grepl("\\\\ [", tex, fixed = TRUE)) # no bare `\\ [`
+})
+
+test_that("multi-line header with bracket footnote marker compiles to PDF (#latex-brackets)", {
+  skip_on_cran()
+  skip_if_not_installed("tinytex")
+  skip_if_not(tinytex::is_tinytex() || nzchar(Sys.which("xelatex")))
+
+  df <- data.frame(
+    g = c("A", "A"),
+    stat = c("n", "Mean"),
+    x = c("10", "5.2"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "T", footnotes = "F") |>
+    cols(
+      g = col_spec(
+        usage = "group",
+        group_display = "column",
+        label = "Char",
+        align = "left"
+      ),
+      stat = col_spec(label = "Statistic", align = "left"),
+      x = col_spec(label = "p-value\n[1]", align = "decimal")
+    )
+  f <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, f)
+  pdf <- tinytex::xelatex(f)
+  withr::defer(unlink(pdf))
+  expect_true(file.exists(pdf))
+})
+
+test_that("title block padded with full-height blank lines, not collapsing empties (#latex-titlepad)", {
+  # `rep("", n)` emitted empty strings that collapse to zero height
+  # under `\parskip=0pt`; the RTF/HTML title blank-line padding never
+  # appeared. The padding is now a strut paragraph per blank line.
+  spec <- tabular(data.frame(x = 1L), titles = "My Title")
+  f <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, f)
+  tex <- paste(readLines(f), collapse = "\n")
+  expect_true(grepl("{\\strut\\par}", tex, fixed = TRUE))
+})
+
+test_that("footnotes present: one rule above footnotes, no doubled in-table \\hline (#latex-footrule)", {
+  # The foot-template minipage draws the footnote separator rule (it
+  # repeats per page); the in-table footer \hline would duplicate it.
+  spec <- tabular(data.frame(g = "A", x = "1"), footnotes = "Note 1")
+  f <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, f)
+  tex <- readLines(f)
+  expect_true(any(grepl("\\rule{\\linewidth}{0.4pt}", tex, fixed = TRUE)))
+  end_idx <- grep("\\end{longtblr}", tex, fixed = TRUE)[[1L]]
+  expect_false(identical(trimws(tex[end_idx - 1L]), "\\hline"))
+})
+
+test_that("no footnotes: table keeps its closing in-table \\hline (#latex-footrule)", {
+  spec <- tabular(data.frame(g = "A", x = "1"))
+  f <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, f)
+  tex <- readLines(f)
+  end_idx <- grep("\\end{longtblr}", tex, fixed = TRUE)[[1L]]
+  expect_identical(trimws(tex[end_idx - 1L]), "\\hline")
 })

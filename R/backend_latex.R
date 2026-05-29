@@ -438,7 +438,12 @@ backend_latex <- function(grid, file) {
   if (has_titles) {
     pad_top <- .latex_blank_count(cs, "title", "above", 1L)
     pad_bottom <- .latex_blank_count(cs, "title", "below", 1L)
-    titles <- c(rep("", pad_top), titles, rep("", pad_bottom))
+    # Real blank lines, NOT empty strings: an empty TeX paragraph has
+    # zero height under `\parskip=0pt`, so `rep("", n)` produced no
+    # visible gap. `{\strut\par}` is one full-height blank line each,
+    # matching the RTF/HTML/DOCX blank-`\par` title padding.
+    blank_line <- "{\\strut\\par}"
+    titles <- c(rep(blank_line, pad_top), titles, rep(blank_line, pad_bottom))
   }
   cont_text <- if (length(continuation) > 0L) {
     as.character(continuation)[[1L]]
@@ -635,7 +640,16 @@ backend_latex <- function(grid, file) {
     cols = cols,
     preset = meta$preset
   )
-  footer_rule <- hline_footer_top
+  # The rule above the footnotes is drawn by the foot template's `\rule`
+  # (it repeats on every physical page). Emitting the in-table
+  # `footer_top` `\hline` as well would stack a SECOND line above the
+  # footnotes, so suppress it when user footnotes exist; keep it as the
+  # table's own closing rule only when there are none.
+  footer_rule <- if (length(meta$footnotes_ast) > 0L) {
+    character()
+  } else {
+    hline_footer_top
+  }
 
   # Subgroup banner row — `\SetCell[c=N]{c|l|r}` spanning every
   # visible column. Inserted between the header rule and the first
@@ -1580,7 +1594,11 @@ backend_latex <- function(grid, file) {
     code = paste0("\\texttt{", .render_latex_children(run$children), "}"),
     link = .render_latex_link(run),
     span = .render_latex_children(run$children),
-    newline = " \\\\ ",
+    # `\\{}` not bare `\\`: the trailing empty group stops LaTeX's `\\`
+    # from swallowing a following `[...]` (e.g. a footnote marker like
+    # `[1]` on the next line) as its optional `\\[<dimen>]` argument,
+    # which would otherwise raise "Illegal unit of measure".
+    newline = " \\\\{} ",
     .latex_escape(run$text %||% "")
   )
 }
@@ -1653,9 +1671,12 @@ backend_latex <- function(grid, file) {
   text <- as.character(text)
   text[is.na(text)] <- ""
   text <- .latex_escape(text)
-  # LaTeX in-cell line break is `\\` (two literal backslashes).
-  text <- gsub("\r\n", " \\\\ ", text, fixed = TRUE)
-  text <- gsub("\n", " \\\\ ", text, fixed = TRUE)
+  # LaTeX in-cell line break is `\\`; the trailing `{}` stops a
+  # following `[...]` (e.g. a footnote marker like `[1]`) from being read
+  # as the optional `\\[<dimen>]` argument, which would raise "Illegal
+  # unit of measure". Mirrors the newline run in `.render_latex_run`.
+  text <- gsub("\r\n", " \\\\{} ", text, fixed = TRUE)
+  text <- gsub("\n", " \\\\{} ", text, fixed = TRUE)
   text
 }
 

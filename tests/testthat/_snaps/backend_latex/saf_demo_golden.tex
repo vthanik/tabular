@@ -23,18 +23,18 @@
 \pagestyle{empty}
 \begin{document}
 \DefTblrTemplate{firsthead}{default}{%
-
+{\strut\par}
 {\centering {\bfseries Table 14.1.1}\par}
 {\centering {\bfseries Demographics}\par}
 {\centering {\bfseries Safety Population}\par}
-
+{\strut\par}
 }
 \DefTblrTemplate{middlehead, lasthead}{default}{%
-
+{\strut\par}
 {\centering {\bfseries Table 14.1.1}\par}
 {\centering {\bfseries Demographics}\par}
 {\centering {\bfseries Safety Population}\par}
-
+{\strut\par}
 }
 \DefTblrTemplate{firstfoot, middlefoot, lastfoot}{default}{%
 \begin{minipage}{7.9472in}
@@ -45,7 +45,7 @@
 \end{minipage}
 }
 \begin{longtblr}[caption={}, label={}, presep=0pt, postsep=0pt]{colspec={Q[l,wd=2.700000in] Q[r,wd=1.125000in] Q[r,wd=1.125000in] Q[r,wd=1.125000in] Q[r,wd=1.125000in]}, rowhead=1, leftsep=5.4pt, rightsep=5.4pt, rows={valign=t}, hline{1}={1-5}{0.4pt, solid}, hline{2}={1-5}{0.4pt, solid}}
-\SetCell{valign=b} Statistic & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Placebo \\ N=86} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering High Dose \\ N=72} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Low Dose \\ N=96} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Total \\ N=254} \\
+\SetCell{valign=b} Statistic & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Placebo \\{} N=86} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering High Dose \\{} N=72} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Low Dose \\{} N=96} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Total \\{} N=254} \\
 \SetCell[c=5]{l} \textbf{Age (years)} & & & & \\*
 {\leftskip=10.8pt\relax n} &  86           &  72           &  96           & 254           \\
 {\leftskip=10.8pt\relax Mean (SD)} &  75.2 (8.59)  &  73.8 (7.94)  &  76.0 (8.11)  &  75.1 (8.25)  \\
@@ -98,6 +98,5 @@
 {\leftskip=10.8pt\relax Normal (18.5-24.9)} &  57 (66.3)    &  39 (54.2)    &  46 (47.9)    & 142 (55.9)    \\
 {\leftskip=10.8pt\relax Overweight (25-29.9)} &  20 (23.3)    &  23 (31.9)    &  32 (33.3)    &  75 (29.5)    \\
 {\leftskip=10.8pt\relax Obese (>=30)} &   6 ( 7.0)    &   9 (12.5)    &  13 (13.5)    &  28 (11.0)    \\
-\hline
 \end{longtblr}
 \end{document}
