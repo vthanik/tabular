@@ -500,7 +500,8 @@ backend_latex <- function(grid, file) {
     ))
   }
   width_in <- .latex_table_width_in(col_names_vis, cols, cells_style, preset)
-  wrapped <- .latex_minipage_wrap(fn, width_in)
+  foot_triple <- .chrome_border_at(cs, "footer_top")
+  wrapped <- .latex_minipage_wrap(fn, width_in, foot_triple)
   if (isTRUE(rep_footnotes)) {
     .latex_def_tblr_template("firstfoot, middlefoot, lastfoot", wrapped)
   } else {
@@ -511,11 +512,15 @@ backend_latex <- function(grid, file) {
   }
 }
 
-# Wrap footnote lines in a fixed-width `minipage` topped by a full-width
-# separator rule. `width_in` is the rendered table width in inches;
-# `NA` falls back to `\linewidth` (the page text width) when column
-# widths are unresolved (e.g. proportional `X[]` columns).
-.latex_minipage_wrap <- function(lines, width_in) {
+# Wrap footnote lines in a fixed-width `minipage`, optionally topped by
+# the footnote-section opening rule (`footnoterule`). `width_in` is the
+# rendered table width in inches; `NA` falls back to `\linewidth` (the
+# page text width) when column widths are unresolved (e.g. proportional
+# `X[]` columns). The rule spans `\linewidth` (the minipage width = the
+# table width), never the page width. `foot_triple` is the resolved
+# footnoterule triple (or NULL); off by default, since the body
+# `bottomrule` is the mutually-exclusive default closer.
+.latex_minipage_wrap <- function(lines, width_in, foot_triple = NULL) {
   width_tok <- if (is.na(width_in)) {
     "\\linewidth"
   } else {
@@ -523,10 +528,35 @@ backend_latex <- function(grid, file) {
   }
   c(
     sprintf("\\begin{minipage}{%s}", width_tok),
-    "\\noindent\\rule{\\linewidth}{0.4pt}\\par",
+    .latex_foot_rule_line(foot_triple),
     lines,
     "\\end{minipage}"
   )
+}
+
+# Build the footnote-opening rule line, sized to `\linewidth` (= table
+# width). NULL / style "none" -> no rule (the default: `bottomrule`
+# closes the body and `footnoterule` is OFF). When ON, honour the
+# resolved width + colour from the SSOT (hex colours ride a preamble
+# `\definecolor`, the same token machinery as table-cell rules).
+.latex_foot_rule_line <- function(triple) {
+  if (is.null(triple) || identical(triple$style, "none")) {
+    return(character())
+  }
+  width <- triple$width %||% .tabular_rule_width
+  has_color <- !is.null(triple$color) &&
+    !is.na(triple$color) &&
+    nzchar(triple$color) &&
+    !identical(triple$color, "currentColor")
+  if (has_color) {
+    sprintf(
+      "\\noindent{\\color{%s}\\rule{\\linewidth}{%gpt}}\\par",
+      .latex_border_color_token(triple$color),
+      width
+    )
+  } else {
+    sprintf("\\noindent\\rule{\\linewidth}{%gpt}\\par", width)
+  }
 }
 
 # Rendered table width in inches: the sum of resolved column widths
@@ -621,8 +651,10 @@ backend_latex <- function(grid, file) {
   # rule under the column-labels row (`hline{nbands+2}`); each spanner
   # band keeps its own scoped cmidrule(lr) from `bands$band_hlines`.
   # No separate top rule on the col-labels row, so nothing doubles when
-  # bands sit above it. The footer (body-bottom) rule stays inline.
-  hline_footer_top <- .latex_chrome_hline(cs, "footer_top")
+  # bands sit above it. The body-bottom closer is the SSOT `bottomrule`
+  # (`outer_bottom` -> `hline{nrow}` directive); the footnote-opening
+  # rule (`footnoterule`, opt-in) rides the foot-template `\rule`. Both
+  # are handled outside this block, so there is no in-table footer rule.
   header_rule_dirs <- .latex_header_rule_directives(
     nbands = length(band_rows),
     n_cols = length(col_names_vis),
@@ -641,17 +673,6 @@ backend_latex <- function(grid, file) {
     cols = cols,
     preset = meta$preset
   )
-  # The rule above the footnotes is drawn by the foot template's `\rule`
-  # (it repeats on every physical page). Emitting the in-table
-  # `footer_top` `\hline` as well would stack a SECOND line above the
-  # footnotes, so suppress it when user footnotes exist; keep it as the
-  # table's own closing rule only when there are none.
-  footer_rule <- if (length(meta$footnotes_ast) > 0L) {
-    character()
-  } else {
-    hline_footer_top
-  }
-
   # Subgroup banner row — `\SetCell[c=N]{c|l|r}` spanning every
   # visible column. Inserted between the header rule and the first
   # body row so it sits directly under the column-header band on
@@ -712,7 +733,6 @@ backend_latex <- function(grid, file) {
     header_rules,
     banner_row,
     body_rows,
-    footer_rule,
     "\\end{longtblr}"
   )
 }
@@ -935,35 +955,15 @@ backend_latex <- function(grid, file) {
   row
 }
 
-# Resolve a chrome border region into a `\hline` or a tabularray-
-# style border directive. For LaTeX we keep it simple: when no
-# user override is set, emit `\hline`; otherwise emit nothing here
-# (tabularray's outer-line handling deals with explicit border
-# widths). Width / style customisation will route through
-# `.latex_border_directives` in a follow-up commit if needed.
-.latex_chrome_hline <- function(cs, region) {
-  triple <- .chrome_border_at(cs, region)
-  if (is.null(triple)) {
-    return("\\hline")
-  }
-  if (identical(triple$style, "none")) {
-    return(character())
-  }
-  # For now keep the visual rule but the explicit override has
-  # taken effect (caller may layer further in border directives).
-  "\\hline"
-}
-
 # Resolve a chrome border region into a tabularray border-spec
-# fragment (e.g. `"0.4pt, solid"`) for use inside an outer
+# fragment (e.g. `"0.5pt, solid"`) for use inside an outer
 # `hline{i}={range}{spec}` directive. No user override -> the
-# canonical thin solid rule. `style = "none"` -> "" (caller skips
-# the directive entirely). Sibling of `.latex_chrome_hline`, which
-# emits the legacy inline `\hline` form for the body-bottom rule.
+# canonical thin solid rule at the SSOT width. `style = "none"` -> ""
+# (caller skips the directive entirely).
 .latex_chrome_hline_spec <- function(cs, region) {
   triple <- .chrome_border_at(cs, region)
   if (is.null(triple)) {
-    return("0.4pt, solid")
+    return(sprintf("%gpt, solid", .tabular_rule_width))
   }
   .latex_border_spec(triple)
 }

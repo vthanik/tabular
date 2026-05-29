@@ -62,14 +62,16 @@ test_that(".chrome_surface_at() returns a default style_node on missing surface 
 # ---------------------------------------------------------------------
 
 test_that("engine_chrome_borders() injects the booktabs chrome defaults", {
-  # The booktabs baseline drives the header (top / bottom / between)
-  # and footnote (top) chrome rules even with no user `rules` knob;
-  # page-band and subgroup regions stay NULL until set.
+  # The booktabs baseline drives the header (top / bottom) chrome rules
+  # even with no user `rules` knob. `footer_top` (footnoterule) is OFF
+  # by default: the body `bottomrule` closes the data->footnote
+  # boundary (the two are mutually exclusive). page-band and subgroup
+  # regions stay NULL until set.
   spec <- tabular(saf_demo)
   cs <- tabular:::engine_chrome_borders(spec)
   expect_false(is.null(cs$borders$header_top))
   expect_false(is.null(cs$borders$header_bottom))
-  expect_false(is.null(cs$borders$footer_top))
+  expect_null(cs$borders$footer_top)
   expect_null(cs$borders$pagehead_bottom)
   expect_null(cs$borders$subgroup_bottom)
 })

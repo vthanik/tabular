@@ -1111,9 +1111,11 @@ test_that("col_spec(valign = 'top') header keeps top, not the bottom default", {
   expect_false(any(grepl("\\\\clvertalb", block)))
 })
 
-test_that("footnote section opens with a top solid rule (regulatory layout contract) (#rtf-footrule)", {
-  # The first footnote paragraph carries a top border so a separator
-  # rule sits above the footnotes, matching the LaTeX foot-template rule.
+test_that("default: footnotes carry no page-width paragraph rule; bottomrule closes (#rtf-footrule)", {
+  # `footnoterule` is OFF by default (the body `bottomrule` is the
+  # mutually-exclusive default closer). The footnote paragraphs must
+  # NOT carry a top paragraph border (`\brdrt`), which a Word reader
+  # stretches to the full page text column (the page-width defect).
   spec <- tabular(
     data.frame(g = "A", x = "1"),
     footnotes = c("Note 1", "Note 2")
@@ -1121,5 +1123,26 @@ test_that("footnote section opens with a top solid rule (regulatory layout contr
   f <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, f)
   rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
-  expect_match(rtf, "\\brdrt\\brdrs\\brdrw10", fixed = TRUE)
+  expect_no_match(rtf, "\\pard\\plain\\brdrt", fixed = TRUE)
+  # The body's last row still closes with a table-width bottom rule.
+  expect_match(rtf, "\\clbrdrb\\brdrs\\brdrw10", fixed = TRUE)
+})
+
+test_that("opt-in footnoterule draws a table-width merged-row rule, not a page-width paragraph border (#rtf-footrule)", {
+  # When the user opts in, the rule is a merged-cell top border sized to
+  # the table `\cellx` grid (table width), never a paragraph `\brdrt`.
+  spec <- tabular(
+    data.frame(g = "A", x = "1"),
+    footnotes = c("Note 1", "Note 2")
+  ) |>
+    preset(
+      rules = list(bottomrule = "none", footnoterule = brdr(width = "thin"))
+    )
+  f <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  # Merged-row top border (the `\cellx`-grid idiom) carries the rule.
+  expect_match(rtf, "\\clbrdrt\\brdrs\\brdrw10\\clmgf", fixed = TRUE)
+  # No page-width paragraph border on a footnote line.
+  expect_no_match(rtf, "\\pard\\plain\\brdrt", fixed = TRUE)
 })

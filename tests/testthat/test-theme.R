@@ -5,12 +5,15 @@
 test_that("resolve_rules booktabs turns on the clinical baseline rules", {
   r <- tabular:::resolve_rules("booktabs")
   expect_named(r, tabular:::.tabular_rule_keys)
-  # Horizontal closers + spanner + footnote on; row + verticals off.
+  # Top / mid / bottom closers + spanner on. `bottomrule` and
+  # `footnoterule` are mutually exclusive at the data -> footnote
+  # boundary; the default closer is `bottomrule`, so `footnoterule`
+  # is OFF (opt-in only). Row + verticals off.
   expect_false(is.null(r$toprule))
   expect_false(is.null(r$midrule))
   expect_false(is.null(r$bottomrule))
   expect_false(is.null(r$spanrule))
-  expect_false(is.null(r$footnoterule))
+  expect_null(r$footnoterule)
   expect_null(r$rowrule)
   expect_null(r$leftrule)
   expect_null(r$rightrule)
@@ -68,8 +71,9 @@ test_that("resolve_rules broadcasts a single brdr to active rules only", {
   expect_identical(r$toprule$color, "black")
   expect_identical(r$toprule$width, 0.75)
   expect_identical(r$spanrule$color, "black")
-  expect_identical(r$footnoterule$width, 0.75)
-  # Off baseline rules stay off.
+  expect_identical(r$bottomrule$width, 0.75)
+  # Off baseline rules stay off (footnoterule is off by default).
+  expect_null(r$footnoterule)
   expect_null(r$rowrule)
   expect_null(r$colrule)
 })

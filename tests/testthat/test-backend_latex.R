@@ -1250,8 +1250,31 @@ test_that(".latex_foot_template: repeating footnotes share one template + minipa
     fixed = TRUE
   )
   expect_match(out, "\\begin{minipage}{", fixed = TRUE)
-  expect_match(out, "\\rule{\\linewidth}{0.4pt}", fixed = TRUE)
+  # footnoterule is OFF by default (the body bottomrule is the
+  # mutually-exclusive default closer), so the foot template carries
+  # no separator rule unless the user opts in.
+  expect_no_match(out, "\\rule{\\linewidth}", fixed = TRUE)
   expect_match(out, "safety population", fixed = TRUE)
+
+  # Opt-in: a non-NULL footer_top chrome triple draws the rule, sized to
+  # \linewidth (= the table-width minipage), at the resolved SSOT width.
+  cs <- chrome_style()
+  cs$borders$footer_top <- list(
+    style = "solid",
+    width = 0.5,
+    color = "currentColor"
+  )
+  out_on <- paste(
+    tabular:::.latex_foot_template(
+      fn,
+      rep_footnotes = TRUE,
+      col_names_vis = c("a", "b"),
+      cols = cols,
+      cs = cs
+    ),
+    collapse = "\n"
+  )
+  expect_match(out_on, "\\rule{\\linewidth}{0.5pt}", fixed = TRUE)
 })
 
 test_that(".latex_foot_template: non-repeat pins footnotes to lastfoot only", {
@@ -1289,10 +1312,10 @@ test_that(".latex_table_width_in: sum of widths + padding; NA -> linewidth fallb
 # --- Phase 1 + 2/3: native pagination + panel composition ------------
 
 test_that(".latex_chrome_hline_spec: default, override, and none", {
-  # No chrome border set -> canonical thin solid rule.
+  # No chrome border set -> canonical thin solid rule at the SSOT width.
   expect_identical(
     tabular:::.latex_chrome_hline_spec(NULL, "header_top"),
-    "0.4pt, solid"
+    "0.5pt, solid"
   )
   # Explicit override resolves through .latex_border_spec.
   cs <- list(
@@ -1572,23 +1595,45 @@ test_that("title block padded with full-height blank lines, not collapsing empti
   expect_true(grepl("{\\strut\\par}", tex, fixed = TRUE))
 })
 
-test_that("footnotes present: one rule above footnotes, no doubled in-table \\hline (#latex-footrule)", {
-  # The foot-template minipage draws the footnote separator rule (it
-  # repeats per page); the in-table footer \hline would duplicate it.
+test_that("footnotes present: single closing rule, no doubled rule at the boundary (#latex-footrule)", {
+  # `bottomrule` and `footnoterule` are mutually exclusive. The default
+  # closer is the body `bottomrule` (an outer `hline{nrow}` directive).
+  # `footnoterule` is OFF, so the foot template draws NO separator
+  # `\rule`, and there is no in-table inline `\hline` -- exactly one
+  # rule sits at the data -> footnote boundary.
   spec <- tabular(data.frame(g = "A", x = "1"), footnotes = "Note 1")
   f <- withr::local_tempfile(fileext = ".tex")
   emit(spec, f)
   tex <- readLines(f)
-  expect_true(any(grepl("\\rule{\\linewidth}{0.4pt}", tex, fixed = TRUE)))
-  end_idx <- grep("\\end{longtblr}", tex, fixed = TRUE)[[1L]]
-  expect_false(identical(trimws(tex[end_idx - 1L]), "\\hline"))
+  expect_false(any(grepl("\\rule{\\linewidth}", tex, fixed = TRUE)))
+  expect_equal(sum(trimws(tex) == "\\hline"), 0L)
+  spec_line <- tex[grep("begin{longtblr}", tex, fixed = TRUE)][[1L]]
+  expect_match(spec_line, "hline{3}", fixed = TRUE)
 })
 
-test_that("no footnotes: table keeps its closing in-table \\hline (#latex-footrule)", {
+test_that("no footnotes: single closing rule is the SSOT bottomrule, not an inline \\hline (#latex-footrule)", {
   spec <- tabular(data.frame(g = "A", x = "1"))
   f <- withr::local_tempfile(fileext = ".tex")
   emit(spec, f)
   tex <- readLines(f)
-  end_idx <- grep("\\end{longtblr}", tex, fixed = TRUE)[[1L]]
-  expect_identical(trimws(tex[end_idx - 1L]), "\\hline")
+  # The closer is the outer `hline{nrow}` bottomrule directive; the
+  # legacy inline `\hline` (which doubled with it) is gone.
+  expect_equal(sum(trimws(tex) == "\\hline"), 0L)
+  spec_line <- tex[grep("begin{longtblr}", tex, fixed = TRUE)][[1L]]
+  expect_match(spec_line, "hline{3}", fixed = TRUE)
+})
+
+test_that("opt-in footnoterule draws a table-width \\rule and drops the bottomrule (#latex-footrule)", {
+  spec <- tabular(data.frame(g = "A", x = "1"), footnotes = "Note 1") |>
+    preset(
+      rules = list(bottomrule = "none", footnoterule = brdr(width = "thin"))
+    )
+  f <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, f)
+  tex <- readLines(f)
+  # The footnoterule rides the foot-template minipage (= table width),
+  # at the resolved SSOT width; the bottomrule directive is suppressed.
+  expect_true(any(grepl("\\rule{\\linewidth}{0.5pt}", tex, fixed = TRUE)))
+  spec_line <- tex[grep("begin{longtblr}", tex, fixed = TRUE)][[1L]]
+  expect_no_match(spec_line, "hline{3}", fixed = TRUE)
 })

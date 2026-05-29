@@ -94,10 +94,17 @@
 # Baseline rule set — the clinical Appendix-I default and the value of
 # `rules = "booktabs"`. NOTE this is the regulatory baseline, not the
 # bare three-rule LaTeX booktabs look: the column-spanner underline
-# (`spanrule`, muted) and the footnote-section top rule
-# (`footnoterule`, TL-RTF-112) are ON, because both are load-bearing
-# layout invariants in the canonical submission contract. `rowrule`
-# and the three verticals are OFF.
+# (`spanrule`, muted) is ON because it is a load-bearing layout
+# invariant in the canonical submission contract.
+#
+# `bottomrule` and `footnoterule` are MUTUALLY EXCLUSIVE: exactly one
+# rule sits at the data -> footnote boundary, never two. The default is
+# `bottomrule` (table-width, ink, closing the body); `footnoterule` is
+# OFF. A user who prefers the footnote-section-opens-with-a-rule look
+# turns `footnoterule` on (and, to avoid the double rule, `bottomrule`
+# off) through the `rules` knob. When drawn, `footnoterule` matches the
+# `toprule` width (table/content width), NOT the full page width.
+# `rowrule` and the three verticals are OFF.
 .tabular_rule_booktabs <- function() {
   list(
     toprule = .rule_ink(),
@@ -105,7 +112,7 @@
     bottomrule = .rule_ink(),
     spanrule = .rule_muted(),
     rowrule = NULL,
-    footnoterule = .rule_ink(),
+    footnoterule = NULL,
     leftrule = NULL,
     rightrule = NULL,
     colrule = NULL

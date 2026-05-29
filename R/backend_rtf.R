@@ -197,7 +197,14 @@ backend_rtf <- function(grid, file) {
   trailing_footnotes <- has_footnotes && !isTRUE(rep_footnotes)
   footer_active <- has_pf || footer_footnotes
   footnote_lines <- if (footer_footnotes) {
-    .render_rtf_footnote_block(meta$footnotes_ast, preset, cs, colors, fonts)
+    .render_rtf_footnote_block(
+      meta$footnotes_ast,
+      preset,
+      cs,
+      colors,
+      fonts,
+      cellx
+    )
   } else {
     character()
   }
@@ -356,7 +363,8 @@ backend_rtf <- function(grid, file) {
       preset,
       cs,
       colors,
-      fonts
+      fonts,
+      cellx
     )
   }
 
@@ -938,7 +946,8 @@ backend_rtf <- function(grid, file) {
   preset,
   cs = NULL,
   colors = NULL,
-  fonts = NULL
+  fonts = NULL,
+  cellx = NULL
 ) {
   n <- length(footnotes_ast)
   if (n == 0L) {
@@ -967,7 +976,7 @@ backend_rtf <- function(grid, file) {
     fonts,
     skip = "font_size"
   )
-  vapply(
+  paras <- vapply(
     seq_len(n),
     function(i) {
       halign <- if (
@@ -985,15 +994,8 @@ backend_rtf <- function(grid, file) {
         if (is.na(h)) "left" else h
       }
       align_tok <- .rtf_align_token(halign)
-      # The footnote section opens with a top solid rule (the regulatory
-      # layout contract), drawn as a top paragraph border on the FIRST
-      # footnote line so it repeats with the `{\footer}` group on every
-      # page, the RTF analogue of the LaTeX foot-template `\rule`. `\brsp`
-      # spaces the rule above the footnote text.
-      rule_tok <- if (i == 1L) "\\brdrt\\brdrs\\brdrw10\\brsp20" else ""
       paste0(
         "\\pard\\plain",
-        rule_tok,
         align_tok,
         sprintf("\\fs%d ", fs_half),
         surface_props_no_fs,
@@ -1003,6 +1005,46 @@ backend_rtf <- function(grid, file) {
     },
     character(1L)
   )
+  # The footnote-section opening rule (footnoterule). OFF by default:
+  # the body `bottomrule` is the mutually-exclusive default closer, so
+  # the footnote block carries no rule of its own. When the user opts in
+  # via the `rules` knob, draw it as a TABLE-WIDTH merged-cell top border
+  # (the same `\cellx`-grid idiom as the title / spanner rows), NOT a
+  # paragraph `\brdrt` border -- a Word reader stretches a paragraph
+  # border to the full page text column (margin to margin), which is the
+  # page-width defect. The merged row is sized to the table `\cellx`
+  # grid, so the rule matches the toprule / bottomrule width.
+  foot_triple <- .chrome_border_at(cs, "footer_top")
+  rule_row <- .rtf_foot_rule_row(foot_triple, cellx, preset)
+  c(rule_row, paras)
+}
+
+# Build the table-width footnote-opening rule as a merged-cell row with
+# a top border. NULL / "none" triple, or no resolved `\cellx` grid ->
+# no rule (character(0)).
+.rtf_foot_rule_row <- function(triple, cellx, preset) {
+  if (
+    is.null(triple) ||
+      identical(triple$style, "none") ||
+      length(cellx) == 0L
+  ) {
+    return(character())
+  }
+  style_tok <- switch(
+    triple$style,
+    solid = "\\brdrs",
+    dashed = "\\brdrdash",
+    dotted = "\\brdrdot",
+    double = "\\brdrdb",
+    dashdot = "\\brdrdashd",
+    "\\brdrs"
+  )
+  twips <- max(
+    1L,
+    as.integer(round((triple$width %||% .tabular_rule_width) * 20))
+  )
+  top_token <- paste0("\\clbrdrt", style_tok, sprintf("\\brdrw%d", twips))
+  .rtf_merged_row("", cellx, preset, prelude = top_token)
 }
 
 # Helper — render the run-level text props from a chrome surface
