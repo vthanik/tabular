@@ -476,14 +476,16 @@ test_that("HTML emit indents data-row host-col cells under header_row mode", {
 test_that("LaTeX emit indents data-row host-col cells under header_row mode", {
   # The engine bakes a leading-space prefix into cells_text AND ships
   # an integer depth on `page$cells_indent`. The LaTeX backend reads
-  # the sidecar, strips the prefix, and emits the indent as a native
-  # `\SetCell{leftsep+=Xpt}` so wrapped continuation lines align with
-  # the indented baseline (SAS PADDINGLEFT contract).
+  # the sidecar, strips the prefix, and emits the indent as a per-cell
+  # `\leftskip` group so wrapped continuation lines align with the
+  # indented baseline (SAS PADDINGLEFT contract). `\leftskip` is used
+  # rather than the column key `leftsep`, which tabularray rejects
+  # inside a cell and which broke the PDF compile.
   spec <- mk_soc_pt_spec()
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_match(txt, "\\\\SetCell\\{leftsep\\+=", perl = FALSE)
+  expect_match(txt, "{\\leftskip=", fixed = TRUE)
   expect_true(grepl("Atrial fib", txt, fixed = TRUE))
   expect_true(grepl("Nausea", txt, fixed = TRUE))
   # Engine-baked leading-space prefix must NOT survive into the cell

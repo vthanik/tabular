@@ -268,7 +268,10 @@ test_that("titles render as bold centred paragraphs preserving order", {
   expect_match(txt, "{\\bfseries First}\\par", fixed = TRUE)
   expect_match(txt, "{\\bfseries Second}\\par", fixed = TRUE)
   expect_match(txt, "{\\bfseries Third}\\par", fixed = TRUE)
-  expect_match(txt, "\\begin{center}", fixed = TRUE)
+  # Centred via a glue-free `{\centering ...}` group (NOT a `center`
+  # list environment, which added inter-line vertical gaps).
+  expect_match(txt, "{\\centering {\\bfseries First}\\par}", fixed = TRUE)
+  expect_no_match(txt, "\\begin{center}", fixed = TRUE)
 })
 
 test_that("footnotes render in small font with \\par separators", {
@@ -582,7 +585,7 @@ test_that("no headers -> rowhead = 1 (only col-labels row)", {
 # Pagination
 # ---------------------------------------------------------------------
 
-test_that("multi-page emit separates pages with \\newpage", {
+test_that("multi-page emit is ONE longtblr (native pagination, no \\newpage)", {
   d <- data.frame(
     grp = rep(letters[1:6], each = 4L),
     x = seq_len(24L)
@@ -592,7 +595,13 @@ test_that("multi-page emit separates pages with \\newpage", {
     paginate(keep_together = "grp") |>
     preset(font_size = 24L)
   txt <- render_tex(spec)
-  expect_match(txt, "\\newpage", fixed = TRUE)
+  # Native pagination: tabularray paginates the body, so a single
+  # vertical run of rows is ONE longtblr with no manual \newpage.
+  expect_equal(
+    length(gregexpr("\\begin{longtblr}", txt, fixed = TRUE)[[1L]]),
+    1L
+  )
+  expect_no_match(txt, "\\newpage", fixed = TRUE)
 })
 
 test_that("continuation marker renders as italic noindent on pages 2+", {
@@ -812,7 +821,7 @@ test_that("style(.at = cells_headers(), color = ...) wraps header band in \\text
   expect_match(tex, "\\\\textcolor\\[HTML\\]\\{CC0000\\}", fixed = FALSE)
 })
 
-test_that("style(.at = cells_title(), halign = 'left') puts title inside flushleft", {
+test_that("style(.at = cells_title(), halign = 'left') left-aligns the title", {
   template <- style_template() |>
     style(.at = cells_title(), halign = "left")
   spec <- tabular(
@@ -821,7 +830,9 @@ test_that("style(.at = cells_title(), halign = 'left') puts title inside flushle
   ) |>
     preset(.style = template)
   tex <- render_tex(spec)
-  expect_match(tex, "\\\\begin\\{flushleft\\}.*Demographics", fixed = FALSE)
+  # Left alignment via a glue-free `{\raggedright ...}` group (not the
+  # `flushleft` list environment, which added vertical gaps).
+  expect_match(tex, "\\{\\\\raggedright .*Demographics", fixed = FALSE)
 })
 
 test_that("style(.at = cells_footnotes(), italic = TRUE) wraps footnote in \\textit", {
@@ -851,7 +862,7 @@ test_that("style(.at = cells_title(), blank_above = 3) emits three blank lines b
 })
 
 # ---------------------------------------------------------------------
-# Change C: cells_indent sidecar -> tabularray \SetCell{leftsep+=Xpt}
+# Change C: cells_indent sidecar -> per-cell \leftskip indent group
 # ---------------------------------------------------------------------
 
 test_that("LaTeX emits leftsep+= on data rows but NOT on header rows (Change C)", {
@@ -883,18 +894,20 @@ test_that("LaTeX emits leftsep+= on data rows but NOT on header rows (Change C)"
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  # Data row PT cells carry `\SetCell{leftsep+=Xpt}` BEFORE the label.
+  # Data row PT cells carry a `\leftskip` indent group around the label.
   expect_match(
     tex,
-    "\\\\SetCell\\{leftsep\\+=[0-9.]+pt\\}[^&]*Atrial",
+    "\\{\\\\leftskip=[0-9.]+pt\\\\relax [^&]*Atrial",
     perl = TRUE
   )
-  # Header row (the synthesised CARDIAC band) does NOT carry leftsep+=.
-  expect_false(grepl(
-    "leftsep+=",
-    sub(".*(CARDIAC[^&]*).*", "\\1", tex),
-    fixed = TRUE
-  ))
+  # The invalid column key `leftsep+=` never appears (it broke the PDF).
+  expect_no_match(tex, "leftsep+=", fixed = TRUE)
+  # The depth-0 CARDIAC band header gets no indent group.
+  expect_no_match(
+    tex,
+    "\\{\\\\leftskip=[0-9.]+pt\\\\relax \\\\textbf\\{CARDIAC\\}",
+    perl = TRUE
+  )
 })
 
 # ---------------------------------------------------------------------
@@ -966,10 +979,10 @@ test_that("LaTeX nested bands: band-1 header bare {l}, band-2 header gets leftse
     "\\\\SetCell\\[c=2\\]\\{l\\} \\\\textbf\\{Safety\\}",
     perl = TRUE
   )
-  # Band 2 ("AE", depth 1) -> `\SetCell[c=2]{l, leftsep+=Xpt} \textbf{AE}`.
+  # Band 2 ("AE", depth 1) -> `\SetCell[c=2]{l} {\leftskip=Xpt\relax \textbf{AE}}`.
   expect_match(
     tex,
-    "\\\\SetCell\\[c=2\\]\\{l, leftsep\\+=[0-9.]+pt\\} \\\\textbf\\{AE\\}",
+    "\\\\SetCell\\[c=2\\]\\{l\\} \\{\\\\leftskip=[0-9.]+pt\\\\relax \\\\textbf\\{AE\\}\\}",
     perl = TRUE
   )
 })
@@ -1068,6 +1081,63 @@ test_that("LaTeX multi-page banded table compiles cleanly (regression: cmidrule 
   expect_gt(pages, 1L)
 })
 
+# --- §4 spanner parity: full-width top + bottom ride outer hlines ----
+# The header top/bottom rules used to be inline `\hline` lines wedged
+# between the band rows. Inline header rules do NOT survive longtblr's
+# rowhead replay (same failure mode as inline \cmidrule) and they
+# doubled when bands sat above the column-labels row. They now ride
+# tabularray-native outer `hline{i}={1-N}{spec}` directives: a
+# full-width rule on the TOPMOST header row and a full-width rule under
+# the column-labels row, with each spanner keeping its scoped
+# cmidrule(lr). Mirrors the RTF `outer_top` / `has_bands` model.
+
+mk_band_spec_small <- function() {
+  df <- data.frame(
+    param = c("Age", "Sex", "BMI"),
+    a = 1:3,
+    b = 4:6,
+    c = 7:9,
+    d = 10:12
+  )
+  tabular(df, titles = "Banded") |>
+    cols(
+      param = col_spec(label = "Param"),
+      a = col_spec(label = "C1"),
+      b = col_spec(label = "C2"),
+      c = col_spec(label = "C3"),
+      d = col_spec(label = "C4")
+    ) |>
+    headers("Group A" = c("a", "b"), "Group B" = c("c", "d"))
+}
+
+test_that("LaTeX header rules ride outer hlines, no inline header rule (#parity-s4)", {
+  tex <- render_tex(mk_band_spec_small())
+  # Full-width top rule across all 5 columns on the topmost band row.
+  expect_match(tex, "hline\\{1\\}=\\{1-5\\}", perl = TRUE)
+  # Full-width bottom rule under the column-labels row.
+  # rowhead = nbands(1) + 1 = 2, so the bottom rule sits at hline{3}.
+  expect_match(tex, "hline\\{3\\}=\\{1-5\\}", perl = TRUE)
+  # Each spanner keeps its scoped, inset cmidrule(lr) at hline{2}.
+  expect_match(tex, "hline\\{2\\}=\\{2-3,4-5\\}", perl = TRUE)
+  # The only inline `\hline` left is the body-bottom (footer) rule;
+  # the header top/bottom are no longer inline (single-page spec).
+  n_inline <- length(gregexpr("\\hline", tex, fixed = TRUE)[[1L]])
+  expect_equal(n_inline, 1L)
+})
+
+test_that("LaTeX no-band table: top hline{1}, bottom hline{2}, no double rule", {
+  spec <- tabular(
+    data.frame(grp = c("a", "b"), n = c("1", "2")),
+    titles = "Plain"
+  ) |>
+    cols(grp = col_spec(label = "Group"), n = col_spec(label = "N"))
+  tex <- render_tex(spec)
+  expect_match(tex, "hline\\{1\\}=\\{1-2\\}", perl = TRUE)
+  expect_match(tex, "hline\\{2\\}=\\{1-2\\}", perl = TRUE)
+  # No band cmidrule and no doubled top rule.
+  expect_no_match(tex, "leftpos=-1", fixed = TRUE)
+})
+
 test_that("cell_padding_h drives LaTeX per-side leftsep/rightsep (padding SSOT)", {
   # Scalar -> equal left/right; c(left, right) -> exact per side.
   spec1 <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
@@ -1085,4 +1155,344 @@ test_that("cell_padding_h drives LaTeX per-side leftsep/rightsep (padding SSOT)"
     "leftsep=3pt, rightsep=7pt",
     fixed = TRUE
   )
+})
+
+# --- Phase 5: longtblr head / foot templates -------------------------
+# These additive helpers carry running titles + footnotes via
+# tabularray's firsthead/middle/lasthead + firstfoot/middle/lastfoot
+# templates. Unit-tested on hand-built asts; wired into the panel
+# renderer in the native-pagination phase.
+
+mk_ast <- function(...) lapply(c(...), tabular:::parse_inline)
+
+test_that(".latex_def_tblr_template: empty content clears the template", {
+  expect_identical(
+    tabular:::.latex_def_tblr_template("firsthead", character()),
+    "\\DefTblrTemplate{firsthead}{default}{}"
+  )
+  out <- tabular:::.latex_def_tblr_template("middlehead, lasthead", "X")
+  expect_match(
+    out[[1L]],
+    "\\DefTblrTemplate{middlehead, lasthead}{default}{",
+    fixed = TRUE
+  )
+  expect_identical(out[[length(out)]], "}")
+})
+
+test_that(".latex_head_template: titles repeat by default, marker only on cont panels", {
+  titles <- mk_ast("Table 14.1", "Demographics")
+  out <- paste(
+    tabular:::.latex_head_template(titles, is_cont_panel = FALSE),
+    collapse = "\n"
+  )
+  expect_match(out, "\\DefTblrTemplate{firsthead}{default}{", fixed = TRUE)
+  expect_match(
+    out,
+    "\\DefTblrTemplate{middlehead, lasthead}{default}{",
+    fixed = TRUE
+  )
+  expect_match(out, "Demographics", fixed = TRUE)
+  # Panel 1: no continuation marker anywhere.
+  expect_no_match(out, "(continued)", fixed = TRUE)
+})
+
+test_that(".latex_head_template: non-repeat keeps titles out of middle/lasthead", {
+  titles <- mk_ast("Table 14.1")
+  out <- tabular:::.latex_head_template(titles, rep_titles = FALSE)
+  # firsthead carries the title; middle/lasthead is the empty form.
+  first_blk <- out[seq_len(which(out == "}")[[1L]])]
+  expect_match(paste(first_blk, collapse = "\n"), "Table 14.1", fixed = TRUE)
+  expect_true("\\DefTblrTemplate{middlehead, lasthead}{default}{}" %in% out)
+})
+
+test_that(".latex_head_template: continuation marker on cont panel + continued pages", {
+  titles <- mk_ast("Table 14.1")
+  out <- paste(
+    tabular:::.latex_head_template(
+      titles,
+      continuation = "(continued)",
+      is_cont_panel = TRUE
+    ),
+    collapse = "\n"
+  )
+  # Marker appears in firsthead (cont panel) and middle/lasthead.
+  expect_gte(lengths(gregexpr("(continued)", out, fixed = TRUE))[[1L]], 2L)
+})
+
+test_that(".latex_head_template: empty titles, no marker -> empty templates", {
+  out <- tabular:::.latex_head_template(list())
+  expect_true("\\DefTblrTemplate{firsthead}{default}{}" %in% out)
+  expect_true("\\DefTblrTemplate{middlehead, lasthead}{default}{}" %in% out)
+})
+
+test_that(".latex_foot_template: repeating footnotes share one template + minipage", {
+  fn <- mk_ast("Note: safety population.")
+  cols <- list(
+    a = col_spec(width = 2),
+    b = col_spec(width = 1)
+  )
+  out <- paste(
+    tabular:::.latex_foot_template(
+      fn,
+      rep_footnotes = TRUE,
+      col_names_vis = c("a", "b"),
+      cols = cols
+    ),
+    collapse = "\n"
+  )
+  expect_match(
+    out,
+    "\\DefTblrTemplate{firstfoot, middlefoot, lastfoot}{default}{",
+    fixed = TRUE
+  )
+  expect_match(out, "\\begin{minipage}{", fixed = TRUE)
+  expect_match(out, "\\rule{\\linewidth}{0.4pt}", fixed = TRUE)
+  expect_match(out, "safety population", fixed = TRUE)
+})
+
+test_that(".latex_foot_template: non-repeat pins footnotes to lastfoot only", {
+  fn <- mk_ast("Note: last page.")
+  out <- tabular:::.latex_foot_template(fn, rep_footnotes = FALSE)
+  expect_true("\\DefTblrTemplate{firstfoot, middlefoot}{default}{}" %in% out)
+  last_blk <- paste(out, collapse = "\n")
+  expect_match(
+    last_blk,
+    "\\DefTblrTemplate{lastfoot}{default}{",
+    fixed = TRUE
+  )
+  expect_match(last_blk, "last page", fixed = TRUE)
+})
+
+test_that(".latex_foot_template: empty footnotes -> empty foot templates", {
+  out <- tabular:::.latex_foot_template(list())
+  expect_true("\\DefTblrTemplate{firstfoot, middlefoot}{default}{}" %in% out)
+  expect_true("\\DefTblrTemplate{lastfoot}{default}{}" %in% out)
+})
+
+test_that(".latex_table_width_in: sum of widths + padding; NA -> linewidth fallback", {
+  cols <- list(a = col_spec(width = 2), b = col_spec(width = 1))
+  spec <- tabular(data.frame(a = 1, b = 2)) |> preset(cell_padding_h = 0)
+  preset <- tabular:::.effective_preset(spec)
+  w <- tabular:::.latex_table_width_in(c("a", "b"), cols, preset = preset)
+  expect_equal(w, 3) # zero padding -> exactly the summed widths
+  # Missing width on a column -> NA (caller uses \linewidth).
+  cols2 <- list(a = col_spec(width = 2), b = col_spec())
+  expect_true(is.na(
+    tabular:::.latex_table_width_in(c("a", "b"), cols2, preset = preset)
+  ))
+})
+
+# --- Phase 1 + 2/3: native pagination + panel composition ------------
+
+test_that(".latex_chrome_hline_spec: default, override, and none", {
+  # No chrome border set -> canonical thin solid rule.
+  expect_identical(
+    tabular:::.latex_chrome_hline_spec(NULL, "header_top"),
+    "0.4pt, solid"
+  )
+  # Explicit override resolves through .latex_border_spec.
+  cs <- list(
+    borders = list(
+      header_top = list(style = "solid", width = 1.2, color = NA_character_),
+      header_bottom = list(style = "none", width = 0, color = NA_character_)
+    )
+  )
+  expect_match(
+    tabular:::.latex_chrome_hline_spec(cs, "header_top"),
+    "1.2pt",
+    fixed = TRUE
+  )
+  # style = "none" -> "" so the caller skips the directive.
+  expect_identical(
+    tabular:::.latex_chrome_hline_spec(cs, "header_bottom"),
+    ""
+  )
+})
+
+test_that(".latex_minipage_wrap falls back to \\linewidth on NA width", {
+  out <- tabular:::.latex_minipage_wrap(c("body"), NA_real_)
+  expect_match(out[[1L]], "\\begin{minipage}{\\linewidth}", fixed = TRUE)
+  fixed_w <- tabular:::.latex_minipage_wrap(c("body"), 3.5)
+  expect_match(fixed_w[[1L]], "\\begin{minipage}{3.5in}", fixed = TRUE)
+})
+
+test_that(".latex_group_pages_into_panels keys by (subgroup, panel), sorts pages", {
+  pages <- list(
+    list(subgroup_index = 1L, panel_index = 1L, page_index = 2L),
+    list(subgroup_index = 1L, panel_index = 1L, page_index = 1L),
+    list(subgroup_index = 1L, panel_index = 2L, page_index = 1L)
+  )
+  grouped <- tabular:::.latex_group_pages_into_panels(pages)
+  expect_length(grouped, 2L)
+  # First group (panel 1) sorted by page_index ascending.
+  expect_identical(
+    vapply(grouped[[1L]], function(p) p$page_index, integer(1L)),
+    c(1L, 2L)
+  )
+})
+
+test_that(".latex_concat_panel_body: single page passes through, multi rbinds", {
+  mk_page <- function(txt, keep) {
+    list(
+      cells_text = matrix(txt, nrow = length(txt), ncol = 1L),
+      cells_style = matrix(list(style_node()), nrow = length(txt), ncol = 1L),
+      cells_indent = matrix(0L, nrow = length(txt), ncol = 1L),
+      is_header_row = rep(FALSE, length(txt)),
+      is_blank_row = rep(FALSE, length(txt)),
+      keep_with_next = keep,
+      host_col = NA_character_
+    )
+  }
+  one <- tabular:::.latex_concat_panel_body(list(mk_page(
+    c("a", "b"),
+    c(TRUE, FALSE)
+  )))
+  expect_equal(nrow(one$cells_text), 2L)
+
+  two <- tabular:::.latex_concat_panel_body(list(
+    mk_page(c("a", "b"), c(TRUE, FALSE)),
+    mk_page(c("c"), FALSE)
+  ))
+  expect_equal(nrow(two$cells_text), 3L)
+  expect_identical(two$keep_with_next, c(TRUE, FALSE, FALSE))
+})
+
+test_that(".latex_warn_long_table warns past threshold, silent below", {
+  expect_warning(
+    tabular:::.latex_warn_long_table(1000L),
+    class = "tabular_warning_layout"
+  )
+  expect_no_warning(tabular:::.latex_warn_long_table(999L))
+  expect_no_warning(tabular:::.latex_warn_long_table(NA_integer_))
+})
+
+test_that("long table emit() warns about tabularray compile cost", {
+  d <- data.frame(
+    grp = sprintf("Item %d", seq_len(1000L)),
+    x = seq_len(1000L)
+  )
+  out <- withr::local_tempfile(fileext = ".tex")
+  expect_warning(
+    emit(tabular(d), out),
+    class = "tabular_warning_layout"
+  )
+})
+
+test_that("keep_together drives \\* glue inside ONE longtblr (native)", {
+  d <- data.frame(grp = rep(letters[1:6], each = 4L), x = seq_len(24L))
+  spec <- tabular(d) |>
+    cols(grp = col_spec(usage = "group")) |>
+    paginate(keep_together = "grp")
+  tex <- render_tex(spec)
+  expect_match(tex, "\\\\*", fixed = TRUE) # at least one glued row
+  expect_equal(
+    length(gregexpr("\\begin{longtblr}", tex, fixed = TRUE)[[1L]]),
+    1L
+  )
+})
+
+test_that("subgroup emits one longtblr per group separated by \\clearpage", {
+  d <- data.frame(
+    g = rep(c("Cohort A", "Cohort B"), each = 3L),
+    lab = rep(c("n", "Mean", "SD"), 2L),
+    val = c("10", "5.1", "1.2", "12", "5.4", "1.0")
+  )
+  spec <- tabular(d) |>
+    cols(g = col_spec(usage = "group")) |>
+    subgroup(by = "g")
+  tex <- render_tex(spec)
+  expect_match(tex, "\\clearpage", fixed = TRUE)
+  expect_gte(
+    length(gregexpr("\\begin{longtblr}", tex, fixed = TRUE)[[1L]]),
+    2L
+  )
+})
+
+test_that("tall chrome no longer aborts under native pagination", {
+  # Many title lines + large font make the header chrome taller than
+  # the printable area. Non-native pagination aborted here; native
+  # floors rows_per_page instead.
+  d <- data.frame(grp = letters[1:8], x = seq_len(8L))
+  spec <- tabular(d, titles = sprintf("Title line %d", 1:12)) |>
+    preset(font_size = 26L)
+  out <- withr::local_tempfile(fileext = ".tex")
+  expect_no_error(emit(spec, out))
+})
+
+# --- Phase 6: PDF compile + benchmark gate (tinytex) -----------------
+# The only check that proves the head/foot templates + native
+# pagination compile under the installed tabularray.
+
+test_that("subgroup + panel spec compiles to PDF with template lines", {
+  skip_on_cran()
+  skip_if_not(tinytex::is_tinytex())
+  d <- data.frame(
+    g = rep(c("Cohort A", "Cohort B"), each = 30L),
+    lab = rep(sprintf("Row %d", 1:30), 2L),
+    val = as.character(seq_len(60L))
+  )
+  spec <- tabular(
+    d,
+    titles = c("Table X", "Demographics"),
+    footnotes = "Note: x."
+  ) |>
+    cols(g = col_spec(usage = "group")) |>
+    subgroup(by = "g")
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(tex, "\\DefTblrTemplate{firsthead}{default}", fixed = TRUE)
+  expect_match(
+    tex,
+    "\\DefTblrTemplate{firstfoot, middlefoot, lastfoot}{default}",
+    fixed = TRUE
+  )
+  pdf <- tinytex::xelatex(out)
+  withr::defer(unlink(pdf))
+  expect_true(file.exists(pdf) && file.size(pdf) > 0L)
+})
+
+test_that("pagefoot band + user footnotes coexist (chrome/template no overlap)", {
+  skip_on_cran()
+  skip_if_not(tinytex::is_tinytex())
+  d <- data.frame(grp = sprintf("Item %d", 1:40), x = seq_len(40L))
+  spec <- tabular(d, titles = "T", footnotes = c("Note A", "Note B")) |>
+    preset(
+      pagefoot = list(
+        left = "Program: demo.R",
+        right = "Page {page} of {npages}"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  pdf <- tinytex::xelatex(out)
+  withr::defer(unlink(pdf))
+  expect_true(file.exists(pdf) && file.size(pdf) > 0L)
+})
+
+test_that("~400-row table compiles (tabularray whole-table cost benchmark)", {
+  skip_on_cran()
+  skip_if_not(tinytex::is_tinytex())
+  d <- data.frame(
+    grp = sprintf("Subject %03d", seq_len(400L)),
+    a = seq_len(400L),
+    b = round(seq_len(400L) / 7, 1)
+  )
+  spec <- tabular(d, titles = "Long listing")
+  out <- withr::local_tempfile(fileext = ".tex")
+  suppressWarnings(emit(spec, out))
+  elapsed <- system.time({
+    pdf <- tinytex::xelatex(out)
+  })[["elapsed"]]
+  withr::defer(unlink(pdf))
+  expect_true(file.exists(pdf) && file.size(pdf) > 0L)
+  info <- suppressWarnings(
+    system2("pdfinfo", pdf, stdout = TRUE, stderr = FALSE)
+  )
+  pages <- as.integer(sub(".*:\\s*", "", grep("^Pages:", info, value = TRUE)))
+  expect_gt(pages, 1L)
+  testthat::skip(sprintf(
+    "benchmark: 400-row xelatex compile = %.1fs",
+    elapsed
+  ))
 })

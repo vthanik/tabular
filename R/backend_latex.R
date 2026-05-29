@@ -19,12 +19,24 @@
 # * **Booktabs-compatible rule weights** without needing
 #   booktabs itself; rule placement is declarative.
 #
-# Output layout — one `longtblr` per `grid@pages` entry,
-# separated by `\newpage`. Page 1 carries the title block and
-# footnote block; continuation pages get the (optional)
-# `continuation` marker the user set on `paginate()`. Header
-# bands + column-labels row repeat on every page through
-# `longtblr`'s `rowhead` mechanism.
+# Output layout — ONE `longtblr` per (subgroup x panel) group, with
+# `\clearpage` between groups. tabularray paginates the body natively;
+# the title block repeats at the top of every physical page via the
+# `firsthead`/`middlehead`/`lasthead` templates and the footnotes via
+# `firstfoot`/`middlefoot`/`lastfoot` (a `minipage` at table width).
+# Header bands + column-labels row repeat through `longtblr`'s `rowhead`
+# mechanism, and the keep-with-next mask drives `\\*` so groups are not
+# split across a page break. The program-path band + page numbers ride
+# the fancyhdr page header/footer (`.latex_pagestyle_block`).
+#
+# This replaces the older "one `longtblr` per estimated page, joined by
+# `\newpage`, titles/footnotes on page 1 only" manual-pagination model.
+# Tradeoff: tabularray buffers and re-measures the whole table body, so
+# compile cost grows super-linearly with row count. `.latex_warn_long_table`
+# warns past a threshold; very long listings should chunk via
+# `subgroup()` / `paginate(panels=)` or render to RTF/DOCX. Recommend
+# xelatex/lualatex (dynamic memory; the tinytex default the preamble
+# targets) over pdflatex for large tables.
 #
 # Inline ASTs (cell text, titles, footnotes, col labels) render
 # through `.render_latex_inline()` — a recursive walker over
@@ -78,17 +90,18 @@ backend_latex <- function(grid, file) {
     return(c(preamble, begin, .render_latex_empty(grid), end))
   }
 
+  # Warn once when the whole table is long enough that tabularray's
+  # whole-table buffering may make the compile slow (see file header).
+  .latex_warn_long_table(meta$nrow_data %||% total)
+
+  cs <- meta$chrome_style %||% chrome_style()
+  panels <- .latex_group_pages_into_panels(pages)
   body <- list()
-  for (i in seq_along(pages)) {
-    if (i > 1L) {
-      body[[length(body) + 1L]] <- c("", "\\newpage", "")
+  for (k in seq_along(panels)) {
+    if (k > 1L) {
+      body[[length(body) + 1L]] <- "\\clearpage"
     }
-    body[[length(body) + 1L]] <- .render_latex_page(
-      page = pages[[i]],
-      meta = meta,
-      page_number = i,
-      total_pages = total
-    )
+    body[[length(body) + 1L]] <- .render_latex_panel(panels[[k]], meta, cs)
   }
   c(preamble, begin, unlist(body, use.names = FALSE), end)
 }
@@ -113,59 +126,142 @@ backend_latex <- function(grid, file) {
   )
 }
 
-# Render one page block. Page 1 carries titles + footnotes;
-# continuation pages get the (optional) `continuation` marker.
-# Header bands + column-labels row repeat across page breaks
-# via `longtblr`'s `rowhead = N` mechanism (computed from the
-# number of band-rows + 1 for the column-labels row).
-.render_latex_page <- function(page, meta, page_number, total_pages) {
-  out <- character()
-  cs <- meta$chrome_style %||% chrome_style()
-  pad_title_top <- .latex_blank_count(cs, "title", "above", 1L)
-  pad_title_bottom <- .latex_blank_count(cs, "title", "below", 1L)
-  pad_body_top <- 0L
-  pad_body_bottom <- 0L
+# Group the engine's flat page list into render panels keyed by
+# `(subgroup_index, panel_index)`, each sorted by `page_index`. For a
+# native (unsplit) grid each group is a single page; for a split
+# inspection grid the group's pages are concatenated downstream into one
+# continuous table. First-appearance order of groups is preserved.
+# Port of `.rtf_group_pages_into_panels`.
+.latex_group_pages_into_panels <- function(pages) {
+  keys <- vapply(
+    pages,
+    function(p) {
+      sg <- p$subgroup_index %||% 0L
+      sprintf("%d\x1f%d", as.integer(sg), as.integer(p$panel_index %||% 1L))
+    },
+    character(1L)
+  )
+  lapply(unique(keys), function(k) {
+    grp <- pages[keys == k]
+    idx <- vapply(
+      grp,
+      function(p) as.integer(p$page_index %||% 1L),
+      integer(1L)
+    )
+    grp[order(idx)]
+  })
+}
 
-  if (page_number == 1L) {
-    titles <- .render_latex_title_block(
-      meta$titles_ast,
-      preset = meta$preset,
-      cs = cs
-    )
-    if (length(titles) > 0L) {
-      out <- c(
-        out,
-        rep("", pad_title_top),
-        titles,
-        rep("", pad_title_bottom)
-      )
-    }
-  } else if (length(page$continuation) > 0L) {
-    out <- c(
-      out,
-      paste0(
-        "\\noindent\\textit{",
-        .latex_escape(as.character(page$continuation)),
-        "}\\par\\medskip"
-      )
-    )
+# Concatenate a panel's page slices into one body. For a native (unsplit)
+# grid this is a single page (pass-through); for a split inspection grid
+# it stitches the per-page slices back into one continuous table. rbinds
+# the cell-text + sidecar matrices (column names preserved so
+# `.cell_style_at` keeps indexing by name) and concatenates the parallel
+# row vectors in render order. Port of `.rtf_concat_panel_body`.
+.latex_concat_panel_body <- function(panel_pages) {
+  first <- panel_pages[[1L]]
+  if (length(panel_pages) == 1L) {
+    return(list(
+      cells_text = first$cells_text,
+      cells_style = first$cells_style,
+      cells_indent = first$cells_indent,
+      is_header_row = first$is_header_row,
+      is_blank_row = first$is_blank_row,
+      keep_with_next = first$keep_with_next,
+      host_col = first$host_col
+    ))
   }
+  list(
+    cells_text = do.call(
+      rbind,
+      lapply(panel_pages, function(p) p$cells_text)
+    ),
+    cells_style = do.call(
+      rbind,
+      lapply(panel_pages, function(p) p$cells_style)
+    ),
+    cells_indent = do.call(
+      rbind,
+      lapply(panel_pages, function(p) p$cells_indent)
+    ),
+    is_header_row = unlist(
+      lapply(panel_pages, function(p) p$is_header_row),
+      use.names = FALSE
+    ),
+    is_blank_row = unlist(
+      lapply(panel_pages, function(p) p$is_blank_row),
+      use.names = FALSE
+    ),
+    keep_with_next = unlist(
+      lapply(panel_pages, function(p) p$keep_with_next),
+      use.names = FALSE
+    ),
+    host_col = first$host_col
+  )
+}
 
-  out <- c(out, rep("", pad_body_top))
-  out <- c(out, .render_latex_table(page, meta, cs))
-  out <- c(out, rep("", pad_body_bottom))
+# Render one panel as ONE `longtblr`. The title block rides the
+# firsthead/middle/lasthead templates and the footnotes ride
+# firstfoot/middle/lastfoot (re-declared just before the table so each
+# panel carries its own), so both repeat on every physical page while
+# tabularray paginates the body. The header band (incl. column labels)
+# repeats via `rowhead`; longtblr structurally repeats those rows on
+# every page, so the `repeat_headers` flag is always honoured here.
+# `\clearpage` between panels is emitted by the caller.
+.render_latex_panel <- function(panel_pages, meta, cs) {
+  first <- panel_pages[[1L]]
 
-  if (page_number == 1L) {
-    footnotes <- .render_latex_footnote_block(
-      meta$footnotes_ast,
-      preset = meta$preset,
-      cs = cs
-    )
-    if (length(footnotes) > 0L) {
-      out <- c(out, footnotes)
-    }
+  # Default to "everything repeats" (the regulatory norm) when a grid
+  # carries no repeat flags (e.g. a hand-built fixture).
+  rep_titles <- meta$repeat_titles %||% TRUE
+  rep_footnotes <- meta$repeat_footnotes %||% TRUE
+
+  is_cont_panel <- isTRUE((first$panel_index %||% 1L) > 1L)
+  continuation <- first$continuation %||% character()
+
+  head_tpl <- .latex_head_template(
+    meta$titles_ast,
+    continuation = continuation,
+    is_cont_panel = is_cont_panel,
+    rep_titles = rep_titles,
+    preset = meta$preset,
+    cs = cs
+  )
+  foot_tpl <- .latex_foot_template(
+    meta$footnotes_ast,
+    rep_footnotes = rep_footnotes,
+    col_names_vis = first$col_names,
+    cols = meta$cols,
+    cells_style = first$cells_style,
+    preset = meta$preset,
+    cs = cs
+  )
+
+  body <- .latex_concat_panel_body(panel_pages)
+  c(head_tpl, foot_tpl, .render_latex_table(first, meta, cs, body = body))
+}
+
+# Warn once when a table is long enough that tabularray's whole-table
+# buffering (it re-measures the entire body before typesetting) may make
+# the LaTeX/PDF compile slow or memory-hungry. Threshold is deliberately
+# conservative; the message points at the chunking escape hatches.
+.latex_long_table_threshold <- 1000L
+
+.latex_warn_long_table <- function(nrow_total) {
+  n <- suppressWarnings(as.integer(nrow_total))
+  if (length(n) != 1L || is.na(n) || n < .latex_long_table_threshold) {
+    return(invisible())
   }
-  out
+  cli::cli_warn(
+    c(
+      "LaTeX table has {n} rows.",
+      "i" = "tabularray re-measures the whole table, so the PDF compile may be slow or memory-heavy.",
+      "i" = "Chunk with {.fn subgroup} or {.code paginate(panels=)}, or render to RTF/DOCX for very long listings.",
+      "i" = "Prefer the xelatex or lualatex engine (dynamic memory) over pdflatex."
+    ),
+    class = "tabular_warning_layout",
+    call = rlang::caller_env()
+  )
 }
 
 # Resolve the blank-line count for a chrome surface side. chrome_style
@@ -274,18 +370,202 @@ backend_latex <- function(grid, file) {
 # inline `\centering` so the alignment scope is unambiguous (and
 # composes inside `\noindent\small ... \normalsize` blocks).
 .latex_aligned_paragraph <- function(body, halign) {
-  env <- switch(
+  # A glue-free group, NOT a list environment (`center`/`flushleft` add
+  # `\topsep`+`\partopsep` between every line). With `\parskip=0pt` in the
+  # preamble, consecutive groups stack on the normal baseline with no gap,
+  # so multi-line titles/footnotes read tight (galley's model).
+  align_cmd <- switch(
     halign,
-    left = "flushleft",
-    center = "center",
-    right = "flushright",
-    "flushleft"
+    left = "\\raggedright",
+    center = "\\centering",
+    right = "\\raggedleft",
+    "\\raggedright"
+  )
+  paste0("{", align_cmd, " ", body, "\\par}")
+}
+
+# ---------------------------------------------------------------------
+# longtblr head / foot templates (running titles + footnotes)
+# ---------------------------------------------------------------------
+
+# Emit one `\DefTblrTemplate{<name>}{default}{<content>}` block. `name`
+# may be a comma list (`"middlehead, lasthead"`) so several template
+# slots share one definition. Empty `content` emits the one-line empty
+# form `{default}{}` which CLEARS any previously declared template of
+# that name (so a panel with no titles does not inherit the previous
+# panel's). `default` is the template style longtblr looks up by
+# default; a wrong name renders nothing silently, hence the dedicated
+# helper + unit tests.
+.latex_def_tblr_template <- function(name, content) {
+  if (length(content) == 0L) {
+    return(sprintf("\\DefTblrTemplate{%s}{default}{}", name))
+  }
+  c(
+    sprintf("\\DefTblrTemplate{%s}{default}{%%", name),
+    content,
+    "}"
+  )
+}
+
+# Build the longtblr head templates that carry the table's titles, so
+# the title block repeats at the top of every physical page (tabularray
+# replays `firsthead` on a panel's first page and `middlehead`/`lasthead`
+# on its continuation pages). Re-declared just before each panel's table.
+#
+# * `firsthead`            -> titles (+ continuation marker when this is a
+#                             continuation PANEL, panel_index > 1).
+# * `middlehead, lasthead` -> titles (only when `rep_titles`) plus the
+#                             continuation marker (every physical
+#                             continued page gets it). This is finer than
+#                             RTF, which can only mark continuation panels.
+#
+# `continuation` is the user's `paginate(continuation=)` string (carried
+# verbatim on every page by the engine); an empty value suppresses the
+# marker. Empty titles + no marker collapse to the empty template form.
+.latex_head_template <- function(
+  titles_ast,
+  continuation = character(),
+  is_cont_panel = FALSE,
+  rep_titles = TRUE,
+  preset = NULL,
+  cs = NULL
+) {
+  titles <- .render_latex_title_block(titles_ast, preset = preset, cs = cs)
+  has_titles <- length(titles) > 0L
+  # Title blank-line padding (chrome `style(blank_above/below,
+  # .at = cells_title())`, else the legacy single blank line) wraps the
+  # title block so the spacing repeats with the titles on every page.
+  if (has_titles) {
+    pad_top <- .latex_blank_count(cs, "title", "above", 1L)
+    pad_bottom <- .latex_blank_count(cs, "title", "below", 1L)
+    titles <- c(rep("", pad_top), titles, rep("", pad_bottom))
+  }
+  cont_text <- if (length(continuation) > 0L) {
+    as.character(continuation)[[1L]]
+  } else {
+    ""
+  }
+  cont_marker <- if (nzchar(cont_text)) {
+    paste0("\\noindent\\textit{", .latex_escape(cont_text), "}\\par")
+  } else {
+    character()
+  }
+  first_content <- c(
+    if (isTRUE(is_cont_panel)) cont_marker,
+    if (has_titles) titles
+  )
+  rest_content <- c(
+    if (isTRUE(rep_titles) && has_titles) titles,
+    cont_marker
   )
   c(
-    paste0("\\begin{", env, "}"),
-    paste0(body, "\\par"),
-    paste0("\\end{", env, "}")
+    .latex_def_tblr_template("firsthead", first_content),
+    .latex_def_tblr_template("middlehead, lasthead", rest_content)
   )
+}
+
+# Build the longtblr foot templates that carry the user footnotes (with
+# the separator rule) inside a `minipage` matching the rendered table
+# width, so the rule and text align with the table columns rather than
+# spilling to the full page text width.
+#
+# * `rep_footnotes` TRUE  -> footnotes on every page
+#                            (`firstfoot, middlefoot, lastfoot`).
+# * `rep_footnotes` FALSE -> footnotes pin to the final page only
+#                            (`lastfoot`); the other slots are cleared.
+#
+# The program-path band + page numbers stay on the fancyhdr page footer
+# (`.latex_pagestyle_block`); this template carries ONLY the user
+# footnotes, so the two never collide.
+.latex_foot_template <- function(
+  footnotes_ast,
+  rep_footnotes = TRUE,
+  col_names_vis = NULL,
+  cols = NULL,
+  cells_style = NULL,
+  preset = NULL,
+  cs = NULL
+) {
+  fn <- .render_latex_footnote_block(footnotes_ast, preset = preset, cs = cs)
+  if (length(fn) == 0L) {
+    return(c(
+      .latex_def_tblr_template("firstfoot, middlefoot", character()),
+      .latex_def_tblr_template("lastfoot", character())
+    ))
+  }
+  width_in <- .latex_table_width_in(col_names_vis, cols, cells_style, preset)
+  wrapped <- .latex_minipage_wrap(fn, width_in)
+  if (isTRUE(rep_footnotes)) {
+    .latex_def_tblr_template("firstfoot, middlefoot, lastfoot", wrapped)
+  } else {
+    c(
+      .latex_def_tblr_template("firstfoot, middlefoot", character()),
+      .latex_def_tblr_template("lastfoot", wrapped)
+    )
+  }
+}
+
+# Wrap footnote lines in a fixed-width `minipage` topped by a full-width
+# separator rule. `width_in` is the rendered table width in inches;
+# `NA` falls back to `\linewidth` (the page text width) when column
+# widths are unresolved (e.g. proportional `X[]` columns).
+.latex_minipage_wrap <- function(lines, width_in) {
+  width_tok <- if (is.na(width_in)) {
+    "\\linewidth"
+  } else {
+    sprintf("%gin", round(width_in, 4L))
+  }
+  c(
+    sprintf("\\begin{minipage}{%s}", width_tok),
+    "\\noindent\\rule{\\linewidth}{0.4pt}\\par",
+    lines,
+    "\\end{minipage}"
+  )
+}
+
+# Rendered table width in inches: the sum of resolved column widths
+# (`col_spec@width`, inches) plus the per-column horizontal padding
+# (`leftsep + rightsep`, points -> inches at 72.27pt/in) that tabularray
+# adds around each column box. Returns `NA_real_` when any column width
+# is unresolved so callers can fall back to `\linewidth`.
+.latex_table_width_in <- function(
+  col_names_vis,
+  cols,
+  cells_style = NULL,
+  preset = NULL
+) {
+  if (is.null(cols) || length(col_names_vis) == 0L) {
+    return(NA_real_)
+  }
+  widths <- vapply(
+    col_names_vis,
+    function(nm) {
+      co <- cols[[nm]]
+      if (
+        is_col_spec(co) &&
+          is.numeric(co@width) &&
+          length(co@width) == 1L &&
+          !is.na(co@width)
+      ) {
+        co@width
+      } else {
+        NA_real_
+      }
+    },
+    numeric(1L)
+  )
+  if (anyNA(widths)) {
+    return(NA_real_)
+  }
+  # Per-column horizontal padding (leftsep + rightsep) needs a preset to
+  # resolve; a headless caller without one contributes zero padding.
+  lr <- if (is_preset_spec(preset)) {
+    .resolve_cell_padding_lr(cells_style, preset)
+  } else {
+    c(0, 0)
+  }
+  pad_in <- length(col_names_vis) * (lr[[1L]] + lr[[2L]]) / 72.27
+  sum(widths) + pad_in
 }
 
 # ---------------------------------------------------------------------
@@ -295,10 +575,25 @@ backend_latex <- function(grid, file) {
 # Render one page's table as a `\begin{longtblr}` ... `\end{longtblr}`
 # block. tabularray's `longtblr` auto-paginates and repeats
 # `rowhead` rows on continuation pages.
-.render_latex_table <- function(page, meta, cs = NULL) {
+.render_latex_table <- function(page, meta, cs = NULL, body = NULL) {
   col_names_vis <- page$col_names
   cols <- meta$cols %||% list()
   colspec <- .latex_colspec(col_names_vis, cols)
+
+  # Body source: the concatenated panel body when the panel renderer
+  # supplies one (native pagination), else the single page's slices
+  # (direct / legacy callers). `keep_with_next` drives the per-row
+  # `\\*` (no-break) terminator so tabularray does not split a group.
+  src <- body %||%
+    list(
+      cells_text = page$cells_text,
+      cells_style = page$cells_style,
+      cells_indent = page$cells_indent,
+      is_header_row = page$is_header_row,
+      is_blank_row = page$is_blank_row,
+      host_col = page$host_col,
+      keep_with_next = page$keep_with_next
+    )
 
   bands <- .render_latex_header_bands(meta$headers, col_names_vis, cs)
   band_rows <- bands$rows
@@ -311,28 +606,32 @@ backend_latex <- function(grid, file) {
   )
   rowhead <- length(band_rows) + 1L
 
-  # Chrome borders: header_top / header_bottom / footer_top come
-  # from `chrome_style$borders` when the user set them via
-  # `style(border_top = brdr(...), at = cells_headers())` and
-  # similar; otherwise fall through to the canonical `\hline`
-  # rules.
-  hline_header_top <- .latex_chrome_hline(cs, "header_top")
-  hline_header_bottom <- .latex_chrome_hline(cs, "header_bottom")
+  # Header rules ride tabularray-native outer `hline{i}={1-N}{spec}`
+  # directives (spliced into `outer_args` below), exactly like the
+  # per-band cmidrules. This is what makes them survive longtblr's
+  # `rowhead` replay on continuation pages, where an inline `\hline`
+  # in the replayed block would double or drop. A full-width top rule
+  # sits on the TOPMOST header row (`hline{1}`) and a full-width bottom
+  # rule under the column-labels row (`hline{nbands+2}`); each spanner
+  # band keeps its own scoped cmidrule(lr) from `bands$band_hlines`.
+  # No separate top rule on the col-labels row, so nothing doubles when
+  # bands sit above it. The footer (body-bottom) rule stays inline.
   hline_footer_top <- .latex_chrome_hline(cs, "footer_top")
-  header_rules <- c(
-    hline_header_top,
-    band_rows,
-    label_row,
-    hline_header_bottom
+  header_rule_dirs <- .latex_header_rule_directives(
+    nbands = length(band_rows),
+    n_cols = length(col_names_vis),
+    cs = cs
   )
+  header_rules <- c(band_rows, label_row)
   body_rows <- .render_latex_body_rows(
-    page$cells_text,
+    src$cells_text,
     col_names_vis = col_names_vis,
-    cells_style = page$cells_style,
-    cells_indent = page$cells_indent,
-    is_header_row = page$is_header_row,
-    is_blank_row = page$is_blank_row,
-    host_col = page$host_col,
+    cells_style = src$cells_style,
+    cells_indent = src$cells_indent,
+    is_header_row = src$is_header_row,
+    is_blank_row = src$is_blank_row,
+    host_col = src$host_col,
+    keep_with_next = src$keep_with_next,
     cols = cols,
     preset = meta$preset
   )
@@ -372,21 +671,29 @@ backend_latex <- function(grid, file) {
   )
   rows_inner <- c(
     sprintf("valign=%s", .latex_valign_letter(body_valign)),
-    .latex_rowsep_inner(page$cells_style)
+    .latex_rowsep_inner(src$cells_style)
   )
   outer_args <- paste(
     c(
       sprintf("colspec={%s}", colspec),
       sprintf("rowhead=%d", rowhead),
-      .latex_cellsep_inner(page$cells_style, meta$preset),
+      .latex_cellsep_inner(src$cells_style, meta$preset),
       sprintf("rows={%s}", paste(rows_inner, collapse = ", ")),
+      header_rule_dirs,
       border_directives,
       bands$band_hlines
     ),
     collapse = ", "
   )
+  # `presep=0pt, postsep=0pt` so the head/foot templates (titles /
+  # footnotes) butt directly against the table rather than gaining
+  # tabularray's default outer padding.
   c(
-    paste0("\\begin{longtblr}[caption={}, label={}]{", outer_args, "}"),
+    paste0(
+      "\\begin{longtblr}[caption={}, label={}, presep=0pt, postsep=0pt]{",
+      outer_args,
+      "}"
+    ),
     header_rules,
     banner_row,
     body_rows,
@@ -577,6 +884,51 @@ backend_latex <- function(grid, file) {
   "\\hline"
 }
 
+# Resolve a chrome border region into a tabularray border-spec
+# fragment (e.g. `"0.4pt, solid"`) for use inside an outer
+# `hline{i}={range}{spec}` directive. No user override -> the
+# canonical thin solid rule. `style = "none"` -> "" (caller skips
+# the directive entirely). Sibling of `.latex_chrome_hline`, which
+# emits the legacy inline `\hline` form for the body-bottom rule.
+.latex_chrome_hline_spec <- function(cs, region) {
+  triple <- .chrome_border_at(cs, region)
+  if (is.null(triple)) {
+    return("0.4pt, solid")
+  }
+  .latex_border_spec(triple)
+}
+
+# Build the full-width header-band rule directives for the outer
+# longtblr arg list. The header band occupies rows 1..(nbands+1):
+# `nbands` spanner rows followed by the single column-labels row, so
+# `rowhead = nbands + 1`. Two full-width rules bound the band:
+#
+#   hline{1}          -> top rule on the topmost header row
+#   hline{nbands + 2} -> bottom rule under the column-labels row
+#
+# Both span every column (`{1-N}`). Per-band cmidrules (`hline{k+1}`,
+# scoped + inset) are emitted separately by `.render_latex_header_bands`
+# and do not collide with these. The bottom rule shares its row index
+# (`nbands + 2` == `rowhead + 1`) with a body `outer_top` border; the
+# caller emits these directives BEFORE the body border directives so an
+# explicit user body border wins (last write in tabularray's arg list).
+# A region whose spec resolves to "" (style = "none") is skipped.
+.latex_header_rule_directives <- function(nbands, n_cols, cs = NULL) {
+  out <- character()
+  top <- .latex_chrome_hline_spec(cs, "header_top")
+  if (nzchar(top)) {
+    out <- c(out, sprintf("hline{1}={1-%d}{%s}", n_cols, top))
+  }
+  bottom <- .latex_chrome_hline_spec(cs, "header_bottom")
+  if (nzchar(bottom)) {
+    out <- c(
+      out,
+      sprintf("hline{%d}={1-%d}{%s}", nbands + 2L, n_cols, bottom)
+    )
+  }
+  out
+}
+
 # Compose the `colspec={...}` portion of the longtblr arg list.
 # One entry per visible column. Each column's token reads
 # alignment + width off its `col_spec`:
@@ -683,7 +1035,7 @@ backend_latex <- function(grid, file) {
   # Thin solid rule with a both-ends inset matching booktabs
   # `\cmidrule(lr)`. leftpos / rightpos = -1 pull the rule in at each
   # end so adjacent bands meet but do not visually touch.
-  band_spec <- "0.4pt, solid, leftpos=-1, rightpos=-1"
+  band_spec <- "0.4pt, solid"
   for (k in seq_along(depths)) {
     labels <- .band_labels_for_depth(headers, depths[[k]], col_names_visible)
     runs <- .group_contiguous_runs(labels)
@@ -734,6 +1086,9 @@ backend_latex <- function(grid, file) {
       cells <- c(cells, rep("", span))
     } else {
       lbl <- .latex_wrap_text_props(.latex_escape(run$value), surface_node)
+      # Multi-line spanner labels wrap so the `\\` breaks the line inside
+      # the (merged) cell rather than ending the band row.
+      lbl <- .latex_linebreak_wrap(lbl, halign = "center", valign = "bottom")
       if (span == 1L) {
         cells <- c(cells, lbl)
       } else {
@@ -796,15 +1151,27 @@ backend_latex <- function(grid, file) {
         valign <- "bottom"
       }
       parts <- sprintf("valign=%s", .latex_valign_letter(valign))
-      # Override halign to centre ONLY for a decimal column (HTML parity);
-      # other columns inherit their `Q[...]` colspec alignment, so no
-      # `halign` is emitted (keeps prior output verbatim).
-      if (
-        is_col_spec(col) &&
-          length(col@align) == 1L &&
-          !is.na(col@align) &&
-          col@align == "decimal"
-      ) {
+      is_decimal <- is_col_spec(col) &&
+        length(col@align) == 1L &&
+        !is.na(col@align) &&
+        col@align == "decimal"
+      if (grepl("\\\\", body, fixed = TRUE)) {
+        # Multi-line header: wrap so the in-cell `\\` is a line break, not
+        # a row separator. The parbox carries the halign (decimal centres,
+        # else the column's alignment); the cell keeps only valign.
+        halign <- if (is_decimal) {
+          "center"
+        } else if (
+          is_col_spec(col) && length(col@align) == 1L && !is.na(col@align)
+        ) {
+          col@align
+        } else {
+          "left"
+        }
+        body <- .latex_linebreak_wrap(body, halign = halign, valign = valign)
+      } else if (is_decimal) {
+        # Single-line decimal header centres (HTML parity); other
+        # single-line headers inherit their `Q[...]` colspec alignment.
         parts <- paste0("halign=c,", parts)
       }
       sprintf("\\SetCell{%s} %s", parts, body)
@@ -824,6 +1191,44 @@ backend_latex <- function(grid, file) {
 # baseline carries the preset's body_valign (`rows={valign=...}`)
 # so non-style cells inherit the cascade default for vertical
 # alignment without per-cell emission.
+# Wrap cell content in a `\leftskip` group for indent depth. `pt <= 0`
+# returns the content unchanged. `\leftskip` is paragraph-level, so a
+# wrapped cell's continuation lines align with the indented first line
+# (SAS PADDINGLEFT). Used for grouped body rows + section-header rows;
+# unlike the column-level `leftsep`, it is a valid construct inside a
+# tabularray cell.
+.latex_indent_wrap <- function(content, pt) {
+  if (!is.numeric(pt) || length(pt) != 1L || is.na(pt) || pt <= 0) {
+    return(content)
+  }
+  sprintf("{\\leftskip=%gpt\\relax %s}", pt, content)
+}
+
+# Wrap multi-line cell content in a `\parbox` so an in-cell `\\` becomes a
+# LINE break within the cell instead of a tabularray ROW separator (a bare
+# `\\` ends the row and fragments the table). Single-line content (no
+# `\\`) is returned unchanged. galley's construct: `\hsize` is the
+# Q-column content width; `[b]`/`[t]`/`[c]` sets the box baseline so a
+# multi-line header bottom-aligns with single-line neighbours; the
+# `\raggedright`/`\centering`/`\raggedleft` inside aligns every line.
+.latex_linebreak_wrap <- function(
+  content,
+  halign = "left",
+  valign = "bottom"
+) {
+  if (!grepl("\\\\", content, fixed = TRUE)) {
+    return(content)
+  }
+  align_cmd <- switch(
+    halign,
+    center = "\\centering ",
+    right = "\\raggedleft ",
+    "\\raggedright "
+  )
+  v <- switch(valign, top = "t", middle = "c", bottom = "b", "b")
+  sprintf("\\parbox[%s]{\\hsize}{%s%s}", v, align_cmd, content)
+}
+
 .render_latex_body_rows <- function(
   cells_text,
   col_names_vis = NULL,
@@ -832,6 +1237,7 @@ backend_latex <- function(grid, file) {
   is_header_row = NULL,
   is_blank_row = NULL,
   host_col = NA_character_,
+  keep_with_next = NULL,
   cols = NULL,
   preset = NULL
 ) {
@@ -848,6 +1254,23 @@ backend_latex <- function(grid, file) {
   }
   is_header_row <- is_header_row %||% rep(FALSE, nrow_data)
   is_blank_row <- is_blank_row %||% rep(FALSE, nrow_data)
+  # `keep_with_next[[i]]` TRUE -> glue row i to row i+1 with the `\\*`
+  # no-break terminator; FALSE -> plain `\\` (tabularray may break here).
+  # NULL default = all-FALSE, i.e. let tabularray paginate freely. This
+  # DIFFERS from the RTF backend's all-TRUE legacy fallback: under native
+  # pagination LaTeX must not glue every row (that would forbid every
+  # page break and overflow). The panel renderer supplies the engine's
+  # per-rendered-row keep mask.
+  keep_vec <- if (is.null(keep_with_next)) {
+    rep(FALSE, nrow_data)
+  } else {
+    vapply(
+      seq_len(nrow_data),
+      function(r) isTRUE(keep_with_next[[r]]),
+      logical(1L)
+    )
+  }
+  row_term <- function(i) if (isTRUE(keep_vec[[i]])) " \\\\*" else " \\\\"
   # Per-level native padding in `pt` (LaTeX's tabularray takes pt for
   # `leftsep+=`). `.indent_native_pt_per_level()` is the single source
   # of truth shared with the leading-space strip below.
@@ -868,7 +1291,7 @@ backend_latex <- function(grid, file) {
           } else {
             paste(rep(" &", ncol_data - 1L), collapse = "")
           },
-          " \\\\*"
+          row_term(i)
         ))
       }
       if (isTRUE(is_header_row[[i]])) {
@@ -882,30 +1305,26 @@ backend_latex <- function(grid, file) {
             break
           }
         }
-        # Band-depth padding on the spanning cell via tabularray's
-        # `leftsep+=` cell option. Band-1 (depth 0) gets the bare
-        # `\SetCell[c=N]{l}`; band-2+ adds `, leftsep+=Xpt`.
-        setcell_opts <- "l"
+        # Band-depth indent on the spanning cell via a `\leftskip`
+        # group around the label (NOT `leftsep`, which is a column key
+        # tabularray rejects inside `\SetCell` -> "Undefined color").
+        # `\leftskip` indents wrapped continuation lines too (SAS
+        # PADDINGLEFT contract). Band-1 (depth 0) gets the bare label.
+        header_indent_pt <- 0
         if (!is.na(host_idx)) {
           header_depth <- cells_indent[i, host_idx]
           if (isTRUE(header_depth > 0L) && indent_pt_per_level > 0) {
-            setcell_opts <- sprintf(
-              "l, leftsep+=%gpt",
-              indent_pt_per_level * header_depth
-            )
+            header_indent_pt <- indent_pt_per_level * header_depth
           }
         }
         body <- paste0("\\textbf{", .latex_escape_cell(host_text), "}")
-        terminator <- if (i == nrow_data) " \\\\" else " \\\\*"
+        body <- .latex_indent_wrap(body, header_indent_pt)
+        terminator <- row_term(i)
         if (ncol_data == 1L) {
-          return(paste0(
-            sprintf("\\SetCell{halign=%s} ", setcell_opts),
-            body,
-            terminator
-          ))
+          return(paste0("\\SetCell{halign=l} ", body, terminator))
         }
         return(paste0(
-          sprintf("\\SetCell[c=%d]{%s} ", ncol_data, setcell_opts),
+          sprintf("\\SetCell[c=%d]{l} ", ncol_data),
           body,
           paste(rep(" &", ncol_data - 1L), collapse = ""),
           terminator
@@ -917,12 +1336,13 @@ backend_latex <- function(grid, file) {
           raw <- cells_text[i, j]
           # Read per-cell depth from the engine sidecar. The engine
           # baked one indent level of spaces into the cell text per
-          # depth unit; strip exactly that many leading spaces so
-          # `leftsep+=` carries the indent semantically (wrapped
-          # continuation lines align with the indented baseline,
-          # matching the SAS PADDINGLEFT contract).
+          # depth unit; strip exactly that many leading spaces, then
+          # carry the indent with a `\leftskip` group around the cell
+          # content. `\leftskip` indents wrapped continuation lines too
+          # (SAS PADDINGLEFT contract); the older `\SetCell{leftsep+=}`
+          # was invalid tabularray and broke the PDF compile.
           depth <- cells_indent[i, j]
-          extra_prefix <- NULL
+          indent_pt <- 0
           if (
             isTRUE(depth > 0L) &&
               indent_unit > 0L &&
@@ -936,10 +1356,7 @@ backend_latex <- function(grid, file) {
               raw <- substr(raw, n_leading + 1L, nchar(raw))
             }
             if (indent_pt_per_level > 0) {
-              extra_prefix <- sprintf(
-                "\\SetCell{leftsep+=%gpt} ",
-                indent_pt_per_level * depth
-              )
+              indent_pt <- indent_pt_per_level * depth
             }
           }
           text <- .latex_escape_cell(raw)
@@ -951,20 +1368,14 @@ backend_latex <- function(grid, file) {
           }
           prefix <- .latex_setcell_alignment(sn)
           wrapped <- .latex_wrap_text_props(text, sn)
-          paste0(extra_prefix %||% "", prefix, wrapped)
+          paste0(prefix, .latex_indent_wrap(wrapped, indent_pt))
         },
         character(1L)
       )
-      # `\\*` is LaTeX's no-page-break row terminator (inherited
-      # by tabularray's longtblr from longtable). Emit it on every
-      # row except the last of the page so the renderer never
-      # re-paginates inside the page that engine_paginate already
-      # split. The last row of the page uses the plain `\\` so the
-      # natural longtblr / longtable page break can fall at the
-      # end of the page. Galley pattern lifted to tabular's manual
-      # pagination.
-      terminator <- if (i == nrow_data) " \\\\" else " \\\\*"
-      paste0(paste(cells, collapse = " & "), terminator)
+      # `\\*` (no page break after) vs `\\` is decided per row by the
+      # keep-with-next mask: tabularray paginates the body natively and
+      # only the glued rows (group runs, section headers) stay together.
+      paste0(paste(cells, collapse = " & "), row_term(i))
     },
     character(1L)
   )
@@ -1084,7 +1495,8 @@ backend_latex <- function(grid, file) {
 # horizontal cell-padding SSOT so the rendered per-side margin matches
 # the measured column width (`.compute_col_width` adds left + right).
 # These are outer-spec keys (the per-side analogue of the symmetric
-# `colsep`); per-cell indent (`\SetCell{leftsep+=...}`) adds on top.
+# `colsep`); per-cell indent rides a `\leftskip` group on top
+# (see `.latex_indent_wrap`).
 # A scalar body `@padding` override (from `cells_style`) wins on both
 # sides; else the configured `cell_padding_h` pair. Returns
 # character(0) when no preset is available so headless callers stay
@@ -1327,6 +1739,7 @@ backend_latex <- function(grid, file) {
     chrome$packages,
     font_lines,
     "\\setlength{\\parindent}{0pt}",
+    "\\setlength{\\parskip}{0pt}",
     chrome$style
   )
 }
@@ -1348,7 +1761,10 @@ backend_latex <- function(grid, file) {
   ph_pop <- .page_band_is_populated(pagehead_ast)
   pf_pop <- .page_band_is_populated(pagefoot_ast)
   if (!ph_pop && !pf_pop) {
-    return(list(packages = character(), style = character()))
+    # No running header/footer band: suppress LaTeX's default `plain`
+    # pagestyle so no stray page number prints. Page numbers appear ONLY
+    # when the user puts {page}/{npages} in a pagehead/pagefoot.
+    return(list(packages = character(), style = "\\pagestyle{empty}"))
   }
   packages <- c(
     "\\usepackage{fancyhdr}",

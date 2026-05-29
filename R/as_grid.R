@@ -264,9 +264,11 @@ as_grid <- function(spec) {
 # decides vertical page breaks) receive an UNSPLIT grid: one vertical
 # page per `(subgroup x horizontal panel)`. The RTF backend emits one
 # continuous Word table per panel with `\trhdr` repeating header rows;
-# DOCX will reuse this hook. Every other backend (and `as_grid()` with
-# `format = NA`) keeps tabular's estimated vertical split.
-.native_pagination_formats <- c("rtf")
+# the LaTeX backend emits one `longtblr` per panel (tabularray paginates
+# the body, `rowhead` repeats the header band, and a keep-with-next mask
+# drives `\\*`); DOCX will reuse this hook. Every other backend (and
+# `as_grid()` with `format = NA`) keeps tabular's estimated vertical split.
+.native_pagination_formats <- c("rtf", "latex")
 
 # Compose every engine_* phase. Returns a fully populated
 # `tabular_grid`. `format` is stamped into metadata so emit() can

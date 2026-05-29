@@ -557,5 +557,7 @@ test_that("legacy preset(title_align = ...) drives LaTeX title alignment", {
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_true(grepl("\\begin{flushleft}", txt, fixed = TRUE))
+  # Left-aligned via a glue-free `{\raggedright ...}` group (the
+  # `flushleft` list environment that added vertical gaps was dropped).
+  expect_true(grepl("{\\raggedright", txt, fixed = TRUE))
 })
