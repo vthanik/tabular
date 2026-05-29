@@ -104,7 +104,13 @@
 # turns `footnoterule` on (and, to avoid the double rule, `bottomrule`
 # off) through the `rules` knob. When drawn, `footnoterule` matches the
 # `toprule` width (table/content width), NOT the full page width.
-# `rowrule` and the three verticals are OFF.
+#
+# `footnoterule` is drawn as a distinct footnote-section rule only by
+# the PAGINATED backends: RTF, LaTeX / PDF, and DOCX. HTML is continuous
+# (no separate footnote section), so it FOLDS both into one rule:
+# whichever of `bottomrule` / `footnoterule` is active becomes the
+# table's bottom edge (bottomrule wins when both are set). `rowrule` and
+# the three verticals are OFF.
 .tabular_rule_booktabs <- function() {
   list(
     toprule = .rule_ink(),

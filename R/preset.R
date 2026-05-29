@@ -274,6 +274,20 @@
 #'       their default, and the bare string `"none"` drops one.
 #'       `rules = list(rowrule = brdr())` reproduces the old
 #'       `hlines = "all"`.
+#'
+#'       **`bottomrule` vs `footnoterule`.** These are mutually
+#'       exclusive: exactly one rule sits at the data -> footnote
+#'       boundary. The default is `bottomrule` (the table's bottom
+#'       edge); `footnoterule` (a table-width rule opening the
+#'       footnote section) is OFF by default. As a distinct
+#'       footnote-section rule, `footnoterule` is drawn only by the
+#'       paginated backends — **RTF, LaTeX / PDF, and DOCX**. The
+#'       **HTML** backend is continuous (non-paginated) and has no
+#'       separate footnote section, so it folds both into one rule:
+#'       whichever of `bottomrule` / `footnoterule` is active becomes
+#'       the table's bottom edge (`bottomrule` wins when both are
+#'       set). Setting `footnoterule` therefore still draws a closing
+#'       rule on HTML — rendered as the `bottomrule`.
 #'   *   **`spacing`** — region-keyed blank-line control. A named list
 #'       keyed by `title` / `body` / `subgroup` / `footnote`, each a
 #'       named numeric `c(above = , below = )` (footnote: `above`

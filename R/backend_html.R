@@ -79,6 +79,26 @@ backend_html <- function(grid, file) {
   meta <- grid@metadata
   doc_title <- .html_doc_title(meta)
   cs <- meta$chrome_style %||% chrome_style()
+  # HTML is continuous (no separate footnote section), so it folds
+  # `footnoterule` into the `bottomrule`: whichever is active becomes
+  # the table's bottom edge. bottomrule wins; when it is off and
+  # footnoterule is on, footnoterule supplies the bottom rule so a
+  # closing rule still appears.
+  body_borders <- meta$body_borders %||% list()
+  .bottom <- body_borders[["outer_bottom"]]
+  .foot <- .chrome_border_at(cs, "footer_top")
+  if (
+    (is.null(.bottom) || identical(.bottom$style, "none")) &&
+      !is.null(.foot) &&
+      !identical(.foot$style, "none")
+  ) {
+    body_borders[["outer_bottom"]] <- .foot
+    # Stamp the folded rule onto the last data row's cells so the
+    # per-cell inline border agrees with the `tbody tr:last-child` CSS
+    # rule; otherwise the `bottomrule = "none"` clear leaves inline
+    # `border-bottom: none`, and inline specificity defeats the fold.
+    pages <- .html_stamp_last_row_bottom(pages, .foot)
+  }
 
   head <- c(
     "<!DOCTYPE html>",
@@ -91,7 +111,7 @@ backend_html <- function(grid, file) {
       pagehead_ast = meta$pagehead_ast,
       pagefoot_ast = meta$pagefoot_ast,
       cs = cs,
-      body_borders = meta$body_borders
+      body_borders = body_borders
     ),
     "</head>",
     "<body class=\"tabular-doc\">"
@@ -1093,6 +1113,40 @@ backend_html <- function(grid, file) {
     return(NULL)
   }
   sprintf("%s { %s }", selector, decl)
+}
+
+# Stamp `triple` as the bottom border of every cell in the LAST data
+# row of the LAST page. Used by the HTML footnoterule -> bottomrule
+# fold: when `bottomrule = "none"` clears the per-cell bottom border,
+# the cells emit inline `border-bottom: none`, which (inline > class
+# specificity) would defeat the folded `tbody tr:last-child` CSS rule.
+# Overwriting the per-cell bottom with the folded triple makes inline
+# and CSS agree, so the rule renders full width.
+.html_stamp_last_row_bottom <- function(pages, triple) {
+  if (length(pages) == 0L) {
+    return(pages)
+  }
+  li <- length(pages)
+  mat <- pages[[li]]$cells_style
+  if (is.null(mat) || nrow(mat) == 0L || ncol(mat) == 0L) {
+    return(pages)
+  }
+  r <- nrow(mat)
+  for (cn in colnames(mat)) {
+    sn <- mat[[r, cn]]
+    if (!is_style_node(sn)) {
+      sn <- style_node()
+    }
+    sn <- S7::set_props(
+      sn,
+      border_bottom_style = triple$style,
+      border_bottom_width = triple$width,
+      border_bottom_color = triple$color
+    )
+    mat[[r, cn]] <- sn
+  }
+  pages[[li]]$cells_style <- mat
+  pages
 }
 
 # Compose an inline `style="..."` fragment for one cell covering

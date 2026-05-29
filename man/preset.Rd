@@ -168,6 +168,20 @@ keyed by the nine rule names (\code{toprule}, \code{midrule},
 their default, and the bare string \code{"none"} drops one.
 \code{rules = list(rowrule = brdr())} reproduces the old
 \code{hlines = "all"}.
+
+\strong{\code{bottomrule} vs \code{footnoterule}.} These are mutually
+exclusive: exactly one rule sits at the data -> footnote
+boundary. The default is \code{bottomrule} (the table's bottom
+edge); \code{footnoterule} (a table-width rule opening the
+footnote section) is OFF by default. As a distinct
+footnote-section rule, \code{footnoterule} is drawn only by the
+paginated backends — \strong{RTF, LaTeX / PDF, and DOCX}. The
+\strong{HTML} backend is continuous (non-paginated) and has no
+separate footnote section, so it folds both into one rule:
+whichever of \code{bottomrule} / \code{footnoterule} is active becomes
+the table's bottom edge (\code{bottomrule} wins when both are
+set). Setting \code{footnoterule} therefore still draws a closing
+rule on HTML — rendered as the \code{bottomrule}.
 \item \strong{\code{spacing}} — region-keyed blank-line control. A named list
 keyed by \code{title} / \code{body} / \code{subgroup} / \code{footnote}, each a
 named numeric \code{c(above = , below = )} (footnote: \code{above}

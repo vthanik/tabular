@@ -262,6 +262,22 @@ backend_docx <- function(grid, file) {
     preset = preset,
     cs = cs
   )
+  # footnoterule (opt-in): a table-width rule above the footnotes. The
+  # body bottomrule is the default closer, so this is off unless the
+  # user sets it through the `rules` knob.
+  if (length(footnotes_block) > 0L) {
+    pages <- grid@pages
+    foot_triple <- .chrome_border_at(cs, "footer_top")
+    if (length(pages) > 0L) {
+      widths <- .docx_col_widths_twips(
+        pages[[1L]]$col_names,
+        meta$cols %||% list(),
+        preset
+      )
+      rule_tbl <- .docx_foot_rule_table(foot_triple, sum(widths))
+      footnotes_block <- c(rule_tbl, footnotes_block)
+    }
+  }
   sect_pr <- .docx_section_pr(preset, rid_map)
 
   body <- paste0(
@@ -398,6 +414,41 @@ backend_docx <- function(grid, file) {
       )
     },
     character(1L)
+  )
+}
+
+# Build the footnote-section opening rule (`footnoterule`) as a
+# table-width single-cell `<w:tbl>` carrying a top border, placed just
+# above the footnote paragraphs. OFF by default (the body `bottomrule`
+# is the mutually-exclusive default closer). A paragraph border
+# (`<w:pBdr>`) would span the full page text column (margin to margin);
+# a 1-cell table sized to the table grid keeps the rule at TABLE width,
+# matching the LaTeX foot-template rule and the RTF merged-row rule.
+# NULL / "none" triple, or a non-positive width -> no rule.
+.docx_foot_rule_table <- function(triple, total_twips) {
+  if (
+    is.null(triple) ||
+      identical(triple$style, "none") ||
+      total_twips <= 0L
+  ) {
+    return(character())
+  }
+  attrs <- .docx_border_attrs(triple)
+  paste0(
+    "<w:tbl>",
+    "<w:tblPr><w:tblW w:w=\"",
+    total_twips,
+    "\" w:type=\"dxa\"/></w:tblPr>",
+    "<w:tblGrid><w:gridCol w:w=\"",
+    total_twips,
+    "\"/></w:tblGrid>",
+    "<w:tr><w:tc><w:tcPr><w:tcW w:w=\"",
+    total_twips,
+    "\" w:type=\"dxa\"/>",
+    "<w:tcBorders><w:top w:space=\"0\" ",
+    attrs,
+    "/></w:tcBorders></w:tcPr><w:p/></w:tc></w:tr>",
+    "</w:tbl>"
   )
 }
 

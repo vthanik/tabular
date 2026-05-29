@@ -154,6 +154,57 @@ test_that("DOCX header-band underline is the SSOT spanrule (override + 'none' ho
   )
 })
 
+test_that("DOCX footnoterule (opt-in) draws a table-width rule above the footnotes, not a page-width paragraph border", {
+  # footnoterule is OFF by default (bottomrule closes the body). When
+  # the user opts in, the rule is a single-cell table sized to the
+  # table grid (table width), NOT a paragraph border (<w:pBdr>, which
+  # spans the full page text column).
+  base <- tabular(saf_demo, footnotes = "Source: ADSL.") |>
+    cols(
+      variable = col_spec(usage = "group", label = "C"),
+      stat_label = col_spec(label = "S"),
+      placebo = col_spec(label = "PBO"),
+      drug_50 = col_spec(label = "D50"),
+      drug_100 = col_spec(label = "D100"),
+      Total = col_spec(label = "Tot")
+    )
+  docxml <- function(spec) {
+    out <- withr::local_tempfile(
+      fileext = ".docx",
+      .local_envir = parent.frame()
+    )
+    emit(spec, out)
+    paste(
+      readLines(
+        file.path(.unzip_docx(out), "word/document.xml"),
+        warn = FALSE
+      ),
+      collapse = ""
+    )
+  }
+
+  # Default: no footnote rule table.
+  expect_no_match(
+    docxml(base),
+    "<w:tcBorders><w:top w:space=\"0\" w:val=\"single\"",
+    fixed = TRUE
+  )
+  # Opt-in: a table-width single-cell top-border rule appears.
+  opt <- docxml(
+    base |>
+      preset(
+        rules = list(bottomrule = "none", footnoterule = brdr(width = "thin"))
+      )
+  )
+  expect_match(
+    opt,
+    "<w:tcBorders><w:top w:space=\"0\" w:val=\"single\" w:sz=\"4\"",
+    fixed = TRUE
+  )
+  # No paragraph-border (page-width) rule on the footnote paragraphs.
+  expect_no_match(opt, "<w:pBdr>", fixed = TRUE)
+})
+
 test_that("emit(.docx) writes no header1.xml / footer1.xml when pagehead / pagefoot are empty", {
   spec <- tabular(data.frame(x = 1L))
   out <- withr::local_tempfile(fileext = ".docx")

@@ -2257,3 +2257,40 @@ test_that("HTML structural rules are SSOT-driven: overrides and the 'none' clear
     fixed = TRUE
   )
 })
+
+test_that("HTML folds footnoterule into the bottomrule (continuous format, no footnote section)", {
+  # HTML has no separate footnote section, so footnoterule and
+  # bottomrule both target the table's bottom edge. With bottomrule
+  # off and footnoterule on, footnoterule supplies the bottom rule --
+  # both the CSS rule and the per-cell inline border must agree (else
+  # an inline `border-bottom: none` defeats the folded CSS rule).
+  base <- tabular(saf_demo, footnotes = "Source: ADSL.") |>
+    cols(
+      variable = col_spec(usage = "group", label = "Char"),
+      stat_label = col_spec(label = "Stat"),
+      placebo = col_spec(label = "PBO"),
+      drug_50 = col_spec(label = "D50"),
+      drug_100 = col_spec(label = "D100"),
+      Total = col_spec(label = "Tot")
+    )
+  f <- withr::local_tempfile(fileext = ".html")
+  emit(
+    base |>
+      preset(
+        rules = list(
+          bottomrule = "none",
+          footnoterule = brdr(width = "thick", color = "#0000ff")
+        )
+      ),
+    f
+  )
+  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  # Folded CSS rule present at the footnoterule spec.
+  expect_match(
+    html,
+    ".tabular-table tbody tr:last-child td { border-bottom: 1.5pt solid #0000ff; }",
+    fixed = TRUE
+  )
+  # No inline `border-bottom: none` left to defeat the folded rule.
+  expect_no_match(html, "border-bottom: none", fixed = TRUE)
+})
