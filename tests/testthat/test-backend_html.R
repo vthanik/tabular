@@ -2192,15 +2192,68 @@ test_that("HTML band: top rule scopes to first thead row only (col-labels row ha
   for (scen in c("G", "J")) {
     html <- band_emit(scen, "html")
     # Top rule must be scoped to the FIRST thead row, not every row.
+    # Width is the SSOT rule width (0.5pt), not the legacy 1px literal.
     expect_match(
       html,
-      "\\.tabular-table thead tr:first-child th \\{ border-top: 1px solid",
+      "\\.tabular-table thead tr:first-child th \\{ border-top: 0.5pt solid",
       info = paste("scenario", scen)
     )
     expect_no_match(
       html,
-      "\\.tabular-table thead th \\{ border-top: 1px solid",
+      "\\.tabular-table thead th \\{ border-top: 0.5pt solid",
       info = paste("scenario", scen)
     )
   }
+})
+
+test_that("HTML structural rules are SSOT-driven: overrides and the 'none' clear take effect", {
+  # Regression: the thead toprule/midrule/spanrule and the body
+  # bottomrule were hardcoded `1px solid` CSS, so `preset(rules = ...)`
+  # overrides were silently ignored on HTML. They now generate from the
+  # resolved chrome_style + body bottomrule manifest.
+  base <- tabular(saf_demo, footnotes = "Source: ADSL.") |>
+    cols(
+      variable = col_spec(usage = "group", label = "Char"),
+      stat_label = col_spec(label = "Stat"),
+      placebo = col_spec(label = "PBO"),
+      drug_50 = col_spec(label = "D50"),
+      drug_100 = col_spec(label = "D100"),
+      Total = col_spec(label = "Tot")
+    )
+
+  # Default: bottomrule present at the SSOT width.
+  f0 <- withr::local_tempfile(fileext = ".html")
+  emit(base, f0)
+  html0 <- paste(readLines(f0, warn = FALSE), collapse = "\n")
+  expect_match(
+    html0,
+    ".tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }",
+    fixed = TRUE
+  )
+
+  # bottomrule = "none" drops the body closing rule entirely.
+  f1 <- withr::local_tempfile(fileext = ".html")
+  emit(base |> preset(rules = list(bottomrule = "none")), f1)
+  html1 <- paste(readLines(f1, warn = FALSE), collapse = "\n")
+  expect_no_match(
+    html1,
+    "tbody tr:last-child td { border-bottom:",
+    fixed = TRUE
+  )
+
+  # midrule override changes the rendered width + colour.
+  f2 <- withr::local_tempfile(fileext = ".html")
+  emit(
+    base |>
+      preset(
+        rules = list(midrule = brdr(width = "thick", color = "#0000ff"))
+      ),
+    f2
+  )
+  html2 <- paste(readLines(f2, warn = FALSE), collapse = "\n")
+  expect_match(
+    html2,
+    ".tabular-table thead tr:last-child th { border-bottom: 1.5pt solid #0000ff; }",
+    fixed = TRUE
+  )
 })

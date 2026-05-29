@@ -89,7 +89,9 @@ backend_html <- function(grid, file) {
     .html_inline_style(
       preset = meta$preset,
       pagehead_ast = meta$pagehead_ast,
-      pagefoot_ast = meta$pagefoot_ast
+      pagefoot_ast = meta$pagefoot_ast,
+      cs = cs,
+      body_borders = meta$body_borders
     ),
     "</head>",
     "<body class=\"tabular-doc\">"
@@ -1079,6 +1081,20 @@ backend_html <- function(grid, file) {
   sprintf("border-%s: %gpt %s %s;", side, brd$width, css_style, brd$color)
 }
 
+# Build one structural CSS rule (`<selector> { border-<side>: ... }`)
+# from a resolved border triple, or NULL when the rule is off
+# (NULL / style "none"). Drives the thead toprule / midrule / spanrule
+# and the body bottomrule from the SSOT instead of hardcoded literals,
+# so `preset(rules = ...)` overrides (including the "none" clear) take
+# effect on the HTML backend.
+.html_structural_rule <- function(selector, side, triple) {
+  decl <- .html_border_decl(side, triple)
+  if (is.null(decl)) {
+    return(NULL)
+  }
+  sprintf("%s { %s }", selector, decl)
+}
+
 # Compose an inline `style="..."` fragment for one cell covering
 # any explicit borders set on the cascade. Returns `""` when no
 # side carries an override. Used in addition to the class attribute
@@ -1378,8 +1394,37 @@ backend_html <- function(grid, file) {
 .html_inline_style <- function(
   preset = NULL,
   pagehead_ast = NULL,
-  pagefoot_ast = NULL
+  pagefoot_ast = NULL,
+  cs = NULL,
+  body_borders = NULL
 ) {
+  cs <- cs %||% chrome_style()
+  # Structural rules driven from the SSOT (chrome_style + the body
+  # bottomrule manifest) rather than hardcoded `1px solid #212529`.
+  # An off rule (NULL / "none") drops out, so `rules = list(... = "none")`
+  # clears the rule here too. `header_between` carries the muted spanrule.
+  structural_rules <- c(
+    .html_structural_rule(
+      ".tabular-table thead tr:first-child th",
+      "top",
+      .chrome_border_at(cs, "header_top")
+    ),
+    .html_structural_rule(
+      ".tabular-table thead tr:last-child th",
+      "bottom",
+      .chrome_border_at(cs, "header_bottom")
+    ),
+    .html_structural_rule(
+      ".tabular-table thead .tabular-band",
+      "bottom",
+      .chrome_border_at(cs, "header_between")
+    ),
+    .html_structural_rule(
+      ".tabular-table tbody tr:last-child td",
+      "bottom",
+      if (is.list(body_borders)) body_borders[["outer_bottom"]] else NULL
+    )
+  )
   # `fs` drives every font-size emitted in pt below — title,
   # table, footnote. Sourcing the size from one local keeps the
   # three rules trivially in sync and lets `preset(font_size = N)`
@@ -1452,11 +1497,10 @@ backend_html <- function(grid, file) {
     # cells so blank flanking cells over unmapped columns do not extend
     # the rule full width — cmidrule(lr) cell-border semantics.
     ".tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }",
-    ".tabular-table thead tr:first-child th { border-top: 1px solid #212529; }",
-    ".tabular-table thead tr:last-child th { border-bottom: 1px solid #212529; }",
-    ".tabular-table thead .tabular-band { border-bottom: 1px solid #adb5bd; }",
+    # Structural toprule / midrule / spanrule (thead) + bottomrule
+    # (tbody) -- generated from the SSOT just above; off rules drop out.
+    structural_rules,
     ".tabular-table tbody tr td { border-top: none; }",
-    ".tabular-table tbody tr:last-child td { border-bottom: 1px solid #212529; }",
     ".tabular-band { text-align: center; }",
     ".tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }",
     ".tabular-subgroup-label { font-weight: 600; }",
