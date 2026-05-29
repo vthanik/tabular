@@ -10,6 +10,8 @@
 \usepackage{graphicx}
 \usepackage{hyperref}
 \UseTblrLibrary{siunitx}
+\definecolor{tabularrule212529}{HTML}{212529}
+\definecolor{tabularruleADB5BD}{HTML}{ADB5BD}
 \usepackage{iftex}
 \ifPDFTeX
   \usepackage{tgcursor}
@@ -44,7 +46,7 @@
 \normalsize
 \end{minipage}
 }
-\begin{longtblr}[caption={}, label={}, presep=0pt, postsep=0pt]{colspec={Q[l,wd=2.700000in] Q[r,wd=1.125000in] Q[r,wd=1.125000in] Q[r,wd=1.125000in] Q[r,wd=1.125000in]}, rowhead=1, leftsep=5.4pt, rightsep=5.4pt, rows={valign=t}, hline{1}={1-5}{0.4pt, solid}, hline{2}={1-5}{0.4pt, solid}}
+\begin{longtblr}[caption={}, label={}, presep=0pt, postsep=0pt]{colspec={Q[l,wd=2.700000in] Q[r,wd=1.125000in] Q[r,wd=1.125000in] Q[r,wd=1.125000in] Q[r,wd=1.125000in]}, rowhead=1, leftsep=5.4pt, rightsep=5.4pt, rows={valign=t}, hline{1}={1-5}{0.5pt, solid, fg=tabularrule212529}, hline{2}={1-5}{0.5pt, solid, fg=tabularrule212529}, hline{54}={0.5pt, solid, fg=tabularrule212529}}
 \SetCell{valign=b} Statistic & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Placebo \\{} N=86} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering High Dose \\{} N=72} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Low Dose \\{} N=96} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Total \\{} N=254} \\
 \SetCell[c=5]{l} \textbf{Age (years)} & & & & \\*
 {\leftskip=10.8pt\relax n} &  86           &  72           &  96           & 254           \\

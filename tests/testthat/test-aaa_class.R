@@ -102,8 +102,10 @@ test_that("preset_spec() defaults", {
   expect_true(is_preset_spec(p))
   expect_identical(p@orientation, "landscape")
   expect_identical(p@paper_size, "letter")
-  expect_identical(p@hlines, "header")
   expect_identical(p@decimal_metrics, "chars")
+  expect_identical(as.numeric(p@cell_padding), c(0, 5.4))
+  expect_identical(p@spacing$title, c(above = 1L, below = 1L))
+  expect_null(p@stripe)
 })
 
 test_that("preset_spec() rejects unknown orientation", {
@@ -114,12 +116,12 @@ test_that("preset_spec() rejects unknown paper_size", {
   expect_error(preset_spec(paper_size = "letterA"), "must be one of")
 })
 
-test_that("preset_spec() rejects unknown hlines", {
-  expect_error(preset_spec(hlines = "vertical"), "must be one of")
+test_that("preset_spec() rejects bad cell_padding length", {
+  expect_error(preset_spec(cell_padding = c(1, 2, 3)), "length 1")
 })
 
 test_that("preset_spec() rejects unknown decimal_metrics", {
-  expect_error(preset_spec(decimal_metrics = "truetype"), "afm")
+  expect_error(preset_spec(decimal_metrics = "truetype"), "must be one of")
 })
 
 test_that("preset_spec() rejects margin length other than 1, 2, or 4", {
@@ -138,11 +140,14 @@ test_that("preset_spec() rejects negative or NA margins", {
   expect_error(preset_spec(margins = NA_real_), "non-negative")
 })
 
-test_that("preset_spec() rejects bad title_align / footnote_align", {
-  expect_error(preset_spec(title_align = "decimal"), "left, center, or right")
+test_that("preset_spec() rejects malformed spacing / stripe", {
   expect_error(
-    preset_spec(footnote_align = "justify"),
-    "left, center, or right"
+    preset_spec(spacing = list(footnote = c(below = 1))),
+    "accepts only"
+  )
+  expect_error(
+    preset_spec(stripe = c(top = "#fff")),
+    "odd"
   )
 })
 

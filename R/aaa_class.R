@@ -54,10 +54,12 @@
 }
 .orientation_values <- c("portrait", "landscape")
 .paper_size_values <- c("letter", "a4")
-.hlines_values <- c("header", "none", "all")
 .align_anchor_values <- c("left", "center", "right")
 .valign_values <- c("top", "middle", "bottom")
-.decimal_metrics_values <- c("chars", "afm", "systemfonts")
+# After the rules/spacing SSOT redesign `decimal_metrics` carries only
+# the wired "chars" metric; the unwired "afm" / "systemfonts" values
+# were removed.
+.decimal_metrics_values <- c("chars")
 .chrome_onscreen_values <- c("auto", "off")
 
 # Recognised values for `preset_spec@width_mode`. Table-level
@@ -78,10 +80,10 @@
 #                         auto-expand. Word's "Fixed Column Width".
 .preset_width_mode_values <- c("content", "window", "fixed")
 
-# Recognised line styles on the new border_{side}_style scalars.
-# "none" is the explicit clear-this-border sentinel; the back-compat
-# Boolean knobs (rule_above / border_left / etc.) map to "solid"
-# when TRUE. "dashdot" is the SAS-ODS extension we lift verbatim.
+# Recognised line styles on the border_{side}_style scalars. "none"
+# is the explicit clear-this-border sentinel. "dashdot" is the SAS-ODS
+# extension we lift verbatim. Per-side triples are the sole border
+# representation; there are no Boolean rule_*/border_left/right knobs.
 .border_style_values <- c(
   "solid",
   "dashed",
@@ -89,50 +91,6 @@
   "double",
   "dashdot",
   "none"
-)
-
-# Recognised region keys on `preset_spec@borders`. The vocabulary
-# covers every visual rule the canonical submission page layout
-# can carry, split across body regions (interpreted by
-# `engine_borders()` onto the `cells_style` matrix) and chrome
-# regions (interpreted by `engine_chrome_borders()` onto the
-# `chrome_style$borders` sidecar — `R/chrome_style.R`):
-#
-#   Body regions (cells_style):
-#     outer, outer_{top,bottom,left,right}
-#     body_top / body_bottom (aliases for outer_top / outer_bottom)
-#     body_rows / body_cols  (interior separators)
-#
-#   Chrome regions (chrome_style$borders):
-#     pagehead_bottom                   bottom edge of the page-head band
-#     header_top / header_bottom        top + bottom of the column-header block
-#     header_between                    between rows of a multi-band header
-#     subgroup_top / subgroup_bottom    around the subgroup banner row
-#     subgroup                          legacy alias for `subgroup_bottom`
-#     footer_top / footer_bottom        around the footnote block
-#     pagefoot_top                      top edge of the page-foot band
-.preset_border_regions <- c(
-  # Body regions
-  "outer",
-  "outer_top",
-  "outer_bottom",
-  "outer_left",
-  "outer_right",
-  "body_top",
-  "body_bottom",
-  "body_rows",
-  "body_cols",
-  # Chrome regions
-  "pagehead_bottom",
-  "header_top",
-  "header_bottom",
-  "header_between",
-  "subgroup_top",
-  "subgroup_bottom",
-  "subgroup",
-  "footer_top",
-  "footer_bottom",
-  "pagefoot_top"
 )
 
 # Recognised surface keys on `preset_spec@fonts`. Each surface gets
@@ -146,14 +104,17 @@
   "subgroup"
 )
 
-# Recognised token keys for the `preset(colors = list(...))` knob.
-# Each token lowers through `.preset_args_to_layers()` to a per-cell
-# `style_node` attribute on `cells_body()`; there is no slot on
-# `preset_spec` after the Task 4/5 cut. The legacy `border` /
-# `border_muted` tokens dropped — use
-# `style(at = cells_table(side = "rows"), border_top = brdr(color = ...))`
-# (and analogous outer / cols variants) instead. `text_muted` dropped
-# (no backend ever consumed it).
+# The `preset(colors = list(...))` knob is region-keyed: one entry per
+# surface, each a named list of the two tokens below. Lowers through
+# `.preset_args_to_layers()` to `color` / `background` attributes on
+# the matching `cells_<surface>()` location.
+.preset_color_surfaces <- c(
+  "body",
+  "header",
+  "titles",
+  "footnotes",
+  "subgroup"
+)
 .preset_color_tokens <- c(
   "text",
   "background"
@@ -505,9 +466,9 @@ style_node <- S7::new_class(
   "style_node",
   package = "tabular",
   properties = list(
-    bold = S7::new_property(S7::class_any, default = NA),
-    italic = S7::new_property(S7::class_any, default = NA),
-    underline = S7::new_property(S7::class_any, default = NA),
+    bold = S7::new_property(S7::class_logical, default = NA),
+    italic = S7::new_property(S7::class_logical, default = NA),
+    underline = S7::new_property(S7::class_logical, default = NA),
     color = S7::new_property(S7::class_character, default = NA_character_),
     background = S7::new_property(
       S7::class_character,
@@ -518,11 +479,13 @@ style_node <- S7::new_class(
       default = NA_character_
     ),
     font_size = S7::new_property(S7::class_numeric, default = NA_real_),
-    rule_above = S7::new_property(S7::class_any, default = NA),
-    rule_below = S7::new_property(S7::class_any, default = NA),
-    border_left = S7::new_property(S7::class_any, default = NA),
-    border_right = S7::new_property(S7::class_any, default = NA),
-    padding = S7::new_property(S7::class_numeric, default = NA_real_),
+    # Symmetric per-side padding in points (NA = inherit). Mirrors the
+    # border_<side>_* convention. The preset `cell_padding` knob and a
+    # per-cell `style(padding = ...)` both lower into these four slots.
+    padding_top = S7::new_property(S7::class_numeric, default = NA_real_),
+    padding_right = S7::new_property(S7::class_numeric, default = NA_real_),
+    padding_bottom = S7::new_property(S7::class_numeric, default = NA_real_),
+    padding_left = S7::new_property(S7::class_numeric, default = NA_real_),
     blank_above = S7::new_property(S7::class_integer, default = NA_integer_),
     blank_below = S7::new_property(S7::class_integer, default = NA_integer_),
     pretext = S7::new_property(S7::class_character, default = NA_character_),
@@ -530,11 +493,10 @@ style_node <- S7::new_class(
     halign = S7::new_property(S7::class_character, default = NA_character_),
     valign = S7::new_property(S7::class_character, default = NA_character_),
     # Per-side line style / width / color for the four cell borders.
-    # Default NA on every scalar; the legacy Boolean knobs
-    # (rule_above / rule_below / border_left / border_right) remain
-    # back-compat and map to ("solid", 0.5pt, default colour) when TRUE.
-    # Width is numeric points (0.25 / 0.5 / 1 / 1.5 are typical
-    # clinical settings); color is hex / CSS-name / "currentColor".
+    # Default NA on every scalar. Per-side triples are the SOLE border
+    # representation (no Boolean knobs). Width is numeric points
+    # (0.25 / 0.5 / 1 / 1.5 are typical clinical settings); color is
+    # hex / CSS-name / "currentColor".
     border_top_style = S7::new_property(
       S7::class_character,
       default = NA_character_
@@ -632,6 +594,17 @@ style_node <- S7::new_class(
           side,
           "_width must be non-negative; got ",
           wid
+        ))
+      }
+    }
+    for (side in c("top", "right", "bottom", "left")) {
+      pad <- S7::prop(self, paste0("padding_", side))
+      if (length(pad) == 1L && !is.na(pad) && pad < 0) {
+        return(paste0(
+          "@padding_",
+          side,
+          " must be non-negative; got ",
+          pad
         ))
       }
     }
@@ -759,17 +732,26 @@ preset_spec <- S7::new_class(
     margins = S7::new_property(S7::class_any, default = 1),
     pagehead = S7::new_property(S7::class_list, default = list()),
     pagefoot = S7::new_property(S7::class_list, default = list()),
-    hlines = S7::new_property(S7::class_character, default = "header"),
     indent_size = S7::new_property(S7::class_integer, default = 2L),
-    title_align = S7::new_property(
-      S7::class_character,
-      default = "center"
-    ),
-    footnote_align = S7::new_property(
-      S7::class_character,
-      default = "left"
-    ),
     na_text = S7::new_property(S7::class_character, default = ""),
+    # spacing — region-keyed blank-line control, resolved into the
+    # five physical inter-section gaps by `gap_counts()` at render.
+    # Default is the Appendix-I 1/1 blank line above and below the
+    # title block, every other region 0. Set via the `spacing` knob.
+    # Literal here (not `.tabular_spacing_default()`) because aaa_class.R
+    # collates before theme.R.
+    spacing = S7::new_property(
+      S7::class_list,
+      default = list(
+        title = c(above = 1L, below = 1L),
+        body = c(above = 0L, below = 0L),
+        subgroup = c(above = 0L, below = 0L),
+        footnote = c(above = 0L)
+      )
+    ),
+    # stripe — zebra body-row fills, NULL = off. A single colour or a
+    # named c(odd, even). Resolved by `resolve_stripe()` at render.
+    stripe = S7::new_property(S7::class_any, default = NULL),
     decimal_metrics = S7::new_property(
       S7::class_character,
       default = "chars"
@@ -786,19 +768,19 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "content"
     ),
-    # Horizontal cell padding in points (left / right sides) — the h
-    # analogue of `halign`. SINGLE SOURCE OF TRUTH for column-width
+    # Cell padding in points, CSS shorthand length 1 / 2 / 4 (all |
+    # vertical horizontal | top right bottom left), parsed by the same
+    # `margins` length rule. SINGLE SOURCE OF TRUTH for column-width
     # measurement (`.compute_col_width` adds left + right) and for
-    # every backend's horizontal cell-margin emitter. Length 1 sets
-    # both sides; length 2 is `c(left, right)`. A body `@padding`
-    # override (`preset(padding = list(body = N))` /
-    # `style(at = cells_body(), padding = N)`) wins at both surfaces,
-    # so measurement and render always agree. Default 5.4pt/side
-    # (10.8pt total) matches Word's ~0.075in default and RTF's legacy
-    # `\trgaph 108`.
-    cell_padding_h = S7::new_property(
+    # every backend's cell-margin emitter. A body per-side `padding_*`
+    # override (`preset(padding = list(body = N))` / `style(at =
+    # cells_body(), padding = N)`) wins at both surfaces, so
+    # measurement and render always agree. Default `c(0, 5.4)`:
+    # vertical 0 (preserves the prior row height), horizontal 5.4pt
+    # (matches Word's ~0.075in default and RTF's legacy `\trgaph 108`).
+    cell_padding = S7::new_property(
       S7::class_numeric,
-      default = 5.4
+      default = c(0, 5.4)
     ),
     # @style — ordered list of `style_layer` records that flow into
     # every spec rendered against this preset. Populated by:
@@ -826,18 +808,6 @@ preset_spec <- S7::new_class(
         paste(.sh_quote(.paper_size_values), collapse = ", ")
       ))
     }
-    if (!(self@hlines %in% .hlines_values)) {
-      return(paste0(
-        "@hlines must be one of ",
-        paste(.sh_quote(.hlines_values), collapse = ", ")
-      ))
-    }
-    if (!(self@title_align %in% .align_anchor_values)) {
-      return("@title_align must be left, center, or right")
-    }
-    if (!(self@footnote_align %in% .align_anchor_values)) {
-      return("@footnote_align must be left, center, or right")
-    }
     if (!(self@decimal_metrics %in% .decimal_metrics_values)) {
       return(paste0(
         "@decimal_metrics must be one of ",
@@ -859,14 +829,22 @@ preset_spec <- S7::new_class(
       ))
     }
     if (
-      !(length(self@cell_padding_h) %in% c(1L, 2L)) ||
-        anyNA(self@cell_padding_h) ||
-        any(self@cell_padding_h < 0)
+      !(length(self@cell_padding) %in% c(1L, 2L, 4L)) ||
+        anyNA(self@cell_padding) ||
+        any(self@cell_padding < 0)
     ) {
       return(paste0(
-        "@cell_padding_h must be a non-negative numeric of length 1 ",
-        "(both sides) or 2 (left, right)"
+        "@cell_padding must be a non-negative numeric of length 1 (all ",
+        "sides), 2 (vertical horizontal), or 4 (top right bottom left)"
       ))
+    }
+    sp_err <- .spacing_shape_error(self@spacing)
+    if (!is.null(sp_err)) {
+      return(paste0("@spacing ", sp_err))
+    }
+    st_err <- .stripe_shape_error(self@stripe)
+    if (!is.null(st_err)) {
+      return(paste0("@stripe ", st_err))
     }
     if (
       length(self@indent_size) != 1L ||

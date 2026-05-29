@@ -60,11 +60,15 @@ test_that("cells_table(side = 'cols') stamps every visible col except first on t
   expect_identical(cs[[1L, 2L]]@border_left_style, "solid")
 })
 
-test_that("preset@borders and cells_table() layers compose in cascade order", {
+test_that("cells_table() layers compose in cascade order (last write wins)", {
   g <- build_grid()
-  # Preset says outer_top is "double"; per-spec layer overrides to thick solid.
+  # First layer says outer_top is "double"; the later layer overrides
+  # to thin solid (layer order is precedence within the cascade).
   spec <- g$spec |>
-    preset(borders = list(outer_top = brdr("thick", "double"))) |>
+    style(
+      border_top = brdr("thick", "double"),
+      .at = cells_table(side = "outer_top")
+    ) |>
     style(
       border_top = brdr("thin", "solid"),
       .at = cells_table(side = "outer_top")

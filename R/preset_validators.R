@@ -1,40 +1,61 @@
-# preset_validators.R — shape validators for the five named-list
-# knobs accepted by `preset()` / `set_preset()` (alignment /
-# borders / fonts / colors / padding). After the Task 4/5 slot
-# cut these knobs no longer reach `preset_spec` as properties;
-# they lower to `style_layer` records on `@style` via
-# `.preset_args_to_layers()`. The validators below are invoked at
-# `preset()` call time through `.validate_lowered_knobs()` (in
-# `R/preset.R`) and return NULL on well-formed input, otherwise an
-# error-message string the caller surfaces as
-# `tabular_error_input`.
+# preset_validators.R — shape validators for the named-list knobs
+# accepted by `preset()` / `set_preset()` (rules / alignment / fonts
+# / colors / padding) plus the `spacing` / `stripe` slots. The lowered
+# knobs (rules / alignment / fonts / colors / padding) lower to
+# `style_layer` records on `@style` via `.preset_args_to_layers()` and
+# are validated at `preset()` call time through
+# `.validate_lowered_knobs()` (in `R/preset.R`). `spacing` / `stripe`
+# are scalar slots validated by the `preset_spec` S7 validator. Every
+# validator returns NULL on well-formed input, otherwise an
+# error-message string the caller surfaces as `tabular_error_input`.
 
 # ---------------------------------------------------------------------
-# borders knob
+# rules knob — string preset, single brdr() broadcast, or named list
+# keyed by the nine rule names
 # ---------------------------------------------------------------------
 
-.preset_borders_shape_error <- function(br) {
-  if (length(br) == 0L) {
+.preset_rules_shape_error <- function(ru) {
+  if (length(ru) == 0L) {
     return(NULL)
   }
-  if (!is.list(br)) {
-    return(paste0("must be a named list; got ", class(br)[[1]]))
+  # Form 1 — string sugar.
+  if (is.character(ru) && length(ru) == 1L && !is.na(ru)) {
+    if (!(ru %in% .tabular_rule_presets)) {
+      return(paste0(
+        "preset ",
+        .sh_quote(ru),
+        " is unknown; use one of ",
+        paste(.sh_quote(.tabular_rule_presets), collapse = ", ")
+      ))
+    }
+    return(NULL)
   }
-  nms <- names(br)
+  # Form 2 — single brdr() broadcast.
+  if (is_brdr(ru)) {
+    return(NULL)
+  }
+  # Form 3 — named list keyed by rule names.
+  if (!is.list(ru)) {
+    return(paste0(
+      "must be a preset name, a single brdr(), or a named list; got ",
+      class(ru)[[1]]
+    ))
+  }
+  nms <- names(ru)
   if (is.null(nms) || any(!nzchar(nms)) || anyNA(nms)) {
     return("entries must all be named")
   }
-  unknown <- setdiff(nms, .preset_border_regions)
+  unknown <- setdiff(nms, .tabular_rule_keys)
   if (length(unknown) > 0L) {
     return(paste0(
-      "contains unknown region(s): ",
+      "contains unknown rule(s): ",
       paste(.sh_quote(unknown), collapse = ", "),
       "; recognised: ",
-      paste(.sh_quote(.preset_border_regions), collapse = ", ")
+      paste(.sh_quote(.tabular_rule_keys), collapse = ", ")
     ))
   }
   for (k in nms) {
-    v <- br[[k]]
+    v <- ru[[k]]
     if (is.null(v)) {
       next
     }
@@ -48,9 +69,96 @@
       next
     }
     return(paste0(
-      "key ",
+      "rule ",
       .sh_quote(k),
       " must be a brdr() value, \"none\", or NULL"
+    ))
+  }
+  NULL
+}
+
+# ---------------------------------------------------------------------
+# spacing slot — named list keyed by region, each a named numeric
+# vector of its accepted sides
+# ---------------------------------------------------------------------
+
+.spacing_shape_error <- function(sp) {
+  if (length(sp) == 0L) {
+    return(NULL)
+  }
+  if (!is.list(sp)) {
+    return(paste0("must be a named list; got ", class(sp)[[1]]))
+  }
+  nms <- names(sp)
+  if (is.null(nms) || any(!nzchar(nms)) || anyNA(nms)) {
+    return("entries must all be named")
+  }
+  unknown <- setdiff(nms, .tabular_spacing_keys)
+  if (length(unknown) > 0L) {
+    return(paste0(
+      "contains unknown region(s): ",
+      paste(.sh_quote(unknown), collapse = ", "),
+      "; recognised: ",
+      paste(.sh_quote(.tabular_spacing_keys), collapse = ", ")
+    ))
+  }
+  for (region in nms) {
+    val <- sp[[region]]
+    sides <- .tabular_spacing_sides[[region]]
+    if (!is.numeric(val) || is.null(names(val))) {
+      return(paste0(
+        "region ",
+        .sh_quote(region),
+        " must be a named numeric vector (e.g. c(above = 1, below = 1))"
+      ))
+    }
+    bad_sides <- setdiff(names(val), sides)
+    if (length(bad_sides) > 0L) {
+      return(paste0(
+        "region ",
+        .sh_quote(region),
+        " accepts only ",
+        paste(.sh_quote(sides), collapse = ", "),
+        "; got ",
+        paste(.sh_quote(bad_sides), collapse = ", ")
+      ))
+    }
+    for (n in val) {
+      if (is.na(n) || n < 0 || n != as.integer(n)) {
+        return(paste0(
+          "region ",
+          .sh_quote(region),
+          " gaps must be non-negative integers"
+        ))
+      }
+    }
+  }
+  NULL
+}
+
+# ---------------------------------------------------------------------
+# stripe slot — NULL, a single fill colour, or a named c(odd, even)
+# ---------------------------------------------------------------------
+
+.stripe_shape_error <- function(st) {
+  if (is.null(st)) {
+    return(NULL)
+  }
+  if (!is.character(st) || anyNA(st) || !all(nzchar(st))) {
+    return("must be NULL, a colour string, or a named c(odd, even)")
+  }
+  if (length(st) == 1L && is.null(names(st))) {
+    return(NULL)
+  }
+  nms <- names(st)
+  if (is.null(nms)) {
+    return("a multi-element stripe must be named c(odd = , even = )")
+  }
+  bad <- setdiff(nms, c("odd", "even"))
+  if (length(bad) > 0L) {
+    return(paste0(
+      "names must be 'odd' and / or 'even'; got ",
+      paste(.sh_quote(bad), collapse = ", ")
     ))
   }
   NULL
@@ -159,13 +267,13 @@
   if (is.null(nms) || any(!nzchar(nms)) || anyNA(nms)) {
     return("entries must all be named")
   }
-  unknown <- setdiff(nms, .preset_color_tokens)
+  unknown <- setdiff(nms, .preset_color_surfaces)
   if (length(unknown) > 0L) {
     return(paste0(
-      "contains unknown token(s): ",
+      "contains unknown surface(s): ",
       paste(.sh_quote(unknown), collapse = ", "),
       "; recognised: ",
-      paste(.sh_quote(.preset_color_tokens), collapse = ", ")
+      paste(.sh_quote(.preset_color_surfaces), collapse = ", ")
     ))
   }
   for (k in nms) {
@@ -173,17 +281,42 @@
     if (is.null(v)) {
       next
     }
-    if (
-      !is.character(v) ||
-        length(v) != 1L ||
-        is.na(v) ||
-        !nzchar(v)
-    ) {
+    if (!is.list(v)) {
       return(paste0(
-        "key ",
+        "surface ",
         .sh_quote(k),
-        " must be a single non-empty character (hex, CSS name, or 'currentColor' / 'transparent')"
+        " must be a named list with any of text / background"
       ))
+    }
+    sub_nms <- names(v)
+    if (is.null(sub_nms) || anyNA(sub_nms) || any(!nzchar(sub_nms))) {
+      return(paste0("surface ", .sh_quote(k), " entries must all be named"))
+    }
+    unknown_keys <- setdiff(sub_nms, .preset_color_tokens)
+    if (length(unknown_keys) > 0L) {
+      return(paste0(
+        "surface ",
+        .sh_quote(k),
+        " has unknown token(s): ",
+        paste(.sh_quote(unknown_keys), collapse = ", "),
+        "; recognised: ",
+        paste(.sh_quote(.preset_color_tokens), collapse = ", ")
+      ))
+    }
+    for (tok in sub_nms) {
+      tv <- v[[tok]]
+      if (is.null(tv)) {
+        next
+      }
+      if (!is.character(tv) || length(tv) != 1L || is.na(tv) || !nzchar(tv)) {
+        return(paste0(
+          "surface ",
+          .sh_quote(k),
+          " token ",
+          .sh_quote(tok),
+          " must be a single non-empty character (hex, CSS name, or 'currentColor' / 'transparent')"
+        ))
+      }
     }
   }
   NULL

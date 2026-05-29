@@ -99,58 +99,16 @@
 # preset accessor: read one alignment key with cascade
 # ---------------------------------------------------------------------
 
-# Resolve one alignment key against a preset, walking ONLY the
-# explicit layers — the user-set named-list and the legacy flat
-# scalars. Returns NA_character_ when no layer explicitly set the
-# key; the caller decides whether to fall through to a baked
-# default or to leave the surface to CSS / backend defaults.
-#
-# Resolve one alignment key from the surviving `preset_spec`
-# scalars. After the Task 4/5 slot cut, only `preset@title_align`
-# and `preset@footnote_align` remain on the class — every other
-# alignment knob (`alignment = list(header_halign = …)` etc.)
-# lowers to a style_layer and flows through chrome_style /
-# cells_style, consumed by the caller before falling through to
-# this helper.
-#
-# We treat the legacy scalars as "explicit" only when the user has
-# changed them away from the factory default; otherwise the
-# factory baseline would clobber a chrome-layer override from the
-# user's `preset(alignment = list(title_halign = ...))` call. The
-# comparison memoises the factory `preset_spec()` once per session.
+# Alignment resolver. After the rules/spacing redesign there are NO
+# alignment slots on `preset_spec`: title / footnote / subgroup /
+# header / body alignment all flow through the `alignment` knob, which
+# lowers to `cells_<surface>()` layers (chrome_style / cells_style)
+# that backends consult FIRST. With no slot left to read, this helper
+# returns NA for every key, so each backend applies its own baked-in
+# surface default (title centered, footnote left, via CSS / markup).
+# The `preset` argument is retained for signature stability but unused.
 .preset_align <- function(preset, key, line_index = 1L, n_lines = 1L) {
-  if (!is_preset_spec(preset)) {
-    return(NA_character_)
-  }
-  legacy_key <- switch(
-    key,
-    title_halign = "title_align",
-    footnote_halign = "footnote_align",
-    NULL
-  )
-  if (!is.null(legacy_key)) {
-    val <- S7::prop(preset, legacy_key)
-    if (length(val) == 1L && !is.na(val)) {
-      factory <- .preset_factory_default(legacy_key)
-      if (!identical(val, factory)) {
-        return(val)
-      }
-    }
-  }
   NA_character_
-}
-
-# Look up the factory default for one preset_spec property. Used
-# by .preset_align to decide whether the legacy `title_align` /
-# `footnote_align` scalars have been explicitly overridden by the
-# user. Memoised once per session via a package-internal env so we
-# avoid rebuilding the default preset on every cell resolution.
-.preset_factory_defaults_env <- new.env(parent = emptyenv())
-.preset_factory_default <- function(name) {
-  if (is.null(.preset_factory_defaults_env$preset)) {
-    .preset_factory_defaults_env$preset <- preset_spec()
-  }
-  S7::prop(.preset_factory_defaults_env$preset, name)
 }
 
 # ---------------------------------------------------------------------

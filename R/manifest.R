@@ -323,7 +323,7 @@
     paper_size = p@paper_size,
     orientation = p@orientation,
     margins = as.numeric(p@margins),
-    hlines = p@hlines
+    cell_padding = as.numeric(p@cell_padding)
   )
 }
 
@@ -389,11 +389,14 @@
     background = node@background,
     font_family = node@font_family,
     font_size = node@font_size,
-    rule_above = node@rule_above,
-    rule_below = node@rule_below,
-    border_left = node@border_left,
-    border_right = node@border_right,
-    padding = node@padding,
+    padding_top = node@padding_top,
+    padding_right = node@padding_right,
+    padding_bottom = node@padding_bottom,
+    padding_left = node@padding_left,
+    border_top_style = node@border_top_style,
+    border_bottom_style = node@border_bottom_style,
+    border_left_style = node@border_left_style,
+    border_right_style = node@border_right_style,
     blank_above = node@blank_above,
     blank_below = node@blank_below,
     pretext = node@pretext,

@@ -463,11 +463,12 @@ test_that("HTML emit indents data-row host-col cells under header_row mode", {
     txt,
     fixed = TRUE
   ))
-  expect_true(grepl(
-    "<td style=\"padding-left: calc(.6rem + 1.2em);\">Nausea</td>",
+  # Nausea is the last body row, so it also carries the SSOT
+  # bottomrule (border-bottom); match the indent prefix loosely.
+  expect_match(
     txt,
-    fixed = TRUE
-  ))
+    "padding-left: calc\\(\\.6rem \\+ 1\\.2em\\);[^>]*>Nausea</td>"
+  )
   # The synthetic CARDIAC / GI header rows DO NOT carry the prefix.
   expect_true(grepl("<td>CARDIAC</td>", txt, fixed = TRUE))
   expect_true(grepl("<td>GI</td>", txt, fixed = TRUE))

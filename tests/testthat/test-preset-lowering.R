@@ -42,75 +42,64 @@ test_that(".preset_args_to_layers() routes every alignment key to its surface", 
 # direct-helper coverage we still pass scalars only.
 
 # ---------------------------------------------------------------------
-# borders — body regions lower to cells_table() layers after the cut
+# rules — the nine rules lower to cells_table() + chrome layers
 # ---------------------------------------------------------------------
 
-test_that(".preset_args_to_layers() lowers body border regions to cells_table()", {
-  layers <- tabular:::.preset_args_to_layers(list(
-    borders = list(
-      outer = brdr("thin"),
-      body_rows = brdr("hairline"),
-      body_cols = brdr("thin")
-    )
-  ))
-  # outer expands to 4 outer_* sides; rows + cols = 6 layers total.
-  expect_length(layers, 6L)
-  sides <- vapply(
-    layers,
-    function(l) as.character(l@location$side %||% "outer"),
+test_that(".preset_args_to_layers() lowers every rule (booktabs) to a layer", {
+  layers <- tabular:::.preset_args_to_layers(list(rules = "booktabs"))
+  # 5 body rules (cells_table) + 4 chrome rules (headers x3, footnotes).
+  expect_length(layers, 9L)
+  body <- Filter(function(l) identical(l@location$surface, "table"), layers)
+  sides <- vapply(body, function(l) l@location$side, character(1L))
+  expect_setequal(
+    sides,
+    c("outer_bottom", "rows", "outer_left", "outer_right", "cols")
+  )
+})
+
+test_that(".preset_args_to_layers() maps chrome rules via chrome_region", {
+  layers <- tabular:::.preset_args_to_layers(list(rules = "booktabs"))
+  chrome <- Filter(function(l) !is.null(l@location$chrome_region), layers)
+  regions <- vapply(
+    chrome,
+    function(l) l@location$chrome_region,
     character(1L)
   )
   expect_setequal(
-    sides,
-    c(
-      "outer_top",
-      "outer_bottom",
-      "outer_left",
-      "outer_right",
-      "rows",
-      "cols"
-    )
+    regions,
+    c("header_top", "header_bottom", "header_between", "footer_top")
   )
 })
 
-test_that(".preset_args_to_layers() body_top / body_bottom alias outer_top / outer_bottom", {
-  layers <- tabular:::.preset_args_to_layers(list(
-    borders = list(body_top = brdr("medium", "dotted"))
-  ))
-  expect_length(layers, 1L)
-  expect_identical(layers[[1L]]@location$side, "outer_top")
-  expect_identical(layers[[1L]]@style@border_top_style, "dotted")
+test_that(".preset_args_to_layers() on-rules carry the triple, off-rules clear", {
+  layers <- tabular:::.preset_args_to_layers(list(rules = "booktabs"))
+  # bottomrule is ON (outer_bottom) -> solid; rowrule is OFF -> "none".
+  bottom <- Filter(
+    function(l) identical(l@location$side, "outer_bottom"),
+    layers
+  )[[1L]]
+  expect_identical(bottom@style@border_bottom_style, "solid")
+  rows <- Filter(function(l) identical(l@location$side, "rows"), layers)[[1L]]
+  expect_identical(rows@style@border_top_style, "none")
 })
 
-# ---------------------------------------------------------------------
-# borders — chrome regions
-# ---------------------------------------------------------------------
-
-test_that(".preset_args_to_layers() maps chrome border regions to cells_<surface>()", {
+test_that(".preset_args_to_layers() drops a rule when set to 'none'", {
   layers <- tabular:::.preset_args_to_layers(list(
-    borders = list(
-      header_top = brdr("medium"),
-      header_bottom = brdr(),
-      subgroup_top = brdr("thin"),
-      footer_top = brdr("hairline"),
-      pagehead_bottom = brdr(),
-      pagefoot_top = brdr()
-    )
+    rules = list(midrule = "none")
   ))
-  surfaces <- vapply(layers, function(l) l@location$surface, character(1L))
-  expect_setequal(
-    surfaces,
-    c("headers", "subgroup_labels", "footnotes", "pagehead", "pagefoot")
-  )
+  mid <- Filter(
+    function(l) identical(l@location$chrome_region, "header_bottom"),
+    layers
+  )[[1L]]
+  expect_identical(mid@style@border_bottom_style, "none")
 })
 
-test_that(".preset_args_to_layers() treats borders$subgroup as subgroup_bottom alias", {
+test_that(".preset_args_to_layers() rowrule on reproduces hlines='all'", {
   layers <- tabular:::.preset_args_to_layers(list(
-    borders = list(subgroup = brdr("medium"))
+    rules = list(rowrule = brdr())
   ))
-  expect_length(layers, 1L)
-  expect_identical(layers[[1L]]@location$surface, "subgroup_labels")
-  expect_identical(layers[[1L]]@style@border_bottom_style, "solid")
+  rows <- Filter(function(l) identical(l@location$side, "rows"), layers)[[1L]]
+  expect_identical(rows@style@border_top_style, "solid")
 })
 
 # ---------------------------------------------------------------------
@@ -160,40 +149,49 @@ test_that(".preset_args_to_layers() lowers fonts weight='bold' to bold=TRUE", {
 # colors
 # ---------------------------------------------------------------------
 
-test_that(".preset_args_to_layers() lowers colors$text / $background to cells_body()", {
+test_that(".preset_args_to_layers() lowers region-keyed colors text / background", {
   layers <- tabular:::.preset_args_to_layers(list(
-    colors = list(text = "#ff0000", background = "#eeeeee")
+    colors = list(body = list(text = "#ff0000", background = "#eeeeee"))
   ))
   expect_length(layers, 2L)
   surfaces <- vapply(layers, function(l) l@location$surface, character(1L))
   expect_true(all(surfaces == "body"))
 })
 
-# `colors$border` / `colors$border_muted` / `colors$text_muted`
-# tokens are rejected at validation time after the Task 4/5 cut —
-# the lowering helper no longer sees them. Replace via
-# `style(.at = cells_table(side = "rows"), border_top = brdr(color = …))`
-# and friends.
+test_that(".preset_args_to_layers() routes colors to every recognised surface", {
+  layers <- tabular:::.preset_args_to_layers(list(
+    colors = list(
+      header = list(text = "#111111"),
+      footnotes = list(background = "#fafafa")
+    )
+  ))
+  surfaces <- vapply(layers, function(l) l@location$surface, character(1L))
+  expect_setequal(surfaces, c("headers", "footnotes"))
+})
 
 # ---------------------------------------------------------------------
 # padding
 # ---------------------------------------------------------------------
 
-test_that(".preset_args_to_layers() lowers padding[body] scalar to cells_body()", {
+test_that(".preset_args_to_layers() lowers padding[body] scalar to four sides", {
   layers <- tabular:::.preset_args_to_layers(list(
     padding = list(body = 5)
   ))
   expect_length(layers, 1L)
   expect_identical(layers[[1L]]@location$surface, "body")
-  expect_identical(layers[[1L]]@style@padding, 5)
+  expect_identical(layers[[1L]]@style@padding_top, 5)
+  expect_identical(layers[[1L]]@style@padding_left, 5)
 })
 
-test_that(".preset_args_to_layers() collapses per-side padding to the mean", {
+test_that(".preset_args_to_layers() lowers per-side padding WITHOUT averaging", {
   layers <- tabular:::.preset_args_to_layers(list(
     padding = list(body = list(top = 2, right = 4, bottom = 2, left = 4))
   ))
   expect_length(layers, 1L)
-  expect_identical(layers[[1L]]@style@padding, 3)
+  expect_identical(layers[[1L]]@style@padding_top, 2)
+  expect_identical(layers[[1L]]@style@padding_right, 4)
+  expect_identical(layers[[1L]]@style@padding_bottom, 2)
+  expect_identical(layers[[1L]]@style@padding_left, 4)
 })
 
 test_that(".preset_args_to_layers() routes padding to every recognised surface", {
@@ -222,7 +220,7 @@ test_that(".preset_args_to_layers() returns an empty list for NULL / empty args"
   expect_identical(
     tabular:::.preset_args_to_layers(list(
       alignment = NULL,
-      borders = list(),
+      rules = list(),
       fonts = list(),
       colors = list(),
       padding = list()
@@ -257,8 +255,21 @@ test_that(".preset_alignment_to_layers() returns empty list for non-list input",
   expect_identical(tabular:::.preset_alignment_to_layers("nope"), list())
 })
 
-test_that(".preset_borders_to_layers() returns empty list for non-list input", {
-  expect_identical(tabular:::.preset_borders_to_layers("nope"), list())
+test_that(".preset_rules_to_layers() handles the 'none' preset (all clears)", {
+  layers <- tabular:::.preset_rules_to_layers("none")
+  expect_length(layers, 9L)
+  styles <- vapply(
+    layers,
+    function(l) {
+      for (s in c("top", "bottom", "left", "right")) {
+        v <- S7::prop(l@style, paste0("border_", s, "_style"))
+        if (!is.na(v)) return(v)
+      }
+      NA_character_
+    },
+    character(1L)
+  )
+  expect_true(all(styles == "none"))
 })
 
 test_that(".preset_fonts_to_layers() returns empty list for non-list input", {

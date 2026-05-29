@@ -179,21 +179,28 @@ test_that(".compute_col_width breaks a multi-line header on \\n (author break)",
   expect_lt(w_ml, w_joined)
 })
 
-test_that("preset_spec carries cell_padding_h default 5.4 (padding SSOT)", {
-  expect_equal(preset_spec()@cell_padding_h, 5.4)
+test_that("preset_spec carries cell_padding default c(0, 5.4) (padding SSOT)", {
+  expect_equal(as.numeric(preset_spec()@cell_padding), c(0, 5.4))
+  expect_equal(tabular:::.cell_padding_lr(preset_spec()), c(5.4, 5.4))
 })
 
-test_that("cell_padding_h is settable via preset(), scalar or c(left, right)", {
-  p1 <- preset(tabular(data.frame(x = 1)), cell_padding_h = 3)
-  expect_equal(p1@preset@cell_padding_h, 3)
-  p2 <- preset(tabular(data.frame(x = 1)), cell_padding_h = c(2, 4))
-  expect_equal(p2@preset@cell_padding_h, c(2, 4))
+test_that("cell_padding is settable via preset(), CSS shorthand 1/2/4", {
+  p1 <- preset(tabular(data.frame(x = 1)), cell_padding = 3)
+  expect_equal(as.numeric(p1@preset@cell_padding), 3)
+  p2 <- preset(tabular(data.frame(x = 1)), cell_padding = c(0, 4, 0, 2))
+  expect_equal(as.numeric(p2@preset@cell_padding), c(0, 4, 0, 2))
 })
 
-test_that(".cell_padding_lr broadcasts a scalar and passes a pair through", {
+test_that(".cell_padding_lr resolves the horizontal pair from cell_padding", {
+  # scalar -> all sides; length-2 c(v, h) -> both horizontals = h;
+  # length-4 c(t, r, b, l) -> c(left, right).
   expect_equal(tabular:::.cell_padding_lr(preset_spec()), c(5.4, 5.4))
   expect_equal(
-    tabular:::.cell_padding_lr(preset_spec(cell_padding_h = c(2, 4))),
+    tabular:::.cell_padding_lr(preset_spec(cell_padding = c(2, 4))),
+    c(4, 4)
+  )
+  expect_equal(
+    tabular:::.cell_padding_lr(preset_spec(cell_padding = c(0, 4, 0, 2))),
     c(2, 4)
   )
 })
@@ -211,12 +218,12 @@ test_that(".compute_col_width adds the total horizontal padding (padding SSOT)",
   )
   expect_equal(w_default, w_explicit)
 
-  # A c(left, right) preset sums to the same total as a scalar of the
-  # average, so the measured width matches.
+  # A c(vertical, horizontal) preset measures with horizontal on both
+  # sides, so the total equals 2 * horizontal.
   p_pair <- preset_spec(
     font_family = "serif",
     font_size = 10,
-    cell_padding_h = c(2, 4)
+    cell_padding = c(0, 3)
   )
   expect_equal(
     tabular:::.compute_col_width(c("Placebo"), header = "", p_pair),
@@ -245,10 +252,10 @@ test_that(".resolve_col_widths measures with body padding override (padding SSOT
 
   pad20 <- matrix(
     list(
-      tabular:::style_node(padding = 20),
-      tabular:::style_node(padding = 20),
-      tabular:::style_node(padding = 20),
-      tabular:::style_node(padding = 20)
+      tabular:::style_node(padding_left = 20, padding_right = 20),
+      tabular:::style_node(padding_left = 20, padding_right = 20),
+      tabular:::style_node(padding_left = 20, padding_right = 20),
+      tabular:::style_node(padding_left = 20, padding_right = 20)
     ),
     nrow = 2
   )
@@ -372,12 +379,13 @@ test_that(".ast_flatten_text returns empty string for non-AST input", {
   expect_equal(tabular:::.ast_flatten_text("not an ast"), "")
 })
 
-test_that("preset_spec validates cell_padding_h length + sign (padding SSOT)", {
-  # Length 1 (both sides) and 2 (left, right) are valid.
-  expect_true(is_preset_spec(preset_spec(cell_padding_h = 4)))
-  expect_true(is_preset_spec(preset_spec(cell_padding_h = c(2, 4))))
+test_that("preset_spec validates cell_padding length + sign (padding SSOT)", {
+  # Length 1 (all), 2 (vertical horizontal), and 4 (t r b l) are valid.
+  expect_true(is_preset_spec(preset_spec(cell_padding = 4)))
+  expect_true(is_preset_spec(preset_spec(cell_padding = c(2, 4))))
+  expect_true(is_preset_spec(preset_spec(cell_padding = c(1, 2, 3, 4))))
   # Length 3, negative, or NA are rejected.
-  expect_error(preset_spec(cell_padding_h = c(1, 2, 3)), "cell_padding_h")
-  expect_error(preset_spec(cell_padding_h = -1), "cell_padding_h")
-  expect_error(preset_spec(cell_padding_h = c(1, NA)), "cell_padding_h")
+  expect_error(preset_spec(cell_padding = c(1, 2, 3)), "cell_padding")
+  expect_error(preset_spec(cell_padding = -1), "cell_padding")
+  expect_error(preset_spec(cell_padding = c(1, NA)), "cell_padding")
 })

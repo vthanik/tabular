@@ -149,7 +149,10 @@ body_border_manifest <- function(spec) {
 # order — session preset first, per-spec layers last — so the
 # last-write wins per side at stamp time.
 .collect_table_layers <- function(spec) {
-  sources <- list()
+  # The booktabs baseline is injected first (lowest precedence) so a
+  # table with no `rules` knob still gets the clinical default rules;
+  # session / preset / per-spec layers override via later position.
+  sources <- .default_rule_layers()
   session <- get_preset()
   if (is_preset_spec(session)) {
     sources <- c(sources, session@style)
@@ -316,17 +319,22 @@ body_border_manifest <- function(spec) {
   cells_style
 }
 
-# Read the first non-NA @padding scalar from any cell in a
-# cells_style matrix. Returns NA_real_ when no override is set
-# anywhere. Shared across backends that need a scalar table-wide
-# padding (LaTeX's `rowsep=Xpt`, RTF's `\trgaph<twips>`, DOCX's
-# `<w:tcMar>`). The lowered `preset(padding = list(body = N))` knob
-# stamps the same value on every body cell, so any non-NA cell is
-# canonical; the scan skips synthetic group-header / blank rows
-# whose injected style_nodes carry the default NA padding.
-.first_cell_padding <- function(cells_style) {
+# Read the first cell carrying any non-NA per-side padding from a
+# cells_style matrix; returns a named c(top, right, bottom, left)
+# (NA where unset), or all-NA when no override exists anywhere. The
+# lowered `preset(padding = list(body = ...))` knob stamps the same
+# per-side values on every body cell, so the first non-default cell is
+# canonical; the scan skips synthetic group-header / blank rows whose
+# injected style_nodes carry default NA padding.
+.first_cell_padding_sides <- function(cells_style) {
+  out <- c(
+    top = NA_real_,
+    right = NA_real_,
+    bottom = NA_real_,
+    left = NA_real_
+  )
   if (!is.matrix(cells_style) || length(cells_style) == 0L) {
-    return(NA_real_)
+    return(out)
   }
   for (i in seq_len(nrow(cells_style))) {
     for (j in seq_len(ncol(cells_style))) {
@@ -334,13 +342,28 @@ body_border_manifest <- function(spec) {
       if (!is_style_node(node)) {
         next
       }
-      pad <- node@padding
-      if (length(pad) == 1L && !is.na(pad)) {
-        return(as.numeric(pad))
+      sides <- vapply(
+        c("top", "right", "bottom", "left"),
+        function(s) {
+          v <- S7::prop(node, paste0("padding_", s))
+          if (length(v) == 1L) as.numeric(v) else NA_real_
+        },
+        numeric(1L)
+      )
+      if (!all(is.na(sides))) {
+        return(sides)
       }
     }
   }
-  NA_real_
+  out
+}
+
+# Scalar table-wide padding shim used by backends that take a single
+# representative value (RTF `\trgaph`, DOCX `<w:tcMar>` horizontal,
+# LaTeX `tabcolsep`). Returns the first cell's horizontal (left)
+# padding override, NA when none is set.
+.first_cell_padding <- function(cells_style) {
+  unname(.first_cell_padding_sides(cells_style)[["left"]])
 }
 
 # Read the first non-NA @color scalar from any cell in a cells_style
@@ -452,7 +475,10 @@ engine_chrome_borders <- function(spec) {
 # chrome surface (anything mapping to a chrome_style surface key).
 # Order: session preset -> spec preset -> per-spec layers.
 .collect_chrome_layers <- function(spec) {
-  sources <- list()
+  # Inject the booktabs baseline first (lowest precedence) for the
+  # chrome rules (toprule / midrule / spanrule / footnoterule); later
+  # cascade sources override.
+  sources <- .default_rule_layers()
   session <- get_preset()
   if (is_preset_spec(session)) {
     sources <- c(sources, session@style)
@@ -485,6 +511,22 @@ engine_chrome_borders <- function(spec) {
   loc <- layer@location
   surface_key <- .location_to_chrome_surface[[loc$surface]]
   node <- layer@style
+
+  # Explicit chrome-region target (set by `.preset_rules_to_layers()`):
+  # write the triple straight to the named region, bypassing the
+  # border-side heuristic that otherwise conflates header_top and
+  # header_between. The triple may carry style = "none" (clear), which
+  # overrides the injected booktabs default for that region.
+  if (!is.null(loc$chrome_region)) {
+    triple <- .style_node_border_triple(node, "top")
+    if (is.null(triple)) {
+      triple <- .style_node_border_triple(node, "bottom")
+    }
+    if (!is.null(triple)) {
+      cs$borders[[loc$chrome_region]] <- triple
+    }
+    return(cs)
+  }
 
   # Merge the layer's text/alignment properties onto the surface
   # node. Reuse engine_style's merge contract — non-NA overrides.
@@ -531,22 +573,6 @@ engine_chrome_borders <- function(spec) {
     }
   }
   cs
-}
-
-# Coerce a region's value to the bare `list(style, width, color)`
-# triple that engine_borders writes to style_node. Accepts:
-#   * NULL                  -> NULL (no effect)
-#   * "none"                -> explicit clear sentinel
-#   * tabular_brdr value    -> unwrap via `.as_brdr_triple`
-#   * bare list(style, width, color) -> pass through
-.normalise_region_value <- function(v) {
-  if (is.null(v)) {
-    return(NULL)
-  }
-  if (identical(v, "none") || identical(v, "off")) {
-    return(list(style = "none", width = 0, color = NA_character_))
-  }
-  .as_brdr_triple(v)
 }
 
 # Visible column indices on `cells_style` -- preserves the order in

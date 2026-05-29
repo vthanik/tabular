@@ -2,8 +2,8 @@
 # session-default `preset_spec` consulted by every subsequent
 # `tabular()` chain. The preset carries page geometry: paper size,
 # orientation, margins, body font_size + family, header / footer rows,
-# horizontal-rule policy, decimal-alignment metric, and a handful of
-# typography defaults. The render-engine geometry helpers consult the
+# the rules / spacing / stripe styling knobs, decimal-alignment metric,
+# and a handful of typography defaults. The render-engine geometry helpers consult the
 # per-spec preset first, then the session default, then `preset_spec`
 # defaults.
 #
@@ -32,18 +32,17 @@
   "margins",
   "pagehead",
   "pagefoot",
-  "hlines",
   "indent_size",
-  "title_align",
-  "footnote_align",
   "na_text",
   "decimal_metrics",
   "decimal_markers",
   "chrome_onscreen",
   "width_mode",
-  "cell_padding_h",
+  "cell_padding",
+  "spacing",
+  "stripe",
   "alignment",
-  "borders",
+  "rules",
   "fonts",
   "colors",
   "padding"
@@ -59,7 +58,7 @@
 # of truth for theme-level cell defaults.
 .preset_lowered_knob_names <- c(
   "alignment",
-  "borders",
+  "rules",
   "fonts",
   "colors",
   "padding"
@@ -85,7 +84,7 @@
 #' **Merge, not replace.** A second `preset()` call merges its scalar
 #' knobs onto the spec's existing preset; unspecified knobs keep
 #' their prior value. The five named-list knobs (`alignment` /
-#' `borders` / `fonts` / `colors` / `padding`) lower to `style_layer`
+#' `rules` / `fonts` / `colors` / `padding`) lower to `style_layer`
 #' records on `preset@style` via `.preset_args_to_layers()`
 #' (internal) and append in call order; layer order is precedence
 #' within the engine cascade, so a later `preset()` call's lowered
@@ -98,7 +97,7 @@
 #' **Direct `preset_spec()` calls bypass lowering.** The five
 #' named-list knobs are no longer slots on the `preset_spec` S7
 #' class — they exist only as `preset()` / `set_preset()` arguments
-#' that lower into `@style`. `preset_spec(borders = list(...))`
+#' that lower into `@style`. `preset_spec(rules = list(...))`
 #' (and analogous direct calls) raise "unused argument". Wrap such
 #' calls in `tabular(...) |> preset(...)` so the lowering helper
 #' fires and the layers land on `@style`.
@@ -265,9 +264,26 @@
 #'       API, `source()` frame, Rscript / R CMD BATCH commandArgs
 #'       (covers Domino + Linux batch + CI), knitr current_input,
 #'       fallback `"<interactive>"`.
-#'   *   **`hlines`** — horizontal-rule policy.
-#'       `<character(1)>`. One of `"header"` (default), `"none"`,
-#'       `"all"`.
+#'   *   **`rules`** — the single border vocabulary (replaces the old
+#'       `borders` knob). String sugar `"booktabs"` (default, the
+#'       clinical baseline), `"grid"`, `"frame"`, `"none"`; a single
+#'       [`brdr()`] broadcast to every active rule; or a named list
+#'       keyed by the nine rule names (`toprule`, `midrule`,
+#'       `bottomrule`, `spanrule`, `rowrule`, `footnoterule`,
+#'       `leftrule`, `rightrule`, `colrule`) — unlisted rules keep
+#'       their default, and the bare string `"none"` drops one.
+#'       `rules = list(rowrule = brdr())` reproduces the old
+#'       `hlines = "all"`.
+#'   *   **`spacing`** — region-keyed blank-line control. A named list
+#'       keyed by `title` / `body` / `subgroup` / `footnote`, each a
+#'       named numeric `c(above = , below = )` (footnote: `above`
+#'       only). Default is the Appendix-I one blank line above and
+#'       below the title block. Two adjoining region-sides that target
+#'       the same physical gap resolve to the MAX (never the sum), so a
+#'       gap is never accidentally doubled.
+#'   *   **`stripe`** — zebra body-row fills. A single colour (applied
+#'       to even rows) or a named `c(odd = , even = )`; `NULL`
+#'       (default) is off.
 #'   *   **`indent_size`** — row-label indent width, in monospace-
 #'       space units. `<integer(1)>`. Default `2L`. Each indent level
 #'       adds this many space-widths of left padding to the cell.
@@ -276,43 +292,14 @@
 #'       PDF) emit this as cell padding so wrapped continuation lines
 #'       align with the indented baseline; Markdown carries the literal
 #'       space-prefix.
-#'   *   **`title_align`**, **`footnote_align`** — block alignment.
-#'       `<character(1)>`. One of `"left"`, `"center"`, `"right"`.
-#'   *   **`title_pad_top`**, **`title_pad_bottom`** — blank-line
-#'       count above and below the title block. `<numeric(1)>:
-#'       default 1`. Non-negative whole number. Matches the
-#'       Appendix-I "blank line above and below the title" layout
-#'       contract; set to `0` for a compact title flush against the
-#'       column-header rule, or `2`+ for poster-sized prints with
-#'       extra breathing room.
-#'   *   **`body_pad_top`**, **`body_pad_bottom`** — blank-line count
-#'       above and below the table body. `<numeric(1)>: default 0`.
-#'       Non-negative whole number. `body_pad_top` sits between the
-#'       title block (or subgroup banner, when active) and the
-#'       column-header rule; `body_pad_bottom` sits between the
-#'       table's bottom rule and the footnote block (or the page
-#'       footer when no footnotes are set).
-#'
-#'       **Default 0 (not 1)** because `body_pad_top` STACKS on top
-#'       of `title_pad_bottom`: with both at `1`, a table without a
-#'       subgroup banner would carry TWO blank lines between the
-#'       title and the column-header rule. The body pads are
-#'       opt-in: set `body_pad_top = 1` to insert a gap below the
-#'       subgroup banner (or to add a second line below the title);
-#'       set `body_pad_bottom = 1` to keep a blank below the table
-#'       when the footnote block is empty.
-#'
-#'       Every backend (MD / HTML / LaTeX / RTF / DOCX) honours all
-#'       four counts uniformly — one empty line / paragraph /
-#'       `\par` / `<w:p/>` per unit.
+#'       Block alignment for the title / footnote / header / subgroup /
+#'       body surfaces is set via the `alignment` named-list knob
+#'       (`alignment = list(title_halign = "left", ...)`), not a scalar
+#'       knob; blank-line spacing is set via `spacing` (above).
 #'   *   **`na_text`** — global NA fallback. `<character(1)>`.
-#'   *   **`decimal_metrics`** *(experimental)* — reserved knob
-#'       for future em-aware decimal-padding refinement.
-#'       `<character(1)>`. One of `"afm"` *(default)* or
-#'       `"systemfonts"`. Currently neither value affects
-#'       rendering; the engine pads decimal columns by character
-#'       count regardless. Roadmapped for em-unit prefix
-#'       measurement in a later release.
+#'   *   **`decimal_metrics`** — decimal-padding metric.
+#'       `<character(1)>`. Only `"chars"` (default); the engine pads
+#'       decimal columns by character count.
 #'   *   **`decimal_markers`** — missing-value tokens recognised by
 #'       `col_spec(align = "decimal")`. `<character>`. Default
 #'       `c("NR", "NE", "NC", "ND", "BLQ")`. A cell whose trimmed
@@ -349,21 +336,20 @@
 #'       `width_mode`. Per-column widths (`col_spec(width)`) emit
 #'       verbatim into the HTML colgroup per the gt convention.
 #'
-#'   *   **`cell_padding_h`** — horizontal cell padding (left / right
-#'       sides) in points, the `h` analogue of `halign`.
-#'       `<numeric(1) | numeric(2)>: default 5.4`. Length 1 sets both
-#'       sides; length 2 is `c(left, right)`. The single source of
-#'       truth for both auto column-width measurement (left + right)
-#'       and every backend's horizontal cell margin, so measured and
-#'       rendered widths agree. Default 5.4pt/side matches Word's
-#'       ~0.075in cell margin.
+#'   *   **`cell_padding`** — cell padding in points, CSS shorthand of
+#'       length 1 / 2 / 4 (`all` | `vertical horizontal` |
+#'       `top right bottom left`), parsed by the same length rule as
+#'       `margins`. `<numeric>: default c(0, 5.4)` (vertical 0,
+#'       horizontal 5.4pt). The single source of truth for both auto
+#'       column-width measurement (left + right) and every backend's
+#'       cell margin, so measured and rendered widths agree.
 #'
-#'       **Interaction:** A body padding override
-#'       (`preset(padding = list(body = N))` or
-#'       `style(at = cells_body(), padding = N)`) takes precedence at
+#'       **Interaction:** A body per-side padding override
+#'       (`preset(padding = list(body = ...))` or
+#'       `style(at = cells_body(), padding = ...)`) takes precedence at
 #'       both measurement and render.
 #'
-#'       **Note:** DOCX and LaTeX render `c(left, right)` exactly; RTF
+#'       **Note:** DOCX and LaTeX render left / right exactly; RTF
 #'       (`\\trgaph` is one symmetric gap) renders the average, so the
 #'       total width still matches but the two sides look equal.
 #'
@@ -381,7 +367,7 @@
 #'   `<preset_spec | NULL>: default NULL`. When supplied, every knob
 #'   the template has set away from its factory default feeds in as
 #'   the base layer; user-supplied `...` knobs then merge on top.
-#'   List-valued knobs (`borders`, `fonts`, `colors`, `padding`,
+#'   List-valued knobs (`rules`, `fonts`, `colors`, `padding`,
 #'   `alignment`) shallow-merge per key; scalars replace. Use this
 #'   to layer a house-style `preset_spec` onto a chain without
 #'   restating its knobs.
@@ -1023,7 +1009,7 @@ get_preset <- function() {
   }
   validators <- list(
     alignment = .preset_alignment_shape_error,
-    borders = .preset_borders_shape_error,
+    rules = .preset_rules_shape_error,
     fonts = .preset_fonts_shape_error,
     colors = .preset_colors_shape_error,
     padding = .preset_padding_shape_error
@@ -1128,9 +1114,8 @@ get_preset <- function() {
 }
 
 # Memoised factory preset_spec — used by `.extract_template_knobs`
-# to decide which template knobs are deliberate overrides. The
-# `.preset_factory_defaults_env` env is shared with `align.R`'s
-# `.preset_factory_default()` helper.
+# to decide which template knobs are deliberate overrides.
+.preset_factory_defaults_env <- new.env(parent = emptyenv())
 .preset_factory_default_spec <- function() {
   if (is.null(.preset_factory_defaults_env$preset)) {
     .preset_factory_defaults_env$preset <- preset_spec()
@@ -1201,7 +1186,7 @@ get_preset <- function() {
 # numeric); the helper averages the four sides as the closest scalar.
 .preset_args_to_layers <- function(args) {
   layers <- list()
-  for (knob in c("alignment", "borders", "fonts", "colors", "padding")) {
+  for (knob in c("alignment", "rules", "fonts", "colors", "padding")) {
     val <- args[[knob]]
     if (is.null(val) || length(val) == 0L) {
       next
@@ -1209,7 +1194,7 @@ get_preset <- function() {
     new <- switch(
       knob,
       alignment = .preset_alignment_to_layers(val),
-      borders = .preset_borders_to_layers(val),
+      rules = .preset_rules_to_layers(val),
       fonts = .preset_fonts_to_layers(val),
       colors = .preset_colors_to_layers(val),
       padding = .preset_padding_to_layers(val)
@@ -1333,113 +1318,102 @@ get_preset <- function() {
   layers
 }
 
-# borders named-list -> per-region border layers. Splits across the
-# body / chrome region vocabulary:
+# rules knob -> per-rule border layers. The nine rules are the single
+# border vocabulary; `resolve_rules()` expands the knob (string sugar /
+# single-brdr broadcast / named-list overlay) into a fixed nine-entry
+# list of resolved triples (or NULL = off). Each rule lowers to one
+# layer: an ON rule carries its triple; an OFF rule carries the
+# explicit-clear sentinel (style = "none") so it OVERRIDES the
+# injected booktabs baseline (`.default_rule_layers()`).
 #
-#   * Body regions (outer, outer_{top/bottom/left/right}, body_top,
-#     body_bottom, body_rows, body_cols) become `cells_table(side=...)`
-#     layers carrying the per-side triple. `engine_borders()` stamps
-#     these onto cells_style after `engine_style()` runs.
-#
-#   * Chrome regions (pagehead_bottom, header_{top/bottom/between},
-#     subgroup_{top/bottom}, footer_{top/bottom}, pagefoot_top) become
-#     `cells_<chrome surface>()` layers carrying the matching
-#     `border_<side>_*` triple. `engine_chrome_borders()` routes
-#     these onto chrome_style.
-#
-# Layer order is precedence within the cascade. Aliases that share
-# a target surface (`subgroup` for `subgroup_bottom`, `body_top` for
-# `outer_top`, `body_bottom` for `outer_bottom`) are emitted FIRST so
-# an explicit canonical key later in the list overrides them.
-.preset_borders_to_layers <- function(br) {
-  if (!is.list(br)) {
-    return(list())
-  }
+# Rule -> (location, edge):
+#   toprule      -> cells_headers   header_top      (border_top)
+#   midrule      -> cells_headers   header_bottom   (border_bottom)
+#   spanrule     -> cells_headers   header_between  (border_top)
+#   footnoterule -> cells_footnotes footer_top      (border_top)
+#   bottomrule   -> cells_table(outer_bottom)       (border_bottom)
+#   rowrule      -> cells_table(rows)               (border_top)
+#   leftrule     -> cells_table(outer_left)         (border_left)
+#   rightrule    -> cells_table(outer_right)        (border_right)
+#   colrule      -> cells_table(cols)               (border_left)
+.preset_rules_to_layers <- function(ru, clear_off = TRUE) {
+  resolved <- resolve_rules(ru)
   layers <- list()
   add <- function(layer) {
     if (!is.null(layer)) {
       layers[[length(layers) + 1L]] <<- layer
     }
   }
-  triple_for <- function(key) .normalise_region_value(br[[key]])
-
-  # ---- Body regions ----
-  # The `outer` umbrella stamps all four edges; per-side keys can
-  # then override individual edges. `body_top` / `body_bottom`
-  # aliases collapse onto `outer_top` / `outer_bottom`.
-  if (!is.null(br[["outer"]])) {
-    for (side in c("top", "bottom", "left", "right")) {
-      add(.preset_layer_table_border(
-        side = paste0("outer_", side),
-        triple = triple_for("outer")
-      ))
+  # An ON rule carries its triple. An OFF rule carries an explicit-clear
+  # sentinel ONLY when `clear_off` (the user-knob path), so it overrides
+  # the injected booktabs default. The default-injection path passes
+  # `clear_off = FALSE` and returns NULL for off rules, leaving those
+  # cell sides untouched (NA) instead of stamping "none" everywhere.
+  triple_of <- function(key) {
+    r <- resolved[[key]]
+    if (is.null(r)) {
+      if (clear_off) {
+        list(style = "none", width = 0, color = NA_character_)
+      } else {
+        NULL
+      }
+    } else {
+      r
     }
   }
-  for (side_key in c(
-    "outer_top",
-    "outer_bottom",
-    "outer_left",
-    "outer_right"
-  )) {
-    if (!is.null(br[[side_key]])) {
-      add(.preset_layer_table_border(
-        side = side_key,
-        triple = triple_for(side_key)
-      ))
-    }
-  }
-  if (!is.null(br[["body_top"]])) {
-    add(.preset_layer_table_border(
-      side = "outer_top",
-      triple = triple_for("body_top")
-    ))
-  }
-  if (!is.null(br[["body_bottom"]])) {
-    add(.preset_layer_table_border(
-      side = "outer_bottom",
-      triple = triple_for("body_bottom")
-    ))
-  }
-  if (!is.null(br[["body_rows"]])) {
-    add(.preset_layer_table_border(
-      side = "rows",
-      triple = triple_for("body_rows")
-    ))
-  }
-  if (!is.null(br[["body_cols"]])) {
-    add(.preset_layer_table_border(
-      side = "cols",
-      triple = triple_for("body_cols")
-    ))
-  }
-
-  # ---- Chrome regions ----
-  # `subgroup` alias for `subgroup_bottom` is emitted FIRST so an
-  # explicit `subgroup_bottom` later wins (layer order is
-  # precedence).
-  chrome_mapping <- list(
-    pagehead_bottom = list(loc = cells_pagehead, side = "bottom"),
-    header_top = list(loc = cells_headers, side = "top"),
-    header_bottom = list(loc = cells_headers, side = "bottom"),
-    header_between = list(loc = cells_headers, side = "top"),
-    subgroup_top = list(loc = cells_subgroup_labels, side = "top"),
-    subgroup = list(loc = cells_subgroup_labels, side = "bottom"),
-    subgroup_bottom = list(loc = cells_subgroup_labels, side = "bottom"),
-    footer_top = list(loc = cells_footnotes, side = "top"),
-    footer_bottom = list(loc = cells_footnotes, side = "bottom"),
-    pagefoot_top = list(loc = cells_pagefoot, side = "top")
-  )
-  for (key in names(chrome_mapping)) {
-    if (!is.null(br[[key]])) {
-      info <- chrome_mapping[[key]]
-      add(.preset_layer_border(
-        info$loc(),
-        info$side,
-        triple_for(key)
-      ))
-    }
-  }
+  # Body rules (cells_table edges / separators).
+  add(.preset_layer_table_border("outer_bottom", triple_of("bottomrule")))
+  add(.preset_layer_table_border("rows", triple_of("rowrule")))
+  add(.preset_layer_table_border("outer_left", triple_of("leftrule")))
+  add(.preset_layer_table_border("outer_right", triple_of("rightrule")))
+  add(.preset_layer_table_border("cols", triple_of("colrule")))
+  # Chrome rules (header / footnote bands), targeted by chrome_region.
+  add(.preset_layer_chrome_rule(
+    "headers",
+    "header_top",
+    "top",
+    triple_of("toprule")
+  ))
+  add(.preset_layer_chrome_rule(
+    "headers",
+    "header_bottom",
+    "bottom",
+    triple_of("midrule")
+  ))
+  add(.preset_layer_chrome_rule(
+    "headers",
+    "header_between",
+    "top",
+    triple_of("spanrule")
+  ))
+  add(.preset_layer_chrome_rule(
+    "footnotes",
+    "footer_top",
+    "top",
+    triple_of("footnoterule")
+  ))
   layers
+}
+
+# Build one chrome rule layer whose location carries an explicit
+# `chrome_region` tag (so `.apply_chrome_layer()` writes that exact
+# region, bypassing the border-side heuristic that conflates
+# header_top / header_between).
+.preset_layer_chrome_rule <- function(surface, region, side, triple) {
+  .preset_layer_border(
+    location = .new_location(surface = surface, chrome_region = region),
+    side = side,
+    triple = triple
+  )
+}
+
+# The booktabs baseline lowered to layers. Injected as the lowest-
+# precedence layer source by `.collect_table_layers()` /
+# `.collect_chrome_layers()` so every table gets the clinical default
+# rules even with no `rules` knob; a user `rules` knob or `style()`
+# layer overrides via later cascade position.
+.default_rule_layers <- function() {
+  .preset_rules_to_layers("booktabs", clear_off = FALSE)
 }
 
 # Build one `cells_table(side = ...)` layer carrying a per-side
@@ -1517,37 +1491,73 @@ get_preset <- function() {
   layers
 }
 
-# colors named-list -> cells_body() color / background layers. Only
-# `text` and `background` survive after the Task 4/5 cut; the
-# `border` / `border_muted` (table-wide stroke colour) and
-# `text_muted` (chrome muted-text) tokens are rejected at
-# `.validate_lowered_knobs()` call time. Border colour now belongs
-# to `style(at = cells_table(side = "rows"), border_top = brdr(color = …))`;
-# muted chrome text belongs to `style(at = cells_footnotes(), color = …)`
-# or analogous chrome-surface layers.
+# colors named-list -> per-surface color / background layers. Now
+# region-keyed for parity with the `fonts` / `padding` surface set:
+# `colors = list(body = list(text = , background = ), header = list(...),
+# titles = , footnotes = , subgroup = )`. Each surface lowers its
+# `text` -> `color` and `background` to a `cells_<surface>()` layer.
 .preset_colors_to_layers <- function(co) {
   if (!is.list(co)) {
     return(list())
   }
   layers <- list()
-  if (!is.null(co[["text"]])) {
-    layer <- .preset_layer_one(cells_body(), "color", co[["text"]])
-    if (!is.null(layer)) {
-      layers <- c(layers, list(layer))
+  for (surface in names(co)) {
+    spec <- co[[surface]]
+    if (is.null(spec) || !is.list(spec)) {
+      next
     }
-  }
-  if (!is.null(co[["background"]])) {
-    layer <- .preset_layer_one(cells_body(), "background", co[["background"]])
-    if (!is.null(layer)) {
-      layers <- c(layers, list(layer))
+    location <- .preset_surface_to_location(surface)
+    if (is.null(location)) {
+      next
+    }
+    txt <- .preset_layer_one(location, "color", spec$text)
+    if (!is.null(txt)) {
+      layers <- c(layers, list(txt))
+    }
+    bg <- .preset_layer_one(location, "background", spec$background)
+    if (!is.null(bg)) {
+      layers <- c(layers, list(bg))
     }
   }
   layers
 }
 
-# padding named-list -> per-surface padding layers. Per-side padding
-# lists collapse to the mean (style_node@padding is a single numeric;
-# the four-sided shape is not expressible at the layer surface).
+# Expand a padding knob value to a named numeric c(top, right, bottom,
+# left); unset sides are NA (inherit). A scalar applies to all four.
+.padding_sides <- function(val) {
+  if (is.numeric(val) && length(val) == 1L && !is.na(val)) {
+    return(c(top = val, right = val, bottom = val, left = val))
+  }
+  if (is.list(val)) {
+    return(vapply(
+      c("top", "right", "bottom", "left"),
+      function(s) if (is.null(val[[s]])) NA_real_ else as.numeric(val[[s]]),
+      numeric(1L)
+    ))
+  }
+  c(top = NA_real_, right = NA_real_, bottom = NA_real_, left = NA_real_)
+}
+
+# Build one style_layer carrying per-side padding scalars. Returns
+# NULL when every side is NA (nothing to set).
+.preset_layer_padding <- function(location, sides) {
+  if (is.null(location) || all(is.na(sides))) {
+    return(NULL)
+  }
+  args <- list(style_node())
+  for (s in c("top", "right", "bottom", "left")) {
+    if (!is.na(sides[[s]])) {
+      args[[paste0("padding_", s)]] <- as.numeric(sides[[s]])
+    }
+  }
+  node <- do.call(S7::set_props, args)
+  style_layer(location = location, style = node)
+}
+
+# padding named-list -> per-surface, per-side padding layers. A scalar
+# expands to all four sides; a per-side list maps to the matching
+# padding_<side> scalars WITHOUT averaging (the four-sided shape is now
+# fully expressible on style_node).
 .preset_padding_to_layers <- function(pa) {
   if (!is.list(pa)) {
     return(list())
@@ -1562,19 +1572,7 @@ get_preset <- function() {
     if (is.null(location)) {
       next
     }
-    pad <- if (is.list(val)) {
-      vals <- vapply(
-        c("top", "right", "bottom", "left"),
-        function(s) if (is.null(val[[s]])) 0 else as.numeric(val[[s]]),
-        numeric(1L)
-      )
-      mean(vals)
-    } else if (is.numeric(val) && length(val) == 1L && !is.na(val)) {
-      as.numeric(val)
-    } else {
-      NA_real_
-    }
-    layer <- .preset_layer_one(location, "padding", pad)
+    layer <- .preset_layer_padding(location, .padding_sides(val))
     if (!is.null(layer)) {
       layers <- c(layers, list(layer))
     }

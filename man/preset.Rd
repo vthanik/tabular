@@ -158,9 +158,26 @@ program tokens walk a 5-mode detection chain — RStudio
 API, \code{source()} frame, Rscript / R CMD BATCH commandArgs
 (covers Domino + Linux batch + CI), knitr current_input,
 fallback \code{"<interactive>"}.
-\item \strong{\code{hlines}} — horizontal-rule policy.
-\verb{<character(1)>}. One of \code{"header"} (default), \code{"none"},
-\code{"all"}.
+\item \strong{\code{rules}} — the single border vocabulary (replaces the old
+\code{borders} knob). String sugar \code{"booktabs"} (default, the
+clinical baseline), \code{"grid"}, \code{"frame"}, \code{"none"}; a single
+\code{\link[=brdr]{brdr()}} broadcast to every active rule; or a named list
+keyed by the nine rule names (\code{toprule}, \code{midrule},
+\code{bottomrule}, \code{spanrule}, \code{rowrule}, \code{footnoterule},
+\code{leftrule}, \code{rightrule}, \code{colrule}) — unlisted rules keep
+their default, and the bare string \code{"none"} drops one.
+\code{rules = list(rowrule = brdr())} reproduces the old
+\code{hlines = "all"}.
+\item \strong{\code{spacing}} — region-keyed blank-line control. A named list
+keyed by \code{title} / \code{body} / \code{subgroup} / \code{footnote}, each a
+named numeric \code{c(above = , below = )} (footnote: \code{above}
+only). Default is the Appendix-I one blank line above and
+below the title block. Two adjoining region-sides that target
+the same physical gap resolve to the MAX (never the sum), so a
+gap is never accidentally doubled.
+\item \strong{\code{stripe}} — zebra body-row fills. A single colour (applied
+to even rows) or a named \code{c(odd = , even = )}; \code{NULL}
+(default) is off.
 \item \strong{\code{indent_size}} — row-label indent width, in monospace-
 space units. \verb{<integer(1)>}. Default \code{2L}. Each indent level
 adds this many space-widths of left padding to the cell.
@@ -169,42 +186,14 @@ native padding-left semantics (HTML / LaTeX / RTF / DOCX /
 PDF) emit this as cell padding so wrapped continuation lines
 align with the indented baseline; Markdown carries the literal
 space-prefix.
-\item \strong{\code{title_align}}, \strong{\code{footnote_align}} — block alignment.
-\verb{<character(1)>}. One of \code{"left"}, \code{"center"}, \code{"right"}.
-\item \strong{\code{title_pad_top}}, \strong{\code{title_pad_bottom}} — blank-line
-count above and below the title block. \verb{<numeric(1)>: default 1}. Non-negative whole number. Matches the
-Appendix-I "blank line above and below the title" layout
-contract; set to \code{0} for a compact title flush against the
-column-header rule, or \code{2}+ for poster-sized prints with
-extra breathing room.
-\item \strong{\code{body_pad_top}}, \strong{\code{body_pad_bottom}} — blank-line count
-above and below the table body. \verb{<numeric(1)>: default 0}.
-Non-negative whole number. \code{body_pad_top} sits between the
-title block (or subgroup banner, when active) and the
-column-header rule; \code{body_pad_bottom} sits between the
-table's bottom rule and the footnote block (or the page
-footer when no footnotes are set).
-
-\strong{Default 0 (not 1)} because \code{body_pad_top} STACKS on top
-of \code{title_pad_bottom}: with both at \code{1}, a table without a
-subgroup banner would carry TWO blank lines between the
-title and the column-header rule. The body pads are
-opt-in: set \code{body_pad_top = 1} to insert a gap below the
-subgroup banner (or to add a second line below the title);
-set \code{body_pad_bottom = 1} to keep a blank below the table
-when the footnote block is empty.
-
-Every backend (MD / HTML / LaTeX / RTF / DOCX) honours all
-four counts uniformly — one empty line / paragraph /
-\verb{\\par} / \verb{<w:p/>} per unit.
+Block alignment for the title / footnote / header / subgroup /
+body surfaces is set via the \code{alignment} named-list knob
+(\code{alignment = list(title_halign = "left", ...)}), not a scalar
+knob; blank-line spacing is set via \code{spacing} (above).
 \item \strong{\code{na_text}} — global NA fallback. \verb{<character(1)>}.
-\item \strong{\code{decimal_metrics}} \emph{(experimental)} — reserved knob
-for future em-aware decimal-padding refinement.
-\verb{<character(1)>}. One of \code{"afm"} \emph{(default)} or
-\code{"systemfonts"}. Currently neither value affects
-rendering; the engine pads decimal columns by character
-count regardless. Roadmapped for em-unit prefix
-measurement in a later release.
+\item \strong{\code{decimal_metrics}} — decimal-padding metric.
+\verb{<character(1)>}. Only \code{"chars"} (default); the engine pads
+decimal columns by character count.
 \item \strong{\code{decimal_markers}} — missing-value tokens recognised by
 \code{col_spec(align = "decimal")}. \verb{<character>}. Default
 \code{c("NR", "NE", "NC", "ND", "BLQ")}. A cell whose trimmed
@@ -241,21 +230,20 @@ responsive — the table always fills its parent and
 columns wrap when the viewport narrows, regardless of
 \code{width_mode}. Per-column widths (\code{col_spec(width)}) emit
 verbatim into the HTML colgroup per the gt convention.
-\item \strong{\code{cell_padding_h}} — horizontal cell padding (left / right
-sides) in points, the \code{h} analogue of \code{halign}.
-\verb{<numeric(1) | numeric(2)>: default 5.4}. Length 1 sets both
-sides; length 2 is \code{c(left, right)}. The single source of
-truth for both auto column-width measurement (left + right)
-and every backend's horizontal cell margin, so measured and
-rendered widths agree. Default 5.4pt/side matches Word's
-~0.075in cell margin.
+\item \strong{\code{cell_padding}} — cell padding in points, CSS shorthand of
+length 1 / 2 / 4 (\code{all} | \verb{vertical horizontal} |
+\verb{top right bottom left}), parsed by the same length rule as
+\code{margins}. \verb{<numeric>: default c(0, 5.4)} (vertical 0,
+horizontal 5.4pt). The single source of truth for both auto
+column-width measurement (left + right) and every backend's
+cell margin, so measured and rendered widths agree.
 
-\strong{Interaction:} A body padding override
-(\code{preset(padding = list(body = N))} or
-\code{style(at = cells_body(), padding = N)}) takes precedence at
+\strong{Interaction:} A body per-side padding override
+(\code{preset(padding = list(body = ...))} or
+\code{style(at = cells_body(), padding = ...)}) takes precedence at
 both measurement and render.
 
-\strong{Note:} DOCX and LaTeX render \code{c(left, right)} exactly; RTF
+\strong{Note:} DOCX and LaTeX render left / right exactly; RTF
 (\verb{\\\\trgaph} is one symmetric gap) renders the average, so the
 total width still matches but the two sides look equal.
 }
@@ -273,7 +261,7 @@ preset(
 \verb{<preset_spec | NULL>: default NULL}. When supplied, every knob
 the template has set away from its factory default feeds in as
 the base layer; user-supplied \code{...} knobs then merge on top.
-List-valued knobs (\code{borders}, \code{fonts}, \code{colors}, \code{padding},
+List-valued knobs (\code{rules}, \code{fonts}, \code{colors}, \code{padding},
 \code{alignment}) shallow-merge per key; scalars replace. Use this
 to layer a house-style \code{preset_spec} onto a chain without
 restating its knobs.}
@@ -315,7 +303,7 @@ efficacy summary inside a portfolio of portrait letter tables).
 \strong{Merge, not replace.} A second \code{preset()} call merges its scalar
 knobs onto the spec's existing preset; unspecified knobs keep
 their prior value. The five named-list knobs (\code{alignment} /
-\code{borders} / \code{fonts} / \code{colors} / \code{padding}) lower to \code{style_layer}
+\code{rules} / \code{fonts} / \code{colors} / \code{padding}) lower to \code{style_layer}
 records on \code{preset@style} via \code{.preset_args_to_layers()}
 (internal) and append in call order; layer order is precedence
 within the engine cascade, so a later \code{preset()} call's lowered
@@ -328,7 +316,7 @@ per-spec override entirely (the spec then falls through to
 \strong{Direct \code{preset_spec()} calls bypass lowering.} The five
 named-list knobs are no longer slots on the \code{preset_spec} S7
 class — they exist only as \code{preset()} / \code{set_preset()} arguments
-that lower into \verb{@style}. \code{preset_spec(borders = list(...))}
+that lower into \verb{@style}. \code{preset_spec(rules = list(...))}
 (and analogous direct calls) raise "unused argument". Wrap such
 calls in \code{tabular(...) |> preset(...)} so the lowering helper
 fires and the layers land on \verb{@style}.

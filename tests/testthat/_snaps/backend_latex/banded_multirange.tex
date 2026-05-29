@@ -10,6 +10,8 @@
 \usepackage{graphicx}
 \usepackage{hyperref}
 \UseTblrLibrary{siunitx}
+\definecolor{tabularrule212529}{HTML}{212529}
+\definecolor{tabularruleADB5BD}{HTML}{ADB5BD}
 \usepackage{iftex}
 \ifPDFTeX
   \usepackage{tgcursor}
@@ -34,7 +36,7 @@
 }
 \DefTblrTemplate{firstfoot, middlefoot}{default}{}
 \DefTblrTemplate{lastfoot}{default}{}
-\begin{longtblr}[caption={}, label={}, presep=0pt, postsep=0pt]{colspec={Q[l,wd=0.525000in] Q[l,wd=0.300000in] Q[l,wd=0.300000in] Q[l,wd=0.300000in] Q[l,wd=0.300000in]}, rowhead=2, leftsep=5.4pt, rightsep=5.4pt, rows={valign=t}, hline{1}={1-5}{0.4pt, solid}, hline{3}={1-5}{0.4pt, solid}, hline{2}={2-3,4-5}{0.4pt, solid}}
+\begin{longtblr}[caption={}, label={}, presep=0pt, postsep=0pt]{colspec={Q[l,wd=0.525000in] Q[l,wd=0.300000in] Q[l,wd=0.300000in] Q[l,wd=0.300000in] Q[l,wd=0.300000in]}, rowhead=2, leftsep=5.4pt, rightsep=5.4pt, rows={valign=t}, hline{1}={1-5}{0.5pt, solid, fg=tabularrule212529}, hline{3}={1-5}{0.5pt, solid, fg=tabularrule212529}, hline{6}={0.5pt, solid, fg=tabularrule212529}, hline{2}={2-3,4-5}{0.4pt, solid}}
  & \SetCell[c=2]{c} Group A &  & \SetCell[c=2]{c} Group B &  \\
 \SetCell{valign=b} Param & \SetCell{valign=b} C1 & \SetCell{valign=b} C2 & \SetCell{valign=b} C3 & \SetCell{valign=b} C4 \\
 Age & 1 & 4 & 7 & 10 \\

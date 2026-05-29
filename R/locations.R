@@ -132,7 +132,8 @@
   labels = NULL,
   level = NULL,
   slot = NULL,
-  side = NULL
+  side = NULL,
+  chrome_region = NULL
 ) {
   structure(
     list(
@@ -143,7 +144,13 @@
       labels = labels,
       level = level,
       slot = slot,
-      side = side
+      side = side,
+      # chrome_region — when set, names the exact chrome border region
+      # (e.g. "header_between") a rule layer targets, bypassing the
+      # border-side heuristic in `.apply_chrome_layer()`. Used only by
+      # `.preset_rules_to_layers()`; NULL for ordinary `cells_*()`
+      # locations.
+      chrome_region = chrome_region
     ),
     class = c("tabular_location", "list")
   )

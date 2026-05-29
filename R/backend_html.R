@@ -1155,9 +1155,16 @@ backend_html <- function(grid, file) {
   if (length(bg) == 1L && !is.na(bg) && nzchar(bg)) {
     decls <- c(decls, sprintf("background-color: %s;", bg))
   }
-  pad <- cell_style@padding
-  if (length(pad) == 1L && !is.na(pad)) {
-    decls <- c(decls, sprintf("padding: %spt;", format(pad, trim = TRUE)))
+  # Per-side padding overrides. Emit only the sides explicitly set;
+  # unset sides inherit the table-level `.tabular-table td` baseline.
+  for (side in c("top", "right", "bottom", "left")) {
+    pad <- S7::prop(cell_style, paste0("padding_", side))
+    if (length(pad) == 1L && !is.na(pad)) {
+      decls <- c(
+        decls,
+        sprintf("padding-%s: %spt;", side, format(pad, trim = TRUE))
+      )
+    }
   }
   decls
 }

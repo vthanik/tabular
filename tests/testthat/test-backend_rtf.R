@@ -868,20 +868,21 @@ test_that("spanner band carries a full-width top rule; cmidrule scoped to spanne
   expect_true(all(grepl("\\\\clbrdrb\\\\brdrs", cl_defs)))
 })
 
-test_that("cell_padding_h drives RTF \\trgaph horizontal gap (padding SSOT)", {
-  # The horizontal cell-padding SSOT preset@cell_padding_h feeds both
+test_that("cell_padding drives RTF \\trgaph horizontal gap (padding SSOT)", {
+  # The horizontal cell-padding SSOT preset@cell_padding feeds both
   # column-width measurement and the rendered \trgaph, so they agree.
   spec <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
-    preset(cell_padding_h = 10)
+    preset(cell_padding = 10)
   txt <- .rtf_emit_text(spec)
   expect_match(txt, "\\\\trgaph200") # 10pt * 20 = 200 twips
 })
 
-test_that("RTF renders asymmetric cell_padding_h as its symmetric average", {
-  # RTF's \trgaph is one gap; c(left, right) renders as the average
-  # (total width still matches measurement). c(4, 8) -> mean 6 -> 120.
+test_that("RTF renders asymmetric cell_padding as its symmetric average", {
+  # RTF's \trgaph is one gap; an asymmetric left/right renders as the
+  # average (total width still matches measurement). left 4 / right 8
+  # (c(top, right, bottom, left) = c(0, 8, 0, 4)) -> mean 6 -> 120.
   spec <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
-    preset(cell_padding_h = c(4, 8))
+    preset(cell_padding = c(0, 8, 0, 4))
   txt <- .rtf_emit_text(spec)
   expect_match(txt, "\\\\trgaph120")
 })

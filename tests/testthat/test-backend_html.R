@@ -250,10 +250,12 @@ test_that("col_spec align surfaces as a CSS class on body cells", {
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
-  expect_true(grepl("<td class=\"text-left\">x</td>", txt, fixed = TRUE))
-  expect_true(grepl("<td class=\"text-center\">x</td>", txt, fixed = TRUE))
+  # The single body row is also the last, so its cells additionally
+  # carry the SSOT bottomrule style; match the alignment class loosely.
+  expect_match(txt, "<td class=\"text-left\"[^>]*>x</td>")
+  expect_match(txt, "<td class=\"text-center\"[^>]*>x</td>")
   # `text-right` covers both right + decimal
-  expect_true(grepl("<td class=\"text-right\">x</td>", txt, fixed = TRUE))
+  expect_match(txt, "<td class=\"text-right\"[^>]*>x</td>")
 })
 
 # ---------------------------------------------------------------------
@@ -1424,11 +1426,12 @@ test_that("HTML indent_by cells emit padding-left and strip engine prefix", {
     txt,
     fixed = TRUE
   ))
-  expect_true(grepl(
-    "<td style=\"padding-left: calc(.6rem + 1.2em);\">Nausea</td>",
+  # Nausea is the last body row, so it also carries the SSOT
+  # bottomrule; match the indent prefix loosely.
+  expect_match(
     txt,
-    fixed = TRUE
-  ))
+    "padding-left: calc\\(\\.6rem \\+ 1\\.2em\\);[^>]*>Nausea</td>"
+  )
 
   # Bug condition (engine prefix surviving into the rendered cell)
   # must NOT recur.
@@ -1649,11 +1652,12 @@ test_that("indent padding-left is additive via calc + uses %g format", {
     txt,
     fixed = TRUE
   ))
-  expect_true(grepl(
-    "<td style=\"padding-left: calc(.6rem + 1.2em);\">Nausea</td>",
+  # Nausea is the last body row, so it also carries the SSOT
+  # bottomrule; match the indent prefix loosely.
+  expect_match(
     txt,
-    fixed = TRUE
-  ))
+    "padding-left: calc\\(\\.6rem \\+ 1\\.2em\\);[^>]*>Nausea</td>"
+  )
 
   # The non-additive hardcoded variants must NOT recur.
   expect_false(grepl("padding-left: 1.2000em", txt, fixed = TRUE))
@@ -1687,11 +1691,11 @@ test_that("indent calc trims trailing zeros for proportional fonts too", {
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
 
   # Helvetica space = 556/1000em -> `0.556em` per depth (NOT 0.5560).
-  expect_true(grepl(
-    "<td style=\"padding-left: calc(.6rem + 0.556em);\">Atrial fib</td>",
+  # Match loosely: the row may also carry the SSOT bottomrule style.
+  expect_match(
     txt,
-    fixed = TRUE
-  ))
+    "padding-left: calc\\(\\.6rem \\+ 0\\.556em\\);[^>]*>Atrial fib</td>"
+  )
   expect_false(grepl("0.5560em", txt, fixed = TRUE))
 })
 

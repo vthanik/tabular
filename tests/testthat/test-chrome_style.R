@@ -16,6 +16,8 @@ test_that("chrome_style()$borders carries every chrome region key with NULL defa
     cs$borders,
     c(
       "pagehead_bottom",
+      "title_top",
+      "title_bottom",
       "header_top",
       "header_bottom",
       "header_between",
@@ -59,72 +61,50 @@ test_that(".chrome_surface_at() returns a default style_node on missing surface 
 # engine_chrome_borders() — preset@borders -> chrome_style$borders
 # ---------------------------------------------------------------------
 
-test_that("engine_chrome_borders() returns an empty chrome_style when preset@borders is empty", {
+test_that("engine_chrome_borders() injects the booktabs chrome defaults", {
+  # The booktabs baseline drives the header (top / bottom / between)
+  # and footnote (top) chrome rules even with no user `rules` knob;
+  # page-band and subgroup regions stay NULL until set.
   spec <- tabular(saf_demo)
   cs <- tabular:::engine_chrome_borders(spec)
-  expect_true(all(vapply(cs$borders, is.null, logical(1L))))
+  expect_false(is.null(cs$borders$header_top))
+  expect_false(is.null(cs$borders$header_bottom))
+  expect_false(is.null(cs$borders$footer_top))
+  expect_null(cs$borders$pagehead_bottom)
+  expect_null(cs$borders$subgroup_bottom)
 })
 
-test_that("engine_chrome_borders() resolves every chrome region key", {
-  # Each chrome region carries a distinct triple so we can pin which
-  # key landed where.
-  rule <- brdr(width = 0.5, style = "solid", color = "#000000")
+test_that("rules knob targets each header / footnote chrome region distinctly", {
   spec <- tabular(saf_demo) |>
     preset(
-      borders = list(
-        pagehead_bottom = rule,
-        header_top = rule,
-        header_bottom = rule,
-        header_between = rule,
-        subgroup_top = rule,
-        subgroup_bottom = rule,
-        footer_top = rule,
-        footer_bottom = rule,
-        pagefoot_top = rule
+      rules = list(
+        toprule = brdr(color = "#000000"),
+        midrule = brdr(color = "#111111"),
+        spanrule = brdr(color = "#222222"),
+        footnoterule = brdr(color = "#333333")
       )
     )
   cs <- tabular:::engine_chrome_borders(spec)
-  for (region in tabular:::.chrome_border_regions) {
-    triple <- cs$borders[[region]]
-    expect_false(is.null(triple), info = region)
-    expect_equal(triple$style, "solid", info = region)
-    expect_equal(triple$width, 0.5, info = region)
-    expect_equal(triple$color, "#000000", info = region)
-  }
+  expect_equal(cs$borders$header_top$color, "#000000")
+  expect_equal(cs$borders$header_bottom$color, "#111111")
+  expect_equal(cs$borders$header_between$color, "#222222")
+  expect_equal(cs$borders$footer_top$color, "#333333")
 })
 
-test_that("engine_chrome_borders() legacy `subgroup` key resolves to `subgroup_bottom`", {
+test_that("style(cells_subgroup_labels) sets the subgroup chrome border", {
   spec <- tabular(saf_demo) |>
-    preset(
-      borders = list(
-        subgroup = brdr(width = 0.75, style = "solid", color = "#cc0000")
-      )
+    style(
+      border_bottom = brdr(width = 0.75, color = "#cc0000"),
+      .at = cells_subgroup_labels()
     )
   cs <- tabular:::engine_chrome_borders(spec)
   expect_equal(cs$borders$subgroup_bottom$color, "#cc0000")
   expect_equal(cs$borders$subgroup_bottom$width, 0.75)
 })
 
-test_that("engine_chrome_borders() explicit subgroup_bottom wins over legacy `subgroup`", {
+test_that("rules knob honours the 'none' explicit-clear sentinel on midrule", {
   spec <- tabular(saf_demo) |>
-    preset(
-      borders = list(
-        subgroup = brdr(width = 0.5, style = "solid", color = "#aaaaaa"),
-        subgroup_bottom = brdr(
-          width = 1.0,
-          style = "dashed",
-          color = "#cc0000"
-        )
-      )
-    )
-  cs <- tabular:::engine_chrome_borders(spec)
-  expect_equal(cs$borders$subgroup_bottom$style, "dashed")
-  expect_equal(cs$borders$subgroup_bottom$color, "#cc0000")
-})
-
-test_that("engine_chrome_borders() honours the 'none' explicit-clear sentinel", {
-  spec <- tabular(saf_demo) |>
-    preset(borders = list(header_bottom = "none"))
+    preset(rules = list(midrule = "none"))
   cs <- tabular:::engine_chrome_borders(spec)
   expect_equal(cs$borders$header_bottom$style, "none")
 })
@@ -135,11 +115,7 @@ test_that("engine_chrome_borders() honours the 'none' explicit-clear sentinel", 
 
 test_that("as_grid() puts chrome_style on grid@metadata", {
   spec <- tabular(saf_demo) |>
-    preset(
-      borders = list(
-        header_bottom = brdr(width = 1, style = "solid", color = "#000000")
-      )
-    )
+    preset(rules = list(midrule = brdr(width = 1, color = "#000000")))
   grid <- as_grid(spec)
   cs <- grid@metadata$chrome_style
   expect_type(cs, "list")

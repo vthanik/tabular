@@ -33,11 +33,12 @@ combined_spec <- function() {
     sort_rows(by = c("arm", "helper_sort")) |>
     style(bold = TRUE, .at = cells_body(where = n > 50)) |>
     subgroup("cohort", label = "Cohort: {cohort}") |>
+    style(border = brdr("medium"), .at = cells_table(side = "outer")) |>
     preset(
       alignment = list(title_halign = "left"),
-      borders = list(outer = brdr("medium"), body_rows = brdr("hairline")),
+      rules = list(rowrule = brdr("hairline")),
       fonts = list(body = list(family = "Inter", size = 9)),
-      colors = list(text = "#212529"),
+      colors = list(body = list(text = "#212529")),
       padding = list(body = 4)
     )
 }
@@ -53,8 +54,8 @@ test_that("integration spec composes through all Phase 6 surfaces (HTML)", {
   expect_true(grepl("font-family: Inter", txt, fixed = TRUE))
   # colors$text — per-cell inline style after the Task 4/5 cut
   expect_true(grepl("color: #212529", txt, fixed = TRUE))
-  # padding$body — per-cell inline style after the Task 4/5 cut
-  expect_true(grepl("padding: 4pt", txt, fixed = TRUE))
+  # padding$body — per-cell inline per-side style after the cut
+  expect_true(grepl("padding-top: 4pt", txt, fixed = TRUE))
   # Subgroup banner
   expect_true(grepl("Cohort: X", txt, fixed = TRUE))
   expect_true(grepl("Integration", txt, fixed = TRUE))

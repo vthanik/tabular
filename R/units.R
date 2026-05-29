@@ -180,3 +180,128 @@
     .parse_dim(margins[[i]], call = call)
   })
 }
+
+# ---------------------------------------------------------------------
+# Typed unit helpers — pt() / px() / pct()
+# ---------------------------------------------------------------------
+
+# A `tabular_unit` is a length-1 value tagged with its unit, so a
+# width / size argument carries its unit explicitly rather than
+# relying on the bare-numeric "points" convention. Resolved to a
+# backend's native unit at render via `.resolve_unit()`. A bare
+# numeric still means points everywhere these helpers are accepted.
+
+.new_unit <- function(value, unit, call = rlang::caller_env()) {
+  if (
+    !is.numeric(value) ||
+      length(value) != 1L ||
+      is.na(value) ||
+      !is.finite(value) ||
+      value < 0
+  ) {
+    cli::cli_abort(
+      c(
+        "A {.fn {unit}} value must be a length-1, non-negative, finite number.",
+        "x" = "You supplied {.obj_type_friendly {value}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  structure(
+    list(value = as.numeric(value), unit = unit),
+    class = "tabular_unit"
+  )
+}
+
+#' Typed unit helpers
+#'
+#' Tag a width or size with its unit so a style argument is
+#' unambiguous about points versus pixels versus percent. Accepted
+#' anywhere `tabular` takes a width or size; a bare numeric is still
+#' interpreted as points. `pct()` expresses a proportional width
+#' (e.g. a column at 50% of the table width).
+#'
+#' @param x *Magnitude.* `<numeric(1)>: required`. Non-negative,
+#'   finite. For `pct()`, a percentage in `[0, 100]`.
+#'
+#' @return *A `tabular_unit` object* — a length-2 list `list(value,
+#'   unit)` with class `"tabular_unit"`.
+#'
+#' @examples
+#' # ---- Example 1: Disambiguate a rule width ----
+#' #
+#' # A 0.75-point hairline is unambiguous as pt(0.75); a bare 0.75
+#' # also means points, but the typed form documents intent.
+#' pt(0.75)
+#' px(1)
+#' pct(50)
+#'
+#' @seealso [`brdr()`] for border specifications that accept these.
+#' @export
+pt <- function(x) .new_unit(x, "pt", call = rlang::caller_env())
+
+#' @rdname pt
+#' @export
+px <- function(x) .new_unit(x, "px", call = rlang::caller_env())
+
+#' @rdname pt
+#' @export
+pct <- function(x) {
+  call <- rlang::caller_env()
+  u <- .new_unit(x, "pct", call = call)
+  if (u$value > 100) {
+    cli::cli_abort(
+      c(
+        "A {.fn pct} value must be in the range 0 to 100.",
+        "x" = "You supplied {.val {x}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  u
+}
+
+#' @rdname pt
+#' @export
+is_unit <- function(x) inherits(x, "tabular_unit")
+
+# Pretty-printer — keep inspect output compact.
+#' @export
+#' @noRd
+print.tabular_unit <- function(x, ...) {
+  cat(sprintf("<tabular_unit> %g%s\n", x$value, x$unit))
+  invisible(x)
+}
+
+# Resolve a width / size argument to a backend's native unit. Accepts
+# a `tabular_unit`, a bare numeric (treated as points), or NULL
+# (passthrough). `to` is one of "pt" (points), "px" (CSS pixels), or
+# "twip" (1/1440 inch). Percent passes through as a `list(value, unit
+# = "pct")` because a proportion has no fixed conversion without a
+# reference width; callers route it to the backend's proportional
+# column path.
+.resolve_unit <- function(x, to = c("pt", "px", "twip")) {
+  to <- match.arg(to)
+  if (is.null(x)) {
+    return(NULL)
+  }
+  if (is_unit(x)) {
+    if (identical(x$unit, "pct")) {
+      return(x)
+    }
+    twips <- x$value * .tabular_unit_twips[[x$unit]]
+  } else if (is.numeric(x) && length(x) == 1L && !is.na(x)) {
+    # Bare numeric -> points.
+    twips <- x * .tabular_unit_twips[["pt"]]
+  } else {
+    return(NULL)
+  }
+  switch(
+    to,
+    twip = twips,
+    pt = twips / .tabular_unit_twips[["pt"]],
+    px = twips / .tabular_unit_twips[["px"]]
+  )
+}

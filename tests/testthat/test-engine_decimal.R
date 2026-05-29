@@ -1162,7 +1162,7 @@ test_that("engine_decimal in afm mode keeps uniform column widths in proportiona
   expect_true(all(grepl(".", out, fixed = TRUE)))
 })
 
-test_that("as_grid threads preset@decimal_metrics='afm' end-to-end", {
+test_that("as_grid threads preset@decimal_metrics='chars' end-to-end", {
   spec <- tabular(saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "Characteristic"),
@@ -1172,7 +1172,7 @@ test_that("as_grid threads preset@decimal_metrics='afm' end-to-end", {
       drug_100 = col_spec(label = "Drug 100", align = "decimal"),
       Total = col_spec(label = "Total", align = "decimal")
     ) |>
-    preset(decimal_metrics = "afm")
+    preset(decimal_metrics = "chars")
   grid <- as_grid(spec)
   expect_true(is.matrix(grid@pages[[1]]$cells_text))
   expect_type(grid@pages[[1]]$cells_text, "character")
@@ -1182,11 +1182,16 @@ test_that("preset_spec default for decimal_metrics is 'chars'", {
   expect_equal(preset_spec()@decimal_metrics, "chars")
 })
 
-test_that("preset_spec accepts all three decimal_metrics values", {
-  for (m in c("chars", "afm", "systemfonts")) {
-    ps <- preset_spec(decimal_metrics = m)
-    expect_equal(ps@decimal_metrics, m, info = m)
-  }
+test_that("preset_spec accepts only the 'chars' decimal_metrics value", {
+  expect_equal(
+    preset_spec(decimal_metrics = "chars")@decimal_metrics,
+    "chars"
+  )
+  expect_error(preset_spec(decimal_metrics = "afm"), "must be one of")
+  expect_error(
+    preset_spec(decimal_metrics = "systemfonts"),
+    "must be one of"
+  )
 })
 
 test_that("preset_spec@decimal_markers default + preset() override flows to as_grid", {

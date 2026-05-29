@@ -101,15 +101,15 @@ test_that("preset_spec() accepts every orientation value", {
   }
 })
 
-test_that("preset_spec() accepts every hlines value", {
-  for (h in c("header", "none", "all")) {
-    expect_silent(preset_spec(hlines = h))
+test_that("resolve_rules() accepts every string-sugar preset", {
+  for (r in c("booktabs", "grid", "frame", "none")) {
+    expect_silent(tabular:::resolve_rules(r))
   }
 })
 
-test_that("preset_spec() accepts every title_align / footnote_align value", {
-  for (a in c("left", "center", "right")) {
-    expect_silent(preset_spec(title_align = a, footnote_align = a))
+test_that("preset_spec() accepts every cell_padding shorthand length", {
+  for (cp in list(4, c(0, 5), c(1, 2, 3, 4))) {
+    expect_silent(preset_spec(cell_padding = cp))
   }
 })
 
@@ -151,29 +151,18 @@ test_that("preset() alignment knob accepts every documented surface", {
   }
 })
 
-test_that("preset() borders knob accepts every region key", {
+test_that("preset() rules knob accepts every rule name", {
   spec <- tabular(data.frame(x = 1))
-  region_keys <- c(
-    "outer",
-    "outer_top",
-    "outer_bottom",
-    "outer_left",
-    "outer_right",
-    "body_top",
-    "body_bottom",
-    "body_rows",
-    "body_cols"
-  )
-  for (k in region_keys) {
+  for (k in tabular:::.tabular_rule_keys) {
     arg <- stats::setNames(list(brdr()), k)
-    expect_silent(preset(spec, borders = arg))
+    expect_silent(preset(spec, rules = arg))
   }
 })
 
-test_that("preset() borders knob accepts 'none' sentinel and NULL", {
+test_that("preset() rules knob accepts 'none' sentinel and NULL", {
   spec <- tabular(data.frame(x = 1))
-  expect_silent(preset(spec, borders = list(outer = "none")))
-  expect_silent(preset(spec, borders = list(outer = NULL)))
+  expect_silent(preset(spec, rules = list(midrule = "none")))
+  expect_silent(preset(spec, rules = list(midrule = NULL)))
 })
 
 test_that("preset() fonts knob accepts every surface + sub-key", {
@@ -187,11 +176,16 @@ test_that("preset() fonts knob accepts every surface + sub-key", {
   }
 })
 
-test_that("preset() colors knob accepts every surviving token key", {
+test_that("preset() colors knob accepts every surface + token key", {
   spec <- tabular(data.frame(x = 1))
-  for (t in c("text", "background")) {
-    arg <- stats::setNames(list("#212529"), t)
-    expect_silent(preset(spec, colors = arg))
+  for (s in c("body", "header", "titles", "footnotes", "subgroup")) {
+    for (t in c("text", "background")) {
+      arg <- stats::setNames(
+        list(stats::setNames(list("#212529"), t)),
+        s
+      )
+      expect_silent(preset(spec, colors = arg))
+    }
   }
 })
 

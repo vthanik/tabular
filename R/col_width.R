@@ -161,25 +161,42 @@
   max(width_in, .min_auto_width_in)
 }
 
-# Resolve `preset@cell_padding_h` to a length-2 c(left, right) in pt.
-# A length-1 value broadcasts to both sides; length 2 is taken
-# verbatim. The single source of truth for horizontal cell padding,
-# read by measurement (summed) and every backend (per side).
-.cell_padding_lr <- function(preset) {
-  h <- preset@cell_padding_h
-  if (length(h) == 1L) c(h, h) else h
+# Resolve `preset@cell_padding` (CSS shorthand length 1 / 2 / 4) to a
+# named c(top, right, bottom, left) in pt.
+#   length 1 -> all sides
+#   length 2 -> c(vertical, horizontal)
+#   length 4 -> c(top, right, bottom, left)
+.cell_padding_sides <- function(preset) {
+  cp <- as.numeric(preset@cell_padding)
+  v <- switch(
+    as.character(length(cp)),
+    "1" = c(cp, cp, cp, cp),
+    "2" = c(cp[[1]], cp[[2]], cp[[1]], cp[[2]]),
+    "4" = cp,
+    c(cp[[1]], cp[[1]], cp[[1]], cp[[1]])
+  )
+  stats::setNames(v, c("top", "right", "bottom", "left"))
 }
 
-# Render-time horizontal padding c(left, right) in pt: a scalar body
-# `@padding` override (from the resolved `cells_style`) wins on both
-# sides; otherwise the configured `cell_padding_h` pair. Backends call
-# this so the rendered margin matches the measured column width.
+# Horizontal padding c(left, right) in pt from `preset@cell_padding`.
+# The single source of truth for horizontal cell padding, read by
+# measurement (summed) and every backend (per side).
+.cell_padding_lr <- function(preset) {
+  s <- .cell_padding_sides(preset)
+  unname(c(s[["left"]], s[["right"]]))
+}
+
+# Render-time horizontal padding c(left, right) in pt: a per-side body
+# `padding_left` / `padding_right` override (from the resolved
+# `cells_style`) wins on its side; otherwise the configured
+# `cell_padding` horizontal pair. Backends call this so the rendered
+# margin matches the measured column width.
 .resolve_cell_padding_lr <- function(cells_style, preset) {
-  p <- .first_cell_padding(cells_style)
-  if (length(p) == 1L && !is.na(p)) {
-    return(c(p, p))
-  }
-  .cell_padding_lr(preset)
+  s <- .first_cell_padding_sides(cells_style)
+  base <- .cell_padding_lr(preset)
+  l <- if (is.na(s[["left"]])) base[[1L]] else s[["left"]]
+  r <- if (is.na(s[["right"]])) base[[2L]] else s[["right"]]
+  unname(c(l, r))
 }
 
 # ---------------------------------------------------------------------
@@ -266,23 +283,15 @@
   preset <- .effective_preset(spec)
   available <- .available_content_width(preset)
 
-  # Horizontal cell-padding SSOT: a resolved body @padding override
-  # (from preset(padding=list(body=)) / style(at=cells_body())) drives
-  # measurement so auto widths track the rendered cell margin; else the
-  # preset default. This is the SAME scalar `.first_cell_padding()`
-  # returns to the backends at render time.
-  override_pad <- if (is.null(cells_style)) {
-    NA_real_
-  } else {
-    .first_cell_padding(cells_style)
-  }
-  # Total horizontal padding (left + right) the column is measured for.
-  # A scalar body override applies to both sides; else sum the
-  # configured cell_padding_h pair.
-  pad_h <- if (is.na(override_pad)) {
+  # Horizontal cell-padding SSOT: a resolved per-side body padding
+  # override (from preset(padding=list(body=)) / style(at=cells_body()))
+  # drives measurement so auto widths track the rendered cell margin;
+  # else the preset default. This is the SAME pair
+  # `.resolve_cell_padding_lr()` returns to the backends at render time.
+  pad_h <- if (is.null(cells_style)) {
     sum(.cell_padding_lr(preset))
   } else {
-    2 * override_pad
+    sum(.resolve_cell_padding_lr(cells_style, preset))
   }
 
   visible <- vapply(

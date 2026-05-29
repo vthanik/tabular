@@ -1142,10 +1142,10 @@ test_that("LaTeX no-band table: top hline{1}, bottom hline{2}, no double rule", 
   expect_no_match(tex, "leftpos=-1", fixed = TRUE)
 })
 
-test_that("cell_padding_h drives LaTeX per-side leftsep/rightsep (padding SSOT)", {
-  # Scalar -> equal left/right; c(left, right) -> exact per side.
+test_that("cell_padding drives LaTeX per-side leftsep/rightsep (padding SSOT)", {
+  # Scalar -> equal left/right; c(t, r, b, l) -> exact per side.
   spec1 <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
-    preset(cell_padding_h = 10)
+    preset(cell_padding = 10)
   expect_match(
     render_tex(spec1),
     "leftsep=10pt, rightsep=10pt",
@@ -1153,7 +1153,7 @@ test_that("cell_padding_h drives LaTeX per-side leftsep/rightsep (padding SSOT)"
   )
 
   spec2 <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
-    preset(cell_padding_h = c(3, 7))
+    preset(cell_padding = c(0, 7, 0, 3))
   expect_match(
     render_tex(spec2),
     "leftsep=3pt, rightsep=7pt",
@@ -1275,7 +1275,7 @@ test_that(".latex_foot_template: empty footnotes -> empty foot templates", {
 
 test_that(".latex_table_width_in: sum of widths + padding; NA -> linewidth fallback", {
   cols <- list(a = col_spec(width = 2), b = col_spec(width = 1))
-  spec <- tabular(data.frame(a = 1, b = 2)) |> preset(cell_padding_h = 0)
+  spec <- tabular(data.frame(a = 1, b = 2)) |> preset(cell_padding = 0)
   preset <- tabular:::.effective_preset(spec)
   w <- tabular:::.latex_table_width_in(c("a", "b"), cols, preset = preset)
   expect_equal(w, 3) # zero padding -> exactly the summed widths

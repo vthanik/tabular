@@ -81,7 +81,8 @@ backend_latex <- function(grid, file) {
   preamble <- .latex_preamble(
     preset = meta$preset,
     pagehead_ast = meta$pagehead_ast,
-    pagefoot_ast = meta$pagefoot_ast
+    pagefoot_ast = meta$pagefoot_ast,
+    border_color_defs = .latex_border_color_definitions(meta)
   )
   begin <- "\\begin{document}"
   end <- "\\end{document}"
@@ -819,9 +820,64 @@ backend_latex <- function(grid, file) {
       nzchar(triple$color) &&
       !identical(triple$color, "currentColor")
   ) {
-    parts <- c(parts, paste0("fg=", triple$color))
+    parts <- c(parts, paste0("fg=", .latex_border_color_token(triple$color)))
   }
   paste(parts, collapse = ", ")
+}
+
+# Map a border colour to a tabularray `fg=` token. A hex (`#RRGGBB`)
+# becomes a deterministic `\definecolor` name (`tabularruleRRGGBB`)
+# that `.latex_border_color_definitions()` declares in the preamble;
+# tabularray rejects an inline `[HTML]{...}` model in a border spec, so
+# a named colour is required. A CSS / xcolor colour name passes through
+# unchanged.
+.latex_border_color_token <- function(color) {
+  hex <- .latex_hex6(color)
+  if (!is.null(hex)) {
+    return(paste0("tabularrule", hex))
+  }
+  color
+}
+
+# Normalise a `#RRGGBB` / `RRGGBB` colour to upper-case `RRGGBB`, or
+# NULL when the input is not a 6-digit hex.
+.latex_hex6 <- function(color) {
+  s <- toupper(sub("^#", "", as.character(color)))
+  if (grepl("^[0-9A-F]{6}$", s)) s else NULL
+}
+
+# Collect every distinct hex border colour used in a grid's resolved
+# stores (chrome rules + body-edge manifest), so the preamble can
+# `\definecolor` each. The booktabs baseline always contributes the
+# ink + muted palette, so both are included unconditionally.
+.latex_collect_border_colors <- function(meta) {
+  hexes <- c(
+    .latex_hex6(.tabular_ink),
+    .latex_hex6(.tabular_muted)
+  )
+  triples <- c(
+    if (is.list(meta$chrome_style)) meta$chrome_style$borders else NULL,
+    if (is.list(meta$body_borders)) meta$body_borders else NULL
+  )
+  for (tr in triples) {
+    if (is.list(tr) && !is.null(tr$color)) {
+      h <- .latex_hex6(tr$color)
+      if (!is.null(h)) {
+        hexes <- c(hexes, h)
+      }
+    }
+  }
+  unique(hexes)
+}
+
+# Preamble `\definecolor` lines for the collected border colours.
+.latex_border_color_definitions <- function(meta) {
+  hexes <- .latex_collect_border_colors(meta)
+  vapply(
+    hexes,
+    function(h) sprintf("\\definecolor{tabularrule%s}{HTML}{%s}", h, h),
+    character(1L)
+  )
 }
 
 # Render the subgroup banner row inside a longtblr environment.
@@ -1498,7 +1554,9 @@ backend_latex <- function(grid, file) {
 # Returns an empty character vector when no padding override is
 # active so the longtblr arg stays minimal.
 .latex_rowsep_inner <- function(cells_style) {
-  pt <- .first_cell_padding(cells_style)
+  # rowsep is vertical, so read the vertical (top) per-side padding
+  # override; default cell_padding leaves it NA so the arg is omitted.
+  pt <- .first_cell_padding_sides(cells_style)[["top"]]
   if (is.na(pt)) {
     return(character())
   }
@@ -1723,7 +1781,8 @@ backend_latex <- function(grid, file) {
 .latex_preamble <- function(
   preset = NULL,
   pagehead_ast = NULL,
-  pagefoot_ast = NULL
+  pagefoot_ast = NULL,
+  border_color_defs = character()
 ) {
   if (is.null(preset) || !is_preset_spec(preset)) {
     preset <- preset_spec()
@@ -1758,6 +1817,9 @@ backend_latex <- function(grid, file) {
     "\\usepackage{hyperref}",
     "\\UseTblrLibrary{siunitx}",
     chrome$packages,
+    # Named colours for tabularray border `fg=` tokens (rules cannot
+    # carry an inline xcolor model, so each hex is pre-defined).
+    border_color_defs,
     font_lines,
     "\\setlength{\\parindent}{0pt}",
     "\\setlength{\\parskip}{0pt}",

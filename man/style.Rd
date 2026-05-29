@@ -67,13 +67,14 @@ from \code{...}. Recognised attribute names:
 \code{border_left}, \code{border_right} (each takes a \code{brdr()} value
 or the literal \code{"none"}); per-side scalars
 \verb{border_<side>_\{style,width,color\}} for finer control
-\item Padding — \code{padding} (CSS-sense interior space)
+\item Padding — \code{padding} (a scalar applies to all four sides; a
+named vector \code{c(top = , right = , bottom = , left = )} sets
+each side); or the per-side scalars \verb{padding_<side>} directly
 \item Spacing — \code{blank_above}, \code{blank_below} (integer blank lines
 above / below the block — for \code{cells_title()} /
 \code{cells_footnotes()} / \code{cells_subgroup_labels()})
 \item Inline — \code{pretext}, \code{posttext} (literal text prepended /
 appended around the cell value)
-\item Legacy Boolean rules — \code{rule_above}, \code{rule_below}
 }
 
 Unknown attribute names emit a \code{cli::cli_warn} and drop from

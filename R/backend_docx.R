@@ -1903,45 +1903,62 @@ backend_docx <- function(grid, file) {
   paste(parts, collapse = "")
 }
 
-# Emit a `<w:tcMar>` block from the cell's scalar `@padding`. Word's
-# tcMar uses twentieths-of-a-point (dxa) per side. After the Task
-# 4/5 cut, body padding lives on `cells_style[r,c]@padding` (a
-# single numeric — the lowered `preset(padding = list(body = N))`
-# knob stamps the same value on every body cell). All four sides
-# share that scalar. When no override is set, fall back to the
-# horizontal cell-padding SSOT `preset@cell_padding_h` on the LEFT /
-# RIGHT sides (exact per side, so an asymmetric `c(left, right)`
-# renders faithfully and matches the measured column width) while
-# leaving the vertical margin to Word's default.
+# Emit a `<w:tcMar>` block from the cell's per-side padding. Word's
+# tcMar uses twentieths-of-a-point (dxa) per side. Per-cell
+# `padding_<side>` overrides (lowered from `preset(padding =
+# list(body = ...))` / `style(at = cells_body(), padding = ...)`) win;
+# unset sides fall back to the `preset@cell_padding` shorthand. A
+# default-zero vertical margin is omitted (Word's own default applies),
+# so the common case emits only left / right and matches the measured
+# column width; an explicit per-cell vertical padding emits a 0 too.
 .docx_tcMar_from_style <- function(style, preset = NULL) {
-  pad <- if (is_style_node(style)) style@padding else NA_real_
-  if (length(pad) == 1L && !is.na(pad)) {
-    n <- as.integer(round(as.numeric(pad) * 20))
-    return(paste0(
-      "<w:tcMar>",
-      sprintf("<w:top w:w=\"%d\" w:type=\"dxa\"/>", n),
-      sprintf("<w:left w:w=\"%d\" w:type=\"dxa\"/>", n),
-      sprintf("<w:bottom w:w=\"%d\" w:type=\"dxa\"/>", n),
-      sprintf("<w:right w:w=\"%d\" w:type=\"dxa\"/>", n),
-      "</w:tcMar>"
-    ))
+  base <- if (is_preset_spec(preset)) {
+    .cell_padding_sides(preset)
+  } else {
+    c(top = NA_real_, right = NA_real_, bottom = NA_real_, left = NA_real_)
   }
-  if (!is_preset_spec(preset)) {
+  over <- c(
+    top = NA_real_,
+    right = NA_real_,
+    bottom = NA_real_,
+    left = NA_real_
+  )
+  if (is_style_node(style)) {
+    over <- vapply(
+      c("top", "right", "bottom", "left"),
+      function(s) {
+        v <- S7::prop(style, paste0("padding_", s))
+        if (length(v) == 1L) as.numeric(v) else NA_real_
+      },
+      numeric(1L)
+    )
+  }
+  inner <- character()
+  # OOXML cell-margin order: top -> left -> bottom -> right.
+  for (s in c("top", "left", "bottom", "right")) {
+    overridden <- !is.na(over[[s]])
+    val <- if (overridden) over[[s]] else base[[s]]
+    if (is.na(val)) {
+      next
+    }
+    # Skip a default-zero vertical margin (no per-cell override) to keep
+    # the common case lean; emit it when explicitly set.
+    if (val == 0 && !overridden && s %in% c("top", "bottom")) {
+      next
+    }
+    inner <- c(
+      inner,
+      sprintf(
+        "<w:%s w:w=\"%d\" w:type=\"dxa\"/>",
+        s,
+        as.integer(round(val * 20))
+      )
+    )
+  }
+  if (length(inner) == 0L) {
     return("")
   }
-  lr <- .cell_padding_lr(preset)
-  paste0(
-    "<w:tcMar>",
-    sprintf(
-      "<w:left w:w=\"%d\" w:type=\"dxa\"/>",
-      as.integer(round(lr[[1L]] * 20))
-    ),
-    sprintf(
-      "<w:right w:w=\"%d\" w:type=\"dxa\"/>",
-      as.integer(round(lr[[2L]] * 20))
-    ),
-    "</w:tcMar>"
-  )
+  paste0("<w:tcMar>", paste(inner, collapse = ""), "</w:tcMar>")
 }
 
 # Normalize a hex color to the OOXML `RRGGBB` form (no leading "#",

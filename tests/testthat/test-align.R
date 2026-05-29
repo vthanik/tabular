@@ -134,22 +134,20 @@ test_that(".preset_alignment_shape_error: valign vector rejected", {
   )
 })
 
-test_that(".preset_align: legacy footnote_align surfaces when changed", {
-  preset_custom <- preset_spec(footnote_align = "center")
-  expect_identical(
-    tabular:::.effective_footnote_halign(preset_custom),
-    "center"
-  )
+test_that(".effective_footnote_halign returns NA on a default preset", {
+  # No footnote alignment slot remains; the resolver returns NA and the
+  # backend applies its own left default (the `alignment` knob, when
+  # set, flows through the chrome layer the backend checks first).
+  expect_true(is.na(tabular:::.effective_footnote_halign(preset_spec())))
 })
 
 # ---------------------------------------------------------------------
-# .preset_align — legacy scalar-only resolver
+# .preset_align — baked-default resolver (no alignment slots)
 # ---------------------------------------------------------------------
 
 test_that(".preset_align returns NA for body / header / subgroup keys", {
-  # No legacy scalar exists for these on preset_spec, so the function
-  # always returns NA. Backends consume the chrome_style cascade for
-  # these surfaces.
+  # These surfaces carry no baked default; backends consume the
+  # chrome_style / cells_style cascade for them.
   expect_true(is.na(tabular:::.preset_align(preset_spec(), "body_halign")))
   expect_true(is.na(tabular:::.preset_align(preset_spec(), "header_halign")))
   expect_true(
@@ -162,19 +160,15 @@ test_that(".preset_align returns NA for non-preset input", {
   expect_true(is.na(tabular:::.preset_align("not a preset", "body_halign")))
 })
 
-test_that(".preset_align respects factory-default fall-through guard", {
-  # Factory `title_align = "center"` is NOT treated as explicit; the
-  # resolver returns NA so backends fall through to the chrome_style
-  # cascade instead of locking in the factory default.
+test_that(".preset_align returns NA for every key (no alignment slots)", {
+  # With the title_align / footnote_align slots removed, the resolver
+  # always returns NA; backends apply their own surface defaults and
+  # the `alignment` knob flows through the chrome layer.
   expect_true(is.na(tabular:::.preset_align(preset_spec(), "title_halign")))
-  # User-changed `title_align` IS explicit; returns the value.
-  expect_identical(
-    tabular:::.preset_align(
-      preset_spec(title_align = "left"),
-      "title_halign"
-    ),
-    "left"
-  )
+  expect_true(is.na(tabular:::.preset_align(
+    preset_spec(),
+    "footnote_halign"
+  )))
 })
 
 # ---------------------------------------------------------------------
@@ -412,30 +406,12 @@ test_that(".effective_subgroup_halign returns NA on factory preset", {
   expect_true(is.na(tabular:::.effective_subgroup_halign(preset_spec())))
 })
 
-test_that(".effective_title_halign reads legacy title_align scalar", {
-  preset <- preset_spec(title_align = "left")
-  expect_identical(
-    tabular:::.effective_title_halign(preset, line_index = 1L, n_lines = 1L),
-    "left"
-  )
-})
-
-test_that("legacy preset@title_align only counts as explicit when not factory default", {
-  preset_default <- preset_spec()
+test_that(".effective_title_halign returns NA on a default preset", {
   expect_true(is.na(tabular:::.effective_title_halign(
-    preset_default,
+    preset_spec(),
     line_index = 1L,
     n_lines = 1L
   )))
-  preset_custom <- preset_spec(title_align = "left")
-  expect_identical(
-    tabular:::.effective_title_halign(
-      preset_custom,
-      line_index = 1L,
-      n_lines = 1L
-    ),
-    "left"
-  )
 })
 
 # ---------------------------------------------------------------------
@@ -548,12 +524,12 @@ test_that("preset(alignment = footnote_halign = ...) surfaces in RTF", {
   expect_true(grepl("\\\\qr", txt))
 })
 
-test_that("legacy preset(title_align = ...) drives LaTeX title alignment", {
+test_that("preset(alignment = title_halign = ...) drives LaTeX title alignment", {
   spec <- tabular(
     data.frame(x = 1),
     titles = "One line"
   ) |>
-    preset(title_align = "left")
+    preset(alignment = list(title_halign = "left"))
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")

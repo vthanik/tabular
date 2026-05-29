@@ -496,6 +496,9 @@ as_grid <- function(spec) {
       preset = eff_preset,
       chrome_style = chrome_style_mat,
       body_borders = body_borders_mat,
+      spacing = resolve_spacing(eff_preset@spacing),
+      gaps = gap_counts(eff_preset@spacing),
+      stripe = resolve_stripe(eff_preset@stripe),
       subgroup_runtime = runtime
     )
   )

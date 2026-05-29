@@ -48,6 +48,8 @@
 # `cells_<chrome surface>()` layers map onto.
 .chrome_border_regions <- c(
   "pagehead_bottom",
+  "title_top",
+  "title_bottom",
   "header_top",
   "header_bottom",
   "header_between",

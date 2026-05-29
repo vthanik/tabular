@@ -62,13 +62,14 @@
 #'     `border_left`, `border_right` (each takes a `brdr()` value
 #'     or the literal `"none"`); per-side scalars
 #'     `border_<side>_{style,width,color}` for finer control
-#'   * Padding — `padding` (CSS-sense interior space)
+#'   * Padding — `padding` (a scalar applies to all four sides; a
+#'     named vector `c(top = , right = , bottom = , left = )` sets
+#'     each side); or the per-side scalars `padding_<side>` directly
 #'   * Spacing — `blank_above`, `blank_below` (integer blank lines
 #'     above / below the block — for `cells_title()` /
 #'     `cells_footnotes()` / `cells_subgroup_labels()`)
 #'   * Inline — `pretext`, `posttext` (literal text prepended /
 #'     appended around the cell value)
-#'   * Legacy Boolean rules — `rule_above`, `rule_below`
 #'
 #' Unknown attribute names emit a `cli::cli_warn` and drop from
 #' the constructed node; the engine never sees a foreign property.
@@ -234,11 +235,10 @@ style <- function(.spec, ..., .at = cells_body()) {
   "background",
   "font_family",
   "font_size",
-  "rule_above",
-  "rule_below",
-  "border_left",
-  "border_right",
-  "padding",
+  "padding_top",
+  "padding_right",
+  "padding_bottom",
+  "padding_left",
   "blank_above",
   "blank_below",
   "pretext",
@@ -265,12 +265,13 @@ style <- function(.spec, ..., .at = cells_body()) {
 #   style(border_top = brdr("thick", "double"), ...)
 # wants the three scalars `border_top_style` / `border_top_width` /
 # `border_top_color` populated from one brdr value. Same for
-# `border = brdr(...)` (sets all four sides) and the legacy
-# Boolean knobs `rule_above` / `rule_below` / `border_left` /
-# `border_right` (already accepted as TRUE / FALSE by the engine).
+# `border = brdr(...)` (sets all four sides). A `"none"` literal
+# string is shorthand for "kill the border on this side" — expands to
+# (style = "none", width = 0).
 #
-# A `"none"` literal string is also accepted as shorthand for "kill
-# the border on this side" — expands to (style = "none", width = 0).
+# `padding` is likewise sugar over the four `padding_<side>` scalars:
+# a scalar applies to all four sides; a named vector / list
+# (`c(top = 2, bottom = 8)`) maps each named side WITHOUT averaging.
 .expand_brdr_shorthand <- function(attrs, call) {
   sides <- c("top", "bottom", "left", "right")
   if (!is.null(attrs[["border"]])) {
@@ -306,6 +307,22 @@ style <- function(.spec, ..., .at = cells_body()) {
       attrs[[paste0(key, "_style")]] <- "none"
       attrs[[paste0(key, "_width")]] <- 0
       next
+    }
+  }
+  pv <- attrs[["padding"]]
+  if (!is.null(pv)) {
+    attrs[["padding"]] <- NULL
+    if (is.numeric(pv) && length(pv) == 1L && is.null(names(pv))) {
+      for (side in sides) {
+        key <- paste0("padding_", side)
+        if (is.null(attrs[[key]])) {
+          attrs[[key]] <- pv
+        }
+      }
+    } else if (is.numeric(pv) || is.list(pv)) {
+      for (side in intersect(names(pv), sides)) {
+        attrs[[paste0("padding_", side)]] <- pv[[side]]
+      }
     }
   }
   attrs

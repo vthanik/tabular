@@ -889,10 +889,10 @@ test_that(".docx_rPr_from_style returns '' when input is not a style_node", {
 test_that(".docx_tcPr_from_style emits width + shading + borders from style_node", {
   sn <- tabular:::style_node(
     background = "#E0F0FF",
-    rule_above = TRUE,
-    rule_below = TRUE,
-    border_left = TRUE,
-    border_right = TRUE
+    border_top_style = "solid",
+    border_bottom_style = "solid",
+    border_left_style = "solid",
+    border_right_style = "solid"
   )
   out <- tabular:::.docx_tcPr_from_style(sn, 1440L)
   expect_match(out, "<w:tcW w:w=\"1440\" w:type=\"dxa\"/>", fixed = TRUE)
@@ -1266,13 +1266,13 @@ test_that("DOCX scenario G: band cell tcPr carries w:tcBorders w:bottom; blanks 
   }
 })
 
-test_that("cell_padding_h emits per-side w:tcMar (padding SSOT)", {
+test_that("cell_padding emits per-side w:tcMar (padding SSOT)", {
   # With no body padding override, DOCX emits left/right tcMar from
   # the horizontal SSOT so the rendered margin matches the measured
-  # column width; vertical margin stays Word's default. c(left, right)
-  # renders exactly per side.
+  # column width; vertical margin stays Word's default. c(t, r, b, l)
+  # renders left / right exactly per side.
   spec <- tabular(data.frame(grp = c("a", "b"), n = c("1", "2"))) |>
-    preset(cell_padding_h = c(5, 15))
+    preset(cell_padding = c(0, 15, 0, 5))
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   unzipped <- .unzip_docx(out)

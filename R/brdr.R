@@ -76,12 +76,13 @@
 #' Border-line specification
 #'
 #' Build a small immutable record describing one border line —
-#' width, style, and colour — for use in [`preset()`]'s `borders`
-#' named-list knob. One `brdr()` value names a single region's
-#' stroke (`outer`, `body_rows`, `header_top`, ...); successive
-#' [`preset()`] calls shallow-merge per region so users can layer a
-#' one-off override onto a house-style template without disturbing
-#' the other regions.
+#' width, style, and colour. A `brdr()` value is the stroke you hand
+#' to the [`preset()`] `rules` knob (one entry per rule name, e.g.
+#' `rules = list(midrule = brdr(width = 0.75))`) or to [`style()`]'s
+#' border arguments (`style(border_top = brdr(...), .at =
+#' cells_table(side = "rows"))`). Successive [`preset()`] calls layer
+#' cleanly, so a one-off override composes onto a house-style template
+#' without disturbing the other rules.
 #'
 #' @details
 #'
@@ -109,10 +110,10 @@
 #'
 #' **Style enum.** `style` is one of `"solid"` (default),
 #' `"dashed"`, `"dotted"`, `"double"`, `"dashdot"`, `"none"`.
-#' `"none"` is the explicit clear-this-region sentinel: passing
-#' `brdr(style = "none")` to a region in [`preset()`]`(borders =
-#' list(...))` suppresses any baseline rule that backend would
-#' otherwise draw for that region.
+#' `"none"` is the explicit clear-this-rule sentinel: setting a rule
+#' to `brdr(style = "none")` (or the bare string `"none"`) in
+#' [`preset()`]`(rules = list(...))` suppresses the baseline rule that
+#' backend would otherwise draw.
 #'
 #' **Color.** Hex (`"#212529"`), CSS colour name (`"black"`,
 #' `"slategray"`), or `"currentColor"` (default; resolves to the
@@ -137,15 +138,16 @@
 #'   in the `tabular_brdr` S3 class.
 #'
 #' @return *A `tabular_brdr` S3 object* — a length-3 named list
-#'   suitable for `preset(borders = list(<region> = .))`.
+#'   suitable for `preset(rules = list(<rule> = .))` or `style(border_*
+#'   = .)`.
 #'
 #' @examples
-#' # ---- Example 1: A house-style border manifest ----
+#' # ---- Example 1: A house-style rule set ----
 #' #
-#' # Build a per-spec preset that draws a thick solid outer frame,
-#' # hairline dotted row separators, and clears the right outer
-#' # edge entirely. Each region key takes one brdr() value (or
-#' # NULL / "none" to suppress).
+#' # The `rules` knob takes one brdr() value per rule name. Here a
+#' # thick column-label divider (midrule), a hairline dotted rule
+#' # between body rows (rowrule), and the muted spanner rule dropped.
+#' # Unlisted rules keep their booktabs defaults.
 #' demo_n <- stats::setNames(saf_n$n, saf_n$arm_short)
 #' tabular(
 #'   saf_aeoverall,
@@ -164,34 +166,32 @@
 #'     Total      = col_spec(label = sprintf("Total\nN=%d",    demo_n["Total"]))
 #'   ) |>
 #'   preset(
-#'     borders = list(
-#'       outer     = brdr(width = "thick"),
-#'       body_rows = brdr(width = "hairline", style = "dotted"),
-#'       outer_right = brdr(style = "none")
+#'     rules = list(
+#'       midrule  = brdr(width = "thick"),
+#'       rowrule  = brdr(width = "hairline", style = "dotted"),
+#'       spanrule = "none"
 #'     )
 #'   )
 #'
 #' # ---- Example 2: Wrap a custom style into a reusable function ----
 #' #
-#' # The recommended way to share a border style across many tables
-#' # is to wrap the `preset()` call in a small function. Subsequent
-#' # `preset(borders = list(...))` calls then shallow-merge per
-#' # region — a one-off override layers cleanly on top.
+#' # The recommended way to share a rule style across many tables is to
+#' # wrap the `preset()` call in a small function. A later `preset()` /
+#' # `style()` call layers a one-off override cleanly on top.
 #' custom_style <- function(spec) {
 #'   spec |>
 #'     preset(
-#'       borders = list(
-#'         outer         = brdr(width = "medium", color = "#212529"),
-#'         header_top    = brdr(width = "thin",   color = "#212529"),
-#'         header_bottom = brdr(width = "thin",   color = "#212529"),
-#'         body_bottom   = brdr(width = "thin",   color = "#212529")
+#'       rules = list(
+#'         toprule    = brdr(width = "thin", color = "#212529"),
+#'         midrule    = brdr(width = "thin", color = "#212529"),
+#'         bottomrule = brdr(width = "thin", color = "#212529")
 #'       )
 #'     )
 #' }
 #'
 #' tabular(saf_n) |>
 #'   custom_style() |>
-#'   preset(borders = list(body_rows = brdr("hairline", "dashed")))
+#'   preset(rules = list(rowrule = brdr("hairline", "dashed")))
 #'
 #' # ---- Example 3: Width keyword vs numeric, every style enum value ----
 #' #
@@ -209,13 +209,13 @@
 #'   function(s) brdr(style = s)
 #' )
 #'
-#' # ---- Example 4: Submission-style chrome wrapping the body block ----
+#' # ---- Example 4: A full grid via the body-edge style() path ----
 #' #
-#' # Full Appendix-I chrome on a real demographics table: heavy
-#' # outer rule around the body, single hairline between header and
-#' # body, no inter-row rules to keep the body airy. The combination
-#' # of the three region keys is the canonical clinical convention.
-#' tabular(saf_demo, titles = "Demographics with submission chrome") |>
+#' # The `rules` knob covers the named booktabs anatomy; for the body
+#' # outer frame and inter-column separators, hand brdr() to
+#' # `style(.at = cells_table(side = ...))`. Here a medium outer frame
+#' # plus hairline column separators on a demographics table.
+#' tabular(saf_demo, titles = "Demographics with a full grid") |>
 #'   cols(
 #'     variable   = col_spec(usage = "group", label = "Characteristic"),
 #'     stat_label = col_spec(label = "Statistic"),
@@ -224,17 +224,12 @@
 #'     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
 #'     Total      = col_spec(label = "Total",    align = "decimal")
 #'   ) |>
-#'   preset(
-#'     borders = list(
-#'       outer     = brdr(width = "medium", style = "solid"),
-#'       body_top  = brdr(width = "thin",   style = "solid"),
-#'       body_rows = brdr(style = "none")
-#'     )
-#'   )
+#'   style(border = brdr(width = "medium"), .at = cells_table(side = "outer")) |>
+#'   style(border_left = brdr("hairline"), .at = cells_table(side = "cols"))
 #'
 #' @seealso
-#' **Where to attach:** [`preset()`] takes a
-#'   `borders = list(<region> = brdr(...))` argument.
+#' **Where to attach:** [`preset()`]'s `rules` knob (one brdr() per
+#'   rule name) and [`style()`]'s `border_*` arguments.
 #'
 #' **Per-cell predicates:** [`style()`] accepts the same per-side
 #' `border_<side>_{style,width,color}` triples without going through

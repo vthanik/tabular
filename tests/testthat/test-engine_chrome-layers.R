@@ -126,9 +126,9 @@ test_that("session preset style template flows into chrome_style", {
   expect_identical(cs$surfaces$header@bold, TRUE)
 })
 
-test_that("layer over legacy preset@borders chrome region wins", {
+test_that("style(cells_headers) layer over the rules toprule wins", {
   spec <- tabular(saf_demo) |>
-    preset(borders = list(header_top = brdr("thick", "double"))) |>
+    preset(rules = list(toprule = brdr("thick", "double"))) |>
     style(border_top = brdr("thin", "solid"), .at = cells_headers())
   cs <- tabular:::engine_chrome_borders(spec)
   expect_identical(cs$borders$header_top$style, "solid")

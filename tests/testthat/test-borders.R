@@ -41,17 +41,8 @@ test_that(".effective_border returns NULL when nothing is set", {
   expect_null(tabular:::.effective_border("top", style_node()))
 })
 
-test_that(".effective_border with legacy bool TRUE returns solid 0.5pt default", {
-  sn <- style_node(rule_above = TRUE)
-  brd <- tabular:::.effective_border("top", sn)
-  expect_identical(brd$style, "solid")
-  expect_identical(brd$width, 0.5)
-  expect_identical(brd$color, "currentColor")
-})
-
-test_that(".effective_border with explicit triple overrides legacy bool", {
+test_that(".effective_border with a full per-side triple returns it verbatim", {
   sn <- style_node(
-    rule_above = TRUE,
     border_top_style = "dashed",
     border_top_width = 1,
     border_top_color = "#abcdef"
@@ -76,14 +67,8 @@ test_that(".effective_border explicit 'none' returns clear sentinel", {
   expect_identical(brd$style, "none")
 })
 
-test_that(".effective_border explicit 'none' overrides legacy bool", {
-  sn <- style_node(rule_above = TRUE, border_top_style = "none")
-  brd <- tabular:::.effective_border("top", sn)
-  expect_identical(brd$style, "none")
-})
-
-test_that(".effective_border maps left/right legacy bools to the right side", {
-  sn <- style_node(border_left = TRUE)
+test_that(".effective_border resolves each side independently", {
+  sn <- style_node(border_left_style = "solid")
   expect_null(tabular:::.effective_border("top", sn))
   expect_null(tabular:::.effective_border("bottom", sn))
   expect_null(tabular:::.effective_border("right", sn))
@@ -98,12 +83,14 @@ test_that(".effective_border handles non-style_node input safely", {
 
 test_that(".cell_has_any_border short-circuits cleanly", {
   expect_false(tabular:::.cell_has_any_border(style_node()))
-  expect_true(tabular:::.cell_has_any_border(style_node(rule_above = TRUE)))
+  expect_true(
+    tabular:::.cell_has_any_border(style_node(border_top_style = "solid"))
+  )
   expect_false(tabular:::.cell_has_any_border(NULL))
 })
 
 test_that(".effective_borders returns the 4-slot map", {
-  brds <- tabular:::.effective_borders(style_node(rule_above = TRUE))
+  brds <- tabular:::.effective_borders(style_node(border_top_style = "solid"))
   expect_named(brds, c("top", "bottom", "left", "right"))
   expect_false(is.null(brds$top))
   expect_null(brds$bottom)
@@ -136,9 +123,9 @@ test_that("DOCX style(border_top_*) emits <w:top> with the right attrs", {
   ))
 })
 
-test_that("DOCX legacy rule_above retains back-compat single border", {
+test_that("DOCX style(border_top = brdr()) emits the default single border", {
   spec <- tabular(data.frame(x = 1L)) |>
-    style(rule_above = TRUE, .at = cells_body(where = TRUE))
+    style(border_top = brdr(), .at = cells_body(where = TRUE))
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   td <- withr::local_tempdir()
@@ -157,7 +144,6 @@ test_that("DOCX legacy rule_above retains back-compat single border", {
 test_that("DOCX explicit border_top_style='none' suppresses emission", {
   spec <- tabular(data.frame(x = 1L)) |>
     style(
-      rule_above = TRUE,
       border_top_style = "none",
       .at = cells_body(where = TRUE)
     )
@@ -250,7 +236,7 @@ test_that(".html_cell_border_style_attr is empty when no overrides", {
 })
 
 test_that(".html_cell_border_style_attr emits 'none' for explicit clear", {
-  sn <- style_node(rule_above = TRUE, border_top_style = "none")
+  sn <- style_node(border_top_style = "none")
   out <- tabular:::.html_cell_border_style_attr(sn)
   expect_true(grepl("border-top: none;", out, fixed = TRUE))
 })
@@ -266,9 +252,7 @@ test_that("HTML emit injects style=... on body cell with border override", {
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_true(grepl(
-    "style=\"border-left: 1pt solid #123456;\"",
-    txt,
-    fixed = TRUE
-  ))
+  # The single body cell is also the last row, so it carries the SSOT
+  # bottomrule alongside the user's left border; match the left decl.
+  expect_true(grepl("border-left: 1pt solid #123456;", txt, fixed = TRUE))
 })

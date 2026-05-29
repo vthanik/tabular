@@ -1,15 +1,13 @@
 # borders.R — per-cell border resolver.
 #
-# A `style_node` can carry up to 12 border scalars
-# (`border_{top,bottom,left,right}_{style,width,color}`) plus the
-# legacy four Boolean knobs (`rule_above`, `rule_below`,
-# `border_left`, `border_right`). The legacy knobs map to
-# `("solid", 0.5pt, default colour)` when TRUE — they remain the
-# back-compat shorthand.
+# A `style_node` carries up to 12 border scalars
+# (`border_{top,bottom,left,right}_{style,width,color}`). Per-side
+# triples are the SOLE border representation; there are no Boolean
+# knobs.
 #
-# `.effective_border(side, cell_style)` walks the per-side scalars
-# first, then the legacy Boolean, and returns either NULL
-# ("emit no border on this side") or a list with three components:
+# `.effective_border(side, cell_style)` reads the per-side scalars and
+# returns either NULL ("emit no border on this side") or a list with
+# three components:
 #
 #   list(style = <enum>, width = <numeric pt>, color = <character>)
 #
@@ -19,27 +17,13 @@
 #   * DOCX: `<w:top w:val="single" w:sz="4" w:color="auto"/>`
 #   * RTF: `\clbrdrt\brdrs\brdrw10\brdrcf0`
 #   * HTML: `border-top: 0.5pt solid currentColor`
-#   * LaTeX: tabularray `vlines={...}` / `hlines={...}` (Phase 5 lite)
+#   * LaTeX: tabularray `hline{...}` / `vline{...}`
 #
 # A `border_<side>_style == "none"` value is the explicit clear-this-
-# border sentinel; the resolver returns NULL even if the legacy
-# Boolean is TRUE. This lets a user wire `style(rule_above = TRUE,
-# border_top_style = "none")` to disable the rule on a single cell
-# without unsetting the table-wide default.
-
-# Map a "side" string to the matching legacy Boolean property name.
-# `top` -> `rule_above`, `bottom` -> `rule_below`, left / right are
-# eponymous.
-.border_legacy_prop <- function(side) {
-  switch(
-    side,
-    top = "rule_above",
-    bottom = "rule_below",
-    left = "border_left",
-    right = "border_right",
-    NULL
-  )
-}
+# border sentinel; backends translate it to "no border at all" and do
+# NOT fall back to their own default. This lets a `style()` layer or
+# the `rules` knob suppress a rule the injected booktabs baseline would
+# otherwise draw.
 
 # Effective border for ONE side. Returns:
 #
@@ -53,8 +37,7 @@
 #      sentinel (backends translate to "no border at all")
 #   2. Any of the three per-side scalars set -> build triple from
 #      explicit values, falling back to defaults for unset components
-#   3. Legacy Boolean TRUE -> default triple ("solid", 0.5pt, default)
-#   4. Otherwise NULL -> backend default applies
+#   3. Otherwise NULL -> backend default applies
 .effective_border <- function(side, cell_style) {
   if (!is_style_node(cell_style)) {
     return(NULL)
@@ -77,18 +60,13 @@
     return(list(style = "none", width = 0, color = NA_character_))
   }
 
-  any_explicit <- style_set || width_set || color_set
-  legacy_prop <- .border_legacy_prop(side)
-  legacy_truth <- !is.null(legacy_prop) &&
-    isTRUE(S7::prop(cell_style, legacy_prop))
-
-  if (!any_explicit && !legacy_truth) {
+  if (!(style_set || width_set || color_set)) {
     return(NULL)
   }
 
   list(
     style = if (style_set) style else "solid",
-    width = if (width_set) width else 0.5,
+    width = if (width_set) width else .tabular_rule_width,
     color = if (color_set) color else "currentColor"
   )
 }
