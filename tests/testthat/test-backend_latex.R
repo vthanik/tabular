@@ -1043,6 +1043,14 @@ test_that("LaTeX band underline rides an outer multi-range hline (no inline cmid
   # Cols: param=1, a=2, b=3, c=4, d=5 -> Group A {2-3}, Group B {4-5}
   # collapse to one multi-range hline below the single band row.
   expect_match(tex, "hline\\{2\\}=\\{2-3,4-5\\}", perl = TRUE)
+  # The band underline is the SSOT muted `spanrule` (0.5pt, #adb5bd),
+  # matching HTML's muted band -- not the legacy hardcoded `0.4pt`
+  # black rule.
+  expect_match(
+    tex,
+    "hline{2}={2-3,4-5}{0.5pt, solid, fg=tabularruleADB5BD}",
+    fixed = TRUE
+  )
 })
 
 test_that("banded .tex output matches snapshot (band SetCell + outer hline)", {

@@ -1102,16 +1102,18 @@ backend_latex <- function(grid, file) {
   depths <- sort(unique(headers$depth))
   rows <- character(length(depths))
   band_hlines <- character()
-  # Thin solid rule with a both-ends inset matching booktabs
-  # `\cmidrule(lr)`. leftpos / rightpos = -1 pull the rule in at each
-  # end so adjacent bands meet but do not visually touch.
-  band_spec <- "0.4pt, solid"
+  # The spanner underline is the SSOT `spanrule` (chrome region
+  # `header_between`, muted by default) so LaTeX matches HTML's muted
+  # band rule. `.latex_chrome_hline_spec()` resolves the triple to a
+  # tabularray border spec; "" means the rule is off (`spanrule =
+  # "none"`), so the band hline directive is skipped entirely.
+  band_spec <- .latex_chrome_hline_spec(cs, "header_between")
   for (k in seq_along(depths)) {
     labels <- .band_labels_for_depth(headers, depths[[k]], col_names_visible)
     runs <- .group_contiguous_runs(labels)
     band <- .runs_to_band_row(runs, surface_node)
     rows[[k]] <- band$row
-    if (length(band$ranges) > 0L) {
+    if (length(band$ranges) > 0L && nzchar(band_spec)) {
       cols_spec <- paste(
         vapply(
           band$ranges,
