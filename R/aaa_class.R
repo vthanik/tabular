@@ -711,7 +711,7 @@ preset_spec <- S7::new_class(
   "preset_spec",
   package = "tabular",
   properties = list(
-    font_size = S7::new_property(S7::class_numeric, default = 9),
+    font_size = S7::new_property(S7::class_numeric, default = 10),
     # font_family accepts three input shapes (handled by .resolve_font_stack):
     #   * generic family   — "mono" (default) / "serif" / "sans"
     #   * single named     — "Courier New", "Inter", ...

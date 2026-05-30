@@ -22,10 +22,10 @@
 #' **What it sets**, both at theme (lowest) precedence so an explicit
 #' later [`style()`] wins:
 #'
-#' 1. **Rules.** Drops the booktabs `toprule`, `bottomrule`, and the
-#'    muted column-spanner `spanrule`, leaving `midrule` alone under the
-#'    column labels. Equivalent to `preset(rules = list(toprule =
-#'    "none", bottomrule = "none", spanrule = "none"))`.
+#' 1. **Rules.** Drops the booktabs `toprule` and `bottomrule` (the
+#'    outer frame), keeping the `midrule` under the column labels and the
+#'    muted column-spanner `spanrule`. Equivalent to `preset(rules =
+#'    list(toprule = "none", bottomrule = "none"))`.
 #' 2. **Weight.** Sets `bold = FALSE` on the title, column-header,
 #'    subgroup-label, and group-header surfaces. The HTML backend
 #'    overrides its `font-weight: 600` class default with an inline
@@ -133,7 +133,7 @@ preset_minimal <- function(.spec, ...) {
     cli::cli_abort(
       c(
         "{.fn preset_minimal} owns the rule set.",
-        "x" = "Drop {.arg {owned}}; the minimal theme draws the midrule only.",
+        "x" = "Drop {.arg {owned}}; the minimal theme owns the rule set (midrule + spanrule, no frame).",
         "i" = "For a custom rule set call {.fn preset} directly."
       ),
       class = "tabular_error_input",
@@ -142,17 +142,22 @@ preset_minimal <- function(.spec, ...) {
   }
 
   # Normal weight on every bold-by-default surface, carried at theme
-  # precedence so a later explicit style() overrides per surface.
+  # precedence so a later explicit style() overrides per surface. One
+  # blank line above the footnotes stands in for the dropped bottomrule,
+  # keeping the footnote block visually separated from the body.
   normal <- style_template() |>
     style(bold = FALSE, .at = cells_title()) |>
     style(bold = FALSE, .at = cells_headers()) |>
     style(bold = FALSE, .at = cells_subgroup_labels()) |>
-    style(bold = FALSE, .at = cells_group_headers())
+    style(bold = FALSE, .at = cells_group_headers()) |>
+    style(blank_above = 1L, .at = cells_footnotes())
 
-  # Midrule-only rule set: overlay the three "off" sentinels onto the
-  # booktabs baseline (which already leaves rowrule / footnoterule and
-  # the verticals off, midrule on). Forward the user's geometry knobs
-  # through the same `preset()` call so they merge as usual.
+  # Strip the outer frame (toprule + bottomrule) but KEEP the muted
+  # column-spanner `spanrule` and the `midrule` under the column labels.
+  # Overlays the two "off" sentinels onto the booktabs baseline (which
+  # already leaves rowrule / footnoterule and the verticals off, midrule
+  # + spanrule on). Forward the user's geometry knobs through the same
+  # `preset()` call so they merge as usual.
   do.call(
     preset,
     c(
@@ -160,8 +165,7 @@ preset_minimal <- function(.spec, ...) {
         .spec,
         rules = list(
           toprule = "none",
-          bottomrule = "none",
-          spanrule = "none"
+          bottomrule = "none"
         ),
         .style = normal
       ),

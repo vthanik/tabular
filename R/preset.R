@@ -815,7 +815,7 @@ set_preset <- function(
         c(
           "Pass {.arg new} OR knobs / {.arg .template} / {.arg .style} / {.arg .reset}, not both.",
           "i" = "Wholesale install, {.code set_preset(spec)}.",
-          "i" = "Knob update, {.code set_preset(font_size = 9)}.",
+          "i" = "Knob update, {.code set_preset(font_size = 10)}.",
           "i" = "Restore saved, {.code set_preset(old)} after {.code old <- set_preset(...)}."
         ),
         class = "tabular_error_input",

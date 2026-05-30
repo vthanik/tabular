@@ -207,8 +207,9 @@ test_that("as_grid() under default preset(width_mode='content') matches today's 
       placebo = col_spec(label = "Placebo")
     ) |>
     preset(width_mode = "content")
-  g1 <- as_grid(spec_default)
-  g2 <- as_grid(spec_explicit)
+  # suppress the incidental overflow warning (content mode, wide demo).
+  g1 <- suppressWarnings(as_grid(spec_default))
+  g2 <- suppressWarnings(as_grid(spec_explicit))
   # Resolved widths byte-identical between default and explicit content.
   w1 <- vapply(g1@metadata$cols, function(cs) cs@width, numeric(1L))
   w2 <- vapply(g2@metadata$cols, function(cs) cs@width, numeric(1L))

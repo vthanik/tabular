@@ -57,11 +57,34 @@ test_that("preset_minimal() forwards geometry knobs to preset() (#edge15)", {
 # Midrule-only rules + all-normal weight, cross-backend
 # ---------------------------------------------------------------------
 
-test_that("preset_minimal() draws the midrule only (LaTeX)", {
+test_that("preset_minimal() keeps the midrule (and spanrule) but drops the frame (LaTeX)", {
   tex <- render_str(preset_minimal(mk_group_spec()), ".tex")
   hlines <- regmatches(tex, gregexpr("hline\\{[0-9]+\\}", tex))[[1]]
-  # Exactly one horizontal rule: the midrule under the column labels.
+  # `mk_group_spec()` has no column spanner, so the kept spanrule draws
+  # nothing here: exactly one horizontal rule, the midrule under the
+  # column labels (no toprule / bottomrule frame).
   expect_length(hlines, 1L)
+})
+
+test_that("preset_minimal() inserts one blank line above the footnotes (replaces the dropped bottomrule)", {
+  # The minimal theme drops the bottomrule, so a blank line above the
+  # footnote block stands in to keep it separated from the body.
+  min_html <- render_str(preset_minimal(mk_group_spec()), ".html")
+  def_html <- render_str(mk_group_spec(), ".html")
+  pad_before_foot <- "<p class=\"tabular-pad\">&nbsp;</p>\\s*<p class=\"tabular-footnote"
+  expect_match(min_html, pad_before_foot)
+  # The default theme (with its bottomrule) inserts no footnote pad.
+  expect_no_match(def_html, pad_before_foot)
+})
+
+test_that("the `spacing` knob footnote gap renders a blank above the footnotes (cross-backend)", {
+  # Regression: `body_to_footnote` (max of body.below / footnote.above)
+  # was computed in meta$gaps but consumed by no backend. Now wired.
+  base <- mk_group_spec()
+  spaced <- base |> preset(spacing = list(footnote = c(above = 1L)))
+  pad_before_foot <- "<p class=\"tabular-pad\">&nbsp;</p>\\s*<p class=\"tabular-footnote"
+  expect_match(render_str(spaced, ".html"), pad_before_foot)
+  expect_no_match(render_str(base, ".html"), pad_before_foot)
 })
 
 test_that("preset_minimal() renders every surface in normal weight, cross-backend", {

@@ -231,7 +231,7 @@ test_that("as_grid() with explicit group_display='column_repeat' keeps the varia
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     )
-  g <- as_grid(spec)
+  g <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   page1 <- g@pages[[1L]]
   # Variable column visible; every row repeats the value.
   expect_true("variable" %in% page1$col_names)
@@ -252,7 +252,7 @@ test_that("as_grid() with explicit group_display='column' keeps column + suppres
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     )
-  g <- as_grid(spec)
+  g <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   page1 <- g@pages[[1L]]
   expect_true("variable" %in% page1$col_names)
   # Row 1 shows the value; row 2+ in the same block is blank.

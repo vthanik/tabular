@@ -237,7 +237,8 @@ backend_latex <- function(grid, file) {
     cols = meta$cols,
     cells_style = first$cells_style,
     preset = meta$preset,
-    cs = cs
+    cs = cs,
+    gap_above = .meta_gap(meta, "body_to_footnote", 0L)
   )
 
   body <- .latex_concat_panel_body(panel_pages)
@@ -494,7 +495,8 @@ backend_latex <- function(grid, file) {
   cols = NULL,
   cells_style = NULL,
   preset = NULL,
-  cs = NULL
+  cs = NULL,
+  gap_above = 0L
 ) {
   fn <- .render_latex_footnote_block(footnotes_ast, preset = preset, cs = cs)
   if (length(fn) == 0L) {
@@ -505,7 +507,16 @@ backend_latex <- function(grid, file) {
   }
   width_in <- .latex_table_width_in(col_names_vis, cols, cells_style, preset)
   foot_triple <- .chrome_border_at(cs, "footer_top")
-  wrapped <- .latex_minipage_wrap(fn, width_in, foot_triple)
+  # Blank line(s) above the footnotes: the footer surface's
+  # `blank_above` (via `style(.at = cells_footnotes())`) wins, else the
+  # `body_to_footnote` spacing gap. `{\strut\par}` is one full-height
+  # blank line each (matching the title padding), standing in for the
+  # bottomrule when `preset_minimal()` drops it.
+  pad_above <- .latex_blank_count(cs, "footer", "above", gap_above)
+  wrapped <- c(
+    rep("{\\strut\\par}", pad_above),
+    .latex_minipage_wrap(fn, width_in, foot_triple)
+  )
   if (isTRUE(rep_footnotes)) {
     .latex_def_tblr_template("firstfoot, middlefoot, lastfoot", wrapped)
   } else {

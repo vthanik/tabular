@@ -24,7 +24,7 @@
       Error:
       ! Pass `new` OR knobs / `.template` / `.style` / `.reset`, not both.
       i Wholesale install, `set_preset(spec)`.
-      i Knob update, `set_preset(font_size = 9)`.
+      i Knob update, `set_preset(font_size = 10)`.
       i Restore saved, `set_preset(old)` after `old <- set_preset(...)`.
 
 ---

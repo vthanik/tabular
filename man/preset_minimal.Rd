@@ -38,9 +38,9 @@ verbs and the terminal \code{\link[=emit]{emit()}} / \code{\link[=as_grid]{as_gr
 \strong{What it sets}, both at theme (lowest) precedence so an explicit
 later \code{\link[=style]{style()}} wins:
 \enumerate{
-\item \strong{Rules.} Drops the booktabs \code{toprule}, \code{bottomrule}, and the
-muted column-spanner \code{spanrule}, leaving \code{midrule} alone under the
-column labels. Equivalent to \code{preset(rules = list(toprule = "none", bottomrule = "none", spanrule = "none"))}.
+\item \strong{Rules.} Drops the booktabs \code{toprule} and \code{bottomrule} (the
+outer frame), keeping the \code{midrule} under the column labels and the
+muted column-spanner \code{spanrule}. Equivalent to \code{preset(rules = list(toprule = "none", bottomrule = "none"))}.
 \item \strong{Weight.} Sets \code{bold = FALSE} on the title, column-header,
 subgroup-label, and group-header surfaces. The HTML backend
 overrides its \code{font-weight: 600} class default with an inline

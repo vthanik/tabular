@@ -196,14 +196,30 @@ backend_rtf <- function(grid, file) {
   footer_footnotes <- has_footnotes && isTRUE(rep_footnotes)
   trailing_footnotes <- has_footnotes && !isTRUE(rep_footnotes)
   footer_active <- has_pf || footer_footnotes
-  footnote_lines <- if (footer_footnotes) {
-    .render_rtf_footnote_block(
-      meta$footnotes_ast,
-      preset,
+  # Blank line(s) above the footnotes: the footer surface's
+  # `blank_above` (via `style(.at = cells_footnotes())`) wins, else the
+  # `body_to_footnote` spacing gap. Stands in for the bottomrule when
+  # `preset_minimal()` drops it.
+  foot_pad <- rep(
+    "\\pard\\plain\\par",
+    .rtf_blank_count(
       cs,
-      colors,
-      fonts,
-      cellx
+      "footer",
+      "above",
+      .meta_gap(meta, "body_to_footnote", 0L)
+    )
+  )
+  footnote_lines <- if (footer_footnotes) {
+    c(
+      foot_pad,
+      .render_rtf_footnote_block(
+        meta$footnotes_ast,
+        preset,
+        cs,
+        colors,
+        fonts,
+        cellx
+      )
     )
   } else {
     character()
@@ -368,13 +384,16 @@ backend_rtf <- function(grid, file) {
 
   # Non-repeating footnotes trail the table as paragraphs (final page).
   if (trailing_footnotes) {
-    out[[length(out) + 1L]] <- .render_rtf_footnote_block(
-      meta$footnotes_ast,
-      preset,
-      cs,
-      colors,
-      fonts,
-      cellx
+    out[[length(out) + 1L]] <- c(
+      foot_pad,
+      .render_rtf_footnote_block(
+        meta$footnotes_ast,
+        preset,
+        cs,
+        colors,
+        fonts,
+        cellx
+      )
     )
   }
 

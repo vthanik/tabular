@@ -115,7 +115,7 @@ test_that("explicit group_skip = TRUE on a 'column' group injects blanks too", {
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     )
-  g <- as_grid(spec)
+  g <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   page1 <- g@pages[[1L]]
   # Variable visible (column mode); blanks between variable transitions.
   expect_true("variable" %in% page1$col_names)

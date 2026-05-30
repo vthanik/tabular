@@ -5,6 +5,6 @@
     Condition
       Error:
       ! `preset_minimal()` owns the rule set.
-      x Drop `rules`; the minimal theme draws the midrule only.
+      x Drop `rules`; the minimal theme owns the rule set (midrule + spanrule, no frame).
       i For a custom rule set call `preset()` directly.
 

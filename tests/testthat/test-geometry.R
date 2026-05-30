@@ -90,6 +90,6 @@ test_that(".effective_preset returns defaults when no preset attached", {
   spec <- tabular(data.frame(x = 1))
   out <- tabular:::.effective_preset(spec)
   expect_true(is_preset_spec(out))
-  expect_identical(out@font_size, 9)
+  expect_identical(out@font_size, 10)
   expect_identical(out@orientation, "landscape")
 })

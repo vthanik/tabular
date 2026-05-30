@@ -181,6 +181,19 @@ backend_html <- function(grid, file) {
     preset = preset,
     cs = cs
   )
+  # Blank line(s) above the footnotes: the footer surface's
+  # `blank_above` (via `style(.at = cells_footnotes())`) wins, else the
+  # `body_to_footnote` spacing gap. Stands in for the bottomrule when
+  # `preset_minimal()` drops it.
+  if (length(footnote_block) > 0L) {
+    foot_blank_above <- .html_blank_count(
+      cs,
+      "footer",
+      "above",
+      .meta_gap(meta, "body_to_footnote", 0L)
+    )
+    footnote_block <- c(rep(blank_p, foot_blank_above), footnote_block)
+  }
 
   # `.tabular-content` wraps title + tables + footnotes in one
   # centred container sized to the widest table (`width:
@@ -1522,9 +1535,10 @@ backend_html <- function(grid, file) {
   # `fs` drives every font-size emitted in pt below — title,
   # table, footnote. Sourcing the size from one local keeps the
   # three rules trivially in sync and lets `preset(font_size = N)`
-  # cascade across the whole document. Default 9pt matches
-  # `preset_spec@font_size`'s default in `R/aaa_class.R`.
-  fs <- if (is.null(preset)) 9 else preset@font_size
+  # cascade across the whole document. The NULL-preset fallback
+  # reads the factory default from the SSOT so it never drifts from
+  # `preset_spec@font_size` (`R/aaa_class.R`).
+  fs <- .effective_font_size(preset)
 
   body_css <- c(
     sprintf(

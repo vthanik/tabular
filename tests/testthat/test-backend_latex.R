@@ -64,7 +64,7 @@ test_that("emit(.tex) renders saf_demo golden pipeline end to end", {
 
 test_that("default preamble uses preset defaults", {
   txt <- render_tex(tabular(data.frame(x = 1L)))
-  # Default preset: font_size=9 -> 10pt class option, paper=letter,
+  # Default preset: font_size=10 -> 10pt class option, paper=letter,
   # orientation=landscape.
   expect_match(txt, "\\documentclass[10pt]{article}", fixed = TRUE)
   expect_match(

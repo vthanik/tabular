@@ -81,7 +81,10 @@ test_that("emit(.docx) writes well-formed XML at every part", {
   }
 })
 
-test_that("emit(.docx) renders title + footnote text into word/document.xml", {
+test_that("emit(.docx) renders title (table rows) + footnote (footer) text", {
+  # Default repeat_content: titles ride merged table rows in
+  # document.xml (Word repeats them per page); footnotes ride the
+  # repeating footer1.xml.
   spec <- tabular(
     data.frame(x = 1L),
     titles = c("First Title", "Second Title"),
@@ -94,9 +97,13 @@ test_that("emit(.docx) renders title + footnote text into word/document.xml", {
     readLines(file.path(unzipped, "word/document.xml")),
     collapse = ""
   )
+  ftr <- paste(
+    readLines(file.path(unzipped, "word/footer1.xml")),
+    collapse = ""
+  )
   expect_match(doc, "First Title", fixed = TRUE)
   expect_match(doc, "Second Title", fixed = TRUE)
-  expect_match(doc, "Source: ADSL.", fixed = TRUE)
+  expect_match(ftr, "Source: ADSL.", fixed = TRUE)
 })
 
 test_that("DOCX header-band underline is the SSOT spanrule (override + 'none' honoured)", {
@@ -146,9 +153,17 @@ test_that("DOCX header-band underline is the SSOT spanrule (override + 'none' ho
     "w:sz=\"12\" w:color=\"FF0000\"",
     fixed = TRUE
   )
-  # "none" drops the band underline entirely.
+  # "none" drops the band underline entirely. Scope to the band row
+  # (the "Active" spanner): the midrule on the column-label row below
+  # is a different SSOT rule (header_bottom) and legitimately remains.
+  none_doc <- band_xml(base |> preset(rules = list(spanrule = "none")))
+  none_rows <- regmatches(
+    none_doc,
+    gregexpr("<w:tr>.*?</w:tr>", none_doc, perl = TRUE)
+  )[[1L]]
+  band_row <- none_rows[grepl("Active", none_rows, fixed = TRUE)][[1L]]
   expect_no_match(
-    band_xml(base |> preset(rules = list(spanrule = "none"))),
+    band_row,
     "w:bottom w:space=\"0\" w:val=\"single\"",
     fixed = TRUE
   )
@@ -183,9 +198,13 @@ test_that("DOCX footnoterule (opt-in) draws a table-width rule above the footnot
     )
   }
 
-  # Default: no footnote rule table.
+  # Default: no footnote rule table. Scope to the region AFTER the
+  # main table (the footnote area) — the toprule now legitimately
+  # emits <w:tcBorders><w:top ...> inside the table's column-header
+  # band, which is a different SSOT rule.
+  trailing_default <- sub("^.*</w:tbl>", "", docxml(base))
   expect_no_match(
-    docxml(base),
+    trailing_default,
     "<w:tcBorders><w:top w:space=\"0\" w:val=\"single\"",
     fixed = TRUE
   )
@@ -216,8 +235,102 @@ test_that("emit(.docx) writes no header1.xml / footer1.xml when pagehead / pagef
 })
 
 # ---------------------------------------------------------------------
-# Manifest emitters (pure helpers)
+# Per-page titles + footnotes via Word-native repetition (RTF parity).
+# Default repeat_content -> titles ride merged <w:tblHeader/> rows and
+# footnotes ride footer1.xml (Word repeats both per page); dropping a
+# member reverts to body placement (page 1 / final page only).
 # ---------------------------------------------------------------------
+
+.unzip_parts <- function(spec) {
+  out <- withr::local_tempfile(
+    fileext = ".docx",
+    .local_envir = parent.frame()
+  )
+  emit(spec, out)
+  td <- .unzip_docx(out)
+  read_part <- function(p) {
+    f <- file.path(td, p)
+    if (file.exists(f)) {
+      paste(readLines(f, warn = FALSE), collapse = "")
+    } else {
+      NA_character_
+    }
+  }
+  list(
+    doc = read_part("word/document.xml"),
+    footer = read_part("word/footer1.xml")
+  )
+}
+
+test_that("default repeat_titles renders titles as merged <w:tblHeader/> table rows", {
+  spec <- tabular(data.frame(x = 1L), titles = c("Table 1", "Demographics"))
+  parts <- .unzip_parts(spec)
+  # Titles live INSIDE the table, each a full-width gridSpan tblHeader
+  # row carrying the TabularTitle style — Word repeats them per page.
+  expect_match(parts$doc, "<w:tbl>", fixed = TRUE)
+  title_row <- regmatches(
+    parts$doc,
+    regexpr(
+      "<w:tr><w:trPr><w:tblHeader/></w:trPr><w:tc>(?:(?!</w:tr>).)*Table 1(?:(?!</w:tr>).)*</w:tr>",
+      parts$doc,
+      perl = TRUE
+    )
+  )
+  expect_match(title_row, "<w:pStyle w:val=\"TabularTitle\"/>", fixed = TRUE)
+  expect_true(nzchar(title_row))
+})
+
+test_that("dropping 'titles' from repeat_content renders titles as paragraphs above the table", {
+  spec <- tabular(data.frame(x = 1L), titles = "Table 1") |>
+    paginate(repeat_content = c("headers", "footnotes"))
+  parts <- .unzip_parts(spec)
+  # Title appears as a TabularTitle paragraph BEFORE the table opens.
+  before_table <- sub("<w:tbl>.*$", "", parts$doc)
+  expect_match(before_table, "TabularTitle", fixed = TRUE)
+  expect_match(before_table, "Table 1", fixed = TRUE)
+})
+
+test_that("default repeat_footnotes routes footnotes into footer1.xml, not the body", {
+  spec <- tabular(
+    data.frame(x = 1L),
+    footnotes = c("Note A.", "Source: ADSL.")
+  )
+  parts <- .unzip_parts(spec)
+  expect_false(is.na(parts$footer))
+  expect_match(parts$footer, "Note A.", fixed = TRUE)
+  expect_match(parts$footer, "Source: ADSL.", fixed = TRUE)
+  expect_no_match(parts$doc, "Source: ADSL.", fixed = TRUE)
+})
+
+test_that("dropping 'footnotes' from repeat_content trails them in the body, no footer", {
+  spec <- tabular(data.frame(x = 1L), footnotes = "Source: ADSL.") |>
+    paginate(repeat_content = c("titles", "headers"))
+  parts <- .unzip_parts(spec)
+  expect_true(is.na(parts$footer))
+  expect_match(parts$doc, "Source: ADSL.", fixed = TRUE)
+})
+
+test_that(".docx_section_pr places header/footer like RTF: margins exact, header near body, footer at bottom margin", {
+  # Mirrors `.rtf_section_def`: margins stay EXACTLY the preset values
+  # (never enlarged to reserve footer space); the header sits one body
+  # line above the top margin (flows up, near body), the footer sits at
+  # the bottom-margin line (flows down, near body). Word auto-expands a
+  # tall footer into the body rather than growing the page.
+  preset <- preset_spec(margins = "1in", font_size = 9)
+  sp <- tabular:::.docx_section_pr(preset, NULL)
+  grab <- function(attr) {
+    as.integer(regmatches(
+      sp,
+      regexpr(sprintf("(?<=%s=\")[0-9]+", attr), sp, perl = TRUE)
+    ))
+  }
+  expect_identical(grab("w:top"), 1440L) # exact 1in, not enlarged
+  expect_identical(grab("w:bottom"), 1440L) # exact 1in, not enlarged
+  # header one body line (9 * 28 = 252 twips) above the top margin.
+  expect_identical(grab("w:header"), 1440L - 252L)
+  # footer at the bottom-margin line.
+  expect_identical(grab("w:footer"), 1440L)
+})
 
 test_that(".docx_content_types emits the Override for every part, conditional on chrome", {
   no_chrome <- tabular:::.docx_content_types(FALSE, FALSE)
@@ -285,21 +398,46 @@ test_that(".docx_rid_map produces numeric rIds and shifts hyperlinks past chrome
   expect_identical(m_both_links$hyperlinks, c("rId8", "rId9"))
 })
 
-test_that(".docx_styles_xml uses theme-resolved font references and emits named styles", {
-  preset <- preset_spec(font_family = "Arial", font_size = 11)
+test_that(".docx_styles_xml pins the resolved preset font and emits named styles", {
+  # SSOT: the default run font is the resolved preset@font_family
+  # primary face, NOT the Office theme. The earlier asciiTheme form
+  # silently dropped the user's font choice (Word substituted Aptos).
+  # Naming an installed face with a declared fallback is safe; the
+  # "Word rejects unknown fonts" hazard applies only to CSS generics,
+  # which .resolve_font_stack() never emits.
+  preset <- preset_spec(font_family = "sans", font_size = 11)
   styles <- tabular:::.docx_styles_xml(preset)
-  # Default rFonts MUST reference the theme (minorHAnsi), not a
-  # CSS-generic family name. Embedding "serif" / "Arial" / etc.
-  # directly into w:ascii is the bug that makes Word reject the
-  # whole document — only theme-resolved or installed font names
-  # work universally.
-  expect_match(styles, "w:asciiTheme=\"minorHAnsi\"", fixed = TRUE)
+  expect_match(
+    styles,
+    "<w:rFonts w:ascii=\"Liberation Sans\" w:hAnsi=\"Liberation Sans\" w:cs=\"Liberation Sans\"/>",
+    fixed = TRUE
+  )
+  expect_false(grepl("asciiTheme", styles, fixed = TRUE))
   # 11pt -> 22 half-points
   expect_match(styles, "w:sz w:val=\"22\"", fixed = TRUE)
   # Named styles for the title and footnote blocks.
   expect_match(styles, "w:styleId=\"TabularTitle\"", fixed = TRUE)
   expect_match(styles, "w:styleId=\"TabularFoot\"", fixed = TRUE)
   expect_match(styles, "w:styleId=\"Hyperlink\"", fixed = TRUE)
+})
+
+test_that(".docx_styles_xml defaults to Liberation Mono and fontTable declares the stack", {
+  preset <- preset_spec()
+  styles <- tabular:::.docx_styles_xml(preset)
+  fonts <- tabular:::.docx_font_table(preset)
+  # Default font_family is "mono" -> Liberation Mono primary face.
+  expect_match(
+    styles,
+    "<w:rFonts w:ascii=\"Liberation Mono\" w:hAnsi=\"Liberation Mono\" w:cs=\"Liberation Mono\"/>",
+    fixed = TRUE
+  )
+  # fontTable declares the primary face + its metric-compatible
+  # substitutes (the OOXML form of RTF's \*\falt), all modern/fixed.
+  expect_match(fonts, "<w:font w:name=\"Liberation Mono\">", fixed = TRUE)
+  expect_match(fonts, "<w:font w:name=\"Courier New\">", fixed = TRUE)
+  expect_match(fonts, "w:family w:val=\"modern\"", fixed = TRUE)
+  # No vestigial Office theme faces (Calibri / Cambria) leak in.
+  expect_false(grepl("Calibri", fonts, fixed = TRUE))
 })
 
 test_that(".docx_core_xml carries the first title and fixed timestamps for determinism", {
@@ -646,8 +784,8 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
     doc,
     gregexpr("(?<=<w:gridCol w:w=\")[0-9]+(?=\"/>)", doc, perl = TRUE)
   )[[1L]])
-  expect_identical(widths_twips, c(1756L, 3645L, 1191L, 1191L, 1191L, 1191L))
-  expect_identical(sum(widths_twips), 10165L)
+  expect_identical(widths_twips, c(1927L, 4026L, 1299L, 1300L, 1299L, 1299L))
+  expect_identical(sum(widths_twips), 11150L)
 })
 
 test_that("col_spec@align surfaces as <w:jc> on data cells", {
@@ -671,6 +809,129 @@ test_that("col_spec@align surfaces as <w:jc> on data cells", {
   expect_match(doc, "<w:jc w:val=\"center\"/>", fixed = TRUE)
   expect_match(doc, "<w:jc w:val=\"right\"/>", fixed = TRUE)
   # decimal collapses to right at the <w:jc> level
+})
+
+test_that("the table is centred on the page (<w:jc> in <w:tblPr>, RTF \\trqc parity)", {
+  expect_match(
+    tabular:::.docx_tbl_pr(10368L),
+    "<w:tblPr><w:tblW w:w=\"10368\" w:type=\"dxa\"/><w:jc w:val=\"center\"/>",
+    fixed = TRUE
+  )
+})
+
+test_that("toprule + midrule bracket the column-label band from the SSOT chrome regions", {
+  # Flat header (no bands): the toprule (header_top) and midrule
+  # (header_bottom) both ride the column-label row, full table width,
+  # bracketing the headers per the submission layout (TL-RTF-101).
+  flat <- tabular(saf_demo) |>
+    cols(
+      variable = col_spec(usage = "group", label = "C"),
+      stat_label = col_spec(label = "S"),
+      placebo = col_spec(label = "PBO"),
+      drug_50 = col_spec(label = "D50"),
+      drug_100 = col_spec(label = "D100"),
+      Total = col_spec(label = "Tot")
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(flat, out)
+  doc <- paste(
+    readLines(file.path(.unzip_docx(out), "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  rows <- regmatches(doc, gregexpr("<w:tr>.*?</w:tr>", doc, perl = TRUE))[[
+    1L
+  ]]
+  label_row <- rows[grepl("<w:tblHeader/>", rows)][[1L]]
+  # The first <w:tblHeader/> row (label row) carries solid 0.5pt
+  # toprule (top) and midrule (bottom) on its cells, default ink.
+  expect_match(
+    label_row,
+    "<w:top w:space=\"0\" w:val=\"single\" w:sz=\"4\" w:color=\"212529\"/>",
+    fixed = TRUE
+  )
+  expect_match(
+    label_row,
+    "<w:bottom w:space=\"0\" w:val=\"single\" w:sz=\"4\" w:color=\"212529\"/>",
+    fixed = TRUE
+  )
+})
+
+test_that("toprule rides the first band row (not the label row) when bands exist", {
+  banded <- tabular(saf_demo) |>
+    cols(
+      variable = col_spec(usage = "group", label = "C"),
+      stat_label = col_spec(label = "S"),
+      placebo = col_spec(label = "PBO"),
+      drug_50 = col_spec(label = "D50"),
+      drug_100 = col_spec(label = "D100"),
+      Total = col_spec(label = "Tot")
+    ) |>
+    headers("Active" = c("drug_50", "drug_100"))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(banded, out)
+  doc <- paste(
+    readLines(file.path(.unzip_docx(out), "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  rows <- regmatches(doc, gregexpr("<w:tr>.*?</w:tr>", doc, perl = TRUE))[[
+    1L
+  ]]
+  hdr_rows <- rows[grepl("<w:tblHeader/>", rows)]
+  band_row <- hdr_rows[[1L]]
+  label_row <- hdr_rows[[2L]]
+  # Toprule on the first band row; none on the label row below it.
+  expect_match(
+    band_row,
+    "<w:top w:space=\"0\" w:val=\"single\"",
+    fixed = TRUE
+  )
+  expect_no_match(
+    label_row,
+    "<w:top w:space=\"0\" w:val=\"single\"",
+    fixed = TRUE
+  )
+  # Midrule still closes the label band.
+  expect_match(
+    label_row,
+    "<w:bottom w:space=\"0\" w:val=\"single\"",
+    fixed = TRUE
+  )
+})
+
+test_that("rules = list(toprule/midrule = 'none') suppress the bracket rules", {
+  base <- tabular(saf_demo) |>
+    cols(
+      variable = col_spec(usage = "group", label = "C"),
+      stat_label = col_spec(label = "S"),
+      placebo = col_spec(label = "PBO"),
+      drug_50 = col_spec(label = "D50"),
+      drug_100 = col_spec(label = "D100"),
+      Total = col_spec(label = "Tot")
+    )
+  doc_for <- function(spec) {
+    out <- withr::local_tempfile(
+      fileext = ".docx",
+      .local_envir = parent.frame()
+    )
+    emit(spec, out)
+    paste(
+      readLines(
+        file.path(.unzip_docx(out), "word/document.xml"),
+        warn = FALSE
+      ),
+      collapse = ""
+    )
+  }
+  none <- doc_for(
+    base |> preset(rules = list(toprule = "none", midrule = "none"))
+  )
+  rows <- regmatches(none, gregexpr("<w:tr>.*?</w:tr>", none, perl = TRUE))[[
+    1L
+  ]]
+  label_row <- rows[grepl("<w:tblHeader/>", rows)][[1L]]
+  expect_no_match(label_row, "<w:top w:space=\"0\"", fixed = TRUE)
+  # midrule gone; the last body row keeps its bottomrule (outer_bottom).
+  expect_no_match(label_row, "<w:bottom w:space=\"0\"", fixed = TRUE)
 })
 
 test_that("multi-level header bands render as <w:tr> with <w:gridSpan>", {
@@ -811,6 +1072,8 @@ test_that("bold / italic / code marks render as <w:b/> / <w:i/> / <w:rFonts mono
 })
 
 test_that("superscript / subscript render as <w:vertAlign>", {
+  # Footnotes ride footer1.xml by default; the inline AST renders
+  # there identically.
   spec <- tabular(
     data.frame(x = 1L),
     footnotes = c(md("Marker^a^"), md("Marker~b~"))
@@ -818,12 +1081,12 @@ test_that("superscript / subscript render as <w:vertAlign>", {
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   unzipped <- .unzip_docx(out)
-  doc <- paste(
-    readLines(file.path(unzipped, "word/document.xml")),
+  ftr <- paste(
+    readLines(file.path(unzipped, "word/footer1.xml")),
     collapse = ""
   )
-  expect_match(doc, "<w:vertAlign w:val=\"superscript\"/>", fixed = TRUE)
-  expect_match(doc, "<w:vertAlign w:val=\"subscript\"/>", fixed = TRUE)
+  expect_match(ftr, "<w:vertAlign w:val=\"superscript\"/>", fixed = TRUE)
+  expect_match(ftr, "<w:vertAlign w:val=\"subscript\"/>", fixed = TRUE)
 })
 
 test_that("newline / <br/> renders as <w:r><w:br/></w:r>", {
@@ -842,9 +1105,13 @@ test_that("newline / <br/> renders as <w:r><w:br/></w:r>", {
 })
 
 test_that("link runs wrap in <w:hyperlink> with numeric rIds matching rels", {
+  # Hyperlinks on a body surface (titles -> repeating table rows in
+  # document.xml) so the relationships file correctly is
+  # document.xml.rels. (Footnote hyperlinks would land in footer1.xml,
+  # whose relationships belong in a separate footer1.xml.rels part.)
   spec <- tabular(
     data.frame(x = 1L),
-    footnotes = c(
+    titles = c(
       md("[example](https://example.com)"),
       md("[duplicate](https://example.com) and [other](https://example.org)")
     )
@@ -870,6 +1137,7 @@ test_that("link runs wrap in <w:hyperlink> with numeric rIds matching rels", {
 })
 
 test_that("nested formatting (bold inside italic) merges <w:rPr> tokens", {
+  # Footnote rides footer1.xml; nested inline AST merges there.
   spec <- tabular(
     data.frame(x = 1L),
     footnotes = md("*Italic with **bold** inside*")
@@ -877,13 +1145,13 @@ test_that("nested formatting (bold inside italic) merges <w:rPr> tokens", {
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   unzipped <- .unzip_docx(out)
-  doc <- paste(
-    readLines(file.path(unzipped, "word/document.xml")),
+  ftr <- paste(
+    readLines(file.path(unzipped, "word/footer1.xml")),
     collapse = ""
   )
   # The inner run must carry both <w:b/> and <w:i/> in its <w:rPr>.
   expect_match(
-    doc,
+    ftr,
     "<w:rPr><w:i/><w:b/></w:rPr><w:t xml:space=\"preserve\">bold</w:t>",
     fixed = TRUE
   )
@@ -1093,8 +1361,8 @@ test_that("emit(.docx) is byte-deterministic across repeated calls", {
 
   a <- withr::local_tempfile(fileext = ".docx")
   b <- withr::local_tempfile(fileext = ".docx")
-  emit(spec, a)
-  emit(spec, b)
+  suppressWarnings(emit(spec, a)) # incidental overflow warn
+  suppressWarnings(emit(spec, b))
   bytes_a <- readBin(a, what = "raw", n = file.size(a))
   bytes_b <- readBin(b, what = "raw", n = file.size(b))
   expect_identical(bytes_a, bytes_b)
@@ -1181,8 +1449,18 @@ test_that("style(.at = cells_footnotes(), halign = 'right') drives footnote jc=r
     footnotes = "Source: ADSL"
   ) |>
     preset(.style = template)
-  xml <- .docx_doc_xml(spec)
-  expect_match(xml, "TabularFoot.*<w:jc w:val=\"right\"/>", fixed = FALSE)
+  # Footnotes ride footer1.xml by default; the cascade halign surfaces
+  # there on the TabularFoot paragraph.
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  ftr <- paste(
+    readLines(
+      file.path(.unzip_docx(out), "word/footer1.xml"),
+      warn = FALSE
+    ),
+    collapse = "\n"
+  )
+  expect_match(ftr, "TabularFoot.*<w:jc w:val=\"right\"/>", fixed = FALSE)
 })
 
 test_that("style(.at = cells_title(), blank_above = 3) emits three blank paragraphs", {
@@ -1349,8 +1627,10 @@ test_that("DOCX scenario G: band cell tcPr carries w:tcBorders w:bottom; blanks 
   )
   expect_match(doc, "<w:tcBorders><w:bottom w:val=\"single\"")
   # Extract the band row and confirm only the cell containing
-  # "Active Treatment" carries tcBorders; the two blank flanking
-  # cells (3-cell left run, 1-cell right run) do not.
+  # "Active Treatment" carries the band UNDERLINE (cmidrule(lr), the
+  # <w:bottom> side). All three cells share the full-width toprule
+  # (<w:top>, header_top) since "Active Treatment" is the topmost
+  # band; the two blank flanking cells carry no underline.
   band_row <- regmatches(
     doc,
     regexpr(
@@ -1366,9 +1646,13 @@ test_that("DOCX scenario G: band cell tcPr carries w:tcBorders w:bottom; blanks 
   expect_length(tcs, 3L)
   band_idx <- grep("Active Treatment", tcs, fixed = TRUE)
   blank_idx <- setdiff(seq_along(tcs), band_idx)
-  expect_match(tcs[band_idx], "<w:tcBorders>")
+  expect_match(
+    tcs[band_idx],
+    "<w:bottom w:space=\"0\" w:val=\"single\"",
+    fixed = TRUE
+  )
   for (i in blank_idx) {
-    expect_no_match(tcs[i], "<w:tcBorders>")
+    expect_no_match(tcs[i], "<w:bottom", fixed = TRUE)
   }
 })
 

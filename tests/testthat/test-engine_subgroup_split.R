@@ -174,7 +174,7 @@ test_that("as_grid() with subgroup concatenates per-group pages", {
 
 test_that("as_grid() with no subgroup returns single un-annotated grid", {
   spec <- tabular(saf_demo)
-  grid <- as_grid(spec)
+  grid <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   expect_length(grid@pages, 1L)
   expect_null(grid@pages[[1L]]$subgroup_line_ast)
   expect_null(grid@pages[[1L]]$subgroup_index)

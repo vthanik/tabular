@@ -448,7 +448,7 @@ test_that(".tabular-table CSS centres content-fitted tables and renders at prese
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(
     txt,
-    ".tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }",
+    ".tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }",
     fixed = TRUE
   )
 })
@@ -476,12 +476,12 @@ test_that(".tabular-title + .tabular-footnote also render at preset@font_size", 
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(
     txt,
-    ".tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }",
+    ".tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }",
     fixed = TRUE
   )
   expect_match(
     txt,
-    ".tabular-footnote { font-size: 9pt; color: #495057; margin: .25rem 0; }",
+    ".tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }",
     fixed = TRUE
   )
 })

@@ -111,18 +111,40 @@ backend_docx <- function(grid, file) {
 .docx_zip_entries <- function(grid) {
   meta <- grid@metadata
   preset <- .docx_resolve_preset(meta$preset)
+  cs <- meta$chrome_style %||% chrome_style()
   has_ph <- .page_band_is_populated(meta$pagehead_ast)
-  has_pf <- .page_band_is_populated(meta$pagefoot_ast)
+  has_pf_band <- .page_band_is_populated(meta$pagefoot_ast)
+
+  # Footnote placement (RTF parity): `repeat_footnotes` (the
+  # `paginate(repeat_content)` "footnotes" member, default TRUE) puts
+  # the footnote block into the repeating `footer1.xml` so Word renders
+  # it at the foot of EVERY page; FALSE trails it in the body (final
+  # page only). The page footer therefore exists whenever a `pagefoot`
+  # band is set OR footnotes ride the footer.
+  rep_footnotes <- meta$repeat_footnotes %||% TRUE
+  has_footnotes <- length(meta$footnotes_ast %||% list()) > 0L
+  footer_footnotes <- has_footnotes && isTRUE(rep_footnotes)
+  has_footer <- has_pf_band || footer_footnotes
 
   # One-pass hyperlink walk over every AST surface so the rels file
   # and the inline renderer agree on rId numbering. First-encounter
   # order is deterministic given the walk order in
   # `.docx_collect_hyperlinks()`.
   hyperlinks <- .docx_collect_hyperlinks(grid)
-  rid_map <- .docx_rid_map(has_ph, has_pf, length(hyperlinks))
+  rid_map <- .docx_rid_map(has_ph, has_footer, length(hyperlinks))
+
+  # Build the footnote section once. It lands in the body when
+  # trailing, or in `footer1.xml` when repeating; never both.
+  foot_section <- if (has_footnotes) {
+    .docx_footnote_section(grid, preset, hyperlinks, rid_map, cs)
+  } else {
+    ""
+  }
+  body_footnotes <- if (footer_footnotes) "" else foot_section
+  footer_foot_block <- if (footer_footnotes) foot_section else ""
 
   entries <- c(
-    "[Content_Types].xml" = .docx_content_types(has_ph, has_pf),
+    "[Content_Types].xml" = .docx_content_types(has_ph, has_footer),
     "_rels/.rels" = .docx_root_rels(),
     "docProps/app.xml" = .docx_app_xml(),
     "docProps/core.xml" = .docx_core_xml(meta),
@@ -134,7 +156,8 @@ backend_docx <- function(grid, file) {
       grid,
       preset,
       hyperlinks,
-      rid_map
+      rid_map,
+      body_footnotes = body_footnotes
     ),
     "word/fontTable.xml" = .docx_font_table(preset),
     "word/settings.xml" = .docx_settings_xml(),
@@ -148,10 +171,11 @@ backend_docx <- function(grid, file) {
       preset
     )
   }
-  if (has_pf) {
+  if (has_footer) {
     entries[["word/footer1.xml"]] <- .docx_footer_xml(
       meta$pagefoot_ast,
-      preset
+      preset,
+      footnote_block = footer_foot_block
     )
   }
   # OPC (Open Packaging Conventions) MANDATES that `[Content_Types].xml`
@@ -225,7 +249,13 @@ backend_docx <- function(grid, file) {
 # Inline AST runs through `.render_docx_inline()` everywhere user
 # content appears (titles, footnotes, col labels, body cells).
 # Commits 4-5 wire page chrome refs and per-cell styling.
-.docx_document_xml <- function(grid, preset, hyperlinks, rid_map) {
+.docx_document_xml <- function(
+  grid,
+  preset,
+  hyperlinks,
+  rid_map,
+  body_footnotes = ""
+) {
   meta <- grid@metadata
   cs <- meta$chrome_style %||% chrome_style()
   blank_p <- "<w:p/>"
@@ -241,20 +271,28 @@ backend_docx <- function(grid, file) {
     "below",
     .meta_gap(meta, "title_to_body", 1L)
   )
-  pad_body_top <- 0L
-  pad_body_bottom <- 0L
 
-  titles_block <- .docx_title_block(
-    meta$titles_ast %||% list(),
-    hyperlinks,
-    rid_map,
-    preset = preset,
-    cs = cs
-  )
-  if (length(titles_block) > 0L) {
+  # Title placement (RTF parity): `repeat_titles` (the
+  # `paginate(repeat_content)` "titles" member, default TRUE) renders
+  # titles as merged `<w:tblHeader/>` rows at the top of the table, so
+  # Word repeats them at every page break; FALSE renders them as
+  # paragraphs above the table (page 1 only). Either way the toprule
+  # still rides the column-header block, below the titles.
+  rep_titles <- meta$repeat_titles %||% TRUE
+  titles_ast <- meta$titles_ast %||% list()
+  title_in_table <- length(titles_ast) > 0L && isTRUE(rep_titles)
+
+  titles_block <- character()
+  if (length(titles_ast) > 0L && !isTRUE(rep_titles)) {
     titles_block <- c(
       rep(blank_p, pad_title_top),
-      titles_block,
+      .docx_title_block(
+        titles_ast,
+        hyperlinks,
+        rid_map,
+        preset = preset,
+        cs = cs
+      ),
       rep(blank_p, pad_title_bottom)
     )
   }
@@ -263,39 +301,17 @@ backend_docx <- function(grid, file) {
     preset,
     hyperlinks,
     rid_map,
-    cs = cs
+    cs = cs,
+    title_ast = if (title_in_table) titles_ast else list(),
+    pad_title_top = pad_title_top,
+    pad_title_bottom = pad_title_bottom
   )
-  footnotes_block <- .docx_footnote_block(
-    meta$footnotes_ast %||% list(),
-    hyperlinks,
-    rid_map,
-    preset = preset,
-    cs = cs
-  )
-  # footnoterule (opt-in): a table-width rule above the footnotes. The
-  # body bottomrule is the default closer, so this is off unless the
-  # user sets it through the `rules` knob.
-  if (length(footnotes_block) > 0L) {
-    pages <- grid@pages
-    foot_triple <- .chrome_border_at(cs, "footer_top")
-    if (length(pages) > 0L) {
-      widths <- .docx_col_widths_twips(
-        pages[[1L]]$col_names,
-        meta$cols %||% list(),
-        preset
-      )
-      rule_tbl <- .docx_foot_rule_table(foot_triple, sum(widths))
-      footnotes_block <- c(rule_tbl, footnotes_block)
-    }
-  }
   sect_pr <- .docx_section_pr(preset, rid_map)
 
   body <- paste0(
     paste(titles_block, collapse = ""),
-    paste(rep(blank_p, pad_body_top), collapse = ""),
     table_block,
-    paste(rep(blank_p, pad_body_bottom), collapse = ""),
-    paste(footnotes_block, collapse = ""),
+    body_footnotes,
     sect_pr
   )
   paste0(
@@ -356,6 +372,93 @@ backend_docx <- function(grid, file) {
       )
     },
     character(1L)
+  )
+}
+
+# Render the title block as merged full-width table rows for the
+# repeating-titles path. Each title is one `<w:tr>` carrying
+# `<w:tblHeader/>` (so Word repeats it at every page break) and a
+# single `<w:gridSpan>` cell spanning all visible columns, centred +
+# bold via the `TabularTitle` paragraph style. `pad_top` / `pad_bottom`
+# blank `<w:tblHeader/>` rows reproduce the title block's vertical
+# spacing inside the table. Mirrors RTF's `.rtf_title_header_rows` +
+# `.rtf_blank_trhdr_rows`. Returns "" when there are no titles.
+.docx_title_header_rows <- function(
+  titles_ast,
+  total_twips,
+  n_cols,
+  pad_top = 0L,
+  pad_bottom = 0L,
+  hyperlinks = character(),
+  rid_map = NULL,
+  preset = NULL,
+  cs = NULL
+) {
+  n <- length(titles_ast)
+  if (n == 0L) {
+    return("")
+  }
+  blank_row <- .docx_full_width_row(total_twips, n_cols, "<w:p/>")
+  surface_node <- .chrome_surface_at(cs, "title")
+  title_rows <- vapply(
+    seq_len(n),
+    function(i) {
+      # Reuse the TabularTitle paragraph style (centred + bold) so the
+      # repeating title rows render identically to the paragraph path
+      # (`.docx_title_block`); the per-line halign cascade overrides it.
+      runs <- .render_docx_inline(
+        titles_ast[[i]],
+        hyperlinks,
+        rid_map = rid_map
+      )
+      halign <- if (
+        is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        .effective_title_halign(preset, line_index = i, n_lines = n)
+      }
+      jc_override <- if (length(halign) == 1L && !is.na(halign)) {
+        .docx_align_token(halign)
+      } else {
+        ""
+      }
+      para <- paste0(
+        "<w:p><w:pPr><w:pStyle w:val=\"TabularTitle\"/>",
+        jc_override,
+        "</w:pPr>",
+        runs,
+        "</w:p>"
+      )
+      .docx_full_width_row(total_twips, n_cols, para)
+    },
+    character(1L)
+  )
+  paste0(
+    paste(rep(blank_row, pad_top), collapse = ""),
+    paste(title_rows, collapse = ""),
+    paste(rep(blank_row, pad_bottom), collapse = "")
+  )
+}
+
+# One full-width `<w:tr>` carrying `<w:tblHeader/>` and a single
+# `<w:gridSpan>` cell spanning every visible column. Used for the
+# repeating title rows and their blank spacing rows.
+.docx_full_width_row <- function(total_twips, n_cols, content) {
+  span <- if (n_cols > 1L) {
+    sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols)
+  } else {
+    ""
+  }
+  paste0(
+    "<w:tr><w:trPr><w:tblHeader/></w:trPr><w:tc><w:tcPr>",
+    sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", total_twips),
+    span,
+    "</w:tcPr>",
+    content,
+    "</w:tc></w:tr>"
   )
 }
 
@@ -462,6 +565,53 @@ backend_docx <- function(grid, file) {
   )
 }
 
+# Build the footnote section as one XML string: an optional
+# table-width separator rule (chrome `footer_top`, opt-in) above the
+# footnote paragraphs. "" when no footnotes. The SAME section lands in
+# the body (`trailing_footnotes`) or in `footer1.xml`
+# (`footer_footnotes`), so both placements render identically. Mirrors
+# RTF's `.render_rtf_footnote_block`.
+.docx_footnote_section <- function(grid, preset, hyperlinks, rid_map, cs) {
+  meta <- grid@metadata
+  paras <- .docx_footnote_block(
+    meta$footnotes_ast %||% list(),
+    hyperlinks,
+    rid_map,
+    preset = preset,
+    cs = cs
+  )
+  if (length(paras) == 0L) {
+    return("")
+  }
+  pages <- grid@pages
+  rule_tbl <- character()
+  if (length(pages) > 0L) {
+    foot_triple <- .chrome_border_at(cs, "footer_top")
+    widths <- .docx_col_widths_twips(
+      pages[[1L]]$col_names,
+      meta$cols %||% list(),
+      preset
+    )
+    rule_tbl <- .docx_foot_rule_table(foot_triple, sum(widths))
+  }
+  # Blank line(s) above the footnote block: the footer surface's
+  # `blank_above` (set via `style(blank_above = N, .at =
+  # cells_footnotes())`) wins, else the `body_to_footnote` spacing gap.
+  # Lets `preset_minimal()` separate the footnotes from the body once
+  # the bottomrule is gone.
+  blank_above <- .docx_blank_count(
+    cs,
+    "footer",
+    "above",
+    .meta_gap(meta, "body_to_footnote", 0L)
+  )
+  paste0(
+    paste(rep("<w:p/>", blank_above), collapse = ""),
+    paste(rule_tbl, collapse = ""),
+    paste(paras, collapse = "")
+  )
+}
+
 # ---------------------------------------------------------------------
 # Table emission
 # ---------------------------------------------------------------------
@@ -486,7 +636,10 @@ backend_docx <- function(grid, file) {
   preset,
   hyperlinks = character(),
   rid_map = NULL,
-  cs = NULL
+  cs = NULL,
+  title_ast = list(),
+  pad_title_top = 0L,
+  pad_title_bottom = 0L
 ) {
   meta <- grid@metadata
   pages <- grid@pages
@@ -497,11 +650,36 @@ backend_docx <- function(grid, file) {
   cols <- meta$cols %||% list()
   widths <- .docx_col_widths_twips(col_names_vis, cols, preset)
 
+  # Repeating titles: merged `<w:tblHeader/>` rows at the top of the
+  # table (RTF's `\trhdr` title rows), so Word repeats the title block
+  # at every page break. Empty when `repeat_titles` is FALSE (titles
+  # then render as paragraphs above the table in `.docx_document_xml`).
+  title_rows <- .docx_title_header_rows(
+    title_ast,
+    sum(widths),
+    length(widths),
+    pad_title_top,
+    pad_title_bottom,
+    hyperlinks,
+    rid_map,
+    preset = preset,
+    cs = cs
+  )
+
+  # Structural rules from the SSOT chrome regions (RTF parity): the
+  # toprule (`header_top`) rides the first row of the column-header
+  # block; the midrule (`header_bottom`) closes the column-label band.
+  # Both default solid and are suppressed only on an explicit "none".
+  top_el <- .docx_chrome_border_seg(cs, "header_top", "top")
+  mid_el <- .docx_chrome_border_seg(cs, "header_bottom", "bottom")
+  has_bands <- is.data.frame(meta$headers) && nrow(meta$headers) > 0L
+
   band_rows <- .render_docx_header_bands(
     meta$headers,
     col_names_vis,
     widths,
-    cs = cs
+    cs = cs,
+    top_border = top_el
   )
   label_row <- .render_docx_col_labels_row(
     meta$col_labels_ast,
@@ -511,7 +689,9 @@ backend_docx <- function(grid, file) {
     hyperlinks,
     rid_map,
     preset = preset,
-    cs = cs
+    cs = cs,
+    top_border = if (has_bands) "" else top_el,
+    bottom_border = mid_el
   )
   body_rows <- .render_docx_body_rows(
     pages,
@@ -526,6 +706,7 @@ backend_docx <- function(grid, file) {
     "<w:tbl>",
     .docx_tbl_pr(sum(widths)),
     .docx_tbl_grid(widths),
+    title_rows,
     paste(band_rows, collapse = ""),
     label_row,
     paste(body_rows, collapse = ""),
@@ -586,12 +767,15 @@ backend_docx <- function(grid, file) {
 
 # Compose the `<w:tblPr>` block: fixed-width layout (so engine
 # widths are honoured verbatim, not auto-resized by Word) + table
-# total width in twips. `<w:tblBorders>` is omitted; rules live on
-# individual cells (commit 5 wires per-cell rule_above / rule_below).
+# total width in twips + centred on the page (`<w:jc w:val="center"/>`,
+# the OOXML twin of RTF's `\trqc`). `<w:tblBorders>` is omitted; rules
+# live on individual cells (per-cell rule_above / rule_below + the
+# chrome toprule / midrule / bottomrule).
 .docx_tbl_pr <- function(total_twips) {
   paste0(
     "<w:tblPr>",
     sprintf("<w:tblW w:w=\"%d\" w:type=\"dxa\"/>", total_twips),
+    "<w:jc w:val=\"center\"/>",
     "<w:tblLayout w:type=\"fixed\"/>",
     "</w:tblPr>"
   )
@@ -617,7 +801,8 @@ backend_docx <- function(grid, file) {
   headers,
   col_names_vis,
   widths_twips,
-  cs = NULL
+  cs = NULL,
+  top_border = ""
 ) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(character())
@@ -627,19 +812,20 @@ backend_docx <- function(grid, file) {
   # Band underline = the SSOT `spanrule` (chrome region `header_between`,
   # muted by default), so band overrides + the "none" clear take effect
   # and DOCX matches the LaTeX / HTML muted band. NULL / "none" -> the
-  # band cells stay borderless.
+  # band cells stay borderless. Held as the bare `<w:bottom>` element so
+  # it composes with the toprule top element in one `<w:tcBorders>`.
   span_triple <- .chrome_border_at(cs, "header_between")
-  span_border <- if (
+  span_bottom <- if (
     is.null(span_triple) || identical(span_triple$style, "none")
   ) {
     ""
   } else {
-    sprintf(
-      "<w:tcBorders><w:bottom w:space=\"0\" %s/></w:tcBorders>",
-      .docx_border_attrs(span_triple)
-    )
+    sprintf("<w:bottom w:space=\"0\" %s/>", .docx_border_attrs(span_triple))
   }
   for (d in depths) {
+    # Toprule (chrome `header_top`) rides every cell of the topmost band
+    # row across the full table width, including blank flanking cells.
+    is_first_depth <- d == depths[[1L]]
     labels <- .band_labels_for_depth(headers, d, col_names_vis)
     runs <- .group_contiguous_runs(labels)
     cells <- character(length(runs))
@@ -651,13 +837,12 @@ backend_docx <- function(grid, file) {
       cell_w <- sum(widths_twips[cursor:end])
       label <- run$value
       # Band cells carry the span-rule bottom border (cmidrule(lr) cell
-      # semantics); blank flanking cells over unmapped columns are
-      # borderless so the rule does not extend across the full width.
-      tc_borders <- if (!is.na(label)) {
-        span_border
-      } else {
-        ""
-      }
+      # semantics); blank flanking cells over unmapped columns omit it so
+      # the rule does not extend across the full width. The toprule top
+      # rides every cell of the first band row.
+      top_part <- if (is_first_depth) top_border else ""
+      bottom_part <- if (!is.na(label)) span_bottom else ""
+      tc_borders <- .docx_tcborders(top_part, bottom_part)
       tc_pr <- paste0(
         "<w:tcPr>",
         sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", cell_w),
@@ -706,7 +891,9 @@ backend_docx <- function(grid, file) {
   hyperlinks,
   rid_map = NULL,
   preset = NULL,
-  cs = NULL
+  cs = NULL,
+  top_border = "",
+  bottom_border = ""
 ) {
   surface_node <- .chrome_surface_at(cs, "header")
   cells <- vapply(
@@ -772,9 +959,14 @@ backend_docx <- function(grid, file) {
       }
       jc <- .docx_align_token(halign)
       valign_tok <- .docx_valign_token(valign)
+      # Toprule rides the label row only when no band rows preceded it
+      # (caller passes "" otherwise); the midrule (chrome `header_bottom`)
+      # always closes the column-label band, full table width.
+      tc_borders <- .docx_tcborders(top_border, bottom_border)
       tc_pr <- sprintf(
-        "<w:tcPr><w:tcW w:w=\"%d\" w:type=\"dxa\"/>%s</w:tcPr>",
+        "<w:tcPr><w:tcW w:w=\"%d\" w:type=\"dxa\"/>%s%s</w:tcPr>",
         widths_twips[[j]],
+        tc_borders,
         valign_tok
       )
       paste0(
@@ -1173,12 +1365,26 @@ backend_docx <- function(grid, file) {
       ""
     }
   )
+  # Header / footer placement mirrors RTF's `.rtf_section_def`
+  # (`\headery` / `\footery`). Margins stay EXACTLY the preset values,
+  # never enlarged: the header sits one body line above the top margin
+  # and flows upward (row 1 = body edge), the footer sits at the
+  # bottom-margin line and flows downward (footnotes near the body,
+  # program-path below). Word auto-expands the footer upward INTO the
+  # body when the footnote block is tall, so extra footnotes eat body
+  # space instead of growing the page (galley's model) -- never
+  # reserve margin, never overlap.
+  head_line <- as.integer(round(preset@font_size * 28))
+  header_dist <- max(360L, margins$top - head_line)
+  footer_dist <- margins$bottom
   pg_mar <- sprintf(
-    "<w:pgMar w:top=\"%d\" w:right=\"%d\" w:bottom=\"%d\" w:left=\"%d\" w:header=\"720\" w:footer=\"720\" w:gutter=\"0\"/>",
+    "<w:pgMar w:top=\"%d\" w:right=\"%d\" w:bottom=\"%d\" w:left=\"%d\" w:header=\"%d\" w:footer=\"%d\" w:gutter=\"0\"/>",
     margins$top,
     margins$right,
     margins$bottom,
-    margins$left
+    margins$left,
+    header_dist,
+    footer_dist
   )
   refs <- character()
   if (!is.null(rid_map) && !is.null(rid_map$header)) {
@@ -1286,7 +1492,11 @@ backend_docx <- function(grid, file) {
 # Center / Right slots; empty slots collapse). Rows emit in
 # FORWARD index order so row 1 (body edge) ends up at the top of
 # the footer zone — matches the RTF footer convention.
-.docx_footer_xml <- function(pagefoot_ast, preset) {
+# `footnote_block` (when `repeat_footnotes` is on) is placed ABOVE the
+# pagefoot chrome rows, so the footer reads footnotes-then-program-path
+# top to bottom, repeating on every page. Mirrors RTF's `{\footer}`
+# (footnote lines above the program-path band).
+.docx_footer_xml <- function(pagefoot_ast, preset, footnote_block = "") {
   nrow_band <- .page_band_nrow(pagefoot_ast)
   rows <- character()
   for (i in seq_len(nrow_band)) {
@@ -1298,6 +1508,7 @@ backend_docx <- function(grid, file) {
     "<w:ftr ",
     .docx_ns_decls,
     ">",
+    footnote_block,
     paste(rows, collapse = ""),
     "</w:ftr>"
   )
@@ -1556,14 +1767,17 @@ backend_docx <- function(grid, file) {
   )
 }
 
-# `word/styles.xml` — style definitions, pandoc-shaped. Defaults
-# point at the **theme** font (`asciiTheme="minorHAnsi"`) instead of
-# a hardcoded face name; the theme cascade in `word/theme/theme1.xml`
-# resolves `minorHAnsi` -> a real installed face the consuming app
-# recognises (Word ships Aptos by default; LibreOffice substitutes
-# Liberation). This avoids the trap of embedding CSS-generic family
-# names ("serif", "sans") into `<w:rFonts w:ascii=>`, which Word
-# treats as unknown fonts and refuses to open.
+# `word/styles.xml` — style definitions, pandoc-shaped. The default
+# run font is the resolved `preset@font_family` primary face (e.g.
+# `Liberation Mono` for the `"mono"` default), pinned directly into
+# `<w:rFonts w:ascii=>` and declared in `word/fontTable.xml` with a
+# metric-compatible substitute (RTF's `\*\falt` discipline). This is
+# the SSOT principle: the body font comes from the preset, not from
+# the Office theme. The earlier `asciiTheme="minorHAnsi"` form let
+# Word substitute Aptos/Calibri and silently dropped the user's font
+# choice. Naming an installed face with a declared fallback is safe;
+# the "Word rejects unknown fonts" hazard applies only to CSS generic
+# names (`serif` / `sans`), which `.resolve_font_stack()` never emits.
 #
 # Three named styles are declared so other parts of `document.xml`
 # can reference them via `<w:pStyle>` instead of repeating inline
@@ -1574,13 +1788,21 @@ backend_docx <- function(grid, file) {
 #   TabularFoot  — left-aligned, used by the footnote block.
 .docx_styles_xml <- function(preset) {
   half_pts <- as.integer(round(preset@font_size * 2))
+  face <- .docx_escape_attr(
+    .docx_primary_font(.resolve_font_stack(preset@font_family, "docx"))
+  )
   paste0(
     .docx_xml_prologue,
     "<w:styles ",
     .docx_ns_decls,
     ">",
     "<w:docDefaults><w:rPrDefault><w:rPr>",
-    "<w:rFonts w:asciiTheme=\"minorHAnsi\" w:hAnsiTheme=\"minorHAnsi\" w:cstheme=\"minorBidi\" w:eastAsiaTheme=\"minorEastAsia\"/>",
+    sprintf(
+      "<w:rFonts w:ascii=\"%s\" w:hAnsi=\"%s\" w:cs=\"%s\"/>",
+      face,
+      face,
+      face
+    ),
     sprintf("<w:sz w:val=\"%d\"/><w:szCs w:val=\"%d\"/>", half_pts, half_pts),
     "<w:lang w:val=\"en-US\" w:eastAsia=\"en-US\" w:bidi=\"ar-SA\"/>",
     "</w:rPr></w:rPrDefault>",
@@ -1629,38 +1851,71 @@ backend_docx <- function(grid, file) {
   paste(readLines(path, warn = FALSE), collapse = "\n")
 }
 
-# `word/fontTable.xml` — declares the font faces the document may
-# reference. Word uses panose1 / charset / family / pitch / sig
-# fingerprints to find a substitute when the named face is not
-# installed. We declare the five Office defaults (Calibri / Cambria
-# / Aptos / Times New Roman / Courier New) that Word knows how to
-# substitute. Pandoc emits the same set.
+# OOXML font fingerprints keyed by family class. Word uses
+# panose1 / charset / family / pitch / sig to find a metric-
+# compatible substitute when a named face is absent. The three
+# classes cover every face `.resolve_font_stack()` can emit:
+# `modern` (mono, Courier-metric), `roman` (serif, Times-metric),
+# `swiss` (sans, Arial-metric).
+.docx_font_fingerprint <- list(
+  modern = paste0(
+    "<w:panose1 w:val=\"02070309020205020404\"/>",
+    "<w:charset w:val=\"00\"/><w:family w:val=\"modern\"/><w:pitch w:val=\"fixed\"/>",
+    "<w:sig w:usb0=\"E0002AFF\" w:usb1=\"C0007843\" w:usb2=\"00000009\" w:usb3=\"00000000\" w:csb0=\"000001FF\" w:csb1=\"00000000\"/>"
+  ),
+  roman = paste0(
+    "<w:panose1 w:val=\"02020603050405020304\"/>",
+    "<w:charset w:val=\"00\"/><w:family w:val=\"roman\"/><w:pitch w:val=\"variable\"/>",
+    "<w:sig w:usb0=\"E0002EFF\" w:usb1=\"C000785B\" w:usb2=\"00000009\" w:usb3=\"00000000\" w:csb0=\"000001FF\" w:csb1=\"00000000\"/>"
+  ),
+  swiss = paste0(
+    "<w:panose1 w:val=\"020B0604020202020204\"/>",
+    "<w:charset w:val=\"00\"/><w:family w:val=\"swiss\"/><w:pitch w:val=\"variable\"/>",
+    "<w:sig w:usb0=\"E0002AFF\" w:usb1=\"C000247B\" w:usb2=\"00000009\" w:usb3=\"00000000\" w:csb0=\"000001FF\" w:csb1=\"00000000\"/>"
+  )
+)
+
+# Classify a resolved font stack into one OOXML family class by
+# membership in the shared cores from `R/fonts.R`. Mono wins first
+# (the `"mono"` default), then serif, then sans; an unrecognised
+# named face defaults to `swiss` (the safe variable-pitch class).
+.docx_font_class <- function(stack) {
+  if (any(stack %in% .stack_mono)) {
+    return("modern")
+  }
+  if (any(stack %in% .stack_serif)) {
+    return("roman")
+  }
+  "swiss"
+}
+
+# `word/fontTable.xml` — declares the resolved `preset@font_family`
+# stack so the consuming app can substitute a metric-compatible face
+# when the primary is absent. The primary face (e.g. `Liberation
+# Mono`) leads; the stack tail (e.g. `Courier New`, `Courier`) are
+# the declared substitutes, the OOXML form of RTF's `\*\falt`. Every
+# face in one stack shares the class fingerprint, since the stack is
+# metric-compatible by construction.
 .docx_font_table <- function(preset) {
+  stack <- .resolve_font_stack(preset@font_family, "docx")
+  fp <- .docx_font_fingerprint[[.docx_font_class(stack)]]
+  decls <- vapply(
+    unique(stack),
+    function(face) {
+      sprintf(
+        "<w:font w:name=\"%s\">%s</w:font>",
+        .docx_escape_attr(face),
+        fp
+      )
+    },
+    character(1L)
+  )
   paste0(
     .docx_xml_prologue,
     "<w:fonts ",
     .docx_ns_decls,
     ">",
-    "<w:font w:name=\"Calibri\">",
-    "<w:panose1 w:val=\"020F0502020204030204\"/>",
-    "<w:charset w:val=\"00\"/><w:family w:val=\"swiss\"/><w:pitch w:val=\"variable\"/>",
-    "<w:sig w:usb0=\"E0002AFF\" w:usb1=\"C000247B\" w:usb2=\"00000009\" w:usb3=\"00000000\" w:csb0=\"000001FF\" w:csb1=\"00000000\"/>",
-    "</w:font>",
-    "<w:font w:name=\"Cambria\">",
-    "<w:panose1 w:val=\"02040503050406030204\"/>",
-    "<w:charset w:val=\"00\"/><w:family w:val=\"roman\"/><w:pitch w:val=\"variable\"/>",
-    "<w:sig w:usb0=\"E00002FF\" w:usb1=\"400004FF\" w:usb2=\"00000000\" w:usb3=\"00000000\" w:csb0=\"0000019F\" w:csb1=\"00000000\"/>",
-    "</w:font>",
-    "<w:font w:name=\"Times New Roman\">",
-    "<w:panose1 w:val=\"02020603050405020304\"/>",
-    "<w:charset w:val=\"00\"/><w:family w:val=\"roman\"/><w:pitch w:val=\"variable\"/>",
-    "<w:sig w:usb0=\"E0002EFF\" w:usb1=\"C000785B\" w:usb2=\"00000009\" w:usb3=\"00000000\" w:csb0=\"000001FF\" w:csb1=\"00000000\"/>",
-    "</w:font>",
-    "<w:font w:name=\"Courier New\">",
-    "<w:panose1 w:val=\"02070309020205020404\"/>",
-    "<w:charset w:val=\"00\"/><w:family w:val=\"modern\"/><w:pitch w:val=\"fixed\"/>",
-    "<w:sig w:usb0=\"E0002AFF\" w:usb1=\"C0007843\" w:usb2=\"00000009\" w:usb3=\"00000000\" w:csb0=\"000001FF\" w:csb1=\"00000000\"/>",
-    "</w:font>",
+    paste(decls, collapse = ""),
     "</w:fonts>"
   )
 }
@@ -1934,6 +2189,45 @@ backend_docx <- function(grid, file) {
     sz,
     color_attr
   )
+}
+
+# Resolve a chrome border region into one OOXML cell-side element
+# (e.g. `<w:top w:space="0" w:val="single" .../>`) or "" when the
+# region carries no rule. The OOXML twin of `.rtf_chrome_border_seg`:
+# the resolved `chrome_style$borders` triple wins; a NULL region
+# falls back to `backend_default` ("solid" -> 0.5pt ink, else no
+# rule); an explicit "none" triple suppresses the side. `side` is
+# the cell side this region writes to ("top" for `header_top`,
+# "bottom" for `header_bottom`).
+.docx_chrome_border_seg <- function(
+  cs,
+  region,
+  side,
+  backend_default = "solid"
+) {
+  triple <- .chrome_border_at(cs, region)
+  if (is.null(triple)) {
+    if (!identical(backend_default, "solid")) {
+      return("")
+    }
+    triple <- list(style = "solid", width = 0.5, color = .tabular_ink)
+  } else if (identical(triple$style, "none")) {
+    return("")
+  }
+  sprintf("<w:%s w:space=\"0\" %s/>", side, .docx_border_attrs(triple))
+}
+
+# Wrap an ordered set of cell-side border elements into a single
+# `<w:tcBorders>`. Empty entries drop out; an all-empty set yields ""
+# (no element emitted). OOXML side order is top -> left -> bottom ->
+# right, so callers pass elements already in that order.
+.docx_tcborders <- function(...) {
+  sides <- c(...)
+  sides <- sides[nzchar(sides)]
+  if (length(sides) == 0L) {
+    return("")
+  }
+  paste0("<w:tcBorders>", paste(sides, collapse = ""), "</w:tcBorders>")
 }
 
 # Translate a `style_node` to a `<w:rPr>` XML fragment carrying

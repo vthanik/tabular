@@ -155,7 +155,15 @@ test_that("DOCX explicit border_top_style='none' suppresses emission", {
     readLines(file.path(td, "word", "document.xml"), warn = FALSE),
     collapse = ""
   )
-  expect_false(grepl("<w:top ", doc, fixed = TRUE))
+  # Scope to the body row: the column-header label row legitimately
+  # carries the structural toprule (header_top, default solid). The
+  # body cell's explicit border_top_style="none" must still suppress
+  # its own top border.
+  rows <- regmatches(doc, gregexpr("<w:tr>.*?</w:tr>", doc, perl = TRUE))[[
+    1L
+  ]]
+  body_row <- rows[!grepl("<w:tblHeader/>", rows)][[1L]]
+  expect_false(grepl("<w:top ", body_row, fixed = TRUE))
 })
 
 # ---------------------------------------------------------------------

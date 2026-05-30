@@ -118,7 +118,7 @@ test_that("rules knob honours the 'none' explicit-clear sentinel on midrule", {
 test_that("as_grid() puts chrome_style on grid@metadata", {
   spec <- tabular(saf_demo) |>
     preset(rules = list(midrule = brdr(width = 1, color = "#000000")))
-  grid <- as_grid(spec)
+  grid <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   cs <- grid@metadata$chrome_style
   expect_type(cs, "list")
   expect_named(cs, c("borders", "surfaces"))
