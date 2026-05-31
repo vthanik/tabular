@@ -1264,3 +1264,22 @@ test_that("RTF pagehead slot honors color / font_family / background (#page-chro
   # Background shading emitted on the slot cell.
   expect_true(grepl("clcbpat", rtf, fixed = TRUE))
 })
+
+# ---- RTF body cell per-side padding (#cell-padding) ---------------------
+
+test_that("RTF body cells emit per-side padding via clpad (#cell-padding)", {
+  spec <- tabular(data.frame(x = c("1", "2"))) |>
+    cols(x = col_spec(label = "X")) |>
+    style(
+      padding_top = 15,
+      padding_bottom = 15,
+      padding_left = 15,
+      .at = cells_body()
+    )
+  f <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_true(grepl("clpadt", rtf, fixed = TRUE))
+  expect_true(grepl("clpadb", rtf, fixed = TRUE))
+  expect_true(grepl("clpadl", rtf, fixed = TRUE))
+})

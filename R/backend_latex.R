@@ -1635,13 +1635,26 @@ backend_latex <- function(grid, file) {
 # Returns an empty character vector when no padding override is
 # active so the longtblr arg stays minimal.
 .latex_rowsep_inner <- function(cells_style) {
-  # rowsep is vertical, so read the vertical (top) per-side padding
-  # override; default cell_padding leaves it NA so the arg is omitted.
-  pt <- .first_cell_padding_sides(cells_style)[["top"]]
-  if (is.na(pt)) {
-    return(character())
+  # Vertical per-cell padding -> tabularray row separation. Symmetric
+  # top == bottom collapses to a single `rowsep`; an asymmetric override
+  # (e.g. `padding_bottom` alone) emits `abovesep` / `belowsep` so the
+  # bottom padding is no longer dropped. Default cell_padding leaves both
+  # NA, so the arg is omitted (tabularray's own rowsep default applies).
+  sides <- .first_cell_padding_sides(cells_style)
+  pt <- sides[["top"]]
+  pb <- sides[["bottom"]]
+  fmt <- function(v) format(v, trim = TRUE, scientific = FALSE)
+  if (!is.na(pt) && !is.na(pb) && isTRUE(all.equal(pt, pb))) {
+    return(sprintf("rowsep=%spt", fmt(pt)))
   }
-  sprintf("rowsep=%spt", format(pt, trim = TRUE, scientific = FALSE))
+  out <- character()
+  if (!is.na(pt)) {
+    out <- c(out, sprintf("abovesep=%spt", fmt(pt)))
+  }
+  if (!is.na(pb)) {
+    out <- c(out, sprintf("belowsep=%spt", fmt(pb)))
+  }
+  out
 }
 
 # tabularray `\SetRow{abovesep=, belowsep=}` prefix from a chrome

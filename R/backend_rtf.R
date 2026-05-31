@@ -1856,6 +1856,7 @@ backend_rtf <- function(grid, file) {
         .rtf_border_seg("left", sn, "none"),
         .rtf_border_seg("right", sn, "none"),
         shading,
+        .rtf_cell_padding(sn),
         valign_tok,
         sprintf("\\cellx%d", as.integer(cellx[[i]]))
       )
