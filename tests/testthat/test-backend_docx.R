@@ -1446,9 +1446,16 @@ test_that("DOCX panels = 2 emit one self-contained <w:tbl> per panel", {
     collapse = ""
   )
 
-  # One `<w:tbl>` per panel, separated by a hard page break.
+  # One `<w:tbl>` per panel, separated by a next-page section break.
+  # Two panels -> 2 `<w:sectPr>` (one in-paragraph break after panel 1
+  # + the body-level section for panel 2). No empty pageBreakBefore
+  # paragraph (it would render as a blank line above panel 2's title).
   expect_identical(length(gregexpr("<w:tbl>", xml, fixed = TRUE)[[1L]]), 2L)
-  expect_match(xml, "pageBreakBefore", fixed = TRUE)
+  expect_identical(
+    length(gregexpr("<w:sectPr>", xml, fixed = TRUE)[[1L]]),
+    2L
+  )
+  expect_false(grepl("pageBreakBefore", xml, fixed = TRUE))
 
   # Each panel's `<w:tblGrid>` matches its OWN column set: panel 1 =
   # stub(2) + data(2) = 4 gridCols; panel 2 = stub(2) + data(1) = 3.
@@ -1480,6 +1487,11 @@ test_that("DOCX panels = 1 emit a single <w:tbl> with no inter-panel break", {
     collapse = ""
   )
   expect_identical(length(gregexpr("<w:tbl>", xml, fixed = TRUE)[[1L]]), 1L)
+  # Single panel -> one section (just the body-level sectPr), no break.
+  expect_identical(
+    length(gregexpr("<w:sectPr>", xml, fixed = TRUE)[[1L]]),
+    1L
+  )
   expect_false(grepl("pageBreakBefore", xml, fixed = TRUE))
 })
 

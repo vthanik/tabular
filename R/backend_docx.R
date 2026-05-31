@@ -303,7 +303,8 @@ backend_docx <- function(grid, file) {
   # grid/header. Word paginates the body within a panel via
   # `<w:tblHeader/>` + `<w:cantSplit/>`; subgroups stay inline within a
   # panel's table (the banner rows in `.render_docx_body_rows`). Panels
-  # are separated by a hard page break. When `repeat_titles` is set
+  # are separated by a next-page section break (see below). When
+  # `repeat_titles` is set
   # (the `repeat_content` default), the title block rides EVERY panel's
   # table as `<w:tblHeader/>` rows so it repeats on every panel page,
   # matching RTF; otherwise it renders once as paragraphs above panel 1
@@ -322,7 +323,20 @@ backend_docx <- function(grid, file) {
       pad_title_bottom = pad_title_bottom
     )
   } else {
-    panel_break <- "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>"
+    # Separate panels with a next-page SECTION break (a paragraph
+    # carrying the section's `<w:sectPr>`), placed AFTER each panel
+    # except the last. The section mark forces the next panel onto a
+    # fresh page AND keeps Word from merging the two `<w:tbl>`
+    # elements, with no visible blank line above the next panel's
+    # title -- an empty `pageBreakBefore` paragraph would render as a
+    # leading blank line. Mirrors RTF's `\sect` per panel; the final
+    # panel is closed by the body-level `sect_pr` appended downstream.
+    sect_break <- paste0(
+      "<w:p><w:pPr>",
+      .docx_section_pr(preset, rid_map),
+      "</w:pPr></w:p>"
+    )
+    n_panels <- length(panel_groups)
     panel_tables <- vapply(
       seq_along(panel_groups),
       function(gi) {
@@ -337,7 +351,7 @@ backend_docx <- function(grid, file) {
           pad_title_top = pad_title_top,
           pad_title_bottom = pad_title_bottom
         )
-        if (gi > 1L) paste0(panel_break, tbl) else tbl
+        if (gi < n_panels) paste0(tbl, sect_break) else tbl
       },
       character(1L)
     )
