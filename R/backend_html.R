@@ -1265,6 +1265,32 @@ backend_html <- function(grid, file) {
   sprintf("border-%s: %gpt %s %s;", side, brd$width, css_style, brd$color)
 }
 
+# `.tabular-table th/td` padding CSS. The default `cell_padding` keeps the
+# responsive rem-based padding (comfortable on screen and the baseline the
+# indent `calc(.6rem + ...)` builds on); an explicit `preset(cell_padding
+# = ...)` override emits the four sides in pt so the knob reaches HTML like
+# the paged backends. Compared against the factory default so the common
+# case is byte-unchanged.
+.html_cell_padding_css <- function(preset) {
+  rem_default <- ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }"
+  if (!is_preset_spec(preset)) {
+    return(rem_default)
+  }
+  cp <- as.numeric(preset@cell_padding)
+  default_cp <- as.numeric(preset_spec()@cell_padding)
+  if (length(cp) == length(default_cp) && isTRUE(all.equal(cp, default_cp))) {
+    return(rem_default)
+  }
+  s <- .cell_padding_sides(preset)
+  sprintf(
+    ".tabular-table th, .tabular-table td { padding: %gpt %gpt %gpt %gpt; }",
+    s[["top"]],
+    s[["right"]],
+    s[["bottom"]],
+    s[["left"]]
+  )
+}
+
 # Build one structural CSS rule (`<selector> { border-<side>: ... }`)
 # from a resolved border triple, or NULL when the rule is off
 # (NULL / style "none"). Drives the thead toprule / midrule / spanrule
@@ -1726,7 +1752,7 @@ backend_html <- function(grid, file) {
       ".tabular-table { border-collapse: collapse; font-size: %gpt; margin: 0 auto; }",
       fs
     ),
-    ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }",
+    .html_cell_padding_css(preset),
     ".tabular-table td { text-align: left; vertical-align: top; }",
     # Top rule sits above the entire thead block — scoped to the
     # FIRST thead row only. A blanket `thead th { border-top }` would

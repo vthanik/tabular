@@ -2554,3 +2554,27 @@ test_that("cells_pagehead(slot=) styles one slot + band border in HTML (#thread-
     "<header class=\"tabular-page-header\" style=\"border-bottom: 0\\.5pt solid"
   )
 })
+
+# ---- preset(cell_padding=) reaches HTML when overridden (#html-padding) --
+
+test_that("preset(cell_padding=) sets HTML td/th padding in pt when overridden (#html-padding)", {
+  spec <- tabular(data.frame(x = c("1", "2"))) |>
+    cols(x = col_spec(label = "X")) |>
+    preset(cell_padding = 20)
+  f <- withr::local_tempfile(fileext = ".html")
+  emit(spec, f)
+  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_true(grepl(
+    ".tabular-table th, .tabular-table td { padding: 20pt 20pt 20pt 20pt; }",
+    html,
+    fixed = TRUE
+  ))
+})
+
+test_that("default cell_padding keeps the responsive rem padding in HTML (#html-padding)", {
+  spec <- tabular(data.frame(x = c("1", "2")))
+  f <- withr::local_tempfile(fileext = ".html")
+  emit(spec, f)
+  html <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_true(grepl("padding: .35rem .6rem;", html, fixed = TRUE))
+})
