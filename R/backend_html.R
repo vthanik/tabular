@@ -1038,6 +1038,21 @@ backend_html <- function(grid, file) {
   inner <- .render_html_inline(subgroup_line_ast)
   surface_node <- .chrome_surface_at(cs, "subgroup")
   surface_style <- .html_chrome_inline_style(surface_node)
+  # `style(border_*, .at = cells_subgroup_labels())` lowers to the chrome
+  # subgroup_top / subgroup_bottom regions (RTF reads these); fold their
+  # decls into the banner cell's inline style.
+  border_decls <- c(
+    .html_border_decl("top", .chrome_border_at(cs, "subgroup_top")),
+    .html_border_decl("bottom", .chrome_border_at(cs, "subgroup_bottom"))
+  )
+  if (length(border_decls) > 0L) {
+    border_str <- paste(border_decls, collapse = " ")
+    surface_style <- if (nzchar(surface_style)) {
+      sub("\"$", paste0("; ", border_str, "\""), surface_style)
+    } else {
+      sprintf(" style=\"%s\"", border_str)
+    }
+  }
   halign <- if (
     is_style_node(surface_node) &&
       length(surface_node@halign) == 1L &&

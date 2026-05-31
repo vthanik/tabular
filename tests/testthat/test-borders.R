@@ -335,3 +335,40 @@ test_that("RTF + DOCX outer-frame thick top rides the topmost header row (#frame
   first_wtop <- regmatches(docx, regexpr("<w:top [^>]*w:sz=\"[0-9]+\"", docx))
   expect_match(first_wtop, "w:sz=\"12\"")
 })
+
+# ---- cells_subgroup_labels() border (#subgroup-border) ------------------
+
+mk_subgroup_border_spec <- function() {
+  d <- data.frame(
+    pop = c("Saf", "Saf"),
+    lab = c("A", "B"),
+    x = c("1", "2"),
+    stringsAsFactors = FALSE
+  )
+  tabular(d) |>
+    cols(lab = col_spec(label = "L"), x = col_spec(label = "X")) |>
+    subgroup("pop") |>
+    style(
+      border_bottom = brdr(width = "thick"),
+      .at = cells_subgroup_labels()
+    )
+}
+
+test_that("cells_subgroup_labels() border renders on HTML + DOCX (#subgroup-border)", {
+  spec <- mk_subgroup_border_spec()
+  fh <- withr::local_tempfile(fileext = ".html")
+  emit(spec, fh)
+  html <- paste(readLines(fh, warn = FALSE), collapse = "\n")
+  expect_true(grepl("tabular-subgroup", html, fixed = TRUE))
+  expect_true(grepl("border-bottom: 1.5pt", html, fixed = TRUE))
+
+  fz <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, fz)
+  dir <- withr::local_tempdir()
+  utils::unzip(fz, exdir = dir)
+  docx <- paste(
+    readLines(file.path(dir, "word", "document.xml"), warn = FALSE),
+    collapse = "\n"
+  )
+  expect_true(grepl("<w:bottom [^>]*w:sz=\"12\"", docx))
+})

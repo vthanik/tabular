@@ -1496,8 +1496,22 @@ backend_docx <- function(grid, file) {
   # Merged full-width cell: both frame edges ride it, plus the subgroup
   # surface background (RTF parity). `<w:tcBorders>` then `<w:shd>` then
   # `<w:vAlign>` in CT_TcPr order.
+  # Frame L/R edges plus the subgroup top / bottom rules from
+  # `style(border_*, .at = cells_subgroup_labels())` (chrome subgroup_top /
+  # subgroup_bottom regions, RTF parity). CT_TcBorders order: top, left,
+  # bottom, right.
   merged_edges <- .docx_tcborders(
+    .docx_border_seg_from_triple(
+      .chrome_border_at(cs, "subgroup_top"),
+      "top",
+      "none"
+    ),
     .docx_frame_edge("left", body_borders),
+    .docx_border_seg_from_triple(
+      .chrome_border_at(cs, "subgroup_bottom"),
+      "bottom",
+      "none"
+    ),
     .docx_frame_edge("right", body_borders)
   )
   banner_shd <- .docx_shd_from_style(surface_node)
