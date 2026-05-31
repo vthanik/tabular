@@ -1851,10 +1851,10 @@ backend_rtf <- function(grid, file) {
       }
       shading <- .rtf_cell_shading(sn, colors)
       cellx_lines[[i]] <- paste0(
-        .rtf_border_seg("top", sn, "none"),
-        .rtf_border_seg("bottom", sn, bottom_default),
-        .rtf_border_seg("left", sn, "none"),
-        .rtf_border_seg("right", sn, "none"),
+        .rtf_border_seg("top", sn, "none", colors),
+        .rtf_border_seg("bottom", sn, bottom_default, colors),
+        .rtf_border_seg("left", sn, "none", colors),
+        .rtf_border_seg("right", sn, "none", colors),
         shading,
         .rtf_cell_padding(sn),
         valign_tok,
@@ -2083,7 +2083,12 @@ backend_rtf <- function(grid, file) {
 #
 # Returns a fragment like `\clbrdrt\brdrs\brdrw10` (solid 0.5pt) or
 # `\clbrdrt\brdrnone` for the cleared case.
-.rtf_border_seg <- function(side, cell_style, backend_default = "none") {
+.rtf_border_seg <- function(
+  side,
+  cell_style,
+  backend_default = "none",
+  colors = NULL
+) {
   brd <- .effective_border(side, cell_style)
   letter <- substr(side, 1, 1)
   prefix <- paste0("\\clbrdr", letter)
@@ -2109,7 +2114,34 @@ backend_rtf <- function(grid, file) {
     "\\brdrs"
   )
   twips <- max(1L, as.integer(round(brd$width * 20)))
-  paste0(prefix, style_tok, sprintf("\\brdrw%d", twips))
+  paste0(
+    prefix,
+    style_tok,
+    sprintf("\\brdrw%d", twips),
+    .rtf_brdrcf(brd$color, colors)
+  )
+}
+
+# `\brdrcf<n>` colour token for a border, or "" when the colour is unset,
+# the default ink, or not registered in the colour table. The default ink
+# (`.tabular_ink`, the colour the engine stamps on every default rule) is
+# skipped so default borders render via Word's own black default and only
+# a genuinely custom border colour emits a token (no churn on the common
+# case). Keeps the border builders' colour handling in one place.
+.rtf_brdrcf <- function(color, colors) {
+  if (
+    is.null(colors) ||
+      is.null(color) ||
+      length(color) != 1L ||
+      is.na(color) ||
+      !nzchar(color) ||
+      identical(color, "currentColor") ||
+      identical(color, .tabular_ink)
+  ) {
+    return("")
+  }
+  idx <- colors$lookup(color)
+  if (is.na(idx)) "" else sprintf("\\brdrcf%d", idx)
 }
 
 # Row-level border segment (`\trbrdr<letter>`) from a manifest triple,
@@ -2477,7 +2509,25 @@ backend_rtf <- function(grid, file) {
     .rtf_valid_props(lapply(
       cell_styles,
       function(sn) {
-        if (is_style_node(sn)) c(sn@color, sn@background) else NULL
+        if (!is_style_node(sn)) {
+          return(NULL)
+        }
+        # Border colours equal to the default ink are NOT registered: the
+        # engine stamps the ink on every default rule, and emitting it would
+        # churn the colour table on every table. Only a genuinely custom
+        # border colour earns a colortbl slot (and a `\brdrcf` token).
+        border_cols <- c(
+          sn@border_top_color,
+          sn@border_bottom_color,
+          sn@border_left_color,
+          sn@border_right_color
+        )
+        border_cols <- border_cols[
+          !is.na(border_cols) &
+            border_cols != .tabular_ink &
+            border_cols != "currentColor"
+        ]
+        c(sn@color, sn@background, border_cols)
       }
     ))
   })

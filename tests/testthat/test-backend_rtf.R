@@ -1283,3 +1283,20 @@ test_that("RTF body cells emit per-side padding via clpad (#cell-padding)", {
   expect_true(grepl("clpadb", rtf, fixed = TRUE))
   expect_true(grepl("clpadl", rtf, fixed = TRUE))
 })
+
+# ---- RTF per-cell border colour (#border-color) -------------------------
+
+test_that("RTF emits brdrcf for a coloured body-cell border (#border-color)", {
+  spec <- tabular(data.frame(x = c("1", "2"))) |>
+    cols(x = col_spec(label = "X")) |>
+    style(
+      border_bottom = brdr(width = "thick", color = "#FF0000"),
+      .at = cells_body()
+    )
+  f <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  # Red registered in the colour table and referenced on the border.
+  expect_true(grepl("\\red255\\green0\\blue0", rtf, fixed = TRUE))
+  expect_true(grepl("brdrcf", rtf, fixed = TRUE))
+})
