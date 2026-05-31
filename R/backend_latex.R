@@ -769,10 +769,18 @@ backend_latex <- function(grid, file) {
 #
 # Rows 1..rowhead are the header band; tabularray's hline{N}
 # numbering counts from the table's top row, so the body's first
-# row is at index `rowhead + 1`. Per-cell predicate borders from
-# `style()` against `cells_body()` are NOT routed through this
-# surface; they ride on cells_style[r,c] and are emitted by the
-# per-cell `\SetCell{borders}` path.
+# row is at index `rowhead + 1`.
+#
+# KNOWN LIMITATION: per-cell `style(border_*, .at = cells_body())`
+# borders on a SINGLE body cell are not rendered by the LaTeX backend
+# (they are honored by HTML / RTF / DOCX). tabularray draws per-cell
+# borders only through row/col-indexed `hline{r}={c}` / `vline{c}={r}`
+# directives, which cannot be derived from `cells_style[r,c]@border_*`
+# without colliding with the structural `outer` / `rows` / `cols`
+# stamps that share the same per-cell scalars (they would double-draw).
+# Structural body borders (the full frame, row rules, column rules) DO
+# render via the manifest below. The same indexing limit defers the
+# `cells_subgroup_labels()` banner rule on the LaTeX backend.
 .latex_border_directives <- function(
   body_borders,
   rowhead,
