@@ -133,3 +133,11 @@ test_that("a named padding vector sets only the listed per-side fields", {
   expect_true(is.na(node@padding_right))
   expect_true(is.na(node@padding_bottom))
 })
+
+test_that("style() rejects the legacy nested-list padding form (#knob-shape)", {
+  expect_error(
+    tabular(saf_demo) |>
+      style(padding = list(top = 5, bottom = 3), .at = cells_body()),
+    class = "tabular_error_input"
+  )
+})

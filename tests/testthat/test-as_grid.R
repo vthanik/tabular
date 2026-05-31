@@ -243,6 +243,71 @@ test_that("stripe never overwrites an explicit per-cell background", {
   expect_identical(st[[2L, "lbl"]]@background, "#ff0000")
 })
 
+test_that("stripe fills synthesised group-header + blank rows (look-ahead parity)", {
+  spec <- tabular(saf_demo) |>
+    cols(
+      variable = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(align = "left"),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    preset(stripe = c(odd = "#f5f5f5", even = "#ffffff"))
+  page <- as_grid(spec)@pages[[1L]]
+  st <- page$cells_style
+  is_hdr <- page$is_header_row
+  is_blk <- page$is_blank_row
+  cn <- colnames(st)[[1L]]
+  # The stripe now reaches every synthesised special row (previously
+  # skipped, leaving white gaps in the zebra band).
+  special <- which(is_hdr | is_blk)
+  expect_gt(length(special), 0L)
+  for (r in special) {
+    expect_false(is.na(st[[r, cn]]@background))
+  }
+  # Continuity: a special row inherits the fill of the NEXT data row
+  # (look-ahead parity), so the group-header reads as one band with its
+  # block. The parity counter only advanced on data rows.
+  first_hdr <- which(is_hdr)[[1L]]
+  after <- which(!is_hdr & !is_blk & seq_along(is_hdr) > first_hdr)
+  expect_gt(length(after), 0L)
+  expect_identical(
+    st[[first_hdr, cn]]@background,
+    st[[after[[1L]], cn]]@background
+  )
+})
+
+test_that("explicit cells_group_headers(background=) beats the stripe fill", {
+  spec <- tabular(saf_demo) |>
+    cols(
+      variable = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(align = "left"),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    preset(stripe = c(odd = "#f5f5f5", even = "#ffffff")) |>
+    style(background = "#abcdef", .at = cells_group_headers())
+  page <- as_grid(spec)@pages[[1L]]
+  st <- page$cells_style
+  first_hdr <- which(page$is_header_row)[[1L]]
+  host <- which(vapply(
+    seq_len(ncol(st)),
+    function(j) {
+      nm <- colnames(st)[[j]]
+      is_style_node(st[[first_hdr, nm]]) &&
+        identical(st[[first_hdr, nm]]@background, "#abcdef")
+    },
+    logical(1L)
+  ))
+  # The group-header host cell carries the explicit colour, not the
+  # stripe fill (group-header stamp runs before the stripe, and the
+  # stripe's is.na(bg) guard then leaves it alone).
+  expect_gt(length(host), 0L)
+})
+
 # ---------------------------------------------------------------------
 # spacing knob drives inter-section blank lines (meta$gaps)
 # ---------------------------------------------------------------------

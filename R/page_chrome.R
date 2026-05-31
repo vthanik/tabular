@@ -366,19 +366,27 @@
 # Backends use this to decide whether to emit the chrome scaffolding
 # at all (RTF `{\header}` / `{\footer}` groups, LaTeX `\fancyhead`
 # blocks, HTML `@page` rules).
+# TRUE when one band slot (a list of per-row inline_asts) carries at
+# least one non-empty cell. The per-slot half of
+# `.page_band_is_populated()`; the HTML backend uses it to emit only the
+# populated slots, so a `left` + `right`-only band does not reserve a
+# blank centre third (DOCX / RTF already test populated-ness per slot).
+.page_band_slot_populated <- function(slot) {
+  for (cell in slot) {
+    if (is_inline_ast(cell) && length(cell@runs) > 0L) {
+      return(TRUE)
+    }
+  }
+  FALSE
+}
+
 .page_band_is_populated <- function(band) {
   if (is.null(band)) {
     return(FALSE)
   }
-  any_pop <- function(slot) {
-    for (cell in slot) {
-      if (is_inline_ast(cell) && length(cell@runs) > 0L) {
-        return(TRUE)
-      }
-    }
-    FALSE
-  }
-  any_pop(band$left) || any_pop(band$center) || any_pop(band$right)
+  .page_band_slot_populated(band$left) ||
+    .page_band_slot_populated(band$center) ||
+    .page_band_slot_populated(band$right)
 }
 
 # Row count of a resolved page band. Returns 0L when the band is

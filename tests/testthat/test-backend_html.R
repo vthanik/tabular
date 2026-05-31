@@ -2333,3 +2333,217 @@ test_that("HTML bold follows the user option: bold = FALSE renders normal, not t
     fixed = TRUE
   )
 })
+
+# ---------------------------------------------------------------------
+# Frame rules + page-chrome styling
+# ---------------------------------------------------------------------
+
+test_that("rules='frame' draws L/R as table-level CSS borders spanning all rows in HTML (#frame-left)", {
+  spec <- tabular(saf_demo, titles = "t", footnotes = "f") |>
+    cols(
+      variable = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(align = "left"),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    preset(rules = "frame")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # The frame's vertical edges (thin = 0.5pt, ink = #212529) ride the
+  # table element under border-collapse, so they span the spanner band,
+  # column labels, and every body row including the synthesised group-
+  # header + blank-separator rows (the original gap was per-cell stamps
+  # that only reached data rows).
+  expect_match(
+    txt,
+    "\\.tabular-table \\{ border-left: 0\\.5pt solid #212529;"
+  )
+  expect_match(
+    txt,
+    "\\.tabular-table \\{ border-right: 0\\.5pt solid #212529;"
+  )
+})
+
+test_that("page chrome font is max(fs-1,6)pt and borderless (#chrome-style)", {
+  spec <- tabular(saf_demo, titles = "t", footnotes = "f")
+  out <- withr::local_tempfile(fileext = ".html")
+  # saf_demo auto-sizes wider than the default page; the overflow warning
+  # is irrelevant to the chrome CSS this test pins.
+  suppressWarnings(emit(spec, out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Chrome tracks the body font in pt, not the old hardcoded .85rem.
+  expect_no_match(txt, "font-size: \\.85rem")
+  expect_match(
+    txt,
+    "\\.tabular-page-header, \\.tabular-page-footer \\{[^}]*font-size: \\d+pt"
+  )
+  # Borderless bands: no header border-bottom, no footer border-top.
+  expect_no_match(txt, "\\.tabular-page-header \\{[^}]*border-bottom")
+  expect_no_match(txt, "\\.tabular-page-footer \\{[^}]*border-top")
+})
+
+test_that("preset(padding=list(header=...)) emits header-surface padding (#thread-C)", {
+  df <- data.frame(grp = c("A", "B"), d50 = c("1", "2"), d100 = c("3", "4"))
+  spec <- tabular(df) |>
+    headers("Drug" = c("d50", "d100")) |>
+    preset(padding = list(header = c(top = 6, bottom = 6)))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Header band + column-label <th> carry the per-side padding via the
+  # shared `.html_chrome_inline_style` helper.
+  expect_match(txt, "padding-top: 6pt", fixed = TRUE)
+  expect_match(txt, "padding-bottom: 6pt", fixed = TRUE)
+})
+
+test_that("stripe + header background reach special rows in HTML (#thread-B)", {
+  spec <- tabular(saf_demo, titles = "T", footnotes = "F") |>
+    cols(
+      variable = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(align = "left"),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    headers("Active" = c("drug_50", "drug_100")) |>
+    preset(
+      stripe = c(odd = "#f5f5f5", even = "#ffffff"),
+      colors = list(header = c(background = "#dddddd"))
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  suppressWarnings(emit(spec, out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Blank separator rows now carry the stripe fill (previously a white gap
+  # because the renderer read no style_node).
+  expect_match(txt, "tabular-blank-row\"><td[^>]*background-color")
+  # The spanner band is coloured end-to-end: the EMPTY flanking <th>
+  # carries the header background too (no white flanks).
+  expect_match(
+    txt,
+    "<th colspan=\"[0-9]+\" style=\"[^\"]*background-color: #dddddd[^\"]*\"></th>"
+  )
+})
+
+test_that(".html_render_slot_ast_with_tokens renders rich markup + tokens (#thread-F)", {
+  # md() bold survives as <strong> (not flattened to literal **x**).
+  a1 <- parse_inline(md("**bold**"))
+  expect_match(
+    tabular:::.html_render_slot_ast_with_tokens(a1, total_pages = 1L),
+    "<strong>bold</strong>",
+    fixed = TRUE
+  )
+  # {page} / {npages} substitute AFTER rich rendering, so markup wrapping
+  # the token survives.
+  a2 <- parse_inline(md("Page **{page}** of {npages}"))
+  expect_match(
+    tabular:::.html_render_slot_ast_with_tokens(a2, total_pages = 42L),
+    "Page <strong>1</strong> of 42",
+    fixed = TRUE
+  )
+  # Empty AST -> "".
+  expect_identical(
+    tabular:::.html_render_slot_ast_with_tokens(
+      parse_inline(""),
+      total_pages = 1L
+    ),
+    ""
+  )
+})
+
+test_that("md()/html() markup survives in the HTML DOM page band (#thread-F)", {
+  spec <- tabular(saf_demo) |>
+    preset(
+      pagehead = list(
+        left = md("**Protocol** ABC"),
+        right = html("Page <b>{page}</b>")
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  suppressWarnings(emit(spec, out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Bold renders as <strong> in the DOM band (previously flattened to the
+  # literal "**Protocol**").
+  expect_match(txt, "<strong>Protocol</strong>", fixed = TRUE)
+  expect_no_match(txt, "**Protocol**", fixed = TRUE)
+  # The CSS @page print fragment stays FLAT (no markup in a content string).
+  page_css <- regmatches(
+    txt,
+    regexpr("@page[^}]*content:[^;]*", txt, perl = TRUE)
+  )
+  if (length(page_css) > 0L) {
+    expect_no_match(page_css, "<strong>", fixed = TRUE)
+  }
+})
+
+test_that("HTML page band emits only populated slots (#thread-E)", {
+  # A pagefoot with only left + right set must NOT reserve a blank centre
+  # third (which would squeeze + wrap the left content).
+  spec <- tabular(saf_demo) |>
+    preset(
+      pagefoot = list(
+        left = "Program: t_dm.R",
+        right = "Page {page} of {npages}"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  suppressWarnings(emit(spec, out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Match the DOM <div>, not the always-present `.tabular-page-*` CSS rule.
+  expect_match(txt, "<div class=\"tabular-page-footer-left\">", fixed = TRUE)
+  expect_match(txt, "<div class=\"tabular-page-footer-right\">", fixed = TRUE)
+  expect_no_match(
+    txt,
+    "<div class=\"tabular-page-footer-center\">",
+    fixed = TRUE
+  )
+  # A centre-only band still emits exactly its one slot.
+  spec2 <- tabular(saf_demo) |>
+    preset(pagehead = list(center = "Draft"))
+  out2 <- withr::local_tempfile(fileext = ".html")
+  suppressWarnings(emit(spec2, out2))
+  txt2 <- paste(readLines(out2, warn = FALSE), collapse = "\n")
+  expect_match(
+    txt2,
+    "<div class=\"tabular-page-header-center\">",
+    fixed = TRUE
+  )
+  expect_no_match(
+    txt2,
+    "<div class=\"tabular-page-header-left\">",
+    fixed = TRUE
+  )
+  expect_no_match(
+    txt2,
+    "<div class=\"tabular-page-header-right\">",
+    fixed = TRUE
+  )
+})
+
+test_that("cells_pagehead(slot=) styles one slot + band border in HTML (#thread-G)", {
+  spec <- tabular(saf_demo) |>
+    preset(pagehead = list(left = "L", center = "C", right = "R")) |>
+    style(
+      bold = TRUE,
+      color = "#cc0000",
+      .at = cells_pagehead(slot = "center")
+    ) |>
+    style(border_bottom = brdr("thin"), .at = cells_pagehead())
+  out <- withr::local_tempfile(fileext = ".html")
+  suppressWarnings(emit(spec, out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Only the centre slot div carries the bold + colour style.
+  expect_match(
+    txt,
+    "<div class=\"tabular-page-header-center\" style=\"[^\"]*font-weight: bold[^\"]*color: #cc0000"
+  )
+  expect_match(txt, "<div class=\"tabular-page-header-left\">", fixed = TRUE)
+  # The header band itself carries the bottom rule.
+  expect_match(
+    txt,
+    "<header class=\"tabular-page-header\" style=\"border-bottom: 0\\.5pt solid"
+  )
+})

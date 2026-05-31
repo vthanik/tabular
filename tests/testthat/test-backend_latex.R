@@ -1645,3 +1645,37 @@ test_that("opt-in footnoterule draws a table-width \\rule and drops the bottomru
   spec_line <- tex[grep("begin{longtblr}", tex, fixed = TRUE)][[1L]]
   expect_no_match(spec_line, "hline{3}", fixed = TRUE)
 })
+
+test_that("preset(padding=list(header=...)) emits \\SetRow rowsep (#thread-C)", {
+  df <- data.frame(grp = c("A", "B"), d50 = c("1", "2"), d100 = c("3", "4"))
+  spec <- tabular(df) |>
+    headers("Drug" = c("d50", "d100")) |>
+    preset(padding = list(header = c(top = 6, bottom = 6)))
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Band + column-label rows lead with `\SetRow{abovesep,belowsep}` from
+  # the header surface's vertical padding (compiles via tabularray).
+  expect_match(tex, "\\SetRow{abovesep=6pt,belowsep=6pt}", fixed = TRUE)
+})
+
+test_that("cells_pagehead band border drives headrulewidth + per-slot props in LaTeX (#thread-G)", {
+  spec <- tabular(saf_demo) |>
+    preset(pagehead = list(center = "Draft")) |>
+    style(
+      bold = TRUE,
+      color = "#cc0000",
+      .at = cells_pagehead(slot = "center")
+    ) |>
+    style(border_bottom = brdr("thin"), .at = cells_pagehead())
+  out <- withr::local_tempfile(fileext = ".tex")
+  suppressWarnings(emit(spec, out))
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # The band border opts the head rule on (was hardcoded 0pt before G).
+  expect_match(tex, "\\renewcommand{\\headrulewidth}{0.5pt}", fixed = TRUE)
+  # The centre slot content is wrapped in the text props.
+  expect_match(tex, "\\textbf{", fixed = TRUE)
+  expect_match(tex, "CC0000", fixed = TRUE)
+  # The footer band, unset, keeps 0pt.
+  expect_match(tex, "\\renewcommand{\\footrulewidth}{0pt}", fixed = TRUE)
+})

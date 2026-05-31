@@ -193,15 +193,22 @@
     if (is.null(v)) {
       next
     }
-    if (!is.list(v)) {
+    if (is.list(v)) {
       return(paste0(
-        "key ",
+        "spec for ",
         .sh_quote(k),
-        " must be a named list with any of family / size / weight"
+        " must be a named vector c(family = , size = , weight = ), not a nested list"
+      ))
+    }
+    if (!is.atomic(v) || is.null(names(v))) {
+      return(paste0(
+        "spec for ",
+        .sh_quote(k),
+        " must be a named vector c(family = , size = , weight = )"
       ))
     }
     spec_nms <- names(v)
-    if (is.null(spec_nms) || anyNA(spec_nms) || any(!nzchar(spec_nms))) {
+    if (anyNA(spec_nms) || any(!nzchar(spec_nms))) {
       return(paste0(
         "key ",
         .sh_quote(k),
@@ -213,35 +220,33 @@
       return(paste0(
         "key ",
         .sh_quote(k),
-        " has unknown sub-key(s): ",
+        " has unknown name(s): ",
         paste(.sh_quote(unknown_keys), collapse = ", "),
         "; recognised: 'family', 'size', 'weight'"
       ))
     }
-    if (!is.null(v$family) && (!is.character(v$family) || anyNA(v$family))) {
+    if (
+      "family" %in%
+        spec_nms &&
+        (is.na(v[["family"]]) || !nzchar(as.character(v[["family"]])))
+    ) {
       return(paste0(
         "key ",
         .sh_quote(k),
         " family must be a non-NA character"
       ))
     }
-    if (
-      !is.null(v$size) &&
-        (!is.numeric(v$size) ||
-          length(v$size) != 1L ||
-          is.na(v$size) ||
-          v$size <= 0)
-    ) {
-      return(paste0(
-        "key ",
-        .sh_quote(k),
-        " size must be a single positive numeric"
-      ))
+    if ("size" %in% spec_nms) {
+      sz <- suppressWarnings(as.numeric(v[["size"]]))
+      if (!is.finite(sz) || sz <= 0) {
+        return(paste0(
+          "key ",
+          .sh_quote(k),
+          " size must be a single positive finite numeric"
+        ))
+      }
     }
-    if (
-      !is.null(v$weight) &&
-        (!is.character(v$weight) || length(v$weight) != 1L || is.na(v$weight))
-    ) {
+    if ("weight" %in% spec_nms && is.na(v[["weight"]])) {
       return(paste0(
         "key ",
         .sh_quote(k),
@@ -281,15 +286,22 @@
     if (is.null(v)) {
       next
     }
-    if (!is.list(v)) {
+    if (is.list(v)) {
       return(paste0(
-        "surface ",
+        "spec for ",
         .sh_quote(k),
-        " must be a named list with any of text / background"
+        " must be a named character vector c(text = , background = ), not a nested list"
+      ))
+    }
+    if (!is.character(v) || is.null(names(v))) {
+      return(paste0(
+        "spec for ",
+        .sh_quote(k),
+        " must be a named character vector c(text = , background = )"
       ))
     }
     sub_nms <- names(v)
-    if (is.null(sub_nms) || anyNA(sub_nms) || any(!nzchar(sub_nms))) {
+    if (anyNA(sub_nms) || any(!nzchar(sub_nms))) {
       return(paste0("surface ", .sh_quote(k), " entries must all be named"))
     }
     unknown_keys <- setdiff(sub_nms, .preset_color_tokens)
@@ -297,7 +309,7 @@
       return(paste0(
         "surface ",
         .sh_quote(k),
-        " has unknown token(s): ",
+        " has unknown name(s): ",
         paste(.sh_quote(unknown_keys), collapse = ", "),
         "; recognised: ",
         paste(.sh_quote(.preset_color_tokens), collapse = ", ")
@@ -305,10 +317,7 @@
     }
     for (tok in sub_nms) {
       tv <- v[[tok]]
-      if (is.null(tv)) {
-        next
-      }
-      if (!is.character(tv) || length(tv) != 1L || is.na(tv) || !nzchar(tv)) {
+      if (is.na(tv) || !nzchar(tv)) {
         return(paste0(
           "surface ",
           .sh_quote(k),
@@ -351,12 +360,22 @@
     if (is.null(v)) {
       next
     }
-    if (is.numeric(v) && length(v) == 1L && !is.na(v) && v >= 0) {
+    # Unnamed scalar broadcasts to all four sides.
+    if (
+      is.numeric(v) &&
+        length(v) == 1L &&
+        is.null(names(v)) &&
+        !is.na(v) &&
+        v >= 0
+    ) {
       next
     }
-    if (is.list(v)) {
+    # Named numeric vector c(top = , right = , bottom = , left = ); a
+    # named length-1 vector (c(top = 5)) routes here too, not the scalar
+    # branch, so it sets only that side.
+    if (is.numeric(v) && !is.null(names(v))) {
       spec_nms <- names(v)
-      if (is.null(spec_nms) || anyNA(spec_nms) || any(!nzchar(spec_nms))) {
+      if (anyNA(spec_nms) || any(!nzchar(spec_nms))) {
         return(paste0("key ", .sh_quote(k), " entries must all be named"))
       }
       unknown_keys <- setdiff(spec_nms, c("top", "right", "bottom", "left"))
@@ -371,12 +390,7 @@
       }
       for (side in spec_nms) {
         sv <- v[[side]]
-        if (
-          !is.numeric(sv) ||
-            length(sv) != 1L ||
-            is.na(sv) ||
-            sv < 0
-        ) {
+        if (is.na(sv) || sv < 0) {
           return(paste0(
             "key ",
             .sh_quote(k),
@@ -388,10 +402,17 @@
       }
       next
     }
+    if (is.list(v)) {
+      return(paste0(
+        "side spec for ",
+        .sh_quote(k),
+        " must be a named numeric vector c(top = , right = , bottom = , left = ), not a nested list"
+      ))
+    }
     return(paste0(
       "key ",
       .sh_quote(k),
-      " must be a non-negative numeric or a list of top/right/bottom/left"
+      " must be a non-negative numeric or a named vector c(top = , right = , bottom = , left = )"
     ))
   }
   NULL

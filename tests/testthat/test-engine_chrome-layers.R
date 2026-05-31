@@ -35,18 +35,36 @@ test_that("cells_footnotes() text props land on chrome_style$surfaces$footer", {
   expect_identical(node@font_size, 8)
 })
 
-test_that("cells_pagehead() text props land on chrome_style$surfaces$pagehead", {
+test_that("cells_pagehead() (no slot) broadcasts text props to every pagehead slot", {
   spec <- tabular(saf_demo) |>
     style(font_family = "Inter", .at = cells_pagehead())
   cs <- tabular:::engine_chrome_borders(spec)
-  expect_identical(cs$surfaces$pagehead@font_family, "Inter")
+  for (s in c("left", "center", "right")) {
+    expect_identical(cs$surfaces$pagehead[[s]]@font_family, "Inter")
+  }
 })
 
-test_that("cells_pagefoot() text props land on chrome_style$surfaces$pagefoot", {
+test_that("cells_pagefoot() (no slot) broadcasts text props to every pagefoot slot", {
   spec <- tabular(saf_demo) |>
     style(font_size = 7, .at = cells_pagefoot())
   cs <- tabular:::engine_chrome_borders(spec)
-  expect_identical(cs$surfaces$pagefoot@font_size, 7)
+  for (s in c("left", "center", "right")) {
+    expect_identical(cs$surfaces$pagefoot[[s]]@font_size, 7)
+  }
+})
+
+test_that("cells_pagehead(slot = ...) targets exactly one slot", {
+  spec <- tabular(saf_demo) |>
+    style(
+      bold = TRUE,
+      color = "#ff0000",
+      .at = cells_pagehead(slot = "center")
+    )
+  cs <- tabular:::engine_chrome_borders(spec)
+  expect_identical(cs$surfaces$pagehead$center@bold, TRUE)
+  expect_identical(cs$surfaces$pagehead$center@color, "#ff0000")
+  expect_true(is.na(cs$surfaces$pagehead$left@bold))
+  expect_true(is.na(cs$surfaces$pagehead$right@bold))
 })
 
 test_that("cells_subgroup_labels() text props land on chrome_style$surfaces$subgroup", {

@@ -136,13 +136,15 @@ backend_html <- function(grid, file) {
     meta$pagehead_ast,
     zone = "header",
     total_pages = total_for_chrome,
-    chrome_mode = chrome_mode
+    chrome_mode = chrome_mode,
+    cs = cs
   )
   onscreen_footer <- .html_render_chrome_band(
     meta$pagefoot_ast,
     zone = "footer",
     total_pages = total_for_chrome,
-    chrome_mode = chrome_mode
+    chrome_mode = chrome_mode,
+    cs = cs
   )
 
   # Title block — emitted once above the table, with optional
@@ -265,7 +267,8 @@ backend_html <- function(grid, file) {
   band,
   zone,
   total_pages,
-  chrome_mode
+  chrome_mode,
+  cs = NULL
 ) {
   if (identical(chrome_mode, "off") || !.page_band_is_populated(band)) {
     return(character())
@@ -273,44 +276,69 @@ backend_html <- function(grid, file) {
   reverse <- identical(zone, "header")
   cls <- sprintf("tabular-page-%s", zone)
   tag <- if (identical(zone, "header")) "header" else "footer"
+  surface <- if (identical(zone, "header")) "pagehead" else "pagefoot"
+  region <- if (identical(zone, "header")) {
+    "pagehead_bottom"
+  } else {
+    "pagefoot_top"
+  }
+  band_edge <- if (identical(zone, "header")) "bottom" else "top"
+  # Emit a slot <div> only when that slot is populated, so a band with
+  # only `left` + `right` set splits 50/50 (justify-content:
+  # space-between) instead of reserving a blank centre third that wraps
+  # the left content (Thread E). Per-slot alignment classes
+  # (`-left/-center/-right`) are kept. Each populated slot also carries
+  # its own text-prop style from `cells_pagehead(slot = ...)` (Thread G).
+  slot_divs <- character()
+  for (slot_name in .page_band_slots) {
+    slot_asts <- band[[slot_name]]
+    if (!.page_band_slot_populated(slot_asts)) {
+      next
+    }
+    slot_style <- .html_chrome_inline_style(
+      .chrome_surface_at_slot(cs, surface, slot = slot_name)
+    )
+    slot_divs <- c(
+      slot_divs,
+      sprintf(
+        "  <div class=\"%s-%s\"%s>%s</div>",
+        cls,
+        slot_name,
+        slot_style,
+        .html_chrome_slot_text(
+          slot_asts,
+          reverse = reverse,
+          total_pages = total_pages
+        )
+      )
+    )
+  }
+  # Band rule: `style(border_bottom = brdr(), .at = cells_pagehead())`
+  # (or `border_top` on the footer) draws a rule under the page header /
+  # above the page footer, from the chrome border region (Thread G). Off
+  # by default (galley parity), so the default band stays borderless.
+  band_border <- .html_border_decl(band_edge, .chrome_border_at(cs, region))
+  band_style <- if (is.null(band_border)) {
+    ""
+  } else {
+    sprintf(" style=\"%s\"", band_border)
+  }
   c(
-    sprintf("<%s class=\"%s\">", tag, cls),
-    sprintf(
-      "  <div class=\"%s-left\">%s</div>",
-      cls,
-      .html_chrome_slot_text(
-        band$left,
-        reverse = reverse,
-        total_pages = total_pages
-      )
-    ),
-    sprintf(
-      "  <div class=\"%s-center\">%s</div>",
-      cls,
-      .html_chrome_slot_text(
-        band$center,
-        reverse = reverse,
-        total_pages = total_pages
-      )
-    ),
-    sprintf(
-      "  <div class=\"%s-right\">%s</div>",
-      cls,
-      .html_chrome_slot_text(
-        band$right,
-        reverse = reverse,
-        total_pages = total_pages
-      )
-    ),
+    sprintf("<%s class=\"%s\"%s>", tag, cls, band_style),
+    slot_divs,
     sprintf("</%s>", tag)
   )
 }
 
-# Flatten one band slot (list of N inline_asts, one per row) to
-# an HTML fragment with rows joined by `<br>`. `{page}` /
-# `{npages}` tokens resolve statically (page = 1, npages = total).
-# `reverse = TRUE` flips row order to match the pagehead growth
-# convention (index 1 = body edge -> visually closest to the table).
+# Render one band slot (list of N inline_asts, one per row) to an HTML
+# fragment with rows joined by `<br>`. Each row's AST is rendered with
+# the full inline renderer, so `md()` / `html()` markup (bold, italic,
+# sup / sub, code, raw HTML) survives in the on-screen DOM band (Thread
+# F). `{page}` / `{npages}` tokens resolve statically (page = 1, npages =
+# total). `reverse = TRUE` flips row order to match the pagehead growth
+# convention (index 1 = body edge -> visually closest to the table). The
+# `@page { content: }` CSS print fragment keeps the flat
+# `.html_band_row_content()` path (CSS content strings can't hold markup).
 .html_chrome_slot_text <- function(slot_asts, reverse, total_pages) {
   if (length(slot_asts) == 0L) {
     return("")
@@ -319,11 +347,10 @@ backend_html <- function(grid, file) {
   parts <- vapply(
     order,
     function(i) {
-      txt <- .html_band_row_content(slot_asts[[i]])
-      # `.html_band_row_content` quotes its output for CSS `content:`
-      # use (`"text"` with quotes / counter() calls). Unwrap for
-      # plain-HTML emission.
-      .html_chrome_unquote_band_text(txt, total_pages = total_pages)
+      .html_render_slot_ast_with_tokens(
+        slot_asts[[i]],
+        total_pages = total_pages
+      )
     },
     character(1L)
   )
@@ -331,34 +358,20 @@ backend_html <- function(grid, file) {
   paste(parts, collapse = "<br>")
 }
 
-# Strip the CSS-quoting that `.html_band_row_content` applies for
-# @page `content:` strings, leaving plain text suitable for DOM
-# emission. Substitutes `counter(page)` / `counter(pages)` to
-# static "1" and total-pages digits respectively (CSS counters
-# don't fire outside @page context, so on-screen we render the
-# best static approximation).
-.html_chrome_unquote_band_text <- function(s, total_pages) {
-  if (!is.character(s) || length(s) != 1L) {
+# Render one slot-row AST to rich HTML (preserving md()/html() markup),
+# then substitute the static `{page}` / `{npages}` tokens AFTER rendering
+# so any markup wrapping the token survives (e.g. `md("Page **{page}**")`
+# -> `Page <strong>1</strong>`). On-screen DOM path only.
+.html_render_slot_ast_with_tokens <- function(ast, total_pages) {
+  if (!is_inline_ast(ast) || length(ast@runs) == 0L) {
     return("")
   }
-  # `s` is the @page-style `content:` value: a sequence of
-  # `"text"` literals and `counter(...)` calls joined by spaces.
-  # Convert counter calls to static digits first, then convert
-  # the CSS newline literal `"\\A"` to a <br>, then strip ALL
-  # double-quote and inter-fragment spaces — the only quotes in
-  # the source are the CSS delimiters around plain-text fragments
-  # (any `"` inside the user's input was already &quot;-escaped by
-  # `.html_band_row_content` -> `.html_escape`).
-  s <- gsub("counter(page)", "1", s, fixed = TRUE)
-  s <- gsub("counter(pages)", as.character(total_pages), s, fixed = TRUE)
-  s <- gsub("\"\\A\"", "<br>", s, fixed = TRUE)
-  # Collapse `" <fragment> "` -> `<fragment>` by removing the
-  # CSS string delimiters and the single space that joins
-  # adjacent CSS tokens.
-  s <- gsub("\"", "", s, fixed = TRUE)
-  # Collapse double spaces that fall out of the join.
-  s <- gsub("  +", " ", s)
-  trimws(s)
+  html <- .render_html_inline(ast)
+  if (!nzchar(html)) {
+    return("")
+  }
+  html <- gsub("{page}", "1", html, fixed = TRUE)
+  gsub("{npages}", as.character(total_pages), html, fixed = TRUE)
 }
 
 # Resolve the blank-line count for a chrome surface side. chrome_style
@@ -412,6 +425,20 @@ backend_html <- function(grid, file) {
   bg <- node@background
   if (length(bg) == 1L && !is.na(bg) && nzchar(bg)) {
     decls <- c(decls, sprintf("background-color: %s", bg))
+  }
+  # Per-side padding overrides (e.g. `preset(padding = list(header =
+  # c(top = 6, bottom = 6)))`). Emit only the sides explicitly set; unset
+  # sides inherit the `.tabular-table td/th` baseline. This is the one
+  # shared chrome helper, so completing it here fixes header / title /
+  # footnote / subgroup / group-header padding in a single place.
+  for (side in c("top", "right", "bottom", "left")) {
+    pad <- S7::prop(node, paste0("padding_", side))
+    if (length(pad) == 1L && !is.na(pad)) {
+      decls <- c(
+        decls,
+        sprintf("padding-%s: %spt", side, format(pad, trim = TRUE))
+      )
+    }
   }
   if (length(decls) == 0L) {
     return("")
@@ -636,9 +663,19 @@ backend_html <- function(grid, file) {
     seq_len(nrow_data),
     function(i) {
       if (isTRUE(is_blank_row[[i]])) {
+        # The blank separator carries a resolved style_node too (the
+        # stripe fill, stamped uniformly across the row). Emit its
+        # background so the zebra band stays continuous across the gap
+        # instead of leaving a white stripe.
+        blank_node <- if (!is.null(page$cells_style)) {
+          page$cells_style[[i, 1L]]
+        } else {
+          NULL
+        }
         return(sprintf(
-          "<tr class=\"tabular-blank-row\"><td colspan=\"%d\">&nbsp;</td></tr>",
-          ncols_vis
+          "<tr class=\"tabular-blank-row\"><td colspan=\"%d\"%s>&nbsp;</td></tr>",
+          ncols_vis,
+          .html_chrome_inline_style(blank_node)
         ))
       }
       if (isTRUE(is_header_row[[i]])) {
@@ -814,7 +851,10 @@ backend_html <- function(grid, file) {
           lbl <- run$value
           span <- run$length
           if (is.na(lbl)) {
-            sprintf("<th colspan=\"%d\"></th>", span)
+            # Empty flanking cell over unmapped columns: it must carry the
+            # header surface style (background) too, so a coloured band
+            # reads end-to-end instead of leaving white flanks.
+            sprintf("<th colspan=\"%d\"%s></th>", span, surface_style)
           } else {
             sprintf(
               "<th colspan=\"%d\" class=\"tabular-band\"%s>%s</th>",
@@ -1530,6 +1570,23 @@ backend_html <- function(grid, file) {
       ".tabular-table tbody tr:last-child td",
       "bottom",
       if (is.list(body_borders)) body_borders[["outer_bottom"]] else NULL
+    ),
+    # Outer LEFT / RIGHT frame edges ride the table element itself. Under
+    # `border-collapse: collapse` a table border spans <thead> + every
+    # <tbody> row and beats a conflicting cell `border: none`, so the
+    # vertical edge is continuous over the spanner band, the column-label
+    # row, and every body row including the synthesised blank-separator
+    # and group-header rows (the original `rules = "frame"` gap). Titles
+    # are <h1> outside <table>, so they stay outside the box.
+    .html_structural_rule(
+      ".tabular-table",
+      "left",
+      if (is.list(body_borders)) body_borders[["outer_left"]] else NULL
+    ),
+    .html_structural_rule(
+      ".tabular-table",
+      "right",
+      if (is.list(body_borders)) body_borders[["outer_right"]] else NULL
     )
   )
   # `fs` drives every font-size emitted in pt below — title,
@@ -1650,9 +1707,16 @@ backend_html <- function(grid, file) {
     # the @page rules (further below) take over without duplicate
     # bands.
     ":root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }",
-    ".tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: .85rem; color: var(--tabular-chrome-color); }",
-    ".tabular-page-header { border-bottom: 1px solid var(--tabular-border-color-muted); margin-bottom: 1rem; }",
-    ".tabular-page-footer { border-top:    1px solid var(--tabular-border-color-muted); margin-top:    1rem; }",
+    # Chrome font tracks the body font one point smaller (floored at
+    # 6pt), matching galley, so the page bands never out-size the table.
+    # Bands are borderless by default (galley parity); the spacing
+    # margins stay so the header/footer keep their breathing room.
+    sprintf(
+      ".tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: %gpt; color: var(--tabular-chrome-color); }",
+      max(fs - 1, 6)
+    ),
+    ".tabular-page-header { margin-bottom: 1rem; }",
+    ".tabular-page-footer { margin-top: 1rem; }",
     ".tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }",
     ".tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }",
     ".tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }",
@@ -1769,9 +1833,12 @@ backend_html <- function(grid, file) {
 }
 
 # Walk an inline_ast and concatenate plain text, ignoring tag
-# semantics. Newline runs become literal "\n" (so the CSS
-# fragment writer can `\A`-split if it wants); other run types
-# recurse through children.
+# semantics. USED ONLY for the `@page { content: }` CSS print fragment,
+# where markup cannot be expressed; the on-screen DOM band renders rich
+# markup via `.html_render_slot_ast_with_tokens()` -> `.render_html_inline()`
+# (Thread F). Newline runs become literal "\n" (so the CSS fragment
+# writer can `\A`-split if it wants); other run types recurse through
+# children.
 .html_flatten_ast_to_text <- function(ast) {
   out <- character()
   walk <- function(runs) {

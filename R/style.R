@@ -270,8 +270,9 @@ style <- function(.spec, ..., .at = cells_body()) {
 # (style = "none", width = 0).
 #
 # `padding` is likewise sugar over the four `padding_<side>` scalars:
-# a scalar applies to all four sides; a named vector / list
+# a scalar applies to all four sides; a named vector
 # (`c(top = 2, bottom = 8)`) maps each named side WITHOUT averaging.
+# A nested list is rejected (use the named vector).
 .expand_brdr_shorthand <- function(attrs, call) {
   sides <- c("top", "bottom", "left", "right")
   if (!is.null(attrs[["border"]])) {
@@ -319,10 +320,20 @@ style <- function(.spec, ..., .at = cells_body()) {
           attrs[[key]] <- pv
         }
       }
-    } else if (is.numeric(pv) || is.list(pv)) {
+    } else if (is.numeric(pv) && !is.null(names(pv))) {
       for (side in intersect(names(pv), sides)) {
         attrs[[paste0("padding_", side)]] <- pv[[side]]
       }
+    } else if (is.list(pv)) {
+      cli::cli_abort(
+        c(
+          "Invalid {.arg padding} in {.fn style}.",
+          "x" = "Nested lists are no longer supported.",
+          "i" = "Use a scalar or a named vector, e.g. {.code padding = c(top = 5, bottom = 3)}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
     }
   }
   attrs

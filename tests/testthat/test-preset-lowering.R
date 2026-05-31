@@ -108,7 +108,7 @@ test_that(".preset_args_to_layers() rowrule on reproduces hlines='all'", {
 
 test_that(".preset_args_to_layers() splits fonts$body family + size into separate layers", {
   layers <- tabular:::.preset_args_to_layers(list(
-    fonts = list(body = list(family = "Inter", size = 10))
+    fonts = list(body = c(family = "Inter", size = 10))
   ))
   expect_length(layers, 2L)
   fams <- vapply(
@@ -130,7 +130,7 @@ test_that(".preset_args_to_layers() splits fonts$body family + size into separat
 
 test_that(".preset_args_to_layers() lowers fonts$header to cells_headers()", {
   layers <- tabular:::.preset_args_to_layers(list(
-    fonts = list(header = list(size = 11))
+    fonts = list(header = c(size = 11))
   ))
   expect_length(layers, 1L)
   expect_identical(layers[[1L]]@location$surface, "headers")
@@ -139,7 +139,7 @@ test_that(".preset_args_to_layers() lowers fonts$header to cells_headers()", {
 
 test_that(".preset_args_to_layers() lowers fonts weight='bold' to bold=TRUE", {
   layers <- tabular:::.preset_args_to_layers(list(
-    fonts = list(header = list(weight = "bold"))
+    fonts = list(header = c(weight = "bold"))
   ))
   expect_length(layers, 1L)
   expect_true(isTRUE(layers[[1L]]@style@bold))
@@ -151,7 +151,7 @@ test_that(".preset_args_to_layers() lowers fonts weight='bold' to bold=TRUE", {
 
 test_that(".preset_args_to_layers() lowers region-keyed colors text / background", {
   layers <- tabular:::.preset_args_to_layers(list(
-    colors = list(body = list(text = "#ff0000", background = "#eeeeee"))
+    colors = list(body = c(text = "#ff0000", background = "#eeeeee"))
   ))
   expect_length(layers, 2L)
   surfaces <- vapply(layers, function(l) l@location$surface, character(1L))
@@ -161,8 +161,8 @@ test_that(".preset_args_to_layers() lowers region-keyed colors text / background
 test_that(".preset_args_to_layers() routes colors to every recognised surface", {
   layers <- tabular:::.preset_args_to_layers(list(
     colors = list(
-      header = list(text = "#111111"),
-      footnotes = list(background = "#fafafa")
+      header = c(text = "#111111"),
+      footnotes = c(background = "#fafafa")
     )
   ))
   surfaces <- vapply(layers, function(l) l@location$surface, character(1L))
@@ -185,7 +185,7 @@ test_that(".preset_args_to_layers() lowers padding[body] scalar to four sides", 
 
 test_that(".preset_args_to_layers() lowers per-side padding WITHOUT averaging", {
   layers <- tabular:::.preset_args_to_layers(list(
-    padding = list(body = list(top = 2, right = 4, bottom = 2, left = 4))
+    padding = list(body = c(top = 2, right = 4, bottom = 2, left = 4))
   ))
   expect_length(layers, 1L)
   expect_identical(layers[[1L]]@style@padding_top, 2)
@@ -231,7 +231,7 @@ test_that(".preset_args_to_layers() returns an empty list for NULL / empty args"
 
 test_that(".preset_args_to_layers() skips unknown surfaces silently", {
   layers <- tabular:::.preset_args_to_layers(list(
-    fonts = list(banner = list(family = "Inter"))
+    fonts = list(banner = c(family = "Inter"))
   ))
   expect_identical(layers, list())
 })
@@ -239,7 +239,7 @@ test_that(".preset_args_to_layers() skips unknown surfaces silently", {
 test_that(".preset_args_to_layers() drops NA values without producing a layer", {
   layers <- tabular:::.preset_args_to_layers(list(
     alignment = list(body_halign = NA_character_),
-    fonts = list(body = list(family = NA_character_, size = NA_real_))
+    fonts = list(body = c(family = NA_character_, size = NA_real_))
   ))
   expect_identical(layers, list())
 })
@@ -324,7 +324,7 @@ test_that("set_preset() lowers named-list knobs onto the session-default @style"
   withr::defer(set_preset(.reset = TRUE))
   set_preset(
     alignment = list(title_halign = "left"),
-    fonts = list(body = list(family = "Inter"))
+    fonts = list(body = c(family = "Inter"))
   )
   session <- get_preset()
   expect_true(length(session@style) >= 2L)

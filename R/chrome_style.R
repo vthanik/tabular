@@ -101,7 +101,20 @@
 chrome_style <- function() {
   borders <- vector("list", length(.chrome_border_regions))
   names(borders) <- .chrome_border_regions
-  surfaces <- lapply(.chrome_surface_keys, function(k) style_node())
+  # Flat surfaces carry a single text-prop node. The page bands
+  # (pagehead / pagefoot) are SLOT-KEYED (left / center / right) so
+  # `style(.at = cells_pagehead(slot = "center"))` targets one slot;
+  # `slot = NULL` broadcasts to all three. `.chrome_surface_at_slot()`
+  # reads them; `.chrome_surface_at()` returns the merged (broadcast)
+  # view for legacy callers.
+  slot_nodes <- function() {
+    s <- lapply(.location_band_slots, function(x) style_node())
+    names(s) <- .location_band_slots
+    s
+  }
+  surfaces <- lapply(.chrome_surface_keys, function(k) {
+    if (k %in% c("pagehead", "pagefoot")) slot_nodes() else style_node()
+  })
   names(surfaces) <- .chrome_surface_keys
   list(
     borders = borders,
@@ -124,13 +137,50 @@ chrome_style <- function() {
 
 # Look up the resolved style_node for a chrome surface. Returns a
 # default (no-op) style_node when `cs` is NULL or the key is missing.
+# For a slot-keyed page-band surface (pagehead / pagefoot) returns the
+# merge of all three slots as the uniform / broadcast view, so legacy
+# callers that don't distinguish slots still get a node; per-slot
+# consumers use `.chrome_surface_at_slot()`.
 .chrome_surface_at <- function(cs, surface) {
   if (!is.list(cs) || !is.list(cs$surfaces)) {
     return(style_node())
   }
   node <- cs$surfaces[[surface]]
-  if (!is_style_node(node)) {
+  if (is_style_node(node)) {
+    return(node)
+  }
+  if (is.list(node)) {
+    return(.chrome_surface_at_slot(cs, surface, slot = NULL))
+  }
+  style_node()
+}
+
+# Look up the text-prop node for one slot of a slot-keyed page-band
+# surface (pagehead / pagefoot). `slot = NULL` returns the merge of all
+# three slots (the broadcast view). For a flat surface returns its
+# single node regardless of `slot`. Returns a no-op style_node when `cs`
+# is NULL or the key / slot is missing.
+.chrome_surface_at_slot <- function(cs, surface, slot = NULL) {
+  if (!is.list(cs) || !is.list(cs$surfaces)) {
     return(style_node())
   }
-  node
+  data <- cs$surfaces[[surface]]
+  if (is_style_node(data)) {
+    return(data)
+  }
+  if (!is.list(data)) {
+    return(style_node())
+  }
+  if (is.null(slot)) {
+    merged <- style_node()
+    for (s in .location_band_slots) {
+      n <- data[[s]]
+      if (is_style_node(n)) {
+        merged <- .merge_style_node(merged, n)
+      }
+    }
+    return(merged)
+  }
+  n <- data[[slot]]
+  if (is_style_node(n)) n else style_node()
 }

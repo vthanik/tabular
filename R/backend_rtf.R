@@ -171,6 +171,9 @@ backend_rtf <- function(grid, file) {
   first <- panel_pages[[1L]]
   col_names_vis <- first$col_names
   cols <- meta$cols %||% list()
+  # Frame outer LEFT / RIGHT edges, drawn structurally on every table-
+  # proper `\trowd` (the manifest is the SSOT; NULL when the frame is off).
+  body_borders <- meta$body_borders %||% list()
   cellx <- .rtf_cellx_positions(col_names_vis, cols, preset)
   .rtf_warn_cellx_overflow(cellx, preset)
 
@@ -334,7 +337,8 @@ backend_rtf <- function(grid, file) {
     cs,
     colors,
     fonts,
-    trhdr = rep_headers
+    trhdr = rep_headers,
+    body_borders = body_borders
   )
   # The full-width header top rule rides the topmost header row. When
   # spanner bands are present they own it; otherwise the column-labels
@@ -350,7 +354,8 @@ backend_rtf <- function(grid, file) {
     colors,
     fonts,
     trhdr = rep_headers,
-    outer_top = !has_bands
+    outer_top = !has_bands,
+    body_borders = body_borders
   )
   table_rows[[length(table_rows) + 1L]] <- .render_rtf_subgroup_banner_row(
     first$subgroup_line_ast,
@@ -359,7 +364,8 @@ backend_rtf <- function(grid, file) {
     cs = cs,
     colors = colors,
     fonts = fonts,
-    trhdr = rep_headers
+    trhdr = rep_headers,
+    body_borders = body_borders
   )
 
   body <- .rtf_concat_panel_body(panel_pages)
@@ -377,7 +383,8 @@ backend_rtf <- function(grid, file) {
     preset = preset,
     cs = cs,
     colors = colors,
-    fonts = fonts
+    fonts = fonts,
+    body_borders = body_borders
   )
 
   out[[length(out) + 1L]] <- unlist(table_rows, use.names = FALSE)
@@ -474,7 +481,8 @@ backend_rtf <- function(grid, file) {
   trhdr = FALSE,
   keep = FALSE,
   prelude = "",
-  trgaph = 108L
+  trgaph = 108L,
+  body_borders = NULL
 ) {
   n <- length(cellx)
   if (n == 0L) {
@@ -505,7 +513,8 @@ backend_rtf <- function(grid, file) {
       .rtf_trhdr(trhdr),
       sprintf("\\trgaph%d\\trqc", as.integer(trgaph)),
       .rtf_row_height_str(preset),
-      if (isTRUE(keep)) "\\trkeep" else ""
+      if (isTRUE(keep)) "\\trkeep" else "",
+      .rtf_row_frame_edges(body_borders)
     ),
     cell_defs,
     cell_bodies,
@@ -803,9 +812,19 @@ backend_rtf <- function(grid, file) {
   for (s in slots) {
     ast <- row_slots_ast[[s]]
     if (is_inline_ast(ast) && length(ast@runs) > 0L) {
+      # Per-slot text props (bold/italic/color/font) from
+      # cells_pagehead(slot = s) (Thread G). Pagehead/pagefoot slots own
+      # their halign via slot position, so the surface halign is not
+      # applied here.
+      slot_node <- if (!is.null(surface)) {
+        .chrome_surface_at_slot(cs, surface, slot = s)
+      } else {
+        NULL
+      }
       cells[[length(cells) + 1L]] <- list(
         align = alignments[[s]],
-        text = .rtf_resolve_page_tokens(.render_rtf_inline(ast))
+        text = .rtf_resolve_page_tokens(.render_rtf_inline(ast)),
+        props = .rtf_chrome_text_props(slot_node, colors, fonts)
       )
     }
   }
@@ -818,15 +837,32 @@ backend_rtf <- function(grid, file) {
   printable <- paper$width - margins$left - margins$right
   per_cell <- as.integer(printable %/% length(cells))
 
-  # Chrome surface text props (bold/italic/color/font_family/etc).
-  # Pagehead/pagefoot slots own their own halign via slot position,
-  # so the surface's halign is intentionally not applied here.
-  surface_node <- if (!is.null(surface)) {
-    .chrome_surface_at(cs, surface)
+  # Band rule (Thread G): `style(border_bottom = brdr(), .at =
+  # cells_pagehead())` draws a rule on the page-header band's bottom edge;
+  # `border_top` on the footer band's top edge. Read from the chrome
+  # border region (`pagehead_bottom` / `pagefoot_top`); the other three
+  # edges and the default (no region) stay borderless.
+  band_edge <- if (identical(surface, "pagefoot")) "top" else "bottom"
+  region <- if (identical(surface, "pagehead")) {
+    "pagehead_bottom"
+  } else if (identical(surface, "pagefoot")) {
+    "pagefoot_top"
   } else {
     NULL
   }
-  surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
+  edge_seg <- if (is.null(region)) {
+    paste0("\\clbrdr", substr(band_edge, 1L, 1L), "\\brdrnone")
+  } else {
+    .rtf_chrome_border_seg(cs, region, band_edge, "none")
+  }
+  other_segs <- paste0(
+    vapply(
+      setdiff(c("top", "bottom", "left", "right"), band_edge),
+      function(side) paste0("\\clbrdr", substr(side, 1L, 1L), "\\brdrnone"),
+      character(1L)
+    ),
+    collapse = ""
+  )
 
   cellx_lines <- character(length(cells))
   cumulative <- 0L
@@ -834,7 +870,8 @@ backend_rtf <- function(grid, file) {
     cumulative <- cumulative + per_cell
     pos <- if (i == length(cells)) printable else cumulative
     cellx_lines[[i]] <- paste0(
-      "\\clbrdrt\\brdrnone\\clbrdrl\\brdrnone\\clbrdrb\\brdrnone\\clbrdrr\\brdrnone",
+      other_segs,
+      edge_seg,
       sprintf("\\cellx%d", as.integer(pos))
     )
   }
@@ -845,7 +882,7 @@ backend_rtf <- function(grid, file) {
       paste0(
         "\\pard\\plain\\intbl ",
         c$align,
-        surface_props,
+        c$props,
         " ",
         c$text,
         "\\cell"
@@ -1151,7 +1188,8 @@ backend_rtf <- function(grid, file) {
   cs = NULL,
   colors = NULL,
   fonts = NULL,
-  trhdr = FALSE
+  trhdr = FALSE,
+  body_borders = NULL
 ) {
   if (
     is.null(subgroup_line_ast) ||
@@ -1222,7 +1260,8 @@ backend_rtf <- function(grid, file) {
     cellx,
     preset,
     trhdr = trhdr,
-    prelude = prelude
+    prelude = prelude,
+    body_borders = body_borders
   )
 }
 
@@ -1287,7 +1326,8 @@ backend_rtf <- function(grid, file) {
   cs = NULL,
   colors = NULL,
   fonts = NULL,
-  trhdr = FALSE
+  trhdr = FALSE,
+  body_borders = NULL
 ) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(character())
@@ -1306,7 +1346,8 @@ backend_rtf <- function(grid, file) {
       colors,
       fonts,
       trhdr,
-      outer_top = (k == 1L)
+      outer_top = (k == 1L),
+      body_borders = body_borders
     )
   }
   unlist(out, use.names = FALSE)
@@ -1363,7 +1404,8 @@ backend_rtf <- function(grid, file) {
   colors = NULL,
   fonts = NULL,
   trhdr = FALSE,
-  outer_top = FALSE
+  outer_top = FALSE,
+  body_borders = NULL
 ) {
   ncol <- length(cellx)
   if (ncol == 0L) {
@@ -1409,7 +1451,8 @@ backend_rtf <- function(grid, file) {
       top_tok_i,
       bot_tok_i,
       "\\clbrdrl\\brdrnone\\clbrdrr\\brdrnone",
-      shading
+      shading,
+      .rtf_cell_padding(surface_node)
     )
     label_body <- if (is_band) {
       paste0(
@@ -1459,7 +1502,8 @@ backend_rtf <- function(grid, file) {
       "\\trowd",
       .rtf_trhdr(trhdr),
       "\\trgaph108\\trqc",
-      .rtf_row_height_str(preset)
+      .rtf_row_height_str(preset),
+      .rtf_row_frame_edges(body_borders)
     ),
     cell_defs,
     cell_bodies,
@@ -1485,7 +1529,8 @@ backend_rtf <- function(grid, file) {
   colors = NULL,
   fonts = NULL,
   trhdr = FALSE,
-  outer_top = TRUE
+  outer_top = TRUE,
+  body_borders = NULL
 ) {
   cellx_lines <- character(length(col_names_vis))
   cell_bodies <- character(length(col_names_vis))
@@ -1559,6 +1604,7 @@ backend_rtf <- function(grid, file) {
       .rtf_border_seg("left", NULL, "none"),
       .rtf_border_seg("right", NULL, "none"),
       shading,
+      .rtf_cell_padding(surface_node),
       valign_tok,
       sprintf("\\cellx%d", as.integer(cellx[[i]]))
     )
@@ -1581,7 +1627,8 @@ backend_rtf <- function(grid, file) {
       "\\trowd",
       .rtf_trhdr(trhdr),
       "\\trgaph108\\trqc",
-      .rtf_row_height_str(preset)
+      .rtf_row_height_str(preset),
+      .rtf_row_frame_edges(body_borders)
     ),
     cellx_lines,
     cell_bodies,
@@ -1611,7 +1658,8 @@ backend_rtf <- function(grid, file) {
   preset = NULL,
   cs = NULL,
   colors = NULL,
-  fonts = NULL
+  fonts = NULL,
+  body_borders = NULL
 ) {
   nrow_data <- nrow(cells_text)
   if (nrow_data == 0L) {
@@ -1666,13 +1714,22 @@ backend_rtf <- function(grid, file) {
     if (isTRUE(is_blank_row[[r]])) {
       # Blank-gap row: a full-width merged row so it keeps the body
       # column grid (a single trailing \cellx would desync the table).
+      # The stripe fill stamped onto the row's node shades the merged
+      # cell so the zebra band stays continuous across the gap.
+      blank_node <- if (!is.null(cells_style)) {
+        tryCatch(cells_style[[r, 1L]], error = function(e) NULL)
+      } else {
+        NULL
+      }
+      blank_shd <- .rtf_cell_shading(blank_node, colors)
       out[[r]] <- .rtf_merged_row(
         paste0("\\pard\\plain\\intbl", keepn_tok, "\\ql"),
         cellx,
         preset,
         trhdr = FALSE,
         keep = keep_row,
-        prelude = blank_prelude
+        prelude = paste0(blank_prelude, blank_shd),
+        body_borders = body_borders
       )
       next
     }
@@ -1741,7 +1798,8 @@ backend_rtf <- function(grid, file) {
         preset,
         trhdr = FALSE,
         keep = keep_row,
-        prelude = paste0(blank_prelude, header_shading)
+        prelude = paste0(blank_prelude, header_shading),
+        body_borders = body_borders
       )
       next
     }
@@ -1815,7 +1873,8 @@ backend_rtf <- function(grid, file) {
       paste0(
         sprintf("\\trowd\\trgaph%d\\trqc", trgaph),
         .rtf_row_height_str(preset),
-        trkeep_tok
+        trkeep_tok,
+        .rtf_row_frame_edges(body_borders)
       ),
       cellx_lines,
       cell_bodies,
@@ -1935,6 +1994,29 @@ backend_rtf <- function(grid, file) {
   sprintf("\\clcbpat%d", as.integer(idx))
 }
 
+# Per-side RTF cell padding from a chrome surface style_node (the header
+# band / column-label rows). RTF cell margins are
+# `\clpad<side><twips>\clpadf<side>3` where the `\clpadf<side>3` unit
+# flag (3 = twips) is mandatory; 1pt = 20 twips. Only explicitly-set
+# sides emit, so unset sides keep the row's `\trgaph` default. Lets
+# `preset(padding = list(header = c(top = , bottom = )))` reach RTF.
+.rtf_cell_padding <- function(style = NULL) {
+  if (!is_style_node(style)) {
+    return("")
+  }
+  tags <- c(top = "t", right = "r", bottom = "b", left = "l")
+  out <- character()
+  for (side in c("top", "right", "bottom", "left")) {
+    pad <- S7::prop(style, paste0("padding_", side))
+    if (length(pad) == 1L && !is.na(pad)) {
+      tw <- as.integer(round(as.numeric(pad) * 20))
+      tag <- tags[[side]]
+      out <- c(out, sprintf("\\clpad%s%d\\clpadf%s3", tag, tw, tag))
+    }
+  }
+  paste(out, collapse = "")
+}
+
 .rtf_align_token <- function(align) {
   if (is.null(align) || length(align) == 0L || is.na(align)) {
     return("\\ql")
@@ -2002,6 +2084,45 @@ backend_rtf <- function(grid, file) {
   )
   twips <- max(1L, as.integer(round(brd$width * 20)))
   paste0(prefix, style_tok, sprintf("\\brdrw%d", twips))
+}
+
+# Row-level border segment (`\trbrdr<letter>`) from a manifest triple,
+# for the outer frame LEFT / RIGHT edges. Sibling of the cell-level
+# `.rtf_border_seg` (`\clbrdr`): a ROW border applies to the whole
+# `\trowd`, so the same edge rides the spanner band, the column-label
+# row, the subgroup banner, and every body row including the synthesised
+# blank-separator and group-header rows. That is what makes the frame
+# continuous in Word (a per-cell stamp only reaches data rows).
+.rtf_row_border_seg <- function(side, triple) {
+  if (is.null(triple) || identical(triple$style, "none")) {
+    return("")
+  }
+  letter <- substr(side, 1L, 1L)
+  style_tok <- switch(
+    triple$style,
+    solid = "\\brdrs",
+    dashed = "\\brdrdash",
+    dotted = "\\brdrdot",
+    double = "\\brdrdb",
+    dashdot = "\\brdrdashd",
+    "\\brdrs"
+  )
+  twips <- max(1L, as.integer(round(as.numeric(triple$width) * 20)))
+  paste0("\\trbrdr", letter, style_tok, sprintf("\\brdrw%d", twips))
+}
+
+# Both outer LEFT / RIGHT row-border tokens for a table-proper `\trowd`,
+# read from the body-border manifest. Returns "" when the frame is off
+# (manifest carries no outer_left / outer_right), so non-frame presets
+# are byte-unchanged.
+.rtf_row_frame_edges <- function(body_borders) {
+  if (!is.list(body_borders)) {
+    return("")
+  }
+  paste0(
+    .rtf_row_border_seg("left", body_borders[["outer_left"]]),
+    .rtf_row_border_seg("right", body_borders[["outer_right"]])
+  )
 }
 
 # ---------------------------------------------------------------------

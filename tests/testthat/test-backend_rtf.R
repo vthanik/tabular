@@ -1146,3 +1146,98 @@ test_that("opt-in footnoterule draws a table-width merged-row rule, not a page-w
   # No page-width paragraph border on a footnote line.
   expect_no_match(rtf, "\\pard\\plain\\brdrt", fixed = TRUE)
 })
+
+test_that("preset(padding=list(header=...)) emits header cell padding (#thread-C)", {
+  df <- data.frame(grp = c("A", "B"), d50 = c("1", "2"), d100 = c("3", "4"))
+  spec <- tabular(df) |>
+    headers("Drug" = c("d50", "d100")) |>
+    preset(padding = list(header = c(top = 6, bottom = 6)))
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # 6pt -> 120 twips, with the mandatory `\clpadfX3` unit flag on the
+  # band + column-label cells.
+  expect_match(rtf, "\\clpadt120\\clpadft3", fixed = TRUE)
+  expect_match(rtf, "\\clpadb120\\clpadfb3", fixed = TRUE)
+})
+
+test_that("rules='frame' draws \\trbrdrl/r on every table-proper row, not titles (#thread-D)", {
+  spec <- tabular(saf_demo, titles = "T", footnotes = "F") |>
+    cols(
+      variable = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(align = "left"),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    headers("Active" = c("drug_50", "drug_100")) |>
+    preset(rules = "frame")
+  out <- withr::local_tempfile(fileext = ".rtf")
+  suppressWarnings(emit(spec, out))
+  rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  rows <- regmatches(rtf, gregexpr("\\\\trowd[^\n]*", rtf, perl = TRUE))[[1]]
+  # Band + column-label rows repeat (\trhdr) AND now carry the frame edge.
+  # The title rows are the \trhdr rows WITHOUT the edge: they must exist
+  # (titles live inside the table for Word repeat) and stay edge-free.
+  title_rows <- rows[grepl("\\\\trhdr", rows) & !grepl("trbrdr", rows)]
+  expect_gt(length(title_rows), 0L)
+  # Every table-proper row (band, col labels, subgroup, group-header,
+  # blank separator, data) carries BOTH vertical edges; far more than the
+  # handful of data rows, proving the edge reaches the special rows that
+  # the retired per-cell stamp used to gap.
+  edged <- rows[grepl("\\\\trbrdrl", rows) & grepl("\\\\trbrdrr", rows)]
+  expect_gt(length(edged), 5L)
+
+  # Non-frame preset emits no row-border edges (no regression).
+  out2 <- withr::local_tempfile(fileext = ".rtf")
+  suppressWarnings(
+    emit(tabular(saf_demo) |> preset(rules = "booktabs"), out2)
+  )
+  rtf2 <- paste(readLines(out2, warn = FALSE), collapse = "\n")
+  expect_no_match(rtf2, "\\trbrdrl", fixed = TRUE)
+})
+
+test_that("stripe fills merged blank / group rows in RTF (#thread-B)", {
+  spec <- tabular(saf_demo) |>
+    cols(
+      variable = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(align = "left"),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    preset(stripe = c(odd = "#f5f5f5", even = "#ffffff"))
+  out <- withr::local_tempfile(fileext = ".rtf")
+  suppressWarnings(emit(spec, out))
+  rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # A merged special row (blank / group: `\clmgf` first cell) now carries
+  # cell shading (`\clcbpat`) from the stripe fill, so the zebra band
+  # stays continuous across it (previously borderless + unshaded).
+  expect_match(rtf, "clcbpat[0-9]+\\\\clmgf")
+  # Striping off -> no cell shading at all (no regression).
+  out2 <- withr::local_tempfile(fileext = ".rtf")
+  suppressWarnings(emit(tabular(saf_demo), out2))
+  rtf2 <- paste(readLines(out2, warn = FALSE), collapse = "\n")
+  expect_no_match(rtf2, "\\clcbpat", fixed = TRUE)
+})
+
+test_that("cells_pagehead band border adds \\clbrdrb on the RTF header band (#thread-G)", {
+  nb <- function(rtf) {
+    length(gregexpr("clbrdrb\\\\brdrs", rtf, perl = TRUE)[[1]])
+  }
+  base <- tabular(saf_demo) |>
+    preset(pagehead = list(left = "L", center = "C", right = "R"))
+  out0 <- withr::local_tempfile(fileext = ".rtf")
+  suppressWarnings(emit(base, out0))
+  rtf0 <- paste(readLines(out0, warn = FALSE), collapse = "\n")
+  # The band-border knob adds a `\clbrdrb\brdrs` segment per band cell
+  # (the body table already carries its own bottom rules, so compare
+  # counts rather than presence).
+  ruled <- base |> style(border_bottom = brdr("thin"), .at = cells_pagehead())
+  out1 <- withr::local_tempfile(fileext = ".rtf")
+  suppressWarnings(emit(ruled, out1))
+  rtf1 <- paste(readLines(out1, warn = FALSE), collapse = "\n")
+  expect_gt(nb(rtf1), nb(rtf0))
+})

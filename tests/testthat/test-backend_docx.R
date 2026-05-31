@@ -1149,10 +1149,12 @@ test_that("nested formatting (bold inside italic) merges <w:rPr> tokens", {
     readLines(file.path(unzipped, "word/footer1.xml")),
     collapse = ""
   )
-  # The inner run must carry both <w:b/> and <w:i/> in its <w:rPr>.
+  # The inner run must carry both <w:b/> and <w:i/> in its <w:rPr>, in
+  # canonical OOXML CT_RPr order (b before i) regardless of markup
+  # nesting. See the Thread I tests at the end of this file.
   expect_match(
     ftr,
-    "<w:rPr><w:i/><w:b/></w:rPr><w:t xml:space=\"preserve\">bold</w:t>",
+    "<w:rPr><w:b/><w:i/></w:rPr><w:t xml:space=\"preserve\">bold</w:t>",
     fixed = TRUE
   )
 })
@@ -1751,4 +1753,227 @@ test_that("subgroup banner weight follows cells_subgroup_labels() (#edge12)", {
   expect_gt(nb(def), nb(off))
   # `italic = TRUE` adds `<w:i/>` to each banner run.
   expect_match(off, "<w:i/>")
+})
+
+# ---------------------------------------------------------------------
+# Thread I — canonical <w:rPr> child order under nested inline markup.
+# Nested md()/html() markup accumulates run-property fragments in markup
+# NESTING order (.docx_run_wrap appends each wrap token), which is
+# arbitrary vs the OOXML CT_RPr schema sequence. The out-of-order form is
+# well-formed XML but schema-invalid, so Word rejects it as "unreadable
+# content" -- and xml2::read_xml() does NOT catch it. The order
+# assertions below are therefore the load-bearing regression guard.
+# ---------------------------------------------------------------------
+
+test_that(".docx_sort_rpr orders rPr children canonically (stable, lossless)", {
+  # bold-inside-italic accumulates as <w:i/><w:b/>; canonical = b before i.
+  expect_identical(
+    tabular:::.docx_sort_rpr("<w:i/><w:b/>"),
+    "<w:b/><w:i/>"
+  )
+  # Hyperlink rStyle must lead, then b, i (rStyle = element 1 in CT_RPr).
+  expect_identical(
+    tabular:::.docx_sort_rpr("<w:b/><w:i/><w:rStyle w:val=\"Hyperlink\"/>"),
+    "<w:rStyle w:val=\"Hyperlink\"/><w:b/><w:i/>"
+  )
+  # vertAlign sorts last; an already-ordered string is returned unchanged.
+  expect_identical(
+    tabular:::.docx_sort_rpr(
+      "<w:b/><w:i/><w:vertAlign w:val=\"superscript\"/>"
+    ),
+    "<w:b/><w:i/><w:vertAlign w:val=\"superscript\"/>"
+  )
+  # rFonts (code) sorts before b; font name with a space is preserved.
+  expect_identical(
+    tabular:::.docx_sort_rpr(
+      "<w:b/><w:rFonts w:ascii=\"Liberation Mono\" w:hAnsi=\"Liberation Mono\"/>"
+    ),
+    "<w:rFonts w:ascii=\"Liberation Mono\" w:hAnsi=\"Liberation Mono\"/><w:b/>"
+  )
+  # Empty and single-fragment inputs are no-ops.
+  expect_identical(tabular:::.docx_sort_rpr(""), "")
+  expect_identical(tabular:::.docx_sort_rpr("<w:b/>"), "<w:b/>")
+  # Unknown elements are preserved and sorted last (defensive, lossless).
+  expect_identical(
+    tabular:::.docx_sort_rpr("<w:foo/><w:b/>"),
+    "<w:b/><w:foo/>"
+  )
+})
+
+test_that("DOCX nested inline markup emits canonical <w:rPr> order (#thread-I)", {
+  spec <- tabular(
+    data.frame(x = 1L),
+    footnotes = md("*Italic **bold** superscript^a^ end*")
+  )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  footer_path <- file.path(.unzip_docx(out), "word/footer1.xml")
+  ftr <- paste(readLines(footer_path, warn = FALSE), collapse = "")
+
+  # Correct: bold-inside-italic emits <w:b/> before <w:i/>.
+  expect_match(ftr, "<w:rPr><w:b/><w:i/></w:rPr>", fixed = TRUE)
+  # The buggy markup-nesting order must be gone.
+  expect_no_match(ftr, "<w:rPr><w:i/><w:b/></w:rPr>", fixed = TRUE)
+  # vertAlign already sorts after i, and stays correct.
+  expect_match(
+    ftr,
+    "<w:rPr><w:i/><w:vertAlign w:val=\"superscript\"/></w:rPr>",
+    fixed = TRUE
+  )
+  expect_no_error(xml2::read_xml(footer_path))
+})
+
+test_that("DOCX emits well-formed XML for every part with markup-heavy input", {
+  # Systemic output-validity smoke: every word/*.xml part of a
+  # markup-heavy render must parse. Backstops gross malformation from
+  # future edits to the DOCX backend.
+  spec <- tabular(
+    data.frame(x = c(1L, 2L), y = c("a", "b")),
+    titles = c("Title", md("With **bold** and *italic*")),
+    footnotes = md("Footnote **bold^sup^** and ~sub~")
+  ) |>
+    cols(
+      x = col_spec(label = md("`code` **bold**")),
+      y = col_spec(label = md("*italic*"))
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  parts <- list.files(
+    file.path(unzipped, "word"),
+    pattern = "[.]xml$",
+    full.names = TRUE
+  )
+  expect_gt(length(parts), 0L)
+  for (p in parts) {
+    expect_no_error(xml2::read_xml(p))
+  }
+})
+
+test_that("preset(padding=list(header=...)) emits header <w:tcMar> (#thread-C)", {
+  df <- data.frame(grp = c("A", "B"), d50 = c("1", "2"), d100 = c("3", "4"))
+  spec <- tabular(df) |>
+    headers("Drug" = c("d50", "d100")) |>
+    preset(padding = list(header = c(top = 6, bottom = 6)))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  doc <- paste(
+    readLines(file.path(.unzip_docx(out), "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  # 6pt -> 120 dxa on the header band + column-label cells (preset = NULL
+  # in the emitter, so only the header override emits, not body padding).
+  expect_match(
+    doc,
+    "<w:tcMar><w:top w:w=\"120\" w:type=\"dxa\"/>",
+    fixed = TRUE
+  )
+  expect_match(
+    doc,
+    "<w:bottom w:w=\"120\" w:type=\"dxa\"/></w:tcMar>",
+    fixed = TRUE
+  )
+})
+
+test_that("rules='frame' draws <w:left/right> on table-proper rows incl. blank/group (#thread-D)", {
+  spec <- tabular(saf_demo, titles = "T", footnotes = "F") |>
+    cols(
+      variable = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(align = "left"),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    headers("Active" = c("drug_50", "drug_100")) |>
+    preset(rules = "frame")
+  out <- withr::local_tempfile(fileext = ".docx")
+  suppressWarnings(emit(spec, out))
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_match(doc, "<w:left w:space=\"0\"", fixed = TRUE)
+  expect_match(doc, "<w:right w:space=\"0\"", fixed = TRUE)
+  # A merged blank / group-header / subgroup row carries BOTH edges on its
+  # single gridSpan cell (the rows the retired per-cell stamp used to
+  # gap). gridSpan count = visible columns (the group host is dropped).
+  expect_match(
+    doc,
+    "<w:gridSpan w:val=\"\\d+\"/><w:tcBorders><w:left[^/]*/><w:right[^/]*/></w:tcBorders>"
+  )
+  # The whole document stays schema-valid (canonical CT_TcBorders order).
+  expect_no_error(xml2::read_xml(file.path(unzipped, "word/document.xml")))
+
+  # Non-frame preset emits no frame edges (no regression).
+  out2 <- withr::local_tempfile(fileext = ".docx")
+  suppressWarnings(
+    emit(tabular(saf_demo) |> preset(rules = "booktabs"), out2)
+  )
+  doc2 <- paste(
+    readLines(
+      file.path(.unzip_docx(out2), "word/document.xml"),
+      warn = FALSE
+    ),
+    collapse = ""
+  )
+  expect_no_match(doc2, "<w:left w:space=\"0\"", fixed = TRUE)
+})
+
+test_that("stripe + header background reach special rows in DOCX (#thread-B)", {
+  spec <- tabular(saf_demo, titles = "T", footnotes = "F") |>
+    cols(
+      variable = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(align = "left"),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    headers("Active" = c("drug_50", "drug_100")) |>
+    preset(
+      stripe = c(odd = "#f5f5f5", even = "#ffffff"),
+      colors = list(header = c(background = "#dddddd"))
+    )
+  out <- withr::local_tempfile(fileext = ".docx")
+  suppressWarnings(emit(spec, out))
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  # Header band + column-label cells (incl. empty flanks) carry the
+  # header fill via `<w:shd>`.
+  expect_match(doc, "w:fill=\"DDDDDD\"", fixed = TRUE)
+  # Blank + group-header merged cells carry the stripe fill.
+  expect_match(doc, "w:fill=\"F5F5F5\"", fixed = TRUE)
+  # XML stays well-formed with the added <w:shd> in canonical CT_TcPr
+  # order (tcBorders -> shd -> tcMar -> vAlign).
+  expect_no_error(xml2::read_xml(file.path(unzipped, "word/document.xml")))
+})
+
+test_that("cells_pagehead(slot=) styles one slot + band border in DOCX (#thread-G)", {
+  spec <- tabular(saf_demo) |>
+    preset(pagehead = list(left = "L", center = "C")) |>
+    style(
+      bold = TRUE,
+      color = "#cc0000",
+      .at = cells_pagehead(slot = "center")
+    ) |>
+    style(border_bottom = brdr("thin"), .at = cells_pagehead())
+  out <- withr::local_tempfile(fileext = ".docx")
+  suppressWarnings(emit(spec, out))
+  ud <- .unzip_docx(out)
+  hd <- paste(
+    readLines(file.path(ud, "word/header1.xml"), warn = FALSE),
+    collapse = ""
+  )
+  # Centre slot runs carry bold + colour (via the cell default rPr).
+  expect_match(hd, "<w:b/>", fixed = TRUE)
+  expect_match(hd, "CC0000", fixed = TRUE)
+  # The band cells carry the bottom rule (not the default all-nil).
+  expect_match(hd, "<w:bottom w:space", fixed = TRUE)
+  # header1.xml stays well-formed (rPr canonical order, valid tcBorders).
+  expect_no_error(xml2::read_xml(file.path(ud, "word/header1.xml")))
 })

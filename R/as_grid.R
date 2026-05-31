@@ -469,23 +469,28 @@ as_grid <- function(spec) {
     call = call
   )
 
-  # Zebra striping: stamp the resolved stripe fill onto data-row cell
-  # backgrounds (skipping synthetic header / blank rows) wherever no
-  # explicit background is already set, so every backend renders it via
-  # its existing per-cell background path. `stripe = NULL` (the default)
-  # leaves the pages untouched.
-  pages <- .stamp_stripe(pages, resolve_stripe(eff_preset@stripe))
-
   # Group-header styling: route `cells_group_headers()` cascade layers
-  # onto the synthesized section-header rows (disjoint from the stripe's
-  # data rows, so order is irrelevant). `bold = FALSE` here is what
-  # `preset_minimal()` uses to render section labels in normal weight.
+  # onto the synthesized section-header rows. Runs BEFORE the stripe so
+  # an explicit `cells_group_headers(background = ...)` is set first and
+  # the stripe's `is.na(bg)` guard then leaves it alone (explicit wins).
+  # `bold = FALSE` here is what `preset_minimal()` uses to render section
+  # labels in normal weight.
   pages <- .stamp_group_headers(
     pages,
     .collect_group_header_layers(spec),
     spec@data,
     call = call
   )
+
+  # Zebra striping: stamp the resolved stripe fill onto cell backgrounds
+  # wherever no explicit background is already set, so every backend
+  # renders it via its per-cell background path. Synthesised group-header
+  # and blank-separator rows are striped too (they inherit the fill of
+  # the data block they introduce / precede) so the bands read as
+  # continuous with no white gaps; the parity counter still advances on
+  # DATA rows only, so the zebra never desyncs. `stripe = NULL` (the
+  # default) leaves the pages untouched.
+  pages <- .stamp_stripe(pages, resolve_stripe(eff_preset@stripe))
 
   tabular_grid(
     pages = pages,
@@ -864,11 +869,26 @@ as_grid <- function(spec) {
     is_hdr <- pages[[pi]]$is_header_row %||% rep(FALSE, nrow(mat))
     is_blk <- pages[[pi]]$is_blank_row %||% rep(FALSE, nrow(mat))
     for (r in seq_len(nrow(mat))) {
-      if (isTRUE(is_hdr[[r]]) || isTRUE(is_blk[[r]])) {
-        next
+      is_special <- isTRUE(is_hdr[[r]]) || isTRUE(is_blk[[r]])
+      if (is_special) {
+        # A group-header / blank row inherits the fill of the data block
+        # it introduces / precedes: the parity of the NEXT data row
+        # (`data_idx + 1`). The counter itself does NOT advance here, so
+        # the zebra stays locked to the data and the band reads as one
+        # continuous colour with no white gap.
+        fill <- if ((data_idx + 1L) %% 2L == 1L) {
+          stripe[["odd"]]
+        } else {
+          stripe[["even"]]
+        }
+      } else {
+        data_idx <- data_idx + 1L
+        fill <- if (data_idx %% 2L == 1L) {
+          stripe[["odd"]]
+        } else {
+          stripe[["even"]]
+        }
       }
-      data_idx <- data_idx + 1L
-      fill <- if (data_idx %% 2L == 1L) stripe[["odd"]] else stripe[["even"]]
       if (is.na(fill)) {
         next
       }

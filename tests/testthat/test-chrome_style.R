@@ -31,13 +31,70 @@ test_that("chrome_style()$borders carries every chrome region key with NULL defa
   expect_true(all(vapply(cs$borders, is.null, logical(1L))))
 })
 
-test_that("chrome_style()$surfaces carries every chrome surface key with default style_node", {
+test_that("chrome_style()$surfaces carries every chrome surface key; page bands are slot-keyed", {
   cs <- tabular:::chrome_style()
   expect_named(
     cs$surfaces,
     c("pagehead", "title", "header", "subgroup", "footer", "pagefoot")
   )
-  expect_true(all(vapply(cs$surfaces, is_style_node, logical(1L))))
+  # Flat surfaces are a single default style_node.
+  for (k in c("title", "header", "subgroup", "footer")) {
+    expect_true(is_style_node(cs$surfaces[[k]]))
+  }
+  # pagehead / pagefoot are slot-keyed (left / center / right), each a
+  # default style_node, so `style(.at = cells_pagehead(slot = ...))` can
+  # target one slot.
+  for (k in c("pagehead", "pagefoot")) {
+    expect_named(cs$surfaces[[k]], c("left", "center", "right"))
+    expect_true(all(vapply(cs$surfaces[[k]], is_style_node, logical(1L))))
+  }
+})
+
+test_that(".chrome_surface_at_slot resolves per-slot and broadcast (slot = NULL) views", {
+  cs <- tabular:::chrome_style()
+  cs$surfaces$pagehead$center <- S7::set_props(style_node(), bold = TRUE)
+  cs$surfaces$pagehead$left <- S7::set_props(style_node(), italic = TRUE)
+  expect_true(isTRUE(
+    tabular:::.chrome_surface_at_slot(cs, "pagehead", "center")@bold
+  ))
+  expect_true(is.na(
+    tabular:::.chrome_surface_at_slot(cs, "pagehead", "right")@bold
+  ))
+  # slot = NULL merges all three (broadcast view); a flat surface returns
+  # its single node regardless of slot.
+  merged <- tabular:::.chrome_surface_at_slot(cs, "pagehead", slot = NULL)
+  expect_true(isTRUE(merged@bold) && isTRUE(merged@italic))
+  expect_true(is_style_node(
+    tabular:::.chrome_surface_at_slot(cs, "title", "center")
+  ))
+  # Legacy `.chrome_surface_at` degrades to the merged view (no crash).
+  expect_true(isTRUE(tabular:::.chrome_surface_at(cs, "pagehead")@bold))
+})
+
+test_that(".chrome_surface_at(_slot) degrade to a default node on bad / missing input", {
+  cs <- tabular:::chrome_style()
+  # NULL cs / non-list surfaces -> default node.
+  expect_true(is_style_node(tabular:::.chrome_surface_at_slot(
+    NULL,
+    "pagehead",
+    "left"
+  )))
+  expect_true(is_style_node(tabular:::.chrome_surface_at(NULL, "pagehead")))
+  expect_true(is_style_node(
+    tabular:::.chrome_surface_at_slot(list(surfaces = 1L), "pagehead", "left")
+  ))
+  # Missing slot on a slot-keyed surface -> default node.
+  expect_true(is_style_node(
+    tabular:::.chrome_surface_at_slot(cs, "pagehead", "nope")
+  ))
+  # Surface value that is neither a style_node nor a slot list -> default.
+  weird <- list(surfaces = list(x = 1L))
+  expect_true(is_style_node(tabular:::.chrome_surface_at(weird, "x")))
+  expect_true(is_style_node(tabular:::.chrome_surface_at_slot(
+    weird,
+    "x",
+    "left"
+  )))
 })
 
 test_that(".chrome_border_at() returns NULL on missing region or non-list input", {

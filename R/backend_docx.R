@@ -168,14 +168,16 @@ backend_docx <- function(grid, file) {
   if (has_ph) {
     entries[["word/header1.xml"]] <- .docx_header_xml(
       meta$pagehead_ast,
-      preset
+      preset,
+      cs = cs
     )
   }
   if (has_footer) {
     entries[["word/footer1.xml"]] <- .docx_footer_xml(
       meta$pagefoot_ast,
       preset,
-      footnote_block = footer_foot_block
+      footnote_block = footer_foot_block,
+      cs = cs
     )
   }
   # OPC (Open Packaging Conventions) MANDATES that `[Content_Types].xml`
@@ -649,6 +651,11 @@ backend_docx <- function(grid, file) {
   col_names_vis <- pages[[1L]]$col_names
   cols <- meta$cols %||% list()
   widths <- .docx_col_widths_twips(col_names_vis, cols, preset)
+  # Frame outer LEFT / RIGHT edges, applied structurally to the first /
+  # last cell of every table-proper row (`<w:tblBorders>` is out: the
+  # title rows live inside this same `<w:tbl>` and must stay outside the
+  # box). The manifest is the SSOT; NULL when the frame is off.
+  body_borders <- meta$body_borders %||% list()
 
   # Repeating titles: merged `<w:tblHeader/>` rows at the top of the
   # table (RTF's `\trhdr` title rows), so Word repeats the title block
@@ -679,7 +686,8 @@ backend_docx <- function(grid, file) {
     col_names_vis,
     widths,
     cs = cs,
-    top_border = top_el
+    top_border = top_el,
+    body_borders = body_borders
   )
   label_row <- .render_docx_col_labels_row(
     meta$col_labels_ast,
@@ -691,7 +699,8 @@ backend_docx <- function(grid, file) {
     preset = preset,
     cs = cs,
     top_border = if (has_bands) "" else top_el,
-    bottom_border = mid_el
+    bottom_border = mid_el,
+    body_borders = body_borders
   )
   body_rows <- .render_docx_body_rows(
     pages,
@@ -699,7 +708,8 @@ backend_docx <- function(grid, file) {
     cols,
     widths,
     preset = preset,
-    cs = cs
+    cs = cs,
+    body_borders = body_borders
   )
 
   paste0(
@@ -802,7 +812,8 @@ backend_docx <- function(grid, file) {
   col_names_vis,
   widths_twips,
   cs = NULL,
-  top_border = ""
+  top_border = "",
+  body_borders = NULL
 ) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(character())
@@ -842,12 +853,35 @@ backend_docx <- function(grid, file) {
       # rides every cell of the first band row.
       top_part <- if (is_first_depth) top_border else ""
       bottom_part <- if (!is.na(label)) span_bottom else ""
-      tc_borders <- .docx_tcborders(top_part, bottom_part)
+      # Outer frame edges: left on the first run, right on the last run,
+      # placed in canonical CT_TcBorders order (top, left, bottom, right).
+      left_part <- if (i == 1L) .docx_frame_edge("left", body_borders) else ""
+      right_part <- if (i == length(runs)) {
+        .docx_frame_edge("right", body_borders)
+      } else {
+        ""
+      }
+      tc_borders <- .docx_tcborders(
+        top_part,
+        left_part,
+        bottom_part,
+        right_part
+      )
+      # Header surface drives the band background (so a coloured band
+      # reads end-to-end, including the empty flanking cells) and the
+      # header padding override. `<w:shd>` follows `<w:tcBorders>` and
+      # precedes `<w:tcMar>` in CT_TcPr order. preset = NULL on tcMar so
+      # only the header padding override emits (no body-padding bleed).
+      header_surface <- .chrome_surface_at(cs, "header")
+      band_shd <- .docx_shd_from_style(header_surface)
+      tc_mar <- .docx_tcMar_from_style(header_surface, NULL)
       tc_pr <- paste0(
         "<w:tcPr>",
         sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", cell_w),
         if (span > 1L) sprintf("<w:gridSpan w:val=\"%d\"/>", span) else "",
         tc_borders,
+        band_shd,
+        tc_mar,
         "</w:tcPr>"
       )
       content <- if (is.na(label)) {
@@ -893,7 +927,8 @@ backend_docx <- function(grid, file) {
   preset = NULL,
   cs = NULL,
   top_border = "",
-  bottom_border = ""
+  bottom_border = "",
+  body_borders = NULL
 ) {
   surface_node <- .chrome_surface_at(cs, "header")
   cells <- vapply(
@@ -962,11 +997,36 @@ backend_docx <- function(grid, file) {
       # Toprule rides the label row only when no band rows preceded it
       # (caller passes "" otherwise); the midrule (chrome `header_bottom`)
       # always closes the column-label band, full table width.
-      tc_borders <- .docx_tcborders(top_border, bottom_border)
+      # Outer frame edges: left on the first column, right on the last,
+      # in canonical CT_TcBorders order (top, left, bottom, right).
+      left_border <- if (j == 1L) {
+        .docx_frame_edge("left", body_borders)
+      } else {
+        ""
+      }
+      right_border <- if (j == length(col_names_vis)) {
+        .docx_frame_edge("right", body_borders)
+      } else {
+        ""
+      }
+      tc_borders <- .docx_tcborders(
+        top_border,
+        left_border,
+        bottom_border,
+        right_border
+      )
+      # Header surface drives the column-label background (RTF / HTML
+      # parity) and the header padding override (preset = NULL: header
+      # override only, no body-padding bleed). Canonical CT_TcPr order is
+      # tcW -> tcBorders -> shd -> tcMar -> vAlign.
+      col_shd <- .docx_shd_from_style(surface_node)
+      tc_mar <- .docx_tcMar_from_style(surface_node, NULL)
       tc_pr <- sprintf(
-        "<w:tcPr><w:tcW w:w=\"%d\" w:type=\"dxa\"/>%s%s</w:tcPr>",
+        "<w:tcPr><w:tcW w:w=\"%d\" w:type=\"dxa\"/>%s%s%s%s</w:tcPr>",
         widths_twips[[j]],
         tc_borders,
+        col_shd,
+        tc_mar,
         valign_tok
       )
       paste0(
@@ -1005,7 +1065,8 @@ backend_docx <- function(grid, file) {
   cols,
   widths_twips,
   preset = NULL,
-  cs = NULL
+  cs = NULL,
+  body_borders = NULL
 ) {
   col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
   n_cols_vis <- length(col_names_vis)
@@ -1024,7 +1085,8 @@ backend_docx <- function(grid, file) {
         widths_twips = widths_twips,
         page_break_before = page_break_before,
         preset = preset,
-        cs = cs
+        cs = cs,
+        body_borders = body_borders
       )
       if (length(banner_row) > 0L) {
         out <- c(out, banner_row)
@@ -1046,6 +1108,17 @@ backend_docx <- function(grid, file) {
     span_total_twips <- sum(as.integer(widths_twips))
     for (i in seq_len(nrows)) {
       if (isTRUE(is_blank_row_vec[[i]])) {
+        # Merged full-width cell: both frame edges ride this single cell,
+        # plus the stripe fill stamped onto the row's node (so the zebra
+        # band stays continuous across the gap). `<w:shd>` follows
+        # `<w:tcBorders>` in CT_TcPr order.
+        merged_edges <- .docx_tcborders(
+          .docx_frame_edge("left", body_borders),
+          .docx_frame_edge("right", body_borders)
+        )
+        blank_shd <- .docx_shd_from_style(
+          tryCatch(cs_mat[[i, 1L]], error = function(e) NULL)
+        )
         out <- c(
           out,
           paste0(
@@ -1053,6 +1126,8 @@ backend_docx <- function(grid, file) {
             "<w:tc><w:tcPr>",
             sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_total_twips),
             sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols_vis),
+            merged_edges,
+            blank_shd,
             "</w:tcPr>",
             "<w:p><w:pPr></w:pPr><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p>",
             "</w:tc></w:tr>"
@@ -1107,6 +1182,15 @@ backend_docx <- function(grid, file) {
         } else {
           ""
         }
+        # Merged full-width group-header cell: both frame edges ride it,
+        # plus the host node's background (the stripe fill, or an explicit
+        # cells_group_headers(background = ...)). `<w:shd>` follows
+        # `<w:tcBorders>` in CT_TcPr order.
+        merged_edges <- .docx_tcborders(
+          .docx_frame_edge("left", body_borders),
+          .docx_frame_edge("right", body_borders)
+        )
+        group_shd <- .docx_shd_from_style(host_node)
         out <- c(
           out,
           paste0(
@@ -1114,6 +1198,8 @@ backend_docx <- function(grid, file) {
             "<w:tc><w:tcPr>",
             sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_total_twips),
             sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols_vis),
+            merged_edges,
+            group_shd,
             "</w:tcPr>",
             "<w:p><w:pPr>",
             header_ind_tok,
@@ -1149,7 +1235,21 @@ backend_docx <- function(grid, file) {
           align_tok <- .docx_align_token(halign)
           valign_tok <- .docx_valign_token(valign)
           tc_pr <- .docx_tcPr_inject_valign(
-            .docx_tcPr_from_style(style, widths_twips[[j]], preset = preset),
+            .docx_tcPr_from_style(
+              style,
+              widths_twips[[j]],
+              preset = preset,
+              frame_left = if (j == 1L) {
+                .docx_frame_edge("left", body_borders)
+              } else {
+                ""
+              },
+              frame_right = if (j == n_cols_vis) {
+                .docx_frame_edge("right", body_borders)
+              } else {
+                ""
+              }
+            ),
             valign_tok
           )
           r_pr_inner <- .docx_rPr_from_style(style, preset = preset)
@@ -1242,7 +1342,8 @@ backend_docx <- function(grid, file) {
   widths_twips,
   page_break_before,
   preset = NULL,
-  cs = NULL
+  cs = NULL,
+  body_borders = NULL
 ) {
   if (
     is.null(subgroup_line_ast) ||
@@ -1293,11 +1394,21 @@ backend_docx <- function(grid, file) {
   }
   valign_tok <- .docx_valign_token(valign)
   jc_tok <- .docx_align_token(halign)
+  # Merged full-width cell: both frame edges ride it, plus the subgroup
+  # surface background (RTF parity). `<w:tcBorders>` then `<w:shd>` then
+  # `<w:vAlign>` in CT_TcPr order.
+  merged_edges <- .docx_tcborders(
+    .docx_frame_edge("left", body_borders),
+    .docx_frame_edge("right", body_borders)
+  )
+  banner_shd <- .docx_shd_from_style(surface_node)
   paste0(
     "<w:tr><w:trPr><w:tblHeader/></w:trPr>",
     "<w:tc><w:tcPr>",
     sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_w),
     sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols),
+    merged_edges,
+    banner_shd,
     valign_tok,
     "</w:tcPr>",
     "<w:p><w:pPr>",
@@ -1470,12 +1581,15 @@ backend_docx <- function(grid, file) {
 # REVERSE index order so row 1 (body edge) ends up at the bottom of
 # the header zone, closest to the table body — matches the RTF
 # header convention.
-.docx_header_xml <- function(pagehead_ast, preset) {
+.docx_header_xml <- function(pagehead_ast, preset, cs = NULL) {
   nrow_band <- .page_band_nrow(pagehead_ast)
   rows <- character()
   for (i in rev(seq_len(nrow_band))) {
     row_ast <- .page_band_row(pagehead_ast, i)
-    rows <- c(rows, .docx_chrome_row(row_ast, preset))
+    rows <- c(
+      rows,
+      .docx_chrome_row(row_ast, preset, cs = cs, surface = "pagehead")
+    )
   }
   paste0(
     .docx_xml_prologue,
@@ -1496,12 +1610,20 @@ backend_docx <- function(grid, file) {
 # pagefoot chrome rows, so the footer reads footnotes-then-program-path
 # top to bottom, repeating on every page. Mirrors RTF's `{\footer}`
 # (footnote lines above the program-path band).
-.docx_footer_xml <- function(pagefoot_ast, preset, footnote_block = "") {
+.docx_footer_xml <- function(
+  pagefoot_ast,
+  preset,
+  footnote_block = "",
+  cs = NULL
+) {
   nrow_band <- .page_band_nrow(pagefoot_ast)
   rows <- character()
   for (i in seq_len(nrow_band)) {
     row_ast <- .page_band_row(pagefoot_ast, i)
-    rows <- c(rows, .docx_chrome_row(row_ast, preset))
+    rows <- c(
+      rows,
+      .docx_chrome_row(row_ast, preset, cs = cs, surface = "pagefoot")
+    )
   }
   paste0(
     .docx_xml_prologue,
@@ -1521,14 +1643,36 @@ backend_docx <- function(grid, file) {
 # resolve to Word `<w:fldSimple>` PAGE / NUMPAGES fields at view
 # time. No borders, no shading; chrome cells stay visually
 # transparent against the page background.
-.docx_chrome_row <- function(row_slots_ast, preset) {
+.docx_chrome_row <- function(
+  row_slots_ast,
+  preset,
+  cs = NULL,
+  surface = NULL
+) {
   slots <- c("left", "center", "right")
   alignments <- c(left = "left", center = "center", right = "right")
   cells_data <- list()
   for (s in slots) {
     ast <- row_slots_ast[[s]]
     if (is_inline_ast(ast) && length(ast@runs) > 0L) {
-      runs_xml <- .render_docx_inline(ast, hyperlinks = character())
+      # Per-slot text props (bold/italic/color/font) from
+      # cells_pagehead(slot = s) ride as the cell runs' default rPr
+      # (Thread G); .render_docx_inline merges + canonically orders them.
+      slot_node <- if (!is.null(surface)) {
+        .chrome_surface_at_slot(cs, surface, slot = s)
+      } else {
+        NULL
+      }
+      slot_rpr <- if (is_style_node(slot_node)) {
+        .docx_rPr_from_style(slot_node)
+      } else {
+        ""
+      }
+      runs_xml <- .render_docx_inline(
+        ast,
+        hyperlinks = character(),
+        default_rpr = slot_rpr
+      )
       runs_with_fields <- .docx_resolve_page_tokens(runs_xml)
       cells_data[[length(cells_data) + 1L]] <- list(
         align = alignments[[s]],
@@ -1545,13 +1689,36 @@ backend_docx <- function(grid, file) {
   printable <- paper$width - margins$left - margins$right
   per_cell <- as.integer(printable %/% length(cells_data))
 
-  # Borderless cell prelude: <w:tcBorders> with nil on all four
-  # sides. Inserted as a constant so every chrome cell uses the
-  # same scaffold.
+  # Band rule (Thread G): `style(border_bottom = brdr(), .at =
+  # cells_pagehead())` draws a rule on the header band's bottom edge
+  # (`border_top` on the footer's top edge), from the chrome border
+  # region. The other three edges, and the default (no region), stay nil.
+  band_edge <- if (identical(surface, "pagefoot")) "top" else "bottom"
+  region <- if (identical(surface, "pagehead")) {
+    "pagehead_bottom"
+  } else if (identical(surface, "pagefoot")) {
+    "pagefoot_top"
+  } else {
+    NULL
+  }
+  edge_el <- if (is.null(region)) {
+    ""
+  } else {
+    .docx_chrome_border_seg(cs, region, band_edge, "none")
+  }
+  border_el <- function(side) {
+    if (identical(side, band_edge) && nzchar(edge_el)) {
+      edge_el
+    } else {
+      sprintf("<w:%s w:val=\"nil\"/>", side)
+    }
+  }
   nil_borders <- paste0(
     "<w:tcBorders>",
-    "<w:top w:val=\"nil\"/><w:left w:val=\"nil\"/>",
-    "<w:bottom w:val=\"nil\"/><w:right w:val=\"nil\"/>",
+    border_el("top"),
+    border_el("left"),
+    border_el("bottom"),
+    border_el("right"),
     "</w:tcBorders>"
   )
 
@@ -2092,7 +2259,9 @@ backend_docx <- function(grid, file) {
   style,
   width_twips,
   gridspan = NA_integer_,
-  preset = NULL
+  preset = NULL,
+  frame_left = "",
+  frame_right = ""
 ) {
   parts <- character()
   parts <- c(
@@ -2124,16 +2293,22 @@ backend_docx <- function(grid, file) {
     )
     for (entry in border_entries) {
       brd <- .effective_border(entry$side, style)
-      # NULL: no override (DOCX has no per-cell default border, so
-      # we simply emit nothing). list(style = "none", ...): explicit
-      # clear sentinel; same result here (suppress emission).
-      if (is.null(brd) || identical(brd$style, "none")) {
-        next
-      }
-      border_inners <- c(
-        border_inners,
+      tok <- if (!is.null(brd) && !identical(brd$style, "none")) {
         sprintf("<%s %s/>", entry$tag, .docx_border_attrs(brd))
-      )
+      } else if (entry$side == "left") {
+        # Structural outer-frame LEFT edge (retired from the per-cell
+        # stamp; see .apply_table_layer). Slots into the canonical
+        # top -> left -> bottom -> right order. A real per-cell border
+        # still wins (the branch above).
+        frame_left
+      } else if (entry$side == "right") {
+        frame_right
+      } else {
+        ""
+      }
+      if (nzchar(tok)) {
+        border_inners <- c(border_inners, tok)
+      }
     }
     if (length(border_inners) > 0L) {
       parts <- c(
@@ -2228,6 +2403,47 @@ backend_docx <- function(grid, file) {
     return("")
   }
   paste0("<w:tcBorders>", paste(sides, collapse = ""), "</w:tcBorders>")
+}
+
+# Outer frame edge element (`<w:left>` / `<w:right>`) for a DOCX table-
+# proper cell, read from the body-border manifest. Applied to the first
+# (left) and last (right) cell of every table-proper row, and to BOTH
+# sides of a merged blank / group-header cell, so the vertical frame
+# spans the whole table region (`<w:tblBorders>` cannot be used: the
+# title rows share the same `<w:tbl>` and must stay outside the box).
+# Returns "" when the frame is off. The caller MUST place the result in
+# canonical CT_TcBorders order (top, left, bottom, right) inside
+# `.docx_tcborders()`.
+.docx_frame_edge <- function(side, body_borders) {
+  if (!is.list(body_borders)) {
+    return("")
+  }
+  triple <- body_borders[[paste0("outer_", side)]]
+  if (is.null(triple) || identical(triple$style, "none")) {
+    return("")
+  }
+  sprintf("<w:%s w:space=\"0\" %s/>", side, .docx_border_attrs(triple))
+}
+
+# `<w:shd>` cell-shading element from a style_node's @background, or ""
+# when no background is set. Mirrors the inline block in
+# `.docx_tcPr_from_style()` so the special-row renderers (header band,
+# blank separator, group-header, subgroup banner) can colour their cells
+# from the resolved node (the stripe fill or the header surface colour),
+# matching the body cell path. `<w:shd>` follows `<w:tcBorders>` and
+# precedes `<w:tcMar>` / `<w:vAlign>` in CT_TcPr order.
+.docx_shd_from_style <- function(style) {
+  if (!is_style_node(style)) {
+    return("")
+  }
+  bg <- style@background
+  if (length(bg) != 1L || is.na(bg) || !nzchar(bg)) {
+    return("")
+  }
+  sprintf(
+    "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"%s\"/>",
+    .docx_normalize_color(bg)
+  )
 }
 
 # Translate a `style_node` to a `<w:rPr>` XML fragment carrying
@@ -2466,13 +2682,63 @@ backend_docx <- function(grid, file) {
   )
 }
 
+# Canonical OOXML CT_RPr child order (ECMA-376-1:2016 17.3.2.7),
+# restricted to the run-property elements tabular emits. The inline
+# markup path accumulates rPr fragments in nesting order
+# (`.docx_run_wrap()` appends each wrap token to the inherited string),
+# which is arbitrary relative to the schema sequence: bold-inside-italic
+# lands as `<w:i/><w:b/>` and a hyperlink inside bold as
+# `<w:b/><w:rStyle/>`. That is well-formed XML but schema-invalid, and
+# Word rejects it as "unreadable content". `.docx_sort_rpr()` reorders
+# the accumulated self-closing fragments into canonical order at the one
+# point where they become a `<w:rPr>` element. (`.docx_rPr_from_style()`
+# already emits in canonical order, so single-property cell runs are
+# unaffected; the sort is idempotent on an already-ordered string.)
+.docx_rpr_order <- c(
+  rStyle = 1L,
+  rFonts = 2L,
+  b = 3L,
+  bCs = 4L,
+  i = 5L,
+  iCs = 6L,
+  strike = 7L,
+  color = 8L,
+  sz = 9L,
+  szCs = 10L,
+  u = 11L,
+  vertAlign = 12L
+)
+
+.docx_sort_rpr <- function(rpr) {
+  if (!nzchar(rpr)) {
+    return(rpr)
+  }
+  frags <- regmatches(
+    rpr,
+    gregexpr("<w:[A-Za-z]+(?: [^>]*)?/>", rpr, perl = TRUE)
+  )[[1L]]
+  # Reorder only when the string is cleanly a run of self-closing tags
+  # (it always is in practice). If the regex did not account for every
+  # byte, something unexpected is present, so leave it untouched rather
+  # than risk dropping content. A single fragment needs no sorting.
+  if (length(frags) < 2L || sum(nchar(frags)) != nchar(rpr)) {
+    return(rpr)
+  }
+  local <- sub("^<w:([A-Za-z]+).*$", "\\1", frags)
+  rank <- unname(.docx_rpr_order[local])
+  rank[is.na(rank)] <- 999L
+  # `order(rank, seq_along)` is a stable sort: equal-rank and unknown
+  # elements keep their original relative position.
+  paste0(frags[order(rank, seq_along(frags))], collapse = "")
+}
+
 # Render a plain text run with an optional `<w:rPr>` block. The
 # `xml:space="preserve"` attribute is non-negotiable: cell text
 # arrives with leading / trailing NBSP padding from engine_decimal,
 # and Word collapses unprotected whitespace at render time.
 .docx_run_plain <- function(text, default_rpr) {
   rpr <- if (nzchar(default_rpr)) {
-    paste0("<w:rPr>", default_rpr, "</w:rPr>")
+    paste0("<w:rPr>", .docx_sort_rpr(default_rpr), "</w:rPr>")
   } else {
     ""
   }

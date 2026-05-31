@@ -169,7 +169,7 @@ test_that("preset() fonts knob accepts every surface + sub-key", {
   spec <- tabular(data.frame(x = 1))
   for (s in c("body", "header", "titles", "footnotes", "subgroup")) {
     arg <- stats::setNames(
-      list(list(family = "Inter", size = 9, weight = "normal")),
+      list(c(family = "Inter", size = 9, weight = "normal")),
       s
     )
     expect_silent(preset(spec, fonts = arg))
@@ -181,7 +181,7 @@ test_that("preset() colors knob accepts every surface + token key", {
   for (s in c("body", "header", "titles", "footnotes", "subgroup")) {
     for (t in c("text", "background")) {
       arg <- stats::setNames(
-        list(stats::setNames(list("#212529"), t)),
+        list(stats::setNames("#212529", t)),
         s
       )
       expect_silent(preset(spec, colors = arg))
@@ -195,7 +195,7 @@ test_that("preset() padding knob accepts uniform numeric + per-side", {
     arg <- stats::setNames(list(3), s)
     expect_silent(preset(spec, padding = arg))
     arg2 <- stats::setNames(
-      list(list(top = 2, right = 4, bottom = 2, left = 4)),
+      list(c(top = 2, right = 4, bottom = 2, left = 4)),
       s
     )
     expect_silent(preset(spec, padding = arg2))

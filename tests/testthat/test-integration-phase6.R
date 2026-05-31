@@ -37,8 +37,8 @@ combined_spec <- function() {
     preset(
       alignment = list(title_halign = "left"),
       rules = list(rowrule = brdr("hairline")),
-      fonts = list(body = list(family = "Inter", size = 9)),
-      colors = list(body = list(text = "#212529")),
+      fonts = list(body = c(family = "Inter", size = 9)),
+      colors = list(body = c(text = "#212529")),
       padding = list(body = 4)
     )
 }
@@ -115,4 +115,72 @@ test_that("integration spec composes through all Phase 6 surfaces (Markdown)", {
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_false(grepl("helper_sort", txt, fixed = TRUE))
   expect_true(grepl("Integration", txt, fixed = TRUE))
+})
+
+# ---------------------------------------------------------------------
+# Cross-backend integration: the reported demographics scenario that
+# kicked off the special-rows / frame / knob-shape work. A real wide
+# table with a header_row group (-> group-header + blank separator
+# rows), a spanner band, frame rules, zebra striping, a coloured +
+# padded header, and styled page bands must render to a VALID artefact
+# on every backend (Threads A-G + I together).
+# ---------------------------------------------------------------------
+
+test_that("demographics frame + stripe + group + page-band styling renders on all backends", {
+  spec <- tabular(
+    saf_demo,
+    titles = c("Table 14.1.1", "Demographics"),
+    footnotes = md("Source: **ADSL**.")
+  ) |>
+    cols(
+      variable = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(align = "left"),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    headers("Active" = c("drug_50", "drug_100")) |>
+    preset(
+      rules = "frame",
+      stripe = c(odd = "#f5f5f5", even = "#ffffff"),
+      colors = list(header = c(text = "#212529", background = "#dddddd")),
+      padding = list(header = c(top = 4, bottom = 4)),
+      pagehead = list(left = md("**Protocol** ABC"), right = "Page {page}"),
+      pagefoot = list(left = "Program: t_dm.R")
+    ) |>
+    style(bold = TRUE, .at = cells_pagehead(slot = "left")) |>
+    style(border_bottom = brdr("thin"), .at = cells_pagehead())
+
+  # HTML: emits without error, frame edge present, page-band markup rich.
+  html <- withr::local_tempfile(fileext = ".html")
+  expect_no_error(suppressWarnings(emit(spec, html)))
+  htxt <- paste(readLines(html, warn = FALSE), collapse = "\n")
+  expect_match(htxt, ".tabular-table { border-left:", fixed = TRUE)
+  expect_match(htxt, "<strong>Protocol</strong>", fixed = TRUE)
+
+  # RTF: emits without error.
+  rtf <- withr::local_tempfile(fileext = ".rtf")
+  expect_no_error(suppressWarnings(emit(spec, rtf)))
+
+  # DOCX: every word/*.xml part is well-formed (the systemic validity
+  # gate — catches rPr / tcBorders / tcPr ordering regressions).
+  docx <- withr::local_tempfile(fileext = ".docx")
+  expect_no_error(suppressWarnings(emit(spec, docx)))
+  unz <- file.path(tempfile())
+  utils::unzip(docx, exdir = unz)
+  for (p in list.files(
+    file.path(unz, "word"),
+    pattern = "[.]xml$",
+    full.names = TRUE
+  )) {
+    expect_no_error(xml2::read_xml(p))
+  }
+
+  # LaTeX -> PDF: compiles end to end (frame vlines + SetRow + fancyhdr
+  # rule + slot props all valid tabularray / fancyhdr).
+  skip_if_not(tinytex::is_tinytex() || nzchar(Sys.which("pdflatex")))
+  pdf <- withr::local_tempfile(fileext = ".pdf")
+  expect_no_error(suppressWarnings(emit(spec, pdf)))
+  expect_gt(file.size(pdf), 0L)
 })

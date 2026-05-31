@@ -1195,9 +1195,10 @@ get_preset <- function() {
 #   colors$border                -> cells_table(side="outer") + ("rows") + ("cols")
 #   padding[<surface>]           -> cells_<surface>()      padding (scalar only)
 #
-# Per-side padding lists (`padding = list(body = list(top = 1, ...))`)
-# are NOT lowered to per-side scalars (`style_node@padding` is one
-# numeric); the helper averages the four sides as the closest scalar.
+# Per-side padding (`padding = list(body = c(top = 1, ...))`) lowers
+# each named side to the matching `style_node@padding_<side>` scalar
+# (the four-sided shape is fully expressible; no averaging). A bare
+# scalar (`padding = list(body = 4)`) broadcasts to all four sides.
 .preset_args_to_layers <- function(args) {
   layers <- list()
   for (knob in c("alignment", "rules", "fonts", "colors", "padding")) {
@@ -1472,16 +1473,36 @@ get_preset <- function() {
   layers <- list()
   for (surface in names(fn)) {
     spec <- fn[[surface]]
-    if (is.null(spec) || !is.list(spec)) {
+    # Inner spec is a named ATOMIC vector c(family = , size = , weight = ).
+    # `fonts` is the one mixed-type knob: a homogeneous vector cannot hold
+    # character family/weight beside numeric size, so we accept either a
+    # character vector (c(family = "Inter", size = "9")) or a numeric one
+    # (c(size = 9)) and coerce each field at read. The shape validator
+    # rejects the legacy nested-list form upstream.
+    if (is.null(spec) || !is.atomic(spec) || is.null(names(spec))) {
       next
     }
     location <- .preset_surface_to_location(surface)
     if (is.null(location)) {
       next
     }
-    family <- spec$family
-    size <- spec$size
-    weight <- spec$weight
+    family <- if ("family" %in% names(spec)) {
+      as.character(spec[["family"]])
+    } else {
+      NULL
+    }
+    weight <- if ("weight" %in% names(spec)) {
+      as.character(spec[["weight"]])
+    } else {
+      NULL
+    }
+    size <- NA_real_
+    if ("size" %in% names(spec)) {
+      size <- suppressWarnings(as.numeric(spec[["size"]]))
+      if (!is.finite(size) || size <= 0) {
+        size <- NA_real_
+      }
+    }
     fam_layer <- .preset_layer_one(location, "font_family", family)
     if (!is.null(fam_layer)) {
       layers <- c(layers, list(fam_layer))
@@ -1505,9 +1526,10 @@ get_preset <- function() {
   layers
 }
 
-# colors named-list -> per-surface color / background layers. Now
-# region-keyed for parity with the `fonts` / `padding` surface set:
-# `colors = list(body = list(text = , background = ), header = list(...),
+# colors named-list -> per-surface color / background layers. Region-
+# keyed for parity with the `fonts` / `padding` surface set; each inner
+# spec is a named character vector:
+# `colors = list(body = c(text = , background = ), header = c(...),
 # titles = , footnotes = , subgroup = )`. Each surface lowers its
 # `text` -> `color` and `background` to a `cells_<surface>()` layer.
 .preset_colors_to_layers <- function(co) {
@@ -1517,18 +1539,27 @@ get_preset <- function() {
   layers <- list()
   for (surface in names(co)) {
     spec <- co[[surface]]
-    if (is.null(spec) || !is.list(spec)) {
+    # Inner spec is a named character vector c(text = , background = ).
+    # The shape validator rejects the legacy nested-list form upstream;
+    # this is the defensive skip for anything that slips past.
+    if (is.null(spec) || !is.character(spec) || is.null(names(spec))) {
       next
     }
     location <- .preset_surface_to_location(surface)
     if (is.null(location)) {
       next
     }
-    txt <- .preset_layer_one(location, "color", spec$text)
+    txt_val <- if ("text" %in% names(spec)) spec[["text"]] else NULL
+    txt <- .preset_layer_one(location, "color", txt_val)
     if (!is.null(txt)) {
       layers <- c(layers, list(txt))
     }
-    bg <- .preset_layer_one(location, "background", spec$background)
+    bg_val <- if ("background" %in% names(spec)) {
+      spec[["background"]]
+    } else {
+      NULL
+    }
+    bg <- .preset_layer_one(location, "background", bg_val)
     if (!is.null(bg)) {
       layers <- c(layers, list(bg))
     }
@@ -1539,17 +1570,27 @@ get_preset <- function() {
 # Expand a padding knob value to a named numeric c(top, right, bottom,
 # left); unset sides are NA (inherit). A scalar applies to all four.
 .padding_sides <- function(val) {
-  if (is.numeric(val) && length(val) == 1L && !is.na(val)) {
+  # Unnamed scalar broadcasts to all four sides.
+  if (
+    is.numeric(val) && length(val) == 1L && is.null(names(val)) && !is.na(val)
+  ) {
     return(c(top = val, right = val, bottom = val, left = val))
   }
-  if (is.list(val)) {
-    return(vapply(
-      c("top", "right", "bottom", "left"),
-      function(s) if (is.null(val[[s]])) NA_real_ else as.numeric(val[[s]]),
-      numeric(1L)
-    ))
+  # Named numeric vector c(top = , right = , bottom = , left = ); any
+  # subset. Unset sides stay NA (inherit). `intersect` keeps the loop
+  # to present names, so val[[s]] never indexes an absent key.
+  out <- c(
+    top = NA_real_,
+    right = NA_real_,
+    bottom = NA_real_,
+    left = NA_real_
+  )
+  if (is.numeric(val) && !is.null(names(val))) {
+    for (s in intersect(names(val), c("top", "right", "bottom", "left"))) {
+      out[[s]] <- as.numeric(val[[s]])
+    }
   }
-  c(top = NA_real_, right = NA_real_, bottom = NA_real_, left = NA_real_)
+  out
 }
 
 # Build one style_layer carrying per-side padding scalars. Returns

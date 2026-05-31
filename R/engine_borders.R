@@ -188,8 +188,19 @@ body_border_manifest <- function(spec) {
 .apply_table_layer <- function(layer, cells_style, visible_idx) {
   side <- layer@location$side
   node <- layer@style
+  # Outer LEFT / RIGHT edges are NOT stamped per-cell. They are drawn
+  # structurally by each backend from `body_border_manifest()` (which
+  # reads the same cascade, so it already carries the resolved triple):
+  # HTML as a table-level `border-left/right`, RTF as `\trbrdrl/r` on
+  # every table-proper `\trowd`, DOCX as `<w:left>/<w:right>` on the
+  # first / last cell of every row, LaTeX as `vline{}`. A per-cell stamp
+  # only reaches body DATA rows, so the synthesised spanner-band /
+  # blank-separator / group-header rows would gap the vertical edge (the
+  # original `rules = "frame"` defect). Outer TOP / BOTTOM stay per-cell
+  # here: they coincide with the chrome toprule / bottomrule at the same
+  # edge, so one line renders.
   if (is.null(side) || identical(side, "outer")) {
-    for (s in c("top", "bottom", "left", "right")) {
+    for (s in c("top", "bottom")) {
       triple <- .style_node_border_triple(node, s)
       if (!is.null(triple)) {
         cells_style <- .stamp_outer_edge_force(
@@ -202,7 +213,11 @@ body_border_manifest <- function(spec) {
     }
     return(cells_style)
   }
-  if (side %in% c("outer_top", "outer_bottom", "outer_left", "outer_right")) {
+  if (side %in% c("outer_left", "outer_right")) {
+    # Structural-only (see comment above); the manifest carries it.
+    return(cells_style)
+  }
+  if (side %in% c("outer_top", "outer_bottom")) {
     s <- sub("^outer_", "", side)
     triple <- .style_node_border_triple(node, s)
     if (!is.null(triple)) {
@@ -250,19 +265,11 @@ body_border_manifest <- function(spec) {
   if (nrow_data == 0L || ncol_visible == 0L) {
     return(cells_style)
   }
-  if (side == "top") {
-    rows <- 1L
-    cols <- visible_idx
-  } else if (side == "bottom") {
-    rows <- nrow_data
-    cols <- visible_idx
-  } else if (side == "left") {
-    rows <- seq_len(nrow_data)
-    cols <- visible_idx[[1L]]
-  } else {
-    rows <- seq_len(nrow_data)
-    cols <- visible_idx[[length(visible_idx)]]
-  }
+  # Only TOP / BOTTOM are stamped per-cell now (LEFT / RIGHT are drawn
+  # structurally from the manifest, see .apply_table_layer): top -> the
+  # first row, bottom -> the last row, across every visible body column.
+  rows <- if (side == "top") 1L else nrow_data
+  cols <- visible_idx
   prop_style <- paste0("border_", side, "_style")
   prop_width <- paste0("border_", side, "_width")
   prop_color <- paste0("border_", side, "_color")
@@ -528,13 +535,27 @@ engine_chrome_borders <- function(spec) {
     return(cs)
   }
 
-  # Merge the layer's text/alignment properties onto the surface
-  # node. Reuse engine_style's merge contract — non-NA overrides.
-  existing <- cs$surfaces[[surface_key]]
-  if (!is_style_node(existing)) {
-    existing <- style_node()
+  # Merge the layer's text/alignment properties onto the surface node.
+  # Reuse engine_style's merge contract — non-NA overrides. The page
+  # bands are slot-keyed: a layer with `loc$slot` targets that one slot;
+  # `loc$slot = NULL` (`cells_pagehead()` with no slot) broadcasts to all
+  # three. Other surfaces are a single flat node.
+  if (surface_key %in% c("pagehead", "pagefoot")) {
+    slots <- if (is.null(loc$slot)) .location_band_slots else loc$slot
+    for (s in slots) {
+      existing <- cs$surfaces[[surface_key]][[s]]
+      if (!is_style_node(existing)) {
+        existing <- style_node()
+      }
+      cs$surfaces[[surface_key]][[s]] <- .merge_style_node(existing, node)
+    }
+  } else {
+    existing <- cs$surfaces[[surface_key]]
+    if (!is_style_node(existing)) {
+      existing <- style_node()
+    }
+    cs$surfaces[[surface_key]] <- .merge_style_node(existing, node)
   }
-  cs$surfaces[[surface_key]] <- .merge_style_node(existing, node)
 
   # Border properties → chrome border regions. Each chrome surface
   # has a top-edge region, a bottom-edge region (or neither for
@@ -581,6 +602,15 @@ engine_chrome_borders <- function(spec) {
 # `visible = FALSE` sort-key helper.
 .visible_col_indices <- function(spec, col_names) {
   cols <- spec@cols
+  # header_row group columns are pulled OUT of the body into synthesised
+  # section-header rows by engine_group_display(); since engine_borders
+  # runs BEFORE that drop, their per-cell border stamps would land on a
+  # column that never renders. Exclude them so outer_left / cols /
+  # outer_right target the first/last true BODY column. (LaTeX is
+  # unaffected: it reads the per-side triple via body_border_manifest(),
+  # not these stamps.)
+  group_names <- .group_display_columns(cols, col_names)
+  header_row_names <- .header_row_columns(cols, group_names)
   vis <- vapply(
     col_names,
     function(nm) {
@@ -588,7 +618,7 @@ engine_chrome_borders <- function(spec) {
       if (!is_col_spec(cs)) {
         return(TRUE)
       }
-      isTRUE(cs@visible)
+      isTRUE(cs@visible) && !(nm %in% header_row_names)
     },
     logical(1L)
   )

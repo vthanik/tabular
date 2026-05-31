@@ -82,7 +82,8 @@ backend_latex <- function(grid, file) {
     preset = meta$preset,
     pagehead_ast = meta$pagehead_ast,
     pagefoot_ast = meta$pagefoot_ast,
-    border_color_defs = .latex_border_color_definitions(meta)
+    border_color_defs = .latex_border_color_definitions(meta),
+    cs = meta$chrome_style %||% chrome_style()
   )
   begin <- "\\begin{document}"
   end <- "\\end{document}"
@@ -1189,7 +1190,11 @@ backend_latex <- function(grid, file) {
     }
     cursor <- end + 1L
   }
-  row <- paste0(paste(cells, collapse = " & "), " \\\\")
+  row <- paste0(
+    .latex_surface_rowsep(surface_node),
+    paste(cells, collapse = " & "),
+    " \\\\"
+  )
   list(row = row, ranges = ranges)
 }
 
@@ -1265,7 +1270,11 @@ backend_latex <- function(grid, file) {
     },
     character(1L)
   )
-  paste0(paste(cells, collapse = " & "), " \\\\")
+  paste0(
+    .latex_surface_rowsep(surface_node),
+    paste(cells, collapse = " & "),
+    " \\\\"
+  )
 }
 
 # Render one body row per data row. Cell text is the post-
@@ -1372,6 +1381,15 @@ backend_latex <- function(grid, file) {
       # requires (N-1) trailing `&` placeholders so the column count
       # stays consistent with the rest of the body.
       if (isTRUE(is_blank_row[[i]])) {
+        # NOTE: the blank separator carries the stripe fill on its node,
+        # but the LaTeX stripe rides `\colorbox` around the cell TEXT
+        # (see `.latex_wrap_text_props`); an empty row has no text to box,
+        # so the fill cannot ride the existing mechanism. A full-row
+        # `\SetRow{bg=}` here would render a solid bar against the text-
+        # boxed data rows (visual mismatch). Continuous blank-row striping
+        # in LaTeX waits on the broader colorbox -> cellcolor refactor;
+        # HTML / RTF / DOCX colour the blank row directly. (Group-header
+        # rows DO stripe in LaTeX: their label text rides `\colorbox`.)
         return(paste0(
           if (ncol_data == 1L) {
             " "
@@ -1600,6 +1618,38 @@ backend_latex <- function(grid, file) {
   sprintf("rowsep=%spt", format(pt, trim = TRUE, scientific = FALSE))
 }
 
+# tabularray `\SetRow{abovesep=, belowsep=}` prefix from a chrome
+# surface's vertical padding, for the header band and column-label rows
+# (lets `preset(padding = list(header = c(top = , bottom = )))` reach the
+# PDF). `\SetRow` sets the keys for the row it leads. Returns "" when the
+# surface sets no top / bottom padding so the row keeps the table
+# default. Horizontal padding is column-width-driven (leftsep / rightsep)
+# and not expressed per header row.
+.latex_surface_rowsep <- function(surface_node) {
+  if (!is_style_node(surface_node)) {
+    return("")
+  }
+  parts <- character()
+  pt <- S7::prop(surface_node, "padding_top")
+  pb <- S7::prop(surface_node, "padding_bottom")
+  if (length(pt) == 1L && !is.na(pt)) {
+    parts <- c(
+      parts,
+      sprintf("abovesep=%spt", format(pt, trim = TRUE, scientific = FALSE))
+    )
+  }
+  if (length(pb) == 1L && !is.na(pb)) {
+    parts <- c(
+      parts,
+      sprintf("belowsep=%spt", format(pb, trim = TRUE, scientific = FALSE))
+    )
+  }
+  if (length(parts) == 0L) {
+    return("")
+  }
+  sprintf("\\SetRow{%s} ", paste(parts, collapse = ","))
+}
+
 # Emit tabularray table-level `leftsep=Lpt, rightsep=Rpt` from the
 # horizontal cell-padding SSOT so the rendered per-side margin matches
 # the measured column width (`.compute_col_width` adds left + right).
@@ -1819,7 +1869,8 @@ backend_latex <- function(grid, file) {
   preset = NULL,
   pagehead_ast = NULL,
   pagefoot_ast = NULL,
-  border_color_defs = character()
+  border_color_defs = character(),
+  cs = NULL
 ) {
   if (is.null(preset) || !is_preset_spec(preset)) {
     preset <- preset_spec()
@@ -1829,7 +1880,12 @@ backend_latex <- function(grid, file) {
   body_font_family <- .effective_font_family(preset)
   class_opt <- .latex_class_size(body_font_size)
   font_lines <- .latex_font_lines(body_font_family, body_font_size)
-  chrome <- .latex_pagestyle_block(pagehead_ast, pagefoot_ast, preset)
+  chrome <- .latex_pagestyle_block(
+    pagehead_ast,
+    pagefoot_ast,
+    preset,
+    cs = cs
+  )
 
   # Body-cell text colour is per-cell now via cells_style[r,c]@color
   # (set by `style(at = cells_body(), color = ...)` or by the lowered
@@ -1877,7 +1933,12 @@ backend_latex <- function(grid, file) {
 #   - When both bands are empty, both fields are empty character
 #     vectors — the document keeps the LaTeX-default `plain` page
 #     style.
-.latex_pagestyle_block <- function(pagehead_ast, pagefoot_ast, preset) {
+.latex_pagestyle_block <- function(
+  pagehead_ast,
+  pagefoot_ast,
+  preset,
+  cs = NULL
+) {
   ph_pop <- .page_band_is_populated(pagehead_ast)
   pf_pop <- .page_band_is_populated(pagefoot_ast)
   if (!ph_pop && !pf_pop) {
@@ -1905,40 +1966,66 @@ backend_latex <- function(grid, file) {
   if (ph_pop) {
     body <- c(
       body,
-      .latex_band_directives(pagehead_ast, head = TRUE)
+      .latex_band_directives(pagehead_ast, head = TRUE, cs = cs)
     )
   }
   if (pf_pop) {
     body <- c(
       body,
-      .latex_band_directives(pagefoot_ast, head = FALSE)
+      .latex_band_directives(pagefoot_ast, head = FALSE, cs = cs)
     )
   }
-  # Suppress the default head- and footrule lines (fancyhdr draws
-  # a 0.4pt rule by default). Backends own border policy via
-  # preset@hlines; the page bands are unruled.
+  # Head- / footrule width: 0pt by default (the page bands are unruled,
+  # galley parity). `style(border_bottom = brdr(), .at = cells_pagehead())`
+  # opts a header band into a rule by setting the `pagehead_bottom`
+  # chrome region (`pagefoot_top` for the footer band) -> the rule width
+  # drives `\headrulewidth` / `\footrulewidth` (Thread G).
   body <- c(
     body,
-    "\\renewcommand{\\headrulewidth}{0pt}",
-    "\\renewcommand{\\footrulewidth}{0pt}"
+    sprintf(
+      "\\renewcommand{\\headrulewidth}{%s}",
+      .latex_band_rule_width(cs, "pagehead_bottom")
+    ),
+    sprintf(
+      "\\renewcommand{\\footrulewidth}{%s}",
+      .latex_band_rule_width(cs, "pagefoot_top")
+    )
   )
   list(packages = packages, style = body)
+}
+
+# Resolve a page-band chrome border region to a fancyhdr rule width.
+# Returns "0pt" when the region carries no rule (or style "none"), else
+# the triple's width in pt.
+.latex_band_rule_width <- function(cs, region) {
+  triple <- .chrome_border_at(cs, region)
+  if (is.null(triple) || identical(triple$style, "none")) {
+    return("0pt")
+  }
+  sprintf("%gpt", as.numeric(triple$width))
 }
 
 # Emit the three `\fancyhead[L/C/R]{}` (when head = TRUE) or
 # `\fancyfoot[L/C/R]{}` (head = FALSE) directives for one band.
 # Empty slots emit `\fancyhead[L]{}` (or equivalent) so any prior
 # default for that slot is cleared.
-.latex_band_directives <- function(band, head) {
+.latex_band_directives <- function(band, head, cs = NULL) {
   cmd <- if (head) "\\fancyhead" else "\\fancyfoot"
-  c(
-    sprintf("%s[L]{%s}", cmd, .latex_band_slot_text(band$left, head = head)),
-    sprintf(
-      "%s[C]{%s}",
-      cmd,
-      .latex_band_slot_text(band$center, head = head)
-    ),
-    sprintf("%s[R]{%s}", cmd, .latex_band_slot_text(band$right, head = head))
+  surface <- if (head) "pagehead" else "pagefoot"
+  slot_letters <- c(left = "L", center = "C", right = "R")
+  vapply(
+    names(slot_letters),
+    function(s) {
+      txt <- .latex_band_slot_text(band[[s]], head = head)
+      # Per-slot text props (bold / italic / colour / font) from
+      # cells_pagehead(slot = s) wrap the slot content (Thread G).
+      node <- .chrome_surface_at_slot(cs, surface, slot = s)
+      if (nzchar(txt) && is_style_node(node)) {
+        txt <- .latex_wrap_text_props(txt, node)
+      }
+      sprintf("%s[%s]{%s}", cmd, slot_letters[[s]], txt)
+    },
+    character(1L)
   )
 }
 
