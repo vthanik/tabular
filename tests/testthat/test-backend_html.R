@@ -367,7 +367,7 @@ test_that("each <table> is wrapped in <div class=\"tabular-table-wrap\">", {
   expect_identical(opens, closes)
 })
 
-test_that("horizontal panels each get their own scroll wrapper", {
+test_that("horizontal panels collapse to one scroll wrapper on HTML (continuous)", {
   d <- data.frame(
     grp = c("a", "b"),
     c1 = 1:2,
@@ -381,9 +381,11 @@ test_that("horizontal panels each get their own scroll wrapper", {
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   lines <- readLines(out)
+  # HTML has no page width, so the panels collapse to ONE table inside
+  # ONE scroll wrapper (the browser scrolls if too wide).
   expect_identical(
     length(grep("<div class=\"tabular-table-wrap\">", lines, fixed = TRUE)),
-    2L
+    1L
   )
 })
 
@@ -804,7 +806,7 @@ test_that("continuation marker is a no-op for HTML output", {
   expect_false(grepl("(continued)", txt, fixed = TRUE))
 })
 
-test_that("horizontal panels emit one <table> per panel with its own <thead>", {
+test_that("horizontal panels collapse to one <table> with a panel-spanner note (#docx-c)", {
   d <- data.frame(
     grp = c("a", "b"),
     c1 = 1:2,
@@ -813,32 +815,37 @@ test_that("horizontal panels emit one <table> per panel with its own <thead>", {
     c4 = 7:8
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec(usage = "group", group_display = "column")) |>
     paginate(panels = 2L)
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   lines <- readLines(out)
   txt <- paste(lines, collapse = "\n")
-  # Two `<table>` blocks (one per panel), each with its own
-  # `<thead>` and `<tbody>`.
-  expect_identical(
-    length(grep("<table class=\"tabular-table\"", lines)),
-    2L
-  )
-  expect_identical(length(grep("<thead>", lines, fixed = TRUE)), 2L)
-  expect_identical(length(grep("<tbody>", lines, fixed = TRUE)), 2L)
-  # No `<section>` wrapper between panels — natural stacking.
-  expect_false(any(grepl(
-    "<section class=\"tabular-page\">",
-    lines,
-    fixed = TRUE
-  )))
-  # `@media print` carries the panel page-break rule.
-  expect_true(grepl(
-    ".tabular-table + .tabular-table { page-break-before: always",
-    txt,
-    fixed = TRUE
-  ))
+  # Continuous media never split: ONE table / thead / tbody.
+  expect_identical(length(grep("<table class=\"tabular-table\"", lines)), 1L)
+  expect_identical(length(grep("<thead>", lines, fixed = TRUE)), 1L)
+  expect_identical(length(grep("<tbody>", lines, fixed = TRUE)), 1L)
+  # The would-be panel boundaries surface as a header spanner note
+  # above the column labels.
+  expect_match(txt, "tabular-panel-note")
+  expect_match(txt, "Panel 1")
+  expect_match(txt, "Panel 2")
+  # The stub (group) column shows once, not repeated per panel.
+  expect_identical(length(grep(">grp</th>", lines, fixed = TRUE)), 1L)
+})
+
+test_that("panel note spans the chunks when there is no stub column", {
+  # No `usage = "group"` (or "id") column: panels split all columns,
+  # so the note spans each chunk with no leading blank stub cell.
+  d <- data.frame(c1 = 1:2, c2 = 3:4, c3 = 5:6, c4 = 7:8)
+  spec <- tabular(d) |> paginate(panels = 2L)
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_identical(length(grep("<table class=\"tabular-table\"", txt)), 1L)
+  expect_match(txt, "tabular-panel-note")
+  expect_match(txt, "Panel 1")
+  expect_match(txt, "Panel 2")
 })
 
 test_that(".tabular-page-break-row CSS hides on screen and breaks pages in print", {

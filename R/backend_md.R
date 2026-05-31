@@ -6,13 +6,16 @@
 # verification gate.
 #
 # Output layout — one continuous document. Titles emit as
-# level-1 headings once above the table. One pipe table per
-# horizontal panel (the common case is a single panel) carries
-# one header-band block + col-labels row + alignment row, then
-# every vertical page's body rows concatenated underneath — no
-# inter-page separator, no continuation marker. Footnotes emit
-# once below the table. Optional pagehead / pagefoot chrome
-# bands frame the whole document, separated by `----` rules:
+# level-1 headings once above the table. Markdown is a continuous
+# medium with no page width, so a `paginate(panels = N)` request
+# never splits: the engine collapses it to ONE pipe table (all
+# columns, original order, stub once), carrying an optional
+# `**Panel i**` note row (`.render_md_panel_note_row`) + header-band
+# block + col-labels row + alignment row, then every vertical page's
+# body rows concatenated underneath — no inter-page separator, no
+# continuation marker. Footnotes emit once below the table. Optional
+# pagehead / pagefoot chrome bands frame the whole document,
+# separated by `----` rules:
 #
 #   Protocol: XYZ | Draft | Page 1 of 1
 #
@@ -34,12 +37,11 @@
 #
 #   Program: tool.R | 24MAY2026
 #
-# GFM has no native row spanning, so multi-level header bands emit
-# one row per depth where the band label is repeated in every
-# spanned cell (the most readable rendering across GFM previewers
-# that don't support `colspan`). With `total_panels > 1` (driven by
-# `paginate(panels = N)`), panel-tables stack inside the document
-# separated by a blank line.
+# GFM has no native row spanning, so multi-level header bands (and
+# the `paginate(panels = N)` panel-note row) emit one row where the
+# label is repeated in every spanned cell, blank over the stub (the
+# most readable rendering across GFM previewers that don't support
+# `colspan`).
 #
 # Inline ASTs (cell text, titles, footnotes, col labels) render
 # through `.render_md_inline()` — a recursive walker over the
@@ -144,6 +146,7 @@ backend_md <- function(grid, file) {
       panel_pages <- pages[panel_indices == pi]
       col_names <- panel_pages[[1L]]$col_names
       panel_lines <- c(
+        .render_md_panel_note_row(meta$panel_spans, col_names),
         .render_md_header_bands(meta$headers, col_names),
         .render_md_col_labels_row(meta$col_labels_ast, col_names),
         .render_md_alignment_row(
@@ -304,6 +307,30 @@ backend_md <- function(grid, file) {
 # ---------------------------------------------------------------------
 # Header bands + column labels + alignment row
 # ---------------------------------------------------------------------
+
+# Render the panel-spanner note row for a collapsed continuous table.
+# `panel_spans` (from the engine) lists each would-be panel's non-stub
+# columns; GFM has no real colspan, so we mirror the band workaround:
+# repeat `**Panel i**` across every column of panel i, blank over the
+# stub. Returns character(0) when `panel_spans` is NULL/empty so
+# single-panel / non-continuous output is byte-identical to today.
+.render_md_panel_note_row <- function(panel_spans, col_names_visible) {
+  if (is.null(panel_spans) || length(panel_spans) == 0L) {
+    return(character())
+  }
+  labels <- rep(NA_character_, length(col_names_visible))
+  for (span in panel_spans) {
+    pos <- match(span$col_names, col_names_visible)
+    pos <- pos[!is.na(pos)]
+    labels[pos] <- span$label
+  }
+  cells <- vapply(
+    labels,
+    function(l) if (is.na(l)) "" else paste0("**", .md_escape_cell(l), "**"),
+    character(1L)
+  )
+  .md_pipe_row(cells)
+}
 
 # Render multi-level header bands. Each band depth becomes one
 # table row where the band's label is repeated across every

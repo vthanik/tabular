@@ -298,16 +298,48 @@ backend_docx <- function(grid, file) {
       rep(blank_p, pad_title_bottom)
     )
   }
-  table_block <- .render_docx_table(
-    grid,
-    preset,
-    hyperlinks,
-    rid_map,
-    cs = cs,
-    title_ast = if (title_in_table) titles_ast else list(),
-    pad_title_top = pad_title_top,
-    pad_title_bottom = pad_title_bottom
-  )
+  # One `<w:tbl>` per horizontal panel: each panel pins its own column
+  # set, so panel 2's body rows can no longer render under panel 1's
+  # grid/header. Word paginates the body within a panel via
+  # `<w:tblHeader/>` + `<w:cantSplit/>`; subgroups stay inline within a
+  # panel's table (the banner rows in `.render_docx_body_rows`). Panels
+  # are separated by a hard page break. Titles render in panel 1 only
+  # (later panels lead with the repeating column-header band). An empty
+  # grid falls through one call so the "(no rows)" marker still appears.
+  panel_groups <- .docx_group_pages_by_panel(grid@pages)
+  if (length(panel_groups) <= 1L) {
+    table_block <- .render_docx_table(
+      grid,
+      preset,
+      hyperlinks,
+      rid_map,
+      cs = cs,
+      title_ast = if (title_in_table) titles_ast else list(),
+      pad_title_top = pad_title_top,
+      pad_title_bottom = pad_title_bottom
+    )
+  } else {
+    panel_break <- "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>"
+    panel_tables <- vapply(
+      seq_along(panel_groups),
+      function(gi) {
+        panel_grid <- S7::set_props(grid, pages = panel_groups[[gi]])
+        tbl <- .render_docx_table(
+          panel_grid,
+          preset,
+          hyperlinks,
+          rid_map,
+          cs = cs,
+          title_ast = if (gi == 1L && title_in_table) titles_ast else list(),
+          pad_title_top = pad_title_top,
+          pad_title_bottom = pad_title_bottom
+        )
+        if (gi > 1L) paste0(panel_break, tbl) else tbl
+      },
+      character(1L)
+    )
+    table_block <- paste(panel_tables, collapse = "")
+  }
   sect_pr <- .docx_section_pr(preset, rid_map)
 
   body <- paste0(
@@ -618,11 +650,31 @@ backend_docx <- function(grid, file) {
 # Table emission
 # ---------------------------------------------------------------------
 
-# Compose the `<w:tbl>` for this grid. Renders one table containing:
-# multi-level header bands -> column-labels row -> body rows
-# concatenated across all `grid@pages` entries. Header rows carry
-# `<w:tblHeader/>` so Word repeats them after every page break it
-# computes on its own.
+# Group the grid's pages by `panel_index` (first-appearance order),
+# preserving original order within each panel. Each group renders as
+# one `<w:tbl>` in `.docx_document_xml`. Distinct from RTF's
+# `(subgroup x panel)` sectioning: DOCX keeps subgroups inline within
+# a panel's table (via the banner rows), so a single-panel document is
+# byte-identical to the pre-native-flip baseline regardless of
+# subgroups. Returns `list()` for an empty grid.
+.docx_group_pages_by_panel <- function(pages) {
+  if (length(pages) == 0L) {
+    return(list())
+  }
+  pis <- vapply(
+    pages,
+    function(p) as.integer(p$panel_index %||% 1L),
+    integer(1L)
+  )
+  lapply(unique(pis), function(pi) pages[pis == pi])
+}
+
+# Compose one `<w:tbl>` for the pages in `grid` (one horizontal panel
+# after grouping). Renders: multi-level header bands -> column-labels
+# row -> body rows concatenated across this panel's `grid@pages`
+# entries. Header rows carry `<w:tblHeader/>` so Word repeats them
+# after every page break it computes on its own. Caller emits one
+# table per panel and inserts the inter-panel page break.
 #
 # Width consumption: every visible col_spec@width (numeric inches,
 # engine-resolved) -> twips via `.tabular_unit_twips[["in"]] = 1440`.

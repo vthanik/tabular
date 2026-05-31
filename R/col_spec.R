@@ -49,6 +49,14 @@
 #'       space-prefix. Synthesised group-header rows (under
 #'       `group_display = "header_row"`) are NEVER indented — they're
 #'       the parent at depth 0.
+#'   *   **`"id"`** — a row-identifier column. Renders like `"display"`
+#'       (one value per row, never collapses) but joins the *stub*: it
+#'       repeats on every horizontal panel (`paginate(panels = N)`) and
+#'       shows once on the left when a continuous backend (HTML /
+#'       Markdown) collapses the panels into one table. The PROC REPORT
+#'       `ID` role, orthogonal to grouping. Use for a per-row statistic
+#'       label (`"n"`, `"Mean"`, `"SD"`) that must stay legible on every
+#'       panel of a wide demographics or efficacy table.
 #'   *   **`NULL`** — inferred as `"display"` in [`cols()`].
 #'
 #'   ```r
@@ -511,6 +519,31 @@
 #'       align = "decimal", width = "0.9in"
 #'     )
 #'   )
+#'
+#' # ---- Example 5: Non-collapsing `id` stub for a panelled table ----
+#' #
+#' # `usage = "id"` marks `stat_label` ("n", "Mean", "SD", ...) as a
+#' # row identifier: like `display` it shows on every row, but it also
+#' # joins the stub, so it repeats on each horizontal panel created by
+#' # `paginate(panels = 2)`. On HTML / Markdown (no page width) the
+#' # panels collapse into one scrollable table with a "Panel 1 / Panel
+#' # 2" header note; on RTF / Word each panel is its own page with the
+#' # `variable` + `stat_label` stub repeated.
+#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' tabular(
+#'   saf_demo,
+#'   titles = c("Table 14.1.1", "Demographics", "Safety Population")
+#' ) |>
+#'   cols(
+#'     variable   = col_spec(usage = "group", group_display = "column",
+#'                           label = "Parameter"),
+#'     stat_label = col_spec(usage = "id", label = "Statistic"),
+#'     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+#'     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+#'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+#'     Total      = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
+#'   ) |>
+#'   paginate(panels = 2)
 #'
 #' @seealso
 #' **Companion verb:** [`cols()`] attaches `col_spec` entries to a

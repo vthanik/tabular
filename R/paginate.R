@@ -439,3 +439,23 @@ paginate <- function(
   )
   names(cols)[is_group]
 }
+
+# Stub columns: the columns that repeat on every horizontal panel and
+# show once on the left of a collapsed continuous table. This is the
+# `usage = "group"` set widened to include `usage = "id"` (the
+# non-collapsing row-identifier). Distinct from `.group_col_names()`,
+# which stays group-only for collapse / keep_together / group_skip /
+# decimal sectioning. Used only on the panel-repeat path
+# (`engine_paginate` -> `.compute_horizontal_panels` /
+# `.panel_spans_from_panels`).
+.stub_col_names <- function(cols) {
+  if (length(cols) == 0L) {
+    return(character())
+  }
+  is_stub <- vapply(
+    cols,
+    function(c) !is.na(c@usage) && c@usage %in% c("group", "id"),
+    logical(1)
+  )
+  names(cols)[is_stub]
+}

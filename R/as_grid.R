@@ -266,9 +266,18 @@ as_grid <- function(spec) {
 # continuous Word table per panel with `\trhdr` repeating header rows;
 # the LaTeX backend emits one `longtblr` per panel (tabularray paginates
 # the body, `rowhead` repeats the header band, and a keep-with-next mask
-# drives `\\*`); DOCX will reuse this hook. Every other backend (and
+# drives `\\*`); DOCX reuses this hook, emitting one `<w:tbl>` per panel
+# with Word repeating the `<w:tblHeader/>` rows. Every other backend (and
 # `as_grid()` with `format = NA`) keeps tabular's estimated vertical split.
-.native_pagination_formats <- c("rtf", "latex")
+.native_pagination_formats <- c("rtf", "latex", "docx")
+
+# Continuous, scrollable backends have no fixed page width, so a
+# horizontal `panels = N` split is meaningless: the engine collapses it
+# to one all-columns table (stub once, original order) and reports the
+# would-be boundaries via `panel_spans` for a header note. HTML and
+# Markdown only. `as_grid()` (format = NA) is neither native nor
+# continuous, so introspection still shows the full split.
+.continuous_formats <- c("html", "md")
 
 # Compose every engine_* phase. Returns a fully populated
 # `tabular_grid`. `format` is stamped into metadata so emit() can
@@ -419,12 +428,15 @@ as_grid <- function(spec) {
     cells_style = style_mat
   )
 
-  # Native-pagination backends (RTF/Word, DOCX later) receive an unsplit
-  # grid: one vertical page per panel, so Word paginates the body and the
-  # `\trhdr` header repeats natively. `as_grid()` (format = NA) stays
-  # non-native (split pages) for inspection.
+  # Native-pagination backends (RTF/Word, LaTeX, DOCX) receive an unsplit
+  # grid: one vertical page per panel, so the consumer paginates the body
+  # and the `\trhdr` / `<w:tblHeader/>` header repeats natively.
+  # Continuous backends (HTML / Markdown) collapse the horizontal panel
+  # split into one all-columns table + a header note. `as_grid()`
+  # (format = NA) is neither, so it keeps the full split for inspection.
   native <- isTRUE(format %in% .native_pagination_formats)
-  pag <- engine_paginate(spec, native = native)
+  continuous <- isTRUE(format %in% .continuous_formats)
+  pag <- engine_paginate(spec, native = native, continuous = continuous)
 
   pages <- .build_pages(
     pag = pag,
@@ -499,6 +511,7 @@ as_grid <- function(spec) {
       rows_per_page = pag$rows_per_page,
       total_pages = pag$total_pages,
       total_panels = pag$total_panels,
+      panel_spans = pag$panel_spans,
       keep_with_next = pag$keep_with_next,
       repeat_titles = pag$repeat_titles,
       repeat_headers = pag$repeat_headers,

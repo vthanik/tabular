@@ -24,7 +24,22 @@
 # every validator emits stable single-quoted output regardless of OS.
 .sh_quote <- function(x) shQuote(x, type = "sh")
 
-.col_usage_values <- c("display", "group", "indent")
+# Recognised values for `col_spec@usage`.
+#
+#   "display" (default) — a data column: shows every value, never
+#                         repeats across a horizontal panel split.
+#   "group"             — a row-grouping column: collapses repeated
+#                         values (or emits section-header rows), drives
+#                         keep_together / group_skip, and repeats on
+#                         every panel as part of the stub.
+#   "indent"            — an indent-helper sub-label under a group.
+#   "id"                — a row-identifier column. Renders like
+#                         "display" (one value per row, never
+#                         collapses) but joins the stub: it repeats on
+#                         every horizontal panel and shows once on the
+#                         left. The PROC REPORT `ID` role, orthogonal
+#                         to grouping. See `.stub_col_names()`.
+.col_usage_values <- c("display", "group", "indent", "id")
 
 # Recognised values for `col_spec@group_display`. Active only when
 # `col_spec@usage = "group"`; ignored otherwise. Controls how the
