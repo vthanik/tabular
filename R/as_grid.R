@@ -345,6 +345,13 @@ as_grid <- function(spec) {
   # column from `names(spec@data)`.
   data_cells_text <- fmt$cells_text
 
+  # Apply per-cell pretext / posttext literal decorations from the
+  # resolved style cascade. Done after the `data_file` snapshot (so the
+  # QC artefact stays decoration-free) and before engine_group_display
+  # (so the affix flows through repeat-suppression / indent / header
+  # injection and is measured by engine_decimal + column widths).
+  fmt <- .apply_affixes(fmt, style_mat, call = call)
+
   # Apply col_spec@group_display semantics. Header_row mode
   # splices section-header rows above each group-variable
   # transition; column mode suppresses repeats; column_repeat is a
@@ -538,6 +545,55 @@ as_grid <- function(spec) {
       subgroup_runtime = runtime
     )
   )
+}
+
+# Prepend `pretext` / append `posttext` to every cell whose resolved
+# style node carries one. Updates BOTH the character matrix (consumed by
+# every backend's plain-cell path + engine_decimal + col widths) and the
+# AST matrix (consumed when a cell carries md() / html() runs). Affixes
+# may themselves be md() / html()-wrapped: the text path strips the
+# inline marker so width / decimal measure the displayed glyphs, while
+# the AST path parses each affix to its own runs and splices them on.
+# `style_mat` is the post-engine_borders matrix, index-aligned 1:1 with
+# `fmt$cells_text` / `fmt$cells_ast` (same shape + column dimnames).
+.apply_affixes <- function(fmt, style_mat, call) {
+  ct <- fmt$cells_text
+  ca <- fmt$cells_ast
+  if (is.null(style_mat) || nrow(ct) == 0L || ncol(ct) == 0L) {
+    return(fmt)
+  }
+  for (j in seq_len(ncol(ct))) {
+    for (i in seq_len(nrow(ct))) {
+      sn <- style_mat[[i, j]]
+      if (!is_style_node(sn)) {
+        next
+      }
+      pre <- sn@pretext
+      post <- sn@posttext
+      has_pre <- length(pre) == 1L && !is.na(pre)
+      has_post <- length(post) == 1L && !is.na(post)
+      if (!has_pre && !has_post) {
+        next
+      }
+      if (has_pre) {
+        ct[i, j] <- paste0(.strip_inline_marker(pre), ct[[i, j]])
+      }
+      if (has_post) {
+        ct[i, j] <- paste0(ct[[i, j]], .strip_inline_marker(post))
+      }
+      runs <- ca[[i, j]]@runs
+      if (has_pre) {
+        runs <- c(parse_inline(pre, call = call)@runs, runs)
+      }
+      if (has_post) {
+        runs <- c(runs, parse_inline(post, call = call)@runs)
+      }
+      ca[[i, j]] <- inline_ast(runs = runs)
+    }
+  }
+  fmt$cells_text <- ct
+  fmt$cells_ast <- ca
+  fmt
 }
 
 # Stamp per-group subgroup runtime onto every page in `pages` and
