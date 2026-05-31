@@ -2081,3 +2081,46 @@ test_that("cells_pagehead(slot=) styles one slot + band border in DOCX (#thread-
   # header1.xml stays well-formed (rPr canonical order, valid tcBorders).
   expect_no_error(xml2::read_xml(file.path(ud, "word/header1.xml")))
 })
+
+# ---- DOCX chrome surfaces honor per-surface text styling (#docx-chrome) ---
+
+test_that("DOCX title / footnote / header honor style() text overrides (#docx-chrome)", {
+  d <- data.frame(
+    grp = c("A", "A"),
+    x = c("1", "2"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(d, titles = "MYTITLE", footnotes = "MYFOOT") |>
+    cols(
+      grp = col_spec(
+        usage = "group",
+        group_display = "column",
+        group_skip = TRUE,
+        label = "G"
+      ),
+      x = col_spec(label = "MYHEADER")
+    ) |>
+    style(color = "#FF0000", italic = TRUE, .at = cells_title()) |>
+    style(color = "#00FF00", .at = cells_footnotes()) |>
+    style(color = "#0000FF", .at = cells_headers())
+  f <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, f)
+  dir <- withr::local_tempdir()
+  utils::unzip(f, exdir = dir)
+  parts <- list.files(
+    dir,
+    pattern = "\\.xml$",
+    recursive = TRUE,
+    full.names = TRUE
+  )
+  all_xml <- paste(
+    unlist(lapply(parts, function(p) {
+      paste(readLines(p, warn = FALSE), collapse = "\n")
+    })),
+    collapse = "\n"
+  )
+  expect_true(grepl("w:color w:val=\"FF0000\"", all_xml)) # title
+  expect_true(grepl("w:i/>", all_xml, fixed = TRUE)) # title italic
+  expect_true(grepl("w:color w:val=\"00FF00\"", all_xml)) # footnote
+  expect_true(grepl("w:color w:val=\"0000FF\"", all_xml)) # header
+})

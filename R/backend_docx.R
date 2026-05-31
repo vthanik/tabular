@@ -392,12 +392,14 @@ backend_docx <- function(grid, file) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "title")
+  title_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
   vapply(
     seq_len(n),
     function(i) {
       runs <- .render_docx_inline(
         titles_ast[[i]],
         hyperlinks,
+        default_rpr = title_rpr,
         rid_map = rid_map
       )
       halign <- if (
@@ -451,6 +453,7 @@ backend_docx <- function(grid, file) {
   }
   blank_row <- .docx_full_width_row(total_twips, n_cols, "<w:p/>")
   surface_node <- .chrome_surface_at(cs, "title")
+  title_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
   title_rows <- vapply(
     seq_len(n),
     function(i) {
@@ -460,6 +463,7 @@ backend_docx <- function(grid, file) {
       runs <- .render_docx_inline(
         titles_ast[[i]],
         hyperlinks,
+        default_rpr = title_rpr,
         rid_map = rid_map
       )
       halign <- if (
@@ -543,12 +547,14 @@ backend_docx <- function(grid, file) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "footer")
+  foot_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
   vapply(
     seq_len(n),
     function(i) {
       runs <- .render_docx_inline(
         footnotes_ast[[i]],
         hyperlinks,
+        default_rpr = foot_rpr,
         rid_map = rid_map
       )
       halign <- if (
@@ -955,6 +961,7 @@ backend_docx <- function(grid, file) {
       # only the header padding override emits (no body-padding bleed).
       header_surface <- .chrome_surface_at(cs, "header")
       band_shd <- .docx_shd_from_style(header_surface)
+      band_rpr <- .docx_rPr_from_style(header_surface, bold_default = TRUE)
       tc_mar <- .docx_tcMar_from_style(header_surface, NULL)
       tc_pr <- paste0(
         "<w:tcPr>",
@@ -970,7 +977,9 @@ backend_docx <- function(grid, file) {
       } else {
         paste0(
           "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr>",
-          "<w:r><w:rPr><w:b/></w:rPr>",
+          "<w:r><w:rPr>",
+          band_rpr,
+          "</w:rPr>",
           "<w:t xml:space=\"preserve\">",
           .docx_escape(label),
           "</w:t></w:r></w:p>"
@@ -1012,6 +1021,13 @@ backend_docx <- function(grid, file) {
   body_borders = NULL
 ) {
   surface_node <- .chrome_surface_at(cs, "header")
+  # Column labels are bold by default; a `style(.at = cells_headers())`
+  # override adds colour / font / size and can turn bold off.
+  hdr_rpr <- .docx_rPr_from_style(
+    surface_node,
+    preset = preset,
+    bold_default = TRUE
+  )
   cells <- vapply(
     seq_along(col_names_vis),
     function(j) {
@@ -1021,12 +1037,14 @@ backend_docx <- function(grid, file) {
         .render_docx_inline(
           ast,
           hyperlinks,
-          default_rpr = "<w:b/>",
+          default_rpr = hdr_rpr,
           rid_map = rid_map
         )
       } else {
         paste0(
-          "<w:r><w:rPr><w:b/></w:rPr>",
+          "<w:r><w:rPr>",
+          hdr_rpr,
+          "</w:rPr>",
           "<w:t xml:space=\"preserve\">",
           .docx_escape(nm),
           "</w:t></w:r>"
