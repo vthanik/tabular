@@ -1360,7 +1360,18 @@ backend_rtf <- function(grid, file) {
 # map onto cell sides via the caller's choice (e.g. "header_top"
 # maps to the cell's top side).
 .rtf_chrome_border_seg <- function(cs, region, side, backend_default) {
-  triple <- .chrome_border_at(cs, region)
+  .rtf_border_seg_from_triple(
+    .chrome_border_at(cs, region),
+    side,
+    backend_default
+  )
+}
+
+# Build a `\clbrdr<side>...` cell-border fragment from a resolved
+# (style, width, color) triple. NULL falls back to the backend default
+# (solid -> the 0.5pt rule; otherwise `\brdrnone`); an explicit "none"
+# clears the edge.
+.rtf_border_seg_from_triple <- function(triple, side, backend_default) {
   letter <- substr(side, 1L, 1L)
   prefix <- paste0("\\clbrdr", letter)
   if (is.null(triple)) {
@@ -1383,6 +1394,18 @@ backend_rtf <- function(grid, file) {
   )
   twips <- max(1L, as.integer(round(as.numeric(triple$width) * 20)))
   paste0(prefix, style_tok, sprintf("\\brdrw%d", twips))
+}
+
+# Effective RTF top-border fragment for the topmost header row: the
+# outer-frame `outer_top` triple wins over the chrome `header_top` rule,
+# so `cells_table(side = "outer")` thickens the true table top (above the
+# column-header band) rather than the first body row.
+.rtf_header_top_seg <- function(cs, body_borders) {
+  ot <- if (is.list(body_borders)) body_borders[["outer_top"]] else NULL
+  if (!is.null(ot)) {
+    return(.rtf_border_seg_from_triple(ot, "top", "solid"))
+  }
+  .rtf_chrome_border_seg(cs, "header_top", "top", "solid")
 }
 
 # Emit one band row on the body `\cellx` grid. Each contiguous run of
@@ -1414,7 +1437,7 @@ backend_rtf <- function(grid, file) {
   surface_node <- .chrome_surface_at(cs, "header")
   surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
   shading <- .rtf_cell_shading(surface_node, colors)
-  top_tok <- .rtf_chrome_border_seg(cs, "header_top", "top", "solid")
+  top_tok <- .rtf_header_top_seg(cs, body_borders)
   bot_tok <- .rtf_chrome_border_seg(cs, "header_bottom", "bottom", "solid")
   halign <- if (
     is_style_node(surface_node) &&
@@ -1538,7 +1561,7 @@ backend_rtf <- function(grid, file) {
   surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
   shading <- .rtf_cell_shading(surface_node, colors)
   top_tok <- if (isTRUE(outer_top)) {
-    .rtf_chrome_border_seg(cs, "header_top", "top", "solid")
+    .rtf_header_top_seg(cs, body_borders)
   } else {
     "\\clbrdrt\\brdrnone"
   }

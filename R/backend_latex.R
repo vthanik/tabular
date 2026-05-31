@@ -788,7 +788,10 @@ backend_latex <- function(grid, file) {
   if (!is.null(body_borders$outer_top)) {
     spec <- .latex_border_spec(body_borders$outer_top)
     if (nzchar(spec)) {
-      out <- c(out, sprintf("hline{%d}={%s}", body_first, spec))
+      # The outer frame top rides the table top (`hline{1}` = top of the
+      # first header row), NOT the body top (`rowhead + 1`), so the thick
+      # frame edge sits above the column-header band rather than under it.
+      out <- c(out, sprintf("hline{1}={%s}", spec))
     }
   }
   if (!is.null(body_borders$outer_bottom) && nrow_body > 0L) {

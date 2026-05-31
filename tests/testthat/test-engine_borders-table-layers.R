@@ -8,15 +8,19 @@ build_grid <- function() {
   list(spec = spec, cells_style = tabular:::engine_style(spec))
 }
 
-test_that("cells_table(side = 'outer_top') stamps the top row's top border", {
+test_that("cells_table(side = 'outer_top') is structural via the manifest, not per-cell", {
   g <- build_grid()
   spec <- g$spec |>
     style(border_top = brdr("thick"), .at = cells_table(side = "outer_top"))
   cs <- tabular:::engine_style(spec)
   cs <- tabular:::engine_borders(spec, cs)
-  expect_identical(cs[[1L, 1L]]@border_top_style, "solid")
-  expect_true(cs[[1L, 1L]]@border_top_width > 0)
-  expect_true(is.na(cs[[2L, 1L]]@border_top_style))
+  # Outer top is drawn structurally at the header band's top rule (above
+  # the body), which a per-cell body stamp cannot reach, so no per-cell
+  # top stamp lands; the manifest carries the resolved triple.
+  expect_true(is.na(cs[[1L, 1L]]@border_top_style))
+  man <- tabular:::body_border_manifest(spec)
+  expect_identical(man$outer_top$style, "solid")
+  expect_true(man$outer_top$width > 0)
 })
 
 test_that("cells_table(side = 'outer_bottom') stamps the last row's bottom border", {
@@ -31,21 +35,22 @@ test_that("cells_table(side = 'outer_bottom') stamps the last row's bottom borde
   expect_true(is.na(cs[[1L, 1L]]@border_bottom_style))
 })
 
-test_that("cells_table(side = 'outer') stamps top/bottom per-cell, L/R via manifest", {
+test_that("cells_table(side = 'outer') stamps bottom per-cell, top/L/R via manifest", {
   g <- build_grid()
   spec <- g$spec |>
     style(border = brdr("thin"), .at = cells_table(side = "outer"))
   cs <- tabular:::engine_borders(spec, tabular:::engine_style(spec))
-  # Top / bottom are stamped per-cell (they coincide with the chrome
-  # toprule / bottomrule at the same edge).
-  expect_identical(cs[[1L, 1L]]@border_top_style, "solid")
+  # Bottom is stamped per-cell (the last body row's bottom IS the table
+  # bottom, coinciding with the chrome bottomrule).
   expect_identical(cs[[2L, 1L]]@border_bottom_style, "solid")
-  # Left / right are NOT stamped per-cell; they are drawn structurally
-  # from the manifest so the vertical edges span the synthesised special
-  # rows. The per-cell scalars stay NA.
+  # Top / left / right are NOT stamped per-cell; they are drawn
+  # structurally from the manifest so the edges span the synthesised
+  # special rows (top rides the header band). The per-cell scalars stay NA.
+  expect_true(is.na(cs[[1L, 1L]]@border_top_style))
   expect_true(is.na(cs[[1L, 1L]]@border_left_style))
   expect_true(is.na(cs[[1L, 2L]]@border_right_style))
   man <- tabular:::body_border_manifest(spec)
+  expect_identical(man$outer_top$style, "solid")
   expect_identical(man$outer_left$style, "solid")
   expect_identical(man$outer_right$style, "solid")
 })
@@ -81,8 +86,9 @@ test_that("cells_table() layers compose in cascade order (last write wins)", {
       border_top = brdr("thin", "solid"),
       .at = cells_table(side = "outer_top")
     )
-  cs <- tabular:::engine_borders(spec, tabular:::engine_style(spec))
-  expect_identical(cs[[1L, 1L]]@border_top_style, "solid")
+  # outer_top is manifest-routed; the later layer's "solid" wins.
+  man <- tabular:::body_border_manifest(spec)
+  expect_identical(man$outer_top$style, "solid")
 })
 
 test_that("session preset(.style = template) flows through engine_borders", {
@@ -92,8 +98,10 @@ test_that("session preset(.style = template) flows through engine_borders", {
     style(border = brdr("thin"), .at = cells_table(side = "outer"))
   set_preset(.style = tmpl)
   cs <- tabular:::engine_borders(g$spec, tabular:::engine_style(g$spec))
-  expect_identical(cs[[1L, 1L]]@border_top_style, "solid")
+  # Bottom stamps per-cell; top rides the manifest.
   expect_identical(cs[[2L, 1L]]@border_bottom_style, "solid")
+  man <- tabular:::body_border_manifest(g$spec)
+  expect_identical(man$outer_top$style, "solid")
 })
 
 test_that("rules='frame' draws L/R structurally via the manifest, not per-cell (#frame-left)", {

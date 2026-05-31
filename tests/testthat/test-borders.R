@@ -264,3 +264,74 @@ test_that("HTML emit injects style=... on body cell with border override", {
   # bottomrule alongside the user's left border; match the left decl.
   expect_true(grepl("border-left: 1pt solid #123456;", txt, fixed = TRUE))
 })
+
+# ---- outer-frame thick top rides the header band (#frame-top) -----------
+
+mk_thick_outer_spec <- function() {
+  d <- data.frame(
+    grp = c("Age", "Age"),
+    stat = c("Mean", "SD"),
+    a = c("75.2", "8.59"),
+    b = c("75.7", "8.29"),
+    stringsAsFactors = FALSE
+  )
+  tabular(d, titles = "T") |>
+    cols(
+      grp = col_spec(
+        usage = "group",
+        group_display = "column",
+        group_skip = TRUE,
+        label = "C",
+        align = "left"
+      ),
+      stat = col_spec(usage = "id", label = "Stat", align = "left"),
+      a = col_spec(label = "A", align = "right"),
+      b = col_spec(label = "B", align = "right")
+    ) |>
+    headers("Grp" = c("a", "b")) |>
+    style(border = brdr(width = "thick"), .at = cells_table(side = "outer"))
+}
+
+test_that("HTML outer-frame thick top rides the header band, not body row 1 (#frame-top)", {
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(mk_thick_outer_spec(), out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # True top edge (thead first row) carries the thick rule.
+  expect_true(grepl("thead tr:first-child th \\{ border-top: 1.5pt", txt))
+  # No stray thick top border on a body cell.
+  expect_false(grepl("<td[^>]*border-top: 1.5pt", txt))
+})
+
+test_that("LaTeX outer-frame thick top is hline{1}, no stray under-header rule (#frame-top)", {
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(mk_thick_outer_spec(), out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_true(grepl("hline{1}={1.5pt", txt, fixed = TRUE))
+  # The header/body boundary must NOT be upgraded to the thick rule.
+  expect_false(grepl("hline{3}={1.5pt", txt, fixed = TRUE))
+})
+
+test_that("RTF + DOCX outer-frame thick top rides the topmost header row (#frame-top)", {
+  spec <- mk_thick_outer_spec()
+  outr <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, outr)
+  rtf <- paste(readLines(outr, warn = FALSE), collapse = "\n")
+  # The first cell top rule (topmost header band) is the thick rule.
+  first_top <- regmatches(
+    rtf,
+    regexpr("clbrdrt\\\\brdrs\\\\brdrw[0-9]+", rtf)
+  )
+  expect_match(first_top, "brdrw30")
+
+  outd <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, outd)
+  dir <- withr::local_tempdir()
+  utils::unzip(outd, exdir = dir)
+  docx <- paste(
+    readLines(file.path(dir, "word", "document.xml"), warn = FALSE),
+    collapse = "\n"
+  )
+  # The first bordered top (column-header band) is the thick rule.
+  first_wtop <- regmatches(docx, regexpr("<w:top [^>]*w:sz=\"[0-9]+\"", docx))
+  expect_match(first_wtop, "w:sz=\"12\"")
+})

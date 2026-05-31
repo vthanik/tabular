@@ -1610,7 +1610,12 @@ backend_html <- function(grid, file) {
     .html_structural_rule(
       ".tabular-table thead tr:first-child th",
       "top",
-      .chrome_border_at(cs, "header_top")
+      # The outer-frame top rides the table top = the column-header band's
+      # top rule, so `style(.at = cells_table(side = "outer"))` thickens the
+      # true top edge. Falls back to the chrome `header_top` rule when no
+      # outer frame is set.
+      (if (is.list(body_borders)) body_borders[["outer_top"]] else NULL) %||%
+        .chrome_border_at(cs, "header_top")
     ),
     .html_structural_rule(
       ".tabular-table thead tr:last-child th",

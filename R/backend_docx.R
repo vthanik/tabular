@@ -746,7 +746,19 @@ backend_docx <- function(grid, file) {
   # toprule (`header_top`) rides the first row of the column-header
   # block; the midrule (`header_bottom`) closes the column-label band.
   # Both default solid and are suppressed only on an explicit "none".
-  top_el <- .docx_chrome_border_seg(cs, "header_top", "top")
+  # The outer-frame `outer_top` triple wins over the chrome `header_top`
+  # rule, so `cells_table(side = "outer")` thickens the column-header band's
+  # top (the table top) rather than a body row.
+  outer_top_triple <- if (is.list(body_borders)) {
+    body_borders[["outer_top"]]
+  } else {
+    NULL
+  }
+  top_el <- if (!is.null(outer_top_triple)) {
+    .docx_border_seg_from_triple(outer_top_triple, "top")
+  } else {
+    .docx_chrome_border_seg(cs, "header_top", "top")
+  }
   mid_el <- .docx_chrome_border_seg(cs, "header_bottom", "bottom")
   has_bands <- is.data.frame(meta$headers) && nrow(meta$headers) > 0L
 
@@ -2449,7 +2461,22 @@ backend_docx <- function(grid, file) {
   side,
   backend_default = "solid"
 ) {
-  triple <- .chrome_border_at(cs, region)
+  .docx_border_seg_from_triple(
+    .chrome_border_at(cs, region),
+    side,
+    backend_default
+  )
+}
+
+# Build a `<w:top>` / `<w:bottom>` ... border element from a resolved
+# (style, width, color) triple. NULL with a "solid" backend default emits
+# the 0.5pt rule; an explicit "none" (or NULL with a non-solid default)
+# emits nothing.
+.docx_border_seg_from_triple <- function(
+  triple,
+  side,
+  backend_default = "solid"
+) {
   if (is.null(triple)) {
     if (!identical(backend_default, "solid")) {
       return("")
