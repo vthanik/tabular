@@ -303,9 +303,12 @@ backend_docx <- function(grid, file) {
   # grid/header. Word paginates the body within a panel via
   # `<w:tblHeader/>` + `<w:cantSplit/>`; subgroups stay inline within a
   # panel's table (the banner rows in `.render_docx_body_rows`). Panels
-  # are separated by a hard page break. Titles render in panel 1 only
-  # (later panels lead with the repeating column-header band). An empty
-  # grid falls through one call so the "(no rows)" marker still appears.
+  # are separated by a hard page break. When `repeat_titles` is set
+  # (the `repeat_content` default), the title block rides EVERY panel's
+  # table as `<w:tblHeader/>` rows so it repeats on every panel page,
+  # matching RTF; otherwise it renders once as paragraphs above panel 1
+  # (`titles_block`). An empty grid falls through one call so the
+  # "(no rows)" marker still appears.
   panel_groups <- .docx_group_pages_by_panel(grid@pages)
   if (length(panel_groups) <= 1L) {
     table_block <- .render_docx_table(
@@ -330,7 +333,7 @@ backend_docx <- function(grid, file) {
           hyperlinks,
           rid_map,
           cs = cs,
-          title_ast = if (gi == 1L && title_in_table) titles_ast else list(),
+          title_ast = if (title_in_table) titles_ast else list(),
           pad_title_top = pad_title_top,
           pad_title_bottom = pad_title_bottom
         )

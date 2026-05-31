@@ -1483,6 +1483,27 @@ test_that("DOCX panels = 1 emit a single <w:tbl> with no inter-panel break", {
   expect_false(grepl("pageBreakBefore", xml, fixed = TRUE))
 })
 
+test_that("DOCX repeats the title block on every panel", {
+  # repeat_content defaults to include "titles", so the title block
+  # rides each panel's table as <w:tblHeader/> rows -- every panel
+  # page must carry the table number, not just panel 1.
+  d <- data.frame(grp = c("a", "b"), c1 = 1:2, c2 = 3:4, c3 = 5:6)
+  spec <- tabular(d, titles = c("RepeatTitleZ", "Demographics")) |>
+    cols(grp = col_spec(usage = "group", group_display = "column")) |>
+    paginate(panels = 2L)
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  xml <- paste(
+    readLines(unz(out, "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_identical(length(gregexpr("<w:tbl>", xml, fixed = TRUE)[[1L]]), 2L)
+  expect_identical(
+    length(gregexpr("RepeatTitleZ", xml, fixed = TRUE)[[1L]]),
+    2L
+  )
+})
+
 # ---------------------------------------------------------------------
 # chrome_style cascade — `style_template() |> style(.at = cells_*())`
 # must reach the DOCX output. Tests inspect the unzipped
