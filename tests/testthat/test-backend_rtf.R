@@ -1241,3 +1241,26 @@ test_that("cells_pagehead band border adds \\clbrdrb on the RTF header band (#th
   rtf1 <- paste(readLines(out1, warn = FALSE), collapse = "\n")
   expect_gt(nb(rtf1), nb(rtf0))
 })
+
+# ---- RTF page-chrome slot styling (#page-chrome) ------------------------
+
+test_that("RTF pagehead slot honors color / font_family / background (#page-chrome)", {
+  spec <- tabular(data.frame(x = c("1", "2"))) |>
+    cols(x = col_spec(label = "X")) |>
+    preset(pagehead = list(left = "PH")) |>
+    style(
+      color = "#FF0000",
+      font_family = "Times New Roman",
+      background = "#FFFF00",
+      .at = cells_pagehead(slot = "left")
+    )
+  f <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  # Font registered in the font table.
+  expect_true(grepl("Times New Roman", rtf, fixed = TRUE))
+  # Foreground colour registered in the colour table.
+  expect_true(grepl("\\red255\\green0\\blue0", rtf, fixed = TRUE))
+  # Background shading emitted on the slot cell.
+  expect_true(grepl("clcbpat", rtf, fixed = TRUE))
+})

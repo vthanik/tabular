@@ -2124,3 +2124,21 @@ test_that("DOCX title / footnote / header honor style() text overrides (#docx-ch
   expect_true(grepl("w:color w:val=\"00FF00\"", all_xml)) # footnote
   expect_true(grepl("w:color w:val=\"0000FF\"", all_xml)) # header
 })
+
+# ---- DOCX page-chrome slot background (#page-chrome) --------------------
+
+test_that("DOCX pagehead slot honors background shading (#page-chrome)", {
+  spec <- tabular(data.frame(x = c("1", "2"))) |>
+    cols(x = col_spec(label = "X")) |>
+    preset(pagehead = list(left = "PH")) |>
+    style(background = "#FFFF00", .at = cells_pagehead(slot = "left"))
+  f <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, f)
+  dir <- withr::local_tempdir()
+  utils::unzip(f, exdir = dir)
+  hdr <- paste(
+    readLines(file.path(dir, "word", "header1.xml"), warn = FALSE),
+    collapse = "\n"
+  )
+  expect_true(grepl("<w:shd", hdr) && grepl("FFFF00", hdr))
+})

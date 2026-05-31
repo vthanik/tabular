@@ -824,7 +824,8 @@ backend_rtf <- function(grid, file) {
       cells[[length(cells) + 1L]] <- list(
         align = alignments[[s]],
         text = .rtf_resolve_page_tokens(.render_rtf_inline(ast)),
-        props = .rtf_chrome_text_props(slot_node, colors, fonts)
+        props = .rtf_chrome_text_props(slot_node, colors, fonts),
+        shd = .rtf_cell_shading(slot_node, colors)
       )
     }
   }
@@ -872,6 +873,7 @@ backend_rtf <- function(grid, file) {
     cellx_lines[[i]] <- paste0(
       other_segs,
       edge_seg,
+      cells[[i]]$shd %||% "",
       sprintf("\\cellx%d", as.integer(pos))
     )
   }
@@ -2443,6 +2445,21 @@ backend_rtf <- function(grid, file) {
   vals[!is.na(vals) & nzchar(vals)]
 }
 
+# Flatten one `chrome_style$surfaces` entry to a list of style_nodes. A
+# plain surface (title / header / footer / subgroup) is a single node;
+# the slot-keyed page bands (pagehead / pagefoot) are a `left/center/right`
+# list of nodes. Returns `list()` for anything else, so the colour / font
+# collectors register slot-level overrides, not just whole-surface ones.
+.rtf_surface_nodes <- function(node) {
+  if (is_style_node(node)) {
+    list(node)
+  } else if (is.list(node)) {
+    Filter(is_style_node, node)
+  } else {
+    list()
+  }
+}
+
 # Walk every style_node that might contribute a color to the
 # rendered document. Returns a deduplicated character vector of
 # "#RRGGBB" hex codes plus a `lookup(hex) -> integer` closure that
@@ -2464,11 +2481,13 @@ backend_rtf <- function(grid, file) {
     ))
   })
   if (is.list(cs) && is.list(cs$surfaces)) {
+    nodes <- unlist(
+      lapply(cs$surfaces, .rtf_surface_nodes),
+      recursive = FALSE
+    )
     buf[[length(buf) + 1L]] <- .rtf_valid_props(lapply(
-      cs$surfaces,
-      function(node) {
-        if (is_style_node(node)) c(node@color, node@background) else NULL
-      }
+      nodes,
+      function(node) c(node@color, node@background)
     ))
   }
   values <- unique(unlist(buf, use.names = FALSE))
@@ -2510,9 +2529,13 @@ backend_rtf <- function(grid, file) {
     ))
   })
   if (is.list(cs) && is.list(cs$surfaces)) {
+    nodes <- unlist(
+      lapply(cs$surfaces, .rtf_surface_nodes),
+      recursive = FALSE
+    )
     buf[[length(buf) + 1L]] <- .rtf_valid_props(lapply(
-      cs$surfaces,
-      function(node) if (is_style_node(node)) node@font_family else NULL
+      nodes,
+      function(node) node@font_family
     ))
   }
   # `\f0` (body) and `\f1` (mono) are POSITIONAL slots that must both

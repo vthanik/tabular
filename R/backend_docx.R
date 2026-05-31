@@ -1773,9 +1773,15 @@ backend_docx <- function(grid, file) {
         default_rpr = slot_rpr
       )
       runs_with_fields <- .docx_resolve_page_tokens(runs_xml)
+      slot_shd <- if (is_style_node(slot_node)) {
+        .docx_shd_from_style(slot_node)
+      } else {
+        ""
+      }
       cells_data[[length(cells_data) + 1L]] <- list(
         align = alignments[[s]],
-        body = runs_with_fields
+        body = runs_with_fields,
+        shd = slot_shd
       )
     }
   }
@@ -1834,6 +1840,7 @@ backend_docx <- function(grid, file) {
         "<w:tcPr>",
         sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", width),
         nil_borders,
+        c$shd %||% "",
         "</w:tcPr>"
       )
       paste0(
