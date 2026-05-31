@@ -81,7 +81,13 @@ engine_format <- function(spec) {
   col_names <- names(data)
   cols <- .cols_by_name(spec@cols, col_names)
 
-  cells_text <- .format_cells(data, cols, call = call)
+  # The effective preset's `na_text` is the table-wide default NA token;
+  # a column's own `col_spec(na_text=)` overrides it. `.format_one_column`
+  # falls back to this when the column leaves `na_text` at its "" default.
+  eff_preset <- .effective_preset(spec)
+  preset_na <- if (is_preset_spec(eff_preset)) eff_preset@na_text else ""
+
+  cells_text <- .format_cells(data, cols, preset_na = preset_na, call = call)
   cells_ast <- .parse_cells_ast(cells_text, call = call)
 
   titles_ast <- .parse_string_vec(spec@titles, call = call)
@@ -124,7 +130,7 @@ engine_format <- function(spec) {
 
 # Apply per-column format + NA substitution. Returns a character
 # matrix shaped like spec@data.
-.format_cells <- function(data, cols, call) {
+.format_cells <- function(data, cols, preset_na = "", call) {
   nrow_data <- nrow(data)
   ncol_data <- ncol(data)
   col_names <- names(data)
@@ -145,6 +151,7 @@ engine_format <- function(spec) {
     mat[, j] <- .format_one_column(
       values = data[[j]],
       cs = cols[[nm]],
+      preset_na = preset_na,
       call = call
     )
   }
@@ -154,11 +161,13 @@ engine_format <- function(spec) {
 # Format one column. NA cells are substituted with `na_text` BEFORE
 # the format step so neither sprintf nor the user-supplied function
 # sees NA. Returns a character vector of length `length(values)`.
-.format_one_column <- function(values, cs, call) {
+.format_one_column <- function(values, cs, preset_na = "", call) {
   n <- length(values)
   na_mask <- is.na(values)
   out <- character(n)
-  na_text <- cs@na_text
+  # A column that leaves `na_text` at its "" default inherits the
+  # table-wide preset NA token; an explicit per-column value wins.
+  na_text <- if (nzchar(cs@na_text)) cs@na_text else preset_na
 
   if (all(na_mask)) {
     out[] <- na_text
