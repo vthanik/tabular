@@ -1250,16 +1250,32 @@ backend_latex <- function(grid, file) {
         length(col@align) == 1L &&
         !is.na(col@align) &&
         col@align == "decimal"
+      # Chrome surface header halign (from `style(.at = cells_headers())`),
+      # honored when no per-column align is set (parity with HTML/RTF/DOCX,
+      # where col_spec align wins and the surface fills in).
+      surf_halign <- if (
+        !(is_col_spec(col) && length(col@align) == 1L && !is.na(col@align)) &&
+          is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        NA_character_
+      }
       if (grepl("\\\\", body, fixed = TRUE)) {
         # Multi-line header: wrap so the in-cell `\\` is a line break, not
         # a row separator. The parbox carries the halign (decimal centres,
-        # else the column's alignment); the cell keeps only valign.
+        # else the column's alignment, else the surface halign); the cell
+        # keeps only valign.
         halign <- if (is_decimal) {
           "center"
         } else if (
           is_col_spec(col) && length(col@align) == 1L && !is.na(col@align)
         ) {
           col@align
+        } else if (!is.na(surf_halign)) {
+          surf_halign
         } else {
           "left"
         }
@@ -1268,6 +1284,13 @@ backend_latex <- function(grid, file) {
         # Single-line decimal header centres (HTML parity); other
         # single-line headers inherit their `Q[...]` colspec alignment.
         parts <- paste0("halign=c,", parts)
+      } else if (!is.na(surf_halign)) {
+        # No per-column align: honor the surface header halign explicitly
+        # (single-line headers otherwise inherit the `Q[...]` colspec).
+        parts <- paste0(
+          sprintf("halign=%s,", .latex_halign_letter(surf_halign)),
+          parts
+        )
       }
       sprintf("\\SetCell{%s} %s", parts, body)
     },
