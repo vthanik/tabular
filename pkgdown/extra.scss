@@ -6,7 +6,10 @@
 $faint-background: #f9f9f9 !default;
 $faint-border: #efefef !default;
 
-$navbar-background: $faint-background !default;
+// Clean dplyr / tidytemplate hero: the navbar is the same white as the
+// page (no coloured "banner" bar), separated from the content only by a
+// thin horizontal rule below it. The footer keeps its faint fill.
+$navbar-background: #fff !default;
 $footer-background: $faint-background !default;
 
 $accent: #3b82f6 !default;
@@ -211,14 +214,21 @@ body {
 }
 
 // ── Code ───────────────────────────────────────────────────────────────────
-pre, code {
+// Bordered blocks (thicker visual definition than the flat template).
+pre {
+  border: 1px solid $faint-border;
+  border-radius: 0;
+  background-image: linear-gradient(-160deg, #f8f8f8 0, #f1f1f1 100%);
+  padding: 0.85rem 1rem;
+}
+code {
   border: none;
   background-image: linear-gradient(-160deg, #f8f8f8 0, #f1f1f1 100%);
 }
 
 pre code { background: transparent }
 
-pre { font-size: 0.81em }
+pre { font-size: 0.85em; line-height: 1.55 }
 
 h1 code, h2 code, h3 code, h4 code, h5 code, h6 code {
   background: transparent;
@@ -256,3 +266,51 @@ mark {
 // (or its _pkgdown.yml bslib block) and layer them as overrides here.
 // Plan Step 9 calls for adopting only the navbar bg + active-link colors,
 // nothing else.
+
+// ── Typography (DM Sans / DM Mono via bslib; sizing tuned here) ──────────────
+// Type scale tuned by eye against the Databricks docs reference
+// (docs.databricks.com): ~16px base, generous line-height, modular
+// headings (the h1-h4 sizes live in the Headings block above).
+body {
+  font-size: 1rem;
+  line-height: 1.6;
+  letter-spacing: 0.005em;
+}
+h1, .h1 {
+  @include font-size(2.4rem);
+  line-height: 1.15;
+  font-weight: 600;
+}
+main p, main li { line-height: 1.65 }
+
+// ── Quarto callouts (bordered boxes, square corners) ─────────────────────────
+// Vignettes layer beginner/advanced asides via ::: {.callout-*} blocks.
+// Give them a clear bordered card with a left accent stripe.
+.callout {
+  border: 1px solid $faint-border;
+  border-left-width: 4px;
+  border-radius: 0;
+  margin: 1.25rem 0;
+  padding: 0.25rem 0;
+
+  .callout-title { font-weight: 600 }
+}
+.callout-tip     { border-left-color: #16a34a }
+.callout-note    { border-left-color: $accent }
+.callout-warning { border-left-color: #d97706 }
+.callout-important { border-left-color: #dc2626 }
+
+// ── Section dividers (stronger h2 rules on reference + article pages) ────────
+main .section > h2,
+.template-article main h2 {
+  border-bottom: 1px solid $faint-border;
+  padding-bottom: 0.4rem;
+}
+
+// ── Tables in prose (article comparison / capability matrices) ───────────────
+// NOTE: scoped to Bootstrap's .table; the rendered tabular .tabular-table
+// keeps its own monospace decimal-aligned styling untouched.
+main table.table {
+  th { border-bottom: 2px solid mix($body-color, $body-bg, 25%) }
+  td, th { padding: 0.5rem 0.75rem }
+}

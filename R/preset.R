@@ -360,7 +360,7 @@
 #'
 #'       **Interaction:** A body per-side padding override
 #'       (`preset(padding = list(body = ...))` or
-#'       `style(at = cells_body(), padding = ...)`) takes precedence at
+#'       `style(.at = cells_body(), padding = ...)`) takes precedence at
 #'       both measurement and render.
 #'
 #'       **Note:** DOCX and LaTeX render left / right exactly; RTF

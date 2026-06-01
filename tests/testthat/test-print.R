@@ -271,7 +271,7 @@ test_that("as.tags wraps body in a div with overflow-x:auto", {
   s <- tabular(data.frame(x = 1L), titles = "T")
   html <- as.character(htmltools::as.tags(s))
   expect_match(html, "overflow-x:\\s*auto", perl = TRUE)
-  expect_match(html, "<div id=\"tabular_", fixed = TRUE)
+  expect_match(html, "<div id=\"tabular-", fixed = TRUE)
 })
 
 test_that("as.tags emits the <style> block separately from the body", {
@@ -280,7 +280,7 @@ test_that("as.tags emits the <style> block separately from the body", {
   # The style block (from the inline CSS) shows up before the
   # wrapping <div>.
   style_pos <- regexpr(".tabular-table", html)
-  div_pos <- regexpr("<div id=\"tabular_", html)
+  div_pos <- regexpr("<div id=\"tabular-", html)
   expect_lt(style_pos, div_pos)
 })
 

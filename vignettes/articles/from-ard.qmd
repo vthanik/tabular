@@ -1,0 +1,124 @@
+---
+title: "From a cards ARD"
+description: >
+  Bridge long-format Analysis Results Data into the wide frame tabular
+  renders, with pivot_across().
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r}
+#| label: setup
+library(tabular)
+```
+
+`tabular` renders a **wide** frame, but many analysis pipelines produce
+**long** Analysis Results Data (ARD) — one row per statistic, in the
+`cards` format. `pivot_across()` is the bridge: it pivots an ARD into the
+wide, one-row-per-display-row shape `tabular()` expects.
+
+::: {.callout-note}
+## What is an ARD?
+
+An *Analysis Results Data* frame is the tidy, long representation of a
+table's contents: each row carries one statistic for one group level, with
+columns like `group1_level`, `variable`, `stat_name`, and `stat`. It is
+produced upstream by `cards::ard_stack()` (and friends). `tabular` does
+not compute it — it consumes it.
+:::
+
+## A demographics ARD
+
+The bundled `saf_demo_card` is a demographics ARD in `cards` format:
+
+```{r}
+#| label: ard-peek
+head(saf_demo_card, 6)
+```
+
+Each row is one statistic (`stat`) for one treatment arm
+(`group1_level`) and characteristic (`variable`). That is too long to
+render directly.
+
+## Pivot to wide
+
+`pivot_across()` spreads the treatment arms across columns and formats
+each statistic into a display string:
+
+```{r}
+#| label: pivot
+wide <- pivot_across(saf_demo_card)
+
+wide
+```
+
+By default the `statistic` argument formats continuous rows as
+`"{mean} ({sd})"` and categorical rows as `"{n} ({p}%)"`, and an
+`overall = "Total"` column is appended. The arm columns take their names
+from the ARD's `group1_level` values.
+
+## Render the pivoted frame
+
+The result is an ordinary wide data frame, so it flows straight into the
+usual pipeline. Arm columns whose names contain spaces are quoted with
+backticks:
+
+```{r}
+#| label: render
+tabular(
+  wide,
+  titles = c(
+    "Table 14.1.1",
+    "Demographic and Baseline Characteristics",
+    "Safety Population"
+  ),
+  footnotes = "Built from a cards ARD via pivot_across()."
+) |>
+  cols(
+    variable               = col_spec(usage = "group", label = "Characteristic"),
+    stat_label             = col_spec(label = "Statistic"),
+    Placebo                = col_spec(align = "decimal"),
+    `Xanomeline Low Dose`  = col_spec(label = "Drug 50",  align = "decimal"),
+    `Xanomeline High Dose` = col_spec(label = "Drug 100", align = "decimal"),
+    Total                  = col_spec(align = "decimal")
+  )
+```
+
+## Customising the statistic format
+
+Pass your own templates to `statistic` to change how each context renders
+— for example, a mean with one extra decimal and percentages without
+parentheses:
+
+```{r}
+#| label: custom-stat
+pivot_across(
+  saf_demo_card,
+  statistic = list(
+    continuous  = "{mean} (SD {sd})",
+    categorical = "{n} / {p}%"
+  )
+)
+```
+
+The `column` argument selects which ARD grouping variable becomes the
+columns (handy when an ARD carries more than one grouping dimension), and
+`label` renames the `variable` values for display.
+
+::: {.callout-tip}
+## Hierarchical ARDs
+
+`saf_aesocpt_card` is a *hierarchical* AE ARD (system organ class within
+preferred term). The same `pivot_across()` entry point handles it; the
+resulting wide frame then renders with the indent-and-group recipe from
+the [Clinical cookbook](clinical-cookbook.html).
+:::
+
+## Where this fits
+
+`pivot_across()` keeps the division of labour clean: `cards` (or
+`gtsummary`, `dplyr`, SAS) *computes* the summary; `pivot_across()`
+reshapes it; `tabular()` *renders* it to submission-grade output.

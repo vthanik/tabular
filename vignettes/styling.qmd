@@ -1,0 +1,232 @@
+---
+title: "Styling"
+description: >
+  One style() verb plus a cells_*() location drives every visual rule;
+  presets carry the cosmetic defaults, and style templates package a
+  reusable house style.
+vignette: >
+  %\VignetteIndexEntry{Styling}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r}
+#| label: setup
+library(tabular)
+
+base <- tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  )
+```
+
+Styling in `tabular` is one verb: `style()`. You pass it visual
+attributes (bold, colour, borders, padding, …) and a **location** that
+says *where* to apply them. Locations are the `cells_*()` helpers.
+
+## The shape: attributes + a location
+
+```{r}
+#| label: first-style
+base |>
+  style(bold = TRUE, .at = cells_group_headers())
+```
+
+The `.at` argument names the surface. Everything else is the styling to
+apply there. Stack `style()` calls to layer rules; later layers win per
+attribute.
+
+## Where: the location helpers
+
+| Location | Targets |
+|---|---|
+| `cells_body()` | Data cells (filter with `i`, `j`, or `where`) |
+| `cells_headers()` | Column-header band rows (filter with `level`) |
+| `cells_group_headers()` | Bold section-header rows |
+| `cells_subgroup_labels()` | The subgroup banner rows |
+| `cells_title()` | The title block |
+| `cells_footnotes()` | The footnote block |
+| `cells_pagehead()` / `cells_pagefoot()` | Page header / footer slots |
+| `cells_table()` | Table-wide borders and frame (`side =`) |
+
+```{r}
+#| label: locations
+base |>
+  style(bold = TRUE, .at = cells_group_headers()) |>
+  style(italic = TRUE, .at = cells_body(j = "Total")) |>
+  style(border_bottom = brdr("thick"), .at = cells_headers())
+```
+
+## What: the styling attributes
+
+A `style()` call accepts any of these:
+
+- **Text** — `bold`, `italic`, `underline`, `color`, `background`,
+  `font_family`, `font_size`.
+- **Alignment** — `halign` (`"left"`/`"center"`/`"right"`), `valign`.
+- **Borders** — `border_top`, `border_bottom`, `border_left`,
+  `border_right`, each taking a `brdr()`.
+- **Spacing** — `padding_top`/`_bottom`/`_left`/`_right`,
+  `blank_above`, `blank_below`.
+- **Surrounding text** — `pretext`, `posttext`.
+
+### Borders with `brdr()`
+
+`brdr()` describes one line. Its first argument is the **width**
+(`"hairline"`, `"thin"`, `"medium"`, `"thick"`, or a number in points),
+then the line `style`, then the `color`:
+
+```{r}
+#| label: borders
+base |>
+  style(border_top = brdr("thick"), border_bottom = brdr("thick"),
+        .at = cells_headers()) |>
+  style(border_bottom = brdr(width = "medium", style = "dashed"),
+        .at = cells_group_headers())
+```
+
+## Data-driven styling
+
+`cells_body(where = ...)` evaluates a predicate against the data, so you
+can highlight cells by content. Reference any column — including hidden
+ones:
+
+```{r}
+#| label: predicate
+base |>
+  style(background = "#eef6ff", .at = cells_body(where = stat_label == "n"))
+```
+
+Use `i` and `j` for positional targeting instead of a predicate:
+`cells_body(j = "Total")` styles the Total column, `cells_body(i = 1:3)`
+the first three rows.
+
+## Presets: cosmetic defaults for the whole table
+
+Where `style()` targets specific cells, `preset()` carries table-wide
+geometry and cosmetic defaults — paper size, orientation, font, and five
+named-list "knobs" for alignment, rules, fonts, colours, and padding:
+
+```{r}
+#| label: preset
+base |>
+  preset(
+    font_size   = 9,
+    orientation = "landscape",
+    rules  = list(midrule = brdr("thick")),
+    colors = list(header = c(text = "#1f2937"))
+  )
+```
+
+::: {.callout-note}
+## The `c(...)` knob shape
+
+Each cosmetic knob is a **named list keyed by surface**, and each
+per-surface spec is a flat named vector — `fonts = list(body = c(family
+= "Times New Roman", size = 9))`, `colors = list(header = c(text =
+"#1f2937", background = "#f3f4f6"))`, `padding = list(body = c(top = 2,
+bottom = 2))`. The knobs are strictly validated: unknown surfaces,
+unknown keys, or nested lists are rejected with a clear error.
+:::
+
+### Session defaults with `set_preset()`
+
+`preset()` applies to one spec in the pipe. `set_preset()` sets a
+**session default** that every subsequent `tabular()` inherits — the
+`ggplot2::theme_set()` analogue. `get_preset()` returns it; calling
+`set_preset()` with no arguments clears it.
+
+```{r}
+#| label: set-preset
+set_preset(font_size = 8)        # every later table starts at 8pt
+get_preset()
+set_preset()                      # clear it again
+```
+
+### A minimal theme
+
+`preset_minimal()` strips the look down to a single column-header rule
+with normal-weight text throughout — the spare house style some groups
+prefer:
+
+```{r}
+#| label: minimal
+base |>
+  preset_minimal()
+```
+
+## Packaging a house style with `style_template()`
+
+A submission renders dozens of tables that must share one identity. Build
+the rules once with `style_template()` (chaining the *same* `style()`
+verb), then attach it to a preset so every table inherits it:
+
+```{r}
+#| label: template
+house <- style_template() |>
+  style(bold = TRUE, .at = cells_headers()) |>
+  style(bold = TRUE, .at = cells_group_headers()) |>
+  style(border_top = brdr("thick"), border_bottom = brdr("thick"),
+        .at = cells_headers())
+
+is_style_template(house)
+
+base |>
+  preset(.style = house)
+```
+
+Attach it once per session with `set_preset(.style = house)` and every
+subsequent table picks up the house style with no per-table `style()`.
+
+## Inline markup with `md()` and `html()`
+
+Wrap label, title, footnote, or cell text in `md()` for Markdown (bold,
+italic, super/subscript) or `html()` for a constrained HTML subset:
+
+```{r}
+#| label: inline
+tabular(
+  saf_demo,
+  titles = c(
+    md("**Table 14.1.1**"),
+    "Demographic Characteristics"
+  ),
+  footnotes = md("Body mass index in kg/m^2^.")
+) |>
+  cols(
+    variable   = col_spec(usage = "group"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  )
+```
+
+::: {.callout-tip}
+## The cascade
+
+Styling resolves low-to-high priority: backend defaults → session preset
+(`set_preset()`) → spec preset (`preset()`) → per-spec `style()` layers.
+Later layers override earlier ones per attribute, and `NA` fields leave
+the prior value in place. So a house style sets the baseline and a
+per-table `style()` overrides just what it names.
+:::
+
+## Where to next
+
+- **[Clinical cookbook](clinical-cookbook.html)** — these tools applied
+  to six complete production tables.
+- **[Fonts & fidelity](fonts-and-fidelity.html)** — fonts, decimal
+  alignment, and why the print backends are the source of truth.
+```

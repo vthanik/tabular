@@ -102,24 +102,6 @@ backend_html <- function(grid, file) {
     pages <- .html_stamp_last_row_bottom(pages, .foot)
   }
 
-  head <- c(
-    "<!DOCTYPE html>",
-    "<html lang=\"en\">",
-    "<head>",
-    "<meta charset=\"utf-8\">",
-    paste0("<title>", .html_escape(doc_title), "</title>"),
-    .html_inline_style(
-      preset = meta$preset,
-      pagehead_ast = meta$pagehead_ast,
-      pagefoot_ast = meta$pagefoot_ast,
-      cs = cs,
-      body_borders = body_borders
-    ),
-    "</head>",
-    "<body class=\"tabular-doc\">"
-  )
-  tail <- c("</body>", "</html>")
-
   # On-screen chrome — semantic HTML5 `<header>` above the document
   # body and `<footer>` below. The CSS `@page` rules at
   # `.html_inline_style()` still drive print-time chrome (so
@@ -201,16 +183,46 @@ backend_html <- function(grid, file) {
 
   # `.tabular-content` wraps title + tables + footnotes in one
   # centred container sized to the widest table (`width:
-  # fit-content`). Title text centres above; footnote sits flush
-  # to the table's left edge. The `--window` BEM modifier flips
-  # the wrapper to full width so `width_mode = "window"` tables
-  # fill the viewport. The CSS rules live in `.html_inline_style()`.
-  # HTML is unconditionally responsive: the content wrapper
-  # always fills its parent (viewer pane / browser viewport /
-  # Quarto chunk / Shiny UI cell) via the base `.tabular-content`
-  # rule (`width: 100%`). No `--window` modifier; no `width_mode`
-  # branch; one code path regardless of `col_spec(width)` units.
+  # fit-content; margin: 0 auto`) -- the gt / flextable model.
+  # Title text centres above; footnote sits flush to the table's
+  # left edge; the whole block centres on the page. The table
+  # carries no inline width, so it renders at the same intrinsic
+  # size in every host (viewer pane / browser viewport / Quarto
+  # chunk / Shiny UI cell); only the surrounding whitespace
+  # differs. The CSS rules live in `.html_inline_style()`. One code
+  # path regardless of `col_spec(width)` units.
   content_open <- "<div class=\"tabular-content\">"
+
+  # Wrap the rendered body in the document shell. The CSS scope id (gt /
+  # flextable model: every rule prefixed `#<id>`, the container carries
+  # the id, so the host page's Bootstrap / pkgdown / Quarto CSS cannot
+  # cascade over the table) is hashed from the rendered body TEXT, not the
+  # S7 grid object. Text is byte-identical under `load_all` and an
+  # installed package (an S7 object's class carries namespace-environment
+  # refs that hash differently between the two), so snapshots stay stable;
+  # it is still unique per table, so two tables on one page never collide.
+  assemble <- function(body_inner) {
+    doc_body <- c(onscreen_header, body_inner, onscreen_footer)
+    scope_id <- paste0("tabular-", substr(rlang::hash(doc_body), 1L, 10L))
+    head <- c(
+      "<!DOCTYPE html>",
+      "<html lang=\"en\">",
+      "<head>",
+      "<meta charset=\"utf-8\">",
+      paste0("<title>", .html_escape(doc_title), "</title>"),
+      .html_inline_style(
+        preset = meta$preset,
+        pagehead_ast = meta$pagehead_ast,
+        pagefoot_ast = meta$pagefoot_ast,
+        cs = cs,
+        body_borders = body_borders,
+        scope_id = scope_id
+      ),
+      "</head>",
+      sprintf("<body class=\"tabular-doc\" id=\"%s\">", scope_id)
+    )
+    c(head, doc_body, "</body>", "</html>")
+  }
 
   if (total == 0L) {
     body_inner <- c(
@@ -220,7 +232,7 @@ backend_html <- function(grid, file) {
       footnote_block,
       "</div>"
     )
-    return(c(head, onscreen_header, body_inner, onscreen_footer, tail))
+    return(assemble(body_inner))
   }
 
   # Group pages by panel_index so each horizontal panel renders as
@@ -251,7 +263,7 @@ backend_html <- function(grid, file) {
     footnote_block,
     "</div>"
   )
-  c(head, onscreen_header, body_inner, onscreen_footer, tail)
+  assemble(body_inner)
 }
 
 # Render a semantic HTML5 page band (`<header>` or `<footer>`) for
@@ -1100,22 +1112,13 @@ backend_html <- function(grid, file) {
   )
 }
 
-# Emit the opening `<table>` tag carrying width-mode-aware inline
-# style. Reads `preset@width_mode` and the resolved column widths
-# stored on each `col_spec@width` (engine-resolved inches via
-# `.distribute_widths()` in R/col_width.R). Brings HTML into parity
-# with the paginated backends — RTF / LaTeX / PDF / DOCX honour
-# `width_mode` via the engine's distribution math; HTML now honours
-# it at emit time so the on-screen preview matches what the
-# paginated output will look like.
-#
-#   "content" / "fixed" -> style="width:<sum>in"
-#   "window"            -> style="width:100%"
-#
-# Falls back to the bare `<table class="tabular-table">` when no
-# visible column has a resolved numeric width (rare — only when a
-# spec bypasses engine resolution). Keeps the document additive-
-# only against the natural-fit fallback, mirroring `.html_colgroup`.
+# Emit the opening `<table>` tag. The table carries NO inline width:
+# it sizes to its natural content width and is centred on the page
+# by the `fit-content` / `margin: 0 auto` `.tabular-content` wrapper
+# (the gt / flextable model). Per-column widths the user set ship in
+# `<colgroup>` via `.html_colgroup()`; `preset@width_mode` drives the
+# paper backends (RTF / LaTeX / PDF / DOCX) only, not the on-screen
+# table width.
 #
 # No `table-layout: fixed` is emitted. The engine's AFM-measured
 # widths slightly under-count the browser's rendered content width
@@ -1127,14 +1130,17 @@ backend_html <- function(grid, file) {
 # browser expands columns to fit content when needed. Any overflow
 # is absorbed by `.tabular-table-wrap { overflow-x: auto; }`.
 .html_table_open_tag <- function(col_specs, preset) {
-  # HTML is unconditionally responsive: table always fills 100% of
-  # its wrapper, regardless of `col_spec(width)` units or
-  # `preset@width_mode`. Per-column widths (when the user set
-  # them) ship in `<colgroup>` via `.html_colgroup()`; the table
-  # itself never carries an inch-based width style. Width is the
-  # viewport's concern, not paper's. `col_specs` and `preset` are
-  # ignored here -- kept on the signature for call-site stability.
-  "<table class=\"tabular-table\" style=\"width:100%\">"
+  # gt / flextable model: the table sizes to its content (natural
+  # width) and is centred on the page via `.tabular-table { margin:
+  # 0 auto }` inside a `width: fit-content` `.tabular-content`
+  # wrapper. The table therefore carries NO inline width -- a
+  # hardcoded `width:100%` made the same table look different in
+  # every host (wide in a viewer pane, narrow in a pkgdown article
+  # column) and left no room to centre it. Per-column widths (when
+  # the user set them) still ship in `<colgroup>` via
+  # `.html_colgroup()`. `col_specs` and `preset` are ignored here --
+  # kept on the signature for call-site stability.
+  "<table class=\"tabular-table\">"
 }
 
 # Emit a `<colgroup>` block carrying the engine-resolved column
@@ -1640,7 +1646,8 @@ backend_html <- function(grid, file) {
   pagehead_ast = NULL,
   pagefoot_ast = NULL,
   cs = NULL,
-  body_borders = NULL
+  body_borders = NULL,
+  scope_id = NULL
 ) {
   cs <- cs %||% chrome_style()
   # Structural rules driven from the SSOT (chrome_style + the body
@@ -1705,14 +1712,17 @@ backend_html <- function(grid, file) {
       .html_font_family_css(preset)
     ),
     # `.tabular-content` wraps title + tables + footnote in one
-    # full-width container that always fills its parent (viewer
-    # pane / browser viewport / Quarto chunk / Shiny UI cell).
-    # The inner `<table style="width:100%">` (from
-    # `.html_table_open_tag()`) fills the wrapper; per-column
-    # `<col style="width:X">` widths flow through verbatim per
-    # the gt convention. HTML is unconditionally responsive --
-    # no `--window` modifier, no `width_mode` branch.
-    ".tabular-content { width: 100%; }",
+    # block that shrinks to the widest table (`width: fit-content`)
+    # and is centred on the page (`margin: 0 auto`) -- the gt /
+    # flextable model. The table keeps its natural content width
+    # (no inline `width:100%`), so the same spec renders at the
+    # same intrinsic size in every host (viewer pane, pkgdown
+    # article column, Quarto chunk); only the surrounding
+    # whitespace differs. Titles centre over the table; footnotes
+    # sit flush to the table's left edge. `max-width: 100%` caps an
+    # over-wide table to the host so `.tabular-table-wrap`'s
+    # horizontal scroll can take over rather than overflowing.
+    ".tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }",
     sprintf(
       ".tabular-title { font-size: %gpt; font-weight: 600; text-align: center; margin: .2rem 0; }",
       fs
@@ -1723,8 +1733,8 @@ backend_html <- function(grid, file) {
     # to exactly the blank-line count set in
     # `preset@title_pad_top` / `preset@title_pad_bottom`.
     ".tabular-pad { margin: 0; }",
-    # Wrapper around each `<table>` panel. The table's own inline
-    # `width:<N>in` / `width:100%` rides on the `<table>` itself (see
+    # Wrapper around each `<table>` panel. The table itself carries
+    # no inline width (it is content-fitted; see
     # `.html_table_open_tag()` in this file). The wrapper provides
     # the screen-only horizontal-scroll fallback when the viewport
     # is narrower than a content-fitted table, so the surrounding
@@ -1824,6 +1834,14 @@ backend_html <- function(grid, file) {
     ".tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }",
     "@media print { .tabular-table-wrap { overflow-x: visible; margin: 0; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }"
   )
+  # Scope every selector to `#<scope_id>` so the host page (pkgdown /
+  # Quarto / Bootstrap) cannot cascade over the table: the container-level
+  # selectors (`.tabular-doc`, `:root`) collapse to `#<id>` and every
+  # descendant rule gains the `#<id> ` prefix. The `@page` margin boxes
+  # below are print-only and page-global, so they stay unscoped.
+  if (!is.null(scope_id)) {
+    body_css <- .scope_selectors(body_css, scope_id)
+  }
   page_rules <- .html_render_page_band_rules(pagehead_ast, pagefoot_ast)
   # Per-cell colour / background / padding ride on cells_style[r,c]
   # now (set by `style(at = cells_body(), ...)` and the lowered
@@ -1832,6 +1850,82 @@ backend_html <- function(grid, file) {
   # so the table-wide CSS block has nothing to emit on their behalf —
   # the per-cell stamps already carry the visual.
   c("<style>", body_css, page_rules, "</style>")
+}
+
+# Prefix every CSS selector in `lines` with `#<id>` so the stylesheet is
+# scoped to one container (gt/flextable model). Container-level selectors
+# (`.tabular-doc`, the `:root` custom-property block) collapse to `#<id>`
+# itself; every other selector becomes a descendant `#<id> <selector>`.
+# Comma-separated selector lists are prefixed per part. The single
+# `@media print { ... }` line is handled specially: its inner rules are
+# scoped, the `@media` wrapper is preserved. Other at-rules pass through.
+.scope_selectors <- function(lines, id) {
+  hook <- paste0("#", id)
+
+  scope_one_selector <- function(sel) {
+    parts <- trimws(strsplit(sel, ",", fixed = TRUE)[[1L]])
+    out <- vapply(
+      parts,
+      function(p) {
+        if (p %in% c(".tabular-doc", ":root")) {
+          hook
+        } else if (startsWith(p, ".tabular-doc ")) {
+          paste0(hook, sub("^\\.tabular-doc", "", p))
+        } else {
+          paste0(hook, " ", p)
+        }
+      },
+      character(1L),
+      USE.NAMES = FALSE
+    )
+    paste(out, collapse = ", ")
+  }
+
+  # Scope each `selector { decls }` rule inside a brace block (used for
+  # the inner content of `@media print { ... }`).
+  scope_rule_block <- function(block) {
+    pat <- "([^{}]+)\\{([^{}]*)\\}"
+    pieces <- regmatches(block, gregexpr(pat, block, perl = TRUE))[[1L]]
+    if (length(pieces) == 0L) {
+      return(block)
+    }
+    scoped <- vapply(
+      pieces,
+      function(rule) {
+        sel <- trimws(sub(pat, "\\1", rule, perl = TRUE))
+        decls <- sub(pat, "\\2", rule, perl = TRUE)
+        paste0(scope_one_selector(sel), " {", decls, "}")
+      },
+      character(1L),
+      USE.NAMES = FALSE
+    )
+    paste(scoped, collapse = " ")
+  }
+
+  vapply(
+    lines,
+    function(line) {
+      line <- trimws(line)
+      if (!nzchar(line)) {
+        return(line)
+      }
+      if (startsWith(line, "@media")) {
+        head <- sub("\\{.*$", "{", line)
+        inner <- sub("^@media[^{]*\\{(.*)\\}\\s*$", "\\1", line, perl = TRUE)
+        paste0(head, " ", scope_rule_block(trimws(inner)), " }")
+      } else if (startsWith(line, "@")) {
+        line
+      } else if (grepl("{", line, fixed = TRUE)) {
+        sel <- sub("\\{.*$", "", line)
+        rest <- sub("^[^{]*", "", line)
+        paste0(scope_one_selector(trimws(sel)), " ", rest)
+      } else {
+        line
+      }
+    },
+    character(1L),
+    USE.NAMES = FALSE
+  )
 }
 
 # Render the CSS `@page { @top-* / @bottom-* }` margin-box rules

@@ -190,6 +190,14 @@
 # relying on the bare-numeric "points" convention. Resolved to a
 # backend's native unit at render via `.resolve_unit()`. A bare
 # numeric still means points everywhere these helpers are accepted.
+#
+# INTERNAL ONLY. `pt()` / `px()` / `pct()` / `is_unit()` are not
+# exported: the bare `pt` collided with `stats::pt`, and the
+# user-facing way to express a width / size is a string on
+# `col_spec(width = ...)` ("15px", "50%", "2.5in"), parsed by
+# `.parse_dim()`. These constructors have no in-package caller today
+# and are kept solely as internal helpers for the `tabular_unit`
+# class + `.resolve_unit()`.
 
 .new_unit <- function(value, unit, call = rlang::caller_env()) {
   if (
@@ -214,39 +222,11 @@
   )
 }
 
-#' Typed unit helpers
-#'
-#' Tag a width or size with its unit so a style argument is
-#' unambiguous about points versus pixels versus percent. Accepted
-#' anywhere `tabular` takes a width or size; a bare numeric is still
-#' interpreted as points. `pct()` expresses a proportional width
-#' (e.g. a column at 50% of the table width).
-#'
-#' @param x *Magnitude.* `<numeric(1)>: required`. Non-negative,
-#'   finite. For `pct()`, a percentage in `[0, 100]`.
-#'
-#' @return *A `tabular_unit` object* — a length-2 list `list(value,
-#'   unit)` with class `"tabular_unit"`.
-#'
-#' @examples
-#' # ---- Example 1: Disambiguate a rule width ----
-#' #
-#' # A 0.75-point hairline is unambiguous as pt(0.75); a bare 0.75
-#' # also means points, but the typed form documents intent.
-#' pt(0.75)
-#' px(1)
-#' pct(50)
-#'
-#' @seealso [`brdr()`] for border specifications that accept these.
-#' @export
+# Internal `tabular_unit` constructors. Not exported (see banner above).
 pt <- function(x) .new_unit(x, "pt", call = rlang::caller_env())
 
-#' @rdname pt
-#' @export
 px <- function(x) .new_unit(x, "px", call = rlang::caller_env())
 
-#' @rdname pt
-#' @export
 pct <- function(x) {
   call <- rlang::caller_env()
   u <- .new_unit(x, "pct", call = call)
@@ -263,8 +243,6 @@ pct <- function(x) {
   u
 }
 
-#' @rdname pt
-#' @export
 is_unit <- function(x) inherits(x, "tabular_unit")
 
 # Pretty-printer — keep inspect output compact.

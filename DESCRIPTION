@@ -11,6 +11,8 @@ Description: Native emission of clinical submission tables to RTF,
     for CDISC ADaM workflows and FDA / EMA / PMDA regulatory
     submissions.
 License: MIT + file LICENSE
+URL: https://vthanik.github.io/tabular/, https://github.com/vthanik/tabular
+BugReports: https://github.com/vthanik/tabular/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
