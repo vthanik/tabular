@@ -3,11 +3,6 @@
 ``` r
 
 library(tabular)
-#> 
-#> Attaching package: 'tabular'
-#> The following object is masked from 'package:stats':
-#> 
-#>     pt
 ```
 
 Two verbs shape the columns of a table.

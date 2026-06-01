@@ -3,11 +3,6 @@
 ``` r
 
 library(tabular)
-#> 
-#> Attaching package: 'tabular'
-#> The following object is masked from 'package:stats':
-#> 
-#>     pt
 ```
 
 `tabular` renders a **wide** frame, but many analysis pipelines produce
@@ -269,6 +264,4 @@ SAS) *computes* the summary;
 [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
 reshapes it;
 [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md)
-*renders* it to submission-grade output. See the [Comparison
-article](https://vthanik.github.io/tabular/articles/comparison.md) for
-how that split compares to all-in-one table packages. \`\`\`
+*renders* it to submission-grade output.

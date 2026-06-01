@@ -167,47 +167,47 @@ tabular(
   ) |>
   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 #> <style>
-#> .tabular-doc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-#> .tabular-content { width: 100%; }
-#> .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#> .tabular-pad { margin: 0; }
-#> .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#> .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#> .tabular-table th, .tabular-table td { padding: .35rem .6rem; }
-#> .tabular-table td { text-align: left; vertical-align: top; }
-#> .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#> .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#> .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#> .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#> .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#> .tabular-table tbody tr td { border-top: none; }
-#> .tabular-band { text-align: center; }
-#> .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#> .tabular-subgroup-label { font-weight: 600; }
-#> .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#> .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#> .text-left { text-align: left; }
-#> .text-center { text-align: center; }
-#> .text-right { text-align: right; }
-#> .tabular-table thead th.text-left { text-align: left; }
-#> .tabular-table thead th.text-center { text-align: center; }
-#> .tabular-table thead th.text-right { text-align: right; }
-#> .valign-top { vertical-align: top; }
-#> .valign-middle { vertical-align: middle; }
-#> .valign-bottom { vertical-align: bottom; }
-#> .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#> .tabular-empty { font-style: italic; color: #6c757d; }
-#> .tabular-page-break-row { display: none; }
-#> :root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#> .tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#> .tabular-page-header { margin-bottom: 1rem; }
-#> .tabular-page-footer { margin-top: 1rem; }
-#> .tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }
-#> .tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }
-#> .tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }
-#> @media print { .tabular-table-wrap { overflow-x: visible; margin: 0; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#> #tabular-038f42ce68 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#> #tabular-038f42ce68 .tabular-content { width: 100%; }
+#> #tabular-038f42ce68 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#> #tabular-038f42ce68 .tabular-pad { margin: 0; }
+#> #tabular-038f42ce68 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#> #tabular-038f42ce68 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#> #tabular-038f42ce68 .tabular-table th, #tabular-038f42ce68 .tabular-table td { padding: .35rem .6rem; }
+#> #tabular-038f42ce68 .tabular-table td { text-align: left; vertical-align: top; }
+#> #tabular-038f42ce68 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#> #tabular-038f42ce68 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#> #tabular-038f42ce68 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#> #tabular-038f42ce68 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#> #tabular-038f42ce68 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#> #tabular-038f42ce68 .tabular-table tbody tr td { border-top: none; }
+#> #tabular-038f42ce68 .tabular-band { text-align: center; }
+#> #tabular-038f42ce68 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#> #tabular-038f42ce68 .tabular-subgroup-label { font-weight: 600; }
+#> #tabular-038f42ce68 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#> #tabular-038f42ce68 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#> #tabular-038f42ce68 .text-left { text-align: left; }
+#> #tabular-038f42ce68 .text-center { text-align: center; }
+#> #tabular-038f42ce68 .text-right { text-align: right; }
+#> #tabular-038f42ce68 .tabular-table thead th.text-left { text-align: left; }
+#> #tabular-038f42ce68 .tabular-table thead th.text-center { text-align: center; }
+#> #tabular-038f42ce68 .tabular-table thead th.text-right { text-align: right; }
+#> #tabular-038f42ce68 .valign-top { vertical-align: top; }
+#> #tabular-038f42ce68 .valign-middle { vertical-align: middle; }
+#> #tabular-038f42ce68 .valign-bottom { vertical-align: bottom; }
+#> #tabular-038f42ce68 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#> #tabular-038f42ce68 .tabular-empty { font-style: italic; color: #6c757d; }
+#> #tabular-038f42ce68 .tabular-page-break-row { display: none; }
+#> #tabular-038f42ce68 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#> #tabular-038f42ce68 .tabular-page-header, #tabular-038f42ce68 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#> #tabular-038f42ce68 .tabular-page-header { margin-bottom: 1rem; }
+#> #tabular-038f42ce68 .tabular-page-footer { margin-top: 1rem; }
+#> #tabular-038f42ce68 .tabular-page-header-left, #tabular-038f42ce68 .tabular-page-footer-left { flex: 1; text-align: left; }
+#> #tabular-038f42ce68 .tabular-page-header-center, #tabular-038f42ce68 .tabular-page-footer-center { flex: 1; text-align: center; }
+#> #tabular-038f42ce68 .tabular-page-header-right, #tabular-038f42ce68 .tabular-page-footer-right { flex: 1; text-align: right; }
+#> @media print { #tabular-038f42ce68 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-038f42ce68 .tabular-table tr { page-break-inside: avoid; } #tabular-038f42ce68 .tabular-page-header, #tabular-038f42ce68 .tabular-page-footer { display: none; } #tabular-038f42ce68 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-038f42ce68 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-038f42ce68 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 #> </style>
-#> <div id="tabular_KytsiP4a3p" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+#> <div id="tabular-038f42ce68" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
 #> <p class="tabular-pad">&nbsp;</p>
 #> <h1 class="tabular-title">Table 14.3.1</h1>
 #> <h1 class="tabular-title">Adverse Events by System Organ Class and Preferred Term</h1>
@@ -323,47 +323,47 @@ tabular(
   ) |>
   sort_rows(by = "stat_label")
 #> <style>
-#> .tabular-doc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-#> .tabular-content { width: 100%; }
-#> .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#> .tabular-pad { margin: 0; }
-#> .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#> .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#> .tabular-table th, .tabular-table td { padding: .35rem .6rem; }
-#> .tabular-table td { text-align: left; vertical-align: top; }
-#> .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#> .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#> .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#> .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#> .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#> .tabular-table tbody tr td { border-top: none; }
-#> .tabular-band { text-align: center; }
-#> .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#> .tabular-subgroup-label { font-weight: 600; }
-#> .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#> .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#> .text-left { text-align: left; }
-#> .text-center { text-align: center; }
-#> .text-right { text-align: right; }
-#> .tabular-table thead th.text-left { text-align: left; }
-#> .tabular-table thead th.text-center { text-align: center; }
-#> .tabular-table thead th.text-right { text-align: right; }
-#> .valign-top { vertical-align: top; }
-#> .valign-middle { vertical-align: middle; }
-#> .valign-bottom { vertical-align: bottom; }
-#> .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#> .tabular-empty { font-style: italic; color: #6c757d; }
-#> .tabular-page-break-row { display: none; }
-#> :root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#> .tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#> .tabular-page-header { margin-bottom: 1rem; }
-#> .tabular-page-footer { margin-top: 1rem; }
-#> .tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }
-#> .tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }
-#> .tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }
-#> @media print { .tabular-table-wrap { overflow-x: visible; margin: 0; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#> #tabular-39a9349e6a { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#> #tabular-39a9349e6a .tabular-content { width: 100%; }
+#> #tabular-39a9349e6a .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#> #tabular-39a9349e6a .tabular-pad { margin: 0; }
+#> #tabular-39a9349e6a .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#> #tabular-39a9349e6a .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#> #tabular-39a9349e6a .tabular-table th, #tabular-39a9349e6a .tabular-table td { padding: .35rem .6rem; }
+#> #tabular-39a9349e6a .tabular-table td { text-align: left; vertical-align: top; }
+#> #tabular-39a9349e6a .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#> #tabular-39a9349e6a .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#> #tabular-39a9349e6a .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#> #tabular-39a9349e6a .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#> #tabular-39a9349e6a .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#> #tabular-39a9349e6a .tabular-table tbody tr td { border-top: none; }
+#> #tabular-39a9349e6a .tabular-band { text-align: center; }
+#> #tabular-39a9349e6a .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#> #tabular-39a9349e6a .tabular-subgroup-label { font-weight: 600; }
+#> #tabular-39a9349e6a .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#> #tabular-39a9349e6a .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#> #tabular-39a9349e6a .text-left { text-align: left; }
+#> #tabular-39a9349e6a .text-center { text-align: center; }
+#> #tabular-39a9349e6a .text-right { text-align: right; }
+#> #tabular-39a9349e6a .tabular-table thead th.text-left { text-align: left; }
+#> #tabular-39a9349e6a .tabular-table thead th.text-center { text-align: center; }
+#> #tabular-39a9349e6a .tabular-table thead th.text-right { text-align: right; }
+#> #tabular-39a9349e6a .valign-top { vertical-align: top; }
+#> #tabular-39a9349e6a .valign-middle { vertical-align: middle; }
+#> #tabular-39a9349e6a .valign-bottom { vertical-align: bottom; }
+#> #tabular-39a9349e6a .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#> #tabular-39a9349e6a .tabular-empty { font-style: italic; color: #6c757d; }
+#> #tabular-39a9349e6a .tabular-page-break-row { display: none; }
+#> #tabular-39a9349e6a { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#> #tabular-39a9349e6a .tabular-page-header, #tabular-39a9349e6a .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#> #tabular-39a9349e6a .tabular-page-header { margin-bottom: 1rem; }
+#> #tabular-39a9349e6a .tabular-page-footer { margin-top: 1rem; }
+#> #tabular-39a9349e6a .tabular-page-header-left, #tabular-39a9349e6a .tabular-page-footer-left { flex: 1; text-align: left; }
+#> #tabular-39a9349e6a .tabular-page-header-center, #tabular-39a9349e6a .tabular-page-footer-center { flex: 1; text-align: center; }
+#> #tabular-39a9349e6a .tabular-page-header-right, #tabular-39a9349e6a .tabular-page-footer-right { flex: 1; text-align: right; }
+#> @media print { #tabular-39a9349e6a .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-39a9349e6a .tabular-table tr { page-break-inside: avoid; } #tabular-39a9349e6a .tabular-page-header, #tabular-39a9349e6a .tabular-page-footer { display: none; } #tabular-39a9349e6a .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-39a9349e6a .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-39a9349e6a .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 #> </style>
-#> <div id="tabular_vjfhceVyvC" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+#> <div id="tabular-39a9349e6a" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
 #> <p class="tabular-pad">&nbsp;</p>
 #> <h1 class="tabular-title">Table 14.2.1</h1>
 #> <h1 class="tabular-title">Best Overall Response and Response Rates</h1>
@@ -411,47 +411,47 @@ tabular(
 # surface noise.
 tabular(saf_n, titles = "Safety-population BigN per arm")
 #> <style>
-#> .tabular-doc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-#> .tabular-content { width: 100%; }
-#> .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#> .tabular-pad { margin: 0; }
-#> .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#> .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#> .tabular-table th, .tabular-table td { padding: .35rem .6rem; }
-#> .tabular-table td { text-align: left; vertical-align: top; }
-#> .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#> .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#> .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#> .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#> .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#> .tabular-table tbody tr td { border-top: none; }
-#> .tabular-band { text-align: center; }
-#> .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#> .tabular-subgroup-label { font-weight: 600; }
-#> .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#> .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#> .text-left { text-align: left; }
-#> .text-center { text-align: center; }
-#> .text-right { text-align: right; }
-#> .tabular-table thead th.text-left { text-align: left; }
-#> .tabular-table thead th.text-center { text-align: center; }
-#> .tabular-table thead th.text-right { text-align: right; }
-#> .valign-top { vertical-align: top; }
-#> .valign-middle { vertical-align: middle; }
-#> .valign-bottom { vertical-align: bottom; }
-#> .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#> .tabular-empty { font-style: italic; color: #6c757d; }
-#> .tabular-page-break-row { display: none; }
-#> :root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#> .tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#> .tabular-page-header { margin-bottom: 1rem; }
-#> .tabular-page-footer { margin-top: 1rem; }
-#> .tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }
-#> .tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }
-#> .tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }
-#> @media print { .tabular-table-wrap { overflow-x: visible; margin: 0; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#> #tabular-502165d61a { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#> #tabular-502165d61a .tabular-content { width: 100%; }
+#> #tabular-502165d61a .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#> #tabular-502165d61a .tabular-pad { margin: 0; }
+#> #tabular-502165d61a .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#> #tabular-502165d61a .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#> #tabular-502165d61a .tabular-table th, #tabular-502165d61a .tabular-table td { padding: .35rem .6rem; }
+#> #tabular-502165d61a .tabular-table td { text-align: left; vertical-align: top; }
+#> #tabular-502165d61a .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#> #tabular-502165d61a .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#> #tabular-502165d61a .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#> #tabular-502165d61a .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#> #tabular-502165d61a .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#> #tabular-502165d61a .tabular-table tbody tr td { border-top: none; }
+#> #tabular-502165d61a .tabular-band { text-align: center; }
+#> #tabular-502165d61a .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#> #tabular-502165d61a .tabular-subgroup-label { font-weight: 600; }
+#> #tabular-502165d61a .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#> #tabular-502165d61a .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#> #tabular-502165d61a .text-left { text-align: left; }
+#> #tabular-502165d61a .text-center { text-align: center; }
+#> #tabular-502165d61a .text-right { text-align: right; }
+#> #tabular-502165d61a .tabular-table thead th.text-left { text-align: left; }
+#> #tabular-502165d61a .tabular-table thead th.text-center { text-align: center; }
+#> #tabular-502165d61a .tabular-table thead th.text-right { text-align: right; }
+#> #tabular-502165d61a .valign-top { vertical-align: top; }
+#> #tabular-502165d61a .valign-middle { vertical-align: middle; }
+#> #tabular-502165d61a .valign-bottom { vertical-align: bottom; }
+#> #tabular-502165d61a .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#> #tabular-502165d61a .tabular-empty { font-style: italic; color: #6c757d; }
+#> #tabular-502165d61a .tabular-page-break-row { display: none; }
+#> #tabular-502165d61a { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#> #tabular-502165d61a .tabular-page-header, #tabular-502165d61a .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#> #tabular-502165d61a .tabular-page-header { margin-bottom: 1rem; }
+#> #tabular-502165d61a .tabular-page-footer { margin-top: 1rem; }
+#> #tabular-502165d61a .tabular-page-header-left, #tabular-502165d61a .tabular-page-footer-left { flex: 1; text-align: left; }
+#> #tabular-502165d61a .tabular-page-header-center, #tabular-502165d61a .tabular-page-footer-center { flex: 1; text-align: center; }
+#> #tabular-502165d61a .tabular-page-header-right, #tabular-502165d61a .tabular-page-footer-right { flex: 1; text-align: right; }
+#> @media print { #tabular-502165d61a .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-502165d61a .tabular-table tr { page-break-inside: avoid; } #tabular-502165d61a .tabular-page-header, #tabular-502165d61a .tabular-page-footer { display: none; } #tabular-502165d61a .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-502165d61a .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-502165d61a .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 #> </style>
-#> <div id="tabular_zqTiZvfqQI" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+#> <div id="tabular-502165d61a" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
 #> <p class="tabular-pad">&nbsp;</p>
 #> <h1 class="tabular-title">Safety-population BigN per arm</h1>
 #> <p class="tabular-pad">&nbsp;</p>
@@ -505,47 +505,47 @@ tabular(
     )
   )
 #> <style>
-#> .tabular-doc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-#> .tabular-content { width: 100%; }
-#> .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#> .tabular-pad { margin: 0; }
-#> .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#> .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#> .tabular-table th, .tabular-table td { padding: .35rem .6rem; }
-#> .tabular-table td { text-align: left; vertical-align: top; }
-#> .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#> .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#> .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#> .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#> .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#> .tabular-table tbody tr td { border-top: none; }
-#> .tabular-band { text-align: center; }
-#> .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#> .tabular-subgroup-label { font-weight: 600; }
-#> .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#> .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#> .text-left { text-align: left; }
-#> .text-center { text-align: center; }
-#> .text-right { text-align: right; }
-#> .tabular-table thead th.text-left { text-align: left; }
-#> .tabular-table thead th.text-center { text-align: center; }
-#> .tabular-table thead th.text-right { text-align: right; }
-#> .valign-top { vertical-align: top; }
-#> .valign-middle { vertical-align: middle; }
-#> .valign-bottom { vertical-align: bottom; }
-#> .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#> .tabular-empty { font-style: italic; color: #6c757d; }
-#> .tabular-page-break-row { display: none; }
-#> :root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#> .tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#> .tabular-page-header { margin-bottom: 1rem; }
-#> .tabular-page-footer { margin-top: 1rem; }
-#> .tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }
-#> .tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }
-#> .tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }
-#> @media print { .tabular-table-wrap { overflow-x: visible; margin: 0; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#> #tabular-01a0c2e69f { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#> #tabular-01a0c2e69f .tabular-content { width: 100%; }
+#> #tabular-01a0c2e69f .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#> #tabular-01a0c2e69f .tabular-pad { margin: 0; }
+#> #tabular-01a0c2e69f .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#> #tabular-01a0c2e69f .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#> #tabular-01a0c2e69f .tabular-table th, #tabular-01a0c2e69f .tabular-table td { padding: .35rem .6rem; }
+#> #tabular-01a0c2e69f .tabular-table td { text-align: left; vertical-align: top; }
+#> #tabular-01a0c2e69f .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#> #tabular-01a0c2e69f .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#> #tabular-01a0c2e69f .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#> #tabular-01a0c2e69f .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#> #tabular-01a0c2e69f .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#> #tabular-01a0c2e69f .tabular-table tbody tr td { border-top: none; }
+#> #tabular-01a0c2e69f .tabular-band { text-align: center; }
+#> #tabular-01a0c2e69f .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#> #tabular-01a0c2e69f .tabular-subgroup-label { font-weight: 600; }
+#> #tabular-01a0c2e69f .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#> #tabular-01a0c2e69f .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#> #tabular-01a0c2e69f .text-left { text-align: left; }
+#> #tabular-01a0c2e69f .text-center { text-align: center; }
+#> #tabular-01a0c2e69f .text-right { text-align: right; }
+#> #tabular-01a0c2e69f .tabular-table thead th.text-left { text-align: left; }
+#> #tabular-01a0c2e69f .tabular-table thead th.text-center { text-align: center; }
+#> #tabular-01a0c2e69f .tabular-table thead th.text-right { text-align: right; }
+#> #tabular-01a0c2e69f .valign-top { vertical-align: top; }
+#> #tabular-01a0c2e69f .valign-middle { vertical-align: middle; }
+#> #tabular-01a0c2e69f .valign-bottom { vertical-align: bottom; }
+#> #tabular-01a0c2e69f .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#> #tabular-01a0c2e69f .tabular-empty { font-style: italic; color: #6c757d; }
+#> #tabular-01a0c2e69f .tabular-page-break-row { display: none; }
+#> #tabular-01a0c2e69f { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#> #tabular-01a0c2e69f .tabular-page-header, #tabular-01a0c2e69f .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#> #tabular-01a0c2e69f .tabular-page-header { margin-bottom: 1rem; }
+#> #tabular-01a0c2e69f .tabular-page-footer { margin-top: 1rem; }
+#> #tabular-01a0c2e69f .tabular-page-header-left, #tabular-01a0c2e69f .tabular-page-footer-left { flex: 1; text-align: left; }
+#> #tabular-01a0c2e69f .tabular-page-header-center, #tabular-01a0c2e69f .tabular-page-footer-center { flex: 1; text-align: center; }
+#> #tabular-01a0c2e69f .tabular-page-header-right, #tabular-01a0c2e69f .tabular-page-footer-right { flex: 1; text-align: right; }
+#> @media print { #tabular-01a0c2e69f .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-01a0c2e69f .tabular-table tr { page-break-inside: avoid; } #tabular-01a0c2e69f .tabular-page-header, #tabular-01a0c2e69f .tabular-page-footer { display: none; } #tabular-01a0c2e69f .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-01a0c2e69f .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-01a0c2e69f .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 #> </style>
-#> <div id="tabular_kai6WDzHCS" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+#> <div id="tabular-01a0c2e69f" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
 #> <p class="tabular-pad">&nbsp;</p>
 #> <h1 class="tabular-title">Table 14.4.1</h1>
 #> <h1 class="tabular-title">Summary of Vital Signs</h1>

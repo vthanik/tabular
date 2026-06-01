@@ -38,7 +38,7 @@ layers.
 ## Details
 
 **One verb, two surfaces.** The same
-`style(.spec_or_template, ..., at = ...)` call that attaches a layer to
+`style(.spec_or_template, ..., .at = ...)` call that attaches a layer to
 a per-table spec also accumulates layers onto a template. Symmetric API
 — no need to learn a second function for the multi-table use case.
 
@@ -76,42 +76,14 @@ locations that name the *where* half of every layer.
 # The result becomes the default look for every table rendered
 # against this preset. No per-table style() boilerplate.
 house <- style_template() |>
-  style(bold = TRUE, at = cells_headers(level = -1)) |>
-  style(bold = TRUE, at = cells_group_headers()) |>
+  style(bold = TRUE, .at = cells_headers(level = -1)) |>
+  style(bold = TRUE, .at = cells_group_headers()) |>
   style(
     border_top    = brdr("thick", "double"),
     border_bottom = brdr("thick", "double"),
-    at = cells_headers()
+    .at = cells_headers()
   ) |>
-  style(blank_above = 1, blank_below = 1, at = cells_title())
-#> Warning: Unknown style attribute: "at".
-#> ℹ These will not be applied by tabular. Recognised attributes: "bold",
-#>   "italic", "underline", "color", "background", "font_family",
-#>   "font_size", "padding_top", "padding_right", "padding_bottom",
-#>   "padding_left", "blank_above", "blank_below", "pretext", "posttext",
-#>   "halign", "valign", "border_top_style", …, "border_right_width", and
-#>   "border_right_color".
-#> Warning: Unknown style attribute: "at".
-#> ℹ These will not be applied by tabular. Recognised attributes: "bold",
-#>   "italic", "underline", "color", "background", "font_family",
-#>   "font_size", "padding_top", "padding_right", "padding_bottom",
-#>   "padding_left", "blank_above", "blank_below", "pretext", "posttext",
-#>   "halign", "valign", "border_top_style", …, "border_right_width", and
-#>   "border_right_color".
-#> Warning: Unknown style attribute: "at".
-#> ℹ These will not be applied by tabular. Recognised attributes: "bold",
-#>   "italic", "underline", "color", "background", "font_family",
-#>   "font_size", "padding_top", "padding_right", "padding_bottom",
-#>   "padding_left", "blank_above", "blank_below", "pretext", "posttext",
-#>   "halign", "valign", "border_top_style", …, "border_right_width", and
-#>   "border_right_color".
-#> Warning: Unknown style attribute: "at".
-#> ℹ These will not be applied by tabular. Recognised attributes: "bold",
-#>   "italic", "underline", "color", "background", "font_family",
-#>   "font_size", "padding_top", "padding_right", "padding_bottom",
-#>   "padding_left", "blank_above", "blank_below", "pretext", "posttext",
-#>   "halign", "valign", "border_top_style", …, "border_right_width", and
-#>   "border_right_color".
+  style(blank_above = 1, blank_below = 1, .at = cells_title())
 
 length(house$layers)
 #> [1] 4

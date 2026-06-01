@@ -3,11 +3,6 @@
 ``` r
 
 library(tabular)
-#> 
-#> Attaching package: 'tabular'
-#> The following object is masked from 'package:stats':
-#> 
-#>     pt
 ```
 
 A submission table is a *typeset* artefact. Two facts follow from that,

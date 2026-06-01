@@ -1,4 +1,4 @@
-# tabular [![](reference/figures/workflow.svg)](https://vthanik.github.io/tabular/)
+# tabular
 
 **tabular** turns a pre-summarised data frame into a submission-grade
 clinical table and emits it natively to **RTF, PDF, HTML, LaTeX, and
@@ -29,11 +29,6 @@ engine resolves it at render time.
 ``` r
 
 library(tabular)
-#> 
-#> Attaching package: 'tabular'
-#> The following object is masked from 'package:stats':
-#> 
-#>     pt
 
 # BigN denominators, keyed by arm
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
@@ -149,24 +144,28 @@ OOXML `.docx` — all from the one spec:
 ## Where tabular fits
 
 `tabular` is a *renderer* for pre-summarised clinical tables, not a
-statistics engine. The short version of how it relates to the table
-packages you may know (full treatment in the [Comparison
-article](https://vthanik.github.io/tabular/articles/comparison.html)):
+statistics engine. Compute the summary upstream — with `cards`,
+`gtsummary`, `dplyr`, or SAS — then hand the finished wide frame to
+[`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md).
+Reach for `gtsummary` or `rtables` when you want the package to
+*compute* the summary; reach for `tabular` to *render* a summary you
+already have to submission-grade output.
+
+The matrix reflects each package’s documented export surface (verified
+against their namespaces; `via gt` means `gtsummary` renders through
+`gt`):
 
 |  | tabular | gt | rtables | gtsummary | flextable | huxtable |
 |----|:--:|:--:|:--:|:--:|:--:|:--:|
 | Computes statistics | — | — | ✓ | ✓ | — | — |
-| Paginated submission output | ✓ | — | ✓ | — | — | — |
-| Native RTF | ✓ | ✓ | ✓ | via gt | — | ✓ |
-| Native DOCX | ✓ | ✓ | ✓ | via gt | ✓ | ✓ |
-| Decimal align via font metrics | ✓ | — | — | — | — | — |
 | Live HTML preview | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Native RTF | ✓ | ✓ | — | via gt | ✓ | ✓ |
+| Native DOCX | ✓ | ✓ | — | via gt | ✓ | ✓ |
+| LaTeX | ✓ | ✓ | — | via gt | — | ✓ |
+| PDF | ✓ | ✓ | ✓ | via gt | — | ✓ |
+| Paginated submission output | ✓ | — | ✓ | — | — | — |
+| Decimal align via font metrics | ✓ | — | — | — | — | — |
 | CDISC ARS audit manifest | ✓ | — | — | — | — | — |
-| No JVM / Office dependency | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-
-Reach for `gtsummary` or `rtables` when you want the package to
-*compute* the summary; reach for `tabular` to *render* a summary you
-already have to submission-grade output across all five formats.
 
 ## The verb surface
 
@@ -177,7 +176,6 @@ already have to submission-grade output across all five formats.
 | [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) / [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md) | Per-column usage, label, format, alignment, width, visibility |
 | [`headers()`](https://vthanik.github.io/tabular/reference/headers.md) | Multi-level column-header bands with passthrough leaves |
 | [`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md) | Output row order; factor-aware, NA-last |
-| `derive()` | Display-time row arithmetic; topologically ordered |
 | [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md) | Partition the table into page-broken, banner-labelled groups |
 | [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md) | Page splits, group-keep, panels, repeat chrome, orphan/widow |
 | [`style()`](https://vthanik.github.io/tabular/reference/style.md) + `cells_*()` | Predicate-targeted styling for any surface |

@@ -61,19 +61,3 @@
 
   How tabular works under the hood: the immutable spec, the six-phase
   resolve engine, backend dispatch, and the QC and audit artefacts.
-
-### Comparison
-
-- [Coming from gt, rtables, gtsummary, flextable, or
-  huxtable](https://vthanik.github.io/tabular/articles/comparison.md):
-
-  Honest positioning: where tabular fits among the R table packages,
-  when to reach for each, and how the idioms translate.
-
-### Datasets
-
-- [Demo
-  datasets](https://vthanik.github.io/tabular/articles/datasets.md):
-
-  A tour of the eleven bundled datasets: what each represents, its
-  shape, and a rendered preview. Use them to learn, prototype, and test.

@@ -6,6 +6,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Fonts &amp; fidelity • tabular</title>
+<!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
+<link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<link rel="icon" sizes="any" href="../favicon.ico">
+<link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
@@ -15,6 +20,7 @@
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="fonts-and-fidelity_files/libs/quarto-html/popper.min.js"></script><script src="fonts-and-fidelity_files/libs/quarto-html/tippy.umd.min.js"></script><link href="fonts-and-fidelity_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="fonts-and-fidelity_files/libs/quarto-html/light-border.css" rel="stylesheet">
 <!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Fonts &amp; fidelity">
+<meta property="og:image" content="https://vthanik.github.io/tabular/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -50,12 +56,8 @@
     <li><a class="dropdown-item" href="../articles/from-ard.html">From a cards ARD</a></li>
     <li><a class="dropdown-item" href="../articles/fonts-and-fidelity.html">Fonts &amp; fidelity</a></li>
     <li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
-    <li><a class="dropdown-item" href="../articles/comparison.html">Coming from gt, rtables, gtsummary, flextable, or huxtable</a></li>
-    <li><a class="dropdown-item" href="../articles/datasets.html">Demo datasets</a></li>
   </ul>
 </li>
-<li class="nav-item"><a class="nav-link" href="../articles/comparison.html">Comparison</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/datasets.html">Datasets</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -71,8 +73,7 @@
 </nav><div class="container template-quarto">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-
-      <h1>Fonts &amp; fidelity</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Fonts &amp; fidelity</h1>
 
 
 
@@ -88,12 +89,7 @@
 
     <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">tabular</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'tabular'</span></span>
-<span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     pt</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://vthanik.github.io/tabular/">tabular</a></span><span class="op">)</span></span></code></pre></div>
 </div>
 <p>A submission table is a <em>typeset</em> artefact. Two facts follow from that, and they shape how <code>tabular</code> renders: clinical tables are monospace, and the deliverable is the paginated print output, not the screen preview.</p>
 <section class="level2"><h2 id="why-monospace">Why monospace<a class="anchor" aria-label="anchor" href="#why-monospace"></a>
@@ -112,47 +108,47 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-.tabular-doc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-.tabular-content { width: 100%; }
-.tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-.tabular-pad { margin: 0; }
-.tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-.tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-.tabular-table th, .tabular-table td { padding: .35rem .6rem; }
-.tabular-table td { text-align: left; vertical-align: top; }
-.tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-.tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-.tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-.tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-.tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-.tabular-table tbody tr td { border-top: none; }
-.tabular-band { text-align: center; }
-.tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-.tabular-subgroup-label { font-weight: 600; }
-.tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-.tabular-blank-row td { padding: .25rem .6rem; border: none; }
-.text-left { text-align: left; }
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.tabular-table thead th.text-left { text-align: left; }
-.tabular-table thead th.text-center { text-align: center; }
-.tabular-table thead th.text-right { text-align: right; }
-.valign-top { vertical-align: top; }
-.valign-middle { vertical-align: middle; }
-.valign-bottom { vertical-align: bottom; }
-.tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-.tabular-empty { font-style: italic; color: #6c757d; }
-.tabular-page-break-row { display: none; }
-:root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-.tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-.tabular-page-header { margin-bottom: 1rem; }
-.tabular-page-footer { margin-top: 1rem; }
-.tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }
-.tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }
-.tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { .tabular-table-wrap { overflow-x: visible; margin: 0; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-147df95dad { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-147df95dad .tabular-content { width: 100%; }
+#tabular-147df95dad .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-147df95dad .tabular-pad { margin: 0; }
+#tabular-147df95dad .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-147df95dad .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-147df95dad .tabular-table th, #tabular-147df95dad .tabular-table td { padding: .35rem .6rem; }
+#tabular-147df95dad .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-147df95dad .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-147df95dad .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-147df95dad .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-147df95dad .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-147df95dad .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-147df95dad .tabular-table tbody tr td { border-top: none; }
+#tabular-147df95dad .tabular-band { text-align: center; }
+#tabular-147df95dad .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-147df95dad .tabular-subgroup-label { font-weight: 600; }
+#tabular-147df95dad .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-147df95dad .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-147df95dad .text-left { text-align: left; }
+#tabular-147df95dad .text-center { text-align: center; }
+#tabular-147df95dad .text-right { text-align: right; }
+#tabular-147df95dad .tabular-table thead th.text-left { text-align: left; }
+#tabular-147df95dad .tabular-table thead th.text-center { text-align: center; }
+#tabular-147df95dad .tabular-table thead th.text-right { text-align: right; }
+#tabular-147df95dad .valign-top { vertical-align: top; }
+#tabular-147df95dad .valign-middle { vertical-align: middle; }
+#tabular-147df95dad .valign-bottom { vertical-align: bottom; }
+#tabular-147df95dad .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-147df95dad .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-147df95dad .tabular-page-break-row { display: none; }
+#tabular-147df95dad { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-147df95dad .tabular-page-header, #tabular-147df95dad .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-147df95dad .tabular-page-header { margin-bottom: 1rem; }
+#tabular-147df95dad .tabular-page-footer { margin-top: 1rem; }
+#tabular-147df95dad .tabular-page-header-left, #tabular-147df95dad .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-147df95dad .tabular-page-header-center, #tabular-147df95dad .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-147df95dad .tabular-page-header-right, #tabular-147df95dad .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-147df95dad .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-147df95dad .tabular-table tr { page-break-inside: avoid; } #tabular-147df95dad .tabular-page-header, #tabular-147df95dad .tabular-page-footer { display: none; } #tabular-147df95dad .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-147df95dad .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-147df95dad .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular_OQyQT3qUOR" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+<div id="tabular-147df95dad" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
 <div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top" style="width:100%">
@@ -243,47 +239,47 @@
 <span>  <span class="fu"><a href="../reference/preset.html">preset</a></span><span class="op">(</span>font_family <span class="op">=</span> <span class="st">"Courier New"</span>, font_size <span class="op">=</span> <span class="fl">9</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-.tabular-doc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-.tabular-content { width: 100%; }
-.tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-.tabular-pad { margin: 0; }
-.tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-.tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }
-.tabular-table th, .tabular-table td { padding: .35rem .6rem; }
-.tabular-table td { text-align: left; vertical-align: top; }
-.tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-.tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-.tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-.tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-.tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-.tabular-table tbody tr td { border-top: none; }
-.tabular-band { text-align: center; }
-.tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-.tabular-subgroup-label { font-weight: 600; }
-.tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-.tabular-blank-row td { padding: .25rem .6rem; border: none; }
-.text-left { text-align: left; }
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.tabular-table thead th.text-left { text-align: left; }
-.tabular-table thead th.text-center { text-align: center; }
-.tabular-table thead th.text-right { text-align: right; }
-.valign-top { vertical-align: top; }
-.valign-middle { vertical-align: middle; }
-.valign-bottom { vertical-align: bottom; }
-.tabular-footnote { font-size: 9pt; color: #495057; margin: .25rem 0; }
-.tabular-empty { font-style: italic; color: #6c757d; }
-.tabular-page-break-row { display: none; }
-:root { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-.tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 8pt; color: var(--tabular-chrome-color); }
-.tabular-page-header { margin-bottom: 1rem; }
-.tabular-page-footer { margin-top: 1rem; }
-.tabular-page-header-left, .tabular-page-footer-left { flex: 1; text-align: left; }
-.tabular-page-header-center, .tabular-page-footer-center { flex: 1; text-align: center; }
-.tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { .tabular-table-wrap { overflow-x: visible; margin: 0; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-54c19827bd { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-54c19827bd .tabular-content { width: 100%; }
+#tabular-54c19827bd .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-54c19827bd .tabular-pad { margin: 0; }
+#tabular-54c19827bd .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-54c19827bd .tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }
+#tabular-54c19827bd .tabular-table th, #tabular-54c19827bd .tabular-table td { padding: .35rem .6rem; }
+#tabular-54c19827bd .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-54c19827bd .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-54c19827bd .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-54c19827bd .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-54c19827bd .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-54c19827bd .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-54c19827bd .tabular-table tbody tr td { border-top: none; }
+#tabular-54c19827bd .tabular-band { text-align: center; }
+#tabular-54c19827bd .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-54c19827bd .tabular-subgroup-label { font-weight: 600; }
+#tabular-54c19827bd .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-54c19827bd .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-54c19827bd .text-left { text-align: left; }
+#tabular-54c19827bd .text-center { text-align: center; }
+#tabular-54c19827bd .text-right { text-align: right; }
+#tabular-54c19827bd .tabular-table thead th.text-left { text-align: left; }
+#tabular-54c19827bd .tabular-table thead th.text-center { text-align: center; }
+#tabular-54c19827bd .tabular-table thead th.text-right { text-align: right; }
+#tabular-54c19827bd .valign-top { vertical-align: top; }
+#tabular-54c19827bd .valign-middle { vertical-align: middle; }
+#tabular-54c19827bd .valign-bottom { vertical-align: bottom; }
+#tabular-54c19827bd .tabular-footnote { font-size: 9pt; color: #495057; margin: .25rem 0; }
+#tabular-54c19827bd .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-54c19827bd .tabular-page-break-row { display: none; }
+#tabular-54c19827bd { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-54c19827bd .tabular-page-header, #tabular-54c19827bd .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 8pt; color: var(--tabular-chrome-color); }
+#tabular-54c19827bd .tabular-page-header { margin-bottom: 1rem; }
+#tabular-54c19827bd .tabular-page-footer { margin-top: 1rem; }
+#tabular-54c19827bd .tabular-page-header-left, #tabular-54c19827bd .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-54c19827bd .tabular-page-header-center, #tabular-54c19827bd .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-54c19827bd .tabular-page-header-right, #tabular-54c19827bd .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-54c19827bd .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-54c19827bd .tabular-table tr { page-break-inside: avoid; } #tabular-54c19827bd .tabular-page-header, #tabular-54c19827bd .tabular-page-footer { display: none; } #tabular-54c19827bd .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-54c19827bd .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-54c19827bd .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular_Cf6tjVlo2C" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+<div id="tabular-54c19827bd" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
 <div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top" style="width:100%">

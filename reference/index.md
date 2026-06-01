@@ -84,20 +84,14 @@ applies a stripped-down look.
 - [`preset_minimal()`](https://vthanik.github.io/tabular/reference/preset_minimal.md)
   : Minimal theme: one header rule, normal weight throughout
 
-## Inline markup and units
+## Inline markup
 
-Mark label and cell text as Markdown or HTML, and tag widths and sizes
-with explicit units.
+Mark label and cell text as Markdown or HTML.
 
 - [`md()`](https://vthanik.github.io/tabular/reference/md.md) : Mark a
   string as Markdown for inline formatting
 - [`html()`](https://vthanik.github.io/tabular/reference/html.md) : Mark
   a string as HTML for inline formatting
-- [`pt()`](https://vthanik.github.io/tabular/reference/pt.md)
-  [`px()`](https://vthanik.github.io/tabular/reference/pt.md)
-  [`pct()`](https://vthanik.github.io/tabular/reference/pt.md)
-  [`is_unit()`](https://vthanik.github.io/tabular/reference/pt.md) :
-  Typed unit helpers
 
 ## Pagination
 

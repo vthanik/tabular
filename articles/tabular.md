@@ -22,11 +22,6 @@ you want to show. The bundled `saf_demo` dataset is exactly this shape:
 ``` r
 
 library(tabular)
-#> 
-#> Attaching package: 'tabular'
-#> The following object is masked from 'package:stats':
-#> 
-#>     pt
 
 head(saf_demo, 8)
 #>           variable stat_label     placebo    drug_100     drug_50       Total
@@ -286,7 +281,7 @@ emit(tab, paste0(out, ".tex"))    # tabularray LaTeX
 
     #>            file bytes
     #> 1 t_14_1_1.docx  8648
-    #> 2 t_14_1_1.html 14676
+    #> 2 t_14_1_1.html 15681
     #> 3  t_14_1_1.rtf 42959
     #> 4  t_14_1_1.tex  7337
 

@@ -3,11 +3,6 @@
 ``` r
 
 library(tabular)
-#> 
-#> Attaching package: 'tabular'
-#> The following object is masked from 'package:stats':
-#> 
-#>     pt
 ```
 
 [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) shapes
@@ -27,18 +22,24 @@ the engine applies it during Resolve.
 
 ``` r
 
+# Display cells are formatted text ("217 (85.4)"), which would sort
+# lexically. Derive a hidden numeric key upstream and sort on that.
+ae <- saf_aeoverall
+ae$total_n <- as.integer(sub(" .*", "", ae$Total))
+
 tabular(
-  saf_aeoverall,
+  ae,
   titles = "Adverse-event categories, ordered by total frequency"
 ) |>
   cols(
     stat_label = col_spec(label = "Category"),
+    total_n    = col_spec(visible = FALSE),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
     Total      = col_spec(label = "Total",    align = "decimal")
   ) |>
-  sort_rows(by = "Total", descending = TRUE)
+  sort_rows(by = "total_n", descending = TRUE)
 ```
 
  
@@ -49,14 +50,14 @@ tabular(
 
 | Category                     | Total      | Placebo   | Drug 100  | Drug 50   |
 |------------------------------|------------|-----------|-----------|-----------|
-| Maximum severity: Mild       |  77 (30.3) | 36 (41.9) | 20 (27.8) | 21 (21.9) |
-| Any Serious AE (SAE)         |   3 ( 1.2) |  0        |  1 ( 1.4) |  2 ( 2.1) |
-| Any AE Leading to Death      |   3 ( 1.2) |  2 ( 2.3) |  0        |  1 ( 1.0) |
-| Maximum severity: Severe     |  29 (11.4) |  5 ( 5.8) |  8 (11.1) | 16 (16.7) |
 | Any TEAE                     | 217 (85.4) | 65 (75.6) | 68 (94.4) | 84 (87.5) |
 | Any AE Related to Study Drug | 184 (72.4) | 43 (50.0) | 64 (88.9) | 77 (80.2) |
 | Any AE Recovered / Resolved  | 157 (61.8) | 47 (54.7) | 49 (68.1) | 61 (63.5) |
 | Maximum severity: Moderate   | 111 (43.7) | 24 (27.9) | 40 (55.6) | 47 (49.0) |
+| Maximum severity: Mild       |  77 (30.3) | 36 (41.9) | 20 (27.8) | 21 (21.9) |
+| Maximum severity: Severe     |  29 (11.4) |  5 ( 5.8) |  8 (11.1) | 16 (16.7) |
+| Any Serious AE (SAE)         |   3 ( 1.2) |  0        |  1 ( 1.4) |  2 ( 2.1) |
+| Any AE Leading to Death      |   3 ( 1.2) |  2 ( 2.3) |  0        |  1 ( 1.0) |
 
 > **Per-key direction and hidden sort keys**
 >

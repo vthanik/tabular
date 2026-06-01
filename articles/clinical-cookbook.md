@@ -3,11 +3,6 @@
 ``` r
 
 library(tabular)
-#> 
-#> Attaching package: 'tabular'
-#> The following object is masked from 'package:stats':
-#> 
-#>     pt
 
 saf <- stats::setNames(saf_n$n, saf_n$arm_short)   # safety BigN
 eff <- stats::setNames(eff_n$n, eff_n$arm_short)    # efficacy BigN

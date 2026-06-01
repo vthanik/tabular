@@ -3,11 +3,6 @@
 ``` r
 
 library(tabular)
-#> 
-#> Attaching package: 'tabular'
-#> The following object is masked from 'package:stats':
-#> 
-#>     pt
 ```
 
 `tabular` is a three-phase pipeline. Understanding the phases explains
@@ -148,6 +143,3 @@ emit(
 - **[Fonts &
   fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.md)**
   — the metrics the decimal phase relies on.
-- **[Comparison](https://vthanik.github.io/tabular/articles/comparison.md)**
-  — how this architecture differs from the all-in-one table packages.
-  \`\`\`

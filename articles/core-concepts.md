@@ -3,11 +3,6 @@
 ``` r
 
 library(tabular)
-#> 
-#> Attaching package: 'tabular'
-#> The following object is masked from 'package:stats':
-#> 
-#>     pt
 ```
 
 Four ideas explain almost everything in `tabular`. Once they click, the
@@ -47,9 +42,7 @@ or SAS — and hand the finished wide frame to
 >
 > Those packages *compute* the summary and render it in one step.
 > `tabular` deliberately splits the two: bring your own summary, get
-> submission-grade output across five formats. The [Comparison
-> article](https://vthanik.github.io/tabular/articles/comparison.md)
-> maps the idioms across packages.
+> submission-grade output across five formats.
 
 ## 2. The anatomy of a clinical table page
 
