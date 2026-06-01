@@ -321,9 +321,10 @@ test_that("HTML colgroup omits widths when the user wrote none (gt-style auto)",
 # Table width — HTML is unconditionally responsive
 # ---------------------------------------------------------------------
 
-test_that(".html_table_open_tag is always width:100% regardless of widths or width_mode", {
-  # HTML is unconditionally responsive: table always fills 100%
-  # of its wrapper. width_mode is paper-backend-only.
+test_that(".html_table_open_tag emits a width-less table (content-fitted, centred) regardless of widths or width_mode", {
+  # gt / flextable model: the table carries NO inline width and is
+  # centred via `.tabular-table { margin: 0 auto }` inside a
+  # `fit-content` wrapper. width_mode is paper-backend-only.
   for (mode in c("content", "window", "fixed")) {
     ps <- tabular:::preset_spec(width_mode = mode)
     for (col_specs in list(
@@ -334,7 +335,7 @@ test_that(".html_table_open_tag is always width:100% regardless of widths or wid
       tag <- tabular:::.html_table_open_tag(col_specs, ps)
       expect_identical(
         tag,
-        "<table class=\"tabular-table\" style=\"width:100%\">",
+        "<table class=\"tabular-table\">",
         info = sprintf("mode = %s", mode)
       )
     }
@@ -389,10 +390,10 @@ test_that("horizontal panels collapse to one scroll wrapper on HTML (continuous)
   )
 })
 
-test_that("default preset emits an always-responsive <table> end-to-end", {
-  # HTML is unconditionally responsive: table always carries the
-  # `width:100%` inline style regardless of preset @width_mode or
-  # any per-column widths. width_mode drives paper backends only.
+test_that("default preset emits a width-less content-fitted <table> end-to-end", {
+  # gt / flextable model: the table carries no inline width and is
+  # centred by the wrapper, regardless of preset @width_mode or any
+  # per-column widths. width_mode drives paper backends only.
   spec <- tabular(
     saf_demo,
     titles = "Demographics",
@@ -411,20 +412,20 @@ test_that("default preset emits an always-responsive <table> end-to-end", {
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(
     txt,
-    "<table class=\"tabular-table\" style=\"width:100%\">",
+    "<table class=\"tabular-table\">",
     fixed = TRUE
   )
-  # The previous engine-computed inch widths must not recur.
+  # No inline width style of any kind rides on the <table> itself.
   expect_no_match(
     txt,
-    "<table class=\"tabular-table\" style=\"width:[0-9.]+in\">",
-    perl = TRUE
+    "<table class=\"tabular-table\" style=",
+    fixed = TRUE
   )
 })
 
-test_that("width_mode = 'window' preserves the always-100% table emit", {
+test_that("width_mode = 'window' preserves the width-less table emit", {
   # width_mode is paper-backend-only; "window" doesn't change HTML
-  # behaviour (HTML is unconditionally 100%).
+  # behaviour (table is always content-fitted and centred).
   spec <- tabular(
     data.frame(x = c(1L, 2L), y = c("a", "b"))
   ) |>
@@ -434,7 +435,7 @@ test_that("width_mode = 'window' preserves the always-100% table emit", {
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(
     txt,
-    "<table class=\"tabular-table\" style=\"width:100%\">",
+    "<table class=\"tabular-table\">",
     fixed = TRUE
   )
 })
@@ -552,18 +553,18 @@ test_that("preset(width_mode = 'window') leaves the wrapper at the base .tabular
   )
 })
 
-test_that(".tabular-content CSS rule is present and at width:100% (gt-style unconditional)", {
+test_that(".tabular-content CSS rule is content-fitted and centred (gt / flextable model)", {
   spec <- tabular(data.frame(x = 1L))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(
     txt,
-    ".tabular-content { width: 100%; }",
+    ".tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }",
     fixed = TRUE
   )
-  # The legacy fit-content / --window modifier rules are gone.
-  expect_no_match(txt, "fit-content", perl = TRUE)
+  # The legacy always-100% rule and the --window modifier are gone.
+  expect_no_match(txt, ".tabular-content { width: 100%; }", fixed = TRUE)
   expect_no_match(txt, ".tabular-content--window", perl = TRUE)
 })
 
@@ -1757,7 +1758,7 @@ test_that("col_spec.width_user survives .resolve_col_widths mutation", {
 # modifier (which the existing CSS already drives to 100% wide).
 # ---------------------------------------------------------------------
 
-test_that("percent widths emit verbatim in colgroup + always-100% table + plain wrapper", {
+test_that("percent widths emit verbatim in colgroup + width-less table + plain wrapper", {
   spec <- tabular(data.frame(a = 1, b = 2)) |>
     cols(
       a = col_spec(width = "40%"),
@@ -1773,10 +1774,10 @@ test_that("percent widths emit verbatim in colgroup + always-100% table + plain 
   # No inch-resolved widths leak into the <colgroup>.
   expect_no_match(txt, "<col style=\"width:[0-9.]+in\"/>", perl = TRUE)
 
-  # Table is always 100%, regardless of column units.
+  # Table carries no inline width, regardless of column units.
   expect_match(
     txt,
-    "<table class=\"tabular-table\" style=\"width:100%\">",
+    "<table class=\"tabular-table\">",
     fixed = TRUE
   )
   # Wrapper is always plain `.tabular-content` (no --window).
@@ -1803,10 +1804,11 @@ test_that("inch widths emit verbatim in HTML per gt convention", {
   # User's inch values land in the <col> verbatim.
   expect_match(txt, "<col style=\"width:2.5in\"/>", fixed = TRUE)
   expect_match(txt, "<col style=\"width:3.0in\"/>", fixed = TRUE)
-  # Table is always 100% (the old sum-of-inches `width:5.5in` is gone).
+  # Table carries no inline width (the old sum-of-inches `width:5.5in`
+  # is gone; column widths ride the <colgroup> only).
   expect_match(
     txt,
-    "<table class=\"tabular-table\" style=\"width:100%\">",
+    "<table class=\"tabular-table\">",
     fixed = TRUE
   )
   expect_no_match(
@@ -1891,15 +1893,19 @@ test_that("decimal header projects to center (TFL centroid convention)", {
 })
 
 # ---------------------------------------------------------------------
-# Regression: HTML is unconditionally responsive, regardless of unit.
+# Regression: HTML table is content-fitted and centred, regardless
+# of unit.
 #
 # Bug: previous design had `if (any_pct)` / `if (mode == "window")`
 # branches that gated whether the wrapper / table emitted at 100%
 # or at fixed engine-computed inches. That made HTML's responsive
 # behaviour opt-in via percent widths only -- the user's
 # `col_spec()` with no width fell through to inches and locked the
-# viewer pane. Fix: HTML always emits `width:100%` table and
-# `.tabular-content` wrapper, regardless of any column's unit.
+# viewer pane. Fix: the <table> carries no inline width (natural
+# content width) and is centred via the `fit-content` /
+# `margin: 0 auto` `.tabular-content` wrapper (gt / flextable
+# model), regardless of any column's unit. Per-column widths still
+# ride the <colgroup>.
 #
 # The tests below loop over EVERY CSS-supported unit so the
 # guarantee is unit-agnostic; no special-casing of inches or pct.
@@ -1925,12 +1931,18 @@ test_that("decimal header projects to center (TFL centroid convention)", {
   "60mm"
 )
 
-test_that("HTML <table> is always width:100% across every CSS unit", {
+test_that("HTML <table> carries no inline width across every CSS unit", {
   for (w in .css_width_units) {
     txt <- .test_html_for_width(w)
     expect_match(
       txt,
-      "<table class=\"tabular-table\" style=\"width:100%\">",
+      "<table class=\"tabular-table\">",
+      fixed = TRUE,
+      info = sprintf("user width = %s", w)
+    )
+    expect_no_match(
+      txt,
+      "<table class=\"tabular-table\" style=",
       fixed = TRUE,
       info = sprintf("user width = %s", w)
     )
@@ -1942,7 +1954,7 @@ test_that("HTML <table> is always width:100% across every CSS unit", {
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_match(
     txt,
-    "<table class=\"tabular-table\" style=\"width:100%\">",
+    "<table class=\"tabular-table\">",
     fixed = TRUE
   )
 })
@@ -2000,7 +2012,7 @@ test_that("HTML wrapper is always .tabular-content (no --window) across every CS
   }
 })
 
-test_that("CSS drops .tabular-content--window rule; .tabular-content is width:100%", {
+test_that("CSS drops .tabular-content--window rule; .tabular-content is fit-content and centred", {
   spec <- tabular(data.frame(a = 1, b = 2))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
@@ -2008,7 +2020,7 @@ test_that("CSS drops .tabular-content--window rule; .tabular-content is width:10
 
   expect_match(
     txt,
-    "\\.tabular-content\\s*\\{\\s*width:\\s*100%",
+    "\\.tabular-content\\s*\\{\\s*width:\\s*fit-content;\\s*max-width:\\s*100%;\\s*margin:\\s*0 auto;",
     perl = TRUE
   )
   expect_no_match(txt, "\\.tabular-content--window", perl = TRUE)
