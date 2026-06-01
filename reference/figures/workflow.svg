@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 320" font-family="'DM Sans', system-ui, sans-serif" role="img" aria-label="tabular workflow: pre-summarised data, Build, Resolve, Emit, to five output formats">
+  <defs>
+    <style>
+      .phase   { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.5; }
+      .phlbl   { font-size: 15px; fill: #1e3a8a; font-weight: 600; }
+      .phsub   { font-size: 11px; fill: #6b7280; font-family: 'DM Mono', ui-monospace, monospace; }
+      .data    { fill: #f9fafb; stroke: #9ca3af; stroke-width: 1.5; }
+      .datalbl { font-size: 12px; fill: #374151; }
+      .fmt     { fill: #ffffff; stroke: #d1d5db; }
+      .fmtlbl  { font-size: 12px; fill: #111827; font-weight: 600; }
+      .arrow   { stroke: #9ca3af; stroke-width: 1.6; fill: none; }
+    </style>
+    <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <!-- input -->
+  <rect class="data" x="20" y="120" width="120" height="64" rx="2"/>
+  <text class="datalbl" x="80" y="146" text-anchor="middle">pre-summarised</text>
+  <text class="datalbl" x="80" y="164" text-anchor="middle">wide data.frame</text>
+
+  <!-- Build -->
+  <rect class="phase" x="186" y="112" width="150" height="80" rx="2"/>
+  <text class="phlbl" x="261" y="146" text-anchor="middle">Build</text>
+  <text class="phsub" x="261" y="168" text-anchor="middle">tabular() |&gt; cols()</text>
+
+  <!-- Resolve -->
+  <rect class="phase" x="372" y="112" width="150" height="80" rx="2"/>
+  <text class="phlbl" x="447" y="146" text-anchor="middle">Resolve</text>
+  <text class="phsub" x="447" y="168" text-anchor="middle">engine &#8594; grid</text>
+
+  <!-- Emit -->
+  <rect class="phase" x="558" y="112" width="150" height="80" rx="2"/>
+  <text class="phlbl" x="633" y="146" text-anchor="middle">Emit</text>
+  <text class="phsub" x="633" y="168" text-anchor="middle">emit(file)</text>
+
+  <!-- arrows between phases -->
+  <path class="arrow" d="M 142 152 L 184 152" marker-end="url(#ah)"/>
+  <path class="arrow" d="M 338 152 L 370 152" marker-end="url(#ah)"/>
+  <path class="arrow" d="M 524 152 L 556 152" marker-end="url(#ah)"/>
+
+  <!-- output formats -->
+  <g>
+    <rect class="fmt" x="760" y="20"  width="84" height="34"/><text class="fmtlbl" x="802" y="42" text-anchor="middle">RTF</text>
+    <rect class="fmt" x="760" y="68"  width="84" height="34"/><text class="fmtlbl" x="802" y="90" text-anchor="middle">PDF</text>
+    <rect class="fmt" x="760" y="116" width="84" height="34"/><text class="fmtlbl" x="802" y="138" text-anchor="middle">HTML</text>
+    <rect class="fmt" x="760" y="164" width="84" height="34"/><text class="fmtlbl" x="802" y="186" text-anchor="middle">LaTeX</text>
+    <rect class="fmt" x="760" y="212" width="84" height="34"/><text class="fmtlbl" x="802" y="234" text-anchor="middle">DOCX</text>
+  </g>
+
+  <!-- fan-out arrows from Emit -->
+  <path class="arrow" d="M 708 145 C 736 110, 740 60, 758 38"  marker-end="url(#ah)"/>
+  <path class="arrow" d="M 708 148 C 736 120, 740 100, 758 85" marker-end="url(#ah)"/>
+  <path class="arrow" d="M 708 152 L 758 133"                  marker-end="url(#ah)"/>
+  <path class="arrow" d="M 708 156 C 736 184, 740 164, 758 181" marker-end="url(#ah)"/>
+  <path class="arrow" d="M 708 159 C 736 200, 740 210, 758 229" marker-end="url(#ah)"/>
+
+  <!-- caption -->
+  <text x="261" y="232" text-anchor="middle" font-size="12" fill="#6b7280">immutable S7 spec, one verb per step</text>
+  <text x="633" y="278" text-anchor="middle" font-size="12" fill="#6b7280">native emission · no JVM</text>
+</svg>
