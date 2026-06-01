@@ -44,3 +44,5 @@ tests/testthat/testthat-problems.rds
 *.fls
 *.fdb_latexmk
 handoff.md
+/doc/
+/Meta/

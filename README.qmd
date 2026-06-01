@@ -2,6 +2,7 @@
 format:
   gfm:
     default-image-extension: ""
+    wrap: none
 ---
 
 <!-- README.md is generated from README.qmd. Please edit that file -->
@@ -16,102 +17,173 @@ knitr::opts_chunk$set(
 )
 ```
 
-# tabular
+# tabular <a href="https://vthanik.github.io/tabular/"><img src="man/figures/workflow.svg" align="right" height="120" alt="" /></a>
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/vthanik/tabular/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/tabular/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-Native emission of clinical submission tables to RTF, LaTeX, HTML,
-PDF, and DOCX. Decimal alignment via real font metrics, multi-level
-column headers with passthrough leaves, predicate-targeted styling,
-and group-aware pagination — all from one short pipeline. Designed
-for CDISC ADaM workflows and FDA / EMA / PMDA regulatory submissions.
+**tabular** turns a pre-summarised data frame into a submission-grade
+clinical table and emits it natively to **RTF, PDF, HTML, LaTeX, and
+DOCX** — no Java, no LibreOffice, no Word automation. One short pipeline
+gives you decimal alignment via real font metrics, multi-level column
+headers, predicate-targeted styling, and group-aware pagination, built
+for CDISC ADaM workflows and FDA / EMA / PMDA submissions.
+
+It is the only R table package that pairs a **live HTML preview** with a
+**paginated print deliverable**: the same spec you eyeball in a notebook
+is the one that paginates into the RTF you ship.
 
 ## Installation
-
-You can install the development version of tabular from GitHub:
 
 ``` r
 # install.packages("pak")
 pak::pak("vthanik/tabular")
 ```
 
-## Status
+## A table in one pipeline
 
-`tabular` is in **pre-CRAN** development. The spec-building and
-resolve-engine surface (`tabular()`, `cols()`, `headers()`,
-`sort_rows()`, `derive()`, `style()`) is in place; backends
-(`emit()` to RTF / LaTeX / PDF / HTML / DOCX) land incrementally per
-`plan.md`. Break-anything-anytime until v0.1.0.
+The pipeline starts from a pre-summarised wide data frame (one row in =
+one display row — `tabular` does no aggregation) and chains one verb per
+concern. Every verb returns an updated, immutable `tabular_spec`; the
+engine resolves it at render time.
 
-## Example
-
-The pipeline starts from a pre-summarised wide data frame and chains
-through one verb per concern. Each verb returns an updated
-`tabular_spec`; the engine resolves the spec at render time:
-
-``` r
+```{r}
+#| label: quick-example
 library(tabular)
 
+# BigN denominators, keyed by arm
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 
-tabular(
-  saf_demo,
+# columns render in data-frame order, so put them in dose order first
+demo <- saf_demo[c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")]
+
+tab <- tabular(
+  demo,
   titles = c(
     "Table 14.1.1",
-    "Demographics and Baseline Characteristics",
+    "Demographic and Baseline Characteristics",
     sprintf("Safety Population (N=%d)", n["Total"])
   ),
-  footnotes = "Percentages based on N per treatment group."
+  footnotes = "Percentages are based on the number of subjects per treatment group."
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Parameter"),
+    variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
-    Total      = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
-  ) |>
-  headers(
-    "Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")
-  ) |>
-  sort_rows(by = c("variable", "stat_label"))
+    placebo    = col_spec(label = sprintf("Placebo (N=%d)",  n["placebo"]),  align = "decimal"),
+    drug_50    = col_spec(label = sprintf("Drug 50 (N=%d)",  n["drug_50"]),  align = "decimal"),
+    drug_100   = col_spec(label = sprintf("Drug 100 (N=%d)", n["drug_100"]), align = "decimal"),
+    Total      = col_spec(label = sprintf("Total (N=%d)",    n["Total"]),    align = "decimal")
+  )
+
+# render to any backend by file extension (or format = "...")
+path <- emit(tab, tempfile(fileext = ".rtf"))   # submission deliverable
 ```
 
-When the render backends land, the final verb in the chain will
-emit to a file:
+The same `tab` renders to markdown for a quick look (the demographics
+table below is the actual `md` backend output), and to a self-contained
+HTML page, a paginated PDF, a `tabularray` LaTeX fragment, or native
+OOXML `.docx` — all from the one spec:
 
-``` r
-# Pending implementation:
-... |> emit("t_14_1_1.rtf")
+```{r}
+#| label: quick-example-render
+#| echo: false
+#| results: asis
+md <- tempfile(fileext = ".md")
+emit(tab, md)
+# show just the rendered table block; titles/footnotes are in the prose above
+lines <- readLines(md)
+cat(lines[grepl("^\\|", lines)], sep = "\n")
 ```
 
-## Verb surface (as of this snapshot)
+## Why tabular?
 
-| Verb | Tier | Role |
-|---|---|---|
-| `tabular()` | Entry | Wrap a pre-summarised data frame into a `tabular_spec` |
-| `pivot_across()` | Input helper | Bridge `cards` long ARD to a wide display data frame |
-| `col_spec()` | Build | Per-column display attributes (usage / label / align / format) |
-| `cols()` | Build | Attach `col_spec` entries to the spec, keyed by data column |
-| `headers()` | Build | Multi-level column-header bands; passthrough leaves supported |
-| `sort_rows()` | Build | Output row order; factor-level-aware, NA-last |
-| `derive()` | Build | Display-time row-arithmetic; topo-sorted; references prior derives |
-| `style()` | Style | Predicate-targeted bold / colour / borders for cells and rows |
+- **Five native backends, one spec.** `emit()` dispatches on the file
+  extension to RTF 1.9.1, PDF (via `tinytex`), self-contained Bootstrap
+  HTML, `tabularray` LaTeX, and native OOXML DOCX. No JVM, no Office
+  round-trip.
+- **Decimal alignment that survives the page.** Numbers align on the
+  decimal using the backend's real font metrics, not guessed padding —
+  so columns stay aligned in print, not just on screen.
+- **Submission chrome built in.** Multi-line titles, up to eleven
+  footnote lines, page header/footer slots, and the four-section page
+  layout regulatory reviewers expect.
+- **Group-aware pagination.** Keep a SOC and its preferred terms on one
+  page, repeat titles/headers/footnotes per page, control orphan/widow
+  rows, and split wide tables into horizontal panels.
+- **Display-only by design.** `tabular` styles and renders; it never
+  filters, aggregates, or weights. Pair it with `cards` /
+  `gtsummary` / `dplyr` / SAS upstream and feed it a tidy wide frame.
+- **A QC trail.** `emit(data_file = ...)` writes the resolved wide data
+  beside the render, and a CDISC ARS audit manifest documents the
+  display.
 
-## Demo datasets
+## Where tabular fits
 
-Pre-summarised wide-format tables and their upstream `cards`-format
-counterparts ship with the package to power examples, vignettes, and
-tests:
+`tabular` is a *renderer* for pre-summarised clinical tables, not a
+statistics engine. The short version of how it relates to the table
+packages you may know (full treatment in the
+[Comparison article](https://vthanik.github.io/tabular/articles/comparison.html)):
+
+| | tabular | gt | rtables | gtsummary | flextable | huxtable |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Computes statistics | — | — | ✓ | ✓ | — | — |
+| Paginated submission output | ✓ | — | ✓ | — | — | — |
+| Native RTF | ✓ | ✓ | ✓ | via gt | — | ✓ |
+| Native DOCX | ✓ | ✓ | ✓ | via gt | ✓ | ✓ |
+| Decimal align via font metrics | ✓ | — | — | — | — | — |
+| Live HTML preview | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| CDISC ARS audit manifest | ✓ | — | — | — | — | — |
+| No JVM / Office dependency | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+Reach for `gtsummary` or `rtables` when you want the package to *compute*
+the summary; reach for `tabular` to *render* a summary you already have
+to submission-grade output across all five formats.
+
+## The verb surface
+
+| Verb | Role |
+|---|---|
+| `tabular()` | Wrap a pre-summarised data frame into a `tabular_spec` |
+| `pivot_across()` | Bridge a `cards` long ARD into a wide display frame |
+| `cols()` / `col_spec()` | Per-column usage, label, format, alignment, width, visibility |
+| `headers()` | Multi-level column-header bands with passthrough leaves |
+| `sort_rows()` | Output row order; factor-aware, NA-last |
+| `subgroup()` | Partition the table into page-broken, banner-labelled groups |
+| `paginate()` | Page splits, group-keep, panels, repeat chrome, orphan/widow |
+| `style()` + `cells_*()` | Predicate-targeted styling for any surface |
+| `brdr()` | Border-line specification (width / style / colour) |
+| `preset()` / `set_preset()` / `preset_minimal()` | Page geometry + cosmetic defaults |
+| `style_template()` | Reusable house style attached to a preset |
+| `md()` / `html()` | Inline Markdown / HTML markup in labels and cells |
+| `emit()` | Render to a file (RTF / PDF / HTML / LaTeX / DOCX) |
+| `as_grid()` | Resolve to the backend-ready grid without writing a file |
+
+## Demo data
+
+Eleven pre-summarised datasets ship with the package to power every
+example, vignette, and test (the `*_card` pair are long-format `cards`
+ARDs that feed `pivot_across()`):
 
 | Dataset | Content |
 |---|---|
-| `saf_demo` / `saf_demo_card` | Demographics, Safety Population |
-| `saf_aeoverall` / `saf_aeoverall_card` | High-level AE flags |
-| `saf_aesocpt` / `saf_aesocpt_card` | AEs by SOC and Preferred Term |
-| `saf_vital` / `saf_vital_card` | Vital signs at Baseline / End of Treatment |
-| `eff_resp` / `eff_resp_card` | Best Overall Response and Response Rates |
-| `saf_n` / `eff_n` | BigN denominators per arm |
+| `saf_demo`, `saf_demo_card` | Demographics, Safety Population |
+| `saf_aeoverall` | High-level adverse-event summary |
+| `saf_aesocpt`, `saf_aesocpt_card` | Adverse events by SOC and Preferred Term |
+| `saf_vital` | Vital signs by parameter and visit |
+| `saf_subgroup` | Vital signs by Sex × Age-group subgroups |
+| `eff_resp` | Best Overall Response and response rates |
+| `eff_estimates` | Treatment-effect estimates (raw numerics) |
+| `saf_n`, `eff_n` | BigN denominators per arm |
+
+## Documentation
+
+- [Get started](https://vthanik.github.io/tabular/articles/tabular.html) — your first table in ten minutes
+- [Core concepts](https://vthanik.github.io/tabular/articles/core-concepts.html) — the mental model
+- [Clinical cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html) — six complete production tables
+- [Reference](https://vthanik.github.io/tabular/reference/index.html) — every verb, grouped by role
+
+## License
+
+MIT © Vignesh Thanikachalam

@@ -1,0 +1,178 @@
+---
+title: "Rows, grouping & pagination"
+description: >
+  Control the order of display rows, partition a table into labelled
+  subgroups, and govern how it splits across printed pages.
+vignette: >
+  %\VignetteIndexEntry{Rows, grouping & pagination}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r}
+#| label: setup
+library(tabular)
+```
+
+`cols()` shapes the columns; three more verbs shape the rows.
+`sort_rows()` orders them, `subgroup()` partitions the table into labelled
+blocks, and `paginate()` decides how it breaks across pages.
+
+## Ordering rows with `sort_rows()`
+
+`sort_rows()` sets the display order. Sort by any column — including
+hidden ones — and the engine applies it during Resolve.
+
+```{r}
+#| label: sort-desc
+tabular(
+  saf_aeoverall,
+  titles = "Adverse-event categories, ordered by total frequency"
+) |>
+  cols(
+    stat_label = col_spec(label = "Category"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  sort_rows(by = "Total", descending = TRUE)
+```
+
+::: {.callout-tip}
+## Per-key direction and hidden sort keys
+
+`descending` can be a vector matching `by`, so you can sort one key down
+and another up — `sort_rows(by = c("soc_n", "label"), descending = c(TRUE, FALSE))`
+gives the canonical "system organ classes by descending frequency, then
+preferred terms alphabetically". Sort keys are frequently `visible = FALSE`
+columns that exist only to drive the order.
+:::
+
+Sorting is factor-aware: a factor column sorts by its level order, not
+alphabetically, and `NA`s sort last. That is how a CDISC best-overall-
+response column comes out in CR, PR, SD, PD order rather than alphabetical.
+
+## Section groups, revisited
+
+A `usage = "group"` column turns into bold section-header rows
+(`group_display = "header_row"`). That is the row-grouping you already
+saw in [Columns & headers](columns-and-headers.html): each distinct group
+value introduces its block of rows.
+
+```{r}
+#| label: group-rows
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  )
+```
+
+## Partitioning with `subgroup()`
+
+Where a group column stacks blocks *within* one table, `subgroup()`
+splits the table into separate, banner-labelled partitions — each begins
+on its own page in the print backends. Pass the partitioning column(s)
+and a glue-style `label` template referencing those columns:
+
+```{r}
+#| label: subgroup
+tabular(
+  saf_subgroup,
+  titles = "Table 14.2.3  Vital Signs by Sex and Age Group"
+) |>
+  cols(
+    sex        = col_spec(visible = FALSE),
+    agegr      = col_spec(visible = FALSE),
+    sex_n      = col_spec(visible = FALSE),
+    agegr_n    = col_spec(visible = FALSE),
+    paramcd    = col_spec(visible = FALSE),
+    param      = col_spec(usage = "group"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  subgroup(by = c("sex", "agegr"), label = "{sex}, {agegr}")
+```
+
+Each `sex × agegr` combination becomes its own partition with a centred
+banner like *F, <65*. The columns named in `by` and in the `label`
+template are hidden automatically.
+
+::: {.callout-note}
+## Group vs subgroup
+
+A **group** (`usage = "group"`) stacks blocks within one continuous
+table. A **subgroup** (`subgroup()`) cuts the table into independent
+partitions that each start a new page. Use a group for "Age, then Sex,
+then Race"; use a subgroup for "the whole table, repeated per sex".
+:::
+
+## Pagination with `paginate()`
+
+`paginate()` governs how the resolved table breaks across printed pages.
+You do not set rows-per-page directly — the engine computes the row
+budget from the active preset (paper size, orientation, margins, font
+size) and the table's chrome (titles, headers, footnotes).
+
+```{r}
+#| label: paginate
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  paginate(
+    keep_together  = "variable",                          # never split a characteristic
+    repeat_content = c("titles", "headers", "footnotes"), # repeat chrome each page
+    orphan_floor   = 3,
+    widow_floor    = 2
+  )
+```
+
+What the arguments do:
+
+- **`keep_together`** — names `usage = "group"` columns whose blocks must
+  not be split across a page break (keep a system-organ class with its
+  preferred terms).
+- **`repeat_content`** — which chrome repeats at the top/bottom of every
+  page; titles, headers, and footnotes by default.
+- **`orphan_floor` / `widow_floor`** — minimum rows left at the bottom of
+  a page / carried to the next, to avoid stranded single rows.
+- **`panels`** — split a too-wide table into horizontal panels (groups of
+  columns) stacked down the page.
+- **`continuation`** — an optional "(continued)" marker on carried-over
+  blocks.
+
+::: {.callout-warning}
+## Pagination is a print concept
+
+The HTML backend is a single continuous document, so `paginate()` has no
+visible effect in the live previews above — it shapes the **RTF, PDF, and
+DOCX** output, where pages are real. Build and preview in HTML, then emit
+to a paginated backend to see the splits.
+:::
+
+## Where to next
+
+- **[Styling](styling.html)** — target rows, groups, and subgroup banners
+  with `style()`.
+- **[Clinical cookbook](clinical-cookbook.html)** — full AE-by-SOC/PT and
+  subgrouped vitals tables, sorted and paginated end to end.
+```

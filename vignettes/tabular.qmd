@@ -1,0 +1,190 @@
+---
+title: "Get started with tabular"
+description: >
+  Your first submission-grade clinical table in ten minutes: from a
+  pre-summarised data frame to a live preview and five output formats.
+vignette: >
+  %\VignetteIndexEntry{Get started with tabular}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+`tabular` turns a **pre-summarised data frame** into a regulatory
+**table, listing, or figure** (a "TFL") and renders it natively to RTF,
+PDF, HTML, LaTeX, and DOCX. This article gets you from raw numbers to a
+finished table in about ten minutes.
+
+::: {.callout-note}
+## New to clinical tables?
+
+A *TFL* is the formatted output that goes into a clinical study report or
+a regulatory submission — for example, a demographics summary or an
+adverse-event table. The numbers are computed upstream (by `cards`,
+`gtsummary`, `dplyr`, or SAS); `tabular`'s job is to *present* them to
+the exacting layout standards reviewers expect.
+:::
+
+## The one rule: bring summarised data
+
+`tabular` does **no** statistics. You hand it a wide data frame where
+**one row is one display row** and the columns are already the values you
+want to show. The bundled `saf_demo` dataset is exactly this shape:
+
+```{r}
+#| label: setup
+library(tabular)
+
+head(saf_demo, 8)
+```
+
+Each row is a statistic for one characteristic (`variable`), with one
+column per treatment arm. That is all `tabular` needs.
+
+## Your first table
+
+Wrap the data in `tabular()`, then describe each column with `cols()` and
+`col_spec()`. End the chain with the spec itself to see a live preview:
+
+```{r}
+#| label: first-table
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo"),
+    drug_50    = col_spec(label = "Drug 50"),
+    drug_100   = col_spec(label = "Drug 100"),
+    Total      = col_spec(label = "Total")
+  )
+```
+
+Two things already happened for free: `usage = "group"` turned the
+`variable` column into **bold section headers** (Age, Sex, Race, …)
+instead of a repeated column, and the table rendered as live HTML right
+here in the page.
+
+::: {.callout-tip}
+## What is that object?
+
+Every verb returns a `tabular_spec` — an immutable description of the
+table, not the table itself. Nothing is rendered until you print it (as
+above) or call `emit()`. You can inspect a spec at any point in the pipe
+with `print()`; piping further never mutates the previous spec.
+:::
+
+## Align the numbers
+
+Clinical tables align numbers on the decimal point. Set
+`align = "decimal"` on the value columns and `tabular` pads with real
+font metrics so the columns stay aligned in print, not just on screen:
+
+```{r}
+#| label: aligned
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  )
+```
+
+## Add the submission chrome
+
+Real tables carry a title block, BigN denominators in the column
+headers, a spanning header over the treatment arms, and footnotes. Add
+titles and footnotes in `tabular()`, a spanner with `headers()`, and pull
+the per-arm denominators from the bundled `saf_n`:
+
+```{r}
+#| label: full-table
+n <- stats::setNames(saf_n$n, saf_n$arm_short)
+
+tab <- tabular(
+  saf_demo,
+  titles = c(
+    "Table 14.1.1",
+    "Demographic and Baseline Characteristics",
+    sprintf("Safety Population (N=%d)", n["Total"])
+  ),
+  footnotes = c(
+    "Percentages are based on the number of subjects per treatment group.",
+    "BMI = body mass index."
+  )
+) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  n["placebo"]),  align = "decimal"),
+    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  n["drug_50"]),  align = "decimal"),
+    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", n["drug_100"]), align = "decimal"),
+    Total      = col_spec(label = sprintf("Total\n(N=%d)",    n["Total"]),    align = "decimal")
+  ) |>
+  headers(
+    "Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")
+  )
+
+tab
+```
+
+That is a submission-shaped demographics table, built from one pipe.
+
+## Render to five formats
+
+The same `tab` emits to any backend. `emit()` dispatches on the file
+extension (or pass `format =` explicitly):
+
+```{r}
+#| label: emit
+out <- file.path(tempdir(), "t_14_1_1")
+
+emit(tab, paste0(out, ".rtf"))    # RTF 1.9.1
+emit(tab, paste0(out, ".docx"))   # native OOXML
+emit(tab, paste0(out, ".html"))   # self-contained HTML
+emit(tab, paste0(out, ".tex"))    # tabularray LaTeX
+```
+
+```{r}
+#| label: emit-check
+#| echo: false
+files <- list.files(tempdir(), pattern = "^t_14_1_1", full.names = TRUE)
+data.frame(
+  file  = basename(files),
+  bytes = file.size(files)
+)
+```
+
+::: {.callout-note}
+## The preview is not the deliverable
+
+The live HTML above is a faithful *preview*. The artefact you ship is the
+paginated RTF, PDF, or DOCX — same spec, same numbers, but laid out for
+the page with repeated headers, footnotes, and the four-section
+submission layout. See
+[Fonts & fidelity](fonts-and-fidelity.html) for why the print backends
+are the source of truth.
+:::
+
+## Where to next
+
+- **[Core concepts](core-concepts.html)** — the mental model the rest of
+  the guide assumes (the wide-data contract, the page anatomy, the
+  three-phase pipeline).
+- **[Columns & headers](columns-and-headers.html)** — every `col_spec()`
+  option and multi-level header bands.
+- **[Rows, grouping & pagination](rows-grouping-pagination.html)** — sort
+  order, section groups, subgroups, and page splits.
+- **[Styling](styling.html)** — `style()`, presets, and house styles.
+- **[Clinical cookbook](clinical-cookbook.html)** — six complete
+  production tables end to end.
+```

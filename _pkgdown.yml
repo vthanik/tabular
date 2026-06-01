@@ -1,9 +1,12 @@
 url: https://vthanik.github.io/tabular/
 
 template:
+  bootstrap: 5
   bslib:
     primary: "#3b82f6"
-    font_scale: 1.2
+    base_font: { google: "DM Sans" }
+    heading_font: { google: "DM Sans" }
+    code_font: { google: "DM Mono" }
     border-radius: 0
     btn-border-radius: 3px
     grid-gutter-width: 3rem
@@ -16,8 +19,15 @@ navbar:
   type: light
   bg: none
   structure:
-    left: [intro, reference, articles, news]
+    left: [intro, reference, articles, comparison, datasets, news]
     right: [search, github]
+  components:
+    comparison:
+      text: Comparison
+      href: articles/comparison.html
+    datasets:
+      text: Datasets
+      href: articles/datasets.html
 
 home:
   title: Clinical TFL rendering for R
@@ -35,14 +45,14 @@ reference:
 
 - title: Spec building
   desc: Configure per-column display, header bands, sort order, and
-        computed columns. Each verb attaches one slot onto the spec
+        subgrouping. Each verb attaches one slot onto the spec
         and returns the updated spec for chaining.
   contents:
   - cols
   - col_spec
   - headers
   - sort_rows
-  - derive
+  - subgroup
 
 - title: Styling
   desc: A single `style()` verb, paired with one of the `cells_*()`
@@ -56,12 +66,41 @@ reference:
   - style_template
   - brdr
 
+- title: Presets and theming
+  desc: Page geometry and cosmetic defaults. `preset()` overrides per
+        spec in the pipe; `set_preset()` sets a session default;
+        `preset_minimal()` applies a stripped-down look.
+  contents:
+  - preset
+  - set_preset
+  - get_preset
+  - preset_minimal
+
+- title: Inline markup and units
+  desc: Mark label and cell text as Markdown or HTML, and tag widths
+        and sizes with explicit units.
+  contents:
+  - md
+  - html
+  - pt
+
 - title: Pagination
   desc: Configure page splits, group-run protection, and horizontal
         panel layout for wide tables. Row budget per page is computed
         by the engine from the active preset and the spec's chrome.
   contents:
   - paginate
+
+- title: Rendering and inspection
+  desc: Terminal verbs. `emit()` writes a file; `as_grid()` resolves the
+        spec without I/O; `check_fonts()` audits font availability; the
+        print and `as.tags()` methods drive the live HTML preview.
+  contents:
+  - emit
+  - as_grid
+  - check_fonts
+  - print.tabular_spec
+  - as.tags.tabular_spec
 
 - title: Predicates
   desc: Class predicates for tabular's S7 objects.
@@ -74,17 +113,36 @@ reference:
         `cards`-format counterparts. Power every `@examples` block,
         every vignette, and every smoke test.
   contents:
-  - has_keyword("demo-data")
+  - has_keyword("datasets")
 
 articles:
 - title: Get started
   navbar: ~
-  contents: []
+  contents:
+  - tabular
+  - core-concepts
 
 - title: Recipes
   navbar: Recipes
-  contents: []
+  contents:
+  - columns-and-headers
+  - rows-grouping-pagination
+  - styling
+  - articles/clinical-cookbook
 
 - title: Advanced
   navbar: Advanced
-  contents: []
+  contents:
+  - articles/from-ard
+  - articles/fonts-and-fidelity
+  - articles/architecture
+
+- title: Comparison
+  navbar: ~
+  contents:
+  - articles/comparison
+
+- title: Datasets
+  navbar: ~
+  contents:
+  - articles/datasets
