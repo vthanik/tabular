@@ -19,15 +19,8 @@ navbar:
   type: light
   bg: none
   structure:
-    left: [intro, reference, articles, comparison, datasets, news]
+    left: [intro, reference, articles, news]
     right: [search, github]
-  components:
-    comparison:
-      text: Comparison
-      href: articles/comparison.html
-    datasets:
-      text: Datasets
-      href: articles/datasets.html
 
 home:
   title: Clinical TFL rendering for R
@@ -134,13 +127,3 @@ articles:
   - articles/from-ard
   - articles/fonts-and-fidelity
   - articles/architecture
-
-- title: Comparison
-  navbar: ~
-  contents:
-  - articles/comparison
-
-- title: Datasets
-  navbar: ~
-  contents:
-  - articles/datasets

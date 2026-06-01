@@ -254,7 +254,7 @@ cell margin, so measured and rendered widths agree.
 
 \strong{Interaction:} A body per-side padding override
 (\code{preset(padding = list(body = ...))} or
-\code{style(at = cells_body(), padding = ...)}) takes precedence at
+\code{style(.at = cells_body(), padding = ...)}) takes precedence at
 both measurement and render.
 
 \strong{Note:} DOCX and LaTeX render left / right exactly; RTF

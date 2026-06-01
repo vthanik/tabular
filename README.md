@@ -2,11 +2,11 @@
 
 <!-- README.md is generated from README.qmd. Please edit that file -->
 
-# tabular <a href="https://vthanik.github.io/tabular/"><img src="man/figures/workflow.svg" align="right" height="120" alt="" /></a>
+# tabular <a href="https://vthanik.github.io/tabular/"><img src="man/figures/logo.png" align="right" height="139" alt="tabular website" /></a>
 
 <!-- badges: start -->
 
-[![R-CMD-check](https://github.com/vthanik/tabular/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/tabular/actions/workflows/R-CMD-check.yaml) [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental) <!-- badges: end -->
+[![R-CMD-check](https://github.com/vthanik/tabular/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/tabular/actions/workflows/R-CMD-check.yaml) [![Codecov test coverage](https://codecov.io/gh/vthanik/tabular/graph/badge.svg)](https://app.codecov.io/gh/vthanik/tabular) [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental) [![Project Status: Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) <!-- badges: end -->
 
 **tabular** turns a pre-summarised data frame into a submission-grade clinical table and emits it natively to **RTF, PDF, HTML, LaTeX, and DOCX** — no Java, no LibreOffice, no Word automation. One short pipeline gives you decimal alignment via real font metrics, multi-level column headers, predicate-targeted styling, and group-aware pagination, built for CDISC ADaM workflows and FDA / EMA / PMDA submissions.
 
@@ -25,11 +25,6 @@ The pipeline starts from a pre-summarised wide data frame (one row in = one disp
 
 ``` r
 library(tabular)
-#> 
-#> Attaching package: 'tabular'
-#> The following object is masked from 'package:stats':
-#> 
-#>     pt
 
 # BigN denominators, keyed by arm
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
@@ -127,20 +122,21 @@ The same `tab` renders to markdown for a quick look (the demographics table belo
 
 ## Where tabular fits
 
-`tabular` is a *renderer* for pre-summarised clinical tables, not a statistics engine. The short version of how it relates to the table packages you may know (full treatment in the [Comparison article](https://vthanik.github.io/tabular/articles/comparison.html)):
+`tabular` is a *renderer* for pre-summarised clinical tables, not a statistics engine. Compute the summary upstream — with `cards`, `gtsummary`, `dplyr`, or SAS — then hand the finished wide frame to `tabular()`. Reach for `gtsummary` or `rtables` when you want the package to *compute* the summary; reach for `tabular` to *render* a summary you already have to submission-grade output.
+
+The matrix reflects each package’s documented export surface (verified against their namespaces; `via gt` means `gtsummary` renders through `gt`):
 
 |  | tabular | gt | rtables | gtsummary | flextable | huxtable |
 |----|:--:|:--:|:--:|:--:|:--:|:--:|
 | Computes statistics | — | — | ✓ | ✓ | — | — |
-| Paginated submission output | ✓ | — | ✓ | — | — | — |
-| Native RTF | ✓ | ✓ | ✓ | via gt | — | ✓ |
-| Native DOCX | ✓ | ✓ | ✓ | via gt | ✓ | ✓ |
-| Decimal align via font metrics | ✓ | — | — | — | — | — |
 | Live HTML preview | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Native RTF | ✓ | ✓ | — | via gt | ✓ | ✓ |
+| Native DOCX | ✓ | ✓ | — | via gt | ✓ | ✓ |
+| LaTeX | ✓ | ✓ | — | via gt | — | ✓ |
+| PDF | ✓ | ✓ | ✓ | via gt | — | ✓ |
+| Paginated submission output | ✓ | — | ✓ | — | — | — |
+| Decimal align via font metrics | ✓ | — | — | — | — | — |
 | CDISC ARS audit manifest | ✓ | — | — | — | — | — |
-| No JVM / Office dependency | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-
-Reach for `gtsummary` or `rtables` when you want the package to *compute* the summary; reach for `tabular` to *render* a summary you already have to submission-grade output across all five formats.
 
 ## The verb surface
 
@@ -151,7 +147,6 @@ Reach for `gtsummary` or `rtables` when you want the package to *compute* the su
 | `cols()` / `col_spec()` | Per-column usage, label, format, alignment, width, visibility |
 | `headers()` | Multi-level column-header bands with passthrough leaves |
 | `sort_rows()` | Output row order; factor-aware, NA-last |
-| `derive()` | Display-time row arithmetic; topologically ordered |
 | `subgroup()` | Partition the table into page-broken, banner-labelled groups |
 | `paginate()` | Page splits, group-keep, panels, repeat chrome, orphan/widow |
 | `style()` + `cells_*()` | Predicate-targeted styling for any surface |

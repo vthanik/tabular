@@ -102,24 +102,6 @@ backend_html <- function(grid, file) {
     pages <- .html_stamp_last_row_bottom(pages, .foot)
   }
 
-  head <- c(
-    "<!DOCTYPE html>",
-    "<html lang=\"en\">",
-    "<head>",
-    "<meta charset=\"utf-8\">",
-    paste0("<title>", .html_escape(doc_title), "</title>"),
-    .html_inline_style(
-      preset = meta$preset,
-      pagehead_ast = meta$pagehead_ast,
-      pagefoot_ast = meta$pagefoot_ast,
-      cs = cs,
-      body_borders = body_borders
-    ),
-    "</head>",
-    "<body class=\"tabular-doc\">"
-  )
-  tail <- c("</body>", "</html>")
-
   # On-screen chrome — semantic HTML5 `<header>` above the document
   # body and `<footer>` below. The CSS `@page` rules at
   # `.html_inline_style()` still drive print-time chrome (so
@@ -212,6 +194,37 @@ backend_html <- function(grid, file) {
   # branch; one code path regardless of `col_spec(width)` units.
   content_open <- "<div class=\"tabular-content\">"
 
+  # Wrap the rendered body in the document shell. The CSS scope id (gt /
+  # flextable model: every rule prefixed `#<id>`, the container carries
+  # the id, so the host page's Bootstrap / pkgdown / Quarto CSS cannot
+  # cascade over the table) is hashed from the rendered body TEXT, not the
+  # S7 grid object. Text is byte-identical under `load_all` and an
+  # installed package (an S7 object's class carries namespace-environment
+  # refs that hash differently between the two), so snapshots stay stable;
+  # it is still unique per table, so two tables on one page never collide.
+  assemble <- function(body_inner) {
+    doc_body <- c(onscreen_header, body_inner, onscreen_footer)
+    scope_id <- paste0("tabular-", substr(rlang::hash(doc_body), 1L, 10L))
+    head <- c(
+      "<!DOCTYPE html>",
+      "<html lang=\"en\">",
+      "<head>",
+      "<meta charset=\"utf-8\">",
+      paste0("<title>", .html_escape(doc_title), "</title>"),
+      .html_inline_style(
+        preset = meta$preset,
+        pagehead_ast = meta$pagehead_ast,
+        pagefoot_ast = meta$pagefoot_ast,
+        cs = cs,
+        body_borders = body_borders,
+        scope_id = scope_id
+      ),
+      "</head>",
+      sprintf("<body class=\"tabular-doc\" id=\"%s\">", scope_id)
+    )
+    c(head, doc_body, "</body>", "</html>")
+  }
+
   if (total == 0L) {
     body_inner <- c(
       content_open,
@@ -220,7 +233,7 @@ backend_html <- function(grid, file) {
       footnote_block,
       "</div>"
     )
-    return(c(head, onscreen_header, body_inner, onscreen_footer, tail))
+    return(assemble(body_inner))
   }
 
   # Group pages by panel_index so each horizontal panel renders as
@@ -251,7 +264,7 @@ backend_html <- function(grid, file) {
     footnote_block,
     "</div>"
   )
-  c(head, onscreen_header, body_inner, onscreen_footer, tail)
+  assemble(body_inner)
 }
 
 # Render a semantic HTML5 page band (`<header>` or `<footer>`) for
@@ -1640,7 +1653,8 @@ backend_html <- function(grid, file) {
   pagehead_ast = NULL,
   pagefoot_ast = NULL,
   cs = NULL,
-  body_borders = NULL
+  body_borders = NULL,
+  scope_id = NULL
 ) {
   cs <- cs %||% chrome_style()
   # Structural rules driven from the SSOT (chrome_style + the body
@@ -1824,6 +1838,14 @@ backend_html <- function(grid, file) {
     ".tabular-page-header-right, .tabular-page-footer-right { flex: 1; text-align: right; }",
     "@media print { .tabular-table-wrap { overflow-x: visible; margin: 0; } .tabular-table tr { page-break-inside: avoid; } .tabular-page-header, .tabular-page-footer { display: none; } .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }"
   )
+  # Scope every selector to `#<scope_id>` so the host page (pkgdown /
+  # Quarto / Bootstrap) cannot cascade over the table: the container-level
+  # selectors (`.tabular-doc`, `:root`) collapse to `#<id>` and every
+  # descendant rule gains the `#<id> ` prefix. The `@page` margin boxes
+  # below are print-only and page-global, so they stay unscoped.
+  if (!is.null(scope_id)) {
+    body_css <- .scope_selectors(body_css, scope_id)
+  }
   page_rules <- .html_render_page_band_rules(pagehead_ast, pagefoot_ast)
   # Per-cell colour / background / padding ride on cells_style[r,c]
   # now (set by `style(at = cells_body(), ...)` and the lowered
@@ -1832,6 +1854,82 @@ backend_html <- function(grid, file) {
   # so the table-wide CSS block has nothing to emit on their behalf —
   # the per-cell stamps already carry the visual.
   c("<style>", body_css, page_rules, "</style>")
+}
+
+# Prefix every CSS selector in `lines` with `#<id>` so the stylesheet is
+# scoped to one container (gt/flextable model). Container-level selectors
+# (`.tabular-doc`, the `:root` custom-property block) collapse to `#<id>`
+# itself; every other selector becomes a descendant `#<id> <selector>`.
+# Comma-separated selector lists are prefixed per part. The single
+# `@media print { ... }` line is handled specially: its inner rules are
+# scoped, the `@media` wrapper is preserved. Other at-rules pass through.
+.scope_selectors <- function(lines, id) {
+  hook <- paste0("#", id)
+
+  scope_one_selector <- function(sel) {
+    parts <- trimws(strsplit(sel, ",", fixed = TRUE)[[1L]])
+    out <- vapply(
+      parts,
+      function(p) {
+        if (p %in% c(".tabular-doc", ":root")) {
+          hook
+        } else if (startsWith(p, ".tabular-doc ")) {
+          paste0(hook, sub("^\\.tabular-doc", "", p))
+        } else {
+          paste0(hook, " ", p)
+        }
+      },
+      character(1L),
+      USE.NAMES = FALSE
+    )
+    paste(out, collapse = ", ")
+  }
+
+  # Scope each `selector { decls }` rule inside a brace block (used for
+  # the inner content of `@media print { ... }`).
+  scope_rule_block <- function(block) {
+    pat <- "([^{}]+)\\{([^{}]*)\\}"
+    pieces <- regmatches(block, gregexpr(pat, block, perl = TRUE))[[1L]]
+    if (length(pieces) == 0L) {
+      return(block)
+    }
+    scoped <- vapply(
+      pieces,
+      function(rule) {
+        sel <- trimws(sub(pat, "\\1", rule, perl = TRUE))
+        decls <- sub(pat, "\\2", rule, perl = TRUE)
+        paste0(scope_one_selector(sel), " {", decls, "}")
+      },
+      character(1L),
+      USE.NAMES = FALSE
+    )
+    paste(scoped, collapse = " ")
+  }
+
+  vapply(
+    lines,
+    function(line) {
+      line <- trimws(line)
+      if (!nzchar(line)) {
+        return(line)
+      }
+      if (startsWith(line, "@media")) {
+        head <- sub("\\{.*$", "{", line)
+        inner <- sub("^@media[^{]*\\{(.*)\\}\\s*$", "\\1", line, perl = TRUE)
+        paste0(head, " ", scope_rule_block(trimws(inner)), " }")
+      } else if (startsWith(line, "@")) {
+        line
+      } else if (grepl("{", line, fixed = TRUE)) {
+        sel <- sub("\\{.*$", "", line)
+        rest <- sub("^[^{]*", "", line)
+        paste0(scope_one_selector(trimws(sel)), " ", rest)
+      } else {
+        line
+      }
+    },
+    character(1L),
+    USE.NAMES = FALSE
+  )
 }
 
 # Render the CSS `@page { @top-* / @bottom-* }` margin-box rules

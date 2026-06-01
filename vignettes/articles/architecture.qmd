@@ -136,6 +136,3 @@ exactly what the QC `data_file` and the ARS manifest document.
 
 - **[Fonts & fidelity](fonts-and-fidelity.html)** — the metrics the
   decimal phase relies on.
-- **[Comparison](comparison.html)** — how this architecture differs from
-  the all-in-one table packages.
-```

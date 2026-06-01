@@ -30,18 +30,24 @@ hidden ones — and the engine applies it during Resolve.
 
 ```{r}
 #| label: sort-desc
+# Display cells are formatted text ("217 (85.4)"), which would sort
+# lexically. Derive a hidden numeric key upstream and sort on that.
+ae <- saf_aeoverall
+ae$total_n <- as.integer(sub(" .*", "", ae$Total))
+
 tabular(
-  saf_aeoverall,
+  ae,
   titles = "Adverse-event categories, ordered by total frequency"
 ) |>
   cols(
     stat_label = col_spec(label = "Category"),
+    total_n    = col_spec(visible = FALSE),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
     Total      = col_spec(label = "Total",    align = "decimal")
   ) |>
-  sort_rows(by = "Total", descending = TRUE)
+  sort_rows(by = "total_n", descending = TRUE)
 ```
 
 ::: {.callout-tip}

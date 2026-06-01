@@ -121,7 +121,4 @@ the [Clinical cookbook](clinical-cookbook.html).
 
 `pivot_across()` keeps the division of labour clean: `cards` (or
 `gtsummary`, `dplyr`, SAS) *computes* the summary; `pivot_across()`
-reshapes it; `tabular()` *renders* it to submission-grade output. See the
-[Comparison article](comparison.html) for how that split compares to
-all-in-one table packages.
-```
+reshapes it; `tabular()` *renders* it to submission-grade output.

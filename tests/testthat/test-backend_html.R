@@ -1331,7 +1331,7 @@ test_that("style(.at = cells_title(), blank_above = 3) emits three pad paragraph
 # font-family / color / margin.
 # ---------------------------------------------------------------------
 
-test_that(".html_inline_style scopes body-level rules to .tabular-doc", {
+test_that(".html_inline_style scopes every rule to the container id", {
   spec <- tabular(data.frame(x = 1:3))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
@@ -1341,15 +1341,25 @@ test_that(".html_inline_style scopes body-level rules to .tabular-doc", {
   # mutate the host page's body styling when embedded.
   expect_false(grepl("\\bbody\\s*\\{", payload, perl = TRUE))
 
-  # The scoped rule is present.
+  # The container rule is scoped to the unique `#tabular-<hash>` id, not a
+  # bare `.tabular-doc` selector the host theme (Bootstrap / pkgdown /
+  # Quarto) could cascade over.
+  expect_match(payload, "#tabular-[0-9a-f]+ \\{[^}]*font-family", perl = TRUE)
+  expect_false(grepl("(^|\\n)\\.tabular-doc\\s*\\{", payload, perl = TRUE))
+
+  # Descendant rules carry the same id prefix.
   expect_match(
     payload,
-    "\\.tabular-doc\\s*\\{[^}]*font-family",
+    "#tabular-[0-9a-f]+ \\.tabular-table \\{",
     perl = TRUE
   )
 
-  # The full-document body carries the scoping class.
-  expect_match(payload, "<body class=\"tabular-doc\">", fixed = TRUE)
+  # The full-document body carries the matching scope id.
+  expect_match(
+    payload,
+    "<body class=\"tabular-doc\" id=\"tabular-[0-9a-f]+\">",
+    perl = TRUE
+  )
 })
 
 test_that("as.tags.tabular_spec wrapping div carries .tabular-doc class", {
@@ -2385,7 +2395,7 @@ test_that("page chrome font is max(fs-1,6)pt and borderless (#chrome-style)", {
   expect_no_match(txt, "font-size: \\.85rem")
   expect_match(
     txt,
-    "\\.tabular-page-header, \\.tabular-page-footer \\{[^}]*font-size: \\d+pt"
+    "\\.tabular-page-header,[^{]*\\.tabular-page-footer \\{[^}]*font-size: \\d+pt"
   )
   # Borderless bands: no header border-bottom, no footer border-top.
   expect_no_match(txt, "\\.tabular-page-header \\{[^}]*border-bottom")
@@ -2564,11 +2574,10 @@ test_that("preset(cell_padding=) sets HTML td/th padding in pt when overridden (
   f <- withr::local_tempfile(fileext = ".html")
   emit(spec, f)
   html <- paste(readLines(f, warn = FALSE), collapse = "\n")
-  expect_true(grepl(
-    ".tabular-table th, .tabular-table td { padding: 20pt 20pt 20pt 20pt; }",
+  expect_match(
     html,
-    fixed = TRUE
-  ))
+    "\\.tabular-table th,[^{]*\\.tabular-table td \\{ padding: 20pt 20pt 20pt 20pt; \\}"
+  )
 })
 
 test_that("default cell_padding keeps the responsive rem padding in HTML (#html-padding)", {

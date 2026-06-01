@@ -21,7 +21,7 @@
 #' @details
 #'
 #' **One verb, two surfaces.** The same `style(.spec_or_template,
-#' ..., at = ...)` call that attaches a layer to a per-table spec
+#' ..., .at = ...)` call that attaches a layer to a per-table spec
 #' also accumulates layers onto a template. Symmetric API — no need
 #' to learn a second function for the multi-table use case.
 #'
@@ -51,14 +51,14 @@
 #' # The result becomes the default look for every table rendered
 #' # against this preset. No per-table style() boilerplate.
 #' house <- style_template() |>
-#'   style(bold = TRUE, at = cells_headers(level = -1)) |>
-#'   style(bold = TRUE, at = cells_group_headers()) |>
+#'   style(bold = TRUE, .at = cells_headers(level = -1)) |>
+#'   style(bold = TRUE, .at = cells_group_headers()) |>
 #'   style(
 #'     border_top    = brdr("thick", "double"),
 #'     border_bottom = brdr("thick", "double"),
-#'     at = cells_headers()
+#'     .at = cells_headers()
 #'   ) |>
-#'   style(blank_above = 1, blank_below = 1, at = cells_title())
+#'   style(blank_above = 1, blank_below = 1, .at = cells_title())
 #'
 #' length(house$layers)
 #'

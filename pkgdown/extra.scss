@@ -6,7 +6,10 @@
 $faint-background: #f9f9f9 !default;
 $faint-border: #efefef !default;
 
-$navbar-background: $faint-background !default;
+// Clean dplyr / tidytemplate hero: the navbar is the same white as the
+// page (no coloured "banner" bar), separated from the content only by a
+// thin horizontal rule below it. The footer keeps its faint fill.
+$navbar-background: #fff !default;
 $footer-background: $faint-background !default;
 
 $accent: #3b82f6 !default;

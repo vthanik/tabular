@@ -312,12 +312,38 @@ NULL
 as.tags.tabular_spec <- function(x, ..., id = NULL) {
   dir <- getOption("tabular_preview_dir", default = tempdir())
   file <- tempfile(tmpdir = dir, fileext = ".html")
-  emit(x, file, format = "html")
+  # The HTML preview is a responsive medium — the wrapping div sets
+  # `overflow-x: auto`, so a wide table scrolls rather than breaking. A
+  # paper-geometry "columns exceed the available content width" warning is
+  # therefore irrelevant on this path (Positron / RStudio viewer, pkgdown
+  # reference examples, Quarto chunks all render through here). Muffle it so
+  # previews stay clean; the paper backends (RTF / PDF / DOCX / LaTeX)
+  # still surface it where page width genuinely constrains the layout.
+  withCallingHandlers(
+    emit(x, file, format = "html"),
+    tabular_warn_layout = function(w) invokeRestart("muffleWarning")
+  )
 
   payload <- paste(readLines(file, warn = FALSE), collapse = "\n")
   frag <- .extract_html_fragment(payload)
+
+  # The emitted document scopes its `<style>` to the `<body>`'s id
+  # (`tabular-<hash>`), so the wrapping `<div>` must carry the SAME id for
+  # the scoped rules to match. When the caller overrides `id`, re-scope the
+  # style by swapping the hashed hook for the requested one.
+  body_id <- .extract_body_id(payload)
+  if (is.null(body_id)) {
+    body_id <- .random_id("tabular-")
+  }
   if (is.null(id)) {
-    id <- .random_id("tabular_")
+    id <- body_id
+  } else if (nzchar(frag$style)) {
+    frag$style <- gsub(
+      paste0("#", body_id),
+      paste0("#", id),
+      frag$style,
+      fixed = TRUE
+    )
   }
 
   htmltools::tagList(
@@ -332,6 +358,20 @@ as.tags.tabular_spec <- function(x, ..., id = NULL) {
       htmltools::HTML(frag$body)
     )
   )
+}
+
+# Extract the scope id stamped on the `<body id="...">` of an emitted
+# tabular HTML document. Returns NULL when absent (e.g. a hand-supplied
+# fragment), so callers fall back to a random id.
+.extract_body_id <- function(html_str) {
+  m <- regmatches(
+    html_str,
+    regexpr("<body[^>]*\\sid=\"[^\"]+\"", html_str, perl = TRUE)
+  )
+  if (length(m) == 0L) {
+    return(NULL)
+  }
+  sub('.*\\sid="([^"]+)".*', "\\1", m, perl = TRUE)
 }
 
 # Extract the `<style>` block and the `<body>` inner contents
