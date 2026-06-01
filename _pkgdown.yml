@@ -76,13 +76,11 @@ reference:
   - get_preset
   - preset_minimal
 
-- title: Inline markup and units
-  desc: Mark label and cell text as Markdown or HTML, and tag widths
-        and sizes with explicit units.
+- title: Inline markup
+  desc: Mark label and cell text as Markdown or HTML.
   contents:
   - md
   - html
-  - pt
 
 - title: Pagination
   desc: Configure page splits, group-run protection, and horizontal

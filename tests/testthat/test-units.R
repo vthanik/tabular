@@ -275,38 +275,38 @@ test_that(".parse_dim rejects 'auto' string and other non-numeric tokens", {
 # ---------------------------------------------------------------------
 
 test_that("pt / px / pct build tagged tabular_unit objects", {
-  expect_true(is_unit(pt(0.75)))
-  expect_true(is_unit(px(1)))
-  expect_true(is_unit(pct(50)))
-  expect_identical(pt(0.75)$unit, "pt")
-  expect_identical(px(1)$unit, "px")
-  expect_identical(pct(50)$unit, "pct")
-  expect_identical(pt(0.75)$value, 0.75)
+  expect_true(tabular:::is_unit(tabular:::pt(0.75)))
+  expect_true(tabular:::is_unit(tabular:::px(1)))
+  expect_true(tabular:::is_unit(tabular:::pct(50)))
+  expect_identical(tabular:::pt(0.75)$unit, "pt")
+  expect_identical(tabular:::px(1)$unit, "px")
+  expect_identical(tabular:::pct(50)$unit, "pct")
+  expect_identical(tabular:::pt(0.75)$value, 0.75)
 })
 
 test_that("is_unit is FALSE for bare numerics and other objects", {
-  expect_false(is_unit(0.75))
-  expect_false(is_unit("0.75pt"))
-  expect_false(is_unit(brdr()))
+  expect_false(tabular:::is_unit(0.75))
+  expect_false(tabular:::is_unit("0.75pt"))
+  expect_false(tabular:::is_unit(brdr()))
 })
 
 test_that("unit constructors reject bad magnitudes", {
-  expect_error(pt(-1), class = "tabular_error_input")
-  expect_error(pt(c(1, 2)), class = "tabular_error_input")
-  expect_error(pt(NA_real_), class = "tabular_error_input")
-  expect_error(px("x"), class = "tabular_error_input")
+  expect_error(tabular:::pt(-1), class = "tabular_error_input")
+  expect_error(tabular:::pt(c(1, 2)), class = "tabular_error_input")
+  expect_error(tabular:::pt(NA_real_), class = "tabular_error_input")
+  expect_error(tabular:::px("x"), class = "tabular_error_input")
 })
 
 test_that("pct rejects values above 100", {
-  expect_error(pct(150), class = "tabular_error_input")
-  expect_identical(pct(100)$value, 100)
+  expect_error(tabular:::pct(150), class = "tabular_error_input")
+  expect_identical(tabular:::pct(100)$value, 100)
 })
 
 test_that(".resolve_unit converts pt to every native unit", {
   # 1pt = 20 twips; 1px = 15 twips, so 1pt = 20/15 px.
-  expect_identical(tabular:::.resolve_unit(pt(1), "twip"), 20)
-  expect_equal(tabular:::.resolve_unit(pt(1), "pt"), 1)
-  expect_equal(tabular:::.resolve_unit(pt(1), "px"), 20 / 15)
+  expect_identical(tabular:::.resolve_unit(tabular:::pt(1), "twip"), 20)
+  expect_equal(tabular:::.resolve_unit(tabular:::pt(1), "pt"), 1)
+  expect_equal(tabular:::.resolve_unit(tabular:::pt(1), "px"), 20 / 15)
 })
 
 test_that(".resolve_unit treats a bare numeric as points", {
@@ -316,12 +316,12 @@ test_that(".resolve_unit treats a bare numeric as points", {
 
 test_that(".resolve_unit converts px to points", {
   # 1px = 15 twips = 0.75pt.
-  expect_equal(tabular:::.resolve_unit(px(1), "pt"), 0.75)
+  expect_equal(tabular:::.resolve_unit(tabular:::px(1), "pt"), 0.75)
 })
 
 test_that(".resolve_unit passes percent through untouched", {
-  out <- tabular:::.resolve_unit(pct(50), "pt")
-  expect_true(is_unit(out))
+  out <- tabular:::.resolve_unit(tabular:::pct(50), "pt")
+  expect_true(tabular:::is_unit(out))
   expect_identical(out$unit, "pct")
 })
 
@@ -350,5 +350,8 @@ test_that(".parse_dim rejects a parsed-but-non-finite numeric value", {
 })
 
 test_that("print.tabular_unit prints a compact one-liner", {
-  expect_output(tabular:::print.tabular_unit(pt(5)), "<tabular_unit> 5pt")
+  expect_output(
+    tabular:::print.tabular_unit(tabular:::pt(5)),
+    "<tabular_unit> 5pt"
+  )
 })
