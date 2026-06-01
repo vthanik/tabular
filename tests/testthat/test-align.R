@@ -537,3 +537,23 @@ test_that("preset(alignment = title_halign = ...) drives LaTeX title alignment",
   # `flushleft` list environment that added vertical gaps was dropped).
   expect_true(grepl("{\\raggedright", txt, fixed = TRUE))
 })
+
+# ---- header halign surface fallback, LaTeX parity (#header-halign) ----
+
+test_that("style(halign=, .at=cells_headers()) drives header alignment on every backend (#header-halign)", {
+  # A column with no per-column align: the chrome surface header halign
+  # drives the header alignment (a col_spec align would win if set, by
+  # design). HTML/RTF/DOCX already honor the surface; LaTeX must too.
+  d <- data.frame(x = c("1", "2"), stringsAsFactors = FALSE)
+  spec <- tabular(d) |>
+    cols(x = col_spec(label = "X")) |>
+    style(halign = "right", .at = cells_headers())
+  fh <- withr::local_tempfile(fileext = ".html")
+  emit(spec, fh)
+  html <- paste(readLines(fh, warn = FALSE), collapse = "\n")
+  expect_true(grepl("<th class=\"text-right\"", html))
+  ft <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, ft)
+  tex <- paste(readLines(ft, warn = FALSE), collapse = "\n")
+  expect_true(grepl("halign=r", tex, fixed = TRUE))
+})

@@ -299,7 +299,7 @@ test_that("continuation marker is a no-op for MD output", {
   expect_false(grepl("(continued)", txt, fixed = TRUE))
 })
 
-test_that("horizontal panels emit one pipe table per panel separated by a blank line", {
+test_that("horizontal panels collapse to one pipe table with a Panel note row (continuous)", {
   d <- data.frame(
     grp = c("a", "b"),
     c1 = 1:2,
@@ -313,8 +313,13 @@ test_that("horizontal panels emit one pipe table per panel separated by a blank 
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   lines <- readLines(out)
-  # Two alignment rows — one per panel.
-  expect_identical(length(grep("^\\| :", lines)), 2L)
+  txt <- paste(lines, collapse = "\n")
+  # Markdown has no page width: ONE pipe table -> ONE alignment row.
+  expect_identical(length(grep("^\\| :", lines)), 1L)
+  # The panel boundaries surface as a `**Panel i**` note row, repeated
+  # across each panel's columns and blank over the stub.
+  expect_match(txt, "**Panel 1**", fixed = TRUE)
+  expect_match(txt, "**Panel 2**", fixed = TRUE)
   # No inter-page comment or rule between panels.
   expect_false(any(grepl("<!-- page", lines, fixed = TRUE)))
 })

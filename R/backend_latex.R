@@ -769,10 +769,18 @@ backend_latex <- function(grid, file) {
 #
 # Rows 1..rowhead are the header band; tabularray's hline{N}
 # numbering counts from the table's top row, so the body's first
-# row is at index `rowhead + 1`. Per-cell predicate borders from
-# `style()` against `cells_body()` are NOT routed through this
-# surface; they ride on cells_style[r,c] and are emitted by the
-# per-cell `\SetCell{borders}` path.
+# row is at index `rowhead + 1`.
+#
+# KNOWN LIMITATION: per-cell `style(border_*, .at = cells_body())`
+# borders on a SINGLE body cell are not rendered by the LaTeX backend
+# (they are honored by HTML / RTF / DOCX). tabularray draws per-cell
+# borders only through row/col-indexed `hline{r}={c}` / `vline{c}={r}`
+# directives, which cannot be derived from `cells_style[r,c]@border_*`
+# without colliding with the structural `outer` / `rows` / `cols`
+# stamps that share the same per-cell scalars (they would double-draw).
+# Structural body borders (the full frame, row rules, column rules) DO
+# render via the manifest below. The same indexing limit defers the
+# `cells_subgroup_labels()` banner rule on the LaTeX backend.
 .latex_border_directives <- function(
   body_borders,
   rowhead,
@@ -788,7 +796,10 @@ backend_latex <- function(grid, file) {
   if (!is.null(body_borders$outer_top)) {
     spec <- .latex_border_spec(body_borders$outer_top)
     if (nzchar(spec)) {
-      out <- c(out, sprintf("hline{%d}={%s}", body_first, spec))
+      # The outer frame top rides the table top (`hline{1}` = top of the
+      # first header row), NOT the body top (`rowhead + 1`), so the thick
+      # frame edge sits above the column-header band rather than under it.
+      out <- c(out, sprintf("hline{1}={%s}", spec))
     }
   }
   if (!is.null(body_borders$outer_bottom) && nrow_body > 0L) {
@@ -1247,16 +1258,32 @@ backend_latex <- function(grid, file) {
         length(col@align) == 1L &&
         !is.na(col@align) &&
         col@align == "decimal"
+      # Chrome surface header halign (from `style(.at = cells_headers())`),
+      # honored when no per-column align is set (parity with HTML/RTF/DOCX,
+      # where col_spec align wins and the surface fills in).
+      surf_halign <- if (
+        !(is_col_spec(col) && length(col@align) == 1L && !is.na(col@align)) &&
+          is_style_node(surface_node) &&
+          length(surface_node@halign) == 1L &&
+          !is.na(surface_node@halign)
+      ) {
+        surface_node@halign
+      } else {
+        NA_character_
+      }
       if (grepl("\\\\", body, fixed = TRUE)) {
         # Multi-line header: wrap so the in-cell `\\` is a line break, not
         # a row separator. The parbox carries the halign (decimal centres,
-        # else the column's alignment); the cell keeps only valign.
+        # else the column's alignment, else the surface halign); the cell
+        # keeps only valign.
         halign <- if (is_decimal) {
           "center"
         } else if (
           is_col_spec(col) && length(col@align) == 1L && !is.na(col@align)
         ) {
           col@align
+        } else if (!is.na(surf_halign)) {
+          surf_halign
         } else {
           "left"
         }
@@ -1265,6 +1292,13 @@ backend_latex <- function(grid, file) {
         # Single-line decimal header centres (HTML parity); other
         # single-line headers inherit their `Q[...]` colspec alignment.
         parts <- paste0("halign=c,", parts)
+      } else if (!is.na(surf_halign)) {
+        # No per-column align: honor the surface header halign explicitly
+        # (single-line headers otherwise inherit the `Q[...]` colspec).
+        parts <- paste0(
+          sprintf("halign=%s,", .latex_halign_letter(surf_halign)),
+          parts
+        )
       }
       sprintf("\\SetCell{%s} %s", parts, body)
     },
@@ -1609,13 +1643,26 @@ backend_latex <- function(grid, file) {
 # Returns an empty character vector when no padding override is
 # active so the longtblr arg stays minimal.
 .latex_rowsep_inner <- function(cells_style) {
-  # rowsep is vertical, so read the vertical (top) per-side padding
-  # override; default cell_padding leaves it NA so the arg is omitted.
-  pt <- .first_cell_padding_sides(cells_style)[["top"]]
-  if (is.na(pt)) {
-    return(character())
+  # Vertical per-cell padding -> tabularray row separation. Symmetric
+  # top == bottom collapses to a single `rowsep`; an asymmetric override
+  # (e.g. `padding_bottom` alone) emits `abovesep` / `belowsep` so the
+  # bottom padding is no longer dropped. Default cell_padding leaves both
+  # NA, so the arg is omitted (tabularray's own rowsep default applies).
+  sides <- .first_cell_padding_sides(cells_style)
+  pt <- sides[["top"]]
+  pb <- sides[["bottom"]]
+  fmt <- function(v) format(v, trim = TRUE, scientific = FALSE)
+  if (!is.na(pt) && !is.na(pb) && isTRUE(all.equal(pt, pb))) {
+    return(sprintf("rowsep=%spt", fmt(pt)))
   }
-  sprintf("rowsep=%spt", format(pt, trim = TRUE, scientific = FALSE))
+  out <- character()
+  if (!is.na(pt)) {
+    out <- c(out, sprintf("abovesep=%spt", fmt(pt)))
+  }
+  if (!is.na(pb)) {
+    out <- c(out, sprintf("belowsep=%spt", fmt(pb)))
+  }
+  out
 }
 
 # tabularray `\SetRow{abovesep=, belowsep=}` prefix from a chrome

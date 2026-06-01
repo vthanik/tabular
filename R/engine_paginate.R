@@ -70,16 +70,28 @@
 #' semantics; the consumer reads `keep_with_next` to choose its own break
 #' points.
 #'
+#' **Continuous media.** When `continuous = TRUE` (HTML / Markdown, which
+#' have no fixed page width), the horizontal split is meaningless, so the
+#' panels collapse to ONE all-columns page in original order with the stub
+#' shown once. The would-be panel boundaries are still reported via
+#' `panel_spans` so the backend can draw a header note; `total_panels`
+#' still reports the logical (pre-collapse) panel count.
+#'
 #' @param spec A `tabular_spec`.
 #' @param native Skip the vertical split (one page per panel) for backends
 #'   that paginate natively. Defaults to `FALSE` (tabular estimates the
 #'   split itself).
+#' @param continuous Collapse the horizontal panel split into one
+#'   all-columns page for continuous, scrollable backends (HTML /
+#'   Markdown). Defaults to `FALSE`. Mutually independent of `native`.
 #' @return A pagination plan as described above, plus `repeat_titles` /
 #'   `repeat_headers` / `repeat_footnotes` (the resolved `repeat_content`
-#'   membership) so native backends know which chrome rows repeat.
+#'   membership) so native backends know which chrome rows repeat, and
+#'   `panel_spans` (per-panel non-stub column membership, or `NULL` when
+#'   fewer than two panels) for the continuous-backend header note.
 #' @keywords internal
 #' @noRd
-engine_paginate <- function(spec, native = FALSE) {
+engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   data <- spec@data
   nrow_data <- nrow(data)
   col_names <- names(data)
@@ -139,7 +151,11 @@ engine_paginate <- function(spec, native = FALSE) {
     widow_floor = widow
   )
 
-  group_cols <- .group_col_names(spec@cols)
+  # Stub columns repeat on every panel: the `usage = "group"` set
+  # widened to include `usage = "id"` (the non-collapsing row
+  # identifier). keep_together is driven independently by `kt_idx`
+  # above, so this is the only consumer here.
+  stub_cols <- .stub_col_names(spec@cols)
   # Filter visible columns BEFORE pagination so the slice phase
   # (`.slice_one_page`) and every backend see only the columns the
   # user wants rendered. Hidden columns (col_spec@visible = FALSE)
@@ -148,7 +164,7 @@ engine_paginate <- function(spec, native = FALSE) {
   visible_col_names <- .visible_col_names(spec, col_names)
   col_panels <- .compute_horizontal_panels(
     col_names = visible_col_names,
-    group_col_names = group_cols,
+    stub_col_names = stub_cols,
     panels = panels
   )
   # `.compute_horizontal_panels` returns indices into its
@@ -157,6 +173,25 @@ engine_paginate <- function(spec, native = FALSE) {
   # data / style / label columns.
   visible_indices <- match(visible_col_names, col_names)
   col_panels <- lapply(col_panels, function(idx) visible_indices[idx])
+
+  # Per-panel non-stub column membership for the continuous-backend
+  # header note. Computed from the TRUE split (before any collapse) so
+  # it survives the collapse below. `stub_idx` is in full-`col_names`
+  # space, matching the remapped `col_panels`.
+  stub_idx <- match(intersect(stub_cols, visible_col_names), col_names)
+  stub_idx <- stub_idx[!is.na(stub_idx)]
+  panel_spans <- .panel_spans_from_panels(col_panels, stub_idx, col_names)
+
+  # Continuous media (HTML / Markdown) have no page width, so the
+  # horizontal split is meaningless: collapse to ONE all-columns page
+  # (stub once, original order) and let `panel_spans` carry the
+  # boundaries for a header note. `n_panels_effective` (pre-collapse)
+  # drives the reported `total_panels`; `n_horiz` (post-collapse) drives
+  # the page loop and `total_pages` -- the two are now distinct.
+  n_panels_effective <- length(col_panels)
+  if (isTRUE(continuous) && n_panels_effective > 1L) {
+    col_panels <- list(sort(unique(unlist(col_panels))))
+  }
 
   n_vert <- length(row_pages)
   n_horiz <- length(col_panels)
@@ -191,7 +226,8 @@ engine_paginate <- function(spec, native = FALSE) {
   list(
     rows_per_page = as.integer(rpp),
     total_pages = as.integer(total_pages),
-    total_panels = as.integer(n_horiz),
+    total_panels = as.integer(n_panels_effective),
+    panel_spans = panel_spans,
     pages = pages,
     keep_with_next = keep_with_next,
     repeat_titles = rep_titles,
@@ -513,10 +549,11 @@ engine_paginate <- function(spec, native = FALSE) {
   col_names[keep]
 }
 
-# Horizontal pagination: split non-group columns into approximately
-# equal slices; repeat group columns on every panel. Returns a list
-# of integer column-index vectors — one per panel.
-.compute_horizontal_panels <- function(col_names, group_col_names, panels) {
+# Horizontal pagination: split non-stub columns into approximately
+# equal slices; repeat stub columns on every panel. The stub set is
+# `usage in {group, id}` (see `.stub_col_names`). Returns a list of
+# integer column-index vectors — one per panel.
+.compute_horizontal_panels <- function(col_names, stub_col_names, panels) {
   ncol_data <- length(col_names)
   if (ncol_data == 0L) {
     return(list(integer()))
@@ -529,19 +566,42 @@ engine_paginate <- function(spec, native = FALSE) {
     return(list(seq_len(ncol_data)))
   }
 
-  group_idx <- match(intersect(group_col_names, col_names), col_names)
-  group_idx <- group_idx[!is.na(group_idx)]
-  non_group_idx <- setdiff(seq_len(ncol_data), group_idx)
+  stub_idx <- match(intersect(stub_col_names, col_names), col_names)
+  stub_idx <- stub_idx[!is.na(stub_idx)]
+  non_stub_idx <- setdiff(seq_len(ncol_data), stub_idx)
 
-  if (length(non_group_idx) == 0L) {
+  if (length(non_stub_idx) == 0L) {
     return(list(seq_len(ncol_data)))
   }
 
-  n_eff <- min(panels_int, length(non_group_idx))
-  chunk_id <- .equal_chunks(length(non_group_idx), n_eff)
-  chunks <- split(non_group_idx, chunk_id)
+  n_eff <- min(panels_int, length(non_stub_idx))
+  chunk_id <- .equal_chunks(length(non_stub_idx), n_eff)
+  chunks <- split(non_stub_idx, chunk_id)
 
-  lapply(chunks, function(ng) sort(c(group_idx, ng)))
+  lapply(chunks, function(ng) sort(c(stub_idx, ng)))
+}
+
+# Per-panel non-stub column membership for the continuous-backend
+# header note. `col_panels` is the list of per-panel index vectors
+# (in full-`col_names` space, already remapped); `stub_idx` are the
+# stub columns to exclude (also full-`col_names` space). Returns
+# `NULL` when there are fewer than two panels (nothing to annotate),
+# else a list of `list(label = "Panel i", col_names = <non-stub cols
+# of panel i, original order>)`.
+.panel_spans_from_panels <- function(col_panels, stub_idx, col_names) {
+  if (length(col_panels) <= 1L) {
+    return(NULL)
+  }
+  lapply(
+    seq_along(col_panels),
+    function(i) {
+      data_idx <- setdiff(col_panels[[i]], stub_idx)
+      list(
+        label = sprintf("Panel %d", i),
+        col_names = col_names[sort(data_idx)]
+      )
+    }
+  )
 }
 
 # Assign 1..n positions into `k` approximately equal chunks; returns

@@ -298,16 +298,65 @@ backend_docx <- function(grid, file) {
       rep(blank_p, pad_title_bottom)
     )
   }
-  table_block <- .render_docx_table(
-    grid,
-    preset,
-    hyperlinks,
-    rid_map,
-    cs = cs,
-    title_ast = if (title_in_table) titles_ast else list(),
-    pad_title_top = pad_title_top,
-    pad_title_bottom = pad_title_bottom
-  )
+  # One `<w:tbl>` per horizontal panel: each panel pins its own column
+  # set, so panel 2's body rows can no longer render under panel 1's
+  # grid/header. Word paginates the body within a panel via
+  # `<w:tblHeader/>` + `<w:cantSplit/>`; subgroups stay inline within a
+  # panel's table (the banner rows in `.render_docx_body_rows`). Panels
+  # are separated by a next-page section break (see below). When
+  # `repeat_titles` is set
+  # (the `repeat_content` default), the title block rides EVERY panel's
+  # table as `<w:tblHeader/>` rows so it repeats on every panel page,
+  # matching RTF; otherwise it renders once as paragraphs above panel 1
+  # (`titles_block`). An empty grid falls through one call so the
+  # "(no rows)" marker still appears.
+  panel_groups <- .docx_group_pages_by_panel(grid@pages)
+  if (length(panel_groups) <= 1L) {
+    table_block <- .render_docx_table(
+      grid,
+      preset,
+      hyperlinks,
+      rid_map,
+      cs = cs,
+      title_ast = if (title_in_table) titles_ast else list(),
+      pad_title_top = pad_title_top,
+      pad_title_bottom = pad_title_bottom
+    )
+  } else {
+    # Separate panels with a next-page SECTION break (a paragraph
+    # carrying the section's `<w:sectPr>`), placed AFTER each panel
+    # except the last. The section mark forces the next panel onto a
+    # fresh page AND keeps Word from merging the two `<w:tbl>`
+    # elements, with no visible blank line above the next panel's
+    # title -- an empty `pageBreakBefore` paragraph would render as a
+    # leading blank line. Mirrors RTF's `\sect` per panel; the final
+    # panel is closed by the body-level `sect_pr` appended downstream.
+    sect_break <- paste0(
+      "<w:p><w:pPr>",
+      .docx_section_pr(preset, rid_map),
+      "</w:pPr></w:p>"
+    )
+    n_panels <- length(panel_groups)
+    panel_tables <- vapply(
+      seq_along(panel_groups),
+      function(gi) {
+        panel_grid <- S7::set_props(grid, pages = panel_groups[[gi]])
+        tbl <- .render_docx_table(
+          panel_grid,
+          preset,
+          hyperlinks,
+          rid_map,
+          cs = cs,
+          title_ast = if (title_in_table) titles_ast else list(),
+          pad_title_top = pad_title_top,
+          pad_title_bottom = pad_title_bottom
+        )
+        if (gi < n_panels) paste0(tbl, sect_break) else tbl
+      },
+      character(1L)
+    )
+    table_block <- paste(panel_tables, collapse = "")
+  }
   sect_pr <- .docx_section_pr(preset, rid_map)
 
   body <- paste0(
@@ -343,12 +392,14 @@ backend_docx <- function(grid, file) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "title")
+  title_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
   vapply(
     seq_len(n),
     function(i) {
       runs <- .render_docx_inline(
         titles_ast[[i]],
         hyperlinks,
+        default_rpr = title_rpr,
         rid_map = rid_map
       )
       halign <- if (
@@ -402,6 +453,7 @@ backend_docx <- function(grid, file) {
   }
   blank_row <- .docx_full_width_row(total_twips, n_cols, "<w:p/>")
   surface_node <- .chrome_surface_at(cs, "title")
+  title_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
   title_rows <- vapply(
     seq_len(n),
     function(i) {
@@ -411,6 +463,7 @@ backend_docx <- function(grid, file) {
       runs <- .render_docx_inline(
         titles_ast[[i]],
         hyperlinks,
+        default_rpr = title_rpr,
         rid_map = rid_map
       )
       halign <- if (
@@ -494,12 +547,14 @@ backend_docx <- function(grid, file) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "footer")
+  foot_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
   vapply(
     seq_len(n),
     function(i) {
       runs <- .render_docx_inline(
         footnotes_ast[[i]],
         hyperlinks,
+        default_rpr = foot_rpr,
         rid_map = rid_map
       )
       halign <- if (
@@ -618,11 +673,31 @@ backend_docx <- function(grid, file) {
 # Table emission
 # ---------------------------------------------------------------------
 
-# Compose the `<w:tbl>` for this grid. Renders one table containing:
-# multi-level header bands -> column-labels row -> body rows
-# concatenated across all `grid@pages` entries. Header rows carry
-# `<w:tblHeader/>` so Word repeats them after every page break it
-# computes on its own.
+# Group the grid's pages by `panel_index` (first-appearance order),
+# preserving original order within each panel. Each group renders as
+# one `<w:tbl>` in `.docx_document_xml`. Distinct from RTF's
+# `(subgroup x panel)` sectioning: DOCX keeps subgroups inline within
+# a panel's table (via the banner rows), so a single-panel document is
+# byte-identical to the pre-native-flip baseline regardless of
+# subgroups. Returns `list()` for an empty grid.
+.docx_group_pages_by_panel <- function(pages) {
+  if (length(pages) == 0L) {
+    return(list())
+  }
+  pis <- vapply(
+    pages,
+    function(p) as.integer(p$panel_index %||% 1L),
+    integer(1L)
+  )
+  lapply(unique(pis), function(pi) pages[pis == pi])
+}
+
+# Compose one `<w:tbl>` for the pages in `grid` (one horizontal panel
+# after grouping). Renders: multi-level header bands -> column-labels
+# row -> body rows concatenated across this panel's `grid@pages`
+# entries. Header rows carry `<w:tblHeader/>` so Word repeats them
+# after every page break it computes on its own. Caller emits one
+# table per panel and inserts the inter-panel page break.
 #
 # Width consumption: every visible col_spec@width (numeric inches,
 # engine-resolved) -> twips via `.tabular_unit_twips[["in"]] = 1440`.
@@ -677,7 +752,19 @@ backend_docx <- function(grid, file) {
   # toprule (`header_top`) rides the first row of the column-header
   # block; the midrule (`header_bottom`) closes the column-label band.
   # Both default solid and are suppressed only on an explicit "none".
-  top_el <- .docx_chrome_border_seg(cs, "header_top", "top")
+  # The outer-frame `outer_top` triple wins over the chrome `header_top`
+  # rule, so `cells_table(side = "outer")` thickens the column-header band's
+  # top (the table top) rather than a body row.
+  outer_top_triple <- if (is.list(body_borders)) {
+    body_borders[["outer_top"]]
+  } else {
+    NULL
+  }
+  top_el <- if (!is.null(outer_top_triple)) {
+    .docx_border_seg_from_triple(outer_top_triple, "top")
+  } else {
+    .docx_chrome_border_seg(cs, "header_top", "top")
+  }
   mid_el <- .docx_chrome_border_seg(cs, "header_bottom", "bottom")
   has_bands <- is.data.frame(meta$headers) && nrow(meta$headers) > 0L
 
@@ -874,6 +961,7 @@ backend_docx <- function(grid, file) {
       # only the header padding override emits (no body-padding bleed).
       header_surface <- .chrome_surface_at(cs, "header")
       band_shd <- .docx_shd_from_style(header_surface)
+      band_rpr <- .docx_rPr_from_style(header_surface, bold_default = TRUE)
       tc_mar <- .docx_tcMar_from_style(header_surface, NULL)
       tc_pr <- paste0(
         "<w:tcPr>",
@@ -889,7 +977,9 @@ backend_docx <- function(grid, file) {
       } else {
         paste0(
           "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr>",
-          "<w:r><w:rPr><w:b/></w:rPr>",
+          "<w:r><w:rPr>",
+          band_rpr,
+          "</w:rPr>",
           "<w:t xml:space=\"preserve\">",
           .docx_escape(label),
           "</w:t></w:r></w:p>"
@@ -931,6 +1021,13 @@ backend_docx <- function(grid, file) {
   body_borders = NULL
 ) {
   surface_node <- .chrome_surface_at(cs, "header")
+  # Column labels are bold by default; a `style(.at = cells_headers())`
+  # override adds colour / font / size and can turn bold off.
+  hdr_rpr <- .docx_rPr_from_style(
+    surface_node,
+    preset = preset,
+    bold_default = TRUE
+  )
   cells <- vapply(
     seq_along(col_names_vis),
     function(j) {
@@ -940,12 +1037,14 @@ backend_docx <- function(grid, file) {
         .render_docx_inline(
           ast,
           hyperlinks,
-          default_rpr = "<w:b/>",
+          default_rpr = hdr_rpr,
           rid_map = rid_map
         )
       } else {
         paste0(
-          "<w:r><w:rPr><w:b/></w:rPr>",
+          "<w:r><w:rPr>",
+          hdr_rpr,
+          "</w:rPr>",
           "<w:t xml:space=\"preserve\">",
           .docx_escape(nm),
           "</w:t></w:r>"
@@ -1397,8 +1496,22 @@ backend_docx <- function(grid, file) {
   # Merged full-width cell: both frame edges ride it, plus the subgroup
   # surface background (RTF parity). `<w:tcBorders>` then `<w:shd>` then
   # `<w:vAlign>` in CT_TcPr order.
+  # Frame L/R edges plus the subgroup top / bottom rules from
+  # `style(border_*, .at = cells_subgroup_labels())` (chrome subgroup_top /
+  # subgroup_bottom regions, RTF parity). CT_TcBorders order: top, left,
+  # bottom, right.
   merged_edges <- .docx_tcborders(
+    .docx_border_seg_from_triple(
+      .chrome_border_at(cs, "subgroup_top"),
+      "top",
+      "none"
+    ),
     .docx_frame_edge("left", body_borders),
+    .docx_border_seg_from_triple(
+      .chrome_border_at(cs, "subgroup_bottom"),
+      "bottom",
+      "none"
+    ),
     .docx_frame_edge("right", body_borders)
   )
   banner_shd <- .docx_shd_from_style(surface_node)
@@ -1674,9 +1787,15 @@ backend_docx <- function(grid, file) {
         default_rpr = slot_rpr
       )
       runs_with_fields <- .docx_resolve_page_tokens(runs_xml)
+      slot_shd <- if (is_style_node(slot_node)) {
+        .docx_shd_from_style(slot_node)
+      } else {
+        ""
+      }
       cells_data[[length(cells_data) + 1L]] <- list(
         align = alignments[[s]],
-        body = runs_with_fields
+        body = runs_with_fields,
+        shd = slot_shd
       )
     }
   }
@@ -1735,6 +1854,7 @@ backend_docx <- function(grid, file) {
         "<w:tcPr>",
         sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", width),
         nil_borders,
+        c$shd %||% "",
         "</w:tcPr>"
       )
       paste0(
@@ -2380,7 +2500,22 @@ backend_docx <- function(grid, file) {
   side,
   backend_default = "solid"
 ) {
-  triple <- .chrome_border_at(cs, region)
+  .docx_border_seg_from_triple(
+    .chrome_border_at(cs, region),
+    side,
+    backend_default
+  )
+}
+
+# Build a `<w:top>` / `<w:bottom>` ... border element from a resolved
+# (style, width, color) triple. NULL with a "solid" backend default emits
+# the 0.5pt rule; an explicit "none" (or NULL with a non-solid default)
+# emits nothing.
+.docx_border_seg_from_triple <- function(
+  triple,
+  side,
+  backend_default = "solid"
+) {
   if (is.null(triple)) {
     if (!identical(backend_default, "solid")) {
       return("")

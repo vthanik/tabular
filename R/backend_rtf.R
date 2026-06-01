@@ -824,7 +824,8 @@ backend_rtf <- function(grid, file) {
       cells[[length(cells) + 1L]] <- list(
         align = alignments[[s]],
         text = .rtf_resolve_page_tokens(.render_rtf_inline(ast)),
-        props = .rtf_chrome_text_props(slot_node, colors, fonts)
+        props = .rtf_chrome_text_props(slot_node, colors, fonts),
+        shd = .rtf_cell_shading(slot_node, colors)
       )
     }
   }
@@ -872,6 +873,7 @@ backend_rtf <- function(grid, file) {
     cellx_lines[[i]] <- paste0(
       other_segs,
       edge_seg,
+      cells[[i]]$shd %||% "",
       sprintf("\\cellx%d", as.integer(pos))
     )
   }
@@ -1360,7 +1362,18 @@ backend_rtf <- function(grid, file) {
 # map onto cell sides via the caller's choice (e.g. "header_top"
 # maps to the cell's top side).
 .rtf_chrome_border_seg <- function(cs, region, side, backend_default) {
-  triple <- .chrome_border_at(cs, region)
+  .rtf_border_seg_from_triple(
+    .chrome_border_at(cs, region),
+    side,
+    backend_default
+  )
+}
+
+# Build a `\clbrdr<side>...` cell-border fragment from a resolved
+# (style, width, color) triple. NULL falls back to the backend default
+# (solid -> the 0.5pt rule; otherwise `\brdrnone`); an explicit "none"
+# clears the edge.
+.rtf_border_seg_from_triple <- function(triple, side, backend_default) {
   letter <- substr(side, 1L, 1L)
   prefix <- paste0("\\clbrdr", letter)
   if (is.null(triple)) {
@@ -1383,6 +1396,18 @@ backend_rtf <- function(grid, file) {
   )
   twips <- max(1L, as.integer(round(as.numeric(triple$width) * 20)))
   paste0(prefix, style_tok, sprintf("\\brdrw%d", twips))
+}
+
+# Effective RTF top-border fragment for the topmost header row: the
+# outer-frame `outer_top` triple wins over the chrome `header_top` rule,
+# so `cells_table(side = "outer")` thickens the true table top (above the
+# column-header band) rather than the first body row.
+.rtf_header_top_seg <- function(cs, body_borders) {
+  ot <- if (is.list(body_borders)) body_borders[["outer_top"]] else NULL
+  if (!is.null(ot)) {
+    return(.rtf_border_seg_from_triple(ot, "top", "solid"))
+  }
+  .rtf_chrome_border_seg(cs, "header_top", "top", "solid")
 }
 
 # Emit one band row on the body `\cellx` grid. Each contiguous run of
@@ -1414,7 +1439,7 @@ backend_rtf <- function(grid, file) {
   surface_node <- .chrome_surface_at(cs, "header")
   surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
   shading <- .rtf_cell_shading(surface_node, colors)
-  top_tok <- .rtf_chrome_border_seg(cs, "header_top", "top", "solid")
+  top_tok <- .rtf_header_top_seg(cs, body_borders)
   bot_tok <- .rtf_chrome_border_seg(cs, "header_bottom", "bottom", "solid")
   halign <- if (
     is_style_node(surface_node) &&
@@ -1538,7 +1563,7 @@ backend_rtf <- function(grid, file) {
   surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
   shading <- .rtf_cell_shading(surface_node, colors)
   top_tok <- if (isTRUE(outer_top)) {
-    .rtf_chrome_border_seg(cs, "header_top", "top", "solid")
+    .rtf_header_top_seg(cs, body_borders)
   } else {
     "\\clbrdrt\\brdrnone"
   }
@@ -1826,11 +1851,12 @@ backend_rtf <- function(grid, file) {
       }
       shading <- .rtf_cell_shading(sn, colors)
       cellx_lines[[i]] <- paste0(
-        .rtf_border_seg("top", sn, "none"),
-        .rtf_border_seg("bottom", sn, bottom_default),
-        .rtf_border_seg("left", sn, "none"),
-        .rtf_border_seg("right", sn, "none"),
+        .rtf_border_seg("top", sn, "none", colors),
+        .rtf_border_seg("bottom", sn, bottom_default, colors),
+        .rtf_border_seg("left", sn, "none", colors),
+        .rtf_border_seg("right", sn, "none", colors),
         shading,
+        .rtf_cell_padding(sn),
         valign_tok,
         sprintf("\\cellx%d", as.integer(cellx[[i]]))
       )
@@ -2057,7 +2083,12 @@ backend_rtf <- function(grid, file) {
 #
 # Returns a fragment like `\clbrdrt\brdrs\brdrw10` (solid 0.5pt) or
 # `\clbrdrt\brdrnone` for the cleared case.
-.rtf_border_seg <- function(side, cell_style, backend_default = "none") {
+.rtf_border_seg <- function(
+  side,
+  cell_style,
+  backend_default = "none",
+  colors = NULL
+) {
   brd <- .effective_border(side, cell_style)
   letter <- substr(side, 1, 1)
   prefix <- paste0("\\clbrdr", letter)
@@ -2083,7 +2114,34 @@ backend_rtf <- function(grid, file) {
     "\\brdrs"
   )
   twips <- max(1L, as.integer(round(brd$width * 20)))
-  paste0(prefix, style_tok, sprintf("\\brdrw%d", twips))
+  paste0(
+    prefix,
+    style_tok,
+    sprintf("\\brdrw%d", twips),
+    .rtf_brdrcf(brd$color, colors)
+  )
+}
+
+# `\brdrcf<n>` colour token for a border, or "" when the colour is unset,
+# the default ink, or not registered in the colour table. The default ink
+# (`.tabular_ink`, the colour the engine stamps on every default rule) is
+# skipped so default borders render via Word's own black default and only
+# a genuinely custom border colour emits a token (no churn on the common
+# case). Keeps the border builders' colour handling in one place.
+.rtf_brdrcf <- function(color, colors) {
+  if (
+    is.null(colors) ||
+      is.null(color) ||
+      length(color) != 1L ||
+      is.na(color) ||
+      !nzchar(color) ||
+      identical(color, "currentColor") ||
+      identical(color, .tabular_ink)
+  ) {
+    return("")
+  }
+  idx <- colors$lookup(color)
+  if (is.na(idx)) "" else sprintf("\\brdrcf%d", idx)
 }
 
 # Row-level border segment (`\trbrdr<letter>`) from a manifest triple,
@@ -2420,6 +2478,21 @@ backend_rtf <- function(grid, file) {
   vals[!is.na(vals) & nzchar(vals)]
 }
 
+# Flatten one `chrome_style$surfaces` entry to a list of style_nodes. A
+# plain surface (title / header / footer / subgroup) is a single node;
+# the slot-keyed page bands (pagehead / pagefoot) are a `left/center/right`
+# list of nodes. Returns `list()` for anything else, so the colour / font
+# collectors register slot-level overrides, not just whole-surface ones.
+.rtf_surface_nodes <- function(node) {
+  if (is_style_node(node)) {
+    list(node)
+  } else if (is.list(node)) {
+    Filter(is_style_node, node)
+  } else {
+    list()
+  }
+}
+
 # Walk every style_node that might contribute a color to the
 # rendered document. Returns a deduplicated character vector of
 # "#RRGGBB" hex codes plus a `lookup(hex) -> integer` closure that
@@ -2436,16 +2509,36 @@ backend_rtf <- function(grid, file) {
     .rtf_valid_props(lapply(
       cell_styles,
       function(sn) {
-        if (is_style_node(sn)) c(sn@color, sn@background) else NULL
+        if (!is_style_node(sn)) {
+          return(NULL)
+        }
+        # Border colours equal to the default ink are NOT registered: the
+        # engine stamps the ink on every default rule, and emitting it would
+        # churn the colour table on every table. Only a genuinely custom
+        # border colour earns a colortbl slot (and a `\brdrcf` token).
+        border_cols <- c(
+          sn@border_top_color,
+          sn@border_bottom_color,
+          sn@border_left_color,
+          sn@border_right_color
+        )
+        border_cols <- border_cols[
+          !is.na(border_cols) &
+            border_cols != .tabular_ink &
+            border_cols != "currentColor"
+        ]
+        c(sn@color, sn@background, border_cols)
       }
     ))
   })
   if (is.list(cs) && is.list(cs$surfaces)) {
+    nodes <- unlist(
+      lapply(cs$surfaces, .rtf_surface_nodes),
+      recursive = FALSE
+    )
     buf[[length(buf) + 1L]] <- .rtf_valid_props(lapply(
-      cs$surfaces,
-      function(node) {
-        if (is_style_node(node)) c(node@color, node@background) else NULL
-      }
+      nodes,
+      function(node) c(node@color, node@background)
     ))
   }
   values <- unique(unlist(buf, use.names = FALSE))
@@ -2487,9 +2580,13 @@ backend_rtf <- function(grid, file) {
     ))
   })
   if (is.list(cs) && is.list(cs$surfaces)) {
+    nodes <- unlist(
+      lapply(cs$surfaces, .rtf_surface_nodes),
+      recursive = FALSE
+    )
     buf[[length(buf) + 1L]] <- .rtf_valid_props(lapply(
-      cs$surfaces,
-      function(node) if (is_style_node(node)) node@font_family else NULL
+      nodes,
+      function(node) node@font_family
     ))
   }
   # `\f0` (body) and `\f1` (mono) are POSITIONAL slots that must both

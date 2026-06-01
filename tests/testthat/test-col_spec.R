@@ -257,3 +257,12 @@ test_that("col_spec(usage = 'indent') is accepted alongside indent_by", {
   expect_identical(cs@usage, "indent")
   expect_identical(cs@indent_by, "depth")
 })
+
+# ---------------------------------------------------------------------
+# `usage = "id"` — fourth enum value, non-collapsing panel stub
+# ---------------------------------------------------------------------
+
+test_that("col_spec(usage = 'id') stores the new enum value", {
+  cs <- col_spec(usage = "id")
+  expect_identical(cs@usage, "id")
+})

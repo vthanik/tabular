@@ -275,3 +275,28 @@ test_that("engine_format() output composes with engine_decimal()", {
   expect_false(identical(aligned[, "placebo"], out$cells_text[, "placebo"]))
   expect_identical(aligned[, "variable"], out$cells_text[, "variable"])
 })
+
+# ---- preset(na_text=) fallback (#na-text) -------------------------------
+
+test_that("preset(na_text=) fills NA cells when col_spec omits na_text (#na-text)", {
+  d <- data.frame(x = c("a", NA), y = c(NA, "b"), stringsAsFactors = FALSE)
+  spec <- tabular(d) |>
+    cols(x = col_spec(), y = col_spec(na_text = "--")) |>
+    preset(na_text = "MISSING")
+  g <- as_grid(spec)@pages[[1L]]
+  # x has no per-column na_text -> the preset default fills the NA cell.
+  expect_true(g$cells_text[2L, "x"] == "MISSING")
+  # y sets na_text explicitly -> the per-column value wins over the preset.
+  expect_true(g$cells_text[1L, "y"] == "--")
+})
+
+test_that("preset(na_text=) renders on every backend (#na-text)", {
+  d <- data.frame(x = c("a", NA), stringsAsFactors = FALSE)
+  spec <- tabular(d) |> cols(x = col_spec()) |> preset(na_text = "MISSING")
+  for (ext in c("html", "tex", "rtf")) {
+    f <- withr::local_tempfile(fileext = paste0(".", ext))
+    emit(spec, f)
+    txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+    expect_true(grepl("MISSING", txt, fixed = TRUE), label = ext)
+  }
+})

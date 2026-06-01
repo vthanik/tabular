@@ -196,35 +196,36 @@ body_border_manifest <- function(spec) {
   # first / last cell of every row, LaTeX as `vline{}`. A per-cell stamp
   # only reaches body DATA rows, so the synthesised spanner-band /
   # blank-separator / group-header rows would gap the vertical edge (the
-  # original `rules = "frame"` defect). Outer TOP / BOTTOM stay per-cell
-  # here: they coincide with the chrome toprule / bottomrule at the same
-  # edge, so one line renders.
+  # original `rules = "frame"` defect). Outer TOP is ALSO structural: the
+  # table top is the column-header band's top rule (above the body), which a
+  # per-cell body stamp cannot reach, so each backend draws it from the
+  # manifest at the header-band top (HTML `thead tr:first-child th`, LaTeX
+  # `hline{1}`, RTF / DOCX topmost header row). Only outer BOTTOM stays
+  # per-cell: the last body row's bottom IS the table bottom, so the stamp
+  # coincides with the chrome bottomrule and one line renders.
   if (is.null(side) || identical(side, "outer")) {
-    for (s in c("top", "bottom")) {
-      triple <- .style_node_border_triple(node, s)
-      if (!is.null(triple)) {
-        cells_style <- .stamp_outer_edge_force(
-          cells_style,
-          visible_idx = visible_idx,
-          side = s,
-          triple = triple
-        )
-      }
-    }
-    return(cells_style)
-  }
-  if (side %in% c("outer_left", "outer_right")) {
-    # Structural-only (see comment above); the manifest carries it.
-    return(cells_style)
-  }
-  if (side %in% c("outer_top", "outer_bottom")) {
-    s <- sub("^outer_", "", side)
-    triple <- .style_node_border_triple(node, s)
+    triple <- .style_node_border_triple(node, "bottom")
     if (!is.null(triple)) {
       cells_style <- .stamp_outer_edge_force(
         cells_style,
         visible_idx = visible_idx,
-        side = s,
+        side = "bottom",
+        triple = triple
+      )
+    }
+    return(cells_style)
+  }
+  if (side %in% c("outer_left", "outer_right", "outer_top")) {
+    # Structural-only (see comment above); the manifest carries it.
+    return(cells_style)
+  }
+  if (identical(side, "outer_bottom")) {
+    triple <- .style_node_border_triple(node, "bottom")
+    if (!is.null(triple)) {
+      cells_style <- .stamp_outer_edge_force(
+        cells_style,
+        visible_idx = visible_idx,
+        side = "bottom",
         triple = triple
       )
     }

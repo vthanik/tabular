@@ -1413,6 +1413,110 @@ test_that("saf_demo golden pipeline matches the pinned word/document.xml snapsho
 })
 
 # ---------------------------------------------------------------------
+# Horizontal panels — one self-contained `<w:tbl>` per panel
+# ---------------------------------------------------------------------
+
+test_that("DOCX panels = 2 emit one self-contained <w:tbl> per panel", {
+  # 3 data cols + a group stub + an id stub -> panels = 2 splits the
+  # data 2 | 1, so the two panels have DIFFERENT column counts. Before
+  # the per-panel fix, `.render_docx_table` built the grid/header from
+  # panel 1's columns while the body walked every panel's rows, so
+  # panel 2's rows rendered under panel 1's grid (malformed table).
+  d <- data.frame(
+    grp = c("a", "b"),
+    rl = c("n", "Mean"),
+    c1 = 1:2,
+    c2 = 3:4,
+    c3 = 5:6
+  )
+  spec <- tabular(d) |>
+    cols(
+      grp = col_spec(
+        usage = "group",
+        group_display = "column",
+        label = "Char"
+      ),
+      rl = col_spec(usage = "id", label = "Stat")
+    ) |>
+    paginate(panels = 2L)
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  xml <- paste(
+    readLines(unz(out, "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+
+  # One `<w:tbl>` per panel, separated by a next-page section break.
+  # Two panels -> 2 `<w:sectPr>` (one in-paragraph break after panel 1
+  # + the body-level section for panel 2). No empty pageBreakBefore
+  # paragraph (it would render as a blank line above panel 2's title).
+  expect_identical(length(gregexpr("<w:tbl>", xml, fixed = TRUE)[[1L]]), 2L)
+  expect_identical(
+    length(gregexpr("<w:sectPr>", xml, fixed = TRUE)[[1L]]),
+    2L
+  )
+  expect_false(grepl("pageBreakBefore", xml, fixed = TRUE))
+
+  # Each panel's `<w:tblGrid>` matches its OWN column set: panel 1 =
+  # stub(2) + data(2) = 4 gridCols; panel 2 = stub(2) + data(1) = 3.
+  # The differing counts are the malformed-table regression guard.
+  grids <- regmatches(
+    xml,
+    gregexpr("<w:tblGrid>.*?</w:tblGrid>", xml, perl = TRUE)
+  )[[1L]]
+  gridcols <- vapply(
+    grids,
+    function(g) length(gregexpr("<w:gridCol", g, fixed = TRUE)[[1L]]),
+    integer(1L)
+  )
+  expect_identical(unname(gridcols), c(4L, 3L))
+
+  # The `usage = "id"` stub label repeats in BOTH panel tables.
+  expect_identical(length(gregexpr(">Stat<", xml, fixed = TRUE)[[1L]]), 2L)
+})
+
+test_that("DOCX panels = 1 emit a single <w:tbl> with no inter-panel break", {
+  d <- data.frame(grp = c("a", "b"), c1 = 1:2, c2 = 3:4)
+  spec <- tabular(d) |>
+    cols(grp = col_spec(usage = "group")) |>
+    paginate(panels = 1L)
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  xml <- paste(
+    readLines(unz(out, "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_identical(length(gregexpr("<w:tbl>", xml, fixed = TRUE)[[1L]]), 1L)
+  # Single panel -> one section (just the body-level sectPr), no break.
+  expect_identical(
+    length(gregexpr("<w:sectPr>", xml, fixed = TRUE)[[1L]]),
+    1L
+  )
+  expect_false(grepl("pageBreakBefore", xml, fixed = TRUE))
+})
+
+test_that("DOCX repeats the title block on every panel", {
+  # repeat_content defaults to include "titles", so the title block
+  # rides each panel's table as <w:tblHeader/> rows -- every panel
+  # page must carry the table number, not just panel 1.
+  d <- data.frame(grp = c("a", "b"), c1 = 1:2, c2 = 3:4, c3 = 5:6)
+  spec <- tabular(d, titles = c("RepeatTitleZ", "Demographics")) |>
+    cols(grp = col_spec(usage = "group", group_display = "column")) |>
+    paginate(panels = 2L)
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  xml <- paste(
+    readLines(unz(out, "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_identical(length(gregexpr("<w:tbl>", xml, fixed = TRUE)[[1L]]), 2L)
+  expect_identical(
+    length(gregexpr("RepeatTitleZ", xml, fixed = TRUE)[[1L]]),
+    2L
+  )
+})
+
+# ---------------------------------------------------------------------
 # chrome_style cascade — `style_template() |> style(.at = cells_*())`
 # must reach the DOCX output. Tests inspect the unzipped
 # word/document.xml so they survive across binary builds.
@@ -1976,4 +2080,65 @@ test_that("cells_pagehead(slot=) styles one slot + band border in DOCX (#thread-
   expect_match(hd, "<w:bottom w:space", fixed = TRUE)
   # header1.xml stays well-formed (rPr canonical order, valid tcBorders).
   expect_no_error(xml2::read_xml(file.path(ud, "word/header1.xml")))
+})
+
+# ---- DOCX chrome surfaces honor per-surface text styling (#docx-chrome) ---
+
+test_that("DOCX title / footnote / header honor style() text overrides (#docx-chrome)", {
+  d <- data.frame(
+    grp = c("A", "A"),
+    x = c("1", "2"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(d, titles = "MYTITLE", footnotes = "MYFOOT") |>
+    cols(
+      grp = col_spec(
+        usage = "group",
+        group_display = "column",
+        group_skip = TRUE,
+        label = "G"
+      ),
+      x = col_spec(label = "MYHEADER")
+    ) |>
+    style(color = "#FF0000", italic = TRUE, .at = cells_title()) |>
+    style(color = "#00FF00", .at = cells_footnotes()) |>
+    style(color = "#0000FF", .at = cells_headers())
+  f <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, f)
+  dir <- withr::local_tempdir()
+  utils::unzip(f, exdir = dir)
+  parts <- list.files(
+    dir,
+    pattern = "\\.xml$",
+    recursive = TRUE,
+    full.names = TRUE
+  )
+  all_xml <- paste(
+    unlist(lapply(parts, function(p) {
+      paste(readLines(p, warn = FALSE), collapse = "\n")
+    })),
+    collapse = "\n"
+  )
+  expect_true(grepl("w:color w:val=\"FF0000\"", all_xml)) # title
+  expect_true(grepl("w:i/>", all_xml, fixed = TRUE)) # title italic
+  expect_true(grepl("w:color w:val=\"00FF00\"", all_xml)) # footnote
+  expect_true(grepl("w:color w:val=\"0000FF\"", all_xml)) # header
+})
+
+# ---- DOCX page-chrome slot background (#page-chrome) --------------------
+
+test_that("DOCX pagehead slot honors background shading (#page-chrome)", {
+  spec <- tabular(data.frame(x = c("1", "2"))) |>
+    cols(x = col_spec(label = "X")) |>
+    preset(pagehead = list(left = "PH")) |>
+    style(background = "#FFFF00", .at = cells_pagehead(slot = "left"))
+  f <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, f)
+  dir <- withr::local_tempdir()
+  utils::unzip(f, exdir = dir)
+  hdr <- paste(
+    readLines(file.path(dir, "word", "header1.xml"), warn = FALSE),
+    collapse = "\n"
+  )
+  expect_true(grepl("<w:shd", hdr) && grepl("FFFF00", hdr))
 })

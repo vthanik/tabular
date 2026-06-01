@@ -479,3 +479,73 @@ test_that("a wrong-length cells_group_headers(where = ) raises tabular_error_inp
     class = "tabular_error_input"
   )
 })
+
+# ---- pretext / posttext affixes (cross-backend) -------------------------
+
+mk_affix_spec <- function() {
+  d <- data.frame(
+    grp = c("Age", "Age"),
+    stat = c("Mean", "SD"),
+    a = c("75.2", "8.59"),
+    stringsAsFactors = FALSE
+  )
+  tabular(d) |>
+    cols(
+      grp = col_spec(
+        usage = "group",
+        group_display = "column",
+        group_skip = TRUE,
+        label = "C",
+        align = "left"
+      ),
+      stat = col_spec(usage = "id", label = "Stat", align = "left"),
+      a = col_spec(label = "A", align = "right")
+    ) |>
+    style(pretext = "PFX ", .at = cells_body(j = "stat")) |>
+    style(posttext = " SFX", .at = cells_body(j = "a"))
+}
+
+test_that("pretext/posttext wrap cell text and AST (#affixes)", {
+  g <- as_grid(mk_affix_spec())@pages[[1L]]
+  # The affix lands on the resolved cells_text matrix.
+  expect_true(any(grepl("PFX Mean", g$cells_text, fixed = TRUE)))
+  expect_true(any(grepl("75.2 SFX", g$cells_text, fixed = TRUE)))
+  # And on the parsed AST so AST-driven backends see it too.
+  stat_ast <- g$cells_ast[[
+    which(g$cells_text[, "stat"] == "PFX Mean"),
+    "stat"
+  ]]
+  ast_text <- paste(
+    vapply(stat_ast@runs, function(r) r$text %||% "", character(1L)),
+    collapse = ""
+  )
+  expect_true(grepl("PFX Mean", ast_text, fixed = TRUE))
+})
+
+test_that("pretext/posttext render on every paged + continuous backend (#affixes)", {
+  spec <- mk_affix_spec()
+  for (ext in c("html", "tex", "rtf")) {
+    f <- withr::local_tempfile(fileext = paste0(".", ext))
+    emit(spec, f)
+    txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+    expect_true(
+      grepl("PFX Mean", txt, fixed = TRUE),
+      label = paste(ext, "pretext")
+    )
+    expect_true(
+      grepl("75.2 SFX", txt, fixed = TRUE),
+      label = paste(ext, "posttext")
+    )
+  }
+  # DOCX: assert against the unzipped document.xml.
+  fz <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, fz)
+  dir <- withr::local_tempdir()
+  utils::unzip(fz, exdir = dir)
+  docx <- paste(
+    readLines(file.path(dir, "word", "document.xml"), warn = FALSE),
+    collapse = "\n"
+  )
+  expect_true(grepl("PFX Mean", docx, fixed = TRUE))
+  expect_true(grepl("75.2 SFX", docx, fixed = TRUE))
+})

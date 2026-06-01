@@ -6,22 +6,24 @@
 # email, and in `file://` previews).
 #
 # Output layout — one continuous document. Titles emit as
-# `<h1 class="tabular-title">` above the table (once). One
-# `<table class="tabular-table">` per horizontal panel (the
-# common case is a single panel) carries one `<colgroup>`, one
-# `<thead>` (multi-row band stack + column-labels row), and one
-# `<tbody>` whose rows concatenate every vertical page slice.
-# Between vertical pages, an invisible `<tr class="tabular-page-
-# break-row">` rides in the `<tbody>` — `display: none` on
-# screen, `page-break-before: always` under `@media print`.
-# Browsers natively repeat `<thead>` across printed page breaks
-# of a single `<table>`, so no per-page header plumbing is
-# needed. Footnotes emit as `<p class="tabular-footnote">` once
-# below the table. When `total_panels > 1` (driven by
-# `paginate(panels = N)`), panel-tables stack inside `<body>`
-# and a single `@media print` rule on `.tabular-table +
-# .tabular-table` forces each subsequent panel onto a new
-# printed page.
+# `<h1 class="tabular-title">` above the table (once). HTML is a
+# continuous, scrollable medium with no page width, so a
+# `paginate(panels = N)` request never splits: the engine collapses
+# it to ONE `<table class="tabular-table">` (all columns, original
+# order, stub once), and the would-be panel boundaries surface as a
+# `<th class="tabular-panel-note">` spanner row at the top of the
+# `<thead>` (`.render_html_panel_note_row`). The table carries one
+# `<colgroup>`, one `<thead>` (optional panel-note row + multi-row
+# band stack + column-labels row), and one `<tbody>` whose rows
+# concatenate every vertical page slice. Between vertical pages, an
+# invisible `<tr class="tabular-page-break-row">` rides in the
+# `<tbody>` — `display: none` on screen, `page-break-before: always`
+# under `@media print`. Browsers natively repeat `<thead>` across
+# printed page breaks of a single `<table>`, so no per-page header
+# plumbing is needed. Footnotes emit as `<p class="tabular-footnote">`
+# once below the table. The `@media print` rule on `.tabular-table +
+# .tabular-table` is now dead for the common single-table case (kept;
+# harmless adjacent-sibling selector with no match).
 #
 # HTML gives us real `colspan` for header bands — much cleaner
 # than the GFM workaround in `backend_md.R`. For each band-row
@@ -577,7 +579,8 @@ backend_html <- function(grid, file) {
     col_names_visible = col_names_visible,
     cols = cols,
     preset = preset,
-    cs = cs
+    cs = cs,
+    panel_spans = meta$panel_spans
   )
   out <- c(out, thead)
 
@@ -810,9 +813,17 @@ backend_html <- function(grid, file) {
   col_names_visible,
   cols,
   preset = NULL,
-  cs = NULL
+  cs = NULL,
+  panel_spans = NULL
 ) {
   out <- "<thead>"
+  # Panel-spanner note (continuous backends, multi-panel only): one cell
+  # per panel over its data columns, blank over the stub. Sits ABOVE the
+  # user header bands. character(0) for single-panel / non-continuous.
+  out <- c(
+    out,
+    .render_html_panel_note_row(panel_spans, col_names_visible, cs)
+  )
   band_rows <- .render_html_header_bands(headers, col_names_visible, cs)
   out <- c(out, band_rows)
   out <- c(
@@ -826,6 +837,51 @@ backend_html <- function(grid, file) {
     )
   )
   c(out, "</thead>")
+}
+
+# Render the panel-spanner note row for a collapsed continuous table.
+# `panel_spans` (from the engine) lists each would-be panel's non-stub
+# columns; we paint "Panel i" over those columns and leave the stub
+# columns blank, then collapse to `<th colspan>` runs exactly like
+# `.render_html_header_bands`. Returns character(0) when `panel_spans`
+# is NULL/empty (single-panel or non-continuous render), so the
+# `<thead>` is byte-identical to today in the common case.
+.render_html_panel_note_row <- function(
+  panel_spans,
+  col_names_visible,
+  cs = NULL
+) {
+  if (is.null(panel_spans) || length(panel_spans) == 0L) {
+    return(character())
+  }
+  surface_node <- .chrome_surface_at(cs, "header")
+  surface_style <- .html_chrome_inline_style(surface_node)
+  labels <- rep(NA_character_, length(col_names_visible))
+  for (span in panel_spans) {
+    pos <- match(span$col_names, col_names_visible)
+    pos <- pos[!is.na(pos)]
+    labels[pos] <- span$label
+  }
+  runs <- .group_contiguous_runs(labels)
+  cells <- vapply(
+    runs,
+    function(run) {
+      lbl <- run$value
+      span <- run$length
+      if (is.na(lbl)) {
+        sprintf("<th colspan=\"%d\"%s></th>", span, surface_style)
+      } else {
+        sprintf(
+          "<th colspan=\"%d\" class=\"tabular-band tabular-panel-note\"%s>%s</th>",
+          span,
+          surface_style,
+          .html_escape(lbl)
+        )
+      }
+    },
+    character(1L)
+  )
+  paste0("<tr>", paste(cells, collapse = ""), "</tr>")
 }
 
 # Render multi-level header bands using real `colspan`. For each
@@ -982,6 +1038,21 @@ backend_html <- function(grid, file) {
   inner <- .render_html_inline(subgroup_line_ast)
   surface_node <- .chrome_surface_at(cs, "subgroup")
   surface_style <- .html_chrome_inline_style(surface_node)
+  # `style(border_*, .at = cells_subgroup_labels())` lowers to the chrome
+  # subgroup_top / subgroup_bottom regions (RTF reads these); fold their
+  # decls into the banner cell's inline style.
+  border_decls <- c(
+    .html_border_decl("top", .chrome_border_at(cs, "subgroup_top")),
+    .html_border_decl("bottom", .chrome_border_at(cs, "subgroup_bottom"))
+  )
+  if (length(border_decls) > 0L) {
+    border_str <- paste(border_decls, collapse = " ")
+    surface_style <- if (nzchar(surface_style)) {
+      sub("\"$", paste0("; ", border_str, "\""), surface_style)
+    } else {
+      sprintf(" style=\"%s\"", border_str)
+    }
+  }
   halign <- if (
     is_style_node(surface_node) &&
       length(surface_node@halign) == 1L &&
@@ -1192,6 +1263,32 @@ backend_html <- function(grid, file) {
     "solid"
   )
   sprintf("border-%s: %gpt %s %s;", side, brd$width, css_style, brd$color)
+}
+
+# `.tabular-table th/td` padding CSS. The default `cell_padding` keeps the
+# responsive rem-based padding (comfortable on screen and the baseline the
+# indent `calc(.6rem + ...)` builds on); an explicit `preset(cell_padding
+# = ...)` override emits the four sides in pt so the knob reaches HTML like
+# the paged backends. Compared against the factory default so the common
+# case is byte-unchanged.
+.html_cell_padding_css <- function(preset) {
+  rem_default <- ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }"
+  if (!is_preset_spec(preset)) {
+    return(rem_default)
+  }
+  cp <- as.numeric(preset@cell_padding)
+  default_cp <- as.numeric(preset_spec()@cell_padding)
+  if (length(cp) == length(default_cp) && isTRUE(all.equal(cp, default_cp))) {
+    return(rem_default)
+  }
+  s <- .cell_padding_sides(preset)
+  sprintf(
+    ".tabular-table th, .tabular-table td { padding: %gpt %gpt %gpt %gpt; }",
+    s[["top"]],
+    s[["right"]],
+    s[["bottom"]],
+    s[["left"]]
+  )
 }
 
 # Build one structural CSS rule (`<selector> { border-<side>: ... }`)
@@ -1554,7 +1651,12 @@ backend_html <- function(grid, file) {
     .html_structural_rule(
       ".tabular-table thead tr:first-child th",
       "top",
-      .chrome_border_at(cs, "header_top")
+      # The outer-frame top rides the table top = the column-header band's
+      # top rule, so `style(.at = cells_table(side = "outer"))` thickens the
+      # true top edge. Falls back to the chrome `header_top` rule when no
+      # outer frame is set.
+      (if (is.list(body_borders)) body_borders[["outer_top"]] else NULL) %||%
+        .chrome_border_at(cs, "header_top")
     ),
     .html_structural_rule(
       ".tabular-table thead tr:last-child th",
@@ -1650,7 +1752,7 @@ backend_html <- function(grid, file) {
       ".tabular-table { border-collapse: collapse; font-size: %gpt; margin: 0 auto; }",
       fs
     ),
-    ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }",
+    .html_cell_padding_css(preset),
     ".tabular-table td { text-align: left; vertical-align: top; }",
     # Top rule sits above the entire thead block — scoped to the
     # FIRST thead row only. A blanket `thead th { border-top }` would

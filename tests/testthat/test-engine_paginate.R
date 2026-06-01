@@ -237,6 +237,89 @@ test_that("engine_paginate() cross-product vertical x horizontal", {
   expect_gte(plan$total_pages, 2L)
 })
 
+test_that("engine_paginate() repeats usage = 'id' columns on every panel", {
+  # A non-group stub (the "Statistic" column) must repeat per panel
+  # like a group column, but it never collapses in the body.
+  df <- data.frame(
+    g = 1:4,
+    stat = 5:8,
+    x1 = 1:4,
+    x2 = 1:4,
+    x3 = 1:4,
+    x4 = 1:4
+  )
+  spec <- tabular(df) |>
+    cols(
+      g = col_spec(usage = "group", group_display = "column"),
+      stat = col_spec(usage = "id")
+    ) |>
+    paginate(panels = 2L)
+  plan <- tabular:::engine_paginate(spec)
+  expect_identical(plan$total_panels, 2L)
+  # Stub = g (1) + stat (2) repeats on both panels; data 3..6 split.
+  expect_identical(plan$pages[[1]]$col_indices, c(1L, 2L, 3L, 4L))
+  expect_identical(plan$pages[[2]]$col_indices, c(1L, 2L, 5L, 6L))
+})
+
+test_that("engine_paginate() records panel_spans excluding the stub", {
+  df <- data.frame(
+    g = 1:4,
+    stat = 5:8,
+    x1 = 1:4,
+    x2 = 1:4,
+    x3 = 1:4,
+    x4 = 1:4
+  )
+  spec <- tabular(df) |>
+    cols(
+      g = col_spec(usage = "group", group_display = "column"),
+      stat = col_spec(usage = "id")
+    ) |>
+    paginate(panels = 2L)
+  plan <- tabular:::engine_paginate(spec)
+  expect_length(plan$panel_spans, 2L)
+  expect_identical(plan$panel_spans[[1L]]$label, "Panel 1")
+  expect_identical(plan$panel_spans[[1L]]$col_names, c("x1", "x2"))
+  expect_identical(plan$panel_spans[[2L]]$label, "Panel 2")
+  expect_identical(plan$panel_spans[[2L]]$col_names, c("x3", "x4"))
+})
+
+test_that("engine_paginate(continuous = TRUE) collapses to one all-columns page", {
+  df <- data.frame(
+    g = 1:4,
+    stat = 5:8,
+    x1 = 1:4,
+    x2 = 1:4,
+    x3 = 1:4,
+    x4 = 1:4
+  )
+  spec <- tabular(df) |>
+    cols(
+      g = col_spec(usage = "group", group_display = "column"),
+      stat = col_spec(usage = "id")
+    ) |>
+    paginate(panels = 2L)
+  plan <- tabular:::engine_paginate(spec, continuous = TRUE)
+  # One panel page, full column set in original order.
+  panel_idx <- vapply(plan$pages, function(p) p$panel_index, integer(1L))
+  expect_identical(length(unique(panel_idx)), 1L)
+  expect_identical(plan$pages[[1L]]$col_indices, 1:6)
+  # total_panels still reports the logical (requested) count, and
+  # panel_spans is retained for the continuous-backend header note.
+  expect_identical(plan$total_panels, 2L)
+  expect_length(plan$panel_spans, 2L)
+})
+
+test_that("engine_paginate() reports panel_spans = NULL for a single panel", {
+  df <- data.frame(g = 1:3, x = 4:6, y = 7:9)
+  spec <- tabular(df) |>
+    cols(g = col_spec(usage = "group")) |>
+    paginate(panels = 1L)
+  plan <- tabular:::engine_paginate(spec, continuous = TRUE)
+  expect_null(plan$panel_spans)
+  expect_identical(plan$total_panels, 1L)
+})
+
 test_that("engine_paginate() preserves a user continuation marker", {
   spec <- make_paginated_spec(
     30L,

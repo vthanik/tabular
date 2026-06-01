@@ -266,9 +266,18 @@ as_grid <- function(spec) {
 # continuous Word table per panel with `\trhdr` repeating header rows;
 # the LaTeX backend emits one `longtblr` per panel (tabularray paginates
 # the body, `rowhead` repeats the header band, and a keep-with-next mask
-# drives `\\*`); DOCX will reuse this hook. Every other backend (and
+# drives `\\*`); DOCX reuses this hook, emitting one `<w:tbl>` per panel
+# with Word repeating the `<w:tblHeader/>` rows. Every other backend (and
 # `as_grid()` with `format = NA`) keeps tabular's estimated vertical split.
-.native_pagination_formats <- c("rtf", "latex")
+.native_pagination_formats <- c("rtf", "latex", "docx")
+
+# Continuous, scrollable backends have no fixed page width, so a
+# horizontal `panels = N` split is meaningless: the engine collapses it
+# to one all-columns table (stub once, original order) and reports the
+# would-be boundaries via `panel_spans` for a header note. HTML and
+# Markdown only. `as_grid()` (format = NA) is neither native nor
+# continuous, so introspection still shows the full split.
+.continuous_formats <- c("html", "md")
 
 # Compose every engine_* phase. Returns a fully populated
 # `tabular_grid`. `format` is stamped into metadata so emit() can
@@ -335,6 +344,13 @@ as_grid <- function(spec) {
   # alignment). One character row per source data row, every
   # column from `names(spec@data)`.
   data_cells_text <- fmt$cells_text
+
+  # Apply per-cell pretext / posttext literal decorations from the
+  # resolved style cascade. Done after the `data_file` snapshot (so the
+  # QC artefact stays decoration-free) and before engine_group_display
+  # (so the affix flows through repeat-suppression / indent / header
+  # injection and is measured by engine_decimal + column widths).
+  fmt <- .apply_affixes(fmt, style_mat, call = call)
 
   # Apply col_spec@group_display semantics. Header_row mode
   # splices section-header rows above each group-variable
@@ -419,12 +435,15 @@ as_grid <- function(spec) {
     cells_style = style_mat
   )
 
-  # Native-pagination backends (RTF/Word, DOCX later) receive an unsplit
-  # grid: one vertical page per panel, so Word paginates the body and the
-  # `\trhdr` header repeats natively. `as_grid()` (format = NA) stays
-  # non-native (split pages) for inspection.
+  # Native-pagination backends (RTF/Word, LaTeX, DOCX) receive an unsplit
+  # grid: one vertical page per panel, so the consumer paginates the body
+  # and the `\trhdr` / `<w:tblHeader/>` header repeats natively.
+  # Continuous backends (HTML / Markdown) collapse the horizontal panel
+  # split into one all-columns table + a header note. `as_grid()`
+  # (format = NA) is neither, so it keeps the full split for inspection.
   native <- isTRUE(format %in% .native_pagination_formats)
-  pag <- engine_paginate(spec, native = native)
+  continuous <- isTRUE(format %in% .continuous_formats)
+  pag <- engine_paginate(spec, native = native, continuous = continuous)
 
   pages <- .build_pages(
     pag = pag,
@@ -499,6 +518,7 @@ as_grid <- function(spec) {
       rows_per_page = pag$rows_per_page,
       total_pages = pag$total_pages,
       total_panels = pag$total_panels,
+      panel_spans = pag$panel_spans,
       keep_with_next = pag$keep_with_next,
       repeat_titles = pag$repeat_titles,
       repeat_headers = pag$repeat_headers,
@@ -525,6 +545,55 @@ as_grid <- function(spec) {
       subgroup_runtime = runtime
     )
   )
+}
+
+# Prepend `pretext` / append `posttext` to every cell whose resolved
+# style node carries one. Updates BOTH the character matrix (consumed by
+# every backend's plain-cell path + engine_decimal + col widths) and the
+# AST matrix (consumed when a cell carries md() / html() runs). Affixes
+# may themselves be md() / html()-wrapped: the text path strips the
+# inline marker so width / decimal measure the displayed glyphs, while
+# the AST path parses each affix to its own runs and splices them on.
+# `style_mat` is the post-engine_borders matrix, index-aligned 1:1 with
+# `fmt$cells_text` / `fmt$cells_ast` (same shape + column dimnames).
+.apply_affixes <- function(fmt, style_mat, call) {
+  ct <- fmt$cells_text
+  ca <- fmt$cells_ast
+  if (is.null(style_mat) || nrow(ct) == 0L || ncol(ct) == 0L) {
+    return(fmt)
+  }
+  for (j in seq_len(ncol(ct))) {
+    for (i in seq_len(nrow(ct))) {
+      sn <- style_mat[[i, j]]
+      if (!is_style_node(sn)) {
+        next
+      }
+      pre <- sn@pretext
+      post <- sn@posttext
+      has_pre <- length(pre) == 1L && !is.na(pre)
+      has_post <- length(post) == 1L && !is.na(post)
+      if (!has_pre && !has_post) {
+        next
+      }
+      if (has_pre) {
+        ct[i, j] <- paste0(.strip_inline_marker(pre), ct[[i, j]])
+      }
+      if (has_post) {
+        ct[i, j] <- paste0(ct[[i, j]], .strip_inline_marker(post))
+      }
+      runs <- ca[[i, j]]@runs
+      if (has_pre) {
+        runs <- c(parse_inline(pre, call = call)@runs, runs)
+      }
+      if (has_post) {
+        runs <- c(runs, parse_inline(post, call = call)@runs)
+      }
+      ca[[i, j]] <- inline_ast(runs = runs)
+    }
+  }
+  fmt$cells_text <- ct
+  fmt$cells_ast <- ca
+  fmt
 }
 
 # Stamp per-group subgroup runtime onto every page in `pages` and

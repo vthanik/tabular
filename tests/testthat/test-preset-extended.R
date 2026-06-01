@@ -270,7 +270,7 @@ test_that(".extract_template_knobs picks up deliberate scalar overrides only", {
 # engine_borders — body-region layer stamping onto cells_style
 # ---------------------------------------------------------------------
 
-test_that("engine_borders stamps outer top/bottom per-cell, L/R via manifest", {
+test_that("engine_borders stamps outer bottom per-cell, top/L/R via manifest", {
   spec <- tabular(data.frame(x = 1, y = 2)) |>
     style(
       border = brdr("thin", "solid", "#000"),
@@ -281,14 +281,16 @@ test_that("engine_borders stamps outer top/bottom per-cell, L/R via manifest", {
   cs <- page1$cells_style
   c1 <- cs[[1, "x"]]
   c2 <- cs[[1, "y"]]
-  # Top / bottom are stamped per-cell.
-  expect_identical(c1@border_top_style, "solid")
+  # Bottom is stamped per-cell (last body row = table bottom).
   expect_identical(c1@border_bottom_style, "solid")
-  # Left / right are structural (drawn by backends from the manifest so
-  # they span the synthesised special rows), not per-cell stamps.
+  # Top / left / right are structural (drawn by backends from the manifest
+  # so the edges span the synthesised special rows + the header band),
+  # not per-cell stamps.
+  expect_true(is.na(c1@border_top_style))
   expect_true(is.na(c1@border_left_style))
   expect_true(is.na(c2@border_right_style))
   man <- tabular:::body_border_manifest(spec)
+  expect_identical(man$outer_top$style, "solid")
   expect_identical(man$outer_left$style, "solid")
   expect_identical(man$outer_right$style, "solid")
 })

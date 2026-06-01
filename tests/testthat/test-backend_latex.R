@@ -1679,3 +1679,15 @@ test_that("cells_pagehead band border drives headrulewidth + per-slot props in L
   # The footer band, unset, keeps 0pt.
   expect_match(tex, "\\renewcommand{\\footrulewidth}{0pt}", fixed = TRUE)
 })
+
+# ---- LaTeX body asymmetric vertical padding (#cell-padding) -------------
+
+test_that("LaTeX body honors padding_bottom independently via belowsep (#cell-padding)", {
+  spec <- tabular(data.frame(x = c("1", "2"))) |>
+    cols(x = col_spec(label = "X")) |>
+    style(padding_bottom = 20, .at = cells_body())
+  f <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, f)
+  tex <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_true(grepl("belowsep=20pt", tex, fixed = TRUE))
+})
