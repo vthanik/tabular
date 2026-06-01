@@ -1,6 +1,5 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://vthanik.github.io/tabular/404.html</loc></url>
-<url><loc>https://vthanik.github.io/tabular/CLAUDE.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/LICENSE-text.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/LICENSE.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/articles/architecture.html</loc></url>
@@ -18,7 +17,6 @@
 <url><loc>https://vthanik.github.io/tabular/authors.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/index.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/news/index.html</loc></url>
-<url><loc>https://vthanik.github.io/tabular/parity-share-sheet.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/reference/as.tags.tabular_spec.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/reference/as_grid.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/reference/brdr.html</loc></url>

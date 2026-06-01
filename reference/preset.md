@@ -614,7 +614,7 @@ tabular(
 #>   @top-right { content: "Page " counter(page) " of " counter(pages); }
 #>   @bottom-left { content: "<interactive>"; }
 #>   @bottom-center { content: ""; }
-#>   @bottom-right { content: "01JUN2026 17:54:18"; }
+#>   @bottom-right { content: "01JUN2026 18:04:12"; }
 #> }
 #> </style>
 #> <div id="tabular_HwmYEz3cqG" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><header class="tabular-page-header">
@@ -704,7 +704,7 @@ tabular(
 #> </div>
 #> <footer class="tabular-page-footer">
 #>   <div class="tabular-page-footer-left">&lt;interactive&gt;</div>
-#>   <div class="tabular-page-footer-right">01JUN2026 17:54:18</div>
+#>   <div class="tabular-page-footer-right">01JUN2026 18:04:12</div>
 #> </footer></div>
 
 # Reset the session default so subsequent examples / R sessions
