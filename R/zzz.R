@@ -8,6 +8,14 @@
 # environments.
 
 .onLoad <- function(libname, pkgname) {
+  # Activate S7 methods. `print` for a tabular_spec is an S7 method on
+  # the base::print generic (R/print.R). Methods on a generic owned by
+  # another package only register at install time when the defining
+  # package calls this in its load hook; without it, `print(spec)`
+  # falls back to S7's default struct dump after install (devtools'
+  # load_all registers S7 methods itself, which masks the omission).
+  S7::methods_register()
+
   # `S7::method(print, tabular_spec) <- ...` in R/print.R imports
   # `print` into tabular's namespace as a local binding. NAMESPACE's
   # `S3method(print, <class>)` then registers against that local
