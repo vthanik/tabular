@@ -420,20 +420,6 @@ smoke test.
   : Vital-signs subgroup summary by Sex and Age Group
 - [`saf_vital`](https://vthanik.github.io/tabular/reference/saf_vital.md)
   : Vital-signs summary
-- [`tabular_classes`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`.col_spec_class`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`header_node`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`sort_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`subgroup_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`style_node`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`style_layer`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`style_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`.repeat_content_values`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`preset_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`tabular_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`inline_ast`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  [`tabular_grid`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
-  : tabular S7 classes
 
 # Articles
 

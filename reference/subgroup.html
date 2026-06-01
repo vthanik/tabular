@@ -195,54 +195,54 @@ time. Users do not restate <code>col_spec(visible = FALSE)</code> inside
 <span class="r-in"><span>  <span class="fu"><a href="sort_rows.html">sort_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"row_type"</span>, <span class="st">"n_total"</span><span class="op">)</span>, descending <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">FALSE</span>, <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">subgroup</span><span class="op">(</span>by <span class="op">=</span> <span class="st">"row_type"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-content { width: 100%; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-pad { margin: 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table th, #tabular-4ccc32dbff .tabular-table td { padding: .35rem .6rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table td { text-align: left; vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table tbody tr td { border-top: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-band { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-subgroup-label { font-weight: 600; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-blank-row td { padding: .25rem .6rem; border: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table thead th.text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table thead th.text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-table thead th.text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .valign-top { vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .valign-middle { vertical-align: middle; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .valign-bottom { vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-empty { font-style: italic; color: #6c757d; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-page-break-row { display: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-page-header, #tabular-4ccc32dbff .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-page-header { margin-bottom: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-page-footer { margin-top: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-page-header-left, #tabular-4ccc32dbff .tabular-page-footer-left { flex: 1; text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-page-header-center, #tabular-4ccc32dbff .tabular-page-footer-center { flex: 1; text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-4ccc32dbff .tabular-page-header-right, #tabular-4ccc32dbff .tabular-page-footer-right { flex: 1; text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> @media print { #tabular-4ccc32dbff .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-4ccc32dbff .tabular-table tr { page-break-inside: avoid; } #tabular-4ccc32dbff .tabular-page-header, #tabular-4ccc32dbff .tabular-page-footer { display: none; } #tabular-4ccc32dbff .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-4ccc32dbff .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-4ccc32dbff .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-pad { margin: 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table th, #tabular-d1273b0db5 .tabular-table td { padding: .35rem .6rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table td { text-align: left; vertical-align: top; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table tbody tr td { border-top: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-band { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-subgroup-label { font-weight: 600; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-blank-row td { padding: .25rem .6rem; border: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .text-left { text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .text-center { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .text-right { text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table thead th.text-left { text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table thead th.text-center { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-table thead th.text-right { text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .valign-top { vertical-align: top; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .valign-middle { vertical-align: middle; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .valign-bottom { vertical-align: bottom; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-empty { font-style: italic; color: #6c757d; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-page-break-row { display: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-page-header, #tabular-d1273b0db5 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-page-header { margin-bottom: 1rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-page-footer { margin-top: 1rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-page-header-left, #tabular-d1273b0db5 .tabular-page-footer-left { flex: 1; text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-page-header-center, #tabular-d1273b0db5 .tabular-page-footer-center { flex: 1; text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-d1273b0db5 .tabular-page-header-right, #tabular-d1273b0db5 .tabular-page-footer-right { flex: 1; text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> @media print { #tabular-d1273b0db5 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-d1273b0db5 .tabular-table tr { page-break-inside: avoid; } #tabular-d1273b0db5 .tabular-page-header, #tabular-d1273b0db5 .tabular-page-footer { display: none; } #tabular-d1273b0db5 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-d1273b0db5 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-d1273b0db5 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div id="tabular-4ccc32dbff" class="tabular-doc" style="overflow-x:auto;max-width:100%;"&gt;&lt;div class="tabular-content"&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div id="tabular-d1273b0db5" class="tabular-doc" style="overflow-x:auto;max-width:100%;"&gt;&lt;div class="tabular-content"&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Table 14.3.1&lt;/h1&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Adverse Events by SOC and Preferred Term&lt;/h1&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Safety Population (N=254)&lt;/h1&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div class="tabular-table-wrap"&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;table class="tabular-table" style="width:100%"&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;table class="tabular-table"&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;thead&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;th&gt;SOC / PT&lt;/th&gt;&lt;th&gt;soc_n&lt;/th&gt;&lt;th class="text-center"&gt;Placebo&lt;/th&gt;&lt;th class="text-center"&gt;Drug 50&lt;/th&gt;&lt;th class="text-center"&gt;Drug 100&lt;/th&gt;&lt;th class="text-center"&gt;Total&lt;/th&gt;&lt;/tr&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/thead&gt;</span>
@@ -343,52 +343,52 @@ time. Users do not restate <code>col_spec(visible = FALSE)</code> inside
 <span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">subgroup</span><span class="op">(</span>by <span class="op">=</span> <span class="st">"sex"</span>, label <span class="op">=</span> <span class="st">"Sex: {sex} (N = {sex_n})"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-content { width: 100%; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-pad { margin: 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table th, #tabular-5d3441a70e .tabular-table td { padding: .35rem .6rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table td { text-align: left; vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table tbody tr td { border-top: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-band { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-subgroup-label { font-weight: 600; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-blank-row td { padding: .25rem .6rem; border: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table thead th.text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table thead th.text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-table thead th.text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .valign-top { vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .valign-middle { vertical-align: middle; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .valign-bottom { vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-empty { font-style: italic; color: #6c757d; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-page-break-row { display: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-page-header, #tabular-5d3441a70e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-page-header { margin-bottom: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-page-footer { margin-top: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-page-header-left, #tabular-5d3441a70e .tabular-page-footer-left { flex: 1; text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-page-header-center, #tabular-5d3441a70e .tabular-page-footer-center { flex: 1; text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-5d3441a70e .tabular-page-header-right, #tabular-5d3441a70e .tabular-page-footer-right { flex: 1; text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> @media print { #tabular-5d3441a70e .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-5d3441a70e .tabular-table tr { page-break-inside: avoid; } #tabular-5d3441a70e .tabular-page-header, #tabular-5d3441a70e .tabular-page-footer { display: none; } #tabular-5d3441a70e .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-5d3441a70e .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-5d3441a70e .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-pad { margin: 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table th, #tabular-1f88c49413 .tabular-table td { padding: .35rem .6rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table td { text-align: left; vertical-align: top; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table tbody tr td { border-top: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-band { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-subgroup-label { font-weight: 600; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-blank-row td { padding: .25rem .6rem; border: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .text-left { text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .text-center { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .text-right { text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table thead th.text-left { text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table thead th.text-center { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-table thead th.text-right { text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .valign-top { vertical-align: top; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .valign-middle { vertical-align: middle; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .valign-bottom { vertical-align: bottom; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-empty { font-style: italic; color: #6c757d; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-page-break-row { display: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-page-header, #tabular-1f88c49413 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-page-header { margin-bottom: 1rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-page-footer { margin-top: 1rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-page-header-left, #tabular-1f88c49413 .tabular-page-footer-left { flex: 1; text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-page-header-center, #tabular-1f88c49413 .tabular-page-footer-center { flex: 1; text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f88c49413 .tabular-page-header-right, #tabular-1f88c49413 .tabular-page-footer-right { flex: 1; text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> @media print { #tabular-1f88c49413 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-1f88c49413 .tabular-table tr { page-break-inside: avoid; } #tabular-1f88c49413 .tabular-page-header, #tabular-1f88c49413 .tabular-page-footer { display: none; } #tabular-1f88c49413 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-1f88c49413 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-1f88c49413 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div id="tabular-5d3441a70e" class="tabular-doc" style="overflow-x:auto;max-width:100%;"&gt;&lt;div class="tabular-content"&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div id="tabular-1f88c49413" class="tabular-doc" style="overflow-x:auto;max-width:100%;"&gt;&lt;div class="tabular-content"&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Vital Signs at End of Treatment&lt;/h1&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div class="tabular-table-wrap"&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;table class="tabular-table" style="width:100%"&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;table class="tabular-table"&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;thead&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;th&gt;Statistic&lt;/th&gt;&lt;th class="text-center"&gt;Placebo&lt;/th&gt;&lt;th class="text-center"&gt;Drug 50&lt;/th&gt;&lt;th class="text-center"&gt;Drug 100&lt;/th&gt;&lt;th class="text-center"&gt;Total&lt;/th&gt;&lt;/tr&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/thead&gt;</span>
@@ -464,52 +464,52 @@ time. Users do not restate <code>col_spec(visible = FALSE)</code> inside
 <span class="r-in"><span>    label <span class="op">=</span> <span class="st">"Sex: {sex} / Age: {agegr}"</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-content { width: 100%; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-pad { margin: 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table th, #tabular-1f31387e0f .tabular-table td { padding: .35rem .6rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table td { text-align: left; vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table tbody tr td { border-top: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-band { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-subgroup-label { font-weight: 600; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-blank-row td { padding: .25rem .6rem; border: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table thead th.text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table thead th.text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-table thead th.text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .valign-top { vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .valign-middle { vertical-align: middle; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .valign-bottom { vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-empty { font-style: italic; color: #6c757d; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-page-break-row { display: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-page-header, #tabular-1f31387e0f .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-page-header { margin-bottom: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-page-footer { margin-top: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-page-header-left, #tabular-1f31387e0f .tabular-page-footer-left { flex: 1; text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-page-header-center, #tabular-1f31387e0f .tabular-page-footer-center { flex: 1; text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-1f31387e0f .tabular-page-header-right, #tabular-1f31387e0f .tabular-page-footer-right { flex: 1; text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> @media print { #tabular-1f31387e0f .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-1f31387e0f .tabular-table tr { page-break-inside: avoid; } #tabular-1f31387e0f .tabular-page-header, #tabular-1f31387e0f .tabular-page-footer { display: none; } #tabular-1f31387e0f .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-1f31387e0f .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-1f31387e0f .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-pad { margin: 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table th, #tabular-59a4de2b07 .tabular-table td { padding: .35rem .6rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table td { text-align: left; vertical-align: top; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table tbody tr td { border-top: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-band { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-subgroup-label { font-weight: 600; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-blank-row td { padding: .25rem .6rem; border: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .text-left { text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .text-center { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .text-right { text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table thead th.text-left { text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table thead th.text-center { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-table thead th.text-right { text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .valign-top { vertical-align: top; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .valign-middle { vertical-align: middle; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .valign-bottom { vertical-align: bottom; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-empty { font-style: italic; color: #6c757d; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-page-break-row { display: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-page-header, #tabular-59a4de2b07 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-page-header { margin-bottom: 1rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-page-footer { margin-top: 1rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-page-header-left, #tabular-59a4de2b07 .tabular-page-footer-left { flex: 1; text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-page-header-center, #tabular-59a4de2b07 .tabular-page-footer-center { flex: 1; text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-59a4de2b07 .tabular-page-header-right, #tabular-59a4de2b07 .tabular-page-footer-right { flex: 1; text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> @media print { #tabular-59a4de2b07 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-59a4de2b07 .tabular-table tr { page-break-inside: avoid; } #tabular-59a4de2b07 .tabular-page-header, #tabular-59a4de2b07 .tabular-page-footer { display: none; } #tabular-59a4de2b07 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-59a4de2b07 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-59a4de2b07 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div id="tabular-1f31387e0f" class="tabular-doc" style="overflow-x:auto;max-width:100%;"&gt;&lt;div class="tabular-content"&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div id="tabular-59a4de2b07" class="tabular-doc" style="overflow-x:auto;max-width:100%;"&gt;&lt;div class="tabular-content"&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Vital Signs by Sex and Age Group&lt;/h1&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div class="tabular-table-wrap"&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;table class="tabular-table" style="width:100%"&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;table class="tabular-table"&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;thead&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;th&gt;Statistic&lt;/th&gt;&lt;th class="text-center"&gt;Placebo&lt;/th&gt;&lt;th class="text-center"&gt;Drug 50&lt;/th&gt;&lt;th class="text-center"&gt;Drug 100&lt;/th&gt;&lt;th class="text-center"&gt;Total&lt;/th&gt;&lt;/tr&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/thead&gt;</span>
@@ -575,52 +575,52 @@ time. Users do not restate <code>col_spec(visible = FALSE)</code> inside
 <span class="r-in"><span>  <span class="co"># clear it before rendering.</span></span></span>
 <span class="r-in"><span>  <span class="fu">subgroup</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-content { width: 100%; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-pad { margin: 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table th, #tabular-391c8f99b6 .tabular-table td { padding: .35rem .6rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table td { text-align: left; vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table tbody tr td { border-top: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-band { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-subgroup-label { font-weight: 600; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-blank-row td { padding: .25rem .6rem; border: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table thead th.text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table thead th.text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-table thead th.text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .valign-top { vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .valign-middle { vertical-align: middle; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .valign-bottom { vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-empty { font-style: italic; color: #6c757d; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-page-break-row { display: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-page-header, #tabular-391c8f99b6 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-page-header { margin-bottom: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-page-footer { margin-top: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-page-header-left, #tabular-391c8f99b6 .tabular-page-footer-left { flex: 1; text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-page-header-center, #tabular-391c8f99b6 .tabular-page-footer-center { flex: 1; text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-391c8f99b6 .tabular-page-header-right, #tabular-391c8f99b6 .tabular-page-footer-right { flex: 1; text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> @media print { #tabular-391c8f99b6 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-391c8f99b6 .tabular-table tr { page-break-inside: avoid; } #tabular-391c8f99b6 .tabular-page-header, #tabular-391c8f99b6 .tabular-page-footer { display: none; } #tabular-391c8f99b6 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-391c8f99b6 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-391c8f99b6 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-pad { margin: 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table th, #tabular-99f5b7e4f3 .tabular-table td { padding: .35rem .6rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table td { text-align: left; vertical-align: top; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table tbody tr td { border-top: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-band { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-subgroup-label { font-weight: 600; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-blank-row td { padding: .25rem .6rem; border: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .text-left { text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .text-center { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .text-right { text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table thead th.text-left { text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table thead th.text-center { text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-table thead th.text-right { text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .valign-top { vertical-align: top; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .valign-middle { vertical-align: middle; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .valign-bottom { vertical-align: bottom; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-empty { font-style: italic; color: #6c757d; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-page-break-row { display: none; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-page-header, #tabular-99f5b7e4f3 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-page-header { margin-bottom: 1rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-page-footer { margin-top: 1rem; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-page-header-left, #tabular-99f5b7e4f3 .tabular-page-footer-left { flex: 1; text-align: left; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-page-header-center, #tabular-99f5b7e4f3 .tabular-page-footer-center { flex: 1; text-align: center; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-99f5b7e4f3 .tabular-page-header-right, #tabular-99f5b7e4f3 .tabular-page-footer-right { flex: 1; text-align: right; }</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> @media print { #tabular-99f5b7e4f3 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-99f5b7e4f3 .tabular-table tr { page-break-inside: avoid; } #tabular-99f5b7e4f3 .tabular-page-header, #tabular-99f5b7e4f3 .tabular-page-footer { display: none; } #tabular-99f5b7e4f3 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-99f5b7e4f3 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-99f5b7e4f3 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div id="tabular-391c8f99b6" class="tabular-doc" style="overflow-x:auto;max-width:100%;"&gt;&lt;div class="tabular-content"&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div id="tabular-99f5b7e4f3" class="tabular-doc" style="overflow-x:auto;max-width:100%;"&gt;&lt;div class="tabular-content"&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Pooled (no sex partition)&lt;/h1&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div class="tabular-table-wrap"&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;table class="tabular-table" style="width:100%"&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;table class="tabular-table"&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;thead&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;th&gt;sex&lt;/th&gt;&lt;th&gt;agegr&lt;/th&gt;&lt;th&gt;sex_n&lt;/th&gt;&lt;th&gt;agegr_n&lt;/th&gt;&lt;th&gt;paramcd&lt;/th&gt;&lt;th&gt;param&lt;/th&gt;&lt;th&gt;stat_label&lt;/th&gt;&lt;th&gt;placebo&lt;/th&gt;&lt;th&gt;drug_50&lt;/th&gt;&lt;th&gt;drug_100&lt;/th&gt;&lt;th&gt;Total&lt;/th&gt;&lt;/tr&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/thead&gt;</span>
