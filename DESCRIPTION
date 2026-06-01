@@ -15,7 +15,6 @@ URL: https://vthanik.github.io/tabular/, https://github.com/vthanik/tabular
 BugReports: https://github.com/vthanik/tabular/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Depends:
     R (>= 4.3.0)
 Imports:
@@ -43,3 +42,4 @@ VignetteBuilder:
 Config/testthat/edition: 3
 Config/Needs/website: pkgdown
 LazyData: true
+Config/roxygen2/version: 8.0.0
