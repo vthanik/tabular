@@ -6,7 +6,7 @@
 # email, and in `file://` previews).
 #
 # Output layout — one continuous document. Titles emit as
-# `<h1 class="tabular-title">` above the table (once). HTML is a
+# `<p class="tabular-title">` above the table (once). HTML is a
 # continuous, scrollable medium with no page width, so a
 # `paginate(panels = N)` request never splits: the engine collapses
 # it to ONE `<table class="tabular-table">` (all columns, original
@@ -403,7 +403,7 @@ backend_html <- function(grid, file) {
 # Render the run-level inline-style declarations from a chrome
 # surface style_node. Returns a `style="..."` attribute fragment
 # when any prop is set, else an empty string. Backends append this
-# to the surface element's open tag (`<h1>`, `<p>`, `<th>` etc.).
+# to the surface element's open tag (`<p>`, `<th>`, `<td>` etc.).
 .html_chrome_inline_style <- function(node) {
   if (!is_style_node(node)) {
     return("")
@@ -464,8 +464,12 @@ backend_html <- function(grid, file) {
 # Title + footnote blocks
 # ---------------------------------------------------------------------
 
-# Title block: each title line becomes an `<h1 class="tabular-
-# title">`. Per-line horizontal alignment from
+# Title block: each title line becomes a `<p class="tabular-title">`.
+# (Not `<h1>`: a table carries several title lines, so headings would
+# emit multiple `<h1>` per table, inherit the host's heading margins,
+# and pollute pkgdown's "On this page" outline. `<p>` is neutral chrome
+# and the scoped `.tabular-title` rule fully controls its look.)
+# Per-line horizontal alignment from
 # `chrome_style$surfaces$title@halign` (scalar broadcasts; vector zips
 # 1:1 then pads with last). Empty title list returns an empty
 # character vector so the caller can skip the surrounding spacing.
@@ -496,7 +500,7 @@ backend_html <- function(grid, file) {
         }
       }
       sprintf(
-        "<h1 class=\"%s\"%s>%s</h1>",
+        "<p class=\"%s\"%s>%s</p>",
         paste(cls, collapse = " "),
         surface_style,
         .render_html_inline(titles_ast[[i]])
@@ -1686,7 +1690,7 @@ backend_html <- function(grid, file) {
     # vertical edge is continuous over the spanner band, the column-label
     # row, and every body row including the synthesised blank-separator
     # and group-header rows (the original `rules = "frame"` gap). Titles
-    # are <h1> outside <table>, so they stay outside the box.
+    # are <p> outside <table>, so they stay outside the box.
     .html_structural_rule(
       ".tabular-table",
       "left",
@@ -1707,9 +1711,16 @@ backend_html <- function(grid, file) {
   fs <- .effective_font_size(preset)
 
   body_css <- c(
+    # The container pins the table's own font-size and a tight
+    # line-height as the baseline for the whole fragment, so titles,
+    # footnotes, and the blank-line pad spacers inherit the table scale
+    # instead of the host's body text metrics (pkgdown / Bootstrap use a
+    # 16px / 1.65 base, which otherwise inflated every gap between the
+    # title lines, around footnotes, and between body rows).
     sprintf(
-      ".tabular-doc { font-family: %s; color: #212529; margin: 1.5rem; }",
-      .html_font_family_css(preset)
+      ".tabular-doc { font-family: %s; color: #212529; margin: 1.5rem; font-size: %gpt; line-height: 1.3; }",
+      .html_font_family_css(preset),
+      fs
     ),
     # `.tabular-content` wraps title + tables + footnote in one
     # block that shrinks to the widest table (`width: fit-content`)
@@ -1728,11 +1739,12 @@ backend_html <- function(grid, file) {
       fs
     ),
     # `<p class="tabular-pad">&nbsp;</p>` spacers around the title
-    # block carry only one line of preset-driven line-height. Zero
-    # the browser-default `<p>` margin (16px 0) so each pad collapses
-    # to exactly the blank-line count set in
+    # block carry exactly one blank line. Zero the browser-default
+    # `<p>` margin (16px 0) and pin `line-height: 1` so each pad is one
+    # line at the table's font-size (set on `.tabular-doc`), not the
+    # host's inflated body line-height; the count of pads is driven by
     # `preset@title_pad_top` / `preset@title_pad_bottom`.
-    ".tabular-pad { margin: 0; }",
+    ".tabular-pad { margin: 0; line-height: 1; }",
     # Wrapper around each `<table>` panel. The table itself carries
     # no inline width (it is content-fitted; see
     # `.html_table_open_tag()` in this file). The wrapper provides

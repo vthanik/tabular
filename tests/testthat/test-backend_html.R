@@ -29,7 +29,7 @@ test_that("emit(.html) writes a non-empty self-contained .html file", {
   expect_true(any(grepl("^<!DOCTYPE html>", lines)))
   expect_true(any(grepl("<style>", lines, fixed = TRUE)))
   expect_true(any(grepl(
-    "<h1 class=\"tabular-title\">T</h1>",
+    "<p class=\"tabular-title\">T</p>",
     lines,
     fixed = TRUE
   )))
@@ -78,7 +78,7 @@ test_that("emit(.html) renders saf_demo golden pipeline end to end", {
 # Title + footnote blocks
 # ---------------------------------------------------------------------
 
-test_that("titles render as <h1 class=\"tabular-title\"> preserving order", {
+test_that("titles render as <p class=\"tabular-title\"> preserving order", {
   spec <- tabular(
     data.frame(x = 1L),
     titles = c("First", "Second", "Third")
@@ -87,17 +87,44 @@ test_that("titles render as <h1 class=\"tabular-title\"> preserving order", {
   emit(spec, out)
   lines <- readLines(out)
   headings <- lines[grepl(
-    "<h1 class=\"tabular-title\">",
+    "<p class=\"tabular-title\">",
     lines,
     fixed = TRUE
   )]
   expect_identical(
     headings,
     c(
-      "<h1 class=\"tabular-title\">First</h1>",
-      "<h1 class=\"tabular-title\">Second</h1>",
-      "<h1 class=\"tabular-title\">Third</h1>"
+      "<p class=\"tabular-title\">First</p>",
+      "<p class=\"tabular-title\">Second</p>",
+      "<p class=\"tabular-title\">Third</p>"
     )
+  )
+  # Titles must NOT be headings: multiple <h1> per table inherits the
+  # host's heading margins (inflating the gaps) and pollutes pkgdown's
+  # page outline.
+  expect_no_match(paste(lines, collapse = "\n"), "<h1", fixed = TRUE)
+})
+
+test_that(".tabular-doc pins font-size + tight line-height so host metrics don't inflate gaps", {
+  # Without a base font-size / line-height on the container, the title
+  # pad spacers and body rows inherit pkgdown / Bootstrap's 16px / 1.65,
+  # blowing out every gap between title lines, around footnotes, and
+  # between rows. The container pins the table scale instead.
+  spec <- tabular(data.frame(x = 1L), titles = "T")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  # `.tabular-doc` collapses to the scope id (`#tabular-<hash>`) in the
+  # emitted, scoped stylesheet.
+  expect_match(
+    txt,
+    "#tabular-[0-9a-f]+ \\{[^}]*font-size:\\s*10pt;\\s*line-height:\\s*1\\.3;",
+    perl = TRUE
+  )
+  expect_match(
+    txt,
+    ".tabular-pad { margin: 0; line-height: 1; }",
+    fixed = TRUE
   )
 })
 
@@ -121,13 +148,13 @@ test_that("footnotes render as <p class=\"tabular-footnote\">", {
   )))
 })
 
-test_that("no titles -> no <h1>; no footnotes -> no .tabular-footnote", {
+test_that("no titles -> no .tabular-title; no footnotes -> no .tabular-footnote", {
   spec <- tabular(data.frame(x = 1L))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   lines <- readLines(out)
   expect_false(any(grepl(
-    "<h1 class=\"tabular-title\">",
+    "<p class=\"tabular-title\">",
     lines,
     fixed = TRUE
   )))
@@ -528,7 +555,7 @@ test_that("body content sits inside a single <div class=\"tabular-content\"> wra
   # Wrapper open precedes the title; wrapper close follows the
   # footnote. Both inside the document body.
   i_open <- grep("<div class=\"tabular-content\">", lines, fixed = TRUE)
-  i_title <- grep("<h1 class=\"tabular-title\">T</h1>", lines, fixed = TRUE)
+  i_title <- grep("<p class=\"tabular-title\">T</p>", lines, fixed = TRUE)
   i_foot <- grep("<p class=\"tabular-footnote\">F</p>", lines, fixed = TRUE)
   i_close <- tail(grep("^</div>", lines), 1L)
   expect_true(i_open < i_title)
@@ -2375,11 +2402,11 @@ test_that("HTML bold follows the user option: bold = FALSE renders normal, not t
   hdr <- emit_str(base |> style(bold = FALSE, .at = cells_headers()))
   expect_match(hdr, "<th style=\"font-weight: normal\"", fixed = TRUE)
 
-  # bold = FALSE on the title surface -> the <h1> carries inline normal.
+  # bold = FALSE on the title surface -> the <p> carries inline normal.
   ttl <- emit_str(base |> style(bold = FALSE, .at = cells_title()))
   expect_match(
     ttl,
-    "<h1 class=\"tabular-title\" style=\"font-weight: normal\"",
+    "<p class=\"tabular-title\" style=\"font-weight: normal\"",
     fixed = TRUE
   )
 })
