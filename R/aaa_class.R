@@ -1082,7 +1082,7 @@ tabular_grid <- S7::new_class(
 #' spec <- tabular(
 #'   saf_demo,
 #'   titles = c("Table 14.1.1", "Demographics",
-#'              sprintf("Safety Population (N=%d)", n["Total"]))
+#'              "Safety Population")
 #' ) |>
 #'   cols(
 #'     variable   = col_spec(usage = "group", label = "Characteristic"),

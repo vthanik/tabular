@@ -111,7 +111,7 @@ n <- stats::setNames(saf_n$n, saf_n$arm_short)
 spec <- tabular(
   saf_demo,
   titles = c("Table 14.1.1", "Demographics",
-             sprintf("Safety Population (N=\%d)", n["Total"]))
+             "Safety Population")
 ) |>
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),

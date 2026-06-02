@@ -36,6 +36,7 @@ Suggests:
     systemfonts,
     tibble,
     tinytex,
+    webshot2,
     yaml
 VignetteBuilder:
     quarto

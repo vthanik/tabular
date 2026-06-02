@@ -32,7 +32,7 @@ n <- stats::setNames(saf_n$n, saf_n$arm_short)
 titles = c(
   "Table 14.3.1",
   "Adverse Events by System Organ Class and Preferred Term",
-  sprintf("Safety Population (N=\%d)", n["Total"])
+  "Safety Population"
 )
 }\if{html}{\out{</div>}}}
 
@@ -101,7 +101,7 @@ tabular(
   titles = c(
     "Table 14.3.1",
     "Adverse Events by System Organ Class and Preferred Term",
-    sprintf("Safety Population (N=\%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = c(
     "Subjects are counted once per SOC and once per PT.",
@@ -141,7 +141,7 @@ tabular(
   titles = c(
     "Table 14.2.1",
     "Best Overall Response and Response Rates",
-    sprintf("Efficacy Evaluable Population (N=\%d)", ne["Total"])
+    "Efficacy Evaluable Population"
   ),
   footnotes = "Response per RECIST 1.1, investigator assessment."
 ) |>
@@ -176,7 +176,7 @@ tabular(
   titles = c(
     "Table 14.4.1",
     "Summary of Vital Signs",
-    sprintf("Safety Population (N=\%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = "Statistics computed on observed cases."
 ) |>

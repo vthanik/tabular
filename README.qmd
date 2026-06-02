@@ -58,15 +58,17 @@ library(tabular)
 # BigN denominators, keyed by arm
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 
-# columns render in data-frame order, so put them in dose order first
-demo <- saf_demo[c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")]
+# columns render in data-frame order, so put them in dose order first;
+# subset to Age / Sex / Race for a compact display
+keep <- c("Age (years)", "Sex, n (%)", "Race, n (%)")
+demo <- saf_demo[saf_demo$variable %in% keep, c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")]
 
 tab <- tabular(
   demo,
   titles = c(
     "Table 14.1.1",
     "Demographic and Baseline Characteristics",
-    sprintf("Safety Population (N=%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = "Percentages are based on the number of subjects per treatment group."
 ) |>
@@ -83,21 +85,13 @@ tab <- tabular(
 path <- emit(tab, tempfile(fileext = ".rtf"))   # submission deliverable
 ```
 
-The same `tab` renders to markdown for a quick look (the demographics
-table below is the actual `md` backend output), and to a self-contained
-HTML page, a paginated PDF, a `tabularray` LaTeX fragment, or native
-OOXML `.docx` — all from the one spec:
+The same `tab` emits to every backend from the one spec. The table below
+is tabular's own HTML render — the identical spec also produces RTF, a
+paginated PDF, a `tabularray` LaTeX fragment, and native OOXML `.docx`:
 
-```{r}
-#| label: quick-example-render
-#| echo: false
-#| results: asis
-md <- tempfile(fileext = ".md")
-emit(tab, md)
-# show just the rendered table block; titles/footnotes are in the prose above
-lines <- readLines(md)
-cat(lines[grepl("^\\|", lines)], sep = "\n")
-```
+<div align="center">
+  <img src="man/figures/README-hero.png" width="815" alt="Demographic and baseline characteristics table rendered by tabular: decimal-aligned arm columns, a centred multi-line caption, and a single footnote.">
+</div>
 
 ## Why tabular?
 

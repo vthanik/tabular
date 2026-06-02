@@ -54,7 +54,7 @@ tabular(
   titles = c(
     "Table 14.1.1",
     "Demographics and Baseline Characteristics",
-    sprintf("Safety Population (N=\%d)", n["Total"])
+    "Safety Population"
   )
 ) |>
   cols(

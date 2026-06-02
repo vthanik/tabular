@@ -110,7 +110,7 @@
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by SOC and Preferred Term",
-#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'     "Safety Population"
 #'   ),
 #'   footnotes = "Subjects counted once per SOC and once per PT."
 #' ) |>

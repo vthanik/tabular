@@ -41,7 +41,7 @@ saf_aesocpt_card |>
     titles = c(
       "Table 14.3.1",
       "Adverse Events by SOC and PT",
-      sprintf("Safety Population (N=\%d)", n["Total"])
+      "Safety Population"
     )
   )
 }

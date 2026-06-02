@@ -394,7 +394,7 @@
 #'   titles = c(
 #'     "Table 14.1.1",
 #'     "Demographics and Baseline Characteristics",
-#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'     "Safety Population"
 #'   ),
 #'   footnotes = "Percentages based on N per treatment group."
 #' ) |>
@@ -440,7 +440,7 @@
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by SOC and Preferred Term",
-#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'     "Safety Population"
 #'   )
 #' ) |>
 #'   cols(

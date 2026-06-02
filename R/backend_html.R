@@ -154,9 +154,11 @@ backend_html <- function(grid, file) {
   )
   title_block <- if (length(titles) > 0L) {
     c(
+      "<figcaption class=\"tabular-caption\">",
       rep(blank_p, pad_title_top),
       titles,
-      rep(blank_p, pad_title_bottom)
+      rep(blank_p, pad_title_bottom),
+      "</figcaption>"
     )
   } else {
     character()
@@ -181,17 +183,22 @@ backend_html <- function(grid, file) {
     footnote_block <- c(rep(blank_p, foot_blank_above), footnote_block)
   }
 
-  # `.tabular-content` wraps title + tables + footnotes in one
-  # centred container sized to the widest table (`width:
-  # fit-content; margin: 0 auto`) -- the gt / flextable model.
-  # Title text centres above; footnote sits flush to the table's
-  # left edge; the whole block centres on the page. The table
+  # `.tabular-content` is a semantic `<figure>` that wraps the title
+  # `<figcaption>` + tables + footnotes in one centred container sized
+  # to the widest table (`width: fit-content; margin: 0 auto`) -- the
+  # gt / flextable / tinytable model. The titles ride in a real
+  # `<figcaption>` (a caption, not a heading, so pkgdown's "On this
+  # page" outline stays clean); the gap above the table is the engine's
+  # `title_to_body` blank-line count (rendered by the pad spacers,
+  # screen and paper alike, never a hardcoded margin). Footnote sits
+  # flush to the table's left edge; the whole block centres on the
+  # page. The table
   # carries no inline width, so it renders at the same intrinsic
   # size in every host (viewer pane / browser viewport / Quarto
   # chunk / Shiny UI cell); only the surrounding whitespace
   # differs. The CSS rules live in `.html_inline_style()`. One code
   # path regardless of `col_spec(width)` units.
-  content_open <- "<div class=\"tabular-content\">"
+  content_open <- "<figure class=\"tabular-content\">"
 
   # Wrap the rendered body in the document shell. The CSS scope id (gt /
   # flextable model: every rule prefixed `#<id>`, the container carries
@@ -230,7 +237,7 @@ backend_html <- function(grid, file) {
       title_block,
       "<p class=\"tabular-empty\">(no rows)</p>",
       footnote_block,
-      "</div>"
+      "</figure>"
     )
     return(assemble(body_inner))
   }
@@ -261,7 +268,7 @@ backend_html <- function(grid, file) {
     title_block,
     unlist(tables, use.names = FALSE),
     footnote_block,
-    "</div>"
+    "</figure>"
   )
   assemble(body_inner)
 }
@@ -1734,16 +1741,36 @@ backend_html <- function(grid, file) {
     # over-wide table to the host so `.tabular-table-wrap`'s
     # horizontal scroll can take over rather than overflowing.
     ".tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }",
+    # Host-CSS neutralisation for `<p>` line spacing. pkgdown / tidytemplate
+    # ship `main p, main li { line-height: 1.65 }` (selector specificity
+    # 0,0,1,1), which beats the container's inherited `line-height` and
+    # inflates every title / footnote line on a reference or article page
+    # (the standalone emit has no such host rule, so it stayed tight). This
+    # scoped `#<id> p` rule (0,1,0,1) outranks `main p` and re-inherits the
+    # container line-height, so titles render at the table scale in every
+    # host. The pad spacer keeps its own `line-height: 1` (its `.tabular-pad`
+    # rule is more specific, 0,1,1,0).
+    "p { line-height: inherit; }",
     sprintf(
       ".tabular-title { font-size: %gpt; font-weight: 600; text-align: center; margin: .2rem 0; }",
       fs
     ),
-    # `<p class="tabular-pad">&nbsp;</p>` spacers around the title
-    # block carry exactly one blank line. Zero the browser-default
-    # `<p>` margin (16px 0) and pin `line-height: 1` so each pad is one
-    # line at the table's font-size (set on `.tabular-doc`), not the
-    # host's inflated body line-height; the count of pads is driven by
-    # `preset@title_pad_top` / `preset@title_pad_bottom`.
+    # `<figcaption>` groups the title lines (and their pad spacers)
+    # into a semantic caption above the table. The bare `<figure>` UA
+    # margin is neutralised by `.tabular-content { margin: 0 auto }`.
+    # The caption adds NO spacing of its own; the title-to-body gap is
+    # the engine's blank-line count, rendered by the pad spacers below
+    # (so screen and paper share one source of truth, never a hardcoded
+    # margin).
+    ".tabular-caption { margin: 0; padding: 0; }",
+    # `<p class="tabular-pad">&nbsp;</p>` spacers carry the blank lines
+    # the engine resolved from the preset / chrome_style gaps
+    # (`above_title` -> `pad_title_top`, `title_to_body` ->
+    # `pad_title_bottom`, `body_to_footnote` -> the footnote gap). They
+    # render identically on screen and paper -- one clean line each at
+    # the table font-size (`line-height: 1`, zeroing the browser-default
+    # `<p>` margin), so the title-to-table gap is whatever the spec
+    # says, not a backend-invented constant.
     ".tabular-pad { margin: 0; line-height: 1; }",
     # Wrapper around each `<table>` panel. The table itself carries
     # no inline width (it is content-fitted; see

@@ -72,7 +72,7 @@
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Overall Summary of Adverse Events",
-#'     sprintf("Safety Population (N=%d)", demo_n["Total"])
+#'     "Safety Population"
 #'   ),
 #'   footnotes = "Subjects counted once per category."
 #' ) |>

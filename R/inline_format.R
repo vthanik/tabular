@@ -144,7 +144,7 @@
 #' # ---- Example 1: Bold title with Pandoc-style footnote marker ----
 #' #
 #' # AE-by-SOC/PT table. The third title line bolds "Safety
-#' # Population (N=86)" via `md("**...**")`; the first footnote
+#' # Population" via `md("**...**")`; the first footnote
 #' # carries a Pandoc-style superscript marker `^a^` that the
 #' # backends render as a true superscript.
 #' n <- stats::setNames(saf_n$n, saf_n$arm_short)
@@ -154,7 +154,7 @@
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by System Organ Class and Preferred Term",
-#'     md(sprintf("**Safety Population (N=%d)**", n["Total"]))
+#'     md("**Safety Population**")
 #'   ),
 #'   footnotes = c(
 #'     md("^a^ Subjects counted once per SOC and once per PT.")
@@ -180,7 +180,7 @@
 #'   titles = c(
 #'     "Table 14.2.1",
 #'     "Best Overall Response",
-#'     sprintf("Efficacy Evaluable Population (N=%d)", ne["Total"])
+#'     "Efficacy Evaluable Population"
 #'   ),
 #'   footnotes = c(
 #'     md("Response per [RECIST 1.1](https://recist.eortc.org/), investigator assessment.")

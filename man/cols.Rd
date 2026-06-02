@@ -97,7 +97,7 @@ tabular(
   titles = c(
     "Table 14.1.1",
     "Demographics and Baseline Characteristics",
-    sprintf("Safety Population (N=\%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = "Percentages based on N per treatment group."
 ) |>
@@ -131,7 +131,7 @@ tabular(
   titles = c(
     "Table 14.2.1",
     "Best Overall Response and Response Rates",
-    sprintf("Efficacy Evaluable Population (N=\%d)", ne["Total"])
+    "Efficacy Evaluable Population"
   ),
   footnotes = "Response per RECIST 1.1, investigator assessment."
 ) |>

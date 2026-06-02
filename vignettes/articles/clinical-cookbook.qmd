@@ -39,7 +39,7 @@ tabular(
   titles = c(
     "Table 14.1.1",
     "Demographic and Baseline Characteristics",
-    sprintf("Safety Population (N=%d)", saf["Total"])
+    "Safety Population"
   ),
   footnotes = c(
     "Percentages are based on the number of subjects per treatment group.",
@@ -71,7 +71,7 @@ tabular(
   titles = c(
     "Table 14.3.1",
     "Overall Summary of Adverse Events",
-    sprintf("Safety Population (N=%d)", saf["Total"])
+    "Safety Population"
   ),
   footnotes = "n (%) of subjects with at least one event in each category."
 ) |>
@@ -99,7 +99,7 @@ tabular(
   titles = c(
     "Table 14.3.2",
     "Adverse Events by System Organ Class and Preferred Term",
-    sprintf("Safety Population (N=%d)", saf["Total"])
+    "Safety Population"
   ),
   footnotes = c(
     "Subjects are counted once within each system organ class and preferred term.",
@@ -142,7 +142,7 @@ tabular(
   titles = c(
     "Table 14.2.1",
     "Vital Signs by Parameter and Visit",
-    sprintf("Safety Population (N=%d)", saf["Total"])
+    "Safety Population"
   ),
   footnotes = "Summary statistics of observed values at each visit."
 ) |>
@@ -171,7 +171,7 @@ tabular(
   titles = c(
     "Table 14.2.1",
     "Best Overall Response and Response Rates",
-    sprintf("Efficacy Population (N=%d)", sum(eff[c("placebo", "drug_50", "drug_100")]))
+    "Efficacy Population"
   ),
   footnotes = c(
     "Response assessed per RECIST 1.1.",

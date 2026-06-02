@@ -425,7 +425,7 @@
 #'   titles = c(
 #'     "Table 14.2.1",
 #'     "Best Overall Response and Response Rates",
-#'     sprintf("Efficacy Evaluable Population (N=%d)", ne["Total"])
+#'     "Efficacy Evaluable Population"
 #'   ),
 #'   footnotes = "Response per RECIST 1.1, investigator assessment."
 #' ) |>
@@ -466,7 +466,7 @@
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by System Organ Class and Preferred Term",
-#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'     "Safety Population"
 #'   ),
 #'   footnotes = "Subjects are counted once per SOC and once per PT."
 #' ) |>
@@ -692,7 +692,7 @@ preset <- function(
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Overall Summary of Adverse Events",
-#'     sprintf("Safety Population (N=%d)", demo_n["Total"])
+#'     "Safety Population"
 #'   ),
 #'   footnotes = "Subjects counted once per category."
 #' ) |>

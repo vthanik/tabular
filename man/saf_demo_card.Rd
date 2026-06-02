@@ -57,7 +57,7 @@ saf_demo_card |>
     titles = c(
       "Table 14.1.1",
       "Demographics",
-      sprintf("Safety Population (N=\%d)", n["Total"])
+      "Safety Population"
     )
   )
 }

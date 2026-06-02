@@ -62,7 +62,7 @@ tabular(
   titles = c(
     "Table 14.2.1",
     "Best Overall Response and Response Rates",
-    sprintf("Efficacy Evaluable Population (N=\%d)", ne["Total"])
+    "Efficacy Evaluable Population"
   )
 ) |>
   cols(

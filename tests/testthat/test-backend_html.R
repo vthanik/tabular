@@ -128,6 +128,77 @@ test_that(".tabular-doc pins font-size + tight line-height so host metrics don't
   )
 })
 
+test_that("title block is a semantic <figcaption> with engine-driven pad spacers", {
+  # Titles ride a real `<figcaption>` (a caption, not a heading, so
+  # pkgdown's "On this page" outline stays clean) and footnotes sit
+  # after the table but inside the same `<figure>` -- the gt / tinytable
+  # model. The title-to-table gap is NOT a backend-invented margin: the
+  # caption adds no spacing of its own, and the blank line is the
+  # engine's `title_to_body` count, rendered by a `<p class="tabular-pad">`
+  # spacer that shows identically on screen and paper (one source of
+  # truth).
+  spec <- tabular(
+    data.frame(x = 1L),
+    titles = "Caption line",
+    footnotes = "Foot"
+  )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  lines <- readLines(out, warn = FALSE)
+  txt <- paste(lines, collapse = "\n")
+
+  # Semantic figure / figcaption wrapper (not a <div>).
+  expect_match(txt, "<figure class=\"tabular-content\">", fixed = TRUE)
+  expect_match(txt, "<figcaption class=\"tabular-caption\">", fixed = TRUE)
+  expect_match(txt, "</figcaption>", fixed = TRUE)
+  expect_no_match(txt, "<div class=\"tabular-content\">", fixed = TRUE)
+
+  # Title sits inside the figcaption; footnote sits outside it but
+  # inside the figure (figcaption opens before the title, closes
+  # before the footnote, figure closes last).
+  i_fig <- grep("<figure class=\"tabular-content\">", lines, fixed = TRUE)
+  i_cap_open <- grep(
+    "<figcaption class=\"tabular-caption\">",
+    lines,
+    fixed = TRUE
+  )
+  i_title <- grep(
+    "<p class=\"tabular-title\">Caption line</p>",
+    lines,
+    fixed = TRUE
+  )
+  i_cap_close <- grep("</figcaption>", lines, fixed = TRUE)
+  i_foot <- grep(
+    "<p class=\"tabular-footnote\">Foot</p>",
+    lines,
+    fixed = TRUE
+  )
+  i_fig_close <- tail(grep("^</figure>", lines), 1L)
+  expect_true(i_fig < i_cap_open)
+  expect_true(i_cap_open < i_title && i_title < i_cap_close)
+  expect_true(i_cap_close < i_foot && i_foot < i_fig_close)
+
+  # The engine-driven blank-line spacer renders (NOT display:none) -- the
+  # title-to-table gap follows the spec, not a hardcoded margin.
+  expect_match(txt, "<p class=\"tabular-pad\">", fixed = TRUE)
+  expect_match(
+    txt,
+    ".tabular-pad { margin: 0; line-height: 1; }",
+    fixed = TRUE
+  )
+  expect_no_match(
+    txt,
+    ".tabular-pad { margin: 0; line-height: 1; display: none; }",
+    fixed = TRUE
+  )
+  # The caption itself contributes no fixed gap (no hardcoded margin).
+  expect_match(
+    txt,
+    ".tabular-caption { margin: 0; padding: 0; }",
+    fixed = TRUE
+  )
+})
+
 test_that("footnotes render as <p class=\"tabular-footnote\">", {
   spec <- tabular(
     data.frame(x = 1L),
@@ -534,7 +605,7 @@ test_that("preset(font_size = N) cascades to title + footnote rules too", {
   )
 })
 
-test_that("body content sits inside a single <div class=\"tabular-content\"> wrapper", {
+test_that("body content sits inside a single <figure class=\"tabular-content\"> wrapper", {
   # title + table(s) + footnote share one centred container so the
   # footnote aligns with the table's left edge instead of the page
   # gutter.
@@ -549,15 +620,15 @@ test_that("body content sits inside a single <div class=\"tabular-content\"> wra
   # Exactly one wrapper open (no `--window` modifier at the default
   # `width_mode = "content"`).
   expect_identical(
-    length(grep("<div class=\"tabular-content\">", lines, fixed = TRUE)),
+    length(grep("<figure class=\"tabular-content\">", lines, fixed = TRUE)),
     1L
   )
   # Wrapper open precedes the title; wrapper close follows the
   # footnote. Both inside the document body.
-  i_open <- grep("<div class=\"tabular-content\">", lines, fixed = TRUE)
+  i_open <- grep("<figure class=\"tabular-content\">", lines, fixed = TRUE)
   i_title <- grep("<p class=\"tabular-title\">T</p>", lines, fixed = TRUE)
   i_foot <- grep("<p class=\"tabular-footnote\">F</p>", lines, fixed = TRUE)
-  i_close <- tail(grep("^</div>", lines), 1L)
+  i_close <- tail(grep("^</figure>", lines), 1L)
   expect_true(i_open < i_title)
   expect_true(i_title < i_foot)
   expect_true(i_foot < i_close)
@@ -572,10 +643,10 @@ test_that("preset(width_mode = 'window') leaves the wrapper at the base .tabular
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
-  expect_match(txt, "<div class=\"tabular-content\">", fixed = TRUE)
+  expect_match(txt, "<figure class=\"tabular-content\">", fixed = TRUE)
   expect_no_match(
     txt,
-    "<div class=\"tabular-content tabular-content--window\">",
+    "<figure class=\"tabular-content tabular-content--window\">",
     perl = TRUE
   )
 })
@@ -630,7 +701,7 @@ test_that("empty-input emit still wraps content in .tabular-content", {
   emit(spec, out)
   lines <- readLines(out)
   expect_identical(
-    length(grep("<div class=\"tabular-content\">", lines, fixed = TRUE)),
+    length(grep("<figure class=\"tabular-content\">", lines, fixed = TRUE)),
     1L
   )
 })
@@ -1829,10 +1900,10 @@ test_that("percent widths emit verbatim in colgroup + width-less table + plain w
     fixed = TRUE
   )
   # Wrapper is always plain `.tabular-content` (no --window).
-  expect_match(txt, "<div class=\"tabular-content\">", fixed = TRUE)
+  expect_match(txt, "<figure class=\"tabular-content\">", fixed = TRUE)
   expect_no_match(
     txt,
-    "<div class=\"tabular-content tabular-content--window\">",
+    "<figure class=\"tabular-content tabular-content--window\">",
     perl = TRUE
   )
 })
@@ -1865,10 +1936,10 @@ test_that("inch widths emit verbatim in HTML per gt convention", {
     perl = TRUE
   )
   # Wrapper plain (no --window modifier).
-  expect_match(txt, "<div class=\"tabular-content\">", fixed = TRUE)
+  expect_match(txt, "<figure class=\"tabular-content\">", fixed = TRUE)
   expect_no_match(
     txt,
-    "<div class=\"tabular-content tabular-content--window\">",
+    "<figure class=\"tabular-content tabular-content--window\">",
     perl = TRUE
   )
 })
@@ -2045,7 +2116,7 @@ test_that("HTML wrapper is always .tabular-content (no --window) across every CS
 
     expect_match(
       txt,
-      "<div class=\"tabular-content\">",
+      "<figure class=\"tabular-content\">",
       fixed = TRUE,
       info = sprintf("user width = %s", w %||% "<none>")
     )
@@ -2053,7 +2124,7 @@ test_that("HTML wrapper is always .tabular-content (no --window) across every CS
     # DIV anywhere in the emitted HTML.
     expect_no_match(
       txt,
-      "<div class=\"tabular-content tabular-content--window\">",
+      "<figure class=\"tabular-content tabular-content--window\">",
       perl = TRUE,
       info = sprintf("user width = %s", w %||% "<none>")
     )

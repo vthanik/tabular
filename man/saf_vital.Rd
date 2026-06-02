@@ -39,7 +39,7 @@ tabular(
   titles = c(
     "Table 14.4.1",
     "Vital Signs Summary at Baseline and End of Treatment",
-    sprintf("Safety Population (N=\%d)", n["Total"])
+    "Safety Population"
   )
 ) |>
   cols(

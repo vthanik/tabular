@@ -50,7 +50,7 @@
 #'   titles = c(
 #'     "Table 14.1.1",
 #'     "Demographics and Baseline Characteristics",
-#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'     "Safety Population"
 #'   )
 #' ) |>
 #'   cols(
@@ -114,7 +114,7 @@
 #'   titles = c(
 #'     "Table 14.3.0",
 #'     "Adverse Event Overview",
-#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'     "Safety Population"
 #'   )
 #' ) |>
 #'   cols(
@@ -205,7 +205,7 @@
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by SOC and Preferred Term",
-#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'     "Safety Population"
 #'   )
 #' ) |>
 #'   cols(
@@ -274,7 +274,7 @@
 #'   titles = c(
 #'     "Table 14.4.1",
 #'     "Vital Signs Summary at Baseline and End of Treatment",
-#'     sprintf("Safety Population (N=%d)", n["Total"])
+#'     "Safety Population"
 #'   )
 #' ) |>
 #'   cols(
@@ -414,7 +414,7 @@
 #'   titles = c(
 #'     "Table 14.2.1",
 #'     "Best Overall Response and Response Rates",
-#'     sprintf("Efficacy Evaluable Population (N=%d)", ne["Total"])
+#'     "Efficacy Evaluable Population"
 #'   )
 #' ) |>
 #'   cols(
@@ -532,7 +532,7 @@
 #'     titles = c(
 #'       "Table 14.1.1",
 #'       "Demographics",
-#'       sprintf("Safety Population (N=%d)", n["Total"])
+#'       "Safety Population"
 #'     )
 #'   )
 "saf_demo_card"
@@ -572,7 +572,7 @@
 #'     titles = c(
 #'       "Table 14.3.1",
 #'       "Adverse Events by SOC and PT",
-#'       sprintf("Safety Population (N=%d)", n["Total"])
+#'       "Safety Population"
 #'     )
 #'   )
 "saf_aesocpt_card"
