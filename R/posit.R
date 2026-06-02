@@ -28,3 +28,13 @@
 .is_databricks <- function() {
   nzchar(Sys.getenv("DATABRICKS_RUNTIME_VERSION"))
 }
+
+# TRUE when running inside a pkgdown site build (reference examples
+# or articles). pkgdown sets `IN_PKGDOWN=true` for the build's
+# duration via `withr::local_envvar` (see `pkgdown:::in_pkgdown` /
+# `pkgdown:::local_envvar_pkgdown`). The print router branches on this
+# to return a browsable tag list so pkgdown's autoprint handler embeds
+# a live HTML table instead of `cat()`-ing the raw document as text.
+.is_in_pkgdown <- function() {
+  identical(Sys.getenv("IN_PKGDOWN"), "true")
+}

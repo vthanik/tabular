@@ -1762,6 +1762,23 @@ backend_html <- function(grid, file) {
       ".tabular-table { border-collapse: collapse; font-size: %gpt; margin: 0 auto; }",
       fs
     ),
+    # pkgdown / Bootstrap 5 neutralisation. pkgdown injects
+    # `class="table"` onto every `<table>` on a reference page, and
+    # Bootstrap's `.table` rules then paint a `border-bottom` on every
+    # cell, tint cell backgrounds, and cast a box-shadow via the
+    # `--bs-table-*` custom properties, fighting tabular's clinical look
+    # (header rule + table-bottom rule only, no per-row lines). Zero the
+    # Bootstrap variables and the blanket cell border / box-shadow so
+    # tabular's own scoped rules stay authoritative; they are more
+    # specific (id + class + pseudo) than this `(1,1,1)` reset, so the
+    # explicit header / bottom / band borders re-add the wanted lines.
+    # Harmless standalone (the `--bs-*` vars are unknown and ignored; the
+    # cell-border reset matches tabular's own no-body-border baseline).
+    # `width: auto` undoes Bootstrap's `.table { width: 100% }` so the
+    # table stays content-fitted + centred on pkgdown (matching gt /
+    # flextable), not stretched edge-to-edge.
+    ".tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }",
+    ".tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }",
     .html_cell_padding_css(preset),
     ".tabular-table td { text-align: left; vertical-align: top; }",
     # Top rule sits above the entire thead block — scoped to the

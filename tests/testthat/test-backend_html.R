@@ -568,6 +568,27 @@ test_that(".tabular-content CSS rule is content-fitted and centred (gt / flextab
   expect_no_match(txt, ".tabular-content--window", perl = TRUE)
 })
 
+test_that("HTML emits Bootstrap 5 neutralisation so pkgdown's class=\"table\" cannot bleed", {
+  # pkgdown injects class="table" onto every <table>; Bootstrap's .table
+  # rules add per-row borders, box-shadow bg, and width:100%. The scoped
+  # stylesheet must zero the --bs-table-* vars + the blanket cell border /
+  # box-shadow and pin width:auto so tabular's clinical look survives.
+  spec <- tabular(data.frame(x = 1L))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(
+    txt,
+    "\\.tabular-table \\{ --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; \\}",
+    perl = TRUE
+  )
+  expect_match(
+    txt,
+    "\\.tabular-table > :not\\(caption\\) > \\* > \\* \\{ border-bottom-width: 0; box-shadow: none; \\}",
+    perl = TRUE
+  )
+})
+
 test_that("empty-input emit still wraps content in .tabular-content", {
   # Zero-row data emits exactly one wrapper too — `total > 0` here
   # because a one-page empty table is still a page, but the wrapper

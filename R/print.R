@@ -150,6 +150,19 @@ NULL
     return(invisible(x))
   }
 
+  # pkgdown reference examples: pkgdown's autoprint handler
+  # (`pkgdown_print.default`) embeds a value as a live HTML table ONLY
+  # when it is a *browsable* object; any other value falls through to
+  # `print()`, which on this path would `cat()` our full HTML document
+  # and pkgdown renders that as escaped `#>` console text (no table).
+  # Returning the browsable tag list makes the example render inline
+  # exactly as it does in the Positron viewer, the same concept gt and
+  # flextable use. pkgdown sets `IN_PKGDOWN=true` for the build's
+  # duration (see `pkgdown:::in_pkgdown`).
+  if (.is_in_pkgdown()) {
+    return(htmltools::browsable(htmltools::as.tags(x, ...)))
+  }
+
   # Default: HTML via htmltools. The render is wrapped in
   # tryCatch so a broken spec never crashes the REPL — we fall
   # back to the cli-tree summary with a warning.

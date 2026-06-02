@@ -492,3 +492,29 @@ test_that("a broken HTML render falls back to the cli summary with a warning", {
     "HTML preview failed"
   )
 })
+
+# ---------------------------------------------------------------------
+# pkgdown reference examples: print() must return a *browsable* value so
+# pkgdown_print embeds it as a live HTML table instead of cat()-ing the
+# raw HTML document (which renders as escaped #> text). Same concept as
+# flextable's is_in_pkgdown() / gt. pkgdown sets IN_PKGDOWN=true.
+# ---------------------------------------------------------------------
+
+test_that("print() under pkgdown returns browsable HTML (live reference preview)", {
+  skip_if_not_installed("htmltools")
+  withr::local_envvar(IN_PKGDOWN = "true")
+  spec <- tabular(data.frame(x = 1L), titles = "T")
+  out <- tabular:::.tabular_spec_print(spec, view = FALSE)
+  # pkgdown_print.default embeds the value only when this attr is TRUE.
+  expect_true(isTRUE(attr(out, "browsable_html", exact = TRUE)))
+  # and the embedded payload carries the scoped tabular table, not a dump.
+  expect_match(paste(as.character(out), collapse = "\n"), "tabular-table")
+})
+
+test_that("print() outside pkgdown does not return a browsable value", {
+  skip_if_not_installed("htmltools")
+  withr::local_envvar(IN_PKGDOWN = "")
+  spec <- tabular(data.frame(x = 1L), titles = "T")
+  out <- tabular:::.tabular_spec_print(spec, view = FALSE)
+  expect_false(isTRUE(attr(out, "browsable_html", exact = TRUE)))
+})
