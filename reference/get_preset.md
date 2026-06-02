@@ -66,10 +66,10 @@ tabular(saf_n) |>
     orientation = "landscape"
   )
 
-#tabular-864fce58e2 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-864fce58e2 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
 #tabular-864fce58e2 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-864fce58e2 .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-864fce58e2 .tabular-pad { margin: 0; }
+#tabular-864fce58e2 .tabular-pad { margin: 0; line-height: 1; }
 #tabular-864fce58e2 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-864fce58e2 .tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }
 #tabular-864fce58e2 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }

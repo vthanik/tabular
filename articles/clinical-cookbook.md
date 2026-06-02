@@ -14,7 +14,7 @@ is the live HTML preview; in practice you would end the chain with
 demo dataset for your own pre-summarised wide frame and the recipe
 holds.
 
-### 1. Demographics and baseline characteristics
+## 1. Demographics and baseline characteristics
 
 The canonical safety-population summary: a group column for the
 characteristic, decimal-aligned arm columns with BigN, a treatment-group
@@ -49,11 +49,11 @@ tabular(
 
  
 
-## Table 14.1.1
+Table 14.1.1
 
-## Demographic and Baseline Characteristics
+Demographic and Baseline Characteristics
 
-## Safety Population (N=254)
+Safety Population (N=254)
 
  
 
@@ -63,7 +63,7 @@ Percentages are based on the number of subjects per treatment group.
 
 BMI = body mass index (kg/m^2).
 
-### 2. Overall adverse-event summary
+## 2. Overall adverse-event summary
 
 A compact high-level AE table, ordered by descending total frequency so
 the most common categories lead.
@@ -93,11 +93,11 @@ tabular(
 
  
 
-## Table 14.3.1
+Table 14.3.1
 
-## Overall Summary of Adverse Events
+Overall Summary of Adverse Events
 
-## Safety Population (N=254)
+Safety Population (N=254)
 
  
 
@@ -105,7 +105,7 @@ tabular(
 
 n (%) of subjects with at least one event in each category.
 
-### 3. Adverse events by system organ class and preferred term
+## 3. Adverse events by system organ class and preferred term
 
 The hierarchical AE table. Preferred terms indent under their
 system-organ-class header via `indent_by`, and the columns that drive
@@ -144,11 +144,11 @@ tabular(
 
  
 
-## Table 14.3.2
+Table 14.3.2
 
-## Adverse Events by System Organ Class and Preferred Term
+Adverse Events by System Organ Class and Preferred Term
 
-## Safety Population (N=254)
+Safety Population (N=254)
 
  
 
@@ -165,7 +165,7 @@ MedDRA version 26.0.
 > `paginate(repeat_content = c("titles", "headers", "footnotes"))` so
 > the column band and footnotes repeat on every page of this long table.
 
-### 4. Vital signs by parameter and visit
+## 4. Vital signs by parameter and visit
 
 Each vital-sign parameter is a section; visit is an ordinary column so a
 reader scans across timepoints within a parameter.
@@ -195,11 +195,11 @@ tabular(
 
  
 
-## Table 14.2.1
+Table 14.2.1
 
-## Vital Signs by Parameter and Visit
+Vital Signs by Parameter and Visit
 
-## Safety Population (N=254)
+Safety Population (N=254)
 
  
 
@@ -207,7 +207,7 @@ tabular(
 
 Summary statistics of observed values at each visit.
 
-### 5. Best overall response and response rates
+## 5. Best overall response and response rates
 
 An efficacy table on the efficacy population: response categories
 grouped under section labels (Best Overall Response, then derived
@@ -241,11 +241,11 @@ tabular(
 
  
 
-## Table 14.2.1
+Table 14.2.1
 
-## Best Overall Response and Response Rates
+Best Overall Response and Response Rates
 
-## Efficacy Population (N=254)
+Efficacy Population (N=254)
 
  
 
@@ -255,7 +255,7 @@ Response assessed per RECIST 1.1.
 
 CI = confidence interval; ORR = objective response rate.
 
-### 6. Subgrouped vital signs (Sex × Age group)
+## 6. Subgrouped vital signs (Sex × Age group)
 
 The same vitals analysis, partitioned into Sex × Age-group panels with
 [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md).
@@ -291,11 +291,11 @@ tabular(
 
  
 
-## Table 14.2.4
+Table 14.2.4
 
-## Vital Signs by Sex and Age Group
+Vital Signs by Sex and Age Group
 
-## Safety Population
+Safety Population
 
  
 
@@ -347,7 +347,7 @@ tabular(
 
 Summary statistics of observed values within each subgroup.
 
-### Shipping the deliverable
+## Shipping the deliverable
 
 Every recipe ends the same way in production — pick a backend by file
 extension and

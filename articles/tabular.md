@@ -13,7 +13,7 @@ finished table in about ten minutes.
 > `gtsummary`, `dplyr`, or SAS); `tabular`’s job is to *present* them to
 > the exacting layout standards reviewers expect.
 
-### The one rule: bring summarised data
+## The one rule: bring summarised data
 
 `tabular` does **no** statistics. You hand it a wide data frame where
 **one row is one display row** and the columns are already the values
@@ -38,7 +38,7 @@ head(saf_demo, 8)
 Each row is a statistic for one characteristic (`variable`), with one
 column per treatment arm. That is all `tabular` needs.
 
-### Your first table
+## Your first table
 
 Wrap the data in
 [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md),
@@ -130,7 +130,7 @@ here in the page.
 > [`print()`](https://rdrr.io/r/base/print.html); piping further never
 > mutates the previous spec.
 
-### Align the numbers
+## Align the numbers
 
 Clinical tables align numbers on the decimal point. Set
 `align = "decimal"` on the value columns and `tabular` pads with real
@@ -204,7 +204,7 @@ tabular(saf_demo) |>
 | Overweight (25-29.9) |  20 (23.3)    |  23 (31.9)    |  32 (33.3)    |  75 (29.5)    |
 | Obese (\>=30) |   6 ( 7.0)    |   9 (12.5)    |  13 (13.5)    |  28 (11.0)    |
 
-### Add the submission chrome
+## Add the submission chrome
 
 Real tables carry a title block, BigN denominators in the column
 headers, a spanning header over the treatment arms, and footnotes. Add
@@ -247,11 +247,11 @@ tab
 
  
 
-## Table 14.1.1
+Table 14.1.1
 
-## Demographic and Baseline Characteristics
+Demographic and Baseline Characteristics
 
-## Safety Population (N=254)
+Safety Population (N=254)
 
  
 
@@ -263,7 +263,7 @@ BMI = body mass index.
 
 That is a submission-shaped demographics table, built from one pipe.
 
-### Render to five formats
+## Render to five formats
 
 The same `tab` emits to any backend.
 [`emit()`](https://vthanik.github.io/tabular/reference/emit.md)
@@ -281,7 +281,7 @@ emit(tab, paste0(out, ".tex"))    # tabularray LaTeX
 
     #>            file bytes
     #> 1 t_14_1_1.docx  8648
-    #> 2 t_14_1_1.html 15960
+    #> 2 t_14_1_1.html 16005
     #> 3  t_14_1_1.rtf 42959
     #> 4  t_14_1_1.tex  7337
 
@@ -294,7 +294,7 @@ emit(tab, paste0(out, ".tex"))    # tabularray LaTeX
 > fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.md)
 > for why the print backends are the source of truth.
 
-### Where to next
+## Where to next
 
 - **[Core
   concepts](https://vthanik.github.io/tabular/articles/core-concepts.md)**

@@ -61,47 +61,47 @@ saf_aesocpt_card |>
     )
   )
 
-#tabular-1b10514021 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-#tabular-1b10514021 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-1b10514021 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-1b10514021 .tabular-pad { margin: 0; }
-#tabular-1b10514021 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-1b10514021 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-1b10514021 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-1b10514021 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-1b10514021 .tabular-table th, #tabular-1b10514021 .tabular-table td { padding: .35rem .6rem; }
-#tabular-1b10514021 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-1b10514021 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-1b10514021 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-1b10514021 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-1b10514021 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-1b10514021 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-1b10514021 .tabular-table tbody tr td { border-top: none; }
-#tabular-1b10514021 .tabular-band { text-align: center; }
-#tabular-1b10514021 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-1b10514021 .tabular-subgroup-label { font-weight: 600; }
-#tabular-1b10514021 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-1b10514021 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-1b10514021 .text-left { text-align: left; }
-#tabular-1b10514021 .text-center { text-align: center; }
-#tabular-1b10514021 .text-right { text-align: right; }
-#tabular-1b10514021 .tabular-table thead th.text-left { text-align: left; }
-#tabular-1b10514021 .tabular-table thead th.text-center { text-align: center; }
-#tabular-1b10514021 .tabular-table thead th.text-right { text-align: right; }
-#tabular-1b10514021 .valign-top { vertical-align: top; }
-#tabular-1b10514021 .valign-middle { vertical-align: middle; }
-#tabular-1b10514021 .valign-bottom { vertical-align: bottom; }
-#tabular-1b10514021 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-1b10514021 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-1b10514021 .tabular-page-break-row { display: none; }
-#tabular-1b10514021 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-1b10514021 .tabular-page-header, #tabular-1b10514021 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-1b10514021 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-1b10514021 .tabular-page-footer { margin-top: 1rem; }
-#tabular-1b10514021 .tabular-page-header-left, #tabular-1b10514021 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-1b10514021 .tabular-page-header-center, #tabular-1b10514021 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-1b10514021 .tabular-page-header-right, #tabular-1b10514021 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-1b10514021 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-1b10514021 .tabular-table tr { page-break-inside: avoid; } #tabular-1b10514021 .tabular-page-header, #tabular-1b10514021 .tabular-page-footer { display: none; } #tabular-1b10514021 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-1b10514021 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-1b10514021 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-568bfaaa50 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-568bfaaa50 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-568bfaaa50 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-568bfaaa50 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-568bfaaa50 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-568bfaaa50 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-568bfaaa50 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-568bfaaa50 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-568bfaaa50 .tabular-table th, #tabular-568bfaaa50 .tabular-table td { padding: .35rem .6rem; }
+#tabular-568bfaaa50 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-568bfaaa50 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-568bfaaa50 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-568bfaaa50 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-568bfaaa50 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-568bfaaa50 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-568bfaaa50 .tabular-table tbody tr td { border-top: none; }
+#tabular-568bfaaa50 .tabular-band { text-align: center; }
+#tabular-568bfaaa50 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-568bfaaa50 .tabular-subgroup-label { font-weight: 600; }
+#tabular-568bfaaa50 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-568bfaaa50 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-568bfaaa50 .text-left { text-align: left; }
+#tabular-568bfaaa50 .text-center { text-align: center; }
+#tabular-568bfaaa50 .text-right { text-align: right; }
+#tabular-568bfaaa50 .tabular-table thead th.text-left { text-align: left; }
+#tabular-568bfaaa50 .tabular-table thead th.text-center { text-align: center; }
+#tabular-568bfaaa50 .tabular-table thead th.text-right { text-align: right; }
+#tabular-568bfaaa50 .valign-top { vertical-align: top; }
+#tabular-568bfaaa50 .valign-middle { vertical-align: middle; }
+#tabular-568bfaaa50 .valign-bottom { vertical-align: bottom; }
+#tabular-568bfaaa50 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-568bfaaa50 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-568bfaaa50 .tabular-page-break-row { display: none; }
+#tabular-568bfaaa50 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-568bfaaa50 .tabular-page-header, #tabular-568bfaaa50 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-568bfaaa50 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-568bfaaa50 .tabular-page-footer { margin-top: 1rem; }
+#tabular-568bfaaa50 .tabular-page-header-left, #tabular-568bfaaa50 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-568bfaaa50 .tabular-page-header-center, #tabular-568bfaaa50 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-568bfaaa50 .tabular-page-header-right, #tabular-568bfaaa50 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-568bfaaa50 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-568bfaaa50 .tabular-table tr { page-break-inside: avoid; } #tabular-568bfaaa50 .tabular-page-header, #tabular-568bfaaa50 .tabular-page-footer { display: none; } #tabular-568bfaaa50 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-568bfaaa50 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-568bfaaa50 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
 
  

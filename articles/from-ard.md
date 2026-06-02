@@ -23,7 +23,7 @@ expects.
 > [`cards::ard_stack()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html)
 > (and friends). `tabular` does not compute it — it consumes it.
 
-### A demographics ARD
+## A demographics ARD
 
 The bundled `saf_demo_card` is a demographics ARD in `cards` format:
 
@@ -50,7 +50,7 @@ Each row is one statistic (`stat`) for one treatment arm
 (`group1_level`) and characteristic (`variable`). That is too long to
 render directly.
 
-### Pivot to wide
+## Pivot to wide
 
 [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
 spreads the treatment arms across columns and formats each statistic
@@ -108,7 +108,7 @@ By default the `statistic` argument formats continuous rows as
 `overall = "Total"` column is appended. The arm columns take their names
 from the ARD’s `group1_level` values.
 
-### Render the pivoted frame
+## Render the pivoted frame
 
 The result is an ordinary wide data frame, so it flows straight into the
 usual pipeline. Arm columns whose names contain spaces are quoted with
@@ -137,11 +137,11 @@ tabular(
 
  
 
-## Table 14.1.1
+Table 14.1.1
 
-## Demographic and Baseline Characteristics
+Demographic and Baseline Characteristics
 
-## Safety Population
+Safety Population
 
  
 
@@ -186,7 +186,7 @@ tabular(
 
 Built from a cards ARD via pivot_across().
 
-### Customising the statistic format
+## Customising the statistic format
 
 Pass your own templates to `statistic` to change how each context
 renders — for example, a mean with one extra decimal and percentages
@@ -256,7 +256,7 @@ and `label` renames the `variable` values for display.
 > indent-and-group recipe from the [Clinical
 > cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.md).
 
-### Where this fits
+## Where this fits
 
 [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
 keeps the division of labour clean: `cards` (or `gtsummary`, `dplyr`,

@@ -94,8 +94,8 @@
 <p>A <em>TFL</em> is the formatted output that goes into a clinical study report or a regulatory submission — for example, a demographics summary or an adverse-event table. The numbers are computed upstream (by <code>cards</code>, <code>gtsummary</code>, <code>dplyr</code>, or SAS); <code>tabular</code>’s job is to <em>present</em> them to the exacting layout standards reviewers expect.</p>
 </blockquote>
 </div>
-<section class="section level3"><h3 id="the-one-rule-bring-summarised-data">The one rule: bring summarised data<a class="anchor" aria-label="anchor" href="#the-one-rule-bring-summarised-data"></a>
-</h3>
+<section class="level2"><h2 id="the-one-rule-bring-summarised-data">The one rule: bring summarised data<a class="anchor" aria-label="anchor" href="#the-one-rule-bring-summarised-data"></a>
+</h2>
 <p><code>tabular</code> does <strong>no</strong> statistics. You hand it a wide data frame where <strong>one row is one display row</strong> and the columns are already the values you want to show. The bundled <code>saf_demo</code> dataset is exactly this shape:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
@@ -113,8 +113,8 @@
 <span><span class="co">#&gt; 8       Sex, n (%)          F   53 (61.6)   35 (48.6)   55 (57.3)  143 (56.3)</span></span></code></pre></div>
 </div>
 <p>Each row is a statistic for one characteristic (<code>variable</code>), with one column per treatment arm. That is all <code>tabular</code> needs.</p>
-</section><section class="section level3"><h3 id="your-first-table">Your first table<a class="anchor" aria-label="anchor" href="#your-first-table"></a>
-</h3>
+</section><section class="level2"><h2 id="your-first-table">Your first table<a class="anchor" aria-label="anchor" href="#your-first-table"></a>
+</h2>
 <p>Wrap the data in <code><a href="../reference/tabular.html">tabular()</a></code>, then describe each column with <code><a href="../reference/cols.html">cols()</a></code> and <code><a href="../reference/col_spec.html">col_spec()</a></code>. End the chain with the spec itself to see a live preview:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
@@ -129,10 +129,10 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-6e077160b9 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-6e077160b9 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-6e077160b9 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-6e077160b9 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-6e077160b9 .tabular-pad { margin: 0; }
+#tabular-6e077160b9 .tabular-pad { margin: 0; line-height: 1; }
 #tabular-6e077160b9 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-6e077160b9 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-6e077160b9 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -492,8 +492,8 @@
 <p>Every verb returns a <code>tabular_spec</code> — an immutable description of the table, not the table itself. Nothing is rendered until you print it (as above) or call <code><a href="../reference/emit.html">emit()</a></code>. You can inspect a spec at any point in the pipe with <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>; piping further never mutates the previous spec.</p>
 </blockquote>
 </div>
-</section><section class="section level3"><h3 id="align-the-numbers">Align the numbers<a class="anchor" aria-label="anchor" href="#align-the-numbers"></a>
-</h3>
+</section><section class="level2"><h2 id="align-the-numbers">Align the numbers<a class="anchor" aria-label="anchor" href="#align-the-numbers"></a>
+</h2>
 <p>Clinical tables align numbers on the decimal point. Set <code>align = "decimal"</code> on the value columns and <code>tabular</code> pads with real font metrics so the columns stay aligned in print, not just on screen:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
@@ -508,10 +508,10 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-75dbcea1eb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-75dbcea1eb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-75dbcea1eb .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-75dbcea1eb .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-75dbcea1eb .tabular-pad { margin: 0; }
+#tabular-75dbcea1eb .tabular-pad { margin: 0; line-height: 1; }
 #tabular-75dbcea1eb .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-75dbcea1eb .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-75dbcea1eb .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -864,8 +864,8 @@
 </div></div>
 </div>
 </div>
-</section><section class="section level3"><h3 id="add-the-submission-chrome">Add the submission chrome<a class="anchor" aria-label="anchor" href="#add-the-submission-chrome"></a>
-</h3>
+</section><section class="level2"><h2 id="add-the-submission-chrome">Add the submission chrome<a class="anchor" aria-label="anchor" href="#add-the-submission-chrome"></a>
+</h2>
 <p>Real tables carry a title block, BigN denominators in the column headers, a spanning header over the treatment arms, and footnotes. Add titles and footnotes in <code><a href="../reference/tabular.html">tabular()</a></code>, a spanner with <code><a href="../reference/headers.html">headers()</a></code>, and pull the per-arm denominators from the bundled <code>saf_n</code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
@@ -898,53 +898,53 @@
 <span><span class="va">tab</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-e659073e1d { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-#tabular-e659073e1d .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-e659073e1d .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-e659073e1d .tabular-pad { margin: 0; }
-#tabular-e659073e1d .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-e659073e1d .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-e659073e1d .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-e659073e1d .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-e659073e1d .tabular-table th, #tabular-e659073e1d .tabular-table td { padding: .35rem .6rem; }
-#tabular-e659073e1d .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-e659073e1d .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-e659073e1d .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-e659073e1d .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-e659073e1d .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-e659073e1d .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-e659073e1d .tabular-table tbody tr td { border-top: none; }
-#tabular-e659073e1d .tabular-band { text-align: center; }
-#tabular-e659073e1d .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-e659073e1d .tabular-subgroup-label { font-weight: 600; }
-#tabular-e659073e1d .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-e659073e1d .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-e659073e1d .text-left { text-align: left; }
-#tabular-e659073e1d .text-center { text-align: center; }
-#tabular-e659073e1d .text-right { text-align: right; }
-#tabular-e659073e1d .tabular-table thead th.text-left { text-align: left; }
-#tabular-e659073e1d .tabular-table thead th.text-center { text-align: center; }
-#tabular-e659073e1d .tabular-table thead th.text-right { text-align: right; }
-#tabular-e659073e1d .valign-top { vertical-align: top; }
-#tabular-e659073e1d .valign-middle { vertical-align: middle; }
-#tabular-e659073e1d .valign-bottom { vertical-align: bottom; }
-#tabular-e659073e1d .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-e659073e1d .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-e659073e1d .tabular-page-break-row { display: none; }
-#tabular-e659073e1d { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-e659073e1d .tabular-page-header, #tabular-e659073e1d .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-e659073e1d .tabular-page-header { margin-bottom: 1rem; }
-#tabular-e659073e1d .tabular-page-footer { margin-top: 1rem; }
-#tabular-e659073e1d .tabular-page-header-left, #tabular-e659073e1d .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-e659073e1d .tabular-page-header-center, #tabular-e659073e1d .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-e659073e1d .tabular-page-header-right, #tabular-e659073e1d .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-e659073e1d .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-e659073e1d .tabular-table tr { page-break-inside: avoid; } #tabular-e659073e1d .tabular-page-header, #tabular-e659073e1d .tabular-page-footer { display: none; } #tabular-e659073e1d .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-e659073e1d .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-e659073e1d .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-ee29d2ac32 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-ee29d2ac32 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-ee29d2ac32 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-ee29d2ac32 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-ee29d2ac32 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-ee29d2ac32 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-ee29d2ac32 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-ee29d2ac32 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-ee29d2ac32 .tabular-table th, #tabular-ee29d2ac32 .tabular-table td { padding: .35rem .6rem; }
+#tabular-ee29d2ac32 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-ee29d2ac32 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-ee29d2ac32 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-ee29d2ac32 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-ee29d2ac32 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-ee29d2ac32 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-ee29d2ac32 .tabular-table tbody tr td { border-top: none; }
+#tabular-ee29d2ac32 .tabular-band { text-align: center; }
+#tabular-ee29d2ac32 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-ee29d2ac32 .tabular-subgroup-label { font-weight: 600; }
+#tabular-ee29d2ac32 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-ee29d2ac32 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-ee29d2ac32 .text-left { text-align: left; }
+#tabular-ee29d2ac32 .text-center { text-align: center; }
+#tabular-ee29d2ac32 .text-right { text-align: right; }
+#tabular-ee29d2ac32 .tabular-table thead th.text-left { text-align: left; }
+#tabular-ee29d2ac32 .tabular-table thead th.text-center { text-align: center; }
+#tabular-ee29d2ac32 .tabular-table thead th.text-right { text-align: right; }
+#tabular-ee29d2ac32 .valign-top { vertical-align: top; }
+#tabular-ee29d2ac32 .valign-middle { vertical-align: middle; }
+#tabular-ee29d2ac32 .valign-bottom { vertical-align: bottom; }
+#tabular-ee29d2ac32 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-ee29d2ac32 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-ee29d2ac32 .tabular-page-break-row { display: none; }
+#tabular-ee29d2ac32 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-ee29d2ac32 .tabular-page-header, #tabular-ee29d2ac32 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-ee29d2ac32 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-ee29d2ac32 .tabular-page-footer { margin-top: 1rem; }
+#tabular-ee29d2ac32 .tabular-page-header-left, #tabular-ee29d2ac32 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-ee29d2ac32 .tabular-page-header-center, #tabular-ee29d2ac32 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-ee29d2ac32 .tabular-page-header-right, #tabular-ee29d2ac32 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-ee29d2ac32 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-ee29d2ac32 .tabular-table tr { page-break-inside: avoid; } #tabular-ee29d2ac32 .tabular-page-header, #tabular-ee29d2ac32 .tabular-page-footer { display: none; } #tabular-ee29d2ac32 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-ee29d2ac32 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-ee29d2ac32 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-e659073e1d" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+<div id="tabular-ee29d2ac32" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
 <p class="tabular-pad"> </p>
-<h2 class="tabular-title">Table 14.1.1</h2>
-<h2 class="tabular-title">Demographic and Baseline Characteristics</h2>
-<h2 class="tabular-title">Safety Population (N=254)</h2>
+<p class="tabular-title">Table 14.1.1</p>
+<p class="tabular-title">Demographic and Baseline Characteristics</p>
+<p class="tabular-title">Safety Population (N=254)</p>
 <p class="tabular-pad"> </p>
 <div class="tabular-table-wrap">
 
@@ -1279,8 +1279,8 @@
 </div>
 </div>
 <p>That is a submission-shaped demographics table, built from one pipe.</p>
-</section><section class="section level3"><h3 id="render-to-five-formats">Render to five formats<a class="anchor" aria-label="anchor" href="#render-to-five-formats"></a>
-</h3>
+</section><section class="level2"><h2 id="render-to-five-formats">Render to five formats<a class="anchor" aria-label="anchor" href="#render-to-five-formats"></a>
+</h2>
 <p>The same <code>tab</code> emits to any backend. <code><a href="../reference/emit.html">emit()</a></code> dispatches on the file extension (or pass <code>format =</code> explicitly):</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
@@ -1294,7 +1294,7 @@
 <div class="cell">
 <pre><code><span><span class="co">#&gt;            file bytes</span></span>
 <span><span class="co">#&gt; 1 t_14_1_1.docx  8648</span></span>
-<span><span class="co">#&gt; 2 t_14_1_1.html 15960</span></span>
+<span><span class="co">#&gt; 2 t_14_1_1.html 16005</span></span>
 <span><span class="co">#&gt; 3  t_14_1_1.rtf 42959</span></span>
 <span><span class="co">#&gt; 4  t_14_1_1.tex  7337</span></span></code></pre>
 </div>
@@ -1304,8 +1304,8 @@
 <p>The live HTML above is a faithful <em>preview</em>. The artefact you ship is the paginated RTF, PDF, or DOCX — same spec, same numbers, but laid out for the page with repeated headers, footnotes, and the four-section submission layout. See <a href="fonts-and-fidelity.html">Fonts &amp; fidelity</a> for why the print backends are the source of truth.</p>
 </blockquote>
 </div>
-</section><section class="section level3"><h3 id="where-to-next">Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
-</h3>
+</section><section class="level2"><h2 id="where-to-next">Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
+</h2>
 <ul>
 <li>
 <strong><a href="core-concepts.html">Core concepts</a></strong> — the mental model the rest of the guide assumes (the wide-data contract, the page anatomy, the three-phase pipeline).</li>

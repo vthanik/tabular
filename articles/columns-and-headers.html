@@ -92,9 +92,9 @@
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://vthanik.github.io/tabular/">tabular</a></span><span class="op">)</span></span></code></pre></div>
 </div>
 <p>Two verbs shape the columns of a table. <code><a href="../reference/cols.html">cols()</a></code> names each data column and hands it a <code><a href="../reference/col_spec.html">col_spec()</a></code>; <code><a href="../reference/headers.html">headers()</a></code> groups those columns under multi-level spanning bands. This article covers both.</p>
-<section class="section level3"><h3 id="naming-columns-with-cols">Naming columns with <code>cols()</code>
+<section class="level2"><h2 id="naming-columns-with-cols">Naming columns with <code>cols()</code>
 <a class="anchor" aria-label="anchor" href="#naming-columns-with-cols"></a>
-</h3>
+</h2>
 <p><code><a href="../reference/cols.html">cols()</a></code> takes one named argument per data-frame column. The name is the column in your data; the value is a <code><a href="../reference/col_spec.html">col_spec()</a></code> describing how to show it. Columns you do not name keep their defaults.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
@@ -109,10 +109,10 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-75dbcea1eb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-75dbcea1eb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-75dbcea1eb .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-75dbcea1eb .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-75dbcea1eb .tabular-pad { margin: 0; }
+#tabular-75dbcea1eb .tabular-pad { margin: 0; line-height: 1; }
 #tabular-75dbcea1eb .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-75dbcea1eb .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-75dbcea1eb .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -473,8 +473,8 @@
 <code class="sourceCode R"><span><span class="va">demo</span> <span class="op">&lt;-</span> <span class="va">saf_demo</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"stat_label"</span>, <span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
 </blockquote>
 </div>
-</section><section class="section level3"><h3 id="the-col_spec-toolbox">The <code>col_spec()</code> toolbox<a class="anchor" aria-label="anchor" href="#the-col_spec-toolbox"></a>
-</h3>
+</section><section class="level2"><h2 id="the-col_spec-toolbox">The <code>col_spec()</code> toolbox<a class="anchor" aria-label="anchor" href="#the-col_spec-toolbox"></a>
+</h2>
 <p>Every column option lives on <code><a href="../reference/col_spec.html">col_spec()</a></code>:</p>
 <table class="table caption-top">
 <colgroup>
@@ -532,11 +532,11 @@
 </tr>
 </tbody>
 </table>
-<section class="level3"><h4 id="decimal-alignment">Decimal alignment<a class="anchor" aria-label="anchor" href="#decimal-alignment"></a>
-</h4>
+<section class="level3"><h3 id="decimal-alignment">Decimal alignment<a class="anchor" aria-label="anchor" href="#decimal-alignment"></a>
+</h3>
 <p><code>align = "decimal"</code> lines numbers up on the decimal point using real font metrics, so a column of <code>53 (62.1%)</code> and <code>8 (9.3%)</code> stays aligned in print. It is the workhorse alignment for clinical value columns.</p>
-</section><section class="level3"><h4 id="group-columns-section-headers-or-a-repeated-column">Group columns: section headers or a repeated column<a class="anchor" aria-label="anchor" href="#group-columns-section-headers-or-a-repeated-column"></a>
-</h4>
+</section><section class="level3"><h3 id="group-columns-section-headers-or-a-repeated-column">Group columns: section headers or a repeated column<a class="anchor" aria-label="anchor" href="#group-columns-section-headers-or-a-repeated-column"></a>
+</h3>
 <p>A <code>usage = "group"</code> column does not become an ordinary column. By default (<code>group_display = "header_row"</code>) its values become <strong>bold section-header rows</strong>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
@@ -551,10 +551,10 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-75dbcea1eb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-75dbcea1eb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-75dbcea1eb .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-75dbcea1eb .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-75dbcea1eb .tabular-pad { margin: 0; }
+#tabular-75dbcea1eb .tabular-pad { margin: 0; line-height: 1; }
 #tabular-75dbcea1eb .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-75dbcea1eb .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-75dbcea1eb .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -908,8 +908,8 @@
 </div>
 </div>
 <p>Switch to <code>group_display = "column"</code> to keep the group label as a real left-hand column instead of section rows — useful when each group has a single row.</p>
-</section></section><section class="section level3"><h3 id="hiding-the-columns-that-drive-the-display">Hiding the columns that drive the display<a class="anchor" aria-label="anchor" href="#hiding-the-columns-that-drive-the-display"></a>
-</h3>
+</section></section><section class="level2"><h2 id="hiding-the-columns-that-drive-the-display">Hiding the columns that drive the display<a class="anchor" aria-label="anchor" href="#hiding-the-columns-that-drive-the-display"></a>
+</h2>
 <p>Many clinical tables carry columns that control sorting, indentation, or styling but should not appear on the page. Set <code>visible = FALSE</code>: the column stays in <code>spec@data</code> (so <code><a href="../reference/sort_rows.html">sort_rows()</a></code>, <code>indent_by</code>, and <code><a href="../reference/style.html">style()</a></code> predicates can still use it) but is not rendered.</p>
 <p>The AE-by-SOC/PT table is the canonical case. Its <code>row_type</code>, <code>indent_level</code>, and sort-key columns are hidden, and the preferred terms are indented under their system-organ-class header via <code>indent_by</code>:</p>
 <div class="cell">
@@ -936,51 +936,51 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-e290f015bc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-#tabular-e290f015bc .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-e290f015bc .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-e290f015bc .tabular-pad { margin: 0; }
-#tabular-e290f015bc .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-e290f015bc .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-e290f015bc .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-e290f015bc .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-e290f015bc .tabular-table th, #tabular-e290f015bc .tabular-table td { padding: .35rem .6rem; }
-#tabular-e290f015bc .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-e290f015bc .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-e290f015bc .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-e290f015bc .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-e290f015bc .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-e290f015bc .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-e290f015bc .tabular-table tbody tr td { border-top: none; }
-#tabular-e290f015bc .tabular-band { text-align: center; }
-#tabular-e290f015bc .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-e290f015bc .tabular-subgroup-label { font-weight: 600; }
-#tabular-e290f015bc .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-e290f015bc .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-e290f015bc .text-left { text-align: left; }
-#tabular-e290f015bc .text-center { text-align: center; }
-#tabular-e290f015bc .text-right { text-align: right; }
-#tabular-e290f015bc .tabular-table thead th.text-left { text-align: left; }
-#tabular-e290f015bc .tabular-table thead th.text-center { text-align: center; }
-#tabular-e290f015bc .tabular-table thead th.text-right { text-align: right; }
-#tabular-e290f015bc .valign-top { vertical-align: top; }
-#tabular-e290f015bc .valign-middle { vertical-align: middle; }
-#tabular-e290f015bc .valign-bottom { vertical-align: bottom; }
-#tabular-e290f015bc .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-e290f015bc .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-e290f015bc .tabular-page-break-row { display: none; }
-#tabular-e290f015bc { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-e290f015bc .tabular-page-header, #tabular-e290f015bc .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-e290f015bc .tabular-page-header { margin-bottom: 1rem; }
-#tabular-e290f015bc .tabular-page-footer { margin-top: 1rem; }
-#tabular-e290f015bc .tabular-page-header-left, #tabular-e290f015bc .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-e290f015bc .tabular-page-header-center, #tabular-e290f015bc .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-e290f015bc .tabular-page-header-right, #tabular-e290f015bc .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-e290f015bc .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-e290f015bc .tabular-table tr { page-break-inside: avoid; } #tabular-e290f015bc .tabular-page-header, #tabular-e290f015bc .tabular-page-footer { display: none; } #tabular-e290f015bc .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-e290f015bc .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-e290f015bc .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-f912d2cfcf { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-f912d2cfcf .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-f912d2cfcf .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-f912d2cfcf .tabular-pad { margin: 0; line-height: 1; }
+#tabular-f912d2cfcf .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-f912d2cfcf .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-f912d2cfcf .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-f912d2cfcf .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-f912d2cfcf .tabular-table th, #tabular-f912d2cfcf .tabular-table td { padding: .35rem .6rem; }
+#tabular-f912d2cfcf .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-f912d2cfcf .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-f912d2cfcf .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-f912d2cfcf .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-f912d2cfcf .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-f912d2cfcf .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-f912d2cfcf .tabular-table tbody tr td { border-top: none; }
+#tabular-f912d2cfcf .tabular-band { text-align: center; }
+#tabular-f912d2cfcf .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-f912d2cfcf .tabular-subgroup-label { font-weight: 600; }
+#tabular-f912d2cfcf .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-f912d2cfcf .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-f912d2cfcf .text-left { text-align: left; }
+#tabular-f912d2cfcf .text-center { text-align: center; }
+#tabular-f912d2cfcf .text-right { text-align: right; }
+#tabular-f912d2cfcf .tabular-table thead th.text-left { text-align: left; }
+#tabular-f912d2cfcf .tabular-table thead th.text-center { text-align: center; }
+#tabular-f912d2cfcf .tabular-table thead th.text-right { text-align: right; }
+#tabular-f912d2cfcf .valign-top { vertical-align: top; }
+#tabular-f912d2cfcf .valign-middle { vertical-align: middle; }
+#tabular-f912d2cfcf .valign-bottom { vertical-align: bottom; }
+#tabular-f912d2cfcf .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-f912d2cfcf .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-f912d2cfcf .tabular-page-break-row { display: none; }
+#tabular-f912d2cfcf { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-f912d2cfcf .tabular-page-header, #tabular-f912d2cfcf .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-f912d2cfcf .tabular-page-header { margin-bottom: 1rem; }
+#tabular-f912d2cfcf .tabular-page-footer { margin-top: 1rem; }
+#tabular-f912d2cfcf .tabular-page-header-left, #tabular-f912d2cfcf .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-f912d2cfcf .tabular-page-header-center, #tabular-f912d2cfcf .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-f912d2cfcf .tabular-page-header-right, #tabular-f912d2cfcf .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-f912d2cfcf .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-f912d2cfcf .tabular-table tr { page-break-inside: avoid; } #tabular-f912d2cfcf .tabular-page-header, #tabular-f912d2cfcf .tabular-page-footer { display: none; } #tabular-f912d2cfcf .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-f912d2cfcf .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-f912d2cfcf .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-e290f015bc" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+<div id="tabular-f912d2cfcf" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
 <p class="tabular-pad"> </p>
-<h2 class="tabular-title">Table 14.3.1  Adverse Events by System Organ Class and Preferred Term</h2>
+<p class="tabular-title">Table 14.3.1  Adverse Events by System Organ Class and Preferred Term</p>
 <p class="tabular-pad"> </p>
 <div class="tabular-table-wrap">
 
@@ -1121,8 +1121,8 @@
 </div></div>
 </div>
 </div>
-</section><section class="section level3"><h3 id="bign-in-the-header">BigN in the header<a class="anchor" aria-label="anchor" href="#bign-in-the-header"></a>
-</h3>
+</section><section class="level2"><h2 id="bign-in-the-header">BigN in the header<a class="anchor" aria-label="anchor" href="#bign-in-the-header"></a>
+</h2>
 <p>Treatment-group denominators belong in the column headers. Pull them from the bundled <code>saf_n</code> and build the labels with <code><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf()</a></code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
@@ -1139,10 +1139,10 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-47e7f490bf { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-47e7f490bf { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-47e7f490bf .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-47e7f490bf .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-47e7f490bf .tabular-pad { margin: 0; }
+#tabular-47e7f490bf .tabular-pad { margin: 0; line-height: 1; }
 #tabular-47e7f490bf .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-47e7f490bf .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-47e7f490bf .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -1512,9 +1512,9 @@
 <p><code>saf_n</code> is a discoverable data frame, not an attribute on <code>saf_demo</code>, because attributes get silently stripped by <code>dplyr</code> and base-R subsetting. Keying the labels off <code>saf_n$arm_short</code> keeps the denominators robust to upstream data wrangling.</p>
 </blockquote>
 </div>
-</section><section class="section level3"><h3 id="multi-level-headers-with-headers">Multi-level headers with <code>headers()</code>
+</section><section class="level2"><h2 id="multi-level-headers-with-headers">Multi-level headers with <code>headers()</code>
 <a class="anchor" aria-label="anchor" href="#multi-level-headers-with-headers"></a>
-</h3>
+</h2>
 <p><code><a href="../reference/headers.html">headers()</a></code> builds spanning bands above the leaf columns. A named character vector spans those columns under one label:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
@@ -1536,10 +1536,10 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-7c7e7080db { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-7c7e7080db { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-7c7e7080db .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-7c7e7080db .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-7c7e7080db .tabular-pad { margin: 0; }
+#tabular-7c7e7080db .tabular-pad { margin: 0; line-height: 1; }
 #tabular-7c7e7080db .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-7c7e7080db .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-7c7e7080db .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -1925,10 +1925,10 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-6a487217c0 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-6a487217c0 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-6a487217c0 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-6a487217c0 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-6a487217c0 .tabular-pad { margin: 0; }
+#tabular-6a487217c0 .tabular-pad { margin: 0; line-height: 1; }
 #tabular-6a487217c0 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-6a487217c0 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-6a487217c0 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -2312,8 +2312,8 @@
 <p>A spanner sits above adjacent columns, so the columns named in one band must be next to each other in the data frame. If <code>drug_50</code> and <code>drug_100</code> are separated by another column, reorder the data first.</p>
 </blockquote>
 </div>
-</section><section class="section level3"><h3 id="going-deeper">Going deeper<a class="anchor" aria-label="anchor" href="#going-deeper"></a>
-</h3>
+</section><section class="level2"><h2 id="going-deeper">Going deeper<a class="anchor" aria-label="anchor" href="#going-deeper"></a>
+</h2>
 <ul>
 <li>
 <strong>Widths.</strong> <code>width = "auto"</code> lets the engine size the column to its content. Pass a number for inches (<code>width = 1.8</code>) or a unit string (<code>width = "3cm"</code>) to fix it.</li>

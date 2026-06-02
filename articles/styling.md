@@ -21,7 +21,7 @@ pass it visual attributes (bold, colour, borders, padding, …) and a
 **location** that says *where* to apply them. Locations are the
 `cells_*()` helpers.
 
-### The shape: attributes + a location
+## The shape: attributes + a location
 
 ``` r
 
@@ -89,7 +89,7 @@ apply there. Stack
 [`style()`](https://vthanik.github.io/tabular/reference/style.md) calls
 to layer rules; later layers win per attribute.
 
-### Where: the location helpers
+## Where: the location helpers
 
 | Location | Targets |
 |----|----|
@@ -165,7 +165,7 @@ base |>
 | Overweight (25-29.9) |  20 (23.3)    |  23 (31.9)    |  32 (33.3)    |  75 (29.5)    |
 | Obese (\>=30) |   6 ( 7.0)    |   9 (12.5)    |  13 (13.5)    |  28 (11.0)    |
 
-### What: the styling attributes
+## What: the styling attributes
 
 A [`style()`](https://vthanik.github.io/tabular/reference/style.md) call
 accepts any of these:
@@ -180,7 +180,7 @@ accepts any of these:
   `blank_below`.
 - **Surrounding text** — `pretext`, `posttext`.
 
-#### Borders with `brdr()`
+### Borders with `brdr()`
 
 [`brdr()`](https://vthanik.github.io/tabular/reference/brdr.md)
 describes one line. Its first argument is the **width** (`"hairline"`,
@@ -251,7 +251,7 @@ base |>
 | Overweight (25-29.9) |  20 (23.3)    |  23 (31.9)    |  32 (33.3)    |  75 (29.5)    |
 | Obese (\>=30) |   6 ( 7.0)    |   9 (12.5)    |  13 (13.5)    |  28 (11.0)    |
 
-### Data-driven styling
+## Data-driven styling
 
 `cells_body(where = ...)` evaluates a predicate against the data, so you
 can highlight cells by content. Reference any column — including hidden
@@ -322,7 +322,7 @@ Use `i` and `j` for positional targeting instead of a predicate:
 `cells_body(j = "Total")` styles the Total column, `cells_body(i = 1:3)`
 the first three rows.
 
-### Presets: cosmetic defaults for the whole table
+## Presets: cosmetic defaults for the whole table
 
 Where [`style()`](https://vthanik.github.io/tabular/reference/style.md)
 targets specific cells,
@@ -407,7 +407,7 @@ base |>
 > strictly validated: unknown surfaces, unknown keys, or nested lists
 > are rejected with a clear error.
 
-#### Session defaults with `set_preset()`
+### Session defaults with `set_preset()`
 
 [`preset()`](https://vthanik.github.io/tabular/reference/preset.md)
 applies to one spec in the pipe.
@@ -455,7 +455,7 @@ get_preset()
 set_preset()                      # clear it again
 ```
 
-#### A minimal theme
+### A minimal theme
 
 [`preset_minimal()`](https://vthanik.github.io/tabular/reference/preset_minimal.md)
 strips the look down to a single column-header rule with normal-weight
@@ -522,7 +522,7 @@ base |>
 | Overweight (25-29.9) |  20 (23.3)    |  23 (31.9)    |  32 (33.3)    |  75 (29.5)    |
 | Obese (\>=30) |   6 ( 7.0)    |   9 (12.5)    |  13 (13.5)    |  28 (11.0)    |
 
-### Packaging a house style with `style_template()`
+## Packaging a house style with `style_template()`
 
 A submission renders dozens of tables that must share one identity.
 Build the rules once with
@@ -605,7 +605,7 @@ Attach it once per session with `set_preset(.style = house)` and every
 subsequent table picks up the house style with no per-table
 [`style()`](https://vthanik.github.io/tabular/reference/style.md).
 
-### Inline markup with `md()` and `html()`
+## Inline markup with `md()` and `html()`
 
 Wrap label, title, footnote, or cell text in
 [`md()`](https://vthanik.github.io/tabular/reference/md.md) for Markdown
@@ -635,9 +635,9 @@ tabular(
 
  
 
-## **Table 14.1.1**
+**Table 14.1.1**
 
-## Demographic Characteristics
+Demographic Characteristics
 
  
 
@@ -713,7 +713,7 @@ Body mass index in kg/m².
 > [`style()`](https://vthanik.github.io/tabular/reference/style.md)
 > overrides just what it names.
 
-### Where to next
+## Where to next
 
 - **[Clinical
   cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.md)**

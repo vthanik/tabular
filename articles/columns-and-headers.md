@@ -13,7 +13,7 @@ each data column and hands it a
 groups those columns under multi-level spanning bands. This article
 covers both.
 
-### Naming columns with `cols()`
+## Naming columns with `cols()`
 
 [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) takes
 one named argument per data-frame column. The name is the column in your
@@ -101,7 +101,7 @@ tabular(saf_demo) |>
 > demo <- saf_demo[c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")]
 > ```
 
-### The `col_spec()` toolbox
+## The `col_spec()` toolbox
 
 Every column option lives on
 [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md):
@@ -118,13 +118,13 @@ Every column option lives on
 | `indent_by` | Name of a column holding per-row indent depth |
 | `format` | A formatter applied to the column’s values |
 
-#### Decimal alignment
+### Decimal alignment
 
 `align = "decimal"` lines numbers up on the decimal point using real
 font metrics, so a column of `53 (62.1%)` and `8 (9.3%)` stays aligned
 in print. It is the workhorse alignment for clinical value columns.
 
-#### Group columns: section headers or a repeated column
+### Group columns: section headers or a repeated column
 
 A `usage = "group"` column does not become an ordinary column. By
 default (`group_display = "header_row"`) its values become **bold
@@ -202,7 +202,7 @@ Switch to `group_display = "column"` to keep the group label as a real
 left-hand column instead of section rows — useful when each group has a
 single row.
 
-### Hiding the columns that drive the display
+## Hiding the columns that drive the display
 
 Many clinical tables carry columns that control sorting, indentation, or
 styling but should not appear on the page. Set `visible = FALSE`: the
@@ -242,7 +242,7 @@ tabular(
 
  
 
-## Table 14.3.1 Adverse Events by System Organ Class and Preferred Term
+Table 14.3.1 Adverse Events by System Organ Class and Preferred Term
 
  
 
@@ -276,7 +276,7 @@ tabular(
 |           |           |           |            |
 | 13 (15.1) | 12 (12.5) | 17 (23.6) |  42 (16.5) |
 
-### BigN in the header
+## BigN in the header
 
 Treatment-group denominators belong in the column headers. Pull them
 from the bundled `saf_n` and build the labels with
@@ -306,7 +306,7 @@ tabular(saf_demo) |>
 > subsetting. Keying the labels off `saf_n$arm_short` keeps the
 > denominators robust to upstream data wrangling.
 
-### Multi-level headers with `headers()`
+## Multi-level headers with `headers()`
 
 [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
 builds spanning bands above the leaf columns. A named character vector
@@ -358,7 +358,7 @@ base |>
 > band must be next to each other in the data frame. If `drug_50` and
 > `drug_100` are separated by another column, reorder the data first.
 
-### Going deeper
+## Going deeper
 
 - **Widths.** `width = "auto"` lets the engine size the column to its
   content. Pass a number for inches (`width = 1.8`) or a unit string

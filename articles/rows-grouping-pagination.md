@@ -14,7 +14,7 @@ partitions the table into labelled blocks, and
 [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
 decides how it breaks across pages.
 
-### Ordering rows with `sort_rows()`
+## Ordering rows with `sort_rows()`
 
 [`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md)
 sets the display order. Sort by any column — including hidden ones — and
@@ -44,7 +44,7 @@ tabular(
 
  
 
-## Adverse-event categories, ordered by total frequency
+Adverse-event categories, ordered by total frequency
 
  
 
@@ -73,7 +73,7 @@ alphabetically, and `NA`s sort last. That is how a CDISC best-overall-
 response column comes out in CR, PR, SD, PD order rather than
 alphabetical.
 
-### Section groups, revisited
+## Section groups, revisited
 
 A `usage = "group"` column turns into bold section-header rows
 (`group_display = "header_row"`). That is the row-grouping you already
@@ -149,7 +149,7 @@ tabular(saf_demo) |>
 | Overweight (25-29.9) |  20 (23.3)    |  23 (31.9)    |  32 (33.3)    |  75 (29.5)    |
 | Obese (\>=30) |   6 ( 7.0)    |   9 (12.5)    |  13 (13.5)    |  28 (11.0)    |
 
-### Partitioning with `subgroup()`
+## Partitioning with `subgroup()`
 
 Where a group column stacks blocks *within* one table,
 [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
@@ -181,7 +181,7 @@ tabular(
 
  
 
-## Table 14.2.3 Vital Signs by Sex and Age Group
+Table 14.2.3 Vital Signs by Sex and Age Group
 
  
 
@@ -244,7 +244,7 @@ template are hidden automatically.
 > Use a group for “Age, then Sex, then Race”; use a subgroup for “the
 > whole table, repeated per sex”.
 
-### Pagination with `paginate()`
+## Pagination with `paginate()`
 
 [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
 governs how the resolved table breaks across printed pages. You do not
@@ -348,7 +348,7 @@ What the arguments do:
 > **RTF, PDF, and DOCX** output, where pages are real. Build and preview
 > in HTML, then emit to a paginated backend to see the splits.
 
-### Where to next
+## Where to next
 
 - **[Styling](https://vthanik.github.io/tabular/articles/styling.md)** —
   target rows, groups, and subgroup banners with

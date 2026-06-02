@@ -102,18 +102,18 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 </div>
 <p>Styling in <code>tabular</code> is one verb: <code><a href="../reference/style.html">style()</a></code>. You pass it visual attributes (bold, colour, borders, padding, …) and a <strong>location</strong> that says <em>where</em> to apply them. Locations are the <code>cells_*()</code> helpers.</p>
-<section class="section level3"><h3 id="the-shape-attributes-a-location">The shape: attributes + a location<a class="anchor" aria-label="anchor" href="#the-shape-attributes-a-location"></a>
-</h3>
+<section class="level2"><h2 id="the-shape-attributes-a-location">The shape: attributes + a location<a class="anchor" aria-label="anchor" href="#the-shape-attributes-a-location"></a>
+</h2>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">base</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>bold <span class="op">=</span> <span class="cn">TRUE</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_group_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-05611927c7 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-05611927c7 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-05611927c7 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-05611927c7 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-05611927c7 .tabular-pad { margin: 0; }
+#tabular-05611927c7 .tabular-pad { margin: 0; line-height: 1; }
 #tabular-05611927c7 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-05611927c7 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-05611927c7 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -467,8 +467,8 @@
 </div>
 </div>
 <p>The <code>.at</code> argument names the surface. Everything else is the styling to apply there. Stack <code><a href="../reference/style.html">style()</a></code> calls to layer rules; later layers win per attribute.</p>
-</section><section class="section level3"><h3 id="where-the-location-helpers">Where: the location helpers<a class="anchor" aria-label="anchor" href="#where-the-location-helpers"></a>
-</h3>
+</section><section class="level2"><h2 id="where-the-location-helpers">Where: the location helpers<a class="anchor" aria-label="anchor" href="#where-the-location-helpers"></a>
+</h2>
 <table class="table caption-top">
 <thead><tr class="header">
 <th>Location</th>
@@ -519,10 +519,10 @@
 <span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>border_bottom <span class="op">=</span> <span class="fu"><a href="../reference/brdr.html">brdr</a></span><span class="op">(</span><span class="st">"thick"</span><span class="op">)</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-471d8a77be { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-471d8a77be { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-471d8a77be .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-471d8a77be .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-471d8a77be .tabular-pad { margin: 0; }
+#tabular-471d8a77be .tabular-pad { margin: 0; line-height: 1; }
 #tabular-471d8a77be .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-471d8a77be .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-471d8a77be .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -875,8 +875,8 @@
 </div></div>
 </div>
 </div>
-</section><section class="section level3"><h3 id="what-the-styling-attributes">What: the styling attributes<a class="anchor" aria-label="anchor" href="#what-the-styling-attributes"></a>
-</h3>
+</section><section class="level2"><h2 id="what-the-styling-attributes">What: the styling attributes<a class="anchor" aria-label="anchor" href="#what-the-styling-attributes"></a>
+</h2>
 <p>A <code><a href="../reference/style.html">style()</a></code> call accepts any of these:</p>
 <ul>
 <li>
@@ -890,9 +890,9 @@
 <li>
 <strong>Surrounding text</strong> — <code>pretext</code>, <code>posttext</code>.</li>
 </ul>
-<section class="level3"><h4 id="borders-with-brdr">Borders with <code>brdr()</code>
+<section class="level3"><h3 id="borders-with-brdr">Borders with <code>brdr()</code>
 <a class="anchor" aria-label="anchor" href="#borders-with-brdr"></a>
-</h4>
+</h3>
 <p><code><a href="../reference/brdr.html">brdr()</a></code> describes one line. Its first argument is the <strong>width</strong> (<code>"hairline"</code>, <code>"thin"</code>, <code>"medium"</code>, <code>"thick"</code>, or a number in points), then the line <code>style</code>, then the <code>color</code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
@@ -903,10 +903,10 @@
 <span>        .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_group_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-75dbcea1eb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-75dbcea1eb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-75dbcea1eb .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-75dbcea1eb .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-75dbcea1eb .tabular-pad { margin: 0; }
+#tabular-75dbcea1eb .tabular-pad { margin: 0; line-height: 1; }
 #tabular-75dbcea1eb .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-75dbcea1eb .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-75dbcea1eb .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -1259,8 +1259,8 @@
 </div></div>
 </div>
 </div>
-</section></section><section class="section level3"><h3 id="data-driven-styling">Data-driven styling<a class="anchor" aria-label="anchor" href="#data-driven-styling"></a>
-</h3>
+</section></section><section class="level2"><h2 id="data-driven-styling">Data-driven styling<a class="anchor" aria-label="anchor" href="#data-driven-styling"></a>
+</h2>
 <p><code>cells_body(where = ...)</code> evaluates a predicate against the data, so you can highlight cells by content. Reference any column — including hidden ones:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
@@ -1268,10 +1268,10 @@
 <span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>background <span class="op">=</span> <span class="st">"#eef6ff"</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_body</a></span><span class="op">(</span>where <span class="op">=</span> <span class="va">stat_label</span> <span class="op">==</span> <span class="st">"n"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-2317e30b66 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-2317e30b66 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-2317e30b66 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-2317e30b66 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-2317e30b66 .tabular-pad { margin: 0; }
+#tabular-2317e30b66 .tabular-pad { margin: 0; line-height: 1; }
 #tabular-2317e30b66 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-2317e30b66 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-2317e30b66 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -1625,8 +1625,8 @@
 </div>
 </div>
 <p>Use <code>i</code> and <code>j</code> for positional targeting instead of a predicate: <code>cells_body(j = "Total")</code> styles the Total column, <code>cells_body(i = 1:3)</code> the first three rows.</p>
-</section><section class="section level3"><h3 id="presets-cosmetic-defaults-for-the-whole-table">Presets: cosmetic defaults for the whole table<a class="anchor" aria-label="anchor" href="#presets-cosmetic-defaults-for-the-whole-table"></a>
-</h3>
+</section><section class="level2"><h2 id="presets-cosmetic-defaults-for-the-whole-table">Presets: cosmetic defaults for the whole table<a class="anchor" aria-label="anchor" href="#presets-cosmetic-defaults-for-the-whole-table"></a>
+</h2>
 <p>Where <code><a href="../reference/style.html">style()</a></code> targets specific cells, <code><a href="../reference/preset.html">preset()</a></code> carries table-wide geometry and cosmetic defaults — paper size, orientation, font, and five named-list “knobs” for alignment, rules, fonts, colours, and padding:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
@@ -1639,10 +1639,10 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-19f23408f5 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-19f23408f5 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
 #tabular-19f23408f5 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-19f23408f5 .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-19f23408f5 .tabular-pad { margin: 0; }
+#tabular-19f23408f5 .tabular-pad { margin: 0; line-height: 1; }
 #tabular-19f23408f5 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-19f23408f5 .tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }
 #tabular-19f23408f5 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -2001,9 +2001,9 @@
 <p>Each cosmetic knob is a <strong>named list keyed by surface</strong>, and each per-surface spec is a flat named vector — <code>fonts = list(body = c(family = "Times New Roman", size = 9))</code>, <code>colors = list(header = c(text = "#1f2937", background = "#f3f4f6"))</code>, <code>padding = list(body = c(top = 2, bottom = 2))</code>. The knobs are strictly validated: unknown surfaces, unknown keys, or nested lists are rejected with a clear error.</p>
 </blockquote>
 </div>
-<section class="level3"><h4 id="session-defaults-with-set_preset">Session defaults with <code>set_preset()</code>
+<section class="level3"><h3 id="session-defaults-with-set_preset">Session defaults with <code>set_preset()</code>
 <a class="anchor" aria-label="anchor" href="#session-defaults-with-set_preset"></a>
-</h4>
+</h3>
 <p><code><a href="../reference/preset.html">preset()</a></code> applies to one spec in the pipe. <code><a href="../reference/set_preset.html">set_preset()</a></code> sets a <strong>session default</strong> that every subsequent <code><a href="../reference/tabular.html">tabular()</a></code> inherits — the <code><a href="https://ggplot2.tidyverse.org/reference/get_theme.html" class="external-link">ggplot2::theme_set()</a></code> analogue. <code><a href="../reference/get_preset.html">get_preset()</a></code> returns it; calling <code><a href="../reference/set_preset.html">set_preset()</a></code> with no arguments clears it.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
@@ -2037,8 +2037,8 @@
 <span><span class="co">#&gt;  @ style          : list()</span></span>
 <span><span class="fu"><a href="../reference/set_preset.html">set_preset</a></span><span class="op">(</span><span class="op">)</span>                      <span class="co"># clear it again</span></span></code></pre></div>
 </div>
-</section><section class="level3"><h4 id="a-minimal-theme">A minimal theme<a class="anchor" aria-label="anchor" href="#a-minimal-theme"></a>
-</h4>
+</section><section class="level3"><h3 id="a-minimal-theme">A minimal theme<a class="anchor" aria-label="anchor" href="#a-minimal-theme"></a>
+</h3>
 <p><code><a href="../reference/preset_minimal.html">preset_minimal()</a></code> strips the look down to a single column-header rule with normal-weight text throughout — the spare house style some groups prefer:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
@@ -2046,10 +2046,10 @@
 <span>  <span class="fu"><a href="../reference/preset_minimal.html">preset_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-777d4c4c93 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-777d4c4c93 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-777d4c4c93 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-777d4c4c93 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-777d4c4c93 .tabular-pad { margin: 0; }
+#tabular-777d4c4c93 .tabular-pad { margin: 0; line-height: 1; }
 #tabular-777d4c4c93 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-777d4c4c93 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-777d4c4c93 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -2400,9 +2400,9 @@
 </div></div>
 </div>
 </div>
-</section></section><section class="section level3"><h3 id="packaging-a-house-style-with-style_template">Packaging a house style with <code>style_template()</code>
+</section></section><section class="level2"><h2 id="packaging-a-house-style-with-style_template">Packaging a house style with <code>style_template()</code>
 <a class="anchor" aria-label="anchor" href="#packaging-a-house-style-with-style_template"></a>
-</h3>
+</h2>
 <p>A submission renders dozens of tables that must share one identity. Build the rules once with <code><a href="../reference/style_template.html">style_template()</a></code> (chaining the <em>same</em> <code><a href="../reference/style.html">style()</a></code> verb), then attach it to a preset so every table inherits it:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
@@ -2419,10 +2419,10 @@
 <span>  <span class="fu"><a href="../reference/preset.html">preset</a></span><span class="op">(</span>.style <span class="op">=</span> <span class="va">house</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-93ffd1e64a { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-93ffd1e64a { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-93ffd1e64a .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-93ffd1e64a .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-93ffd1e64a .tabular-pad { margin: 0; }
+#tabular-93ffd1e64a .tabular-pad { margin: 0; line-height: 1; }
 #tabular-93ffd1e64a .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
 #tabular-93ffd1e64a .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
 #tabular-93ffd1e64a .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
@@ -2776,9 +2776,9 @@
 </div>
 </div>
 <p>Attach it once per session with <code>set_preset(.style = house)</code> and every subsequent table picks up the house style with no per-table <code><a href="../reference/style.html">style()</a></code>.</p>
-</section><section class="section level3"><h3 id="inline-markup-with-md-and-html">Inline markup with <code>md()</code> and <code>html()</code>
+</section><section class="level2"><h2 id="inline-markup-with-md-and-html">Inline markup with <code>md()</code> and <code>html()</code>
 <a class="anchor" aria-label="anchor" href="#inline-markup-with-md-and-html"></a>
-</h3>
+</h2>
 <p>Wrap label, title, footnote, or cell text in <code><a href="../reference/md.html">md()</a></code> for Markdown (bold, italic, super/subscript) or <code><a href="../reference/html.html">html()</a></code> for a constrained HTML subset:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
@@ -2800,52 +2800,52 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-230741231e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-#tabular-230741231e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-230741231e .tabular-title { font-size: 8pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-230741231e .tabular-pad { margin: 0; }
-#tabular-230741231e .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-230741231e .tabular-table { border-collapse: collapse; font-size: 8pt; margin: 0 auto; }
-#tabular-230741231e .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-230741231e .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-230741231e .tabular-table th, #tabular-230741231e .tabular-table td { padding: .35rem .6rem; }
-#tabular-230741231e .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-230741231e .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-230741231e .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-230741231e .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-230741231e .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-230741231e .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-230741231e .tabular-table tbody tr td { border-top: none; }
-#tabular-230741231e .tabular-band { text-align: center; }
-#tabular-230741231e .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-230741231e .tabular-subgroup-label { font-weight: 600; }
-#tabular-230741231e .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-230741231e .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-230741231e .text-left { text-align: left; }
-#tabular-230741231e .text-center { text-align: center; }
-#tabular-230741231e .text-right { text-align: right; }
-#tabular-230741231e .tabular-table thead th.text-left { text-align: left; }
-#tabular-230741231e .tabular-table thead th.text-center { text-align: center; }
-#tabular-230741231e .tabular-table thead th.text-right { text-align: right; }
-#tabular-230741231e .valign-top { vertical-align: top; }
-#tabular-230741231e .valign-middle { vertical-align: middle; }
-#tabular-230741231e .valign-bottom { vertical-align: bottom; }
-#tabular-230741231e .tabular-footnote { font-size: 8pt; color: #495057; margin: .25rem 0; }
-#tabular-230741231e .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-230741231e .tabular-page-break-row { display: none; }
-#tabular-230741231e { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-230741231e .tabular-page-header, #tabular-230741231e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
-#tabular-230741231e .tabular-page-header { margin-bottom: 1rem; }
-#tabular-230741231e .tabular-page-footer { margin-top: 1rem; }
-#tabular-230741231e .tabular-page-header-left, #tabular-230741231e .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-230741231e .tabular-page-header-center, #tabular-230741231e .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-230741231e .tabular-page-header-right, #tabular-230741231e .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-230741231e .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-230741231e .tabular-table tr { page-break-inside: avoid; } #tabular-230741231e .tabular-page-header, #tabular-230741231e .tabular-page-footer { display: none; } #tabular-230741231e .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-230741231e .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-230741231e .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-91b5245dd3 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
+#tabular-91b5245dd3 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-91b5245dd3 .tabular-title { font-size: 8pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-91b5245dd3 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-91b5245dd3 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-91b5245dd3 .tabular-table { border-collapse: collapse; font-size: 8pt; margin: 0 auto; }
+#tabular-91b5245dd3 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-91b5245dd3 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-91b5245dd3 .tabular-table th, #tabular-91b5245dd3 .tabular-table td { padding: .35rem .6rem; }
+#tabular-91b5245dd3 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-91b5245dd3 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-91b5245dd3 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-91b5245dd3 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-91b5245dd3 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-91b5245dd3 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-91b5245dd3 .tabular-table tbody tr td { border-top: none; }
+#tabular-91b5245dd3 .tabular-band { text-align: center; }
+#tabular-91b5245dd3 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-91b5245dd3 .tabular-subgroup-label { font-weight: 600; }
+#tabular-91b5245dd3 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-91b5245dd3 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-91b5245dd3 .text-left { text-align: left; }
+#tabular-91b5245dd3 .text-center { text-align: center; }
+#tabular-91b5245dd3 .text-right { text-align: right; }
+#tabular-91b5245dd3 .tabular-table thead th.text-left { text-align: left; }
+#tabular-91b5245dd3 .tabular-table thead th.text-center { text-align: center; }
+#tabular-91b5245dd3 .tabular-table thead th.text-right { text-align: right; }
+#tabular-91b5245dd3 .valign-top { vertical-align: top; }
+#tabular-91b5245dd3 .valign-middle { vertical-align: middle; }
+#tabular-91b5245dd3 .valign-bottom { vertical-align: bottom; }
+#tabular-91b5245dd3 .tabular-footnote { font-size: 8pt; color: #495057; margin: .25rem 0; }
+#tabular-91b5245dd3 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-91b5245dd3 .tabular-page-break-row { display: none; }
+#tabular-91b5245dd3 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-91b5245dd3 .tabular-page-header, #tabular-91b5245dd3 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
+#tabular-91b5245dd3 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-91b5245dd3 .tabular-page-footer { margin-top: 1rem; }
+#tabular-91b5245dd3 .tabular-page-header-left, #tabular-91b5245dd3 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-91b5245dd3 .tabular-page-header-center, #tabular-91b5245dd3 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-91b5245dd3 .tabular-page-header-right, #tabular-91b5245dd3 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-91b5245dd3 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-91b5245dd3 .tabular-table tr { page-break-inside: avoid; } #tabular-91b5245dd3 .tabular-page-header, #tabular-91b5245dd3 .tabular-page-footer { display: none; } #tabular-91b5245dd3 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-91b5245dd3 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-91b5245dd3 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-230741231e" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+<div id="tabular-91b5245dd3" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
 <p class="tabular-pad"> </p>
-<h2 class="tabular-title"><strong>Table 14.1.1</strong></h2>
-<h2 class="tabular-title">Demographic Characteristics</h2>
+<p class="tabular-title"><strong>Table 14.1.1</strong></p>
+<p class="tabular-title">Demographic Characteristics</p>
 <p class="tabular-pad"> </p>
 <div class="tabular-table-wrap">
 
@@ -3167,8 +3167,8 @@
 <p>Styling resolves low-to-high priority: backend defaults → session preset (<code><a href="../reference/set_preset.html">set_preset()</a></code>) → spec preset (<code><a href="../reference/preset.html">preset()</a></code>) → per-spec <code><a href="../reference/style.html">style()</a></code> layers. Later layers override earlier ones per attribute, and <code>NA</code> fields leave the prior value in place. So a house style sets the baseline and a per-table <code><a href="../reference/style.html">style()</a></code> overrides just what it names.</p>
 </blockquote>
 </div>
-</section><section class="section level3"><h3 id="where-to-next">Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
-</h3>
+</section><section class="level2"><h2 id="where-to-next">Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
+</h2>
 <ul>
 <li>
 <strong><a href="clinical-cookbook.html">Clinical cookbook</a></strong> — these tools applied to six complete production tables.</li>

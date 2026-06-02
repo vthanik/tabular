@@ -112,47 +112,47 @@ tabular(
     Total    = col_spec(label = sprintf("Total\nN=%d", n["Total"]))
   )
 
-#tabular-e11a279267 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
-#tabular-e11a279267 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-e11a279267 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-e11a279267 .tabular-pad { margin: 0; }
-#tabular-e11a279267 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-e11a279267 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-e11a279267 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-e11a279267 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-e11a279267 .tabular-table th, #tabular-e11a279267 .tabular-table td { padding: .35rem .6rem; }
-#tabular-e11a279267 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-e11a279267 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-e11a279267 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-e11a279267 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-e11a279267 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-e11a279267 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-e11a279267 .tabular-table tbody tr td { border-top: none; }
-#tabular-e11a279267 .tabular-band { text-align: center; }
-#tabular-e11a279267 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-e11a279267 .tabular-subgroup-label { font-weight: 600; }
-#tabular-e11a279267 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-e11a279267 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-e11a279267 .text-left { text-align: left; }
-#tabular-e11a279267 .text-center { text-align: center; }
-#tabular-e11a279267 .text-right { text-align: right; }
-#tabular-e11a279267 .tabular-table thead th.text-left { text-align: left; }
-#tabular-e11a279267 .tabular-table thead th.text-center { text-align: center; }
-#tabular-e11a279267 .tabular-table thead th.text-right { text-align: right; }
-#tabular-e11a279267 .valign-top { vertical-align: top; }
-#tabular-e11a279267 .valign-middle { vertical-align: middle; }
-#tabular-e11a279267 .valign-bottom { vertical-align: bottom; }
-#tabular-e11a279267 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-e11a279267 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-e11a279267 .tabular-page-break-row { display: none; }
-#tabular-e11a279267 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-e11a279267 .tabular-page-header, #tabular-e11a279267 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-e11a279267 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-e11a279267 .tabular-page-footer { margin-top: 1rem; }
-#tabular-e11a279267 .tabular-page-header-left, #tabular-e11a279267 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-e11a279267 .tabular-page-header-center, #tabular-e11a279267 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-e11a279267 .tabular-page-header-right, #tabular-e11a279267 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-e11a279267 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-e11a279267 .tabular-table tr { page-break-inside: avoid; } #tabular-e11a279267 .tabular-page-header, #tabular-e11a279267 .tabular-page-footer { display: none; } #tabular-e11a279267 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-e11a279267 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-e11a279267 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-ae937c4cd0 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-ae937c4cd0 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-ae937c4cd0 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-ae937c4cd0 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-ae937c4cd0 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-ae937c4cd0 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-ae937c4cd0 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-ae937c4cd0 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-ae937c4cd0 .tabular-table th, #tabular-ae937c4cd0 .tabular-table td { padding: .35rem .6rem; }
+#tabular-ae937c4cd0 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-ae937c4cd0 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-ae937c4cd0 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-ae937c4cd0 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-ae937c4cd0 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-ae937c4cd0 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-ae937c4cd0 .tabular-table tbody tr td { border-top: none; }
+#tabular-ae937c4cd0 .tabular-band { text-align: center; }
+#tabular-ae937c4cd0 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-ae937c4cd0 .tabular-subgroup-label { font-weight: 600; }
+#tabular-ae937c4cd0 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-ae937c4cd0 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-ae937c4cd0 .text-left { text-align: left; }
+#tabular-ae937c4cd0 .text-center { text-align: center; }
+#tabular-ae937c4cd0 .text-right { text-align: right; }
+#tabular-ae937c4cd0 .tabular-table thead th.text-left { text-align: left; }
+#tabular-ae937c4cd0 .tabular-table thead th.text-center { text-align: center; }
+#tabular-ae937c4cd0 .tabular-table thead th.text-right { text-align: right; }
+#tabular-ae937c4cd0 .valign-top { vertical-align: top; }
+#tabular-ae937c4cd0 .valign-middle { vertical-align: middle; }
+#tabular-ae937c4cd0 .valign-bottom { vertical-align: bottom; }
+#tabular-ae937c4cd0 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-ae937c4cd0 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-ae937c4cd0 .tabular-page-break-row { display: none; }
+#tabular-ae937c4cd0 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-ae937c4cd0 .tabular-page-header, #tabular-ae937c4cd0 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-ae937c4cd0 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-ae937c4cd0 .tabular-page-footer { margin-top: 1rem; }
+#tabular-ae937c4cd0 .tabular-page-header-left, #tabular-ae937c4cd0 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-ae937c4cd0 .tabular-page-header-center, #tabular-ae937c4cd0 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-ae937c4cd0 .tabular-page-header-right, #tabular-ae937c4cd0 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-ae937c4cd0 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-ae937c4cd0 .tabular-table tr { page-break-inside: avoid; } #tabular-ae937c4cd0 .tabular-page-header, #tabular-ae937c4cd0 .tabular-page-footer { display: none; } #tabular-ae937c4cd0 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-ae937c4cd0 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-ae937c4cd0 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
 
  
