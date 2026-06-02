@@ -46,18 +46,22 @@ tables on the same page have CSS-scopable hooks) and
 instead of overflowing their container.
 }
 \examples{
-# ---- Example 1: Embed in a custom htmltools page ----
+# ---- Example 1: Embed two tables in a custom htmltools page ----
 #
-# Compose two tabular tables side-by-side in a parent div.
-# `as.tags(spec)` is the entry point used by `print()` and
-# `knit_print()` under the hood.
+# Compose two tabular tables in one parent container. `as.tags(spec)`
+# is the entry point `print()` and `knit_print()` use under the hood.
+# Wrap the `tagList` in `htmltools::browsable()` so it renders as live
+# HTML in a viewer / Quarto chunk / pkgdown page instead of printing
+# its source, the same convention `gt` and `flextable` follow.
 s1 <- tabular(saf_demo, titles = "Demographics")
 s2 <- tabular(saf_aeoverall, titles = "AE overall")
 
 if (requireNamespace("htmltools", quietly = TRUE)) {
-  htmltools::tagList(
-    htmltools::as.tags(s1),
-    htmltools::as.tags(s2)
+  htmltools::browsable(
+    htmltools::tagList(
+      htmltools::as.tags(s1),
+      htmltools::as.tags(s2)
+    )
   )
 }
 
