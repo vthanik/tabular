@@ -281,7 +281,7 @@ emit(tab, paste0(out, ".tex"))    # tabularray LaTeX
 
     #>            file bytes
     #> 1 t_14_1_1.docx  8648
-    #> 2 t_14_1_1.html 15702
+    #> 2 t_14_1_1.html 15960
     #> 3  t_14_1_1.rtf 42959
     #> 4  t_14_1_1.tex  7337
 

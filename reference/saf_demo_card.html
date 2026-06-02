@@ -13,7 +13,7 @@ statistic). Shipped as a teaching dataset that shows the upstream
 shape users typically have when they start from cards. Convert
 it to the wide form tabular() accepts via pivot_across() —
 tabular itself does not consume the long ARD format, since
-pre-summarised wide data is the package boundary."><meta property="og:image" content="https://vthanik.github.io/tabular/logo.svg"></head><body>
+pre-summarised wide data is the package boundary."><meta property="og:image" content="https://vthanik.github.io/tabular/logo.svg"><!-- dependencies from examples --></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -130,83 +130,57 @@ counterpart is <a href="saf_aesocpt_card.html">saf_aesocpt_card</a>; together th
 <span class="r-in"><span>      <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"Safety Population (N=%d)"</span>, <span class="va">n</span><span class="op">[</span><span class="st">"Total"</span><span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-in"><span>    <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-pad { margin: 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table th, #tabular-c8865c0064 .tabular-table td { padding: .35rem .6rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table td { text-align: left; vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table tbody tr td { border-top: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-band { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-subgroup-label { font-weight: 600; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-blank-row td { padding: .25rem .6rem; border: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table thead th.text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table thead th.text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-table thead th.text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .valign-top { vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .valign-middle { vertical-align: middle; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .valign-bottom { vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-empty { font-style: italic; color: #6c757d; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-page-break-row { display: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-page-header, #tabular-c8865c0064 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-page-header { margin-bottom: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-page-footer { margin-top: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-page-header-left, #tabular-c8865c0064 .tabular-page-footer-left { flex: 1; text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-page-header-center, #tabular-c8865c0064 .tabular-page-footer-center { flex: 1; text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-c8865c0064 .tabular-page-header-right, #tabular-c8865c0064 .tabular-page-footer-right { flex: 1; text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> @media print { #tabular-c8865c0064 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-c8865c0064 .tabular-table tr { page-break-inside: avoid; } #tabular-c8865c0064 .tabular-page-header, #tabular-c8865c0064 .tabular-page-footer { display: none; } #tabular-c8865c0064 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-c8865c0064 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-c8865c0064 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div id="tabular-c8865c0064" class="tabular-doc" style="overflow-x:auto;max-width:100%;"&gt;&lt;div class="tabular-content"&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Table 14.1.1&lt;/h1&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Demographics&lt;/h1&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Safety Population (N=254)&lt;/h1&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div class="tabular-table-wrap"&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;table class="tabular-table"&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;thead&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;th&gt;variable&lt;/th&gt;&lt;th&gt;stat_label&lt;/th&gt;&lt;th&gt;Placebo&lt;/th&gt;&lt;th&gt;Xanomeline High Dose&lt;/th&gt;&lt;th&gt;Xanomeline Low Dose&lt;/th&gt;&lt;th&gt;Total&lt;/th&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/thead&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tbody&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Age (years)&lt;/td&gt;&lt;td&gt;AGE&lt;/td&gt;&lt;td&gt;75.2 (8.59)&lt;/td&gt;&lt;td&gt;73.8 (7.94)&lt;/td&gt;&lt;td&gt;76.0 (8.11)&lt;/td&gt;&lt;td&gt;75.1 (8.25)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;WEIGHT&lt;/td&gt;&lt;td&gt;WEIGHT&lt;/td&gt;&lt;td&gt;62.8 (12.77)&lt;/td&gt;&lt;td&gt;69.5 (14.35)&lt;/td&gt;&lt;td&gt;68.0 (14.50)&lt;/td&gt;&lt;td&gt;66.6 (14.13)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;HEIGHT&lt;/td&gt;&lt;td&gt;HEIGHT&lt;/td&gt;&lt;td&gt;162.6 (11.52)&lt;/td&gt;&lt;td&gt;165.9 (10.28)&lt;/td&gt;&lt;td&gt;163.7 (10.30)&lt;/td&gt;&lt;td&gt;163.9 (10.76)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI&lt;/td&gt;&lt;td&gt;BMI&lt;/td&gt;&lt;td&gt;23.6 (3.67)&lt;/td&gt;&lt;td&gt;25.2 (3.97)&lt;/td&gt;&lt;td&gt;25.2 (4.40)&lt;/td&gt;&lt;td&gt;24.7 (4.09)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;AGEGR1&lt;/td&gt;&lt;td&gt;  18-64&lt;/td&gt;&lt;td&gt;14 (16%)&lt;/td&gt;&lt;td&gt;11 (15%)&lt;/td&gt;&lt;td&gt;8 (8%)&lt;/td&gt;&lt;td&gt;33 (13%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;AGEGR1&lt;/td&gt;&lt;td&gt;  &amp;gt;64&lt;/td&gt;&lt;td&gt;72 (84%)&lt;/td&gt;&lt;td&gt;61 (85%)&lt;/td&gt;&lt;td&gt;88 (92%)&lt;/td&gt;&lt;td&gt;221 (87%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Sex&lt;/td&gt;&lt;td&gt;  F&lt;/td&gt;&lt;td&gt;53 (62%)&lt;/td&gt;&lt;td&gt;35 (49%)&lt;/td&gt;&lt;td&gt;55 (57%)&lt;/td&gt;&lt;td&gt;143 (56%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Sex&lt;/td&gt;&lt;td&gt;  M&lt;/td&gt;&lt;td&gt;33 (38%)&lt;/td&gt;&lt;td&gt;37 (51%)&lt;/td&gt;&lt;td&gt;41 (43%)&lt;/td&gt;&lt;td&gt;111 (44%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Race&lt;/td&gt;&lt;td&gt;  WHITE&lt;/td&gt;&lt;td&gt;78 (91%)&lt;/td&gt;&lt;td&gt;62 (86%)&lt;/td&gt;&lt;td&gt;90 (94%)&lt;/td&gt;&lt;td&gt;230 (91%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Race&lt;/td&gt;&lt;td&gt;  BLACK OR AFRICAN AMERICAN&lt;/td&gt;&lt;td&gt;8 (9%)&lt;/td&gt;&lt;td&gt;9 (12%)&lt;/td&gt;&lt;td&gt;6 (6%)&lt;/td&gt;&lt;td&gt;23 (9%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Race&lt;/td&gt;&lt;td&gt;  ASIAN&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Race&lt;/td&gt;&lt;td&gt;  AMERICAN INDIAN OR ALASKA NATIVE&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;1 (1%)&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;1 (0%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;ETHNIC&lt;/td&gt;&lt;td&gt;  HISPANIC OR LATINO&lt;/td&gt;&lt;td&gt;3 (3%)&lt;/td&gt;&lt;td&gt;3 (4%)&lt;/td&gt;&lt;td&gt;6 (6%)&lt;/td&gt;&lt;td&gt;12 (5%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;ETHNIC&lt;/td&gt;&lt;td&gt;  NOT HISPANIC OR LATINO&lt;/td&gt;&lt;td&gt;83 (97%)&lt;/td&gt;&lt;td&gt;69 (96%)&lt;/td&gt;&lt;td&gt;90 (94%)&lt;/td&gt;&lt;td&gt;242 (95%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;ETHNIC&lt;/td&gt;&lt;td&gt;  NOT REPORTED&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI_CAT&lt;/td&gt;&lt;td&gt;  Underweight (&amp;lt;18.5)&lt;/td&gt;&lt;td&gt;3 (3%)&lt;/td&gt;&lt;td&gt;1 (1%)&lt;/td&gt;&lt;td&gt;4 (4%)&lt;/td&gt;&lt;td&gt;8 (3%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI_CAT&lt;/td&gt;&lt;td&gt;  Normal (18.5-24.9)&lt;/td&gt;&lt;td&gt;57 (66%)&lt;/td&gt;&lt;td&gt;39 (54%)&lt;/td&gt;&lt;td&gt;46 (48%)&lt;/td&gt;&lt;td&gt;142 (56%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI_CAT&lt;/td&gt;&lt;td&gt;  Overweight (25-29.9)&lt;/td&gt;&lt;td&gt;20 (23%)&lt;/td&gt;&lt;td&gt;23 (32%)&lt;/td&gt;&lt;td&gt;32 (34%)&lt;/td&gt;&lt;td&gt;75 (30%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;BMI_CAT&lt;/td&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;  Obese (&amp;gt;=30)&lt;/td&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;6 (7%)&lt;/td&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;9 (12%)&lt;/td&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;13 (14%)&lt;/td&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;28 (11%)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/tbody&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/table&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/div&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/div&gt;&lt;/div&gt;</span>
-</code></pre></div>
+<style>
+#tabular-c8865c0064 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-c8865c0064 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-c8865c0064 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-c8865c0064 .tabular-pad { margin: 0; }
+#tabular-c8865c0064 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-c8865c0064 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-c8865c0064 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-c8865c0064 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-c8865c0064 .tabular-table th, #tabular-c8865c0064 .tabular-table td { padding: .35rem .6rem; }
+#tabular-c8865c0064 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-c8865c0064 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-c8865c0064 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-c8865c0064 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-c8865c0064 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-c8865c0064 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-c8865c0064 .tabular-table tbody tr td { border-top: none; }
+#tabular-c8865c0064 .tabular-band { text-align: center; }
+#tabular-c8865c0064 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-c8865c0064 .tabular-subgroup-label { font-weight: 600; }
+#tabular-c8865c0064 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-c8865c0064 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-c8865c0064 .text-left { text-align: left; }
+#tabular-c8865c0064 .text-center { text-align: center; }
+#tabular-c8865c0064 .text-right { text-align: right; }
+#tabular-c8865c0064 .tabular-table thead th.text-left { text-align: left; }
+#tabular-c8865c0064 .tabular-table thead th.text-center { text-align: center; }
+#tabular-c8865c0064 .tabular-table thead th.text-right { text-align: right; }
+#tabular-c8865c0064 .valign-top { vertical-align: top; }
+#tabular-c8865c0064 .valign-middle { vertical-align: middle; }
+#tabular-c8865c0064 .valign-bottom { vertical-align: bottom; }
+#tabular-c8865c0064 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-c8865c0064 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-c8865c0064 .tabular-page-break-row { display: none; }
+#tabular-c8865c0064 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-c8865c0064 .tabular-page-header, #tabular-c8865c0064 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-c8865c0064 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-c8865c0064 .tabular-page-footer { margin-top: 1rem; }
+#tabular-c8865c0064 .tabular-page-header-left, #tabular-c8865c0064 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-c8865c0064 .tabular-page-header-center, #tabular-c8865c0064 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-c8865c0064 .tabular-page-header-right, #tabular-c8865c0064 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-c8865c0064 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-c8865c0064 .tabular-table tr { page-break-inside: avoid; } #tabular-c8865c0064 .tabular-page-header, #tabular-c8865c0064 .tabular-page-footer { display: none; } #tabular-c8865c0064 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-c8865c0064 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-c8865c0064 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style><div id="tabular-c8865c0064" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+<p class="tabular-pad"> </p>
+<h1 class="tabular-title">Table 14.1.1</h1>
+<h1 class="tabular-title">Demographics</h1>
+<h1 class="tabular-title">Safety Population (N=254)</h1>
+<p class="tabular-pad"> </p>
+<div class="tabular-table-wrap">
+<table class="table tabular-table"><thead><tr><th>variable</th><th>stat_label</th><th>Placebo</th><th>Xanomeline High Dose</th><th>Xanomeline Low Dose</th><th>Total</th></tr></thead><tbody><tr><td>Age (years)</td><td>AGE</td><td>75.2 (8.59)</td><td>73.8 (7.94)</td><td>76.0 (8.11)</td><td>75.1 (8.25)</td></tr><tr><td>WEIGHT</td><td>WEIGHT</td><td>62.8 (12.77)</td><td>69.5 (14.35)</td><td>68.0 (14.50)</td><td>66.6 (14.13)</td></tr><tr><td>HEIGHT</td><td>HEIGHT</td><td>162.6 (11.52)</td><td>165.9 (10.28)</td><td>163.7 (10.30)</td><td>163.9 (10.76)</td></tr><tr><td>BMI</td><td>BMI</td><td>23.6 (3.67)</td><td>25.2 (3.97)</td><td>25.2 (4.40)</td><td>24.7 (4.09)</td></tr><tr><td>AGEGR1</td><td>  18-64</td><td>14 (16%)</td><td>11 (15%)</td><td>8 (8%)</td><td>33 (13%)</td></tr><tr><td>AGEGR1</td><td>  &gt;64</td><td>72 (84%)</td><td>61 (85%)</td><td>88 (92%)</td><td>221 (87%)</td></tr><tr><td>Sex</td><td>  F</td><td>53 (62%)</td><td>35 (49%)</td><td>55 (57%)</td><td>143 (56%)</td></tr><tr><td>Sex</td><td>  M</td><td>33 (38%)</td><td>37 (51%)</td><td>41 (43%)</td><td>111 (44%)</td></tr><tr><td>Race</td><td>  WHITE</td><td>78 (91%)</td><td>62 (86%)</td><td>90 (94%)</td><td>230 (91%)</td></tr><tr><td>Race</td><td>  BLACK OR AFRICAN AMERICAN</td><td>8 (9%)</td><td>9 (12%)</td><td>6 (6%)</td><td>23 (9%)</td></tr><tr><td>Race</td><td>  ASIAN</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>Race</td><td>  AMERICAN INDIAN OR ALASKA NATIVE</td><td>0</td><td>1 (1%)</td><td>0</td><td>1 (0%)</td></tr><tr><td>ETHNIC</td><td>  HISPANIC OR LATINO</td><td>3 (3%)</td><td>3 (4%)</td><td>6 (6%)</td><td>12 (5%)</td></tr><tr><td>ETHNIC</td><td>  NOT HISPANIC OR LATINO</td><td>83 (97%)</td><td>69 (96%)</td><td>90 (94%)</td><td>242 (95%)</td></tr><tr><td>ETHNIC</td><td>  NOT REPORTED</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>BMI_CAT</td><td>  Underweight (&lt;18.5)</td><td>3 (3%)</td><td>1 (1%)</td><td>4 (4%)</td><td>8 (3%)</td></tr><tr><td>BMI_CAT</td><td>  Normal (18.5-24.9)</td><td>57 (66%)</td><td>39 (54%)</td><td>46 (48%)</td><td>142 (56%)</td></tr><tr><td>BMI_CAT</td><td>  Overweight (25-29.9)</td><td>20 (23%)</td><td>23 (32%)</td><td>32 (34%)</td><td>75 (30%)</td></tr><tr><td style="border-bottom: 0.5pt solid #212529;">BMI_CAT</td><td style="border-bottom: 0.5pt solid #212529;">  Obese (&gt;=30)</td><td style="border-bottom: 0.5pt solid #212529;">6 (7%)</td><td style="border-bottom: 0.5pt solid #212529;">9 (12%)</td><td style="border-bottom: 0.5pt solid #212529;">13 (14%)</td><td style="border-bottom: 0.5pt solid #212529;">28 (11%)</td></tr></tbody></table></div>
+</div></div></code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

@@ -9,7 +9,7 @@ mirrors gt::gt(): convert the spec to an htmltools tag
 list and let htmltools dispatch — RStudio + Positron viewer
 panes, Quarto / Rmd notebook inline, Databricks displayHTML,
 and plain-console cat() are all handled without any IDE-
-specific branching."><meta property="og:image" content="https://vthanik.github.io/tabular/logo.svg"></head><body>
+specific branching."><meta property="og:image" content="https://vthanik.github.io/tabular/logo.svg"><!-- dependencies from examples --></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -168,100 +168,57 @@ to a <code>tabular_grid</code> without I/O.</p></div>
 <span class="r-in"><span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Table 14.1.1"</span>, <span class="st">"Demographics"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  footnotes <span class="op">=</span> <span class="st">"Safety Population."</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-pad { margin: 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table th, #tabular-574680b53c .tabular-table td { padding: .35rem .6rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table td { text-align: left; vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table tbody tr td { border-top: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-band { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-subgroup-label { font-weight: 600; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-blank-row td { padding: .25rem .6rem; border: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table thead th.text-left { text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table thead th.text-center { text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-table thead th.text-right { text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .valign-top { vertical-align: top; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .valign-middle { vertical-align: middle; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .valign-bottom { vertical-align: bottom; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-empty { font-style: italic; color: #6c757d; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-page-break-row { display: none; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-page-header, #tabular-574680b53c .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-page-header { margin-bottom: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-page-footer { margin-top: 1rem; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-page-header-left, #tabular-574680b53c .tabular-page-footer-left { flex: 1; text-align: left; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-page-header-center, #tabular-574680b53c .tabular-page-footer-center { flex: 1; text-align: center; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #tabular-574680b53c .tabular-page-header-right, #tabular-574680b53c .tabular-page-footer-right { flex: 1; text-align: right; }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> @media print { #tabular-574680b53c .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-574680b53c .tabular-table tr { page-break-inside: avoid; } #tabular-574680b53c .tabular-page-header, #tabular-574680b53c .tabular-page-footer { display: none; } #tabular-574680b53c .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-574680b53c .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-574680b53c .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/style&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div id="tabular-574680b53c" class="tabular-doc" style="overflow-x:auto;max-width:100%;"&gt;&lt;div class="tabular-content"&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Table 14.1.1&lt;/h1&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;h1 class="tabular-title"&gt;Demographics&lt;/h1&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-pad"&gt;&amp;nbsp;&lt;/p&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;div class="tabular-table-wrap"&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;table class="tabular-table"&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;thead&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;th&gt;variable&lt;/th&gt;&lt;th&gt;stat_label&lt;/th&gt;&lt;th&gt;placebo&lt;/th&gt;&lt;th&gt;drug_100&lt;/th&gt;&lt;th&gt;drug_50&lt;/th&gt;&lt;th&gt;Total&lt;/th&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/thead&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tbody&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Age (years)&lt;/td&gt;&lt;td&gt;n&lt;/td&gt;&lt;td&gt;86&lt;/td&gt;&lt;td&gt;72&lt;/td&gt;&lt;td&gt;96&lt;/td&gt;&lt;td&gt;254&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Age (years)&lt;/td&gt;&lt;td&gt;Mean (SD)&lt;/td&gt;&lt;td&gt;75.2 (8.59)&lt;/td&gt;&lt;td&gt;73.8 (7.94)&lt;/td&gt;&lt;td&gt;76.0 (8.11)&lt;/td&gt;&lt;td&gt;75.1 (8.25)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Age (years)&lt;/td&gt;&lt;td&gt;Median&lt;/td&gt;&lt;td&gt;76.0&lt;/td&gt;&lt;td&gt;75.5&lt;/td&gt;&lt;td&gt;78.0&lt;/td&gt;&lt;td&gt;77.0&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Age (years)&lt;/td&gt;&lt;td&gt;Q1, Q3&lt;/td&gt;&lt;td&gt;69.2, 81.8&lt;/td&gt;&lt;td&gt;70.5, 79.0&lt;/td&gt;&lt;td&gt;71.0, 82.0&lt;/td&gt;&lt;td&gt;70.0, 81.0&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Age (years)&lt;/td&gt;&lt;td&gt;Min, Max&lt;/td&gt;&lt;td&gt;52, 89&lt;/td&gt;&lt;td&gt;56, 88&lt;/td&gt;&lt;td&gt;51, 88&lt;/td&gt;&lt;td&gt;51, 89&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Age Group, n (%)&lt;/td&gt;&lt;td&gt;18-64&lt;/td&gt;&lt;td&gt;14 (16.3)&lt;/td&gt;&lt;td&gt;11 (15.3)&lt;/td&gt;&lt;td&gt;8 (8.3)&lt;/td&gt;&lt;td&gt;33 (13.0)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Age Group, n (%)&lt;/td&gt;&lt;td&gt;&amp;gt;64&lt;/td&gt;&lt;td&gt;72 (83.7)&lt;/td&gt;&lt;td&gt;61 (84.7)&lt;/td&gt;&lt;td&gt;88 (91.7)&lt;/td&gt;&lt;td&gt;221 (87.0)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Sex, n (%)&lt;/td&gt;&lt;td&gt;F&lt;/td&gt;&lt;td&gt;53 (61.6)&lt;/td&gt;&lt;td&gt;35 (48.6)&lt;/td&gt;&lt;td&gt;55 (57.3)&lt;/td&gt;&lt;td&gt;143 (56.3)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Sex, n (%)&lt;/td&gt;&lt;td&gt;M&lt;/td&gt;&lt;td&gt;33 (38.4)&lt;/td&gt;&lt;td&gt;37 (51.4)&lt;/td&gt;&lt;td&gt;41 (42.7)&lt;/td&gt;&lt;td&gt;111 (43.7)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Race, n (%)&lt;/td&gt;&lt;td&gt;WHITE&lt;/td&gt;&lt;td&gt;78 (90.7)&lt;/td&gt;&lt;td&gt;62 (86.1)&lt;/td&gt;&lt;td&gt;90 (93.8)&lt;/td&gt;&lt;td&gt;230 (90.6)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Race, n (%)&lt;/td&gt;&lt;td&gt;BLACK OR AFRICAN AMERICAN&lt;/td&gt;&lt;td&gt;8 (9.3)&lt;/td&gt;&lt;td&gt;9 (12.5)&lt;/td&gt;&lt;td&gt;6 (6.2)&lt;/td&gt;&lt;td&gt;23 (9.1)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Race, n (%)&lt;/td&gt;&lt;td&gt;ASIAN&lt;/td&gt;&lt;td&gt;0 (0.0)&lt;/td&gt;&lt;td&gt;0 (0.0)&lt;/td&gt;&lt;td&gt;0 (0.0)&lt;/td&gt;&lt;td&gt;0 (0.0)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Race, n (%)&lt;/td&gt;&lt;td&gt;AMERICAN INDIAN OR ALASKA NATIVE&lt;/td&gt;&lt;td&gt;0 (0.0)&lt;/td&gt;&lt;td&gt;1 (1.4)&lt;/td&gt;&lt;td&gt;0 (0.0)&lt;/td&gt;&lt;td&gt;1 (0.4)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Ethnicity, n (%)&lt;/td&gt;&lt;td&gt;HISPANIC OR LATINO&lt;/td&gt;&lt;td&gt;3 (3.5)&lt;/td&gt;&lt;td&gt;3 (4.2)&lt;/td&gt;&lt;td&gt;6 (6.2)&lt;/td&gt;&lt;td&gt;12 (4.7)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Ethnicity, n (%)&lt;/td&gt;&lt;td&gt;NOT HISPANIC OR LATINO&lt;/td&gt;&lt;td&gt;83 (96.5)&lt;/td&gt;&lt;td&gt;69 (95.8)&lt;/td&gt;&lt;td&gt;90 (93.8)&lt;/td&gt;&lt;td&gt;242 (95.3)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Ethnicity, n (%)&lt;/td&gt;&lt;td&gt;NOT REPORTED&lt;/td&gt;&lt;td&gt;0 (0.0)&lt;/td&gt;&lt;td&gt;0 (0.0)&lt;/td&gt;&lt;td&gt;0 (0.0)&lt;/td&gt;&lt;td&gt;0 (0.0)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Weight (kg)&lt;/td&gt;&lt;td&gt;n&lt;/td&gt;&lt;td&gt;86&lt;/td&gt;&lt;td&gt;72&lt;/td&gt;&lt;td&gt;95&lt;/td&gt;&lt;td&gt;253&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Weight (kg)&lt;/td&gt;&lt;td&gt;Mean (SD)&lt;/td&gt;&lt;td&gt;62.8 (12.77)&lt;/td&gt;&lt;td&gt;69.5 (14.35)&lt;/td&gt;&lt;td&gt;68.0 (14.50)&lt;/td&gt;&lt;td&gt;66.6 (14.13)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Weight (kg)&lt;/td&gt;&lt;td&gt;Median&lt;/td&gt;&lt;td&gt;60.6&lt;/td&gt;&lt;td&gt;69.0&lt;/td&gt;&lt;td&gt;66.7&lt;/td&gt;&lt;td&gt;66.7&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Weight (kg)&lt;/td&gt;&lt;td&gt;Q1, Q3&lt;/td&gt;&lt;td&gt;53.6, 74.2&lt;/td&gt;&lt;td&gt;56.9, 80.3&lt;/td&gt;&lt;td&gt;56.0, 78.2&lt;/td&gt;&lt;td&gt;55.3, 77.1&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Weight (kg)&lt;/td&gt;&lt;td&gt;Min, Max&lt;/td&gt;&lt;td&gt;34, 86&lt;/td&gt;&lt;td&gt;44, 108&lt;/td&gt;&lt;td&gt;42, 106&lt;/td&gt;&lt;td&gt;34, 108&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Height (cm)&lt;/td&gt;&lt;td&gt;n&lt;/td&gt;&lt;td&gt;86&lt;/td&gt;&lt;td&gt;72&lt;/td&gt;&lt;td&gt;96&lt;/td&gt;&lt;td&gt;254&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Height (cm)&lt;/td&gt;&lt;td&gt;Mean (SD)&lt;/td&gt;&lt;td&gt;162.6 (11.52)&lt;/td&gt;&lt;td&gt;165.9 (10.28)&lt;/td&gt;&lt;td&gt;163.7 (10.30)&lt;/td&gt;&lt;td&gt;163.9 (10.76)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Height (cm)&lt;/td&gt;&lt;td&gt;Median&lt;/td&gt;&lt;td&gt;162.6&lt;/td&gt;&lt;td&gt;165.1&lt;/td&gt;&lt;td&gt;162.6&lt;/td&gt;&lt;td&gt;162.8&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Height (cm)&lt;/td&gt;&lt;td&gt;Q1, Q3&lt;/td&gt;&lt;td&gt;154.0, 171.1&lt;/td&gt;&lt;td&gt;157.5, 172.8&lt;/td&gt;&lt;td&gt;157.5, 170.2&lt;/td&gt;&lt;td&gt;156.2, 171.4&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;Height (cm)&lt;/td&gt;&lt;td&gt;Min, Max&lt;/td&gt;&lt;td&gt;137, 185&lt;/td&gt;&lt;td&gt;146, 190&lt;/td&gt;&lt;td&gt;136, 196&lt;/td&gt;&lt;td&gt;136, 196&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI (kg/m^2)&lt;/td&gt;&lt;td&gt;n&lt;/td&gt;&lt;td&gt;86&lt;/td&gt;&lt;td&gt;72&lt;/td&gt;&lt;td&gt;95&lt;/td&gt;&lt;td&gt;253&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI (kg/m^2)&lt;/td&gt;&lt;td&gt;Mean (SD)&lt;/td&gt;&lt;td&gt;23.6 (3.67)&lt;/td&gt;&lt;td&gt;25.2 (3.97)&lt;/td&gt;&lt;td&gt;25.2 (4.40)&lt;/td&gt;&lt;td&gt;24.7 (4.09)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI (kg/m^2)&lt;/td&gt;&lt;td&gt;Median&lt;/td&gt;&lt;td&gt;23.4&lt;/td&gt;&lt;td&gt;24.8&lt;/td&gt;&lt;td&gt;24.8&lt;/td&gt;&lt;td&gt;24.2&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI (kg/m^2)&lt;/td&gt;&lt;td&gt;Q1, Q3&lt;/td&gt;&lt;td&gt;21.2, 25.6&lt;/td&gt;&lt;td&gt;22.7, 27.6&lt;/td&gt;&lt;td&gt;22.3, 28.2&lt;/td&gt;&lt;td&gt;21.9, 27.3&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr class="tabular-page-break-row" aria-hidden="true"&gt;&lt;td colspan="6"&gt;&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI (kg/m^2)&lt;/td&gt;&lt;td&gt;Min, Max&lt;/td&gt;&lt;td&gt;15, 33&lt;/td&gt;&lt;td&gt;14, 35&lt;/td&gt;&lt;td&gt;15, 40&lt;/td&gt;&lt;td&gt;14, 40&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI Category, n (%)&lt;/td&gt;&lt;td&gt;Underweight (&amp;lt;18.5)&lt;/td&gt;&lt;td&gt;3 (3.5)&lt;/td&gt;&lt;td&gt;1 (1.4)&lt;/td&gt;&lt;td&gt;4 (4.2)&lt;/td&gt;&lt;td&gt;8 (3.1)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI Category, n (%)&lt;/td&gt;&lt;td&gt;Normal (18.5-24.9)&lt;/td&gt;&lt;td&gt;57 (66.3)&lt;/td&gt;&lt;td&gt;39 (54.2)&lt;/td&gt;&lt;td&gt;46 (47.9)&lt;/td&gt;&lt;td&gt;142 (55.9)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td&gt;BMI Category, n (%)&lt;/td&gt;&lt;td&gt;Overweight (25-29.9)&lt;/td&gt;&lt;td&gt;20 (23.3)&lt;/td&gt;&lt;td&gt;23 (31.9)&lt;/td&gt;&lt;td&gt;32 (33.3)&lt;/td&gt;&lt;td&gt;75 (29.5)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tr&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;BMI Category, n (%)&lt;/td&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;Obese (&amp;gt;=30)&lt;/td&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;6 (7.0)&lt;/td&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;9 (12.5)&lt;/td&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;13 (13.5)&lt;/td&gt;&lt;td style="border-bottom: 0.5pt solid #212529;"&gt;28 (11.0)&lt;/td&gt;&lt;/tr&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/tbody&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/table&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/div&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;p class="tabular-footnote"&gt;Safety Population.&lt;/p&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;/div&gt;&lt;/div&gt;</span>
-<span class="r-in"><span></span></span>
+<style>
+#tabular-574680b53c { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; }
+#tabular-574680b53c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-574680b53c .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-574680b53c .tabular-pad { margin: 0; }
+#tabular-574680b53c .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-574680b53c .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-574680b53c .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-574680b53c .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-574680b53c .tabular-table th, #tabular-574680b53c .tabular-table td { padding: .35rem .6rem; }
+#tabular-574680b53c .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-574680b53c .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-574680b53c .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-574680b53c .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-574680b53c .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-574680b53c .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-574680b53c .tabular-table tbody tr td { border-top: none; }
+#tabular-574680b53c .tabular-band { text-align: center; }
+#tabular-574680b53c .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-574680b53c .tabular-subgroup-label { font-weight: 600; }
+#tabular-574680b53c .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-574680b53c .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-574680b53c .text-left { text-align: left; }
+#tabular-574680b53c .text-center { text-align: center; }
+#tabular-574680b53c .text-right { text-align: right; }
+#tabular-574680b53c .tabular-table thead th.text-left { text-align: left; }
+#tabular-574680b53c .tabular-table thead th.text-center { text-align: center; }
+#tabular-574680b53c .tabular-table thead th.text-right { text-align: right; }
+#tabular-574680b53c .valign-top { vertical-align: top; }
+#tabular-574680b53c .valign-middle { vertical-align: middle; }
+#tabular-574680b53c .valign-bottom { vertical-align: bottom; }
+#tabular-574680b53c .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-574680b53c .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-574680b53c .tabular-page-break-row { display: none; }
+#tabular-574680b53c { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-574680b53c .tabular-page-header, #tabular-574680b53c .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-574680b53c .tabular-page-header { margin-bottom: 1rem; }
+#tabular-574680b53c .tabular-page-footer { margin-top: 1rem; }
+#tabular-574680b53c .tabular-page-header-left, #tabular-574680b53c .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-574680b53c .tabular-page-header-center, #tabular-574680b53c .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-574680b53c .tabular-page-header-right, #tabular-574680b53c .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-574680b53c .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-574680b53c .tabular-table tr { page-break-inside: avoid; } #tabular-574680b53c .tabular-page-header, #tabular-574680b53c .tabular-page-footer { display: none; } #tabular-574680b53c .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-574680b53c .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-574680b53c .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style><div id="tabular-574680b53c" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+<p class="tabular-pad"> </p>
+<h1 class="tabular-title">Table 14.1.1</h1>
+<h1 class="tabular-title">Demographics</h1>
+<p class="tabular-pad"> </p>
+<div class="tabular-table-wrap">
+<table class="table tabular-table"><thead><tr><th>variable</th><th>stat_label</th><th>placebo</th><th>drug_100</th><th>drug_50</th><th>Total</th></tr></thead><tbody><tr><td>Age (years)</td><td>n</td><td>86</td><td>72</td><td>96</td><td>254</td></tr><tr><td>Age (years)</td><td>Mean (SD)</td><td>75.2 (8.59)</td><td>73.8 (7.94)</td><td>76.0 (8.11)</td><td>75.1 (8.25)</td></tr><tr><td>Age (years)</td><td>Median</td><td>76.0</td><td>75.5</td><td>78.0</td><td>77.0</td></tr><tr><td>Age (years)</td><td>Q1, Q3</td><td>69.2, 81.8</td><td>70.5, 79.0</td><td>71.0, 82.0</td><td>70.0, 81.0</td></tr><tr><td>Age (years)</td><td>Min, Max</td><td>52, 89</td><td>56, 88</td><td>51, 88</td><td>51, 89</td></tr><tr><td>Age Group, n (%)</td><td>18-64</td><td>14 (16.3)</td><td>11 (15.3)</td><td>8 (8.3)</td><td>33 (13.0)</td></tr><tr><td>Age Group, n (%)</td><td>&gt;64</td><td>72 (83.7)</td><td>61 (84.7)</td><td>88 (91.7)</td><td>221 (87.0)</td></tr><tr><td>Sex, n (%)</td><td>F</td><td>53 (61.6)</td><td>35 (48.6)</td><td>55 (57.3)</td><td>143 (56.3)</td></tr><tr><td>Sex, n (%)</td><td>M</td><td>33 (38.4)</td><td>37 (51.4)</td><td>41 (42.7)</td><td>111 (43.7)</td></tr><tr><td>Race, n (%)</td><td>WHITE</td><td>78 (90.7)</td><td>62 (86.1)</td><td>90 (93.8)</td><td>230 (90.6)</td></tr><tr><td>Race, n (%)</td><td>BLACK OR AFRICAN AMERICAN</td><td>8 (9.3)</td><td>9 (12.5)</td><td>6 (6.2)</td><td>23 (9.1)</td></tr><tr><td>Race, n (%)</td><td>ASIAN</td><td>0 (0.0)</td><td>0 (0.0)</td><td>0 (0.0)</td><td>0 (0.0)</td></tr><tr><td>Race, n (%)</td><td>AMERICAN INDIAN OR ALASKA NATIVE</td><td>0 (0.0)</td><td>1 (1.4)</td><td>0 (0.0)</td><td>1 (0.4)</td></tr><tr><td>Ethnicity, n (%)</td><td>HISPANIC OR LATINO</td><td>3 (3.5)</td><td>3 (4.2)</td><td>6 (6.2)</td><td>12 (4.7)</td></tr><tr><td>Ethnicity, n (%)</td><td>NOT HISPANIC OR LATINO</td><td>83 (96.5)</td><td>69 (95.8)</td><td>90 (93.8)</td><td>242 (95.3)</td></tr><tr><td>Ethnicity, n (%)</td><td>NOT REPORTED</td><td>0 (0.0)</td><td>0 (0.0)</td><td>0 (0.0)</td><td>0 (0.0)</td></tr><tr><td>Weight (kg)</td><td>n</td><td>86</td><td>72</td><td>95</td><td>253</td></tr><tr><td>Weight (kg)</td><td>Mean (SD)</td><td>62.8 (12.77)</td><td>69.5 (14.35)</td><td>68.0 (14.50)</td><td>66.6 (14.13)</td></tr><tr><td>Weight (kg)</td><td>Median</td><td>60.6</td><td>69.0</td><td>66.7</td><td>66.7</td></tr><tr><td>Weight (kg)</td><td>Q1, Q3</td><td>53.6, 74.2</td><td>56.9, 80.3</td><td>56.0, 78.2</td><td>55.3, 77.1</td></tr><tr><td>Weight (kg)</td><td>Min, Max</td><td>34, 86</td><td>44, 108</td><td>42, 106</td><td>34, 108</td></tr><tr><td>Height (cm)</td><td>n</td><td>86</td><td>72</td><td>96</td><td>254</td></tr><tr><td>Height (cm)</td><td>Mean (SD)</td><td>162.6 (11.52)</td><td>165.9 (10.28)</td><td>163.7 (10.30)</td><td>163.9 (10.76)</td></tr><tr><td>Height (cm)</td><td>Median</td><td>162.6</td><td>165.1</td><td>162.6</td><td>162.8</td></tr><tr><td>Height (cm)</td><td>Q1, Q3</td><td>154.0, 171.1</td><td>157.5, 172.8</td><td>157.5, 170.2</td><td>156.2, 171.4</td></tr><tr><td>Height (cm)</td><td>Min, Max</td><td>137, 185</td><td>146, 190</td><td>136, 196</td><td>136, 196</td></tr><tr><td>BMI (kg/m^2)</td><td>n</td><td>86</td><td>72</td><td>95</td><td>253</td></tr><tr><td>BMI (kg/m^2)</td><td>Mean (SD)</td><td>23.6 (3.67)</td><td>25.2 (3.97)</td><td>25.2 (4.40)</td><td>24.7 (4.09)</td></tr><tr><td>BMI (kg/m^2)</td><td>Median</td><td>23.4</td><td>24.8</td><td>24.8</td><td>24.2</td></tr><tr><td>BMI (kg/m^2)</td><td>Q1, Q3</td><td>21.2, 25.6</td><td>22.7, 27.6</td><td>22.3, 28.2</td><td>21.9, 27.3</td></tr><tr class="tabular-page-break-row" aria-hidden="true"><td colspan="6"></td></tr><tr><td>BMI (kg/m^2)</td><td>Min, Max</td><td>15, 33</td><td>14, 35</td><td>15, 40</td><td>14, 40</td></tr><tr><td>BMI Category, n (%)</td><td>Underweight (&lt;18.5)</td><td>3 (3.5)</td><td>1 (1.4)</td><td>4 (4.2)</td><td>8 (3.1)</td></tr><tr><td>BMI Category, n (%)</td><td>Normal (18.5-24.9)</td><td>57 (66.3)</td><td>39 (54.2)</td><td>46 (47.9)</td><td>142 (55.9)</td></tr><tr><td>BMI Category, n (%)</td><td>Overweight (25-29.9)</td><td>20 (23.3)</td><td>23 (31.9)</td><td>32 (33.3)</td><td>75 (29.5)</td></tr><tr><td style="border-bottom: 0.5pt solid #212529;">BMI Category, n (%)</td><td style="border-bottom: 0.5pt solid #212529;">Obese (&gt;=30)</td><td style="border-bottom: 0.5pt solid #212529;">6 (7.0)</td><td style="border-bottom: 0.5pt solid #212529;">9 (12.5)</td><td style="border-bottom: 0.5pt solid #212529;">13 (13.5)</td><td style="border-bottom: 0.5pt solid #212529;">28 (11.0)</td></tr></tbody></table></div>
+<p class="tabular-footnote">Safety Population.</p>
+</div></div><span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 2: Force the cli-tree structural view ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># The cli-tree summary shows props at a glance. Useful for</span></span></span>
