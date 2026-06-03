@@ -114,6 +114,7 @@ tabular(
     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
     soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
+    soc_n    = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = "Placebo",  align = "decimal"),
     drug_50  = col_spec(label = "Drug 50",  align = "decimal"),

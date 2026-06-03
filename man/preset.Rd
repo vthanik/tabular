@@ -350,8 +350,8 @@ wins; layers are not field-merged across the cascade.
 # `paginate()` reads it later to size the per-page row budget.
 bor_levels <- c(
   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
-  "Objective Response Rate (CR + PR)",
-  "Disease Control Rate (CR + PR + SD)"
+  "ORR (CR + PR)", "CBR (CR + PR + SD)",
+  "DCR (CR + PR + SD + NON-CR/NON-PD)", "95\% CI (Clopper-Pearson)"
 )
 eff <- eff_resp
 eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
@@ -367,13 +367,15 @@ tabular(
   footnotes = "Response per RECIST 1.1, investigator assessment."
 ) |>
   cols(
-    stat_label = col_spec(usage = "group", label = "Response"),
-    row_type   = col_spec(visible = FALSE),
+    stat_label  = col_spec(label = "Response"),
+    row_type    = col_spec(visible = FALSE),
+    groupid     = col_spec(visible = FALSE),
+    group_label = col_spec(visible = FALSE),
     placebo    = col_spec(label = sprintf("Placebo\nN=\%d",  ne["placebo"])),
     drug_50    = col_spec(label = sprintf("Drug 50\nN=\%d",  ne["drug_50"])),
     drug_100   = col_spec(label = sprintf("Drug 100\nN=\%d", ne["drug_100"]))
   ) |>
-  sort_rows(by = "stat_label") |>
+  sort_rows(by = c("groupid", "stat_label")) |>
   preset(
     orientation = "landscape",
     paper_size  = "a4",
@@ -412,6 +414,7 @@ tabular(
     soc      = col_spec(usage = "group", visible = FALSE,
                         group_display = "column_repeat"),
     row_type = col_spec(visible = FALSE),
+    soc_n    = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"])),
     drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"])),

@@ -314,3 +314,22 @@ main table.table {
   th { border-bottom: 2px solid mix($body-color, $body-bg, 25%) }
   td, th { padding: 0.5rem 0.75rem }
 }
+
+// ── Live previews inside reference @examples ─────────────────────────────────
+// On a reference page pkgdown embeds the live tabular preview *inside* the
+// example <pre> (same as flextable's tabwid). Lift each one out of the code
+// stream into a framed preview card under its code, so the page reads as
+// alternating code / preview blocks. Scoped to `pre` so the article and home
+// previews (rendered outside any <pre>) stay untouched. The table keeps its
+// own scoped fonts and decimal alignment.
+pre .tabular-doc {
+  display: block;
+  white-space: normal;
+  margin: 1.25rem auto 2rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid $faint-border;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  overflow-x: auto;
+  line-height: 1.5;
+}

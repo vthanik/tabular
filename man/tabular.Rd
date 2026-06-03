@@ -89,11 +89,15 @@ the column-header band sits flush against the lowest used title.
 # population qualifier with BigN drawn inline from `saf_n`) and a
 # two-line footnote block explaining the denominator. The
 # downstream pipeline hides the hierarchy markers (`row_type`,
-# `n_total`) but keeps them in the data so `sort_rows()` can
-# arrange SOCs and PTs in descending order of subject count.
+# `soc_n`, `n_total`) but keeps them in the data so `sort_rows()`
+# can arrange SOCs and PTs in descending order of subject count.
+# The dataset already ships `n_total` and `soc_n`; here we slice to
+# the overall row plus the two highest-incidence SOCs to keep the
+# preview compact.
 ae <- saf_aesocpt
+keep_soc <- head(unique(ae$soc[ae$row_type == "soc"]), 2L)
+ae <- ae[ae$row_type == "overall" | ae$soc \%in\% keep_soc, ]
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 
 tabular(
@@ -111,6 +115,7 @@ tabular(
   cols(
     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
     soc      = col_spec(visible = FALSE),
+    soc_n    = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"])),
@@ -124,13 +129,14 @@ tabular(
 #
 # Efficacy table where response categories must appear in CDISC
 # clinical order (CR < PR < SD < NON-CR/NON-PD < PD < NE <
-# MISSING < ORR < DCR), not alphabetical. Coerce `stat_label` to
-# a factor with the canonical levels upstream and `sort_rows()`
-# picks up the order for free.
+# MISSING), then the derived ORR / CBR / DCR rate rows, not
+# alphabetical. `groupid` keeps the four sections ordered while the
+# `stat_label` factor orders the response block; `sort_rows()` does
+# both in one pass. `groupid` / `group_label` ride along hidden.
 bor_levels <- c(
   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
-  "Objective Response Rate (CR + PR)",
-  "Disease Control Rate (CR + PR + SD)"
+  "ORR (CR + PR)", "CBR (CR + PR + SD)",
+  "DCR (CR + PR + SD + NON-CR/NON-PD)", "95\% CI (Clopper-Pearson)"
 )
 eff <- eff_resp
 eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
@@ -146,13 +152,15 @@ tabular(
   footnotes = "Response per RECIST 1.1, investigator assessment."
 ) |>
   cols(
-    stat_label = col_spec(usage = "group", label = "Response"),
-    row_type   = col_spec(visible = FALSE),
-    placebo    = col_spec(label = sprintf("Placebo\nN=\%d",  ne["placebo"])),
-    drug_50    = col_spec(label = sprintf("Drug 50\nN=\%d",  ne["drug_50"])),
-    drug_100   = col_spec(label = sprintf("Drug 100\nN=\%d", ne["drug_100"]))
+    stat_label  = col_spec(label = "Response"),
+    row_type    = col_spec(visible = FALSE),
+    groupid     = col_spec(visible = FALSE),
+    group_label = col_spec(visible = FALSE),
+    placebo     = col_spec(label = sprintf("Placebo\nN=\%d",  ne["placebo"])),
+    drug_50     = col_spec(label = sprintf("Drug 50\nN=\%d",  ne["drug_50"])),
+    drug_100    = col_spec(label = sprintf("Drug 100\nN=\%d", ne["drug_100"]))
   ) |>
-  sort_rows(by = "stat_label")
+  sort_rows(by = c("groupid", "stat_label"))
 
 # ---- Example 3: Minimal three-line BigN table from saf_n ----
 #
@@ -166,13 +174,16 @@ tabular(saf_n, titles = "Safety-population BigN per arm")
 
 # ---- Example 4: Vital-signs panel with hidden code column ----
 #
-# Show the canonical 4-visit-by-4-parameter vitals shape. The
-# CDISC `paramcd` is kept in the data frame as the natural sort
-# key but hidden at render via `col_spec(visible = FALSE)`, while
-# `param` (the display label) drives the group block.
+# Show the canonical vitals shape: one parameter across four visits
+# x four statistics. The CDISC `paramcd` is kept in the data frame
+# as the natural sort key but hidden at render via
+# `col_spec(visible = FALSE)`, while `param` (the display label)
+# drives the group block. Slice to a single `paramcd` for a compact
+# preview; the full 4-parameter frame renders identically.
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
+vs <- saf_vital[saf_vital$paramcd == saf_vital$paramcd[1L], ]
 tabular(
-  saf_vital,
+  vs,
   titles = c(
     "Table 14.4.1",
     "Summary of Vital Signs",
