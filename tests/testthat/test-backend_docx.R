@@ -106,6 +106,41 @@ test_that("emit(.docx) renders title (table rows) + footnote (footer) text", {
   expect_match(ftr, "Source: ADSL.", fixed = TRUE)
 })
 
+test_that("an auto-numbered footnote survives pagination (marker in body, block in footer)", {
+  # Tall spec -> > 1 page. The body marker rides a superscript run in
+  # document.xml; the marked-footnote block rides the repeating
+  # footer1.xml (Word repeats the footer per page natively).
+  df <- data.frame(
+    label = paste0("PT ", sprintf("%02d", 1:40)),
+    Total = as.character(1:40),
+    n = c(rep(1L, 39L), 99L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      label = col_spec(label = "PT"),
+      n = col_spec(visible = FALSE),
+      Total = col_spec(label = "Total")
+    ) |>
+    preset(orientation = "portrait", font_size = 24) |>
+    paginate() |>
+    footnote("Last row note.", .at = cells_body(where = n >= 50, j = "label"))
+  expect_gt(length(as_grid(spec)@pages), 1L)
+  out <- withr::local_tempfile(fileext = ".docx")
+  suppressWarnings(emit(spec, out))
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  ftr <- paste(
+    readLines(file.path(unzipped, "word/footer1.xml")),
+    collapse = ""
+  )
+  expect_match(doc, "<w:vertAlign w:val=\"superscript\"/>", fixed = TRUE)
+  expect_match(ftr, "Last row note.", fixed = TRUE)
+})
+
 test_that("DOCX header-band underline is the SSOT spanrule (override + 'none' honoured)", {
   # Regression: the band bottom border was hardcoded `w:sz="4"
   # w:color="adb5bd"`, so `preset(rules = list(spanrule = ...))`

@@ -70,9 +70,10 @@ stacked sections, and reviewers expect each one in its place:
    timestamp.
 
 Every `tabular` verb maps onto a piece of this picture: `titles`/
-`footnotes` fill sections 2 and 4, `headers()` and `cols()` build the
-column band in section 3, `subgroup()` adds the banner, and `preset()`
-controls the page geometry that frames all four.
+`footnotes` fill sections 2 and 4, `footnote()` adds auto-numbered
+markers that anchor a cell to its note in section 4, `headers()` and
+`cols()` build the column band in section 3, `subgroup()` adds the
+banner, and `preset()` controls the page geometry that frames all four.
 
 ## 3. A pipeline of immutable verbs
 

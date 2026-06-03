@@ -130,6 +130,35 @@ test_that("superscript / subscript / link survive in the .md output", {
   expect_true(any(grepl("[link](https://example.com)", lines, fixed = TRUE)))
 })
 
+test_that("two footnotes on one body cell render as a single ^a,b^ superscript", {
+  # Distinct ids on the same body anchor accumulate into one comma-joined
+  # sentinel; the md backend emits ^a,b^ (valid Pandoc superscript). The
+  # header path differs by design: it stacks native sup runs (^a^^b^).
+  spec <- tabular(saf_aesocpt) |>
+    cols(
+      soc = col_spec(usage = "group"),
+      label = col_spec(label = "PT"),
+      n_total = col_spec(visible = FALSE),
+      Total = col_spec(label = "Total")
+    ) |>
+    footnote(
+      "First.",
+      .at = cells_body(where = n_total >= 50, j = "Total"),
+      id = "x"
+    ) |>
+    footnote(
+      "Second.",
+      .at = cells_body(where = n_total >= 50, j = "Total"),
+      id = "y"
+    )
+  out <- withr::local_tempfile(fileext = ".md")
+  suppressWarnings(emit(spec, out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(txt, "^a,b^", fixed = TRUE)
+  expect_match(txt, "a First.", fixed = TRUE)
+  expect_match(txt, "b Second.", fixed = TRUE)
+})
+
 test_that("embedded \\n in cell text becomes <br/>", {
   spec <- tabular(
     data.frame(x = "line1\nline2"),

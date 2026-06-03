@@ -139,6 +139,58 @@ In a paginated backend, add `paginate(repeat_content = c("titles",
 every page of this long table.
 :::
 
+### Auto-numbered footnotes
+
+The `footnotes =` lines above are fixed text. When a note needs to point
+at a *specific* cell, reach for [`footnote()`]: it anchors a marker to any
+`cells_*()` location, and the engine assigns the glyph once, in reading
+order, deduped by `id`. The marker is allocated *after* decimal alignment,
+so it never disturbs a column, and it is byte-identical across every
+backend and page. Here a denominator note rides the `Total` header and a
+shared-`id` note marks every preferred term reported in at least 50
+subjects overall.
+
+```{r}
+#| label: ae-socpt-footnotes
+tabular(
+  saf_aesocpt,
+  titles = c(
+    "Table 14.3.2",
+    "Adverse Events by System Organ Class and Preferred Term",
+    "Safety Population"
+  )
+) |>
+  cols(
+    soc          = col_spec(visible = FALSE),
+    row_type     = col_spec(visible = FALSE),
+    indent_level = col_spec(visible = FALSE),
+    n_total      = col_spec(visible = FALSE),
+    soc_n        = col_spec(visible = FALSE),
+    label        = col_spec(label = "System Organ Class / Preferred Term",
+                            indent_by = "indent_level"),
+    placebo      = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
+    drug_50      = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
+    drug_100     = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
+    Total        = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
+  ) |>
+  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
+  style(bold = TRUE, .at = cells_body(where = row_type %in% c("overall", "soc"))) |>
+  footnote(
+    "Safety population: all randomised subjects who took study drug.",
+    .at = cells_headers(j = "Total")
+  ) |>
+  footnote(
+    md("Reported in at least 50 subjects overall."),
+    .at = cells_body(where = n_total >= 50, j = "label"),
+    id = "highfreq"
+  )
+```
+
+The header marker is lettered before the body marker because headers
+precede the body in reading order. To control hand-built leading
+whitespace in a label rather than an engine-managed marker, see the
+*Verbatim whitespace* section of the [styling article](styling.html).
+
 ## 4. Vital signs by parameter and visit
 
 A two-level row hierarchy: each vital-sign parameter holds its four

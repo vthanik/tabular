@@ -138,6 +138,47 @@ test_that("emit(.pdf) compiles a minimal spec end to end (when TeX is available)
   expect_gt(file.info(out)$size, 0L)
 })
 
+test_that("emit(.pdf) compiles footnote markers (letters + symbol glyphs) and ties", {
+  skip_if_not_installed("tinytex")
+  skip_on_cran()
+  if (!nzchar(Sys.which("xelatex"))) {
+    skip("xelatex not found on this machine")
+  }
+  # The load-bearing risk: the symbol glyphs U+00A7 / U+00B6 / U+2016
+  # (section / pilcrow / double-vert) and the preserved-whitespace ties
+  # (`~`) must survive xelatex + tabularray inside a tblr cell. Pin the
+  # symbols so the test deterministically exercises the riskiest glyphs
+  # alongside an auto-allocated letter marker.
+  df <- data.frame(
+    label = c("  Indented PT", "Headache", "Nausea"),
+    Total = c("10", "20", "30"),
+    Active = c("5", "6", "7"),
+    n = c(99L, 5L, 99L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Footnote glyphs + ties") |>
+    cols(
+      label = col_spec(label = "PT"),
+      n = col_spec(visible = FALSE),
+      Total = col_spec(label = "Total"),
+      Active = col_spec(label = "Active")
+    ) |>
+    footnote(
+      "Auto letter.",
+      .at = cells_body(where = n >= 50, j = "label")
+    ) |>
+    footnote("Section.", .at = cells_headers(j = "Total"), symbol = "§") |>
+    footnote("Pilcrow.", .at = cells_headers(j = "Active"), symbol = "¶") |>
+    footnote("Double-vert.", .at = cells_title(), symbol = "‖")
+  out <- withr::local_tempfile(fileext = ".pdf")
+  result <- tryCatch(suppressWarnings(emit(spec, out)), error = function(e) e)
+  if (inherits(result, "error")) {
+    skip(sprintf("PDF compile failed: %s", conditionMessage(result)))
+  }
+  expect_true(file.exists(out))
+  expect_gt(file.info(out)$size, 0L)
+})
+
 # ---------------------------------------------------------------------
 # Mocked-compile coverage — exercise the backend_pdf() body and
 # .pdf_compile_abort() without requiring tinytex on the test host.

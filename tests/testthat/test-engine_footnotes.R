@@ -90,6 +90,27 @@ test_that(".split_fn_sentinel passes NA through unchanged", {
   expect_null(sp$marker)
 })
 
+test_that(".fn_peel and .split_fn_sentinel extract the same base + marker", {
+  # The two peel paths (vectorized .fn_peel for html/latex/rtf;
+  # per-cell .split_fn_sentinel for md/docx) must agree byte-for-byte.
+  s <- paste0("12.3", tabular:::.fn_sentinel(c("a", "b")))
+  pe <- tabular:::.fn_peel(s)
+  sp <- tabular:::.split_fn_sentinel(s)
+  expect_equal(pe$base, sp$base) # "12.3"
+  expect_equal(pe$marker, sp$marker) # "a,b"
+  # no-sentinel cell: identical base, both report "no marker"
+  pe2 <- tabular:::.fn_peel("plain")
+  sp2 <- tabular:::.split_fn_sentinel("plain")
+  expect_equal(pe2$base, sp2$base)
+  expect_true(is.na(pe2$marker))
+  expect_null(sp2$marker)
+  # NA cell: base passes through unchanged in both
+  pe3 <- tabular:::.fn_peel(NA_character_)
+  sp3 <- tabular:::.split_fn_sentinel(NA_character_)
+  expect_true(is.na(pe3$base))
+  expect_true(is.na(sp3$base))
+})
+
 # ---------------------------------------------------------------------
 # Header-anchor column resolution
 # ---------------------------------------------------------------------
@@ -144,6 +165,59 @@ test_that("a header anchor on an unknown column is dropped (assign returns NULL)
 })
 
 # ---------------------------------------------------------------------
+# Hidden-column anchor guard (no orphan block line)
+# ---------------------------------------------------------------------
+
+mk_hidden_fn_spec <- function() {
+  tabular(saf_aesocpt) |>
+    cols(
+      soc = col_spec(usage = "group"),
+      label = col_spec(label = "PT"),
+      n_total = col_spec(visible = FALSE),
+      Total = col_spec(label = "Total")
+    )
+}
+
+test_that("a body footnote on a hidden column warns and is dropped (no orphan)", {
+  spec <- mk_hidden_fn_spec() |>
+    footnote(
+      "Hidden.",
+      .at = cells_body(where = n_total >= 50, j = "n_total")
+    )
+  groups <- tabular:::engine_subgroup_split(spec)
+  expect_warning(
+    reg <- tabular:::engine_footnotes_assign(spec, groups),
+    "hidden column"
+  )
+  # the only ref was dropped -> no registry, hence no orphan block line
+  expect_null(reg)
+})
+
+test_that("a header footnote on a hidden column warns and is dropped", {
+  spec <- mk_hidden_fn_spec() |>
+    footnote("Hidden header.", .at = cells_headers(j = "n_total"))
+  groups <- tabular:::engine_subgroup_split(spec)
+  expect_warning(
+    reg <- tabular:::engine_footnotes_assign(spec, groups),
+    "hidden column"
+  )
+  expect_null(reg)
+})
+
+test_that("a header footnote spanning hidden + visible columns keeps the visible marker", {
+  spec <- mk_hidden_fn_spec() |>
+    footnote("Both.", .at = cells_headers(j = c("n_total", "Total")))
+  groups <- tabular:::engine_subgroup_split(spec)
+  reg <- expect_no_warning(tabular:::engine_footnotes_assign(spec, groups))
+  expect_equal(reg$markers[[".auto1"]], "a")
+  # the surviving marker lands on the visible Total header
+  out <- withr::local_tempfile(fileext = ".html")
+  suppressWarnings(emit(spec, out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(txt, "Total<sup>a</sup>", fixed = TRUE)
+})
+
+# ---------------------------------------------------------------------
 # Reading order + integration (end to end)
 # ---------------------------------------------------------------------
 
@@ -194,6 +268,19 @@ test_that("markers are byte-identical across all five backends", {
   expect_match(rd(".md", "md"), "Total^a^", fixed = TRUE)
   expect_match(rd(".tex", "latex"), "\\textsuperscript{a}", fixed = TRUE)
   expect_match(rd(".rtf", "rtf"), "{\\super a\\nosupersub}", fixed = TRUE)
+  # DOCX: the header marker rides a superscript run in document.xml,
+  # and the block text rides the repeating footer1.xml.
+  fdocx <- withr::local_tempfile(fileext = ".docx")
+  suppressWarnings(emit(spec, fdocx, format = "docx"))
+  ud <- withr::local_tempdir()
+  utils::unzip(fdocx, exdir = ud)
+  doc <- paste(readLines(file.path(ud, "word/document.xml")), collapse = "")
+  ftr <- paste(readLines(file.path(ud, "word/footer1.xml")), collapse = "")
+  expect_match(doc, "<w:vertAlign w:val=\"superscript\"/>", fixed = TRUE)
+  # The block line is label / space / text as separate runs, so assert
+  # the marker and the text runs rather than a contiguous "a Note.".
+  expect_match(ftr, ">a</w:t>", fixed = TRUE)
+  expect_match(ftr, ">Note.</w:t>", fixed = TRUE)
 })
 
 test_that("symbols scheme leads with an asterisk", {

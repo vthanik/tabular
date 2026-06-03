@@ -219,6 +219,12 @@ tabular(
   )
 ```
 
+Here the `^a^` marker and its note are hand-typed and kept in sync by
+you. When you want the marker assigned and placed *automatically* —
+deduped across cells, byte-identical across backends — use [`footnote()`]
+instead (see the *Auto-numbered footnotes* recipe in the
+[clinical cookbook](articles/clinical-cookbook.html)).
+
 ## Verbatim whitespace
 
 Significant ASCII spaces in labels and cells are preserved by default, so a

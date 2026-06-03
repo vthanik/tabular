@@ -67,3 +67,43 @@ test_that("footnote() requires a tabular_spec", {
     class = "tabular_error_input"
   )
 })
+
+# ---------------------------------------------------------------------
+# Integration: a marker coexists with preserved leading whitespace
+# ---------------------------------------------------------------------
+
+test_that("a marker and preserved leading whitespace coexist in one cell", {
+  # The whitespace token sits at the cell's leading edge; the marker
+  # sentinel sits past the (decimal-aligned) field at the trailing edge,
+  # so the two never collide and alignment is untouched.
+  df <- data.frame(
+    label = c("  Pruritus", "Headache"),
+    Total = c("10", "20"),
+    n = c(99L, 5L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      label = col_spec(label = "PT"),
+      n = col_spec(visible = FALSE),
+      Total = col_spec(label = "Total")
+    ) |>
+    footnote(
+      "High frequency.",
+      .at = cells_body(where = n >= 50, j = "label")
+    )
+
+  out <- withr::local_tempfile(fileext = ".html")
+  suppressWarnings(emit(spec, out))
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(
+    html,
+    "<td>&nbsp;&nbsp;Pruritus<sup>a</sup></td>",
+    fixed = TRUE
+  )
+
+  outm <- withr::local_tempfile(fileext = ".md")
+  suppressWarnings(emit(spec, outm, format = "md"))
+  md <- paste(readLines(outm, warn = FALSE), collapse = "\n")
+  expect_match(md, "&nbsp;&nbsp;Pruritus^a^", fixed = TRUE)
+})

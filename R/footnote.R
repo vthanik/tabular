@@ -35,6 +35,16 @@
 #'   (`cells_body(where = ...)`), a column header (`cells_headers()`), a
 #'   title line (`cells_title()`), and so on.
 #'
+#'   ```r
+#'   # data-driven body anchor: mark every high-frequency preferred term
+#'   footnote(spec, "Includes events of any severity.",
+#'            .at = cells_body(where = n_total >= 50, j = "label"))
+#'
+#'   # column-header anchor: mark the analysis-population denominator
+#'   footnote(spec, "Safety population.",
+#'            .at = cells_headers(j = "Total"))
+#'   ```
+#'
 #'   **Note:** the styling argument is `.at`, never `at`.
 #'
 #' @param id *Stable identifier for sharing one marker across anchors.*

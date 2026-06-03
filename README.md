@@ -69,6 +69,7 @@ The same `tab` emits to every backend from the one spec. The table below is tabu
 - **Five native backends, one spec.** `emit()` dispatches on the file extension to RTF 1.9.1, PDF (via `tinytex`), self-contained Bootstrap HTML, `tabularray` LaTeX, and native OOXML DOCX. No JVM, no Office round-trip.
 - **Decimal alignment that survives the page.** Numbers align on the decimal using the backend’s real font metrics, not guessed padding — so columns stay aligned in print, not just on screen.
 - **Submission chrome built in.** Multi-line titles, up to eleven footnote lines, page header/footer slots, and the four-section page layout regulatory reviewers expect.
+- **Auto-numbered footnotes.** `footnote()` anchors a marker to any cell, header, or title; the engine assigns the glyph once, in reading order, deduped by `id`, and byte-identical across every backend and page.
 - **Group-aware pagination.** Keep a SOC and its preferred terms on one page, repeat titles/headers/footnotes per page, control orphan/widow rows, and split wide tables into horizontal panels.
 - **Display-only by design.** `tabular` styles and renders; it never filters, aggregates, or weights. Pair it with `cards` / `gtsummary` / `dplyr` / SAS upstream and feed it a tidy wide frame.
 - **A QC trail.** `emit(data_file = ...)` writes the resolved wide data beside the render, and a CDISC ARS audit manifest documents the display.
@@ -101,25 +102,6 @@ Two notes on the marks:
   install.packages("tinytex")
   tinytex::install_tinytex()   # one-time TeX setup
   ```
-
-## The verb surface
-
-| Verb | Role |
-|----|----|
-| `tabular()` | Wrap a pre-summarised data frame into a `tabular_spec` |
-| `pivot_across()` | Bridge a `cards` long ARD into a wide display frame |
-| `cols()` / `col_spec()` | Per-column usage, label, format, alignment, width, visibility |
-| `headers()` | Multi-level column-header bands with passthrough leaves |
-| `sort_rows()` | Output row order; factor-aware, NA-last |
-| `subgroup()` | Partition the table into page-broken, banner-labelled groups |
-| `paginate()` | Page splits, group-keep, panels, repeat chrome, orphan/widow |
-| `style()` + `cells_*()` | Predicate-targeted styling for any surface |
-| `brdr()` | Border-line specification (width / style / colour) |
-| `preset()` / `set_preset()` / `preset_minimal()` | Page geometry + cosmetic defaults |
-| `style_template()` | Reusable house style attached to a preset |
-| `md()` / `html()` | Inline Markdown / HTML markup in labels and cells |
-| `emit()` | Render to a file (RTF / PDF / HTML / LaTeX / DOCX) |
-| `as_grid()` | Resolve to the backend-ready grid without writing a file |
 
 ## Documentation
 

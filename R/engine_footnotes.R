@@ -204,8 +204,13 @@
 
 # Compute the reading-order key for one anchor. `matched = FALSE` when
 # the anchor resolves to no cells (the caller warns and drops it).
+# `visible_cols` is the set of column names that actually render (hidden
+# and header_row group columns excluded); an anchor whose every target
+# column is invisible is dropped with `hidden = TRUE` so the caller can
+# name the offending column. This prevents an orphaned block line: a
+# marker allocated for a column that is dropped before render.
 #' @noRd
-.fn_anchor_key <- function(loc, groups, col_names, call) {
+.fn_anchor_key <- function(loc, groups, col_names, visible_cols, call) {
   surface <- loc$surface
   rank <- .fn_surface_rank(surface)
   if (identical(surface, "body")) {
@@ -219,7 +224,13 @@
           .resolve_layer_cols(loc, col_names, call),
           error = function(e) 0L
         )
-        return(list(matched = TRUE, key = c(rank, gi, min(rows), min(cols))))
+        requested <- col_names[cols[cols >= 1L]]
+        vis <- intersect(requested, visible_cols)
+        if (length(requested) > 0L && length(vis) == 0L) {
+          return(list(matched = FALSE, hidden = TRUE, col = requested[[1L]]))
+        }
+        ci <- if (length(vis) > 0L) match(vis, col_names) else cols
+        return(list(matched = TRUE, key = c(rank, gi, min(rows), min(ci))))
       }
     }
     return(list(matched = FALSE))
@@ -229,7 +240,11 @@
     if (length(cols) == 0L) {
       return(list(matched = FALSE))
     }
-    ci <- match(cols, col_names)
+    vis <- intersect(cols, visible_cols)
+    if (length(vis) == 0L) {
+      return(list(matched = FALSE, hidden = TRUE, col = cols[[1L]]))
+    }
+    ci <- match(vis, col_names)
     return(list(matched = TRUE, key = c(rank, 0L, 0L, min(ci))))
   }
   if (identical(surface, "title")) {
@@ -261,16 +276,25 @@ engine_footnotes_assign <- function(
   scheme <- if (is_preset_spec(ps)) ps@footnote_markers else "letters"
   label_tmpl <- if (is_preset_spec(ps)) ps@footnote_label else "{m}"
   col_names <- names(spec@data)
+  # Anchor resolution + block assembly are O(refs x subgroups) plus a
+  # linear `Find()` per block line. Both scale with the (small) footnote
+  # count, never with the data, so the simple loops are intentional.
+  visible_cols <- col_names[.visible_col_indices(spec, col_names)]
 
   enriched <- vector("list", length(refs))
   for (k in seq_along(refs)) {
     r <- refs[[k]]
-    ak <- .fn_anchor_key(r$location, groups, col_names, call)
+    ak <- .fn_anchor_key(r$location, groups, col_names, visible_cols, call)
     if (!isTRUE(ak$matched)) {
       if (isTRUE(ak$unsupported)) {
         cli::cli_warn(c(
           "Footnote anchored to an unsupported location; dropping it.",
           "i" = "Anchor with {.fn cells_body}, {.fn cells_headers}, or {.fn cells_title}."
+        ))
+      } else if (isTRUE(ak$hidden)) {
+        cli::cli_warn(c(
+          "Footnote anchored to hidden column {.val {ak$col}}; dropping it.",
+          "i" = "Make the column visible with {.code col_spec(visible = TRUE)} to show its marker."
         ))
       } else {
         cli::cli_warn(c(

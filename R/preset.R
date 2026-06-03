@@ -116,7 +116,7 @@
 #'   matching cannot accidentally bind a knob name in `...` to the
 #'   spec slot.
 #'
-#' @param ... *Named preset knobs.* Any subset of the 13 knobs the
+#' @param ... *Named preset knobs.* Any subset of the preset knobs the
 #'   `preset_spec` class carries. Knob values are validated against
 #'   the class's enum / length / type rules; bad values raise
 #'   `tabular_error_input`. Unknown knob names raise
@@ -368,6 +368,26 @@
 #'
 #'       **Note:** never affects `col_spec(align = "decimal")` padding,
 #'       which uses U+00A0 and is preserved unconditionally.
+#'
+#'   *   **`footnote_markers`** — the glyph scheme for [`footnote()`]
+#'       markers, which the engine allocates once in reading order.
+#'       `<character(1)>`. One of:
+#'
+#'       *   **`"letters"`** *(default)* — `a`, `b`, …, `z`, `aa`, `ab`,
+#'           … (bijective base-26).
+#'       *   **`"numbers"`** — `1`, `2`, `3`, …
+#'       *   **`"symbols"`** — Lamport's sequence `*`, `†`, `‡`, `§`,
+#'           `¶`, `‖`, then doubled (`**`, `††`, …) once it spills past
+#'           the sixth.
+#'
+#'       **Interaction:** a note's *anchor* is fixed by [`footnote()`];
+#'       its *scheme* (this knob) and *label* (`footnote_label`) are
+#'       resolved from the active preset at render, so flipping either
+#'       re-letters every marker at once.
+#'   *   **`footnote_label`** — block-line template for a [`footnote()`]
+#'       marker. `<character(1)>`. Default `"{m}"`; the `{m}` token is
+#'       replaced by the allocated marker, so `"[{m}]"` prints `[a]`
+#'       ahead of the note text on the footnote line.
 #'
 #'   *   **`cell_padding`** — cell padding in points, CSS shorthand of
 #'       length 1 / 2 / 4 (`all` | `vertical horizontal` |

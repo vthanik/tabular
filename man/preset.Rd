@@ -12,7 +12,7 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
 matching cannot accidentally bind a knob name in \code{...} to the
 spec slot.}
 
-\item{...}{\emph{Named preset knobs.} Any subset of the 13 knobs the
+\item{...}{\emph{Named preset knobs.} Any subset of the preset knobs the
 \code{preset_spec} class carries. Knob values are validated against
 the class's enum / length / type rules; bad values raise
 \code{tabular_error_input}. Unknown knob names raise
@@ -260,6 +260,26 @@ in place (HTML / md / LaTeX collapse runs to one space).
 
 \strong{Note:} never affects \code{col_spec(align = "decimal")} padding,
 which uses U+00A0 and is preserved unconditionally.
+\item \strong{\code{footnote_markers}} — the glyph scheme for \code{\link[=footnote]{footnote()}}
+markers, which the engine allocates once in reading order.
+\verb{<character(1)>}. One of:
+\itemize{
+\item \strong{\code{"letters"}} \emph{(default)} — \code{a}, \code{b}, …, \code{z}, \code{aa}, \code{ab},
+… (bijective base-26).
+\item \strong{\code{"numbers"}} — \code{1}, \code{2}, \code{3}, …
+\item \strong{\code{"symbols"}} — Lamport's sequence \code{*}, \verb{†}, \verb{‡}, \verb{§},
+\verb{¶}, \verb{‖}, then doubled (\verb{**}, \verb{††}, …) once it spills past
+the sixth.
+}
+
+\strong{Interaction:} a note's \emph{anchor} is fixed by \code{\link[=footnote]{footnote()}};
+its \emph{scheme} (this knob) and \emph{label} (\code{footnote_label}) are
+resolved from the active preset at render, so flipping either
+re-letters every marker at once.
+\item \strong{\code{footnote_label}} — block-line template for a \code{\link[=footnote]{footnote()}}
+marker. \verb{<character(1)>}. Default \code{"{m}"}; the \code{{m}} token is
+replaced by the allocated marker, so \code{"[{m}]"} prints \verb{[a]}
+ahead of the note text on the footnote line.
 \item \strong{\code{cell_padding}} — cell padding in points, CSS shorthand of
 length 1 / 2 / 4 (\code{all} | \verb{vertical horizontal} |
 \verb{top right bottom left}), parsed by the same length rule as

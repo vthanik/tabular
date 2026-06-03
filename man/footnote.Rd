@@ -17,6 +17,15 @@ shown verbatim.}
 (\code{cells_body(where = ...)}), a column header (\code{cells_headers()}), a
 title line (\code{cells_title()}), and so on.
 
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# data-driven body anchor: mark every high-frequency preferred term
+footnote(spec, "Includes events of any severity.",
+         .at = cells_body(where = n_total >= 50, j = "label"))
+
+# column-header anchor: mark the analysis-population denominator
+footnote(spec, "Safety population.",
+         .at = cells_headers(j = "Total"))
+}\if{html}{\out{</div>}}
+
 \strong{Note:} the styling argument is \code{.at}, never \code{at}.}
 
 \item{id}{\emph{Stable identifier for sharing one marker across anchors.}

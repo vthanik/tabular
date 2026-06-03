@@ -541,6 +541,35 @@ test_that("split (non-native) grid concatenates into one continuous table", {
   expect_match(rtf, "\\b40\\b", perl = TRUE)
 })
 
+test_that("an auto-numbered footnote survives pagination (marker + block)", {
+  # A tall spec paginates to > 1 page; the marker rides a body cell that
+  # lands on a later page and the marked-footnote block emits. Native
+  # Word pagination owns per-page repetition (the footer is emitted once
+  # in the byte stream and Word repeats it), so the block text appears
+  # once. (LaTeX renders the block once; HTML is one continuous page.)
+  df <- data.frame(
+    label = paste0("PT ", sprintf("%02d", 1:40)),
+    Total = as.character(1:40),
+    n = c(rep(1L, 39L), 99L),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      label = col_spec(label = "PT"),
+      n = col_spec(visible = FALSE),
+      Total = col_spec(label = "Total")
+    ) |>
+    preset(orientation = "portrait", font_size = 24) |>
+    paginate() |>
+    footnote("Last row note.", .at = cells_body(where = n >= 50, j = "label"))
+  expect_gt(length(as_grid(spec)@pages), 1L)
+  out <- withr::local_tempfile(fileext = ".rtf")
+  suppressWarnings(emit(spec, out))
+  rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(rtf, "{\\super a\\nosupersub}", fixed = TRUE)
+  expect_match(rtf, "a Last row note.", fixed = TRUE)
+})
+
 test_that("continuation marker rides the first title cell on panel 2 when titles repeat", {
   # Default repeat_content repeats titles, so on panel 2+ the marker is
   # appended to the first title cell (not a standalone paragraph).
