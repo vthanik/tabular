@@ -456,3 +456,21 @@ test_that("cells_subgroup_labels() border renders on HTML + DOCX (#subgroup-bord
   )
   expect_true(grepl("<w:bottom [^>]*w:sz=\"12\"", docx))
 })
+
+test_that(".first_cell_color promotes a shared colour but not a lone override (#cw4)", {
+  df <- data.frame(
+    g = c("a", "b", "c"),
+    val = c("1", "2", "3"),
+    stringsAsFactors = FALSE
+  )
+  base <- tabular(df) |>
+    cols(g = col_spec(label = "G"), val = col_spec(label = "V"))
+  # a lone per-cell style() override must NOT become the table-wide colour
+  s1 <- base |> style(color = "#FF0000", .at = cells_body(i = 2, j = "val"))
+  cs1 <- tabular:::engine_borders(s1, tabular:::engine_style(s1))
+  expect_true(is.na(tabular:::.first_cell_color(cs1)))
+  # a uniform body colour (preset) IS the table-wide colour
+  s2 <- base |> preset(colors = list(body = c(text = "#0000FF")))
+  cs2 <- tabular:::engine_borders(s2, tabular:::engine_style(s2))
+  expect_equal(tabular:::.first_cell_color(cs2), "#0000FF")
+})

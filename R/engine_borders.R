@@ -374,15 +374,19 @@ body_border_manifest <- function(spec) {
   unname(.first_cell_padding_sides(cells_style)[["left"]])
 }
 
-# Read the first non-NA @color scalar from any cell in a cells_style
-# matrix, falling back to NA_character_ when no override is set.
-# Shared across backends that emit a table-wide text colour from a
-# per-cell stamp (e.g. RTF's `\cf<idx>` body token). Same scan
-# rationale as `.first_cell_padding()`.
+# Read the table-wide body text colour from a cells_style matrix, for
+# backends that emit it as one token (e.g. RTF's `\cf<idx>` body token).
+# Returns the colour SHARED by more than one cell (the uniform colour
+# stamped by the lowered `preset(colors = list(body = ...))` knob), or
+# NA when no such shared colour exists. A lone per-cell `style(color =)`
+# override must NOT become the table-wide default: it is rendered
+# per-cell by `.rtf_cell_text_props()`, so promoting it would wrongly
+# recolour every other (uncoloured) cell.
 .first_cell_color <- function(cells_style) {
   if (!is.matrix(cells_style) || length(cells_style) == 0L) {
     return(NA_character_)
   }
+  seen <- character(0L)
   for (i in seq_len(nrow(cells_style))) {
     for (j in seq_len(ncol(cells_style))) {
       node <- cells_style[[i, j]]
@@ -391,11 +395,15 @@ body_border_manifest <- function(spec) {
       }
       col <- node@color
       if (length(col) == 1L && !is.na(col) && nzchar(col)) {
-        return(as.character(col))
+        seen <- c(seen, as.character(col))
       }
     }
   }
-  NA_character_
+  if (length(seen) == 0L) {
+    return(NA_character_)
+  }
+  counts <- table(seen)
+  if (max(counts) > 1L) names(counts)[which.max(counts)] else NA_character_
 }
 
 # Set a style_node's per-side border scalars unconditionally. Used
