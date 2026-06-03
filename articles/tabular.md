@@ -223,7 +223,7 @@ tab <- tabular(
   titles = c(
     "Table 14.1.1",
     "Demographic and Baseline Characteristics",
-    sprintf("Safety Population (N=%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = c(
     "Percentages are based on the number of subjects per treatment group.",
@@ -245,21 +245,21 @@ tab <- tabular(
 tab
 ```
 
+[TABLE]
+
+Percentages are based on the number of subjects per treatment group.
+
+BMI = body mass index.
+
  
 
 Table 14.1.1
 
 Demographic and Baseline Characteristics
 
-Safety Population (N=254)
+Safety Population
 
  
-
-[TABLE]
-
-Percentages are based on the number of subjects per treatment group.
-
-BMI = body mass index.
 
 That is a submission-shaped demographics table, built from one pipe.
 
@@ -280,10 +280,10 @@ emit(tab, paste0(out, ".tex"))    # tabularray LaTeX
 ```
 
     #>            file bytes
-    #> 1 t_14_1_1.docx  8648
-    #> 2 t_14_1_1.html 16005
-    #> 3  t_14_1_1.rtf 42959
-    #> 4  t_14_1_1.tex  7337
+    #> 1 t_14_1_1.docx  8644
+    #> 2 t_14_1_1.html 16166
+    #> 3  t_14_1_1.rtf 42951
+    #> 4  t_14_1_1.tex  7321
 
 > **The preview is not the deliverable**
 >
@@ -313,4 +313,4 @@ emit(tab, paste0(out, ".tex"))    # tabularray LaTeX
   presets, and house styles.
 - **[Clinical
   cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.md)**
-  — six complete production tables end to end. \`\`\`
+  — six complete production tables end to end.

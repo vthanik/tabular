@@ -63,6 +63,8 @@ The four-section page layout every `tabular` backend reproduces.
 
 Every `tabular` verb maps onto a piece of this picture: `titles`/
 `footnotes` fill sections 2 and 4,
+[`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)
+adds auto-numbered markers that anchor a cell to its note in section 4,
 [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
 and [`cols()`](https://vthanik.github.io/tabular/reference/cols.md)
 build the column band in section 3,
@@ -161,9 +163,9 @@ tabular(saf_aeoverall) |>
 | Any AE Related to Study Drug | 184 (72.4) | 43 (50.0) | 64 (88.9) | 77 (80.2) |
 | Any AE Leading to Death      |   3 ( 1.2) |  2 ( 2.3) |  0        |  1 ( 1.0) |
 | Any AE Recovered / Resolved  | 157 (61.8) | 47 (54.7) | 49 (68.1) | 61 (63.5) |
-| Maximum severity: Mild       |  77 (30.3) | 36 (41.9) | 20 (27.8) | 21 (21.9) |
-| Maximum severity: Moderate   | 111 (43.7) | 24 (27.9) | 40 (55.6) | 47 (49.0) |
-| Maximum severity: Severe     |  29 (11.4) |  5 ( 5.8) |  8 (11.1) | 16 (16.7) |
+|   Maximum severity: Mild     |  77 (30.3) | 36 (41.9) | 20 (27.8) | 21 (21.9) |
+|   Maximum severity: Moderate | 111 (43.7) | 24 (27.9) | 40 (55.6) | 47 (49.0) |
+|   Maximum severity: Severe   |  29 (11.4) |  5 ( 5.8) |  8 (11.1) | 16 (16.7) |
 
 The counts and percentages line up on the decimal regardless of how many
 digits each value has — and they stay aligned when the table paginates
@@ -183,4 +185,4 @@ With the model in hand, the rest of the guide fills in the options:
   [`style()`](https://vthanik.github.io/tabular/reference/style.md),
   presets, and house styles.
 - **[Architecture](https://vthanik.github.io/tabular/articles/architecture.md)**
-  — the engine phases in depth. \`\`\`
+  — the engine phases in depth.

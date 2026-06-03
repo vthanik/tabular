@@ -101,15 +101,17 @@
 <span><span class="co"># BigN denominators, keyed by arm</span></span>
 <span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">saf_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">saf_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># columns render in data-frame order, so put them in dose order first</span></span>
-<span><span class="va">demo</span> <span class="op">&lt;-</span> <span class="va">saf_demo</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"stat_label"</span>, <span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co"># columns render in data-frame order, so put them in dose order first;</span></span>
+<span><span class="co"># subset to Age / Sex / Race for a compact display</span></span>
+<span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Age (years)"</span>, <span class="st">"Sex, n (%)"</span>, <span class="st">"Race, n (%)"</span><span class="op">)</span></span>
+<span><span class="va">demo</span> <span class="op">&lt;-</span> <span class="va">saf_demo</span><span class="op">[</span><span class="va">saf_demo</span><span class="op">$</span><span class="va">variable</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">keep</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"stat_label"</span>, <span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span><span class="op">]</span></span>
 <span></span>
 <span><span class="va">tab</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/tabular.html">tabular</a></span><span class="op">(</span></span>
 <span>  <span class="va">demo</span>,</span>
 <span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Table 14.1.1"</span>,</span>
 <span>    <span class="st">"Demographic and Baseline Characteristics"</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"Safety Population (N=%d)"</span>, <span class="va">n</span><span class="op">[</span><span class="st">"Total"</span><span class="op">]</span><span class="op">)</span></span>
+<span>    <span class="st">"Safety Population"</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  footnotes <span class="op">=</span> <span class="st">"Percentages are based on the number of subjects per treatment group."</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -124,389 +126,10 @@
 <span></span>
 <span><span class="co"># render to any backend by file extension (or format = "...")</span></span>
 <span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/emit.html">emit</a></span><span class="op">(</span><span class="va">tab</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rtf"</span><span class="op">)</span><span class="op">)</span>   <span class="co"># submission deliverable</span></span></code></pre></div>
-<p>The same <code>tab</code> renders to markdown for a quick look (the demographics table below is the actual <code>md</code> backend output), and to a self-contained HTML page, a paginated PDF, a <code>tabularray</code> LaTeX fragment, or native OOXML <code>.docx</code> — all from the one spec:</p>
-<table class="table">
-<colgroup>
-<col width="20%">
-<col width="20%">
-<col width="20%">
-<col width="20%">
-<col width="20%">
-</colgroup>
-<thead><tr>
-<th align="left">Statistic</th>
-<th align="right">Placebo (N=86)</th>
-<th align="right">Drug 50 (N=96)</th>
-<th align="right">Drug 100 (N=72)</th>
-<th align="right">Total (N=254)</th>
-</tr></thead>
-<tbody>
-<tr>
-<td align="left"><strong>Age (years)</strong></td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left">n</td>
-<td align="right"> 86          </td>
-<td align="right"> 96          </td>
-<td align="right"> 72          </td>
-<td align="right">254          </td>
-</tr>
-<tr>
-<td align="left">Mean (SD)</td>
-<td align="right"> 75.2 (8.59) </td>
-<td align="right"> 76.0 (8.11) </td>
-<td align="right"> 73.8 (7.94) </td>
-<td align="right"> 75.1 (8.25) </td>
-</tr>
-<tr>
-<td align="left">Median</td>
-<td align="right"> 76.0        </td>
-<td align="right"> 78.0        </td>
-<td align="right"> 75.5        </td>
-<td align="right"> 77.0        </td>
-</tr>
-<tr>
-<td align="left">Q1, Q3</td>
-<td align="right"> 69.2, 81.8  </td>
-<td align="right"> 71.0, 82.0  </td>
-<td align="right"> 70.5, 79.0  </td>
-<td align="right"> 70.0, 81.0  </td>
-</tr>
-<tr>
-<td align="left">Min, Max</td>
-<td align="right"> 52  , 89    </td>
-<td align="right"> 51  , 88    </td>
-<td align="right"> 56  , 88    </td>
-<td align="right"> 51  , 89    </td>
-</tr>
-<tr>
-<td align="left"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left"><strong>Age Group, n (%)</strong></td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left">18-64</td>
-<td align="right"> 14 (16.3)   </td>
-<td align="right">  8 ( 8.3)   </td>
-<td align="right"> 11 (15.3)   </td>
-<td align="right"> 33 (13.0)   </td>
-</tr>
-<tr>
-<td align="left">&gt;64</td>
-<td align="right"> 72 (83.7)   </td>
-<td align="right"> 88 (91.7)   </td>
-<td align="right"> 61 (84.7)   </td>
-<td align="right">221 (87.0)   </td>
-</tr>
-<tr>
-<td align="left"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left"><strong>Sex, n (%)</strong></td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left">F</td>
-<td align="right"> 53 (61.6)   </td>
-<td align="right"> 55 (57.3)   </td>
-<td align="right"> 35 (48.6)   </td>
-<td align="right">143 (56.3)   </td>
-</tr>
-<tr>
-<td align="left">M</td>
-<td align="right"> 33 (38.4)   </td>
-<td align="right"> 41 (42.7)   </td>
-<td align="right"> 37 (51.4)   </td>
-<td align="right">111 (43.7)   </td>
-</tr>
-<tr>
-<td align="left"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left"><strong>Race, n (%)</strong></td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left">WHITE</td>
-<td align="right"> 78 (90.7)   </td>
-<td align="right"> 90 (93.8)   </td>
-<td align="right"> 62 (86.1)   </td>
-<td align="right">230 (90.6)   </td>
-</tr>
-<tr>
-<td align="left">BLACK OR AFRICAN AMERICAN</td>
-<td align="right">  8 ( 9.3)   </td>
-<td align="right">  6 ( 6.2)   </td>
-<td align="right">  9 (12.5)   </td>
-<td align="right"> 23 ( 9.1)   </td>
-</tr>
-<tr>
-<td align="left">ASIAN</td>
-<td align="right">  0          </td>
-<td align="right">  0          </td>
-<td align="right">  0          </td>
-<td align="right">  0          </td>
-</tr>
-<tr>
-<td align="left">AMERICAN INDIAN OR ALASKA NATIVE</td>
-<td align="right">  0          </td>
-<td align="right">  0          </td>
-<td align="right">  1 ( 1.4)   </td>
-<td align="right">  1 ( 0.4)   </td>
-</tr>
-<tr>
-<td align="left"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left"><strong>Ethnicity, n (%)</strong></td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left">HISPANIC OR LATINO</td>
-<td align="right">  3 ( 3.5)   </td>
-<td align="right">  6 ( 6.2)   </td>
-<td align="right">  3 ( 4.2)   </td>
-<td align="right"> 12 ( 4.7)   </td>
-</tr>
-<tr>
-<td align="left">NOT HISPANIC OR LATINO</td>
-<td align="right"> 83 (96.5)   </td>
-<td align="right"> 90 (93.8)   </td>
-<td align="right"> 69 (95.8)   </td>
-<td align="right">242 (95.3)   </td>
-</tr>
-<tr>
-<td align="left">NOT REPORTED</td>
-<td align="right">  0          </td>
-<td align="right">  0          </td>
-<td align="right">  0          </td>
-<td align="right">  0          </td>
-</tr>
-<tr>
-<td align="left"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left"><strong>Weight (kg)</strong></td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left">n</td>
-<td align="right"> 86          </td>
-<td align="right"> 95          </td>
-<td align="right"> 72          </td>
-<td align="right">253          </td>
-</tr>
-<tr>
-<td align="left">Mean (SD)</td>
-<td align="right"> 62.8 (12.77)</td>
-<td align="right"> 68.0 (14.50)</td>
-<td align="right"> 69.5 (14.35)</td>
-<td align="right"> 66.6 (14.13)</td>
-</tr>
-<tr>
-<td align="left">Median</td>
-<td align="right"> 60.6        </td>
-<td align="right"> 66.7        </td>
-<td align="right"> 69.0        </td>
-<td align="right"> 66.7        </td>
-</tr>
-<tr>
-<td align="left">Q1, Q3</td>
-<td align="right"> 53.6, 74.2  </td>
-<td align="right"> 56.0,  78.2 </td>
-<td align="right"> 56.9,  80.3 </td>
-<td align="right"> 55.3,  77.1 </td>
-</tr>
-<tr>
-<td align="left">Min, Max</td>
-<td align="right"> 34  , 86    </td>
-<td align="right"> 42  , 106   </td>
-<td align="right"> 44  , 108   </td>
-<td align="right"> 34  , 108   </td>
-</tr>
-<tr>
-<td align="left"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left"><strong>Height (cm)</strong></td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left">n</td>
-<td align="right"> 86          </td>
-<td align="right"> 96          </td>
-<td align="right"> 72          </td>
-<td align="right">254          </td>
-</tr>
-<tr>
-<td align="left">Mean (SD)</td>
-<td align="right">162.6 (11.52)</td>
-<td align="right">163.7 (10.30)</td>
-<td align="right">165.9 (10.28)</td>
-<td align="right">163.9 (10.76)</td>
-</tr>
-<tr>
-<td align="left">Median</td>
-<td align="right">162.6        </td>
-<td align="right">162.6        </td>
-<td align="right">165.1        </td>
-<td align="right">162.8        </td>
-</tr>
-<tr>
-<td align="left">Q1, Q3</td>
-<td align="right">154.0, 171.1 </td>
-<td align="right">157.5, 170.2 </td>
-<td align="right">157.5, 172.8 </td>
-<td align="right">156.2, 171.4 </td>
-</tr>
-<tr>
-<td align="left">Min, Max</td>
-<td align="right">137  , 185   </td>
-<td align="right">136  , 196   </td>
-<td align="right">146  , 190   </td>
-<td align="right">136  , 196   </td>
-</tr>
-<tr>
-<td align="left"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left"><strong>BMI (kg/m^2)</strong></td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left">n</td>
-<td align="right"> 86          </td>
-<td align="right"> 95          </td>
-<td align="right"> 72          </td>
-<td align="right">253          </td>
-</tr>
-<tr>
-<td align="left">Mean (SD)</td>
-<td align="right"> 23.6 (3.67) </td>
-<td align="right"> 25.2 (4.40) </td>
-<td align="right"> 25.2 (3.97) </td>
-<td align="right"> 24.7 (4.09) </td>
-</tr>
-<tr>
-<td align="left">Median</td>
-<td align="right"> 23.4        </td>
-<td align="right"> 24.8        </td>
-<td align="right"> 24.8        </td>
-<td align="right"> 24.2        </td>
-</tr>
-<tr>
-<td align="left">Q1, Q3</td>
-<td align="right"> 21.2, 25.6  </td>
-<td align="right"> 22.3, 28.2  </td>
-<td align="right"> 22.7, 27.6  </td>
-<td align="right"> 21.9, 27.3  </td>
-</tr>
-<tr>
-<td align="left">Min, Max</td>
-<td align="right"> 15  , 33    </td>
-<td align="right"> 15  , 40    </td>
-<td align="right"> 14  , 35    </td>
-<td align="right"> 14  , 40    </td>
-</tr>
-<tr>
-<td align="left"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left"><strong>BMI Category, n (%)</strong></td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-<td align="right"> </td>
-</tr>
-<tr>
-<td align="left">Underweight (&lt;18.5)</td>
-<td align="right">  3 ( 3.5)   </td>
-<td align="right">  4 ( 4.2)   </td>
-<td align="right">  1 ( 1.4)   </td>
-<td align="right">  8 ( 3.1)   </td>
-</tr>
-<tr>
-<td align="left">Normal (18.5-24.9)</td>
-<td align="right"> 57 (66.3)   </td>
-<td align="right"> 46 (47.9)   </td>
-<td align="right"> 39 (54.2)   </td>
-<td align="right">142 (55.9)   </td>
-</tr>
-<tr>
-<td align="left">Overweight (25-29.9)</td>
-<td align="right"> 20 (23.3)   </td>
-<td align="right"> 32 (33.3)   </td>
-<td align="right"> 23 (31.9)   </td>
-<td align="right"> 75 (29.5)   </td>
-</tr>
-<tr>
-<td align="left">Obese (&gt;=30)</td>
-<td align="right">  6 ( 7.0)   </td>
-<td align="right"> 13 (13.5)   </td>
-<td align="right">  9 (12.5)   </td>
-<td align="right"> 28 (11.0)   </td>
-</tr>
-</tbody>
-</table>
+<p>The same <code>tab</code> emits to every backend from the one spec. The table below is tabular’s own HTML render — the identical spec also produces RTF, a paginated PDF, a <code>tabularray</code> LaTeX fragment, and native OOXML <code>.docx</code>:</p>
+<div align="center">
+<p><img src="reference/figures/README-hero.png" width="815" alt="Demographic and baseline characteristics table rendered by tabular: decimal-aligned arm columns, a centred multi-line caption, and a single footnote."></p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="why-tabular">Why tabular?<a class="anchor" aria-label="anchor" href="#why-tabular"></a>
@@ -518,6 +141,8 @@
 <strong>Decimal alignment that survives the page.</strong> Numbers align on the decimal using the backend’s real font metrics, not guessed padding — so columns stay aligned in print, not just on screen.</li>
 <li>
 <strong>Submission chrome built in.</strong> Multi-line titles, up to eleven footnote lines, page header/footer slots, and the four-section page layout regulatory reviewers expect.</li>
+<li>
+<strong>Auto-numbered footnotes.</strong> <code><a href="reference/footnote.html">footnote()</a></code> anchors a marker to any cell, header, or title; the engine assigns the glyph once, in reading order, deduped by <code>id</code>, and byte-identical across every backend and page.</li>
 <li>
 <strong>Group-aware pagination.</strong> Keep a SOC and its preferred terms on one page, repeat titles/headers/footnotes per page, control orphan/widow rows, and split wide tables into horizontal panels.</li>
 <li>
@@ -555,7 +180,7 @@
 <td>Live HTML preview</td>
 <td align="center">✓</td>
 <td align="center">✓</td>
-<td align="center">✓</td>
+<td align="center">—</td>
 <td align="center">✓</td>
 <td align="center">✓</td>
 <td align="center">✓</td>
@@ -625,142 +250,16 @@
 </tr>
 </tbody>
 </table>
-</div>
-<div class="section level2">
-<h2 id="the-verb-surface">The verb surface<a class="anchor" aria-label="anchor" href="#the-verb-surface"></a>
-</h2>
-<table class="table">
-<colgroup>
-<col width="50%">
-<col width="50%">
-</colgroup>
-<thead><tr>
-<th>Verb</th>
-<th>Role</th>
-</tr></thead>
-<tbody>
-<tr>
-<td><code><a href="reference/tabular.html">tabular()</a></code></td>
-<td>Wrap a pre-summarised data frame into a <code>tabular_spec</code>
-</td>
-</tr>
-<tr>
-<td><code><a href="reference/pivot_across.html">pivot_across()</a></code></td>
-<td>Bridge a <code>cards</code> long ARD into a wide display frame</td>
-</tr>
-<tr>
-<td>
-<code><a href="reference/cols.html">cols()</a></code> / <code><a href="reference/col_spec.html">col_spec()</a></code>
-</td>
-<td>Per-column usage, label, format, alignment, width, visibility</td>
-</tr>
-<tr>
-<td><code><a href="reference/headers.html">headers()</a></code></td>
-<td>Multi-level column-header bands with passthrough leaves</td>
-</tr>
-<tr>
-<td><code><a href="reference/sort_rows.html">sort_rows()</a></code></td>
-<td>Output row order; factor-aware, NA-last</td>
-</tr>
-<tr>
-<td><code><a href="reference/subgroup.html">subgroup()</a></code></td>
-<td>Partition the table into page-broken, banner-labelled groups</td>
-</tr>
-<tr>
-<td><code><a href="reference/paginate.html">paginate()</a></code></td>
-<td>Page splits, group-keep, panels, repeat chrome, orphan/widow</td>
-</tr>
-<tr>
-<td>
-<code><a href="reference/style.html">style()</a></code> + <code>cells_*()</code>
-</td>
-<td>Predicate-targeted styling for any surface</td>
-</tr>
-<tr>
-<td><code><a href="reference/brdr.html">brdr()</a></code></td>
-<td>Border-line specification (width / style / colour)</td>
-</tr>
-<tr>
-<td>
-<code><a href="reference/preset.html">preset()</a></code> / <code><a href="reference/set_preset.html">set_preset()</a></code> / <code><a href="reference/preset_minimal.html">preset_minimal()</a></code>
-</td>
-<td>Page geometry + cosmetic defaults</td>
-</tr>
-<tr>
-<td><code><a href="reference/style_template.html">style_template()</a></code></td>
-<td>Reusable house style attached to a preset</td>
-</tr>
-<tr>
-<td>
-<code><a href="reference/md.html">md()</a></code> / <code><a href="reference/html.html">html()</a></code>
-</td>
-<td>Inline Markdown / HTML markup in labels and cells</td>
-</tr>
-<tr>
-<td><code><a href="reference/emit.html">emit()</a></code></td>
-<td>Render to a file (RTF / PDF / HTML / LaTeX / DOCX)</td>
-</tr>
-<tr>
-<td><code><a href="reference/as_grid.html">as_grid()</a></code></td>
-<td>Resolve to the backend-ready grid without writing a file</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="section level2">
-<h2 id="demo-data">Demo data<a class="anchor" aria-label="anchor" href="#demo-data"></a>
-</h2>
-<p>Eleven pre-summarised datasets ship with the package to power every example, vignette, and test (the <code>*_card</code> pair are long-format <code>cards</code> ARDs that feed <code><a href="reference/pivot_across.html">pivot_across()</a></code>):</p>
-<table class="table">
-<colgroup>
-<col width="50%">
-<col width="50%">
-</colgroup>
-<thead><tr>
-<th>Dataset</th>
-<th>Content</th>
-</tr></thead>
-<tbody>
-<tr>
-<td>
-<code>saf_demo</code>, <code>saf_demo_card</code>
-</td>
-<td>Demographics, Safety Population</td>
-</tr>
-<tr>
-<td><code>saf_aeoverall</code></td>
-<td>High-level adverse-event summary</td>
-</tr>
-<tr>
-<td>
-<code>saf_aesocpt</code>, <code>saf_aesocpt_card</code>
-</td>
-<td>Adverse events by SOC and Preferred Term</td>
-</tr>
-<tr>
-<td><code>saf_vital</code></td>
-<td>Vital signs by parameter and visit</td>
-</tr>
-<tr>
-<td><code>saf_subgroup</code></td>
-<td>Vital signs by Sex × Age-group subgroups</td>
-</tr>
-<tr>
-<td><code>eff_resp</code></td>
-<td>Best Overall Response and response rates</td>
-</tr>
-<tr>
-<td><code>eff_estimates</code></td>
-<td>Treatment-effect estimates (raw numerics)</td>
-</tr>
-<tr>
-<td>
-<code>saf_n</code>, <code>eff_n</code>
-</td>
-<td>BigN denominators per arm</td>
-</tr>
-</tbody>
-</table>
+<p>Two notes on the marks:</p>
+<ul>
+<li><p><strong>Live HTML preview</strong> means the table renders as HTML <em>inline</em> when you print it in a Quarto / R Markdown chunk or the RStudio viewer (a <code>knit_print</code> method). <code>rtables</code> prints a monospace ASCII table by default and ships no <code>knit_print</code> method, so it is <code>—</code> here; it can still emit HTML through an explicit <code>as_html()</code> call.</p></li>
+<li>
+<p><strong>PDF</strong> is compiled through LaTeX, so it needs a TeX installation. <code>tabular</code> uses <a href="https://yihui.org/tinytex/" class="external-link"><code>tinytex</code></a> — install it once per machine and PDF <code><a href="reference/emit.html">emit()</a></code> works thereafter:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"tinytex"</span><span class="op">)</span></span>
+<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">install_tinytex</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># one-time TeX setup</span></span></code></pre></div>
+</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>

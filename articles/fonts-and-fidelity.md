@@ -41,9 +41,9 @@ tabular(saf_aeoverall) |>
 | Any AE Related to Study Drug | 184 (72.4) | 43 (50.0) | 64 (88.9) | 77 (80.2) |
 | Any AE Leading to Death      |   3 ( 1.2) |  2 ( 2.3) |  0        |  1 ( 1.0) |
 | Any AE Recovered / Resolved  | 157 (61.8) | 47 (54.7) | 49 (68.1) | 61 (63.5) |
-| Maximum severity: Mild       |  77 (30.3) | 36 (41.9) | 20 (27.8) | 21 (21.9) |
-| Maximum severity: Moderate   | 111 (43.7) | 24 (27.9) | 40 (55.6) | 47 (49.0) |
-| Maximum severity: Severe     |  29 (11.4) |  5 ( 5.8) |  8 (11.1) | 16 (16.7) |
+|   Maximum severity: Mild     |  77 (30.3) | 36 (41.9) | 20 (27.8) | 21 (21.9) |
+|   Maximum severity: Moderate | 111 (43.7) | 24 (27.9) | 40 (55.6) | 47 (49.0) |
+|   Maximum severity: Severe   |  29 (11.4) |  5 ( 5.8) |  8 (11.1) | 16 (16.7) |
 
 ## Choosing a font
 
@@ -199,4 +199,4 @@ sp |> emit("t_14_1_1.docx")    # native Word
   consumes.
 - **[Clinical
   cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.md)**
-  — the recipes you would emit to these formats. \`\`\`
+  — the recipes you would emit to these formats.

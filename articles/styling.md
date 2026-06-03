@@ -23,10 +23,13 @@ pass it visual attributes (bold, colour, borders, padding, …) and a
 
 ## The shape: attributes + a location
 
+Section-header rows are already bold by default, so to *see* a layer
+land we tint their background instead:
+
 ``` r
 
 base |>
-  style(bold = TRUE, .at = cells_group_headers())
+  style(background = "#eef2ff", .at = cells_group_headers())
 ```
 
 | Statistic | Placebo | Drug 100 | Drug 50 | Total |
@@ -105,7 +108,7 @@ to layer rules; later layers win per attribute.
 ``` r
 
 base |>
-  style(bold = TRUE, .at = cells_group_headers()) |>
+  style(background = "#eef2ff", .at = cells_group_headers()) |>
   style(italic = TRUE, .at = cells_body(j = "Total")) |>
   style(border_bottom = brdr("thick"), .at = cells_headers())
 ```
@@ -338,7 +341,7 @@ base |>
     font_size   = 9,
     orientation = "landscape",
     rules  = list(midrule = brdr("thick")),
-    colors = list(header = c(text = "#1f2937"))
+    colors = list(header = c(text = "#1d4ed8", background = "#f3f4f6"))
   )
 ```
 
@@ -427,16 +430,16 @@ with no arguments clears it.
 set_preset(font_size = 8)        # every later table starts at 8pt
 get_preset()
 #> <tabular::preset_spec>
-#>  @ font_size      : num 8
-#>  @ font_family    : chr "mono"
-#>  @ orientation    : chr "landscape"
-#>  @ paper_size     : chr "letter"
-#>  @ margins        : num 1
-#>  @ pagehead       : list()
-#>  @ pagefoot       : list()
-#>  @ indent_size    : int 2
-#>  @ na_text        : chr ""
-#>  @ spacing        :List of 4
+#>  @ font_size       : num 8
+#>  @ font_family     : chr "mono"
+#>  @ orientation     : chr "landscape"
+#>  @ paper_size      : chr "letter"
+#>  @ margins         : num 1
+#>  @ pagehead        : list()
+#>  @ pagefoot        : list()
+#>  @ indent_size     : int 2
+#>  @ na_text         : chr ""
+#>  @ spacing         :List of 4
 #>  .. $ title   : Named int [1:2] 1 1
 #>  ..  ..- attr(*, "names")= chr [1:2] "above" "below"
 #>  .. $ body    : Named int [1:2] 0 0
@@ -445,13 +448,16 @@ get_preset()
 #>  ..  ..- attr(*, "names")= chr [1:2] "above" "below"
 #>  .. $ footnote: Named int 0
 #>  ..  ..- attr(*, "names")= chr "above"
-#>  @ stripe         : NULL
-#>  @ decimal_metrics: chr "chars"
-#>  @ decimal_markers: chr [1:5] "NR" "NE" "NC" "ND" "BLQ"
-#>  @ chrome_onscreen: chr "auto"
-#>  @ width_mode     : chr "content"
-#>  @ cell_padding   : num [1:2] 0 5.4
-#>  @ style          : list()
+#>  @ stripe          : NULL
+#>  @ decimal_metrics : chr "chars"
+#>  @ decimal_markers : chr [1:5] "NR" "NE" "NC" "ND" "BLQ"
+#>  @ chrome_onscreen : chr "auto"
+#>  @ whitespace      : chr "preserve"
+#>  @ footnote_markers: chr "letters"
+#>  @ footnote_label  : chr "{m}"
+#>  @ width_mode      : chr "content"
+#>  @ cell_padding    : num [1:2] 0 5.4
+#>  @ style           : list()
 set_preset()                      # clear it again
 ```
 
@@ -533,9 +539,12 @@ then attach it to a preset so every table inherits it:
 
 ``` r
 
+# Headers and section rows are bold by default, so a house style earns
+# its keep with VISIBLE identity: a shaded column-header band, tinted
+# section rows, and thick rules above and below the header.
 house <- style_template() |>
-  style(bold = TRUE, .at = cells_headers()) |>
-  style(bold = TRUE, .at = cells_group_headers()) |>
+  style(background = "#f3f4f6", .at = cells_headers()) |>
+  style(background = "#eef2ff", .at = cells_group_headers()) |>
   style(border_top = brdr("thick"), border_bottom = brdr("thick"),
         .at = cells_headers())
 
@@ -618,10 +627,10 @@ constrained HTML subset:
 tabular(
   saf_demo,
   titles = c(
-    md("**Table 14.1.1**"),
-    "Demographic Characteristics"
+    "Table 14.1.1",
+    md("Demographic Characteristics^a^")
   ),
-  footnotes = md("Body mass index in kg/m^2^.")
+  footnotes = md("^a^ Body mass index summarised in kg/m^2^.")
 ) |>
   cols(
     variable   = col_spec(usage = "group"),
@@ -632,14 +641,6 @@ tabular(
     Total      = col_spec(label = "Total",    align = "decimal")
   )
 ```
-
- 
-
-**Table 14.1.1**
-
-Demographic Characteristics
-
- 
 
 | Statistic | Placebo | Drug 100 | Drug 50 | Total |
 |----|----|----|----|----|
@@ -696,7 +697,49 @@ Demographic Characteristics
 | Overweight (25-29.9) |  20 (23.3)    |  23 (31.9)    |  32 (33.3)    |  75 (29.5)    |
 | Obese (\>=30) |   6 ( 7.0)    |   9 (12.5)    |  13 (13.5)    |  28 (11.0)    |
 
-Body mass index in kg/m².
+^(a) Body mass index summarised in kg/m².
+
+ 
+
+Table 14.1.1
+
+Demographic Characteristics^(a)
+
+ 
+
+Here the `^a^` marker and its note are hand-typed and kept in sync by
+you. When you want the marker assigned and placed *automatically* —
+deduped across cells, byte-identical across backends — use
+\[[`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)\]
+instead (see the *Auto-numbered footnotes* recipe in the [clinical
+cookbook](https://vthanik.github.io/tabular/articles/articles/clinical-cookbook.md)).
+
+## Verbatim whitespace
+
+Significant ASCII spaces in labels and cells are preserved by default,
+so a hand-built indent renders exactly as typed across every backend
+(HTML, RTF, LaTeX, PDF, DOCX, Markdown). A single interior space stays
+breakable, so cells still wrap; leading, trailing, and interior runs of
+two or more spaces become non-breaking. Decimal padding is never
+affected.
+
+``` r
+
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "     Placebo\n(N=86)", align = "decimal"),
+    drug_50    = col_spec(label = "     Drug 50\n(N=96)", align = "decimal"),
+    drug_100   = col_spec(label = "    Drug 100\n(N=72)", align = "decimal"),
+    Total      = col_spec(label = "       Total\n(N=254)", align = "decimal")
+  )
+```
+
+[TABLE]
+
+Set `preset(whitespace = "collapse")` to opt out and let each backend
+fold space runs natively.
 
 > **The cascade**
 >
@@ -721,4 +764,4 @@ Body mass index in kg/m².
 - **[Fonts &
   fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.md)**
   — fonts, decimal alignment, and why the print backends are the source
-  of truth. \`\`\`
+  of truth.

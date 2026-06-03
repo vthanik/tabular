@@ -104,56 +104,58 @@
 <p>Styling in <code>tabular</code> is one verb: <code><a href="../reference/style.html">style()</a></code>. You pass it visual attributes (bold, colour, borders, padding, …) and a <strong>location</strong> that says <em>where</em> to apply them. Locations are the <code>cells_*()</code> helpers.</p>
 <section class="level2"><h2 id="the-shape-attributes-a-location">The shape: attributes + a location<a class="anchor" aria-label="anchor" href="#the-shape-attributes-a-location"></a>
 </h2>
+<p>Section-header rows are already bold by default, so to <em>see</em> a layer land we tint their background instead:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">base</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>bold <span class="op">=</span> <span class="cn">TRUE</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_group_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>background <span class="op">=</span> <span class="st">"#eef2ff"</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_group_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-05611927c7 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-05611927c7 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-05611927c7 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-05611927c7 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-05611927c7 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-05611927c7 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-05611927c7 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-05611927c7 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-05611927c7 .tabular-table th, #tabular-05611927c7 .tabular-table td { padding: .35rem .6rem; }
-#tabular-05611927c7 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-05611927c7 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-05611927c7 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-05611927c7 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-05611927c7 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-05611927c7 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-05611927c7 .tabular-table tbody tr td { border-top: none; }
-#tabular-05611927c7 .tabular-band { text-align: center; }
-#tabular-05611927c7 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-05611927c7 .tabular-subgroup-label { font-weight: 600; }
-#tabular-05611927c7 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-05611927c7 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-05611927c7 .text-left { text-align: left; }
-#tabular-05611927c7 .text-center { text-align: center; }
-#tabular-05611927c7 .text-right { text-align: right; }
-#tabular-05611927c7 .tabular-table thead th.text-left { text-align: left; }
-#tabular-05611927c7 .tabular-table thead th.text-center { text-align: center; }
-#tabular-05611927c7 .tabular-table thead th.text-right { text-align: right; }
-#tabular-05611927c7 .valign-top { vertical-align: top; }
-#tabular-05611927c7 .valign-middle { vertical-align: middle; }
-#tabular-05611927c7 .valign-bottom { vertical-align: bottom; }
-#tabular-05611927c7 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-05611927c7 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-05611927c7 .tabular-page-break-row { display: none; }
-#tabular-05611927c7 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-05611927c7 .tabular-page-header, #tabular-05611927c7 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-05611927c7 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-05611927c7 .tabular-page-footer { margin-top: 1rem; }
-#tabular-05611927c7 .tabular-page-header-left, #tabular-05611927c7 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-05611927c7 .tabular-page-header-center, #tabular-05611927c7 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-05611927c7 .tabular-page-header-right, #tabular-05611927c7 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-05611927c7 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-05611927c7 .tabular-table tr { page-break-inside: avoid; } #tabular-05611927c7 .tabular-page-header, #tabular-05611927c7 .tabular-page-footer { display: none; } #tabular-05611927c7 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-05611927c7 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-05611927c7 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-b84b7d0196 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-b84b7d0196 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-b84b7d0196 p { line-height: inherit; }
+#tabular-b84b7d0196 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-b84b7d0196 .tabular-caption { margin: 0; padding: 0; }
+#tabular-b84b7d0196 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-b84b7d0196 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-b84b7d0196 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-b84b7d0196 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-b84b7d0196 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-b84b7d0196 .tabular-table th, #tabular-b84b7d0196 .tabular-table td { padding: .18rem .6rem; }
+#tabular-b84b7d0196 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-b84b7d0196 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-b84b7d0196 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-b84b7d0196 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-b84b7d0196 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-b84b7d0196 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-b84b7d0196 .tabular-table tbody tr td { border-top: none; }
+#tabular-b84b7d0196 .tabular-band { text-align: center; }
+#tabular-b84b7d0196 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-b84b7d0196 .tabular-subgroup-label { font-weight: 600; }
+#tabular-b84b7d0196 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-b84b7d0196 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-b84b7d0196 .text-left { text-align: left; }
+#tabular-b84b7d0196 .text-center { text-align: center; }
+#tabular-b84b7d0196 .text-right { text-align: right; }
+#tabular-b84b7d0196 .tabular-table thead th.text-left { text-align: left; }
+#tabular-b84b7d0196 .tabular-table thead th.text-center { text-align: center; }
+#tabular-b84b7d0196 .tabular-table thead th.text-right { text-align: right; }
+#tabular-b84b7d0196 .valign-top { vertical-align: top; }
+#tabular-b84b7d0196 .valign-middle { vertical-align: middle; }
+#tabular-b84b7d0196 .valign-bottom { vertical-align: bottom; }
+#tabular-b84b7d0196 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-b84b7d0196 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-b84b7d0196 .tabular-page-break-row { display: none; }
+#tabular-b84b7d0196 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-b84b7d0196 .tabular-page-header, #tabular-b84b7d0196 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-b84b7d0196 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-b84b7d0196 .tabular-page-footer { margin-top: 1rem; }
+#tabular-b84b7d0196 .tabular-page-header-left, #tabular-b84b7d0196 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-b84b7d0196 .tabular-page-header-center, #tabular-b84b7d0196 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-b84b7d0196 .tabular-page-header-right, #tabular-b84b7d0196 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-b84b7d0196 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-b84b7d0196 .tabular-table tr { page-break-inside: avoid; } #tabular-b84b7d0196 .tabular-page-header, #tabular-b84b7d0196 .tabular-page-footer { display: none; } #tabular-b84b7d0196 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-b84b7d0196 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-b84b7d0196 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-05611927c7" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
-<div class="tabular-table-wrap">
+<div id="tabular-b84b7d0196" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
@@ -165,7 +167,7 @@
 </tr></thead>
 <tbody>
 <tr class="tabular-group-header odd">
-<td colspan="5" style="font-weight: bold"><strong>Age (years)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Age (years)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -206,7 +208,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Age Group, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Age Group, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">18-64</td>
@@ -226,7 +228,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Sex, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Sex, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">F</td>
@@ -246,7 +248,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Race, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Race, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">WHITE</td>
@@ -280,7 +282,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Ethnicity, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Ethnicity, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">HISPANIC OR LATINO</td>
@@ -307,7 +309,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5" style="font-weight: bold"><strong>Weight (kg)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Weight (kg)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -348,7 +350,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Height (cm)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Height (cm)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -389,7 +391,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5" style="font-weight: bold"><strong>BMI (kg/m^2)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>BMI (kg/m^2)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -430,7 +432,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>BMI Category, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>BMI Category, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">Underweight (&lt;18.5)</td>
@@ -463,7 +465,7 @@
 </tbody>
 </table>
 </div>
-</div></div>
+</figure></div>
 </div>
 </div>
 <p>The <code>.at</code> argument names the surface. Everything else is the styling to apply there. Stack <code><a href="../reference/style.html">style()</a></code> calls to layer rules; later layers win per attribute.</p>
@@ -514,55 +516,56 @@
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">base</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>bold <span class="op">=</span> <span class="cn">TRUE</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_group_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>background <span class="op">=</span> <span class="st">"#eef2ff"</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_group_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>italic <span class="op">=</span> <span class="cn">TRUE</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_body</a></span><span class="op">(</span>j <span class="op">=</span> <span class="st">"Total"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>border_bottom <span class="op">=</span> <span class="fu"><a href="../reference/brdr.html">brdr</a></span><span class="op">(</span><span class="st">"thick"</span><span class="op">)</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-471d8a77be { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-471d8a77be .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-471d8a77be .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-471d8a77be .tabular-pad { margin: 0; line-height: 1; }
-#tabular-471d8a77be .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-471d8a77be .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-471d8a77be .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-471d8a77be .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-471d8a77be .tabular-table th, #tabular-471d8a77be .tabular-table td { padding: .35rem .6rem; }
-#tabular-471d8a77be .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-471d8a77be .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-471d8a77be .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-471d8a77be .tabular-table thead tr:last-child th { border-bottom: 1.5pt solid currentColor; }
-#tabular-471d8a77be .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-471d8a77be .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-471d8a77be .tabular-table tbody tr td { border-top: none; }
-#tabular-471d8a77be .tabular-band { text-align: center; }
-#tabular-471d8a77be .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-471d8a77be .tabular-subgroup-label { font-weight: 600; }
-#tabular-471d8a77be .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-471d8a77be .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-471d8a77be .text-left { text-align: left; }
-#tabular-471d8a77be .text-center { text-align: center; }
-#tabular-471d8a77be .text-right { text-align: right; }
-#tabular-471d8a77be .tabular-table thead th.text-left { text-align: left; }
-#tabular-471d8a77be .tabular-table thead th.text-center { text-align: center; }
-#tabular-471d8a77be .tabular-table thead th.text-right { text-align: right; }
-#tabular-471d8a77be .valign-top { vertical-align: top; }
-#tabular-471d8a77be .valign-middle { vertical-align: middle; }
-#tabular-471d8a77be .valign-bottom { vertical-align: bottom; }
-#tabular-471d8a77be .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-471d8a77be .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-471d8a77be .tabular-page-break-row { display: none; }
-#tabular-471d8a77be { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-471d8a77be .tabular-page-header, #tabular-471d8a77be .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-471d8a77be .tabular-page-header { margin-bottom: 1rem; }
-#tabular-471d8a77be .tabular-page-footer { margin-top: 1rem; }
-#tabular-471d8a77be .tabular-page-header-left, #tabular-471d8a77be .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-471d8a77be .tabular-page-header-center, #tabular-471d8a77be .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-471d8a77be .tabular-page-header-right, #tabular-471d8a77be .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-471d8a77be .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-471d8a77be .tabular-table tr { page-break-inside: avoid; } #tabular-471d8a77be .tabular-page-header, #tabular-471d8a77be .tabular-page-footer { display: none; } #tabular-471d8a77be .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-471d8a77be .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-471d8a77be .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-57797e4c87 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-57797e4c87 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-57797e4c87 p { line-height: inherit; }
+#tabular-57797e4c87 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-57797e4c87 .tabular-caption { margin: 0; padding: 0; }
+#tabular-57797e4c87 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-57797e4c87 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-57797e4c87 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-57797e4c87 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-57797e4c87 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-57797e4c87 .tabular-table th, #tabular-57797e4c87 .tabular-table td { padding: .18rem .6rem; }
+#tabular-57797e4c87 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-57797e4c87 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-57797e4c87 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-57797e4c87 .tabular-table thead tr:last-child th { border-bottom: 1.5pt solid #212529; }
+#tabular-57797e4c87 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-57797e4c87 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-57797e4c87 .tabular-table tbody tr td { border-top: none; }
+#tabular-57797e4c87 .tabular-band { text-align: center; }
+#tabular-57797e4c87 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-57797e4c87 .tabular-subgroup-label { font-weight: 600; }
+#tabular-57797e4c87 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-57797e4c87 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-57797e4c87 .text-left { text-align: left; }
+#tabular-57797e4c87 .text-center { text-align: center; }
+#tabular-57797e4c87 .text-right { text-align: right; }
+#tabular-57797e4c87 .tabular-table thead th.text-left { text-align: left; }
+#tabular-57797e4c87 .tabular-table thead th.text-center { text-align: center; }
+#tabular-57797e4c87 .tabular-table thead th.text-right { text-align: right; }
+#tabular-57797e4c87 .valign-top { vertical-align: top; }
+#tabular-57797e4c87 .valign-middle { vertical-align: middle; }
+#tabular-57797e4c87 .valign-bottom { vertical-align: bottom; }
+#tabular-57797e4c87 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-57797e4c87 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-57797e4c87 .tabular-page-break-row { display: none; }
+#tabular-57797e4c87 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-57797e4c87 .tabular-page-header, #tabular-57797e4c87 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-57797e4c87 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-57797e4c87 .tabular-page-footer { margin-top: 1rem; }
+#tabular-57797e4c87 .tabular-page-header-left, #tabular-57797e4c87 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-57797e4c87 .tabular-page-header-center, #tabular-57797e4c87 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-57797e4c87 .tabular-page-header-right, #tabular-57797e4c87 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-57797e4c87 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-57797e4c87 .tabular-table tr { page-break-inside: avoid; } #tabular-57797e4c87 .tabular-page-header, #tabular-57797e4c87 .tabular-page-footer { display: none; } #tabular-57797e4c87 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-57797e4c87 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-57797e4c87 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-471d8a77be" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
-<div class="tabular-table-wrap">
+<div id="tabular-57797e4c87" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
@@ -574,7 +577,7 @@
 </tr></thead>
 <tbody>
 <tr class="tabular-group-header odd">
-<td colspan="5" style="font-weight: bold"><strong>Age (years)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Age (years)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -615,7 +618,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Age Group, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Age Group, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">18-64</td>
@@ -635,7 +638,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Sex, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Sex, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">F</td>
@@ -655,7 +658,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Race, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Race, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">WHITE</td>
@@ -689,7 +692,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Ethnicity, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Ethnicity, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">HISPANIC OR LATINO</td>
@@ -716,7 +719,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5" style="font-weight: bold"><strong>Weight (kg)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Weight (kg)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -757,7 +760,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Height (cm)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Height (cm)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -798,7 +801,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5" style="font-weight: bold"><strong>BMI (kg/m^2)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>BMI (kg/m^2)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -839,7 +842,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>BMI Category, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>BMI Category, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">Underweight (&lt;18.5)</td>
@@ -872,7 +875,7 @@
 </tbody>
 </table>
 </div>
-</div></div>
+</figure></div>
 </div>
 </div>
 </section><section class="level2"><h2 id="what-the-styling-attributes">What: the styling attributes<a class="anchor" aria-label="anchor" href="#what-the-styling-attributes"></a>
@@ -903,50 +906,51 @@
 <span>        .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_group_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-75dbcea1eb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-75dbcea1eb .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-75dbcea1eb .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-75dbcea1eb .tabular-pad { margin: 0; line-height: 1; }
-#tabular-75dbcea1eb .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-75dbcea1eb .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-75dbcea1eb .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-75dbcea1eb .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-75dbcea1eb .tabular-table th, #tabular-75dbcea1eb .tabular-table td { padding: .35rem .6rem; }
-#tabular-75dbcea1eb .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-75dbcea1eb .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-75dbcea1eb .tabular-table thead tr:first-child th { border-top: 1.5pt solid currentColor; }
-#tabular-75dbcea1eb .tabular-table thead tr:last-child th { border-bottom: 1.5pt solid currentColor; }
-#tabular-75dbcea1eb .tabular-table thead .tabular-band { border-bottom: 1.5pt solid currentColor; }
-#tabular-75dbcea1eb .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-75dbcea1eb .tabular-table tbody tr td { border-top: none; }
-#tabular-75dbcea1eb .tabular-band { text-align: center; }
-#tabular-75dbcea1eb .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-75dbcea1eb .tabular-subgroup-label { font-weight: 600; }
-#tabular-75dbcea1eb .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-75dbcea1eb .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-75dbcea1eb .text-left { text-align: left; }
-#tabular-75dbcea1eb .text-center { text-align: center; }
-#tabular-75dbcea1eb .text-right { text-align: right; }
-#tabular-75dbcea1eb .tabular-table thead th.text-left { text-align: left; }
-#tabular-75dbcea1eb .tabular-table thead th.text-center { text-align: center; }
-#tabular-75dbcea1eb .tabular-table thead th.text-right { text-align: right; }
-#tabular-75dbcea1eb .valign-top { vertical-align: top; }
-#tabular-75dbcea1eb .valign-middle { vertical-align: middle; }
-#tabular-75dbcea1eb .valign-bottom { vertical-align: bottom; }
-#tabular-75dbcea1eb .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-75dbcea1eb .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-75dbcea1eb .tabular-page-break-row { display: none; }
-#tabular-75dbcea1eb { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-75dbcea1eb .tabular-page-header, #tabular-75dbcea1eb .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-75dbcea1eb .tabular-page-header { margin-bottom: 1rem; }
-#tabular-75dbcea1eb .tabular-page-footer { margin-top: 1rem; }
-#tabular-75dbcea1eb .tabular-page-header-left, #tabular-75dbcea1eb .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-75dbcea1eb .tabular-page-header-center, #tabular-75dbcea1eb .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-75dbcea1eb .tabular-page-header-right, #tabular-75dbcea1eb .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-75dbcea1eb .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-75dbcea1eb .tabular-table tr { page-break-inside: avoid; } #tabular-75dbcea1eb .tabular-page-header, #tabular-75dbcea1eb .tabular-page-footer { display: none; } #tabular-75dbcea1eb .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-75dbcea1eb .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-75dbcea1eb .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-100a5bc43b { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-100a5bc43b .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-100a5bc43b p { line-height: inherit; }
+#tabular-100a5bc43b .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-100a5bc43b .tabular-caption { margin: 0; padding: 0; }
+#tabular-100a5bc43b .tabular-pad { margin: 0; line-height: 1; }
+#tabular-100a5bc43b .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-100a5bc43b .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-100a5bc43b .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-100a5bc43b .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-100a5bc43b .tabular-table th, #tabular-100a5bc43b .tabular-table td { padding: .18rem .6rem; }
+#tabular-100a5bc43b .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-100a5bc43b .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-100a5bc43b .tabular-table thead tr:first-child th { border-top: 1.5pt solid #212529; }
+#tabular-100a5bc43b .tabular-table thead tr:last-child th { border-bottom: 1.5pt solid #212529; }
+#tabular-100a5bc43b .tabular-table thead .tabular-band { border-bottom: 1.5pt solid #212529; }
+#tabular-100a5bc43b .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-100a5bc43b .tabular-table tbody tr td { border-top: none; }
+#tabular-100a5bc43b .tabular-band { text-align: center; }
+#tabular-100a5bc43b .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-100a5bc43b .tabular-subgroup-label { font-weight: 600; }
+#tabular-100a5bc43b .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-100a5bc43b .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-100a5bc43b .text-left { text-align: left; }
+#tabular-100a5bc43b .text-center { text-align: center; }
+#tabular-100a5bc43b .text-right { text-align: right; }
+#tabular-100a5bc43b .tabular-table thead th.text-left { text-align: left; }
+#tabular-100a5bc43b .tabular-table thead th.text-center { text-align: center; }
+#tabular-100a5bc43b .tabular-table thead th.text-right { text-align: right; }
+#tabular-100a5bc43b .valign-top { vertical-align: top; }
+#tabular-100a5bc43b .valign-middle { vertical-align: middle; }
+#tabular-100a5bc43b .valign-bottom { vertical-align: bottom; }
+#tabular-100a5bc43b .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-100a5bc43b .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-100a5bc43b .tabular-page-break-row { display: none; }
+#tabular-100a5bc43b { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-100a5bc43b .tabular-page-header, #tabular-100a5bc43b .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-100a5bc43b .tabular-page-header { margin-bottom: 1rem; }
+#tabular-100a5bc43b .tabular-page-footer { margin-top: 1rem; }
+#tabular-100a5bc43b .tabular-page-header-left, #tabular-100a5bc43b .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-100a5bc43b .tabular-page-header-center, #tabular-100a5bc43b .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-100a5bc43b .tabular-page-header-right, #tabular-100a5bc43b .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-100a5bc43b .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-100a5bc43b .tabular-table tr { page-break-inside: avoid; } #tabular-100a5bc43b .tabular-page-header, #tabular-100a5bc43b .tabular-page-footer { display: none; } #tabular-100a5bc43b .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-100a5bc43b .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-100a5bc43b .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-75dbcea1eb" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
-<div class="tabular-table-wrap">
+<div id="tabular-100a5bc43b" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
@@ -958,7 +962,7 @@
 </tr></thead>
 <tbody>
 <tr class="tabular-group-header odd">
-<td colspan="5"><strong>Age (years)</strong></td>
+<td colspan="5" style="border-bottom: 1pt dashed #212529"><strong>Age (years)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -999,7 +1003,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5"><strong>Age Group, n (%)</strong></td>
+<td colspan="5" style="border-bottom: 1pt dashed #212529"><strong>Age Group, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">18-64</td>
@@ -1019,7 +1023,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5"><strong>Sex, n (%)</strong></td>
+<td colspan="5" style="border-bottom: 1pt dashed #212529"><strong>Sex, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">F</td>
@@ -1039,7 +1043,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5"><strong>Race, n (%)</strong></td>
+<td colspan="5" style="border-bottom: 1pt dashed #212529"><strong>Race, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">WHITE</td>
@@ -1073,7 +1077,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5"><strong>Ethnicity, n (%)</strong></td>
+<td colspan="5" style="border-bottom: 1pt dashed #212529"><strong>Ethnicity, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">HISPANIC OR LATINO</td>
@@ -1100,7 +1104,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5"><strong>Weight (kg)</strong></td>
+<td colspan="5" style="border-bottom: 1pt dashed #212529"><strong>Weight (kg)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -1141,7 +1145,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5"><strong>Height (cm)</strong></td>
+<td colspan="5" style="border-bottom: 1pt dashed #212529"><strong>Height (cm)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -1182,7 +1186,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5"><strong>BMI (kg/m^2)</strong></td>
+<td colspan="5" style="border-bottom: 1pt dashed #212529"><strong>BMI (kg/m^2)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -1223,7 +1227,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5"><strong>BMI Category, n (%)</strong></td>
+<td colspan="5" style="border-bottom: 1pt dashed #212529"><strong>BMI Category, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">Underweight (&lt;18.5)</td>
@@ -1256,7 +1260,7 @@
 </tbody>
 </table>
 </div>
-</div></div>
+</figure></div>
 </div>
 </div>
 </section></section><section class="level2"><h2 id="data-driven-styling">Data-driven styling<a class="anchor" aria-label="anchor" href="#data-driven-styling"></a>
@@ -1268,50 +1272,51 @@
 <span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>background <span class="op">=</span> <span class="st">"#eef6ff"</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_body</a></span><span class="op">(</span>where <span class="op">=</span> <span class="va">stat_label</span> <span class="op">==</span> <span class="st">"n"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-2317e30b66 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-2317e30b66 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-2317e30b66 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-2317e30b66 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-2317e30b66 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-2317e30b66 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-2317e30b66 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-2317e30b66 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-2317e30b66 .tabular-table th, #tabular-2317e30b66 .tabular-table td { padding: .35rem .6rem; }
-#tabular-2317e30b66 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-2317e30b66 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-2317e30b66 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-2317e30b66 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-2317e30b66 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-2317e30b66 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-2317e30b66 .tabular-table tbody tr td { border-top: none; }
-#tabular-2317e30b66 .tabular-band { text-align: center; }
-#tabular-2317e30b66 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-2317e30b66 .tabular-subgroup-label { font-weight: 600; }
-#tabular-2317e30b66 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-2317e30b66 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-2317e30b66 .text-left { text-align: left; }
-#tabular-2317e30b66 .text-center { text-align: center; }
-#tabular-2317e30b66 .text-right { text-align: right; }
-#tabular-2317e30b66 .tabular-table thead th.text-left { text-align: left; }
-#tabular-2317e30b66 .tabular-table thead th.text-center { text-align: center; }
-#tabular-2317e30b66 .tabular-table thead th.text-right { text-align: right; }
-#tabular-2317e30b66 .valign-top { vertical-align: top; }
-#tabular-2317e30b66 .valign-middle { vertical-align: middle; }
-#tabular-2317e30b66 .valign-bottom { vertical-align: bottom; }
-#tabular-2317e30b66 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-2317e30b66 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-2317e30b66 .tabular-page-break-row { display: none; }
-#tabular-2317e30b66 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-2317e30b66 .tabular-page-header, #tabular-2317e30b66 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-2317e30b66 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-2317e30b66 .tabular-page-footer { margin-top: 1rem; }
-#tabular-2317e30b66 .tabular-page-header-left, #tabular-2317e30b66 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-2317e30b66 .tabular-page-header-center, #tabular-2317e30b66 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-2317e30b66 .tabular-page-header-right, #tabular-2317e30b66 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-2317e30b66 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-2317e30b66 .tabular-table tr { page-break-inside: avoid; } #tabular-2317e30b66 .tabular-page-header, #tabular-2317e30b66 .tabular-page-footer { display: none; } #tabular-2317e30b66 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-2317e30b66 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-2317e30b66 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-8d7f4ef084 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-8d7f4ef084 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-8d7f4ef084 p { line-height: inherit; }
+#tabular-8d7f4ef084 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-8d7f4ef084 .tabular-caption { margin: 0; padding: 0; }
+#tabular-8d7f4ef084 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-8d7f4ef084 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-8d7f4ef084 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-8d7f4ef084 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-8d7f4ef084 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-8d7f4ef084 .tabular-table th, #tabular-8d7f4ef084 .tabular-table td { padding: .18rem .6rem; }
+#tabular-8d7f4ef084 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-8d7f4ef084 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-8d7f4ef084 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-8d7f4ef084 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-8d7f4ef084 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-8d7f4ef084 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-8d7f4ef084 .tabular-table tbody tr td { border-top: none; }
+#tabular-8d7f4ef084 .tabular-band { text-align: center; }
+#tabular-8d7f4ef084 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-8d7f4ef084 .tabular-subgroup-label { font-weight: 600; }
+#tabular-8d7f4ef084 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-8d7f4ef084 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-8d7f4ef084 .text-left { text-align: left; }
+#tabular-8d7f4ef084 .text-center { text-align: center; }
+#tabular-8d7f4ef084 .text-right { text-align: right; }
+#tabular-8d7f4ef084 .tabular-table thead th.text-left { text-align: left; }
+#tabular-8d7f4ef084 .tabular-table thead th.text-center { text-align: center; }
+#tabular-8d7f4ef084 .tabular-table thead th.text-right { text-align: right; }
+#tabular-8d7f4ef084 .valign-top { vertical-align: top; }
+#tabular-8d7f4ef084 .valign-middle { vertical-align: middle; }
+#tabular-8d7f4ef084 .valign-bottom { vertical-align: bottom; }
+#tabular-8d7f4ef084 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-8d7f4ef084 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-8d7f4ef084 .tabular-page-break-row { display: none; }
+#tabular-8d7f4ef084 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-8d7f4ef084 .tabular-page-header, #tabular-8d7f4ef084 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-8d7f4ef084 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-8d7f4ef084 .tabular-page-footer { margin-top: 1rem; }
+#tabular-8d7f4ef084 .tabular-page-header-left, #tabular-8d7f4ef084 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-8d7f4ef084 .tabular-page-header-center, #tabular-8d7f4ef084 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-8d7f4ef084 .tabular-page-header-right, #tabular-8d7f4ef084 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-8d7f4ef084 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-8d7f4ef084 .tabular-table tr { page-break-inside: avoid; } #tabular-8d7f4ef084 .tabular-page-header, #tabular-8d7f4ef084 .tabular-page-footer { display: none; } #tabular-8d7f4ef084 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-8d7f4ef084 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-8d7f4ef084 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-2317e30b66" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
-<div class="tabular-table-wrap">
+<div id="tabular-8d7f4ef084" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
@@ -1621,7 +1626,7 @@
 </tbody>
 </table>
 </div>
-</div></div>
+</figure></div>
 </div>
 </div>
 <p>Use <code>i</code> and <code>j</code> for positional targeting instead of a predicate: <code>cells_body(j = "Total")</code> styles the Total column, <code>cells_body(i = 1:3)</code> the first three rows.</p>
@@ -1635,62 +1640,63 @@
 <span>    font_size   <span class="op">=</span> <span class="fl">9</span>,</span>
 <span>    orientation <span class="op">=</span> <span class="st">"landscape"</span>,</span>
 <span>    rules  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>midrule <span class="op">=</span> <span class="fu"><a href="../reference/brdr.html">brdr</a></span><span class="op">(</span><span class="st">"thick"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    colors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>header <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"#1f2937"</span><span class="op">)</span><span class="op">)</span></span>
+<span>    colors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>header <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"#1d4ed8"</span>, background <span class="op">=</span> <span class="st">"#f3f4f6"</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-19f23408f5 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
-#tabular-19f23408f5 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-19f23408f5 .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-19f23408f5 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-19f23408f5 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-19f23408f5 .tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }
-#tabular-19f23408f5 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-19f23408f5 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-19f23408f5 .tabular-table th, #tabular-19f23408f5 .tabular-table td { padding: .35rem .6rem; }
-#tabular-19f23408f5 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-19f23408f5 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-19f23408f5 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-19f23408f5 .tabular-table thead tr:last-child th { border-bottom: 1.5pt solid currentColor; }
-#tabular-19f23408f5 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-19f23408f5 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-19f23408f5 .tabular-table tbody tr td { border-top: none; }
-#tabular-19f23408f5 .tabular-band { text-align: center; }
-#tabular-19f23408f5 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-19f23408f5 .tabular-subgroup-label { font-weight: 600; }
-#tabular-19f23408f5 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-19f23408f5 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-19f23408f5 .text-left { text-align: left; }
-#tabular-19f23408f5 .text-center { text-align: center; }
-#tabular-19f23408f5 .text-right { text-align: right; }
-#tabular-19f23408f5 .tabular-table thead th.text-left { text-align: left; }
-#tabular-19f23408f5 .tabular-table thead th.text-center { text-align: center; }
-#tabular-19f23408f5 .tabular-table thead th.text-right { text-align: right; }
-#tabular-19f23408f5 .valign-top { vertical-align: top; }
-#tabular-19f23408f5 .valign-middle { vertical-align: middle; }
-#tabular-19f23408f5 .valign-bottom { vertical-align: bottom; }
-#tabular-19f23408f5 .tabular-footnote { font-size: 9pt; color: #495057; margin: .25rem 0; }
-#tabular-19f23408f5 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-19f23408f5 .tabular-page-break-row { display: none; }
-#tabular-19f23408f5 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-19f23408f5 .tabular-page-header, #tabular-19f23408f5 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 8pt; color: var(--tabular-chrome-color); }
-#tabular-19f23408f5 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-19f23408f5 .tabular-page-footer { margin-top: 1rem; }
-#tabular-19f23408f5 .tabular-page-header-left, #tabular-19f23408f5 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-19f23408f5 .tabular-page-header-center, #tabular-19f23408f5 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-19f23408f5 .tabular-page-header-right, #tabular-19f23408f5 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-19f23408f5 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-19f23408f5 .tabular-table tr { page-break-inside: avoid; } #tabular-19f23408f5 .tabular-page-header, #tabular-19f23408f5 .tabular-page-footer { display: none; } #tabular-19f23408f5 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-19f23408f5 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-19f23408f5 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-25b6c11db5 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
+#tabular-25b6c11db5 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-25b6c11db5 p { line-height: inherit; }
+#tabular-25b6c11db5 .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-25b6c11db5 .tabular-caption { margin: 0; padding: 0; }
+#tabular-25b6c11db5 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-25b6c11db5 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-25b6c11db5 .tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }
+#tabular-25b6c11db5 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-25b6c11db5 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-25b6c11db5 .tabular-table th, #tabular-25b6c11db5 .tabular-table td { padding: .18rem .6rem; }
+#tabular-25b6c11db5 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-25b6c11db5 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-25b6c11db5 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-25b6c11db5 .tabular-table thead tr:last-child th { border-bottom: 1.5pt solid #212529; }
+#tabular-25b6c11db5 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-25b6c11db5 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-25b6c11db5 .tabular-table tbody tr td { border-top: none; }
+#tabular-25b6c11db5 .tabular-band { text-align: center; }
+#tabular-25b6c11db5 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-25b6c11db5 .tabular-subgroup-label { font-weight: 600; }
+#tabular-25b6c11db5 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-25b6c11db5 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-25b6c11db5 .text-left { text-align: left; }
+#tabular-25b6c11db5 .text-center { text-align: center; }
+#tabular-25b6c11db5 .text-right { text-align: right; }
+#tabular-25b6c11db5 .tabular-table thead th.text-left { text-align: left; }
+#tabular-25b6c11db5 .tabular-table thead th.text-center { text-align: center; }
+#tabular-25b6c11db5 .tabular-table thead th.text-right { text-align: right; }
+#tabular-25b6c11db5 .valign-top { vertical-align: top; }
+#tabular-25b6c11db5 .valign-middle { vertical-align: middle; }
+#tabular-25b6c11db5 .valign-bottom { vertical-align: bottom; }
+#tabular-25b6c11db5 .tabular-footnote { font-size: 9pt; color: #495057; margin: .25rem 0; }
+#tabular-25b6c11db5 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-25b6c11db5 .tabular-page-break-row { display: none; }
+#tabular-25b6c11db5 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-25b6c11db5 .tabular-page-header, #tabular-25b6c11db5 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 8pt; color: var(--tabular-chrome-color); }
+#tabular-25b6c11db5 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-25b6c11db5 .tabular-page-footer { margin-top: 1rem; }
+#tabular-25b6c11db5 .tabular-page-header-left, #tabular-25b6c11db5 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-25b6c11db5 .tabular-page-header-center, #tabular-25b6c11db5 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-25b6c11db5 .tabular-page-header-right, #tabular-25b6c11db5 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-25b6c11db5 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-25b6c11db5 .tabular-table tr { page-break-inside: avoid; } #tabular-25b6c11db5 .tabular-page-header, #tabular-25b6c11db5 .tabular-page-footer { display: none; } #tabular-25b6c11db5 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-25b6c11db5 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-25b6c11db5 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-19f23408f5" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
-<div class="tabular-table-wrap">
+<div id="tabular-25b6c11db5" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
-<th data-quarto-table-cell-role="th" style="color: #1f2937">Statistic</th>
-<th class="text-center" data-quarto-table-cell-role="th" style="color: #1f2937">Placebo</th>
-<th class="text-center" data-quarto-table-cell-role="th" style="color: #1f2937">Drug 100</th>
-<th class="text-center" data-quarto-table-cell-role="th" style="color: #1f2937">Drug 50</th>
-<th class="text-center" data-quarto-table-cell-role="th" style="color: #1f2937">Total</th>
+<th data-quarto-table-cell-role="th" style="color: #1d4ed8; background-color: #f3f4f6">Statistic</th>
+<th class="text-center" data-quarto-table-cell-role="th" style="color: #1d4ed8; background-color: #f3f4f6">Placebo</th>
+<th class="text-center" data-quarto-table-cell-role="th" style="color: #1d4ed8; background-color: #f3f4f6">Drug 100</th>
+<th class="text-center" data-quarto-table-cell-role="th" style="color: #1d4ed8; background-color: #f3f4f6">Drug 50</th>
+<th class="text-center" data-quarto-table-cell-role="th" style="color: #1d4ed8; background-color: #f3f4f6">Total</th>
 </tr></thead>
 <tbody>
 <tr class="tabular-group-header odd">
@@ -1992,7 +1998,7 @@
 </tbody>
 </table>
 </div>
-</div></div>
+</figure></div>
 </div>
 </div>
 <div>
@@ -2010,16 +2016,16 @@
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/set_preset.html">set_preset</a></span><span class="op">(</span>font_size <span class="op">=</span> <span class="fl">8</span><span class="op">)</span>        <span class="co"># every later table starts at 8pt</span></span>
 <span><span class="fu"><a href="../reference/get_preset.html">get_preset</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;tabular::preset_spec&gt;</span></span>
-<span><span class="co">#&gt;  @ font_size      : num 8</span></span>
-<span><span class="co">#&gt;  @ font_family    : chr "mono"</span></span>
-<span><span class="co">#&gt;  @ orientation    : chr "landscape"</span></span>
-<span><span class="co">#&gt;  @ paper_size     : chr "letter"</span></span>
-<span><span class="co">#&gt;  @ margins        : num 1</span></span>
-<span><span class="co">#&gt;  @ pagehead       : list()</span></span>
-<span><span class="co">#&gt;  @ pagefoot       : list()</span></span>
-<span><span class="co">#&gt;  @ indent_size    : int 2</span></span>
-<span><span class="co">#&gt;  @ na_text        : chr ""</span></span>
-<span><span class="co">#&gt;  @ spacing        :List of 4</span></span>
+<span><span class="co">#&gt;  @ font_size       : num 8</span></span>
+<span><span class="co">#&gt;  @ font_family     : chr "mono"</span></span>
+<span><span class="co">#&gt;  @ orientation     : chr "landscape"</span></span>
+<span><span class="co">#&gt;  @ paper_size      : chr "letter"</span></span>
+<span><span class="co">#&gt;  @ margins         : num 1</span></span>
+<span><span class="co">#&gt;  @ pagehead        : list()</span></span>
+<span><span class="co">#&gt;  @ pagefoot        : list()</span></span>
+<span><span class="co">#&gt;  @ indent_size     : int 2</span></span>
+<span><span class="co">#&gt;  @ na_text         : chr ""</span></span>
+<span><span class="co">#&gt;  @ spacing         :List of 4</span></span>
 <span><span class="co">#&gt;  .. $ title   : Named int [1:2] 1 1</span></span>
 <span><span class="co">#&gt;  ..  ..- attr(*, "names")= chr [1:2] "above" "below"</span></span>
 <span><span class="co">#&gt;  .. $ body    : Named int [1:2] 0 0</span></span>
@@ -2028,13 +2034,16 @@
 <span><span class="co">#&gt;  ..  ..- attr(*, "names")= chr [1:2] "above" "below"</span></span>
 <span><span class="co">#&gt;  .. $ footnote: Named int 0</span></span>
 <span><span class="co">#&gt;  ..  ..- attr(*, "names")= chr "above"</span></span>
-<span><span class="co">#&gt;  @ stripe         : NULL</span></span>
-<span><span class="co">#&gt;  @ decimal_metrics: chr "chars"</span></span>
-<span><span class="co">#&gt;  @ decimal_markers: chr [1:5] "NR" "NE" "NC" "ND" "BLQ"</span></span>
-<span><span class="co">#&gt;  @ chrome_onscreen: chr "auto"</span></span>
-<span><span class="co">#&gt;  @ width_mode     : chr "content"</span></span>
-<span><span class="co">#&gt;  @ cell_padding   : num [1:2] 0 5.4</span></span>
-<span><span class="co">#&gt;  @ style          : list()</span></span>
+<span><span class="co">#&gt;  @ stripe          : NULL</span></span>
+<span><span class="co">#&gt;  @ decimal_metrics : chr "chars"</span></span>
+<span><span class="co">#&gt;  @ decimal_markers : chr [1:5] "NR" "NE" "NC" "ND" "BLQ"</span></span>
+<span><span class="co">#&gt;  @ chrome_onscreen : chr "auto"</span></span>
+<span><span class="co">#&gt;  @ whitespace      : chr "preserve"</span></span>
+<span><span class="co">#&gt;  @ footnote_markers: chr "letters"</span></span>
+<span><span class="co">#&gt;  @ footnote_label  : chr "{m}"</span></span>
+<span><span class="co">#&gt;  @ width_mode      : chr "content"</span></span>
+<span><span class="co">#&gt;  @ cell_padding    : num [1:2] 0 5.4</span></span>
+<span><span class="co">#&gt;  @ style           : list()</span></span>
 <span><span class="fu"><a href="../reference/set_preset.html">set_preset</a></span><span class="op">(</span><span class="op">)</span>                      <span class="co"># clear it again</span></span></code></pre></div>
 </div>
 </section><section class="level3"><h3 id="a-minimal-theme">A minimal theme<a class="anchor" aria-label="anchor" href="#a-minimal-theme"></a>
@@ -2046,48 +2055,49 @@
 <span>  <span class="fu"><a href="../reference/preset_minimal.html">preset_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-777d4c4c93 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-777d4c4c93 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-777d4c4c93 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-777d4c4c93 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-777d4c4c93 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-777d4c4c93 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-777d4c4c93 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-777d4c4c93 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-777d4c4c93 .tabular-table th, #tabular-777d4c4c93 .tabular-table td { padding: .35rem .6rem; }
-#tabular-777d4c4c93 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-777d4c4c93 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-777d4c4c93 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-777d4c4c93 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-777d4c4c93 .tabular-table tbody tr td { border-top: none; }
-#tabular-777d4c4c93 .tabular-band { text-align: center; }
-#tabular-777d4c4c93 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-777d4c4c93 .tabular-subgroup-label { font-weight: 600; }
-#tabular-777d4c4c93 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-777d4c4c93 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-777d4c4c93 .text-left { text-align: left; }
-#tabular-777d4c4c93 .text-center { text-align: center; }
-#tabular-777d4c4c93 .text-right { text-align: right; }
-#tabular-777d4c4c93 .tabular-table thead th.text-left { text-align: left; }
-#tabular-777d4c4c93 .tabular-table thead th.text-center { text-align: center; }
-#tabular-777d4c4c93 .tabular-table thead th.text-right { text-align: right; }
-#tabular-777d4c4c93 .valign-top { vertical-align: top; }
-#tabular-777d4c4c93 .valign-middle { vertical-align: middle; }
-#tabular-777d4c4c93 .valign-bottom { vertical-align: bottom; }
-#tabular-777d4c4c93 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-777d4c4c93 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-777d4c4c93 .tabular-page-break-row { display: none; }
-#tabular-777d4c4c93 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-777d4c4c93 .tabular-page-header, #tabular-777d4c4c93 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-777d4c4c93 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-777d4c4c93 .tabular-page-footer { margin-top: 1rem; }
-#tabular-777d4c4c93 .tabular-page-header-left, #tabular-777d4c4c93 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-777d4c4c93 .tabular-page-header-center, #tabular-777d4c4c93 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-777d4c4c93 .tabular-page-header-right, #tabular-777d4c4c93 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-777d4c4c93 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-777d4c4c93 .tabular-table tr { page-break-inside: avoid; } #tabular-777d4c4c93 .tabular-page-header, #tabular-777d4c4c93 .tabular-page-footer { display: none; } #tabular-777d4c4c93 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-777d4c4c93 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-777d4c4c93 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-4d6116e488 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-4d6116e488 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-4d6116e488 p { line-height: inherit; }
+#tabular-4d6116e488 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-4d6116e488 .tabular-caption { margin: 0; padding: 0; }
+#tabular-4d6116e488 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-4d6116e488 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-4d6116e488 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-4d6116e488 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-4d6116e488 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-4d6116e488 .tabular-table th, #tabular-4d6116e488 .tabular-table td { padding: .18rem .6rem; }
+#tabular-4d6116e488 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-4d6116e488 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-4d6116e488 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-4d6116e488 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-4d6116e488 .tabular-table tbody tr td { border-top: none; }
+#tabular-4d6116e488 .tabular-band { text-align: center; }
+#tabular-4d6116e488 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-4d6116e488 .tabular-subgroup-label { font-weight: 600; }
+#tabular-4d6116e488 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-4d6116e488 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-4d6116e488 .text-left { text-align: left; }
+#tabular-4d6116e488 .text-center { text-align: center; }
+#tabular-4d6116e488 .text-right { text-align: right; }
+#tabular-4d6116e488 .tabular-table thead th.text-left { text-align: left; }
+#tabular-4d6116e488 .tabular-table thead th.text-center { text-align: center; }
+#tabular-4d6116e488 .tabular-table thead th.text-right { text-align: right; }
+#tabular-4d6116e488 .valign-top { vertical-align: top; }
+#tabular-4d6116e488 .valign-middle { vertical-align: middle; }
+#tabular-4d6116e488 .valign-bottom { vertical-align: bottom; }
+#tabular-4d6116e488 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-4d6116e488 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-4d6116e488 .tabular-page-break-row { display: none; }
+#tabular-4d6116e488 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-4d6116e488 .tabular-page-header, #tabular-4d6116e488 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-4d6116e488 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-4d6116e488 .tabular-page-footer { margin-top: 1rem; }
+#tabular-4d6116e488 .tabular-page-header-left, #tabular-4d6116e488 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-4d6116e488 .tabular-page-header-center, #tabular-4d6116e488 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-4d6116e488 .tabular-page-header-right, #tabular-4d6116e488 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-4d6116e488 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-4d6116e488 .tabular-table tr { page-break-inside: avoid; } #tabular-4d6116e488 .tabular-page-header, #tabular-4d6116e488 .tabular-page-footer { display: none; } #tabular-4d6116e488 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-4d6116e488 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-4d6116e488 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-777d4c4c93" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
-<div class="tabular-table-wrap">
+<div id="tabular-4d6116e488" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
@@ -2397,7 +2407,7 @@
 </tbody>
 </table>
 </div>
-</div></div>
+</figure></div>
 </div>
 </div>
 </section></section><section class="level2"><h2 id="packaging-a-house-style-with-style_template">Packaging a house style with <code>style_template()</code>
@@ -2406,9 +2416,12 @@
 <p>A submission renders dozens of tables that must share one identity. Build the rules once with <code><a href="../reference/style_template.html">style_template()</a></code> (chaining the <em>same</em> <code><a href="../reference/style.html">style()</a></code> verb), then attach it to a preset so every table inherits it:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">house</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/style_template.html">style_template</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>bold <span class="op">=</span> <span class="cn">TRUE</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>bold <span class="op">=</span> <span class="cn">TRUE</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_group_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="co"># Headers and section rows are bold by default, so a house style earns</span></span>
+<span><span class="co"># its keep with VISIBLE identity: a shaded column-header band, tinted</span></span>
+<span><span class="co"># section rows, and thick rules above and below the header.</span></span>
+<span><span class="va">house</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/style_template.html">style_template</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>background <span class="op">=</span> <span class="st">"#f3f4f6"</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>background <span class="op">=</span> <span class="st">"#eef2ff"</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_group_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>border_top <span class="op">=</span> <span class="fu"><a href="../reference/brdr.html">brdr</a></span><span class="op">(</span><span class="st">"thick"</span><span class="op">)</span>, border_bottom <span class="op">=</span> <span class="fu"><a href="../reference/brdr.html">brdr</a></span><span class="op">(</span><span class="st">"thick"</span><span class="op">)</span>,</span>
 <span>        .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_headers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -2419,62 +2432,63 @@
 <span>  <span class="fu"><a href="../reference/preset.html">preset</a></span><span class="op">(</span>.style <span class="op">=</span> <span class="va">house</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-93ffd1e64a { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-93ffd1e64a .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-93ffd1e64a .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-93ffd1e64a .tabular-pad { margin: 0; line-height: 1; }
-#tabular-93ffd1e64a .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-93ffd1e64a .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-93ffd1e64a .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-93ffd1e64a .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-93ffd1e64a .tabular-table th, #tabular-93ffd1e64a .tabular-table td { padding: .35rem .6rem; }
-#tabular-93ffd1e64a .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-93ffd1e64a .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-93ffd1e64a .tabular-table thead tr:first-child th { border-top: 1.5pt solid currentColor; }
-#tabular-93ffd1e64a .tabular-table thead tr:last-child th { border-bottom: 1.5pt solid currentColor; }
-#tabular-93ffd1e64a .tabular-table thead .tabular-band { border-bottom: 1.5pt solid currentColor; }
-#tabular-93ffd1e64a .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-93ffd1e64a .tabular-table tbody tr td { border-top: none; }
-#tabular-93ffd1e64a .tabular-band { text-align: center; }
-#tabular-93ffd1e64a .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-93ffd1e64a .tabular-subgroup-label { font-weight: 600; }
-#tabular-93ffd1e64a .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-93ffd1e64a .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-93ffd1e64a .text-left { text-align: left; }
-#tabular-93ffd1e64a .text-center { text-align: center; }
-#tabular-93ffd1e64a .text-right { text-align: right; }
-#tabular-93ffd1e64a .tabular-table thead th.text-left { text-align: left; }
-#tabular-93ffd1e64a .tabular-table thead th.text-center { text-align: center; }
-#tabular-93ffd1e64a .tabular-table thead th.text-right { text-align: right; }
-#tabular-93ffd1e64a .valign-top { vertical-align: top; }
-#tabular-93ffd1e64a .valign-middle { vertical-align: middle; }
-#tabular-93ffd1e64a .valign-bottom { vertical-align: bottom; }
-#tabular-93ffd1e64a .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-93ffd1e64a .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-93ffd1e64a .tabular-page-break-row { display: none; }
-#tabular-93ffd1e64a { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-93ffd1e64a .tabular-page-header, #tabular-93ffd1e64a .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-93ffd1e64a .tabular-page-header { margin-bottom: 1rem; }
-#tabular-93ffd1e64a .tabular-page-footer { margin-top: 1rem; }
-#tabular-93ffd1e64a .tabular-page-header-left, #tabular-93ffd1e64a .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-93ffd1e64a .tabular-page-header-center, #tabular-93ffd1e64a .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-93ffd1e64a .tabular-page-header-right, #tabular-93ffd1e64a .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-93ffd1e64a .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-93ffd1e64a .tabular-table tr { page-break-inside: avoid; } #tabular-93ffd1e64a .tabular-page-header, #tabular-93ffd1e64a .tabular-page-footer { display: none; } #tabular-93ffd1e64a .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-93ffd1e64a .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-93ffd1e64a .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-a6d4fadbc6 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-a6d4fadbc6 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-a6d4fadbc6 p { line-height: inherit; }
+#tabular-a6d4fadbc6 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-a6d4fadbc6 .tabular-caption { margin: 0; padding: 0; }
+#tabular-a6d4fadbc6 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-a6d4fadbc6 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-a6d4fadbc6 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-a6d4fadbc6 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-a6d4fadbc6 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-a6d4fadbc6 .tabular-table th, #tabular-a6d4fadbc6 .tabular-table td { padding: .18rem .6rem; }
+#tabular-a6d4fadbc6 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-a6d4fadbc6 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-a6d4fadbc6 .tabular-table thead tr:first-child th { border-top: 1.5pt solid #212529; }
+#tabular-a6d4fadbc6 .tabular-table thead tr:last-child th { border-bottom: 1.5pt solid #212529; }
+#tabular-a6d4fadbc6 .tabular-table thead .tabular-band { border-bottom: 1.5pt solid #212529; }
+#tabular-a6d4fadbc6 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-a6d4fadbc6 .tabular-table tbody tr td { border-top: none; }
+#tabular-a6d4fadbc6 .tabular-band { text-align: center; }
+#tabular-a6d4fadbc6 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-a6d4fadbc6 .tabular-subgroup-label { font-weight: 600; }
+#tabular-a6d4fadbc6 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-a6d4fadbc6 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-a6d4fadbc6 .text-left { text-align: left; }
+#tabular-a6d4fadbc6 .text-center { text-align: center; }
+#tabular-a6d4fadbc6 .text-right { text-align: right; }
+#tabular-a6d4fadbc6 .tabular-table thead th.text-left { text-align: left; }
+#tabular-a6d4fadbc6 .tabular-table thead th.text-center { text-align: center; }
+#tabular-a6d4fadbc6 .tabular-table thead th.text-right { text-align: right; }
+#tabular-a6d4fadbc6 .valign-top { vertical-align: top; }
+#tabular-a6d4fadbc6 .valign-middle { vertical-align: middle; }
+#tabular-a6d4fadbc6 .valign-bottom { vertical-align: bottom; }
+#tabular-a6d4fadbc6 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-a6d4fadbc6 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-a6d4fadbc6 .tabular-page-break-row { display: none; }
+#tabular-a6d4fadbc6 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-a6d4fadbc6 .tabular-page-header, #tabular-a6d4fadbc6 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-a6d4fadbc6 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-a6d4fadbc6 .tabular-page-footer { margin-top: 1rem; }
+#tabular-a6d4fadbc6 .tabular-page-header-left, #tabular-a6d4fadbc6 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-a6d4fadbc6 .tabular-page-header-center, #tabular-a6d4fadbc6 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-a6d4fadbc6 .tabular-page-header-right, #tabular-a6d4fadbc6 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-a6d4fadbc6 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-a6d4fadbc6 .tabular-table tr { page-break-inside: avoid; } #tabular-a6d4fadbc6 .tabular-page-header, #tabular-a6d4fadbc6 .tabular-page-footer { display: none; } #tabular-a6d4fadbc6 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-a6d4fadbc6 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-a6d4fadbc6 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-93ffd1e64a" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
-<div class="tabular-table-wrap">
+<div id="tabular-a6d4fadbc6" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
-<th data-quarto-table-cell-role="th" style="font-weight: bold">Statistic</th>
-<th class="text-center" data-quarto-table-cell-role="th" style="font-weight: bold">Placebo</th>
-<th class="text-center" data-quarto-table-cell-role="th" style="font-weight: bold">Drug 100</th>
-<th class="text-center" data-quarto-table-cell-role="th" style="font-weight: bold">Drug 50</th>
-<th class="text-center" data-quarto-table-cell-role="th" style="font-weight: bold">Total</th>
+<th data-quarto-table-cell-role="th" style="background-color: #f3f4f6">Statistic</th>
+<th class="text-center" data-quarto-table-cell-role="th" style="background-color: #f3f4f6">Placebo</th>
+<th class="text-center" data-quarto-table-cell-role="th" style="background-color: #f3f4f6">Drug 100</th>
+<th class="text-center" data-quarto-table-cell-role="th" style="background-color: #f3f4f6">Drug 50</th>
+<th class="text-center" data-quarto-table-cell-role="th" style="background-color: #f3f4f6">Total</th>
 </tr></thead>
 <tbody>
 <tr class="tabular-group-header odd">
-<td colspan="5" style="font-weight: bold"><strong>Age (years)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Age (years)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -2515,7 +2529,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Age Group, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Age Group, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">18-64</td>
@@ -2535,7 +2549,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Sex, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Sex, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">F</td>
@@ -2555,7 +2569,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Race, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Race, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">WHITE</td>
@@ -2589,7 +2603,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Ethnicity, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Ethnicity, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">HISPANIC OR LATINO</td>
@@ -2616,7 +2630,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5" style="font-weight: bold"><strong>Weight (kg)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Weight (kg)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -2657,7 +2671,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>Height (cm)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>Height (cm)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -2698,7 +2712,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5" style="font-weight: bold"><strong>BMI (kg/m^2)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>BMI (kg/m^2)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">n</td>
@@ -2739,7 +2753,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5" style="font-weight: bold"><strong>BMI Category, n (%)</strong></td>
+<td colspan="5" style="background-color: #eef2ff"><strong>BMI Category, n (%)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">Underweight (&lt;18.5)</td>
@@ -2772,7 +2786,7 @@
 </tbody>
 </table>
 </div>
-</div></div>
+</figure></div>
 </div>
 </div>
 <p>Attach it once per session with <code>set_preset(.style = house)</code> and every subsequent table picks up the house style with no per-table <code><a href="../reference/style.html">style()</a></code>.</p>
@@ -2785,10 +2799,10 @@
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span></span>
 <span>  <span class="va">saf_demo</span>,</span>
 <span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="../reference/md.html">md</a></span><span class="op">(</span><span class="st">"**Table 14.1.1**"</span><span class="op">)</span>,</span>
-<span>    <span class="st">"Demographic Characteristics"</span></span>
+<span>    <span class="st">"Table 14.1.1"</span>,</span>
+<span>    <span class="fu"><a href="../reference/md.html">md</a></span><span class="op">(</span><span class="st">"Demographic Characteristics^a^"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  footnotes <span class="op">=</span> <span class="fu"><a href="../reference/md.html">md</a></span><span class="op">(</span><span class="st">"Body mass index in kg/m^2^."</span><span class="op">)</span></span>
+<span>  footnotes <span class="op">=</span> <span class="fu"><a href="../reference/md.html">md</a></span><span class="op">(</span><span class="st">"^a^ Body mass index summarised in kg/m^2^."</span><span class="op">)</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
 <span>    variable   <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span><span class="op">)</span>,</span>
@@ -2800,54 +2814,55 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-91b5245dd3 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
-#tabular-91b5245dd3 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-91b5245dd3 .tabular-title { font-size: 8pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-91b5245dd3 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-91b5245dd3 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-91b5245dd3 .tabular-table { border-collapse: collapse; font-size: 8pt; margin: 0 auto; }
-#tabular-91b5245dd3 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-91b5245dd3 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-91b5245dd3 .tabular-table th, #tabular-91b5245dd3 .tabular-table td { padding: .35rem .6rem; }
-#tabular-91b5245dd3 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-91b5245dd3 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-91b5245dd3 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-91b5245dd3 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-91b5245dd3 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-91b5245dd3 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-91b5245dd3 .tabular-table tbody tr td { border-top: none; }
-#tabular-91b5245dd3 .tabular-band { text-align: center; }
-#tabular-91b5245dd3 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-91b5245dd3 .tabular-subgroup-label { font-weight: 600; }
-#tabular-91b5245dd3 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-91b5245dd3 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-91b5245dd3 .text-left { text-align: left; }
-#tabular-91b5245dd3 .text-center { text-align: center; }
-#tabular-91b5245dd3 .text-right { text-align: right; }
-#tabular-91b5245dd3 .tabular-table thead th.text-left { text-align: left; }
-#tabular-91b5245dd3 .tabular-table thead th.text-center { text-align: center; }
-#tabular-91b5245dd3 .tabular-table thead th.text-right { text-align: right; }
-#tabular-91b5245dd3 .valign-top { vertical-align: top; }
-#tabular-91b5245dd3 .valign-middle { vertical-align: middle; }
-#tabular-91b5245dd3 .valign-bottom { vertical-align: bottom; }
-#tabular-91b5245dd3 .tabular-footnote { font-size: 8pt; color: #495057; margin: .25rem 0; }
-#tabular-91b5245dd3 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-91b5245dd3 .tabular-page-break-row { display: none; }
-#tabular-91b5245dd3 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-91b5245dd3 .tabular-page-header, #tabular-91b5245dd3 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
-#tabular-91b5245dd3 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-91b5245dd3 .tabular-page-footer { margin-top: 1rem; }
-#tabular-91b5245dd3 .tabular-page-header-left, #tabular-91b5245dd3 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-91b5245dd3 .tabular-page-header-center, #tabular-91b5245dd3 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-91b5245dd3 .tabular-page-header-right, #tabular-91b5245dd3 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-91b5245dd3 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-91b5245dd3 .tabular-table tr { page-break-inside: avoid; } #tabular-91b5245dd3 .tabular-page-header, #tabular-91b5245dd3 .tabular-page-footer { display: none; } #tabular-91b5245dd3 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-91b5245dd3 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-91b5245dd3 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-4faf1a365a { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
+#tabular-4faf1a365a .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-4faf1a365a p { line-height: inherit; }
+#tabular-4faf1a365a .tabular-title { font-size: 8pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-4faf1a365a .tabular-caption { margin: 0; padding: 0; }
+#tabular-4faf1a365a .tabular-pad { margin: 0; line-height: 1; }
+#tabular-4faf1a365a .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-4faf1a365a .tabular-table { border-collapse: collapse; font-size: 8pt; margin: 0 auto; }
+#tabular-4faf1a365a .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-4faf1a365a .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-4faf1a365a .tabular-table th, #tabular-4faf1a365a .tabular-table td { padding: .18rem .6rem; }
+#tabular-4faf1a365a .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-4faf1a365a .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-4faf1a365a .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-4faf1a365a .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-4faf1a365a .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-4faf1a365a .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-4faf1a365a .tabular-table tbody tr td { border-top: none; }
+#tabular-4faf1a365a .tabular-band { text-align: center; }
+#tabular-4faf1a365a .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-4faf1a365a .tabular-subgroup-label { font-weight: 600; }
+#tabular-4faf1a365a .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-4faf1a365a .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-4faf1a365a .text-left { text-align: left; }
+#tabular-4faf1a365a .text-center { text-align: center; }
+#tabular-4faf1a365a .text-right { text-align: right; }
+#tabular-4faf1a365a .tabular-table thead th.text-left { text-align: left; }
+#tabular-4faf1a365a .tabular-table thead th.text-center { text-align: center; }
+#tabular-4faf1a365a .tabular-table thead th.text-right { text-align: right; }
+#tabular-4faf1a365a .valign-top { vertical-align: top; }
+#tabular-4faf1a365a .valign-middle { vertical-align: middle; }
+#tabular-4faf1a365a .valign-bottom { vertical-align: bottom; }
+#tabular-4faf1a365a .tabular-footnote { font-size: 8pt; color: #495057; margin: .25rem 0; }
+#tabular-4faf1a365a .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-4faf1a365a .tabular-page-break-row { display: none; }
+#tabular-4faf1a365a { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-4faf1a365a .tabular-page-header, #tabular-4faf1a365a .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
+#tabular-4faf1a365a .tabular-page-header { margin-bottom: 1rem; }
+#tabular-4faf1a365a .tabular-page-footer { margin-top: 1rem; }
+#tabular-4faf1a365a .tabular-page-header-left, #tabular-4faf1a365a .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-4faf1a365a .tabular-page-header-center, #tabular-4faf1a365a .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-4faf1a365a .tabular-page-header-right, #tabular-4faf1a365a .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-4faf1a365a .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-4faf1a365a .tabular-table tr { page-break-inside: avoid; } #tabular-4faf1a365a .tabular-page-header, #tabular-4faf1a365a .tabular-page-footer { display: none; } #tabular-4faf1a365a .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-4faf1a365a .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-4faf1a365a .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-91b5245dd3" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
+<div id="tabular-4faf1a365a" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<p class="tabular-title">Table 14.1.1</p>
+<p class="tabular-title">Demographic Characteristics<sup>a</sup></p>
 <p class="tabular-pad"> </p>
-<p class="tabular-title"><strong>Table 14.1.1</strong></p>
-<p class="tabular-title">Demographic Characteristics</p>
-<p class="tabular-pad"> </p>
-<div class="tabular-table-wrap">
+</figcaption><div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
@@ -3157,10 +3172,396 @@
 </tbody>
 </table>
 </div>
-<p class="tabular-footnote">Body mass index in kg/m<sup>2</sup>.</p>
-</div></div>
+<p class="tabular-footnote"><sup>a</sup> Body mass index summarised in kg/m<sup>2</sup>.</p>
+</figure></div>
 </div>
 </div>
+<p>Here the <code>^a^</code> marker and its note are hand-typed and kept in sync by you. When you want the marker assigned and placed <em>automatically</em> — deduped across cells, byte-identical across backends — use [<code><a href="../reference/footnote.html">footnote()</a></code>] instead (see the <em>Auto-numbered footnotes</em> recipe in the <a href="articles/clinical-cookbook.html">clinical cookbook</a>).</p>
+</section><section class="level2"><h2 id="verbatim-whitespace">Verbatim whitespace<a class="anchor" aria-label="anchor" href="#verbatim-whitespace"></a>
+</h2>
+<p>Significant ASCII spaces in labels and cells are preserved by default, so a hand-built indent renders exactly as typed across every backend (HTML, RTF, LaTeX, PDF, DOCX, Markdown). A single interior space stays breakable, so cells still wrap; leading, trailing, and interior runs of two or more spaces become non-breaking. Decimal padding is never affected.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">saf_demo</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
+<span>    variable   <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span><span class="op">)</span>,</span>
+<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span>
+<span>    placebo    <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"     Placebo\n(N=86)"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    drug_50    <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"     Drug 50\n(N=96)"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    drug_100   <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"    Drug 100\n(N=72)"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    Total      <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"       Total\n(N=254)"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<div class="cell-output-display">
+<style>
+#tabular-c3b59405e6 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
+#tabular-c3b59405e6 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-c3b59405e6 p { line-height: inherit; }
+#tabular-c3b59405e6 .tabular-title { font-size: 8pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-c3b59405e6 .tabular-caption { margin: 0; padding: 0; }
+#tabular-c3b59405e6 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-c3b59405e6 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-c3b59405e6 .tabular-table { border-collapse: collapse; font-size: 8pt; margin: 0 auto; }
+#tabular-c3b59405e6 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-c3b59405e6 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-c3b59405e6 .tabular-table th, #tabular-c3b59405e6 .tabular-table td { padding: .18rem .6rem; }
+#tabular-c3b59405e6 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-c3b59405e6 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-c3b59405e6 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-c3b59405e6 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-c3b59405e6 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-c3b59405e6 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-c3b59405e6 .tabular-table tbody tr td { border-top: none; }
+#tabular-c3b59405e6 .tabular-band { text-align: center; }
+#tabular-c3b59405e6 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-c3b59405e6 .tabular-subgroup-label { font-weight: 600; }
+#tabular-c3b59405e6 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-c3b59405e6 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-c3b59405e6 .text-left { text-align: left; }
+#tabular-c3b59405e6 .text-center { text-align: center; }
+#tabular-c3b59405e6 .text-right { text-align: right; }
+#tabular-c3b59405e6 .tabular-table thead th.text-left { text-align: left; }
+#tabular-c3b59405e6 .tabular-table thead th.text-center { text-align: center; }
+#tabular-c3b59405e6 .tabular-table thead th.text-right { text-align: right; }
+#tabular-c3b59405e6 .valign-top { vertical-align: top; }
+#tabular-c3b59405e6 .valign-middle { vertical-align: middle; }
+#tabular-c3b59405e6 .valign-bottom { vertical-align: bottom; }
+#tabular-c3b59405e6 .tabular-footnote { font-size: 8pt; color: #495057; margin: .25rem 0; }
+#tabular-c3b59405e6 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-c3b59405e6 .tabular-page-break-row { display: none; }
+#tabular-c3b59405e6 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-c3b59405e6 .tabular-page-header, #tabular-c3b59405e6 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
+#tabular-c3b59405e6 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-c3b59405e6 .tabular-page-footer { margin-top: 1rem; }
+#tabular-c3b59405e6 .tabular-page-header-left, #tabular-c3b59405e6 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-c3b59405e6 .tabular-page-header-center, #tabular-c3b59405e6 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-c3b59405e6 .tabular-page-header-right, #tabular-c3b59405e6 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-c3b59405e6 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-c3b59405e6 .tabular-table tr { page-break-inside: avoid; } #tabular-c3b59405e6 .tabular-page-header, #tabular-c3b59405e6 .tabular-page-footer { display: none; } #tabular-c3b59405e6 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-c3b59405e6 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-c3b59405e6 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style>
+<div id="tabular-c3b59405e6" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><div class="tabular-table-wrap">
+
+<table class="table tabular-table caption-top">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead><tr class="header">
+<th data-quarto-table-cell-role="th">Statistic</th>
+<th class="text-center" data-quarto-table-cell-role="th">     Placebo<br>
+(N=86)</th>
+<th class="text-center" data-quarto-table-cell-role="th">    Drug 100<br>
+(N=72)</th>
+<th class="text-center" data-quarto-table-cell-role="th">     Drug 50<br>
+(N=96)</th>
+<th class="text-center" data-quarto-table-cell-role="th">       Total<br>
+(N=254)</th>
+</tr></thead>
+<tbody>
+<tr class="tabular-group-header odd">
+<td colspan="5"><strong>Age (years)</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">n</td>
+<td class="text-right"> 86          </td>
+<td class="text-right"> 72          </td>
+<td class="text-right"> 96          </td>
+<td class="text-right">254          </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
+<td class="text-right"> 75.2 (8.59) </td>
+<td class="text-right"> 73.8 (7.94) </td>
+<td class="text-right"> 76.0 (8.11) </td>
+<td class="text-right"> 75.1 (8.25) </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
+<td class="text-right"> 76.0        </td>
+<td class="text-right"> 75.5        </td>
+<td class="text-right"> 78.0        </td>
+<td class="text-right"> 77.0        </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
+<td class="text-right"> 69.2, 81.8  </td>
+<td class="text-right"> 70.5, 79.0  </td>
+<td class="text-right"> 71.0, 82.0  </td>
+<td class="text-right"> 70.0, 81.0  </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
+<td class="text-right"> 52  , 89    </td>
+<td class="text-right"> 56  , 88    </td>
+<td class="text-right"> 51  , 88    </td>
+<td class="text-right"> 51  , 89    </td>
+</tr>
+<tr class="tabular-blank-row odd">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="5"><strong>Age Group, n (%)</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">18-64</td>
+<td class="text-right"> 14 (16.3)   </td>
+<td class="text-right"> 11 (15.3)   </td>
+<td class="text-right">  8 ( 8.3)   </td>
+<td class="text-right"> 33 (13.0)   </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">&gt;64</td>
+<td class="text-right"> 72 (83.7)   </td>
+<td class="text-right"> 61 (84.7)   </td>
+<td class="text-right"> 88 (91.7)   </td>
+<td class="text-right">221 (87.0)   </td>
+</tr>
+<tr class="tabular-blank-row odd">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="5"><strong>Sex, n (%)</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">F</td>
+<td class="text-right"> 53 (61.6)   </td>
+<td class="text-right"> 35 (48.6)   </td>
+<td class="text-right"> 55 (57.3)   </td>
+<td class="text-right">143 (56.3)   </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">M</td>
+<td class="text-right"> 33 (38.4)   </td>
+<td class="text-right"> 37 (51.4)   </td>
+<td class="text-right"> 41 (42.7)   </td>
+<td class="text-right">111 (43.7)   </td>
+</tr>
+<tr class="tabular-blank-row odd">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="5"><strong>Race, n (%)</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">WHITE</td>
+<td class="text-right"> 78 (90.7)   </td>
+<td class="text-right"> 62 (86.1)   </td>
+<td class="text-right"> 90 (93.8)   </td>
+<td class="text-right">230 (90.6)   </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">BLACK OR AFRICAN AMERICAN</td>
+<td class="text-right">  8 ( 9.3)   </td>
+<td class="text-right">  9 (12.5)   </td>
+<td class="text-right">  6 ( 6.2)   </td>
+<td class="text-right"> 23 ( 9.1)   </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">ASIAN</td>
+<td class="text-right">  0          </td>
+<td class="text-right">  0          </td>
+<td class="text-right">  0          </td>
+<td class="text-right">  0          </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">AMERICAN INDIAN OR ALASKA NATIVE</td>
+<td class="text-right">  0          </td>
+<td class="text-right">  1 ( 1.4)   </td>
+<td class="text-right">  0          </td>
+<td class="text-right">  1 ( 0.4)   </td>
+</tr>
+<tr class="tabular-blank-row odd">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="5"><strong>Ethnicity, n (%)</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">HISPANIC OR LATINO</td>
+<td class="text-right">  3 ( 3.5)   </td>
+<td class="text-right">  3 ( 4.2)   </td>
+<td class="text-right">  6 ( 6.2)   </td>
+<td class="text-right"> 12 ( 4.7)   </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">NOT HISPANIC OR LATINO</td>
+<td class="text-right"> 83 (96.5)   </td>
+<td class="text-right"> 69 (95.8)   </td>
+<td class="text-right"> 90 (93.8)   </td>
+<td class="text-right">242 (95.3)   </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">NOT REPORTED</td>
+<td class="text-right">  0          </td>
+<td class="text-right">  0          </td>
+<td class="text-right">  0          </td>
+<td class="text-right">  0          </td>
+</tr>
+<tr class="tabular-blank-row even">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="5"><strong>Weight (kg)</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">n</td>
+<td class="text-right"> 86          </td>
+<td class="text-right"> 72          </td>
+<td class="text-right"> 95          </td>
+<td class="text-right">253          </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
+<td class="text-right"> 62.8 (12.77)</td>
+<td class="text-right"> 69.5 (14.35)</td>
+<td class="text-right"> 68.0 (14.50)</td>
+<td class="text-right"> 66.6 (14.13)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
+<td class="text-right"> 60.6        </td>
+<td class="text-right"> 69.0        </td>
+<td class="text-right"> 66.7        </td>
+<td class="text-right"> 66.7        </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
+<td class="text-right"> 53.6, 74.2  </td>
+<td class="text-right"> 56.9,  80.3 </td>
+<td class="text-right"> 56.0,  78.2 </td>
+<td class="text-right"> 55.3,  77.1 </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
+<td class="text-right"> 34  , 86    </td>
+<td class="text-right"> 44  , 108   </td>
+<td class="text-right"> 42  , 106   </td>
+<td class="text-right"> 34  , 108   </td>
+</tr>
+<tr class="tabular-blank-row odd">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="5"><strong>Height (cm)</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">n</td>
+<td class="text-right"> 86          </td>
+<td class="text-right"> 72          </td>
+<td class="text-right"> 96          </td>
+<td class="text-right">254          </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
+<td class="text-right">162.6 (11.52)</td>
+<td class="text-right">165.9 (10.28)</td>
+<td class="text-right">163.7 (10.30)</td>
+<td class="text-right">163.9 (10.76)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
+<td class="text-right">162.6        </td>
+<td class="text-right">165.1        </td>
+<td class="text-right">162.6        </td>
+<td class="text-right">162.8        </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
+<td class="text-right">154.0, 171.1 </td>
+<td class="text-right">157.5, 172.8 </td>
+<td class="text-right">157.5, 170.2 </td>
+<td class="text-right">156.2, 171.4 </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
+<td class="text-right">137  , 185   </td>
+<td class="text-right">146  , 190   </td>
+<td class="text-right">136  , 196   </td>
+<td class="text-right">136  , 196   </td>
+</tr>
+<tr class="tabular-blank-row even">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="5"><strong>BMI (kg/m^2)</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">n</td>
+<td class="text-right"> 86          </td>
+<td class="text-right"> 72          </td>
+<td class="text-right"> 95          </td>
+<td class="text-right">253          </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
+<td class="text-right"> 23.6 (3.67) </td>
+<td class="text-right"> 25.2 (3.97) </td>
+<td class="text-right"> 25.2 (4.40) </td>
+<td class="text-right"> 24.7 (4.09) </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
+<td class="text-right"> 23.4        </td>
+<td class="text-right"> 24.8        </td>
+<td class="text-right"> 24.8        </td>
+<td class="text-right"> 24.2        </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
+<td class="text-right"> 21.2, 25.6  </td>
+<td class="text-right"> 22.7, 27.6  </td>
+<td class="text-right"> 22.3, 28.2  </td>
+<td class="text-right"> 21.9, 27.3  </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
+<td class="text-right"> 15  , 33    </td>
+<td class="text-right"> 14  , 35    </td>
+<td class="text-right"> 15  , 40    </td>
+<td class="text-right"> 14  , 40    </td>
+</tr>
+<tr class="tabular-blank-row odd">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="5"><strong>BMI Category, n (%)</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">Underweight (&lt;18.5)</td>
+<td class="text-right">  3 ( 3.5)   </td>
+<td class="text-right">  1 ( 1.4)   </td>
+<td class="text-right">  4 ( 4.2)   </td>
+<td class="text-right">  8 ( 3.1)   </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">Normal (18.5-24.9)</td>
+<td class="text-right"> 57 (66.3)   </td>
+<td class="text-right"> 39 (54.2)   </td>
+<td class="text-right"> 46 (47.9)   </td>
+<td class="text-right">142 (55.9)   </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">Overweight (25-29.9)</td>
+<td class="text-right"> 20 (23.3)   </td>
+<td class="text-right"> 23 (31.9)   </td>
+<td class="text-right"> 32 (33.3)   </td>
+<td class="text-right"> 75 (29.5)   </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529">Obese (&gt;=30)</td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529">  6 ( 7.0)   </td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529">  9 (12.5)   </td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 13 (13.5)   </td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 28 (11.0)   </td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure></div>
+</div>
+</div>
+<p>Set <code>preset(whitespace = "collapse")</code> to opt out and let each backend fold space runs natively.</p>
 <div>
 <blockquote>
 <p><strong>The cascade</strong></p>
@@ -3173,7 +3574,7 @@
 <li>
 <strong><a href="clinical-cookbook.html">Clinical cookbook</a></strong> — these tools applied to six complete production tables.</li>
 <li>
-<strong><a href="fonts-and-fidelity.html">Fonts &amp; fidelity</a></strong> — fonts, decimal alignment, and why the print backends are the source of truth. ```</li>
+<strong><a href="fonts-and-fidelity.html">Fonts &amp; fidelity</a></strong> — fonts, decimal alignment, and why the print backends are the source of truth.</li>
 </ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

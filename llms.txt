@@ -33,15 +33,17 @@ library(tabular)
 # BigN denominators, keyed by arm
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 
-# columns render in data-frame order, so put them in dose order first
-demo <- saf_demo[c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")]
+# columns render in data-frame order, so put them in dose order first;
+# subset to Age / Sex / Race for a compact display
+keep <- c("Age (years)", "Sex, n (%)", "Race, n (%)")
+demo <- saf_demo[saf_demo$variable %in% keep, c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")]
 
 tab <- tabular(
   demo,
   titles = c(
     "Table 14.1.1",
     "Demographic and Baseline Characteristics",
-    sprintf("Safety Population (N=%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = "Percentages are based on the number of subjects per treatment group."
 ) |>
@@ -58,65 +60,13 @@ tab <- tabular(
 path <- emit(tab, tempfile(fileext = ".rtf"))   # submission deliverable
 ```
 
-The same `tab` renders to markdown for a quick look (the demographics
-table below is the actual `md` backend output), and to a self-contained
-HTML page, a paginated PDF, a `tabularray` LaTeX fragment, or native
-OOXML `.docx` — all from the one spec:
+The same `tab` emits to every backend from the one spec. The table below
+is tabular’s own HTML render — the identical spec also produces RTF, a
+paginated PDF, a `tabularray` LaTeX fragment, and native OOXML `.docx`:
 
-| Statistic | Placebo (N=86) | Drug 50 (N=96) | Drug 100 (N=72) | Total (N=254) |
-|:---|---:|---:|---:|---:|
-| **Age (years)** |   |   |   |   |
-| n |  86           |  96           |  72           | 254           |
-| Mean (SD) |  75.2 (8.59)  |  76.0 (8.11)  |  73.8 (7.94)  |  75.1 (8.25)  |
-| Median |  76.0         |  78.0         |  75.5         |  77.0         |
-| Q1, Q3 |  69.2, 81.8   |  71.0, 82.0   |  70.5, 79.0   |  70.0, 81.0   |
-| Min, Max |  52  , 89     |  51  , 88     |  56  , 88     |  51  , 89     |
-|   |   |   |   |   |
-| **Age Group, n (%)** |   |   |   |   |
-| 18-64 |  14 (16.3)    |   8 ( 8.3)    |  11 (15.3)    |  33 (13.0)    |
-| \>64 |  72 (83.7)    |  88 (91.7)    |  61 (84.7)    | 221 (87.0)    |
-|   |   |   |   |   |
-| **Sex, n (%)** |   |   |   |   |
-| F |  53 (61.6)    |  55 (57.3)    |  35 (48.6)    | 143 (56.3)    |
-| M |  33 (38.4)    |  41 (42.7)    |  37 (51.4)    | 111 (43.7)    |
-|   |   |   |   |   |
-| **Race, n (%)** |   |   |   |   |
-| WHITE |  78 (90.7)    |  90 (93.8)    |  62 (86.1)    | 230 (90.6)    |
-| BLACK OR AFRICAN AMERICAN |   8 ( 9.3)    |   6 ( 6.2)    |   9 (12.5)    |  23 ( 9.1)    |
-| ASIAN |   0           |   0           |   0           |   0           |
-| AMERICAN INDIAN OR ALASKA NATIVE |   0           |   0           |   1 ( 1.4)    |   1 ( 0.4)    |
-|   |   |   |   |   |
-| **Ethnicity, n (%)** |   |   |   |   |
-| HISPANIC OR LATINO |   3 ( 3.5)    |   6 ( 6.2)    |   3 ( 4.2)    |  12 ( 4.7)    |
-| NOT HISPANIC OR LATINO |  83 (96.5)    |  90 (93.8)    |  69 (95.8)    | 242 (95.3)    |
-| NOT REPORTED |   0           |   0           |   0           |   0           |
-|   |   |   |   |   |
-| **Weight (kg)** |   |   |   |   |
-| n |  86           |  95           |  72           | 253           |
-| Mean (SD) |  62.8 (12.77) |  68.0 (14.50) |  69.5 (14.35) |  66.6 (14.13) |
-| Median |  60.6         |  66.7         |  69.0         |  66.7         |
-| Q1, Q3 |  53.6, 74.2   |  56.0,  78.2  |  56.9,  80.3  |  55.3,  77.1  |
-| Min, Max |  34  , 86     |  42  , 106    |  44  , 108    |  34  , 108    |
-|   |   |   |   |   |
-| **Height (cm)** |   |   |   |   |
-| n |  86           |  96           |  72           | 254           |
-| Mean (SD) | 162.6 (11.52) | 163.7 (10.30) | 165.9 (10.28) | 163.9 (10.76) |
-| Median | 162.6         | 162.6         | 165.1         | 162.8         |
-| Q1, Q3 | 154.0, 171.1  | 157.5, 170.2  | 157.5, 172.8  | 156.2, 171.4  |
-| Min, Max | 137  , 185    | 136  , 196    | 146  , 190    | 136  , 196    |
-|   |   |   |   |   |
-| **BMI (kg/m^2)** |   |   |   |   |
-| n |  86           |  95           |  72           | 253           |
-| Mean (SD) |  23.6 (3.67)  |  25.2 (4.40)  |  25.2 (3.97)  |  24.7 (4.09)  |
-| Median |  23.4         |  24.8         |  24.8         |  24.2         |
-| Q1, Q3 |  21.2, 25.6   |  22.3, 28.2   |  22.7, 27.6   |  21.9, 27.3   |
-| Min, Max |  15  , 33     |  15  , 40     |  14  , 35     |  14  , 40     |
-|   |   |   |   |   |
-| **BMI Category, n (%)** |   |   |   |   |
-| Underweight (\<18.5) |   3 ( 3.5)    |   4 ( 4.2)    |   1 ( 1.4)    |   8 ( 3.1)    |
-| Normal (18.5-24.9) |  57 (66.3)    |  46 (47.9)    |  39 (54.2)    | 142 (55.9)    |
-| Overweight (25-29.9) |  20 (23.3)    |  32 (33.3)    |  23 (31.9)    |  75 (29.5)    |
-| Obese (\>=30) |   6 ( 7.0)    |  13 (13.5)    |   9 (12.5)    |  28 (11.0)    |
+![Demographic and baseline characteristics table rendered by tabular:
+decimal-aligned arm columns, a centred multi-line caption, and a single
+footnote.](reference/figures/README-hero.png)
 
 ## Why tabular?
 
@@ -131,6 +81,11 @@ OOXML `.docx` — all from the one spec:
 - **Submission chrome built in.** Multi-line titles, up to eleven
   footnote lines, page header/footer slots, and the four-section page
   layout regulatory reviewers expect.
+- **Auto-numbered footnotes.**
+  [`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)
+  anchors a marker to any cell, header, or title; the engine assigns the
+  glyph once, in reading order, deduped by `id`, and byte-identical
+  across every backend and page.
 - **Group-aware pagination.** Keep a SOC and its preferred terms on one
   page, repeat titles/headers/footnotes per page, control orphan/widow
   rows, and split wide tables into horizontal panels.
@@ -158,7 +113,7 @@ against their namespaces; `via gt` means `gtsummary` renders through
 |  | tabular | gt | rtables | gtsummary | flextable | huxtable |
 |----|:--:|:--:|:--:|:--:|:--:|:--:|
 | Computes statistics | — | — | ✓ | ✓ | — | — |
-| Live HTML preview | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Live HTML preview | ✓ | ✓ | — | ✓ | ✓ | ✓ |
 | Native RTF | ✓ | ✓ | — | via gt | ✓ | ✓ |
 | Native DOCX | ✓ | ✓ | — | via gt | ✓ | ✓ |
 | LaTeX | ✓ | ✓ | — | via gt | — | ✓ |
@@ -167,42 +122,25 @@ against their namespaces; `via gt` means `gtsummary` renders through
 | Decimal align via font metrics | ✓ | — | — | — | — | — |
 | CDISC ARS audit manifest | ✓ | — | — | — | — | — |
 
-## The verb surface
+Two notes on the marks:
 
-| Verb | Role |
-|----|----|
-| [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md) | Wrap a pre-summarised data frame into a `tabular_spec` |
-| [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md) | Bridge a `cards` long ARD into a wide display frame |
-| [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) / [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md) | Per-column usage, label, format, alignment, width, visibility |
-| [`headers()`](https://vthanik.github.io/tabular/reference/headers.md) | Multi-level column-header bands with passthrough leaves |
-| [`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md) | Output row order; factor-aware, NA-last |
-| [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md) | Partition the table into page-broken, banner-labelled groups |
-| [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md) | Page splits, group-keep, panels, repeat chrome, orphan/widow |
-| [`style()`](https://vthanik.github.io/tabular/reference/style.md) + `cells_*()` | Predicate-targeted styling for any surface |
-| [`brdr()`](https://vthanik.github.io/tabular/reference/brdr.md) | Border-line specification (width / style / colour) |
-| [`preset()`](https://vthanik.github.io/tabular/reference/preset.md) / [`set_preset()`](https://vthanik.github.io/tabular/reference/set_preset.md) / [`preset_minimal()`](https://vthanik.github.io/tabular/reference/preset_minimal.md) | Page geometry + cosmetic defaults |
-| [`style_template()`](https://vthanik.github.io/tabular/reference/style_template.md) | Reusable house style attached to a preset |
-| [`md()`](https://vthanik.github.io/tabular/reference/md.md) / [`html()`](https://vthanik.github.io/tabular/reference/html.md) | Inline Markdown / HTML markup in labels and cells |
-| [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) | Render to a file (RTF / PDF / HTML / LaTeX / DOCX) |
-| [`as_grid()`](https://vthanik.github.io/tabular/reference/as_grid.md) | Resolve to the backend-ready grid without writing a file |
+- **Live HTML preview** means the table renders as HTML *inline* when
+  you print it in a Quarto / R Markdown chunk or the RStudio viewer (a
+  `knit_print` method). `rtables` prints a monospace ASCII table by
+  default and ships no `knit_print` method, so it is `—` here; it can
+  still emit HTML through an explicit `as_html()` call.
 
-## Demo data
+- **PDF** is compiled through LaTeX, so it needs a TeX installation.
+  `tabular` uses [`tinytex`](https://yihui.org/tinytex/) — install it
+  once per machine and PDF
+  [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) works
+  thereafter:
 
-Eleven pre-summarised datasets ship with the package to power every
-example, vignette, and test (the `*_card` pair are long-format `cards`
-ARDs that feed
-[`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)):
+  ``` r
 
-| Dataset | Content |
-|----|----|
-| `saf_demo`, `saf_demo_card` | Demographics, Safety Population |
-| `saf_aeoverall` | High-level adverse-event summary |
-| `saf_aesocpt`, `saf_aesocpt_card` | Adverse events by SOC and Preferred Term |
-| `saf_vital` | Vital signs by parameter and visit |
-| `saf_subgroup` | Vital signs by Sex × Age-group subgroups |
-| `eff_resp` | Best Overall Response and response rates |
-| `eff_estimates` | Treatment-effect estimates (raw numerics) |
-| `saf_n`, `eff_n` | BigN denominators per arm |
+  install.packages("tinytex")
+  tinytex::install_tinytex()   # one-time TeX setup
+  ```
 
 ## Documentation
 
@@ -315,6 +253,15 @@ Mark label and cell text as Markdown or HTML.
   string as Markdown for inline formatting
 - [`html()`](https://vthanik.github.io/tabular/reference/html.md) : Mark
   a string as HTML for inline formatting
+
+## Footnotes
+
+Attach an auto-numbered footnote to any `cells_*()` location. The engine
+assigns the marker once, in reading order, deduped by id, and
+byte-identical across every backend and page.
+
+- [`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)
+  : Attach an auto-numbered footnote to a table location
 
 ## Pagination
 
@@ -470,8 +417,9 @@ smoke test.
 - [From a cards
   ARD](https://vthanik.github.io/tabular/articles/from-ard.md):
 
-  Bridge long-format Analysis Results Data into the wide frame tabular
-  renders, with pivot_across().
+  Bridge long-format Analysis Results Data (the cards ARD) into the wide
+  frame tabular renders, with pivot_across() – demographics and a
+  hierarchical adverse-event table, end to end.
 
 - [Fonts &
   fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.md):

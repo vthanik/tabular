@@ -51,6 +51,19 @@
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="tabular-0009000">tabular 0.0.0.9000<a class="anchor" aria-label="anchor" href="#tabular-0009000"></a></h2>
 <ul><li>Initial development. Public surface (verb signatures, S7 class shapes, error contracts) will churn until v0.1.0. This file is rewritten at first tagged release; see <code>git log</code> for live change history in the interim.</li>
 </ul><div class="section level3">
+<h3 id="auto-numbered-footnotes-0-0-0-9000">Auto-numbered footnotes<a class="anchor" aria-label="anchor" href="#auto-numbered-footnotes-0-0-0-9000"></a></h3>
+<ul><li>
+<code>footnote(spec, text, .at = cells_*())</code> attaches an auto-numbered footnote to any cell, column header, or title line. The resolve engine assigns each marker once, in reading order (titles, then headers, then body), deduped by <code>id</code>, and the marker is allocated after decimal alignment so it never disturbs a column. The result is byte-identical across every backend (RTF / LaTeX / PDF / HTML / DOCX) and every page. Pass <code>id</code> to share one marker across anchors, or <code>symbol</code> to pin an explicit glyph.</li>
+<li>
+<code>preset(footnote_markers = ...)</code> chooses the marker scheme: <code>"letters"</code> (default, bijective base-26), <code>"numbers"</code>, or <code>"symbols"</code> (Lamport’s <code>* † ‡ § ¶ ‖</code>, doubled on spill). <code>preset(footnote_label = ...)</code> sets the block-line template (default <code>"{m}"</code>; the <code>{m}</code> token is replaced by the allocated marker).</li>
+<li>A footnote anchored only to hidden columns (<code>col_spec(visible = FALSE)</code>) now warns and is dropped, so a block line is never orphaned without an on-page marker.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="verbatim-whitespace-0-0-0-9000">Verbatim whitespace<a class="anchor" aria-label="anchor" href="#verbatim-whitespace-0-0-0-9000"></a></h3>
+<ul><li>
+<code>preset(whitespace = "preserve")</code> (the default) keeps significant ASCII spaces in labels and cells across every backend: leading, trailing, and interior runs of two or more spaces become the backend’s non-breaking token (<code>&amp;nbsp;</code> / <code>~</code> / <code>\~</code>; DOCX uses <code>xml:space</code>), so a hand-built indent renders verbatim. A single interior space stays breakable, so cells still wrap. Decimal-alignment padding (U+00A0) is preserved unconditionally and is unaffected. <code>preset(whitespace = "collapse")</code> restores the backends’ native run-folding.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="html--md-backends--continuous-document-0-0-0-9000">HTML / MD backends — continuous document<a class="anchor" aria-label="anchor" href="#html--md-backends--continuous-document-0-0-0-9000"></a></h3>
 <ul><li>
 <code>backend_html</code> and <code>backend_md</code> render the resolved grid as one continuous document instead of one section per logical page. The HTML backend emits a single <code>&lt;table&gt;</code> per horizontal panel with one <code>&lt;thead&gt;</code> and one <code>&lt;tbody&gt;</code>; vertical-page boundaries are carried by invisible <code>&lt;tr class="tabular-page-break-row"&gt;</code> markers that fire as <code>page-break-before: always</code> only under <code>@media print</code>. Browsers natively repeat <code>&lt;thead&gt;</code> across the resulting printed page breaks. The MD backend emits one pipe table per horizontal panel with all body rows concatenated.</li>

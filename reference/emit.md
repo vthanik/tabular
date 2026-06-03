@@ -192,7 +192,7 @@ demo <- tabular(
   titles = c(
     "Table 14.1.1",
     "Demographics and Baseline Characteristics",
-    sprintf("Safety Population (N=%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = "Source: ADSL."
 ) |>
@@ -226,7 +226,7 @@ ae_spec <- tabular(
   titles = c(
     "Table 14.3.1",
     "Adverse Events by SOC and Preferred Term",
-    sprintf("Safety Population (N=%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = "Subjects counted once per SOC and once per PT."
 ) |>
@@ -234,6 +234,7 @@ ae_spec <- tabular(
     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
     soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
+    soc_n    = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
@@ -259,11 +260,13 @@ emit(
 # CSR appendix).
 eff_spec <- tabular(eff_resp, titles = "Best Overall Response") |>
   cols(
-    stat_label = col_spec(usage = "group", label = "Response"),
-    row_type   = col_spec(visible = FALSE),
-    placebo    = col_spec(label = "Placebo",  align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100", align = "decimal")
+    stat_label  = col_spec(usage = "group", label = "Response"),
+    row_type    = col_spec(visible = FALSE),
+    groupid     = col_spec(visible = FALSE),
+    group_label = col_spec(visible = FALSE),
+    placebo     = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50     = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100    = col_spec(label = "Drug 100", align = "decimal")
   )
 
 out_dir <- tempfile()

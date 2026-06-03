@@ -7,6 +7,37 @@
   first tagged release; see `git log` for live change history in the
   interim.
 
+### Auto-numbered footnotes
+
+- `footnote(spec, text, .at = cells_*())` attaches an auto-numbered
+  footnote to any cell, column header, or title line. The resolve engine
+  assigns each marker once, in reading order (titles, then headers, then
+  body), deduped by `id`, and the marker is allocated after decimal
+  alignment so it never disturbs a column. The result is byte-identical
+  across every backend (RTF / LaTeX / PDF / HTML / DOCX) and every page.
+  Pass `id` to share one marker across anchors, or `symbol` to pin an
+  explicit glyph.
+- `preset(footnote_markers = ...)` chooses the marker scheme:
+  `"letters"` (default, bijective base-26), `"numbers"`, or `"symbols"`
+  (Lamport’s `* † ‡ § ¶ ‖`, doubled on spill).
+  `preset(footnote_label = ...)` sets the block-line template (default
+  `"{m}"`; the `{m}` token is replaced by the allocated marker).
+- A footnote anchored only to hidden columns
+  (`col_spec(visible = FALSE)`) now warns and is dropped, so a block
+  line is never orphaned without an on-page marker.
+
+### Verbatim whitespace
+
+- `preset(whitespace = "preserve")` (the default) keeps significant
+  ASCII spaces in labels and cells across every backend: leading,
+  trailing, and interior runs of two or more spaces become the backend’s
+  non-breaking token (`&nbsp;` / `~` / `\~`; DOCX uses `xml:space`), so
+  a hand-built indent renders verbatim. A single interior space stays
+  breakable, so cells still wrap. Decimal-alignment padding (U+00A0) is
+  preserved unconditionally and is unaffected.
+  `preset(whitespace = "collapse")` restores the backends’ native
+  run-folding.
+
 ### HTML / MD backends — continuous document
 
 - `backend_html` and `backend_md` render the resolved grid as one

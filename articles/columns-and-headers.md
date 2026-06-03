@@ -227,54 +227,42 @@ tabular(
 ) |>
   cols(
     soc          = col_spec(visible = FALSE),
-    label        = col_spec(usage = "group", indent_by = "indent_level",
-                            label = "System Organ Class / Preferred Term"),
     row_type     = col_spec(visible = FALSE),
     indent_level = col_spec(visible = FALSE),
     n_total      = col_spec(visible = FALSE),
     soc_n        = col_spec(visible = FALSE),
+    label        = col_spec(label = "System Organ Class / Preferred Term",
+                            indent_by = "indent_level"),
     placebo      = col_spec(label = "Placebo",  align = "decimal"),
     drug_50      = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100     = col_spec(label = "Drug 100", align = "decimal"),
     Total        = col_spec(label = "Total",    align = "decimal")
-  )
+  ) |>
+  style(bold = TRUE, .at = cells_body(where = row_type %in% c("overall", "soc")))
 ```
 
+| System Organ Class / Preferred Term | Placebo | Drug 50 | Drug 100 | Total |
+|----|----|----|----|----|
+| TOTAL SUBJECTS WITH AN EVENT | 52 (60.5) | 81 (84.4) | 66 (91.7) | 199 (78.3) |
+| SKIN AND SUBCUTANEOUS TISSUE DISORDERS | 19 (22.1) | 36 (37.5) | 35 (48.6) |  90 (35.4) |
+| PRURITUS |  8 ( 9.3) | 21 (21.9) | 25 (34.7) |  54 (21.3) |
+| ERYTHEMA |  8 ( 9.3) | 14 (14.6) | 14 (19.4) |  36 (14.2) |
+| RASH |  5 ( 5.8) | 13 (13.5) |  8 (11.1) |  26 (10.2) |
+| HYPERHIDROSIS |  2 ( 2.3) |  4 ( 4.2) |  8 (11.1) |  14 ( 5.5) |
+| SKIN IRRITATION |  3 ( 3.5) |  6 ( 6.2) |  5 ( 6.9) |  14 ( 5.5) |
+| GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS | 15 (17.4) | 36 (37.5) | 30 (41.7) |  81 (31.9) |
+| APPLICATION SITE PRURITUS |  6 ( 7.0) | 23 (24.0) | 21 (29.2) |  50 (19.7) |
+| APPLICATION SITE ERYTHEMA |  3 ( 3.5) | 13 (13.5) | 14 (19.4) |  30 (11.8) |
+| APPLICATION SITE DERMATITIS |  5 ( 5.8) |  9 ( 9.4) |  7 ( 9.7) |  21 ( 8.3) |
+| APPLICATION SITE IRRITATION |  3 ( 3.5) |  9 ( 9.4) |  9 (12.5) |  21 ( 8.3) |
+| APPLICATION SITE VESICLES |  1 ( 1.2) |  5 ( 5.2) |  5 ( 6.9) |  11 ( 4.3) |
+| GASTROINTESTINAL DISORDERS | 13 (15.1) | 12 (12.5) | 17 (23.6) |  42 (16.5) |
+
  
 
-Table 14.3.1 Adverse Events by System Organ Class and Preferred Term
+Table 14.3.1  Adverse Events by System Organ Class and Preferred Term
 
  
-
-| Placebo   | Drug 50   | Drug 100  | Total      |
-|-----------|-----------|-----------|------------|
-| 52 (60.5) | 81 (84.4) | 66 (91.7) | 199 (78.3) |
-|           |           |           |            |
-| 19 (22.1) | 36 (37.5) | 35 (48.6) |  90 (35.4) |
-|           |           |           |            |
-|  8 (9.3)  | 21 (21.9) | 25 (34.7) |  54 (21.3) |
-|           |           |           |            |
-|  8 (9.3)  | 14 (14.6) | 14 (19.4) |  36 (14.2) |
-|           |           |           |            |
-|  5 (5.8)  | 13 (13.5) |  8 (11.1) |  26 (10.2) |
-|           |           |           |            |
-|  2 (2.3)  |  4 (4.2)  |  8 (11.1) |  14 (5.5)  |
-|           |           |           |            |
-|  3 (3.5)  |  6 (6.2)  |  5 (6.9)  |  14 (5.5)  |
-|           |           |           |            |
-| 15 (17.4) | 36 (37.5) | 30 (41.7) |  81 (31.9) |
-|           |           |           |            |
-|  6 (7.0)  | 23 (24.0) | 21 (29.2) |  50 (19.7) |
-|           |           |           |            |
-|  3 (3.5)  | 13 (13.5) | 14 (19.4) |  30 (11.8) |
-|           |           |           |            |
-|  5 (5.8)  |  9 (9.4)  |  7 (9.7)  |  21 (8.3)  |
-|           |           |           |            |
-|  3 (3.5)  |  9 (9.4)  |  9 (12.5) |  21 (8.3)  |
-|           |           |           |            |
-|  1 (1.2)  |  5 (5.2)  |  5 (6.9)  |  11 (4.3)  |
-|           |           |           |            |
-| 13 (15.1) | 12 (12.5) | 17 (23.6) |  42 (16.5) |
 
 ## BigN in the header
 
@@ -373,4 +361,3 @@ base |>
   targets any header band or column with
   [`style()`](https://vthanik.github.io/tabular/reference/style.md) +
   [`cells_headers()`](https://vthanik.github.io/tabular/reference/cells.md).
-  \`\`\`

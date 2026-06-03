@@ -91,16 +91,16 @@
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://vthanik.github.io/tabular/">tabular</a></span><span class="op">)</span></span></code></pre></div>
 </div>
-<p><code>tabular</code> renders a <strong>wide</strong> frame, but many analysis pipelines produce <strong>long</strong> Analysis Results Data (ARD) — one row per statistic, in the <code>cards</code> format. <code><a href="../reference/pivot_across.html">pivot_across()</a></code> is the bridge: it pivots an ARD into the wide, one-row-per-display-row shape <code><a href="../reference/tabular.html">tabular()</a></code> expects.</p>
+<p><code>tabular</code> renders a <strong>wide</strong> frame – one row per display row, one column per arm. But most modern analysis pipelines emit <strong>long</strong> Analysis Results Data (an <em>ARD</em>) in the <code>cards</code> format: one row per statistic. <code><a href="../reference/pivot_across.html">pivot_across()</a></code> is the bridge between the two. This article walks a demographics ARD and a hierarchical adverse-event ARD all the way from their long form to a rendered table.</p>
 <div>
 <blockquote>
 <p><strong>What is an ARD?</strong></p>
-<p>An <em>Analysis Results Data</em> frame is the tidy, long representation of a table’s contents: each row carries one statistic for one group level, with columns like <code>group1_level</code>, <code>variable</code>, <code>stat_name</code>, and <code>stat</code>. It is produced upstream by <code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html" class="external-link">cards::ard_stack()</a></code> (and friends). <code>tabular</code> does not compute it — it consumes it.</p>
+<p>An <em>Analysis Results Data</em> frame is the tidy, long representation of a table’s contents: each row carries one statistic, for one group level, of one variable. It is produced upstream by <code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html" class="external-link">cards::ard_stack()</a></code> and friends. <code>tabular</code> does not compute it – it consumes it. The division of labour is deliberate: <code>cards</code> (or <code>gtsummary</code>, <code>dplyr</code>, SAS) <em>computes</em> the numbers; <code><a href="../reference/pivot_across.html">pivot_across()</a></code> <em>reshapes</em> them; <code><a href="../reference/tabular.html">tabular()</a></code> <em>renders</em>.</p>
 </blockquote>
 </div>
-<section class="level2"><h2 id="a-demographics-ard">A demographics ARD<a class="anchor" aria-label="anchor" href="#a-demographics-ard"></a>
+<section class="level2"><h2 id="inspect-the-ard">1. Inspect the ARD<a class="anchor" aria-label="anchor" href="#inspect-the-ard"></a>
 </h2>
-<p>The bundled <code>saf_demo_card</code> is a demographics ARD in <code>cards</code> format:</p>
+<p>The bundled <code>saf_demo_card</code> is a demographics ARD. One row is one statistic, so it is far too long to render directly – the first six rows cover just the start of one arm’s age summary:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">saf_demo_card</span>, <span class="fl">6</span><span class="op">)</span></span>
@@ -119,63 +119,64 @@
 <span><span class="co">#&gt; 5       69</span></span>
 <span><span class="co">#&gt; 6       82</span></span></code></pre></div>
 </div>
-<p>Each row is one statistic (<code>stat</code>) for one treatment arm (<code>group1_level</code>) and characteristic (<code>variable</code>). That is too long to render directly.</p>
-</section><section class="level2"><h2 id="pivot-to-wide">Pivot to wide<a class="anchor" aria-label="anchor" href="#pivot-to-wide"></a>
+<p>The columns that matter to <code><a href="../reference/pivot_across.html">pivot_across()</a></code> are:</p>
+<ul>
+<li>
+<strong><code>group1_level</code></strong> – the treatment arm (<code>Placebo</code>, <code>Xanomeline Low Dose</code>, …). These become the table’s columns.</li>
+<li>
+<strong><code>variable</code></strong> – the characteristic (<code>AGE</code>, <code>SEX</code>, …). These become the row sections.</li>
+<li>
+<strong><code>context</code></strong> – <code>continuous</code> or <code>categorical</code>, which selects the formatting template.</li>
+<li>
+<strong><code>stat_name</code> / <code>stat_label</code> / <code>stat</code></strong> – the statistic’s code, its display name (<code>Mean</code>, <code>SD</code>, <code>n</code>, <code>%</code>), and its raw numeric value.</li>
+</ul></section><section class="level2"><h2 id="pivot-to-wide">2. Pivot to wide<a class="anchor" aria-label="anchor" href="#pivot-to-wide"></a>
 </h2>
-<p><code><a href="../reference/pivot_across.html">pivot_across()</a></code> spreads the treatment arms across columns and formats each statistic into a display string:</p>
+<p><code><a href="../reference/pivot_across.html">pivot_across()</a></code> spreads <code>group1_level</code> across columns and formats each statistic into one display string:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">wide</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span><span class="va">saf_demo_card</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">wide</span></span>
-<span><span class="co">#&gt;    variable                         stat_label       Placebo</span></span>
-<span><span class="co">#&gt; 1       AGE                                AGE   75.2 (8.59)</span></span>
-<span><span class="co">#&gt; 2    WEIGHT                             WEIGHT  62.8 (12.77)</span></span>
-<span><span class="co">#&gt; 3    HEIGHT                             HEIGHT 162.6 (11.52)</span></span>
-<span><span class="co">#&gt; 4       BMI                                BMI   23.6 (3.67)</span></span>
-<span><span class="co">#&gt; 5    AGEGR1                              18-64      14 (16%)</span></span>
-<span><span class="co">#&gt; 6    AGEGR1                                &gt;64      72 (84%)</span></span>
-<span><span class="co">#&gt; 7       SEX                                  F      53 (62%)</span></span>
-<span><span class="co">#&gt; 8       SEX                                  M      33 (38%)</span></span>
-<span><span class="co">#&gt; 9      RACE                              WHITE      78 (91%)</span></span>
-<span><span class="co">#&gt; 10     RACE          BLACK OR AFRICAN AMERICAN        8 (9%)</span></span>
-<span><span class="co">#&gt; 11     RACE                              ASIAN             0</span></span>
-<span><span class="co">#&gt; 12     RACE   AMERICAN INDIAN OR ALASKA NATIVE             0</span></span>
-<span><span class="co">#&gt; 13   ETHNIC                 HISPANIC OR LATINO        3 (3%)</span></span>
-<span><span class="co">#&gt; 14   ETHNIC             NOT HISPANIC OR LATINO      83 (97%)</span></span>
-<span><span class="co">#&gt; 15   ETHNIC                       NOT REPORTED             0</span></span>
-<span><span class="co">#&gt; 16  BMI_CAT                Underweight (&lt;18.5)        3 (3%)</span></span>
-<span><span class="co">#&gt; 17  BMI_CAT                 Normal (18.5-24.9)      57 (66%)</span></span>
-<span><span class="co">#&gt; 18  BMI_CAT               Overweight (25-29.9)      20 (23%)</span></span>
-<span><span class="co">#&gt; 19  BMI_CAT                       Obese (&gt;=30)        6 (7%)</span></span>
-<span><span class="co">#&gt;    Xanomeline High Dose Xanomeline Low Dose         Total</span></span>
-<span><span class="co">#&gt; 1           73.8 (7.94)         76.0 (8.11)   75.1 (8.25)</span></span>
-<span><span class="co">#&gt; 2          69.5 (14.35)        68.0 (14.50)  66.6 (14.13)</span></span>
-<span><span class="co">#&gt; 3         165.9 (10.28)       163.7 (10.30) 163.9 (10.76)</span></span>
-<span><span class="co">#&gt; 4           25.2 (3.97)         25.2 (4.40)   24.7 (4.09)</span></span>
-<span><span class="co">#&gt; 5              11 (15%)              8 (8%)      33 (13%)</span></span>
-<span><span class="co">#&gt; 6              61 (85%)            88 (92%)     221 (87%)</span></span>
-<span><span class="co">#&gt; 7              35 (49%)            55 (57%)     143 (56%)</span></span>
-<span><span class="co">#&gt; 8              37 (51%)            41 (43%)     111 (44%)</span></span>
-<span><span class="co">#&gt; 9              62 (86%)            90 (94%)     230 (91%)</span></span>
-<span><span class="co">#&gt; 10              9 (12%)              6 (6%)       23 (9%)</span></span>
-<span><span class="co">#&gt; 11                    0                   0             0</span></span>
-<span><span class="co">#&gt; 12               1 (1%)                   0        1 (0%)</span></span>
-<span><span class="co">#&gt; 13               3 (4%)              6 (6%)       12 (5%)</span></span>
-<span><span class="co">#&gt; 14             69 (96%)            90 (94%)     242 (95%)</span></span>
-<span><span class="co">#&gt; 15                    0                   0             0</span></span>
-<span><span class="co">#&gt; 16               1 (1%)              4 (4%)        8 (3%)</span></span>
-<span><span class="co">#&gt; 17             39 (54%)            46 (48%)     142 (56%)</span></span>
-<span><span class="co">#&gt; 18             23 (32%)            32 (34%)      75 (30%)</span></span>
-<span><span class="co">#&gt; 19              9 (12%)            13 (14%)      28 (11%)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">wide</span>, <span class="fl">8</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   variable stat_label       Placebo Xanomeline High Dose Xanomeline Low Dose</span></span>
+<span><span class="co">#&gt; 1      AGE        AGE   75.2 (8.59)          73.8 (7.94)         76.0 (8.11)</span></span>
+<span><span class="co">#&gt; 2   WEIGHT     WEIGHT  62.8 (12.77)         69.5 (14.35)        68.0 (14.50)</span></span>
+<span><span class="co">#&gt; 3   HEIGHT     HEIGHT 162.6 (11.52)        165.9 (10.28)       163.7 (10.30)</span></span>
+<span><span class="co">#&gt; 4      BMI        BMI   23.6 (3.67)          25.2 (3.97)         25.2 (4.40)</span></span>
+<span><span class="co">#&gt; 5   AGEGR1      18-64      14 (16%)             11 (15%)              8 (8%)</span></span>
+<span><span class="co">#&gt; 6   AGEGR1        &gt;64      72 (84%)             61 (85%)            88 (92%)</span></span>
+<span><span class="co">#&gt; 7      SEX          F      53 (62%)             35 (49%)            55 (57%)</span></span>
+<span><span class="co">#&gt; 8      SEX          M      33 (38%)             37 (51%)            41 (43%)</span></span>
+<span><span class="co">#&gt;           Total</span></span>
+<span><span class="co">#&gt; 1   75.1 (8.25)</span></span>
+<span><span class="co">#&gt; 2  66.6 (14.13)</span></span>
+<span><span class="co">#&gt; 3 163.9 (10.76)</span></span>
+<span><span class="co">#&gt; 4   24.7 (4.09)</span></span>
+<span><span class="co">#&gt; 5      33 (13%)</span></span>
+<span><span class="co">#&gt; 6     221 (87%)</span></span>
+<span><span class="co">#&gt; 7     143 (56%)</span></span>
+<span><span class="co">#&gt; 8     111 (44%)</span></span></code></pre></div>
 </div>
-<p>By default the <code>statistic</code> argument formats continuous rows as <code>"{mean} ({sd})"</code> and categorical rows as <code>"{n} ({p}%)"</code>, and an <code>overall = "Total"</code> column is appended. The arm columns take their names from the ARD’s <code>group1_level</code> values.</p>
-</section><section class="level2"><h2 id="render-the-pivoted-frame">Render the pivoted frame<a class="anchor" aria-label="anchor" href="#render-the-pivoted-frame"></a>
+<p>By default continuous rows format as <code>"{mean} ({sd})"</code>, categorical rows as <code>"{n} ({p}%)"</code>, and an <code>overall = "Total"</code> column is appended. The arm columns take their names verbatim from <code>group1_level</code>, so spaces survive (<code>Xanomeline Low Dose</code>) and need backticks when you name them in <code><a href="../reference/cols.html">cols()</a></code>.</p>
+</section><section class="level2"><h2 id="render-it">3. Render it<a class="anchor" aria-label="anchor" href="#render-it"></a>
 </h2>
-<p>The result is an ordinary wide data frame, so it flows straight into the usual pipeline. Arm columns whose names contain spaces are quoted with backticks:</p>
+<p>The pivot leaves <code>variable</code> as the raw upstream codes (<code>AGE</code>, <code>SEX</code>). Pass a <code>label</code> map to <code><a href="../reference/pivot_across.html">pivot_across()</a></code> to rename them to display labels in one place – it rewrites the <code>variable</code> (and, for hierarchical ARDs, the <code>soc</code> / <code>label</code>) values. The wide frame is then an ordinary <code><a href="../reference/tabular.html">tabular()</a></code> input:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">wide</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
+<span>  <span class="va">saf_demo_card</span>,</span>
+<span>  label <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    AGE     <span class="op">=</span> <span class="st">"Age (years)"</span>,</span>
+<span>    WEIGHT  <span class="op">=</span> <span class="st">"Weight (kg)"</span>,</span>
+<span>    HEIGHT  <span class="op">=</span> <span class="st">"Height (cm)"</span>,</span>
+<span>    BMI     <span class="op">=</span> <span class="st">"BMI (kg/m²)"</span>,</span>
+<span>    AGEGR1  <span class="op">=</span> <span class="st">"Age Group, n (%)"</span>,</span>
+<span>    SEX     <span class="op">=</span> <span class="st">"Sex, n (%)"</span>,</span>
+<span>    RACE    <span class="op">=</span> <span class="st">"Race, n (%)"</span>,</span>
+<span>    ETHNIC  <span class="op">=</span> <span class="st">"Ethnicity, n (%)"</span>,</span>
+<span>    BMI_CAT <span class="op">=</span> <span class="st">"BMI Category, n (%)"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span></span>
 <span>  <span class="va">wide</span>,</span>
 <span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Table 14.1.1"</span>,</span>
@@ -187,62 +188,63 @@
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
 <span>    variable               <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span>
 <span>    stat_label             <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span>
-<span>    Placebo                <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    Placebo                <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
 <span>    `Xanomeline Low Dose`  <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
 <span>    `Xanomeline High Dose` <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 100"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
-<span>    Total                  <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
+<span>    Total                  <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Total"</span>,    align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-3cc991fe37 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-3cc991fe37 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-3cc991fe37 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-3cc991fe37 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-3cc991fe37 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-3cc991fe37 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-3cc991fe37 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-3cc991fe37 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-3cc991fe37 .tabular-table th, #tabular-3cc991fe37 .tabular-table td { padding: .35rem .6rem; }
-#tabular-3cc991fe37 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-3cc991fe37 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-3cc991fe37 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-3cc991fe37 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-3cc991fe37 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-3cc991fe37 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-3cc991fe37 .tabular-table tbody tr td { border-top: none; }
-#tabular-3cc991fe37 .tabular-band { text-align: center; }
-#tabular-3cc991fe37 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-3cc991fe37 .tabular-subgroup-label { font-weight: 600; }
-#tabular-3cc991fe37 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-3cc991fe37 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-3cc991fe37 .text-left { text-align: left; }
-#tabular-3cc991fe37 .text-center { text-align: center; }
-#tabular-3cc991fe37 .text-right { text-align: right; }
-#tabular-3cc991fe37 .tabular-table thead th.text-left { text-align: left; }
-#tabular-3cc991fe37 .tabular-table thead th.text-center { text-align: center; }
-#tabular-3cc991fe37 .tabular-table thead th.text-right { text-align: right; }
-#tabular-3cc991fe37 .valign-top { vertical-align: top; }
-#tabular-3cc991fe37 .valign-middle { vertical-align: middle; }
-#tabular-3cc991fe37 .valign-bottom { vertical-align: bottom; }
-#tabular-3cc991fe37 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-3cc991fe37 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-3cc991fe37 .tabular-page-break-row { display: none; }
-#tabular-3cc991fe37 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-3cc991fe37 .tabular-page-header, #tabular-3cc991fe37 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-3cc991fe37 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-3cc991fe37 .tabular-page-footer { margin-top: 1rem; }
-#tabular-3cc991fe37 .tabular-page-header-left, #tabular-3cc991fe37 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-3cc991fe37 .tabular-page-header-center, #tabular-3cc991fe37 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-3cc991fe37 .tabular-page-header-right, #tabular-3cc991fe37 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-3cc991fe37 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-3cc991fe37 .tabular-table tr { page-break-inside: avoid; } #tabular-3cc991fe37 .tabular-page-header, #tabular-3cc991fe37 .tabular-page-footer { display: none; } #tabular-3cc991fe37 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-3cc991fe37 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-3cc991fe37 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-6a5215f525 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-6a5215f525 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6a5215f525 p { line-height: inherit; }
+#tabular-6a5215f525 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-6a5215f525 .tabular-caption { margin: 0; padding: 0; }
+#tabular-6a5215f525 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-6a5215f525 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-6a5215f525 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-6a5215f525 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-6a5215f525 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-6a5215f525 .tabular-table th, #tabular-6a5215f525 .tabular-table td { padding: .18rem .6rem; }
+#tabular-6a5215f525 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-6a5215f525 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-6a5215f525 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-6a5215f525 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-6a5215f525 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-6a5215f525 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-6a5215f525 .tabular-table tbody tr td { border-top: none; }
+#tabular-6a5215f525 .tabular-band { text-align: center; }
+#tabular-6a5215f525 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-6a5215f525 .tabular-subgroup-label { font-weight: 600; }
+#tabular-6a5215f525 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-6a5215f525 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-6a5215f525 .text-left { text-align: left; }
+#tabular-6a5215f525 .text-center { text-align: center; }
+#tabular-6a5215f525 .text-right { text-align: right; }
+#tabular-6a5215f525 .tabular-table thead th.text-left { text-align: left; }
+#tabular-6a5215f525 .tabular-table thead th.text-center { text-align: center; }
+#tabular-6a5215f525 .tabular-table thead th.text-right { text-align: right; }
+#tabular-6a5215f525 .valign-top { vertical-align: top; }
+#tabular-6a5215f525 .valign-middle { vertical-align: middle; }
+#tabular-6a5215f525 .valign-bottom { vertical-align: bottom; }
+#tabular-6a5215f525 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-6a5215f525 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-6a5215f525 .tabular-page-break-row { display: none; }
+#tabular-6a5215f525 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-6a5215f525 .tabular-page-header, #tabular-6a5215f525 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-6a5215f525 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-6a5215f525 .tabular-page-footer { margin-top: 1rem; }
+#tabular-6a5215f525 .tabular-page-header-left, #tabular-6a5215f525 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-6a5215f525 .tabular-page-header-center, #tabular-6a5215f525 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-6a5215f525 .tabular-page-header-right, #tabular-6a5215f525 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-6a5215f525 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-6a5215f525 .tabular-table tr { page-break-inside: avoid; } #tabular-6a5215f525 .tabular-page-header, #tabular-6a5215f525 .tabular-page-footer { display: none; } #tabular-6a5215f525 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-6a5215f525 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-6a5215f525 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-3cc991fe37" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><div class="tabular-content">
-<p class="tabular-pad"> </p>
+<div id="tabular-6a5215f525" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Table 14.1.1</p>
 <p class="tabular-title">Demographic and Baseline Characteristics</p>
 <p class="tabular-title">Safety Population</p>
 <p class="tabular-pad"> </p>
-<div class="tabular-table-wrap">
+</figcaption><div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
@@ -254,7 +256,7 @@
 </tr></thead>
 <tbody>
 <tr class="tabular-group-header odd">
-<td colspan="5"><strong>AGE</strong></td>
+<td colspan="5"><strong>Age (years)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">AGE</td>
@@ -267,7 +269,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5"><strong>WEIGHT</strong></td>
+<td colspan="5"><strong>Weight (kg)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">WEIGHT</td>
@@ -280,7 +282,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5"><strong>HEIGHT</strong></td>
+<td colspan="5"><strong>Height (cm)</strong></td>
 </tr>
 <tr class="even">
 <td style="padding-left: calc(.6rem + 1.2em)">HEIGHT</td>
@@ -293,7 +295,7 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5"><strong>BMI</strong></td>
+<td colspan="5"><strong>BMI (kg/m²)</strong></td>
 </tr>
 <tr class="odd">
 <td style="padding-left: calc(.6rem + 1.2em)">BMI</td>
@@ -306,17 +308,17 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5"><strong>AGEGR1</strong></td>
+<td colspan="5"><strong>Age Group, n (%)</strong></td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">18-64</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  18-64</td>
 <td class="text-right"> 14 (16%)    </td>
 <td class="text-right"> 11 (15%)    </td>
 <td class="text-right">  8 ( 8%)    </td>
 <td class="text-right"> 33 (13%)    </td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">&gt;64</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  &gt;64</td>
 <td class="text-right"> 72 (84%)    </td>
 <td class="text-right"> 61 (85%)    </td>
 <td class="text-right"> 88 (92%)    </td>
@@ -326,17 +328,17 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5"><strong>SEX</strong></td>
+<td colspan="5"><strong>Sex, n (%)</strong></td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">F</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  F</td>
 <td class="text-right"> 53 (62%)    </td>
 <td class="text-right"> 35 (49%)    </td>
 <td class="text-right"> 55 (57%)    </td>
 <td class="text-right">143 (56%)    </td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">M</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  M</td>
 <td class="text-right"> 33 (38%)    </td>
 <td class="text-right"> 37 (51%)    </td>
 <td class="text-right"> 41 (43%)    </td>
@@ -346,31 +348,31 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5"><strong>RACE</strong></td>
+<td colspan="5"><strong>Race, n (%)</strong></td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">WHITE</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  WHITE</td>
 <td class="text-right"> 78 (91%)    </td>
 <td class="text-right"> 62 (86%)    </td>
 <td class="text-right"> 90 (94%)    </td>
 <td class="text-right">230 (91%)    </td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">BLACK OR AFRICAN AMERICAN</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  BLACK OR AFRICAN AMERICAN</td>
 <td class="text-right">  8 ( 9%)    </td>
 <td class="text-right">  9 (12%)    </td>
 <td class="text-right">  6 ( 6%)    </td>
 <td class="text-right"> 23 ( 9%)    </td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">ASIAN</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  ASIAN</td>
 <td class="text-right">  0          </td>
 <td class="text-right">  0          </td>
 <td class="text-right">  0          </td>
 <td class="text-right">  0          </td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">AMERICAN INDIAN OR ALASKA NATIVE</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  AMERICAN INDIAN OR ALASKA NATIVE</td>
 <td class="text-right">  0          </td>
 <td class="text-right">  1 ( 1%)    </td>
 <td class="text-right">  0          </td>
@@ -380,24 +382,24 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header odd">
-<td colspan="5"><strong>ETHNIC</strong></td>
+<td colspan="5"><strong>Ethnicity, n (%)</strong></td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">HISPANIC OR LATINO</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  HISPANIC OR LATINO</td>
 <td class="text-right">  3 ( 3%)    </td>
 <td class="text-right">  3 ( 4%)    </td>
 <td class="text-right">  6 ( 6%)    </td>
 <td class="text-right"> 12 ( 5%)    </td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">NOT HISPANIC OR LATINO</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  NOT HISPANIC OR LATINO</td>
 <td class="text-right"> 83 (97%)    </td>
 <td class="text-right"> 69 (96%)    </td>
 <td class="text-right"> 90 (94%)    </td>
 <td class="text-right">242 (95%)    </td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">NOT REPORTED</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  NOT REPORTED</td>
 <td class="text-right">  0          </td>
 <td class="text-right">  0          </td>
 <td class="text-right">  0          </td>
@@ -407,31 +409,31 @@
 <td colspan="5"> </td>
 </tr>
 <tr class="tabular-group-header even">
-<td colspan="5"><strong>BMI_CAT</strong></td>
+<td colspan="5"><strong>BMI Category, n (%)</strong></td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Underweight (&lt;18.5)</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  Underweight (&lt;18.5)</td>
 <td class="text-right">  3 ( 3%)    </td>
 <td class="text-right">  1 ( 1%)    </td>
 <td class="text-right">  4 ( 4%)    </td>
 <td class="text-right">  8 ( 3%)    </td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Normal (18.5-24.9)</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  Normal (18.5-24.9)</td>
 <td class="text-right"> 57 (66%)    </td>
 <td class="text-right"> 39 (54%)    </td>
 <td class="text-right"> 46 (48%)    </td>
 <td class="text-right">142 (56%)    </td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Overweight (25-29.9)</td>
+<td style="padding-left: calc(.6rem + 1.2em)">  Overweight (25-29.9)</td>
 <td class="text-right"> 20 (23%)    </td>
 <td class="text-right"> 23 (32%)    </td>
 <td class="text-right"> 32 (34%)    </td>
 <td class="text-right"> 75 (30%)    </td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529">Obese (&gt;=30)</td>
+<td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529">  Obese (&gt;=30)</td>
 <td class="text-right" style="border-bottom: 0.5pt solid #212529">  6 ( 7%)    </td>
 <td class="text-right" style="border-bottom: 0.5pt solid #212529">  9 (12%)    </td>
 <td class="text-right" style="border-bottom: 0.5pt solid #212529"> 13 (14%)    </td>
@@ -441,12 +443,13 @@
 </table>
 </div>
 <p class="tabular-footnote">Built from a cards ARD via pivot_across().</p>
-</div></div>
+</figure></div>
 </div>
 </div>
-</section><section class="level2"><h2 id="customising-the-statistic-format">Customising the statistic format<a class="anchor" aria-label="anchor" href="#customising-the-statistic-format"></a>
+<p><code>usage = "group"</code> on <code>variable</code> turns each characteristic into a bold section-header row; <code>stat_label</code> carries the per-row statistic name.</p>
+</section><section class="level2"><h2 id="change-the-statistic-format">4. Change the statistic format<a class="anchor" aria-label="anchor" href="#change-the-statistic-format"></a>
 </h2>
-<p>Pass your own templates to <code>statistic</code> to change how each context renders — for example, a mean with one extra decimal and percentages without parentheses:</p>
+<p>The <code>statistic</code> argument takes one template per context. Swap in your own to change how every row of that kind renders – here a mean carrying its SD spelled out, and percentages without parentheses. Because the result is still a wide frame, it renders the same way:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
@@ -454,60 +457,767 @@
 <span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    continuous  <span class="op">=</span> <span class="st">"{mean} (SD {sd})"</span>,</span>
 <span>    categorical <span class="op">=</span> <span class="st">"{n} / {p}%"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt;    variable                         stat_label          Placebo</span></span>
-<span><span class="co">#&gt; 1       AGE                                AGE   75.2 (SD 8.59)</span></span>
-<span><span class="co">#&gt; 2    WEIGHT                             WEIGHT  62.8 (SD 12.77)</span></span>
-<span><span class="co">#&gt; 3    HEIGHT                             HEIGHT 162.6 (SD 11.52)</span></span>
-<span><span class="co">#&gt; 4       BMI                                BMI   23.6 (SD 3.67)</span></span>
-<span><span class="co">#&gt; 5    AGEGR1                              18-64         14 / 16%</span></span>
-<span><span class="co">#&gt; 6    AGEGR1                                &gt;64         72 / 84%</span></span>
-<span><span class="co">#&gt; 7       SEX                                  F         53 / 62%</span></span>
-<span><span class="co">#&gt; 8       SEX                                  M         33 / 38%</span></span>
-<span><span class="co">#&gt; 9      RACE                              WHITE         78 / 91%</span></span>
-<span><span class="co">#&gt; 10     RACE          BLACK OR AFRICAN AMERICAN           8 / 9%</span></span>
-<span><span class="co">#&gt; 11     RACE                              ASIAN                0</span></span>
-<span><span class="co">#&gt; 12     RACE   AMERICAN INDIAN OR ALASKA NATIVE                0</span></span>
-<span><span class="co">#&gt; 13   ETHNIC                 HISPANIC OR LATINO           3 / 3%</span></span>
-<span><span class="co">#&gt; 14   ETHNIC             NOT HISPANIC OR LATINO         83 / 97%</span></span>
-<span><span class="co">#&gt; 15   ETHNIC                       NOT REPORTED                0</span></span>
-<span><span class="co">#&gt; 16  BMI_CAT                Underweight (&lt;18.5)           3 / 3%</span></span>
-<span><span class="co">#&gt; 17  BMI_CAT                 Normal (18.5-24.9)         57 / 66%</span></span>
-<span><span class="co">#&gt; 18  BMI_CAT               Overweight (25-29.9)         20 / 23%</span></span>
-<span><span class="co">#&gt; 19  BMI_CAT                       Obese (&gt;=30)           6 / 7%</span></span>
-<span><span class="co">#&gt;    Xanomeline High Dose Xanomeline Low Dose            Total</span></span>
-<span><span class="co">#&gt; 1        73.8 (SD 7.94)      76.0 (SD 8.11)   75.1 (SD 8.25)</span></span>
-<span><span class="co">#&gt; 2       69.5 (SD 14.35)     68.0 (SD 14.50)  66.6 (SD 14.13)</span></span>
-<span><span class="co">#&gt; 3      165.9 (SD 10.28)    163.7 (SD 10.30) 163.9 (SD 10.76)</span></span>
-<span><span class="co">#&gt; 4        25.2 (SD 3.97)      25.2 (SD 4.40)   24.7 (SD 4.09)</span></span>
-<span><span class="co">#&gt; 5              11 / 15%              8 / 8%         33 / 13%</span></span>
-<span><span class="co">#&gt; 6              61 / 85%            88 / 92%        221 / 87%</span></span>
-<span><span class="co">#&gt; 7              35 / 49%            55 / 57%        143 / 56%</span></span>
-<span><span class="co">#&gt; 8              37 / 51%            41 / 43%        111 / 44%</span></span>
-<span><span class="co">#&gt; 9              62 / 86%            90 / 94%        230 / 91%</span></span>
-<span><span class="co">#&gt; 10              9 / 12%              6 / 6%          23 / 9%</span></span>
-<span><span class="co">#&gt; 11                    0                   0                0</span></span>
-<span><span class="co">#&gt; 12               1 / 1%                   0           1 / 0%</span></span>
-<span><span class="co">#&gt; 13               3 / 4%              6 / 6%          12 / 5%</span></span>
-<span><span class="co">#&gt; 14             69 / 96%            90 / 94%        242 / 95%</span></span>
-<span><span class="co">#&gt; 15                    0                   0                0</span></span>
-<span><span class="co">#&gt; 16               1 / 1%              4 / 4%           8 / 3%</span></span>
-<span><span class="co">#&gt; 17             39 / 54%            46 / 48%        142 / 56%</span></span>
-<span><span class="co">#&gt; 18             23 / 32%            32 / 34%         75 / 30%</span></span>
-<span><span class="co">#&gt; 19              9 / 12%            13 / 14%         28 / 11%</span></span></code></pre></div>
+<span>  <span class="op">)</span>,</span>
+<span>  label <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>AGE <span class="op">=</span> <span class="st">"Age (years)"</span>, SEX <span class="op">=</span> <span class="st">"Sex, n (%)"</span><span class="op">)</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span>titles <span class="op">=</span> <span class="st">"Demographics with a custom statistic format"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
+<span>    variable               <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span>
+<span>    stat_label             <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span>
+<span>    Placebo                <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    `Xanomeline Low Dose`  <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    `Xanomeline High Dose` <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 100"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    Total                  <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Total"</span>,    align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<div class="cell-output-display">
+<style>
+#tabular-f6256a75c2 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-f6256a75c2 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-f6256a75c2 p { line-height: inherit; }
+#tabular-f6256a75c2 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-f6256a75c2 .tabular-caption { margin: 0; padding: 0; }
+#tabular-f6256a75c2 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-f6256a75c2 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-f6256a75c2 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-f6256a75c2 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-f6256a75c2 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-f6256a75c2 .tabular-table th, #tabular-f6256a75c2 .tabular-table td { padding: .18rem .6rem; }
+#tabular-f6256a75c2 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-f6256a75c2 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-f6256a75c2 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-f6256a75c2 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-f6256a75c2 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-f6256a75c2 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-f6256a75c2 .tabular-table tbody tr td { border-top: none; }
+#tabular-f6256a75c2 .tabular-band { text-align: center; }
+#tabular-f6256a75c2 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-f6256a75c2 .tabular-subgroup-label { font-weight: 600; }
+#tabular-f6256a75c2 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-f6256a75c2 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-f6256a75c2 .text-left { text-align: left; }
+#tabular-f6256a75c2 .text-center { text-align: center; }
+#tabular-f6256a75c2 .text-right { text-align: right; }
+#tabular-f6256a75c2 .tabular-table thead th.text-left { text-align: left; }
+#tabular-f6256a75c2 .tabular-table thead th.text-center { text-align: center; }
+#tabular-f6256a75c2 .tabular-table thead th.text-right { text-align: right; }
+#tabular-f6256a75c2 .valign-top { vertical-align: top; }
+#tabular-f6256a75c2 .valign-middle { vertical-align: middle; }
+#tabular-f6256a75c2 .valign-bottom { vertical-align: bottom; }
+#tabular-f6256a75c2 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-f6256a75c2 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-f6256a75c2 .tabular-page-break-row { display: none; }
+#tabular-f6256a75c2 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-f6256a75c2 .tabular-page-header, #tabular-f6256a75c2 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-f6256a75c2 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-f6256a75c2 .tabular-page-footer { margin-top: 1rem; }
+#tabular-f6256a75c2 .tabular-page-header-left, #tabular-f6256a75c2 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-f6256a75c2 .tabular-page-header-center, #tabular-f6256a75c2 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-f6256a75c2 .tabular-page-header-right, #tabular-f6256a75c2 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-f6256a75c2 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-f6256a75c2 .tabular-table tr { page-break-inside: avoid; } #tabular-f6256a75c2 .tabular-page-header, #tabular-f6256a75c2 .tabular-page-footer { display: none; } #tabular-f6256a75c2 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-f6256a75c2 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-f6256a75c2 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style>
+<div id="tabular-f6256a75c2" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<p class="tabular-title">Demographics with a custom statistic format</p>
+<p class="tabular-pad"> </p>
+</figcaption><div class="tabular-table-wrap">
+
+<table class="table tabular-table caption-top">
+<thead><tr class="header">
+<th data-quarto-table-cell-role="th">Statistic</th>
+<th class="text-center" data-quarto-table-cell-role="th">Placebo</th>
+<th class="text-center" data-quarto-table-cell-role="th">Drug 100</th>
+<th class="text-center" data-quarto-table-cell-role="th">Drug 50</th>
+<th class="text-center" data-quarto-table-cell-role="th">Total</th>
+</tr></thead>
+<tbody>
+<tr class="tabular-group-header odd">
+<td colspan="5"><strong>Age (years)</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">AGE</td>
+<td class="text-right"> 75.2 (SD 8.59) </td>
+<td class="text-right"> 73.8 (SD 7.94) </td>
+<td class="text-right"> 76.0 (SD 8.11) </td>
+<td class="text-right"> 75.1 (SD 8.25) </td>
+</tr>
+<tr class="tabular-blank-row odd">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="5"><strong>WEIGHT</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">WEIGHT</td>
+<td class="text-right"> 62.8 (SD 12.77)</td>
+<td class="text-right"> 69.5 (SD 14.35)</td>
+<td class="text-right"> 68.0 (SD 14.50)</td>
+<td class="text-right"> 66.6 (SD 14.13)</td>
+</tr>
+<tr class="tabular-blank-row even">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="5"><strong>HEIGHT</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">HEIGHT</td>
+<td class="text-right">162.6 (SD 11.52)</td>
+<td class="text-right">165.9 (SD 10.28)</td>
+<td class="text-right">163.7 (SD 10.30)</td>
+<td class="text-right">163.9 (SD 10.76)</td>
+</tr>
+<tr class="tabular-blank-row odd">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="5"><strong>BMI</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">BMI</td>
+<td class="text-right"> 23.6 (SD 3.67) </td>
+<td class="text-right"> 25.2 (SD 3.97) </td>
+<td class="text-right"> 25.2 (SD 4.40) </td>
+<td class="text-right"> 24.7 (SD 4.09) </td>
+</tr>
+<tr class="tabular-blank-row even">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="5"><strong>AGEGR1</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">  18-64</td>
+<td class="text-right"> 14 / 16%       </td>
+<td class="text-right"> 11 / 15%       </td>
+<td class="text-right">  8 /  8%       </td>
+<td class="text-right"> 33 / 13%       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">  &gt;64</td>
+<td class="text-right"> 72 / 84%       </td>
+<td class="text-right"> 61 / 85%       </td>
+<td class="text-right"> 88 / 92%       </td>
+<td class="text-right">221 / 87%       </td>
+</tr>
+<tr class="tabular-blank-row even">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="5"><strong>Sex, n (%)</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">  F</td>
+<td class="text-right"> 53 / 62%       </td>
+<td class="text-right"> 35 / 49%       </td>
+<td class="text-right"> 55 / 57%       </td>
+<td class="text-right">143 / 56%       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">  M</td>
+<td class="text-right"> 33 / 38%       </td>
+<td class="text-right"> 37 / 51%       </td>
+<td class="text-right"> 41 / 43%       </td>
+<td class="text-right">111 / 44%       </td>
+</tr>
+<tr class="tabular-blank-row even">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="5"><strong>RACE</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">  WHITE</td>
+<td class="text-right"> 78 / 91%       </td>
+<td class="text-right"> 62 / 86%       </td>
+<td class="text-right"> 90 / 94%       </td>
+<td class="text-right">230 / 91%       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">  BLACK OR AFRICAN AMERICAN</td>
+<td class="text-right">  8 /  9%       </td>
+<td class="text-right">  9 / 12%       </td>
+<td class="text-right">  6 /  6%       </td>
+<td class="text-right"> 23 /  9%       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">  ASIAN</td>
+<td class="text-right">  0             </td>
+<td class="text-right">  0             </td>
+<td class="text-right">  0             </td>
+<td class="text-right">  0             </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">  AMERICAN INDIAN OR ALASKA NATIVE</td>
+<td class="text-right">  0             </td>
+<td class="text-right">  1 /  1%       </td>
+<td class="text-right">  0             </td>
+<td class="text-right">  1 /  0%       </td>
+</tr>
+<tr class="tabular-blank-row even">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="5"><strong>ETHNIC</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">  HISPANIC OR LATINO</td>
+<td class="text-right">  3 /  3%       </td>
+<td class="text-right">  3 /  4%       </td>
+<td class="text-right">  6 /  6%       </td>
+<td class="text-right"> 12 /  5%       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">  NOT HISPANIC OR LATINO</td>
+<td class="text-right"> 83 / 97%       </td>
+<td class="text-right"> 69 / 96%       </td>
+<td class="text-right"> 90 / 94%       </td>
+<td class="text-right">242 / 95%       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">  NOT REPORTED</td>
+<td class="text-right">  0             </td>
+<td class="text-right">  0             </td>
+<td class="text-right">  0             </td>
+<td class="text-right">  0             </td>
+</tr>
+<tr class="tabular-blank-row odd">
+<td colspan="5"> </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="5"><strong>BMI_CAT</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">  Underweight (&lt;18.5)</td>
+<td class="text-right">  3 /  3%       </td>
+<td class="text-right">  1 /  1%       </td>
+<td class="text-right">  4 /  4%       </td>
+<td class="text-right">  8 /  3%       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">  Normal (18.5-24.9)</td>
+<td class="text-right"> 57 / 66%       </td>
+<td class="text-right"> 39 / 54%       </td>
+<td class="text-right"> 46 / 48%       </td>
+<td class="text-right">142 / 56%       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">  Overweight (25-29.9)</td>
+<td class="text-right"> 20 / 23%       </td>
+<td class="text-right"> 23 / 32%       </td>
+<td class="text-right"> 32 / 34%       </td>
+<td class="text-right"> 75 / 30%       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529">  Obese (&gt;=30)</td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529">  6 /  7%       </td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529">  9 / 12%       </td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 13 / 14%       </td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 28 / 11%       </td>
+</tr>
+</tbody>
+</table>
 </div>
-<p>The <code>column</code> argument selects which ARD grouping variable becomes the columns (handy when an ARD carries more than one grouping dimension), and <code>label</code> renames the <code>variable</code> values for display.</p>
-<div>
-<blockquote>
-<p><strong>Hierarchical ARDs</strong></p>
-<p><code>saf_aesocpt_card</code> is a <em>hierarchical</em> AE ARD (system organ class within preferred term). The same <code><a href="../reference/pivot_across.html">pivot_across()</a></code> entry point handles it; the resulting wide frame then renders with the indent-and-group recipe from the <a href="clinical-cookbook.html">Clinical cookbook</a>.</p>
-</blockquote>
+</figure></div>
+</div>
+</div>
+<p><code>decimals</code> and <code>fmt</code> give finer control over rounding when a template alone is not enough; <code>column</code> selects which grouping variable becomes the columns when an ARD carries more than one.</p>
+</section><section class="level2"><h2 id="a-hierarchical-ae-ard">5. A hierarchical AE ARD<a class="anchor" aria-label="anchor" href="#a-hierarchical-ae-ard"></a>
+</h2>
+<p><code>saf_aesocpt_card</code> is a <em>hierarchical</em> AE ARD – preferred terms nested inside system organ classes. <code><a href="../reference/pivot_across.html">pivot_across()</a></code> flattens it into a wide frame carrying <code>soc</code>, a combined <code>label</code>, and a <code>row_type</code> (<code>overall</code> / <code>soc</code> / <code>pt</code>):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ae</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span><span class="va">saf_aesocpt_card</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">ae</span>, <span class="fl">4</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                                      soc                                  label</span></span>
+<span><span class="co">#&gt; 1           ..ard_hierarchical_overall..           ..ard_hierarchical_overall..</span></span>
+<span><span class="co">#&gt; 2 SKIN AND SUBCUTANEOUS TISSUE DISORDERS SKIN AND SUBCUTANEOUS TISSUE DISORDERS</span></span>
+<span><span class="co">#&gt; 3 SKIN AND SUBCUTANEOUS TISSUE DISORDERS                               PRURITUS</span></span>
+<span><span class="co">#&gt; 4 SKIN AND SUBCUTANEOUS TISSUE DISORDERS                               ERYTHEMA</span></span>
+<span><span class="co">#&gt;   row_type  Placebo Xanomeline High Dose Xanomeline Low Dose</span></span>
+<span><span class="co">#&gt; 1  overall 52 (60%)             66 (92%)            81 (84%)</span></span>
+<span><span class="co">#&gt; 2      soc 19 (22%)             35 (49%)            36 (38%)</span></span>
+<span><span class="co">#&gt; 3       pt   8 (9%)             25 (35%)            21 (22%)</span></span>
+<span><span class="co">#&gt; 4       pt   8 (9%)             14 (19%)            14 (15%)</span></span></code></pre></div>
+</div>
+<p>Two small touches turn that into a submission-shaped table. The pivot does not ship an indent key, so derive one from <code>row_type</code>; and the all-subjects row arrives with an internal placeholder label, so give it a real one:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ae</span><span class="op">$</span><span class="va">indent_level</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">ae</span><span class="op">$</span><span class="va">row_type</span> <span class="op">==</span> <span class="st">"pt"</span>, <span class="fl">1L</span>, <span class="fl">0L</span><span class="op">)</span></span>
+<span><span class="va">ae</span><span class="op">$</span><span class="va">label</span><span class="op">[</span><span class="va">ae</span><span class="op">$</span><span class="va">row_type</span> <span class="op">==</span> <span class="st">"overall"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"Total subjects with an event"</span></span></code></pre></div>
+</div>
+<p>Now it renders with the same indent-and-bold recipe as the <a href="clinical-cookbook.html">Clinical cookbook</a>: the <code>soc</code> / <code>row_type</code> columns ride along hidden, the single <code>label</code> column indents preferred terms beneath their SOC via <code>indent_by</code>, and a <code><a href="../reference/style.html">style()</a></code> layer bolds the overall and SOC summary rows:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span></span>
+<span>  <span class="va">ae</span>,</span>
+<span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Table 14.3.1"</span>,</span>
+<span>    <span class="st">"Adverse Events by System Organ Class and Preferred Term"</span>,</span>
+<span>    <span class="st">"Safety Population"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  footnotes <span class="op">=</span> <span class="st">"Built from a hierarchical cards ARD via pivot_across()."</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
+<span>    soc                    <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>    row_type               <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>    indent_level           <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>    label                  <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"System Organ Class / Preferred Term"</span>,</span>
+<span>                                      indent_by <span class="op">=</span> <span class="st">"indent_level"</span><span class="op">)</span>,</span>
+<span>    Placebo                <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    `Xanomeline Low Dose`  <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    `Xanomeline High Dose` <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 100"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/style.html">style</a></span><span class="op">(</span>bold <span class="op">=</span> <span class="cn">TRUE</span>, .at <span class="op">=</span> <span class="fu"><a href="../reference/cells.html">cells_body</a></span><span class="op">(</span>where <span class="op">=</span> <span class="va">row_type</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"overall"</span>, <span class="st">"soc"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="cell-output-display">
+<style>
+#tabular-32ca522486 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-32ca522486 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-32ca522486 p { line-height: inherit; }
+#tabular-32ca522486 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-32ca522486 .tabular-caption { margin: 0; padding: 0; }
+#tabular-32ca522486 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-32ca522486 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-32ca522486 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-32ca522486 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-32ca522486 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-32ca522486 .tabular-table th, #tabular-32ca522486 .tabular-table td { padding: .18rem .6rem; }
+#tabular-32ca522486 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-32ca522486 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-32ca522486 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-32ca522486 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-32ca522486 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-32ca522486 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-32ca522486 .tabular-table tbody tr td { border-top: none; }
+#tabular-32ca522486 .tabular-band { text-align: center; }
+#tabular-32ca522486 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-32ca522486 .tabular-subgroup-label { font-weight: 600; }
+#tabular-32ca522486 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-32ca522486 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-32ca522486 .text-left { text-align: left; }
+#tabular-32ca522486 .text-center { text-align: center; }
+#tabular-32ca522486 .text-right { text-align: right; }
+#tabular-32ca522486 .tabular-table thead th.text-left { text-align: left; }
+#tabular-32ca522486 .tabular-table thead th.text-center { text-align: center; }
+#tabular-32ca522486 .tabular-table thead th.text-right { text-align: right; }
+#tabular-32ca522486 .valign-top { vertical-align: top; }
+#tabular-32ca522486 .valign-middle { vertical-align: middle; }
+#tabular-32ca522486 .valign-bottom { vertical-align: bottom; }
+#tabular-32ca522486 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-32ca522486 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-32ca522486 .tabular-page-break-row { display: none; }
+#tabular-32ca522486 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-32ca522486 .tabular-page-header, #tabular-32ca522486 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-32ca522486 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-32ca522486 .tabular-page-footer { margin-top: 1rem; }
+#tabular-32ca522486 .tabular-page-header-left, #tabular-32ca522486 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-32ca522486 .tabular-page-header-center, #tabular-32ca522486 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-32ca522486 .tabular-page-header-right, #tabular-32ca522486 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-32ca522486 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-32ca522486 .tabular-table tr { page-break-inside: avoid; } #tabular-32ca522486 .tabular-page-header, #tabular-32ca522486 .tabular-page-footer { display: none; } #tabular-32ca522486 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-32ca522486 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-32ca522486 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style>
+<div id="tabular-32ca522486" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<p class="tabular-title">Table 14.3.1</p>
+<p class="tabular-title">Adverse Events by System Organ Class and Preferred Term</p>
+<p class="tabular-title">Safety Population</p>
+<p class="tabular-pad"> </p>
+</figcaption><div class="tabular-table-wrap">
+
+<table class="table tabular-table caption-top">
+<thead><tr class="header">
+<th data-quarto-table-cell-role="th">System Organ Class / Preferred Term</th>
+<th class="text-center" data-quarto-table-cell-role="th">Placebo</th>
+<th class="text-center" data-quarto-table-cell-role="th">Drug 100</th>
+<th class="text-center" data-quarto-table-cell-role="th">Drug 50</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td style="font-weight: bold">Total subjects with an event</td>
+<td class="text-right" style="font-weight: bold">52 (60%)</td>
+<td class="text-right" style="font-weight: bold">66 (92%)</td>
+<td class="text-right" style="font-weight: bold">81 (84%)</td>
+</tr>
+<tr class="even">
+<td style="font-weight: bold">SKIN AND SUBCUTANEOUS TISSUE DISORDERS</td>
+<td class="text-right" style="font-weight: bold">19 (22%)</td>
+<td class="text-right" style="font-weight: bold">35 (49%)</td>
+<td class="text-right" style="font-weight: bold">36 (38%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">PRURITUS</td>
+<td class="text-right"> 8 ( 9%)</td>
+<td class="text-right">25 (35%)</td>
+<td class="text-right">21 (22%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">ERYTHEMA</td>
+<td class="text-right"> 8 ( 9%)</td>
+<td class="text-right">14 (19%)</td>
+<td class="text-right">14 (15%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">RASH</td>
+<td class="text-right"> 5 ( 6%)</td>
+<td class="text-right"> 8 (11%)</td>
+<td class="text-right">13 (14%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">HYPERHIDROSIS</td>
+<td class="text-right"> 2 ( 2%)</td>
+<td class="text-right"> 8 (11%)</td>
+<td class="text-right"> 4 ( 4%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">SKIN IRRITATION</td>
+<td class="text-right"> 3 ( 3%)</td>
+<td class="text-right"> 5 ( 7%)</td>
+<td class="text-right"> 6 ( 6%)</td>
+</tr>
+<tr class="even">
+<td style="font-weight: bold">GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS</td>
+<td class="text-right" style="font-weight: bold">15 (17%)</td>
+<td class="text-right" style="font-weight: bold">30 (42%)</td>
+<td class="text-right" style="font-weight: bold">36 (38%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">APPLICATION SITE PRURITUS</td>
+<td class="text-right"> 6 ( 7%)</td>
+<td class="text-right">21 (29%)</td>
+<td class="text-right">23 (24%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">APPLICATION SITE ERYTHEMA</td>
+<td class="text-right"> 3 ( 3%)</td>
+<td class="text-right">14 (19%)</td>
+<td class="text-right">13 (14%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">APPLICATION SITE DERMATITIS</td>
+<td class="text-right"> 5 ( 6%)</td>
+<td class="text-right"> 7 (10%)</td>
+<td class="text-right"> 9 ( 9%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">APPLICATION SITE IRRITATION</td>
+<td class="text-right"> 3 ( 3%)</td>
+<td class="text-right"> 9 (12%)</td>
+<td class="text-right"> 9 ( 9%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">APPLICATION SITE VESICLES</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 5 ( 7%)</td>
+<td class="text-right"> 5 ( 5%)</td>
+</tr>
+<tr class="even">
+<td style="font-weight: bold">GASTROINTESTINAL DISORDERS</td>
+<td class="text-right" style="font-weight: bold">13 (15%)</td>
+<td class="text-right" style="font-weight: bold">17 (24%)</td>
+<td class="text-right" style="font-weight: bold">12 (12%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">DIARRHOEA</td>
+<td class="text-right"> 9 (10%)</td>
+<td class="text-right"> 3 ( 4%)</td>
+<td class="text-right"> 5 ( 5%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">VOMITING</td>
+<td class="text-right"> 3 ( 3%)</td>
+<td class="text-right"> 6 ( 8%)</td>
+<td class="text-right"> 4 ( 4%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">NAUSEA</td>
+<td class="text-right"> 3 ( 3%)</td>
+<td class="text-right"> 6 ( 8%)</td>
+<td class="text-right"> 3 ( 3%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">ABDOMINAL PAIN</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 3 ( 3%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">SALIVARY HYPERSECRETION</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 4 ( 6%)</td>
+<td class="text-right"> 0      </td>
+</tr>
+<tr class="even">
+<td style="font-weight: bold">NERVOUS SYSTEM DISORDERS</td>
+<td class="text-right" style="font-weight: bold"> 6 ( 7%)</td>
+<td class="text-right" style="font-weight: bold">17 (24%)</td>
+<td class="text-right" style="font-weight: bold">18 (19%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">DIZZINESS</td>
+<td class="text-right"> 2 ( 2%)</td>
+<td class="text-right">10 (14%)</td>
+<td class="text-right"> 9 ( 9%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">HEADACHE</td>
+<td class="text-right"> 3 ( 3%)</td>
+<td class="text-right"> 5 ( 7%)</td>
+<td class="text-right"> 3 ( 3%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">SYNCOPE</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 2 ( 3%)</td>
+<td class="text-right"> 5 ( 5%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">SOMNOLENCE</td>
+<td class="text-right"> 2 ( 2%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 3 ( 3%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">TRANSIENT ISCHAEMIC ATTACK</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 2 ( 2%)</td>
+</tr>
+<tr class="even">
+<td style="font-weight: bold">CARDIAC DISORDERS</td>
+<td class="text-right" style="font-weight: bold"> 7 ( 8%)</td>
+<td class="text-right" style="font-weight: bold">14 (19%)</td>
+<td class="text-right" style="font-weight: bold">12 (12%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">SINUS BRADYCARDIA</td>
+<td class="text-right"> 2 ( 2%)</td>
+<td class="text-right"> 8 (11%)</td>
+<td class="text-right"> 7 ( 7%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">MYOCARDIAL INFARCTION</td>
+<td class="text-right"> 4 ( 5%)</td>
+<td class="text-right"> 4 ( 6%)</td>
+<td class="text-right"> 2 ( 2%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">ATRIAL FIBRILLATION</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 2 ( 3%)</td>
+<td class="text-right"> 2 ( 2%)</td>
+</tr>
+<tr class="tabular-page-break-row even" aria-hidden="true">
+<td colspan="4"></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">SUPRAVENTRICULAR EXTRASYSTOLES</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">VENTRICULAR EXTRASYSTOLES</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 2 ( 2%)</td>
+</tr>
+<tr class="odd">
+<td style="font-weight: bold">INFECTIONS AND INFESTATIONS</td>
+<td class="text-right" style="font-weight: bold">12 (14%)</td>
+<td class="text-right" style="font-weight: bold">11 (15%)</td>
+<td class="text-right" style="font-weight: bold"> 6 ( 6%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">NASOPHARYNGITIS</td>
+<td class="text-right"> 2 ( 2%)</td>
+<td class="text-right"> 6 ( 8%)</td>
+<td class="text-right"> 4 ( 4%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">UPPER RESPIRATORY TRACT INFECTION</td>
+<td class="text-right"> 6 ( 7%)</td>
+<td class="text-right"> 3 ( 4%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">INFLUENZA</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">URINARY TRACT INFECTION</td>
+<td class="text-right"> 2 ( 2%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 0      </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">CYSTITIS</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 0      </td>
+</tr>
+<tr class="odd">
+<td style="font-weight: bold">RESPIRATORY, THORACIC AND MEDIASTINAL DISORDERS</td>
+<td class="text-right" style="font-weight: bold"> 5 ( 6%)</td>
+<td class="text-right" style="font-weight: bold"> 9 (12%)</td>
+<td class="text-right" style="font-weight: bold"> 8 ( 8%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">COUGH</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 5 ( 7%)</td>
+<td class="text-right"> 5 ( 5%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">NASAL CONGESTION</td>
+<td class="text-right"> 3 ( 3%)</td>
+<td class="text-right"> 3 ( 4%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">DYSPNOEA</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">EPISTAXIS</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 2 ( 3%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">PHARYNGOLARYNGEAL PAIN</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="odd">
+<td style="font-weight: bold">PSYCHIATRIC DISORDERS</td>
+<td class="text-right" style="font-weight: bold"> 7 ( 8%)</td>
+<td class="text-right" style="font-weight: bold"> 3 ( 4%)</td>
+<td class="text-right" style="font-weight: bold"> 9 ( 9%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">CONFUSIONAL STATE</td>
+<td class="text-right"> 2 ( 2%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 3 ( 3%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">AGITATION</td>
+<td class="text-right"> 2 ( 2%)</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 3 ( 3%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">INSOMNIA</td>
+<td class="text-right"> 2 ( 2%)</td>
+<td class="text-right"> 2 ( 3%)</td>
+<td class="text-right"> 0      </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">ANXIETY</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 3 ( 3%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">DELUSION</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 0      </td>
+</tr>
+<tr class="odd">
+<td style="font-weight: bold">MUSCULOSKELETAL AND CONNECTIVE TISSUE DISORDERS</td>
+<td class="text-right" style="font-weight: bold"> 3 ( 3%)</td>
+<td class="text-right" style="font-weight: bold"> 5 ( 7%)</td>
+<td class="text-right" style="font-weight: bold"> 6 ( 6%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">BACK PAIN</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 3 ( 4%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">ARTHRALGIA</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 2 ( 2%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">SHOULDER PAIN</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 2 ( 2%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">MUSCLE SPASMS</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">ARTHRITIS</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 0      </td>
+</tr>
+<tr class="odd">
+<td style="font-weight: bold">INVESTIGATIONS</td>
+<td class="text-right" style="font-weight: bold"> 5 ( 6%)</td>
+<td class="text-right" style="font-weight: bold"> 3 ( 4%)</td>
+<td class="text-right" style="font-weight: bold"> 4 ( 4%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">ELECTROCARDIOGRAM ST SEGMENT DEPRESSION</td>
+<td class="text-right"> 4 ( 5%)</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">ELECTROCARDIOGRAM T WAVE INVERSION</td>
+<td class="text-right"> 2 ( 2%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="tabular-page-break-row even" aria-hidden="true">
+<td colspan="4"></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">BLOOD GLUCOSE INCREASED</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">ELECTROCARDIOGRAM T WAVE AMPLITUDE DECREASED</td>
+<td class="text-right"> 1 ( 1%)</td>
+<td class="text-right"> 0      </td>
+<td class="text-right"> 1 ( 1%)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529">BIOPSY</td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 0      </td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 1 ( 1%)</td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 0      </td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="tabular-footnote">Built from a hierarchical cards ARD via pivot_across().</p>
+</figure></div>
+</div>
 </div>
 </section><section class="level2"><h2 id="where-this-fits">Where this fits<a class="anchor" aria-label="anchor" href="#where-this-fits"></a>
 </h2>
-<p><code><a href="../reference/pivot_across.html">pivot_across()</a></code> keeps the division of labour clean: <code>cards</code> (or <code>gtsummary</code>, <code>dplyr</code>, SAS) <em>computes</em> the summary; <code><a href="../reference/pivot_across.html">pivot_across()</a></code> reshapes it; <code><a href="../reference/tabular.html">tabular()</a></code> <em>renders</em> it to submission-grade output.</p>
-</section><script id="quarto-html-after-body" type="application/javascript">
+<p><code><a href="../reference/pivot_across.html">pivot_across()</a></code> keeps the division of labour clean: an upstream tool <em>computes</em> the summary as an ARD, <code><a href="../reference/pivot_across.html">pivot_across()</a></code> <em>reshapes</em> it to the wide frame, and <code><a href="../reference/tabular.html">tabular()</a></code> <em>renders</em> it to submission-grade RTF / PDF / DOCX / HTML. Nothing in the rendering stack needs to know how the numbers were produced – only their shape.</p>
+</section><section class="level2"><h2 id="where-to-next">Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
+</h2>
+<ul>
+<li>
+<strong><a href="clinical-cookbook.html">Clinical cookbook</a></strong> – six complete production tables, including the AE and demographics recipes this article feeds.</li>
+<li>
+<strong><a href="columns-and-headers.html">Columns &amp; headers</a></strong> – every <code><a href="../reference/col_spec.html">col_spec()</a></code> option used above, in depth.</li>
+</ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);

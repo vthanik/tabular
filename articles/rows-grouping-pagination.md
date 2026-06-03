@@ -42,22 +42,22 @@ tabular(
   sort_rows(by = "total_n", descending = TRUE)
 ```
 
- 
-
-Adverse-event categories, ordered by total frequency
-
- 
-
 | Category                     | Total      | Placebo   | Drug 100  | Drug 50   |
 |------------------------------|------------|-----------|-----------|-----------|
 | Any TEAE                     | 217 (85.4) | 65 (75.6) | 68 (94.4) | 84 (87.5) |
 | Any AE Related to Study Drug | 184 (72.4) | 43 (50.0) | 64 (88.9) | 77 (80.2) |
 | Any AE Recovered / Resolved  | 157 (61.8) | 47 (54.7) | 49 (68.1) | 61 (63.5) |
-| Maximum severity: Moderate   | 111 (43.7) | 24 (27.9) | 40 (55.6) | 47 (49.0) |
-| Maximum severity: Mild       |  77 (30.3) | 36 (41.9) | 20 (27.8) | 21 (21.9) |
-| Maximum severity: Severe     |  29 (11.4) |  5 ( 5.8) |  8 (11.1) | 16 (16.7) |
+|   Maximum severity: Moderate | 111 (43.7) | 24 (27.9) | 40 (55.6) | 47 (49.0) |
+|   Maximum severity: Mild     |  77 (30.3) | 36 (41.9) | 20 (27.8) | 21 (21.9) |
+|   Maximum severity: Severe   |  29 (11.4) |  5 ( 5.8) |  8 (11.1) | 16 (16.7) |
 | Any Serious AE (SAE)         |   3 ( 1.2) |  0        |  1 ( 1.4) |  2 ( 2.1) |
 | Any AE Leading to Death      |   3 ( 1.2) |  2 ( 2.3) |  0        |  1 ( 1.0) |
+
+ 
+
+Adverse-event categories, ordered by total frequency
+
+ 
 
 > **Per-key direction and hidden sort keys**
 >
@@ -169,7 +169,8 @@ tabular(
     sex_n      = col_spec(visible = FALSE),
     agegr_n    = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group"),
+    param      = col_spec(usage = "group", group_display = "column",
+                          label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
@@ -179,57 +180,53 @@ tabular(
   subgroup(by = c("sex", "agegr"), label = "{sex}, {agegr}")
 ```
 
+| Parameter | Statistic | Placebo | Drug 50 | Drug 100 | Total |
+|----|----|----|----|----|----|
+| **F, \<65** |  |  |  |  |  |
+| Diastolic BP (mmHg) | n |  24          |   9         |   9          |  42          |
+|  | Mean (SD) |  73.9 (10.5) |  79.9 (8.3) |  81.6 ( 8.5) |  76.8 (10.0) |
+|  | Median |  78.0        |  80.0       |  84.0        |  79.5        |
+|  | Min, Max |  49  , 88    |  68  , 90   |  68  , 90    |  49  , 90    |
+| Systolic BP (mmHg) | n |  24          |   9         |   9          |  42          |
+|  | Mean (SD) | 129.9 (11.2) | 132.1 (4.3) | 121.8 (13.6) | 128.6 (11.1) |
+|  | Median | 130.0        | 130.0       | 128.0        | 130.0        |
+|  | Min, Max | 113  , 156   | 128  , 140  | 100  , 140   | 100  , 156   |
+|  |  |  |  |  |  |
+| **F, \>=65** |  |  |  |  |  |
+| Diastolic BP (mmHg) | n | 105          |  99          |  72          | 276          |
+|  | Mean (SD) |  74.0 (10.8) |  76.9 (12.2) |  75.9 (11.9) |  75.5 (11.7) |
+|  | Median |  72.0        |  79.0        |  80.0        |  76.0        |
+|  | Min, Max |  50  , 100   |  50  , 100   |  56  , 98    |  50  , 100   |
+| Systolic BP (mmHg) | n | 105          |  99          |  72          | 276          |
+|  | Mean (SD) | 137.1 (15.8) | 137.5 (16.7) | 140.1 (16.8) | 138.0 (16.4) |
+|  | Median | 134.0        | 134.0        | 142.0        | 138.0        |
+|  | Min, Max |  95  , 172   |  98  , 178   | 100  , 177   |  95  , 178   |
+|  |  |  |  |  |  |
+| **M, \<65** |  |  |  |  |  |
+| Diastolic BP (mmHg) | n |  12          |   3         |  12          |  27          |
+|  | Mean (SD) |  83.0 (13.3) |  80.7 (3.1) |  77.1 ( 7.0) |  80.1 (10.2) |
+|  | Median |  80.0        |  80.0       |  79.0        |  80.0        |
+|  | Min, Max |  68  , 104   |  78  , 84   |  68  , 87    |  68  , 104   |
+| Systolic BP (mmHg) | n |  12          |   3         |  12          |  27          |
+|  | Mean (SD) | 134.4 ( 8.3) | 122.7 (4.6) | 124.8 (12.0) | 128.9 (10.9) |
+|  | Median | 131.0        | 120.0       | 127.0        | 130.0        |
+|  | Min, Max | 123  , 150   | 120  , 128  | 107  , 146   | 107  , 150   |
+|  |  |  |  |  |  |
+| **M, \>=65** |  |  |  |  |  |
+| Diastolic BP (mmHg) | n |  81          |  66          |  75          | 222          |
+|  | Mean (SD) |  73.9 ( 9.7) |  73.7 ( 9.7) |  75.3 ( 7.9) |  74.4 ( 9.2) |
+|  | Median |  73.0        |  74.0        |  76.0        |  74.0        |
+|  | Min, Max |  58  , 100   |  52  , 94    |  57  , 90    |  52  , 100   |
+| Systolic BP (mmHg) | n |  81          |  66          |  75          | 222          |
+|  | Mean (SD) | 127.6 (15.3) | 127.0 (17.1) | 127.4 (11.5) | 127.3 (14.7) |
+|  | Median | 130.0        | 124.0        | 130.0        | 130.0        |
+|  | Min, Max |  78  , 164   |  92  , 162   | 100  , 156   |  78  , 164   |
+
  
 
-Table 14.2.3 Vital Signs by Sex and Age Group
+Table 14.2.3  Vital Signs by Sex and Age Group
 
  
-
-| Statistic    | Placebo      | Drug 50      | Drug 100     | Total        |
-|--------------|--------------|--------------|--------------|--------------|
-| **F, \<65**  |              |              |              |              |
-| n            |  24          |   9          |   9          |  42          |
-| Mean (SD)    |  73.9 (10.5) |  79.9 (8.3)  |  81.6 (8.5)  |  76.8 (10.0) |
-| Median       |  78.0        |  80.0        |  84.0        |  79.5        |
-| Min, Max     |  49  , 88    |  68  , 90    |  68  , 90    |  49  , 90    |
-|              |              |              |              |              |
-| n            |  24          |   9          |   9          |  42          |
-| Mean (SD)    | 129.9 (11.2) | 132.1 (4.3)  | 121.8 (13.6) | 128.6 (11.1) |
-| Median       | 130.0        | 130.0        | 128.0        | 130.0        |
-| Min, Max     | 113  , 156   | 128  , 140   | 100  , 140   | 100  , 156   |
-|              |              |              |              |              |
-| **F, \>=65** |              |              |              |              |
-| n            | 105          |  99          |  72          | 276          |
-| Mean (SD)    |  74.0 (10.8) |  76.9 (12.2) |  75.9 (11.9) |  75.5 (11.7) |
-| Median       |  72.0        |  79.0        |  80.0        |  76.0        |
-| Min, Max     |  50  , 100   |  50  , 100   |  56  , 98    |  50  , 100   |
-|              |              |              |              |              |
-| n            | 105          |  99          |  72          | 276          |
-| Mean (SD)    | 137.1 (15.8) | 137.5 (16.7) | 140.1 (16.8) | 138.0 (16.4) |
-| Median       | 134.0        | 134.0        | 142.0        | 138.0        |
-| Min, Max     |  95  , 172   |  98  , 178   | 100  , 177   |  95  , 178   |
-|              |              |              |              |              |
-| **M, \<65**  |              |              |              |              |
-| n            |  12          |   3          |  12          |  27          |
-| Mean (SD)    |  83.0 (13.3) |  80.7 (3.1)  |  77.1 (7.0)  |  80.1 (10.2) |
-| Median       |  80.0        |  80.0        |  79.0        |  80.0        |
-| Min, Max     |  68  , 104   |  78  , 84    |  68  , 87    |  68  , 104   |
-|              |              |              |              |              |
-| n            |  12          |   3          |  12          |  27          |
-| Mean (SD)    | 134.4 (8.3)  | 122.7 (4.6)  | 124.8 (12.0) | 128.9 (10.9) |
-| Median       | 131.0        | 120.0        | 127.0        | 130.0        |
-| Min, Max     | 123  , 150   | 120  , 128   | 107  , 146   | 107  , 150   |
-|              |              |              |              |              |
-| **M, \>=65** |              |              |              |              |
-| n            |  81          |  66          |  75          | 222          |
-| Mean (SD)    |  73.9 (9.7)  |  73.7 (9.7)  |  75.3 (7.9)  |  74.4 (9.2)  |
-| Median       |  73.0        |  74.0        |  76.0        |  74.0        |
-| Min, Max     |  58  , 100   |  52  , 94    |  57  , 90    |  52  , 100   |
-|              |              |              |              |              |
-| n            |  81          |  66          |  75          | 222          |
-| Mean (SD)    | 127.6 (15.3) | 127.0 (17.1) | 127.4 (11.5) | 127.3 (14.7) |
-| Median       | 130.0        | 124.0        | 130.0        | 130.0        |
-| Min, Max     |  78  , 164   |  92  , 162   | 100  , 156   |  78  , 164   |
 
 Each `sex × agegr` combination becomes its own partition with a centred
 banner like *F, \<65*. The columns named in `by` and in the `label`
@@ -356,4 +353,4 @@ What the arguments do:
 - **[Clinical
   cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.md)**
   — full AE-by-SOC/PT and subgrouped vitals tables, sorted and paginated
-  end to end. \`\`\`
+  end to end.

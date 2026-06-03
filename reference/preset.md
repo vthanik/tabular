@@ -24,7 +24,7 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
 
 - ...:
 
-  *Named preset knobs.* Any subset of the 13 knobs the `preset_spec`
+  *Named preset knobs.* Any subset of the preset knobs the `preset_spec`
   class carries. Knob values are validated against the class's enum /
   length / type rules; bad values raise `tabular_error_input`. Unknown
   knob names raise `tabular_error_input` with the recognised set listed.
@@ -255,6 +255,47 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
     regardless of `width_mode`. Per-column widths (`col_spec(width)`)
     emit verbatim into the HTML colgroup per the gt convention.
 
+  - **`whitespace`** — how significant ASCII spaces in labels and cells
+    render. `<character(1)>`. One of:
+
+    - **`"preserve"`** *(default)* — leading, trailing, and interior
+      runs of 2+ spaces become the backend non-breaking token (`&nbsp;`
+      / `~` / `\~`; DOCX preserves via `xml:space`), so a hand-built
+      indent like `col_spec(label = " Placebo")` renders verbatim across
+      every backend. A single interior space stays breakable, so cells
+      still wrap.
+
+    - **`"collapse"`** — leave the backend's native run-folding in place
+      (HTML / md / LaTeX collapse runs to one space).
+
+    **Note:** never affects `col_spec(align = "decimal")` padding, which
+    uses U+00A0 and is preserved unconditionally.
+
+  - **`footnote_markers`** — the glyph scheme for
+    [`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)
+    markers, which the engine allocates once in reading order.
+    `<character(1)>`. One of:
+
+    - **`"letters"`** *(default)* — `a`, `b`, …, `z`, `aa`, `ab`, …
+      (bijective base-26).
+
+    - **`"numbers"`** — `1`, `2`, `3`, …
+
+    - **`"symbols"`** — Lamport's sequence `*`, `†`, `‡`, `§`, `¶`, `‖`,
+      then doubled (`**`, `††`, …) once it spills past the sixth.
+
+    **Interaction:** a note's *anchor* is fixed by
+    [`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md);
+    its *scheme* (this knob) and *label* (`footnote_label`) are resolved
+    from the active preset at render, so flipping either re-letters
+    every marker at once.
+
+  - **`footnote_label`** — block-line template for a
+    [`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)
+    marker. `<character(1)>`. Default `"{m}"`; the `{m}` token is
+    replaced by the allocated marker, so `"[{m}]"` prints `[a]` ahead of
+    the note text on the footnote line.
+
   - **`cell_padding`** — cell padding in points, CSS shorthand of length
     1 / 2 / 4 (`all` \| `vertical horizontal` \|
     `top right bottom left`), parsed by the same length rule as
@@ -407,8 +448,8 @@ orientation, margins, and font size.
 # `paginate()` reads it later to size the per-page row budget.
 bor_levels <- c(
   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
-  "Objective Response Rate (CR + PR)",
-  "Disease Control Rate (CR + PR + SD)"
+  "ORR (CR + PR)", "CBR (CR + PR + SD)",
+  "DCR (CR + PR + SD + NON-CR/NON-PD)", "95% CI (Clopper-Pearson)"
 )
 eff <- eff_resp
 eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
@@ -419,18 +460,20 @@ tabular(
   titles = c(
     "Table 14.2.1",
     "Best Overall Response and Response Rates",
-    sprintf("Efficacy Evaluable Population (N=%d)", ne["Total"])
+    "Efficacy Evaluable Population"
   ),
   footnotes = "Response per RECIST 1.1, investigator assessment."
 ) |>
   cols(
-    stat_label = col_spec(usage = "group", label = "Response"),
-    row_type   = col_spec(visible = FALSE),
+    stat_label  = col_spec(label = "Response"),
+    row_type    = col_spec(visible = FALSE),
+    groupid     = col_spec(visible = FALSE),
+    group_label = col_spec(visible = FALSE),
     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  ne["placebo"])),
     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  ne["drug_50"])),
     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", ne["drug_100"]))
   ) |>
-  sort_rows(by = "stat_label") |>
+  sort_rows(by = c("groupid", "stat_label")) |>
   preset(
     orientation = "landscape",
     paper_size  = "a4",
@@ -438,57 +481,57 @@ tabular(
   ) |>
   paginate()
 
-#tabular-bae26871c7 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
-#tabular-bae26871c7 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-bae26871c7 .tabular-title { font-size: 8pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-bae26871c7 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-bae26871c7 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-bae26871c7 .tabular-table { border-collapse: collapse; font-size: 8pt; margin: 0 auto; }
-#tabular-bae26871c7 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-bae26871c7 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-bae26871c7 .tabular-table th, #tabular-bae26871c7 .tabular-table td { padding: .35rem .6rem; }
-#tabular-bae26871c7 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-bae26871c7 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-bae26871c7 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-bae26871c7 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-bae26871c7 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-bae26871c7 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-bae26871c7 .tabular-table tbody tr td { border-top: none; }
-#tabular-bae26871c7 .tabular-band { text-align: center; }
-#tabular-bae26871c7 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-bae26871c7 .tabular-subgroup-label { font-weight: 600; }
-#tabular-bae26871c7 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-bae26871c7 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-bae26871c7 .text-left { text-align: left; }
-#tabular-bae26871c7 .text-center { text-align: center; }
-#tabular-bae26871c7 .text-right { text-align: right; }
-#tabular-bae26871c7 .tabular-table thead th.text-left { text-align: left; }
-#tabular-bae26871c7 .tabular-table thead th.text-center { text-align: center; }
-#tabular-bae26871c7 .tabular-table thead th.text-right { text-align: right; }
-#tabular-bae26871c7 .valign-top { vertical-align: top; }
-#tabular-bae26871c7 .valign-middle { vertical-align: middle; }
-#tabular-bae26871c7 .valign-bottom { vertical-align: bottom; }
-#tabular-bae26871c7 .tabular-footnote { font-size: 8pt; color: #495057; margin: .25rem 0; }
-#tabular-bae26871c7 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-bae26871c7 .tabular-page-break-row { display: none; }
-#tabular-bae26871c7 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-bae26871c7 .tabular-page-header, #tabular-bae26871c7 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
-#tabular-bae26871c7 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-bae26871c7 .tabular-page-footer { margin-top: 1rem; }
-#tabular-bae26871c7 .tabular-page-header-left, #tabular-bae26871c7 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-bae26871c7 .tabular-page-header-center, #tabular-bae26871c7 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-bae26871c7 .tabular-page-header-right, #tabular-bae26871c7 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-bae26871c7 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-bae26871c7 .tabular-table tr { page-break-inside: avoid; } #tabular-bae26871c7 .tabular-page-header, #tabular-bae26871c7 .tabular-page-footer { display: none; } #tabular-bae26871c7 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-bae26871c7 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-bae26871c7 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
-
+#tabular-6baf110ab1 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
+#tabular-6baf110ab1 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6baf110ab1 p { line-height: inherit; }
+#tabular-6baf110ab1 .tabular-title { font-size: 8pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-6baf110ab1 .tabular-caption { margin: 0; padding: 0; }
+#tabular-6baf110ab1 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-6baf110ab1 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-6baf110ab1 .tabular-table { border-collapse: collapse; font-size: 8pt; margin: 0 auto; }
+#tabular-6baf110ab1 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-6baf110ab1 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-6baf110ab1 .tabular-table th, #tabular-6baf110ab1 .tabular-table td { padding: .18rem .6rem; }
+#tabular-6baf110ab1 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-6baf110ab1 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-6baf110ab1 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-6baf110ab1 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-6baf110ab1 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-6baf110ab1 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-6baf110ab1 .tabular-table tbody tr td { border-top: none; }
+#tabular-6baf110ab1 .tabular-band { text-align: center; }
+#tabular-6baf110ab1 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-6baf110ab1 .tabular-subgroup-label { font-weight: 600; }
+#tabular-6baf110ab1 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-6baf110ab1 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-6baf110ab1 .text-left { text-align: left; }
+#tabular-6baf110ab1 .text-center { text-align: center; }
+#tabular-6baf110ab1 .text-right { text-align: right; }
+#tabular-6baf110ab1 .tabular-table thead th.text-left { text-align: left; }
+#tabular-6baf110ab1 .tabular-table thead th.text-center { text-align: center; }
+#tabular-6baf110ab1 .tabular-table thead th.text-right { text-align: right; }
+#tabular-6baf110ab1 .valign-top { vertical-align: top; }
+#tabular-6baf110ab1 .valign-middle { vertical-align: middle; }
+#tabular-6baf110ab1 .valign-bottom { vertical-align: bottom; }
+#tabular-6baf110ab1 .tabular-footnote { font-size: 8pt; color: #495057; margin: .25rem 0; }
+#tabular-6baf110ab1 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-6baf110ab1 .tabular-page-break-row { display: none; }
+#tabular-6baf110ab1 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-6baf110ab1 .tabular-page-header, #tabular-6baf110ab1 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
+#tabular-6baf110ab1 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-6baf110ab1 .tabular-page-footer { margin-top: 1rem; }
+#tabular-6baf110ab1 .tabular-page-header-left, #tabular-6baf110ab1 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-6baf110ab1 .tabular-page-header-center, #tabular-6baf110ab1 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-6baf110ab1 .tabular-page-header-right, #tabular-6baf110ab1 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-6baf110ab1 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-6baf110ab1 .tabular-table tr { page-break-inside: avoid; } #tabular-6baf110ab1 .tabular-page-header, #tabular-6baf110ab1 .tabular-page-footer { display: none; } #tabular-6baf110ab1 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-6baf110ab1 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-6baf110ab1 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.2.1
 Best Overall Response and Response Rates
-Efficacy Evaluable Population (N=254)
+Efficacy Evaluable Population
  
 
 
 
-Placebo
-N=86
+Response
 ```

@@ -47,8 +47,9 @@
 - [From a cards
   ARD](https://vthanik.github.io/tabular/articles/from-ard.md):
 
-  Bridge long-format Analysis Results Data into the wide frame tabular
-  renders, with pivot_across().
+  Bridge long-format Analysis Results Data (the cards ARD) into the wide
+  frame tabular renders, with pivot_across() – demographics and a
+  hierarchical adverse-event table, end to end.
 
 - [Fonts &
   fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.md):

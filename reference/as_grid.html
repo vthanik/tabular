@@ -168,7 +168,7 @@ the same pipeline.</p>
 <span class="r-in"><span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="st">"Table 14.1.1"</span>,</span></span>
 <span class="r-in"><span>    <span class="st">"Demographics and Baseline Characteristics"</span>,</span></span>
-<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"Safety Population (N=%d)"</span>, <span class="va">n</span><span class="op">[</span><span class="st">"Total"</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="st">"Safety Population"</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  footnotes <span class="op">=</span> <span class="st">"Source: ADSL."</span></span></span>
 <span class="r-in"><span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
@@ -208,7 +208,7 @@ the same pipeline.</p>
 <span class="r-in"><span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="st">"Table 14.3.1"</span>,</span></span>
 <span class="r-in"><span>    <span class="st">"Adverse Events by SOC and Preferred Term"</span>,</span></span>
-<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"Safety Population (N=%d)"</span>, <span class="va">n</span><span class="op">[</span><span class="st">"Total"</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="st">"Safety Population"</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  footnotes <span class="op">=</span> <span class="st">"Subjects counted once per SOC and once per PT."</span></span></span>
 <span class="r-in"><span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
@@ -217,6 +217,7 @@ the same pipeline.</p>
 <span class="r-in"><span>    soc      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, visible <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
 <span class="r-in"><span>                        group_display <span class="op">=</span> <span class="st">"column_repeat"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    row_type <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    soc_n    <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    n_total  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    placebo  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"Placebo\nN=%d"</span>,  <span class="va">n</span><span class="op">[</span><span class="st">"placebo"</span><span class="op">]</span><span class="op">)</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    drug_50  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"Drug 50\nN=%d"</span>,  <span class="va">n</span><span class="op">[</span><span class="st">"drug_50"</span><span class="op">]</span><span class="op">)</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>

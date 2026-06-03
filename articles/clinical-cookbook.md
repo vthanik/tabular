@@ -29,7 +29,7 @@ tabular(
   titles = c(
     "Table 14.1.1",
     "Demographic and Baseline Characteristics",
-    sprintf("Safety Population (N=%d)", saf["Total"])
+    "Safety Population"
   ),
   footnotes = c(
     "Percentages are based on the number of subjects per treatment group.",
@@ -47,49 +47,58 @@ tabular(
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total"))
 ```
 
- 
-
-Table 14.1.1
-
-Demographic and Baseline Characteristics
-
-Safety Population (N=254)
-
- 
-
 [TABLE]
 
 Percentages are based on the number of subjects per treatment group.
 
 BMI = body mass index (kg/m^2).
 
+ 
+
+Table 14.1.1
+
+Demographic and Baseline Characteristics
+
+Safety Population
+
+ 
+
 ## 2. Overall adverse-event summary
 
 A compact high-level AE table, ordered by descending total frequency so
-the most common categories lead.
+the most common categories lead. The `Total` cells are formatted strings
+(`"217 (85.4)"`), which sort *lexically* (`"157"` before `"3"`), so we
+derive a hidden integer key from the count and sort on that instead –
+the canonical “sort on a numeric key, never on display text” idiom.
 
 ``` r
 
 ae0 <- saf_aeoverall[c("stat_label", "placebo", "drug_50", "drug_100", "Total")]
+ae0$total_n <- as.integer(sub(" .*", "", ae0$Total))   # 217 (85.4) -> 217
 
 tabular(
   ae0,
   titles = c(
     "Table 14.3.1",
     "Overall Summary of Adverse Events",
-    sprintf("Safety Population (N=%d)", saf["Total"])
+    "Safety Population"
   ),
   footnotes = "n (%) of subjects with at least one event in each category."
 ) |>
   cols(
     stat_label = col_spec(label = "Category"),
+    total_n    = col_spec(visible = FALSE),
     placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
     drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
     drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
     Total      = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
   ) |>
-  sort_rows(by = "Total", descending = TRUE)
+  sort_rows(by = "total_n", descending = TRUE)
 ```
+
+[TABLE]
+
+n (%) of subjects with at least one event in each category.
 
  
 
@@ -97,20 +106,20 @@ Table 14.3.1
 
 Overall Summary of Adverse Events
 
-Safety Population (N=254)
+Safety Population
 
  
 
-[TABLE]
-
-n (%) of subjects with at least one event in each category.
-
 ## 3. Adverse events by system organ class and preferred term
 
-The hierarchical AE table. Preferred terms indent under their
-system-organ-class header via `indent_by`, and the columns that drive
-the hierarchy and sort order are hidden. The data arrives in canonical
-descending-frequency order, which `tabular` preserves.
+The hierarchical AE table. A single `label` column carries both levels:
+system-organ-class text sits flush, preferred terms indent beneath it
+via `indent_by = "indent_level"`. The columns that drive the hierarchy
+and the sort order ride along hidden (`visible = FALSE`), and a
+[`style()`](https://vthanik.github.io/tabular/reference/style.md) layer
+bolds the overall and SOC summary rows so the structure reads at a
+glance. The data arrives in canonical descending-frequency order, which
+`tabular` preserves.
 
 ``` r
 
@@ -119,7 +128,7 @@ tabular(
   titles = c(
     "Table 14.3.2",
     "Adverse Events by System Organ Class and Preferred Term",
-    sprintf("Safety Population (N=%d)", saf["Total"])
+    "Safety Population"
   ),
   footnotes = c(
     "Subjects are counted once within each system organ class and preferred term.",
@@ -128,29 +137,20 @@ tabular(
 ) |>
   cols(
     soc          = col_spec(visible = FALSE),
-    label        = col_spec(usage = "group", indent_by = "indent_level",
-                            label = "System Organ Class / Preferred Term"),
     row_type     = col_spec(visible = FALSE),
     indent_level = col_spec(visible = FALSE),
     n_total      = col_spec(visible = FALSE),
     soc_n        = col_spec(visible = FALSE),
+    label        = col_spec(label = "System Organ Class / Preferred Term",
+                            indent_by = "indent_level"),
     placebo      = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
     drug_50      = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
     drug_100     = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
     Total        = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
   ) |>
-  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total"))
+  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
+  style(bold = TRUE, .at = cells_body(where = row_type %in% c("overall", "soc")))
 ```
-
- 
-
-Table 14.3.2
-
-Adverse Events by System Organ Class and Preferred Term
-
-Safety Population (N=254)
-
- 
 
 [TABLE]
 
@@ -159,16 +159,100 @@ term.
 
 MedDRA version 26.0.
 
+ 
+
+Table 14.3.2
+
+Adverse Events by System Organ Class and Preferred Term
+
+Safety Population
+
+ 
+
 > **Keep a SOC with its terms in print**
 >
 > In a paginated backend, add
 > `paginate(repeat_content = c("titles", "headers", "footnotes"))` so
 > the column band and footnotes repeat on every page of this long table.
 
+### Auto-numbered footnotes
+
+The `footnotes =` lines above are fixed text. When a note needs to point
+at a *specific* cell, reach for
+\[[`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)\]:
+it anchors a marker to any `cells_*()` location, and the engine assigns
+the glyph once, in reading order, deduped by `id`. The marker is
+allocated *after* decimal alignment, so it never disturbs a column, and
+it is byte-identical across every backend and page. Here a denominator
+note rides the `Total` header and a shared-`id` note marks every
+preferred term reported in at least 50 subjects overall.
+
+``` r
+
+tabular(
+  saf_aesocpt,
+  titles = c(
+    "Table 14.3.2",
+    "Adverse Events by System Organ Class and Preferred Term",
+    "Safety Population"
+  )
+) |>
+  cols(
+    soc          = col_spec(visible = FALSE),
+    row_type     = col_spec(visible = FALSE),
+    indent_level = col_spec(visible = FALSE),
+    n_total      = col_spec(visible = FALSE),
+    soc_n        = col_spec(visible = FALSE),
+    label        = col_spec(label = "System Organ Class / Preferred Term",
+                            indent_by = "indent_level"),
+    placebo      = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
+    drug_50      = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
+    drug_100     = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
+    Total        = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
+  ) |>
+  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
+  style(bold = TRUE, .at = cells_body(where = row_type %in% c("overall", "soc"))) |>
+  footnote(
+    "Safety population: all randomised subjects who took study drug.",
+    .at = cells_headers(j = "Total")
+  ) |>
+  footnote(
+    md("Reported in at least 50 subjects overall."),
+    .at = cells_body(where = n_total >= 50, j = "label"),
+    id = "highfreq"
+  )
+```
+
+[TABLE]
+
+a Safety population: all randomised subjects who took study drug.
+
+b Reported in at least 50 subjects overall.
+
+ 
+
+Table 14.3.2
+
+Adverse Events by System Organ Class and Preferred Term
+
+Safety Population
+
+ 
+
+The header marker is lettered before the body marker because headers
+precede the body in reading order. To control hand-built leading
+whitespace in a label rather than an engine-managed marker, see the
+*Verbatim whitespace* section of the [styling
+article](https://vthanik.github.io/tabular/articles/styling.md).
+
 ## 4. Vital signs by parameter and visit
 
-Each vital-sign parameter is a section; visit is an ordinary column so a
-reader scans across timepoints within a parameter.
+A two-level row hierarchy: each vital-sign parameter holds its four
+visits, and each visit holds the summary statistics. Both `param` and
+`visit` are `usage = "group"` with `group_display = "column"`, so each
+name prints once at the top of its block and the repeats blank out – the
+reader scans `Parameter`, then `Visit`, then `Statistic` down a clean
+stair, never re-reading a label.
 
 ``` r
 
@@ -177,14 +261,16 @@ tabular(
   titles = c(
     "Table 14.2.1",
     "Vital Signs by Parameter and Visit",
-    sprintf("Safety Population (N=%d)", saf["Total"])
+    "Safety Population"
   ),
   footnotes = "Summary statistics of observed values at each visit."
 ) |>
   cols(
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group"),
-    visit      = col_spec(label = "Visit"),
+    param      = col_spec(usage = "group", group_display = "column",
+                          label = "Parameter"),
+    visit      = col_spec(usage = "group", group_display = "column",
+                          label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
     drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
@@ -193,19 +279,19 @@ tabular(
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100"))
 ```
 
+[TABLE]
+
+Summary statistics of observed values at each visit.
+
  
 
 Table 14.2.1
 
 Vital Signs by Parameter and Visit
 
-Safety Population (N=254)
+Safety Population
 
  
-
-[TABLE]
-
-Summary statistics of observed values at each visit.
 
 ## 5. Best overall response and response rates
 
@@ -220,7 +306,7 @@ tabular(
   titles = c(
     "Table 14.2.1",
     "Best Overall Response and Response Rates",
-    sprintf("Efficacy Population (N=%d)", sum(eff[c("placebo", "drug_50", "drug_100")]))
+    "Efficacy Population"
   ),
   footnotes = c(
     "Response assessed per RECIST 1.1.",
@@ -239,28 +325,33 @@ tabular(
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100"))
 ```
 
- 
-
-Table 14.2.1
-
-Best Overall Response and Response Rates
-
-Efficacy Population (N=254)
-
- 
-
 [TABLE]
 
 Response assessed per RECIST 1.1.
 
 CI = confidence interval; ORR = objective response rate.
 
+ 
+
+Table 14.2.1
+
+Best Overall Response and Response Rates
+
+Efficacy Population
+
+ 
+
 ## 6. Subgrouped vital signs (Sex × Age group)
 
 The same vitals analysis, partitioned into Sex × Age-group panels with
 [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md).
-Each combination becomes its own banner-labelled partition that starts a
-new page in the print backends.
+Each `{sex}, {agegr}` combination becomes its own banner-labelled
+partition that starts a new page in the print backends. Within every
+panel the two parameters are kept distinct by a `Parameter` column:
+`usage = "group"` with `group_display = "column"` prints each parameter
+name once at the top of its block and blanks the repeats, so a reader
+sees `Diastolic BP (mmHg)` then `Systolic BP (mmHg)` without the label
+repeating on every statistic row.
 
 ``` r
 
@@ -279,15 +370,21 @@ tabular(
     sex_n      = col_spec(visible = FALSE),
     agegr_n    = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group"),
+    param      = col_spec(usage = "group", group_display = "column",
+                          label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = "Placebo",  align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
-    Total      = col_spec(label = "Total",    align = "decimal")
+    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
+    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
+    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
+    Total      = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
   ) |>
+  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
   subgroup(by = c("sex", "agegr"), label = "{sex}, {agegr}")
 ```
+
+[TABLE]
+
+Summary statistics of observed values within each subgroup.
 
  
 
@@ -298,54 +395,6 @@ Vital Signs by Sex and Age Group
 Safety Population
 
  
-
-| Statistic    | Placebo      | Drug 50      | Drug 100     | Total        |
-|--------------|--------------|--------------|--------------|--------------|
-| **F, \<65**  |              |              |              |              |
-| n            |  24          |   9          |   9          |  42          |
-| Mean (SD)    |  73.9 (10.5) |  79.9 (8.3)  |  81.6 (8.5)  |  76.8 (10.0) |
-| Median       |  78.0        |  80.0        |  84.0        |  79.5        |
-| Min, Max     |  49  , 88    |  68  , 90    |  68  , 90    |  49  , 90    |
-|              |              |              |              |              |
-| n            |  24          |   9          |   9          |  42          |
-| Mean (SD)    | 129.9 (11.2) | 132.1 (4.3)  | 121.8 (13.6) | 128.6 (11.1) |
-| Median       | 130.0        | 130.0        | 128.0        | 130.0        |
-| Min, Max     | 113  , 156   | 128  , 140   | 100  , 140   | 100  , 156   |
-|              |              |              |              |              |
-| **F, \>=65** |              |              |              |              |
-| n            | 105          |  99          |  72          | 276          |
-| Mean (SD)    |  74.0 (10.8) |  76.9 (12.2) |  75.9 (11.9) |  75.5 (11.7) |
-| Median       |  72.0        |  79.0        |  80.0        |  76.0        |
-| Min, Max     |  50  , 100   |  50  , 100   |  56  , 98    |  50  , 100   |
-|              |              |              |              |              |
-| n            | 105          |  99          |  72          | 276          |
-| Mean (SD)    | 137.1 (15.8) | 137.5 (16.7) | 140.1 (16.8) | 138.0 (16.4) |
-| Median       | 134.0        | 134.0        | 142.0        | 138.0        |
-| Min, Max     |  95  , 172   |  98  , 178   | 100  , 177   |  95  , 178   |
-|              |              |              |              |              |
-| **M, \<65**  |              |              |              |              |
-| n            |  12          |   3          |  12          |  27          |
-| Mean (SD)    |  83.0 (13.3) |  80.7 (3.1)  |  77.1 (7.0)  |  80.1 (10.2) |
-| Median       |  80.0        |  80.0        |  79.0        |  80.0        |
-| Min, Max     |  68  , 104   |  78  , 84    |  68  , 87    |  68  , 104   |
-|              |              |              |              |              |
-| n            |  12          |   3          |  12          |  27          |
-| Mean (SD)    | 134.4 (8.3)  | 122.7 (4.6)  | 124.8 (12.0) | 128.9 (10.9) |
-| Median       | 131.0        | 120.0        | 127.0        | 130.0        |
-| Min, Max     | 123  , 150   | 120  , 128   | 107  , 146   | 107  , 150   |
-|              |              |              |              |              |
-| **M, \>=65** |              |              |              |              |
-| n            |  81          |  66          |  75          | 222          |
-| Mean (SD)    |  73.9 (9.7)  |  73.7 (9.7)  |  75.3 (7.9)  |  74.4 (9.2)  |
-| Median       |  73.0        |  74.0        |  76.0        |  74.0        |
-| Min, Max     |  58  , 100   |  52  , 94    |  57  , 90    |  52  , 100   |
-|              |              |              |              |              |
-| n            |  81          |  66          |  75          | 222          |
-| Mean (SD)    | 127.6 (15.3) | 127.0 (17.1) | 127.4 (11.5) | 127.3 (14.7) |
-| Median       | 130.0        | 124.0        | 130.0        | 130.0        |
-| Min, Max     |  78  , 164   |  92  , 162   | 100  , 156   |  78  , 164   |
-
-Summary statistics of observed values within each subgroup.
 
 ## Shipping the deliverable
 
@@ -363,4 +412,4 @@ tab |> emit("t_14_1_1.pdf")     # paginated PDF (via tinytex)
 See [Fonts &
 fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.md)
 for why the paginated RTF/PDF/DOCX, not the HTML preview, is the
-artefact of record. \`\`\`
+artefact of record.

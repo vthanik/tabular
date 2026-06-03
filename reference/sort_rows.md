@@ -110,7 +110,7 @@ tabular(
   titles = c(
     "Table 14.3.1",
     "Adverse Events by System Organ Class and Preferred Term",
-    sprintf("Safety Population (N=%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = "Subjects are counted once per SOC and once per PT."
 ) |>
@@ -118,6 +118,7 @@ tabular(
     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
     soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
+    soc_n    = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"])),
     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"])),
@@ -126,53 +127,54 @@ tabular(
   ) |>
   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 
-#tabular-c62b6dba2f { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-c62b6dba2f .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-c62b6dba2f .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-c62b6dba2f .tabular-pad { margin: 0; line-height: 1; }
-#tabular-c62b6dba2f .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-c62b6dba2f .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-c62b6dba2f .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-c62b6dba2f .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-c62b6dba2f .tabular-table th, #tabular-c62b6dba2f .tabular-table td { padding: .35rem .6rem; }
-#tabular-c62b6dba2f .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-c62b6dba2f .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-c62b6dba2f .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-c62b6dba2f .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-c62b6dba2f .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-c62b6dba2f .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-c62b6dba2f .tabular-table tbody tr td { border-top: none; }
-#tabular-c62b6dba2f .tabular-band { text-align: center; }
-#tabular-c62b6dba2f .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-c62b6dba2f .tabular-subgroup-label { font-weight: 600; }
-#tabular-c62b6dba2f .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-c62b6dba2f .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-c62b6dba2f .text-left { text-align: left; }
-#tabular-c62b6dba2f .text-center { text-align: center; }
-#tabular-c62b6dba2f .text-right { text-align: right; }
-#tabular-c62b6dba2f .tabular-table thead th.text-left { text-align: left; }
-#tabular-c62b6dba2f .tabular-table thead th.text-center { text-align: center; }
-#tabular-c62b6dba2f .tabular-table thead th.text-right { text-align: right; }
-#tabular-c62b6dba2f .valign-top { vertical-align: top; }
-#tabular-c62b6dba2f .valign-middle { vertical-align: middle; }
-#tabular-c62b6dba2f .valign-bottom { vertical-align: bottom; }
-#tabular-c62b6dba2f .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-c62b6dba2f .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-c62b6dba2f .tabular-page-break-row { display: none; }
-#tabular-c62b6dba2f { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-c62b6dba2f .tabular-page-header, #tabular-c62b6dba2f .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-c62b6dba2f .tabular-page-header { margin-bottom: 1rem; }
-#tabular-c62b6dba2f .tabular-page-footer { margin-top: 1rem; }
-#tabular-c62b6dba2f .tabular-page-header-left, #tabular-c62b6dba2f .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-c62b6dba2f .tabular-page-header-center, #tabular-c62b6dba2f .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-c62b6dba2f .tabular-page-header-right, #tabular-c62b6dba2f .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-c62b6dba2f .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-c62b6dba2f .tabular-table tr { page-break-inside: avoid; } #tabular-c62b6dba2f .tabular-page-header, #tabular-c62b6dba2f .tabular-page-footer { display: none; } #tabular-c62b6dba2f .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-c62b6dba2f .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-c62b6dba2f .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
-
+#tabular-806c4a335f { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-806c4a335f .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-806c4a335f p { line-height: inherit; }
+#tabular-806c4a335f .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-806c4a335f .tabular-caption { margin: 0; padding: 0; }
+#tabular-806c4a335f .tabular-pad { margin: 0; line-height: 1; }
+#tabular-806c4a335f .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-806c4a335f .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-806c4a335f .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-806c4a335f .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-806c4a335f .tabular-table th, #tabular-806c4a335f .tabular-table td { padding: .18rem .6rem; }
+#tabular-806c4a335f .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-806c4a335f .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-806c4a335f .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-806c4a335f .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-806c4a335f .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-806c4a335f .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-806c4a335f .tabular-table tbody tr td { border-top: none; }
+#tabular-806c4a335f .tabular-band { text-align: center; }
+#tabular-806c4a335f .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-806c4a335f .tabular-subgroup-label { font-weight: 600; }
+#tabular-806c4a335f .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-806c4a335f .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-806c4a335f .text-left { text-align: left; }
+#tabular-806c4a335f .text-center { text-align: center; }
+#tabular-806c4a335f .text-right { text-align: right; }
+#tabular-806c4a335f .tabular-table thead th.text-left { text-align: left; }
+#tabular-806c4a335f .tabular-table thead th.text-center { text-align: center; }
+#tabular-806c4a335f .tabular-table thead th.text-right { text-align: right; }
+#tabular-806c4a335f .valign-top { vertical-align: top; }
+#tabular-806c4a335f .valign-middle { vertical-align: middle; }
+#tabular-806c4a335f .valign-bottom { vertical-align: bottom; }
+#tabular-806c4a335f .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-806c4a335f .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-806c4a335f .tabular-page-break-row { display: none; }
+#tabular-806c4a335f { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-806c4a335f .tabular-page-header, #tabular-806c4a335f .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-806c4a335f .tabular-page-header { margin-bottom: 1rem; }
+#tabular-806c4a335f .tabular-page-footer { margin-top: 1rem; }
+#tabular-806c4a335f .tabular-page-header-left, #tabular-806c4a335f .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-806c4a335f .tabular-page-header-center, #tabular-806c4a335f .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-806c4a335f .tabular-page-header-right, #tabular-806c4a335f .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-806c4a335f .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-806c4a335f .tabular-table tr { page-break-inside: avoid; } #tabular-806c4a335f .tabular-page-header, #tabular-806c4a335f .tabular-page-footer { display: none; } #tabular-806c4a335f .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-806c4a335f .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-806c4a335f .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.3.1
 Adverse Events by System Organ Class and Preferred Term
-Safety Population (N=254)
+Safety Population
  
 
 

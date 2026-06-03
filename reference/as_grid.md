@@ -139,7 +139,7 @@ demo <- tabular(
   titles = c(
     "Table 14.1.1",
     "Demographics and Baseline Characteristics",
-    sprintf("Safety Population (N=%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = "Source: ADSL."
 ) |>
@@ -179,7 +179,7 @@ ae_spec <- tabular(
   titles = c(
     "Table 14.3.1",
     "Adverse Events by SOC and Preferred Term",
-    sprintf("Safety Population (N=%d)", n["Total"])
+    "Safety Population"
   ),
   footnotes = "Subjects counted once per SOC and once per PT."
 ) |>
@@ -188,6 +188,7 @@ ae_spec <- tabular(
     soc      = col_spec(usage = "group", visible = FALSE,
                         group_display = "column_repeat"),
     row_type = col_spec(visible = FALSE),
+    soc_n    = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),

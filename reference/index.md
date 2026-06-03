@@ -93,6 +93,15 @@ Mark label and cell text as Markdown or HTML.
 - [`html()`](https://vthanik.github.io/tabular/reference/html.md) : Mark
   a string as HTML for inline formatting
 
+## Footnotes
+
+Attach an auto-numbered footnote to any `cells_*()` location. The engine
+assigns the marker once, in reading order, deduped by id, and
+byte-identical across every backend and page.
+
+- [`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)
+  : Attach an auto-numbered footnote to a table location
+
 ## Pagination
 
 Configure page splits, group-run protection, and horizontal panel layout

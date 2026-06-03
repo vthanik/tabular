@@ -289,7 +289,7 @@ saf_demo_card |>
     titles = c(
       "Table 14.1.1",
       "Demographics and Baseline Characteristics",
-      sprintf("Safety Population (N=%d)", n["Total"])
+      "Safety Population"
     ),
     footnotes = "Percentages based on N per treatment group."
   ) |>
@@ -314,53 +314,54 @@ saf_demo_card |>
     )
   )
 
-#tabular-0870887ddb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-0870887ddb .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-0870887ddb .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-0870887ddb .tabular-pad { margin: 0; line-height: 1; }
-#tabular-0870887ddb .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-0870887ddb .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-0870887ddb .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-0870887ddb .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-0870887ddb .tabular-table th, #tabular-0870887ddb .tabular-table td { padding: .35rem .6rem; }
-#tabular-0870887ddb .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-0870887ddb .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-0870887ddb .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-0870887ddb .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-0870887ddb .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-0870887ddb .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-0870887ddb .tabular-table tbody tr td { border-top: none; }
-#tabular-0870887ddb .tabular-band { text-align: center; }
-#tabular-0870887ddb .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-0870887ddb .tabular-subgroup-label { font-weight: 600; }
-#tabular-0870887ddb .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-0870887ddb .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-0870887ddb .text-left { text-align: left; }
-#tabular-0870887ddb .text-center { text-align: center; }
-#tabular-0870887ddb .text-right { text-align: right; }
-#tabular-0870887ddb .tabular-table thead th.text-left { text-align: left; }
-#tabular-0870887ddb .tabular-table thead th.text-center { text-align: center; }
-#tabular-0870887ddb .tabular-table thead th.text-right { text-align: right; }
-#tabular-0870887ddb .valign-top { vertical-align: top; }
-#tabular-0870887ddb .valign-middle { vertical-align: middle; }
-#tabular-0870887ddb .valign-bottom { vertical-align: bottom; }
-#tabular-0870887ddb .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-0870887ddb .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-0870887ddb .tabular-page-break-row { display: none; }
-#tabular-0870887ddb { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-0870887ddb .tabular-page-header, #tabular-0870887ddb .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-0870887ddb .tabular-page-header { margin-bottom: 1rem; }
-#tabular-0870887ddb .tabular-page-footer { margin-top: 1rem; }
-#tabular-0870887ddb .tabular-page-header-left, #tabular-0870887ddb .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-0870887ddb .tabular-page-header-center, #tabular-0870887ddb .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-0870887ddb .tabular-page-header-right, #tabular-0870887ddb .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-0870887ddb .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-0870887ddb .tabular-table tr { page-break-inside: avoid; } #tabular-0870887ddb .tabular-page-header, #tabular-0870887ddb .tabular-page-footer { display: none; } #tabular-0870887ddb .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-0870887ddb .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-0870887ddb .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
-
+#tabular-15bff0b949 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-15bff0b949 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-15bff0b949 p { line-height: inherit; }
+#tabular-15bff0b949 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-15bff0b949 .tabular-caption { margin: 0; padding: 0; }
+#tabular-15bff0b949 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-15bff0b949 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-15bff0b949 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-15bff0b949 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-15bff0b949 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-15bff0b949 .tabular-table th, #tabular-15bff0b949 .tabular-table td { padding: .18rem .6rem; }
+#tabular-15bff0b949 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-15bff0b949 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-15bff0b949 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-15bff0b949 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-15bff0b949 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-15bff0b949 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-15bff0b949 .tabular-table tbody tr td { border-top: none; }
+#tabular-15bff0b949 .tabular-band { text-align: center; }
+#tabular-15bff0b949 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-15bff0b949 .tabular-subgroup-label { font-weight: 600; }
+#tabular-15bff0b949 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-15bff0b949 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-15bff0b949 .text-left { text-align: left; }
+#tabular-15bff0b949 .text-center { text-align: center; }
+#tabular-15bff0b949 .text-right { text-align: right; }
+#tabular-15bff0b949 .tabular-table thead th.text-left { text-align: left; }
+#tabular-15bff0b949 .tabular-table thead th.text-center { text-align: center; }
+#tabular-15bff0b949 .tabular-table thead th.text-right { text-align: right; }
+#tabular-15bff0b949 .valign-top { vertical-align: top; }
+#tabular-15bff0b949 .valign-middle { vertical-align: middle; }
+#tabular-15bff0b949 .valign-bottom { vertical-align: bottom; }
+#tabular-15bff0b949 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-15bff0b949 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-15bff0b949 .tabular-page-break-row { display: none; }
+#tabular-15bff0b949 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-15bff0b949 .tabular-page-header, #tabular-15bff0b949 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-15bff0b949 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-15bff0b949 .tabular-page-footer { margin-top: 1rem; }
+#tabular-15bff0b949 .tabular-page-header-left, #tabular-15bff0b949 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-15bff0b949 .tabular-page-header-center, #tabular-15bff0b949 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-15bff0b949 .tabular-page-header-right, #tabular-15bff0b949 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-15bff0b949 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-15bff0b949 .tabular-table tr { page-break-inside: avoid; } #tabular-15bff0b949 .tabular-page-header, #tabular-15bff0b949 .tabular-page-footer { display: none; } #tabular-15bff0b949 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-15bff0b949 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-15bff0b949 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.1.1
 Demographics and Baseline Characteristics
-Safety Population (N=254)
+Safety Population
  
 
 
