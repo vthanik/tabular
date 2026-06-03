@@ -135,10 +135,41 @@ footnote <- function(
       call = call
     )
   }
+  .check_fn_location(.at, call = call)
   .check_fn_opt(id, arg = "id", call = call)
   .check_fn_opt(symbol, arg = "symbol", call = call)
   rec <- list(text = text, id = id, symbol = symbol, location = .at)
   S7::set_props(spec, footnote_refs = c(spec@footnote_refs, list(rec)))
+}
+
+# Validate the anchor location. A footnote marker can only be injected
+# on surfaces with a marker-injection path: body cells, a leaf column
+# header addressed by `j`, or a title line. Spanner band labels
+# (`cells_headers(labels=)`), header depth levels (`cells_headers(level=)`),
+# and group-header rows (`cells_group_headers()`) have no injection
+# surface yet, so reject them here at call time rather than silently
+# dropping the note at render with only a warning.
+#' @noRd
+.check_fn_location <- function(loc, call) {
+  surface <- loc$surface
+  ok <- surface %in%
+    c("body", "title") ||
+    (identical(surface, "headers") &&
+      !is.null(loc$j) &&
+      is.null(loc$labels) &&
+      is.null(loc$level))
+  if (!ok) {
+    cli::cli_abort(
+      c(
+        "Footnote anchor {.arg .at} is not supported.",
+        "i" = "Anchor with {.code cells_body(...)}, {.code cells_headers(j = ...)}, or {.code cells_title()}.",
+        "x" = "Spanner labels, header levels, and group headers cannot carry a footnote marker."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  invisible(NULL)
 }
 
 # Validate an optional scalar-character footnote argument (id / symbol):

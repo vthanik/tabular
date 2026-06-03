@@ -2958,12 +2958,12 @@ backend_docx <- function(grid, file) {
 # needs no non-breaking token. A single-line value yields exactly the
 # prior one-run markup (byte-identical), so only multi-line cells move.
 .docx_body_runs <- function(text, rpr) {
-  if (is.null(text) || length(text) == 0L || is.na(text)) {
+  if (is.null(text) || length(text) != 1L || is.na(text)) {
     text <- ""
   }
   # Peel any auto-footnote marker sentinel off the cell end; it becomes
   # a superscript run appended after the body runs.
-  peeled <- .split_fn_sentinel(as.character(text))
+  peeled <- .fn_peel(as.character(text))
   text <- gsub("\r\n", "\n", peeled$base, fixed = TRUE)
   parts <- strsplit(text, "\n", fixed = TRUE)[[1L]]
   if (length(parts) == 0L) {
@@ -2982,7 +2982,7 @@ backend_docx <- function(grid, file) {
     vapply(parts, run, character(1L), USE.NAMES = FALSE),
     collapse = "<w:r><w:br/></w:r>"
   )
-  if (!is.null(peeled$marker)) {
+  if (isTRUE(peeled$has)) {
     body <- paste0(body, .docx_fn_sup_run(peeled$marker, rpr))
   }
   body

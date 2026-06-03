@@ -70,45 +70,32 @@ test_that(".fn_assign reserves a pinned symbol and skips it in auto-alloc", {
 # Sentinel round-trip
 # ---------------------------------------------------------------------
 
-test_that("sentinel peels back to base + marker", {
+test_that(".fn_peel peels base + marker, scalar and vectorized (#cr12)", {
   s <- paste0("12.3", tabular:::.fn_sentinel(c("a", "b")))
-  sp <- tabular:::.split_fn_sentinel(s)
-  expect_equal(sp$base, "12.3")
-  expect_equal(sp$marker, "a,b")
-  # a cell with no sentinel is unchanged
-  expect_null(tabular:::.split_fn_sentinel("plain")$marker)
+  pe <- tabular:::.fn_peel(s)
+  expect_equal(pe$base, "12.3")
+  expect_equal(pe$marker, "a,b")
+  expect_true(pe$has)
+  # a cell with no sentinel: base unchanged, marker NA, has FALSE
+  pe2 <- tabular:::.fn_peel("plain")
+  expect_equal(pe2$base, "plain")
+  expect_true(is.na(pe2$marker))
+  expect_false(pe2$has)
+  # NA cell passes through unchanged
+  pe3 <- tabular:::.fn_peel(NA_character_)
+  expect_true(is.na(pe3$base))
+  # length > 1 input is handled element-wise. The scalar .split_fn_sentinel
+  # this replaced raised "the condition has length > 1" on such input;
+  # routing md/docx through .fn_peel removes that latent crash.
+  pev <- tabular:::.fn_peel(c(s, "plain", NA_character_))
+  expect_equal(pev$base, c("12.3", "plain", NA_character_))
+  expect_equal(pev$marker, c("a,b", NA_character_, NA_character_))
+  expect_equal(pev$has, c(TRUE, FALSE, FALSE))
 })
 
 test_that(".fn_width_text reduces the sentinel to its marker glyphs", {
   s <- paste0("12.3", tabular:::.fn_sentinel("a"))
   expect_equal(tabular:::.fn_width_text(s), "12.3a")
-})
-
-test_that(".split_fn_sentinel passes NA through unchanged", {
-  sp <- tabular:::.split_fn_sentinel(NA_character_)
-  expect_true(is.na(sp$base))
-  expect_null(sp$marker)
-})
-
-test_that(".fn_peel and .split_fn_sentinel extract the same base + marker", {
-  # The two peel paths (vectorized .fn_peel for html/latex/rtf;
-  # per-cell .split_fn_sentinel for md/docx) must agree byte-for-byte.
-  s <- paste0("12.3", tabular:::.fn_sentinel(c("a", "b")))
-  pe <- tabular:::.fn_peel(s)
-  sp <- tabular:::.split_fn_sentinel(s)
-  expect_equal(pe$base, sp$base) # "12.3"
-  expect_equal(pe$marker, sp$marker) # "a,b"
-  # no-sentinel cell: identical base, both report "no marker"
-  pe2 <- tabular:::.fn_peel("plain")
-  sp2 <- tabular:::.split_fn_sentinel("plain")
-  expect_equal(pe2$base, sp2$base)
-  expect_true(is.na(pe2$marker))
-  expect_null(sp2$marker)
-  # NA cell: base passes through unchanged in both
-  pe3 <- tabular:::.fn_peel(NA_character_)
-  sp3 <- tabular:::.split_fn_sentinel(NA_character_)
-  expect_true(is.na(pe3$base))
-  expect_true(is.na(sp3$base))
 })
 
 # ---------------------------------------------------------------------
@@ -331,14 +318,36 @@ test_that("a title-anchored footnote marks the last title line", {
   expect_match(txt, "a Source: ADAE.", fixed = TRUE)
 })
 
-test_that("an unsupported anchor surface warns and is dropped", {
-  spec <- mk_fn_spec() |>
-    footnote("Nope.", .at = cells_footnotes())
-  groups <- tabular:::engine_subgroup_split(spec)
-  expect_warning(
-    tabular:::engine_footnotes_assign(spec, groups),
-    "unsupported"
+test_that("unsupported footnote anchors are rejected at call time (#cr2, #cr3)", {
+  base <- mk_fn_spec()
+  # group headers and other-block surfaces have no marker-injection path
+  expect_error(
+    footnote(base, "Nope.", .at = cells_footnotes()),
+    class = "tabular_error_input"
   )
+  expect_error(
+    footnote(base, "Group.", .at = cells_group_headers()),
+    class = "tabular_error_input"
+  )
+  # spanner band labels and header depth levels are not (yet) injectable
+  expect_error(
+    footnote(base, "Spanner.", .at = cells_headers(labels = "Treatment")),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    footnote(base, "Band.", .at = cells_headers(level = 1)),
+    class = "tabular_error_input"
+  )
+  # supported anchors still pass call-time validation
+  expect_true(is_tabular_spec(
+    footnote(base, "OK header.", .at = cells_headers(j = "Total"))
+  ))
+  expect_true(is_tabular_spec(
+    footnote(base, "OK body.", .at = cells_body(j = "label"))
+  ))
+  expect_true(is_tabular_spec(
+    footnote(base, "OK title.", .at = cells_title())
+  ))
 })
 
 test_that("the marker is identical across subgroups and the block emits once", {
@@ -369,4 +378,86 @@ test_that("the marker is identical across subgroups and the block emits once", {
     gregexpr("a Across groups.", txt, fixed = TRUE)
   ))[[1L]]
   expect_equal(n_block, 1L)
+})
+
+# ---------------------------------------------------------------------
+# Code-review regression tests
+# ---------------------------------------------------------------------
+
+test_that("footnote markers follow post-sort reading order (#cr1)", {
+  df <- data.frame(
+    grp = c("Alpha", "Beta"),
+    k = c(1L, 2L),
+    val = c("10", "20"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      grp = col_spec(label = "Group"),
+      k = col_spec(visible = FALSE),
+      val = col_spec(label = "Value")
+    ) |>
+    sort_rows(by = "k", descending = TRUE) |>
+    footnote(
+      "Alpha note.",
+      .at = cells_body(where = grp == "Alpha", j = "grp")
+    ) |>
+    footnote("Beta note.", .at = cells_body(where = grp == "Beta", j = "grp"))
+  out <- withr::local_tempfile(fileext = ".md")
+  suppressWarnings(emit(spec, out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Descending sort puts Beta on top, so Beta must be "a" (first in
+  # reading order) and Alpha "b" -- numbering follows the rendered rows.
+  expect_match(txt, "Beta^a^", fixed = TRUE)
+  expect_match(txt, "Alpha^b^", fixed = TRUE)
+  a_pos <- regexpr("a Beta note.", txt, fixed = TRUE)
+  b_pos <- regexpr("b Alpha note.", txt, fixed = TRUE)
+  expect_true(a_pos > 0L && b_pos > 0L && a_pos < b_pos)
+})
+
+test_that("a pinned symbol is reserved against a lower-ranked auto marker (#cr4)", {
+  # The header note (rank 3) would auto-allocate "*" first; the body note
+  # pins "*". The pin must be reserved so the header note skips "*".
+  spec <- mk_fn_spec() |>
+    preset(footnote_markers = "symbols") |>
+    footnote("Header note.", .at = cells_headers(j = "Total")) |>
+    footnote(
+      "Body note.",
+      .at = cells_body(where = n_total >= 50, j = "label"),
+      symbol = "*"
+    )
+  groups <- tabular:::engine_subgroup_split(spec)
+  reg <- tabular:::engine_footnotes_assign(spec, groups)
+  markers <- unlist(reg$markers)
+  expect_equal(sum(markers == "*"), 1L)
+  expect_equal(length(unique(markers)), length(markers))
+})
+
+test_that("reusing an id with different text warns (#cr6)", {
+  spec <- mk_fn_spec() |>
+    footnote("First.", .at = cells_headers(j = "Total"), id = "dup") |>
+    footnote(
+      "Second.",
+      .at = cells_body(where = n_total >= 50, j = "label"),
+      id = "dup"
+    )
+  groups <- tabular:::engine_subgroup_split(spec)
+  expect_warning(
+    tabular:::engine_footnotes_assign(spec, groups),
+    "different text"
+  )
+})
+
+test_that("a body footnote whose j names no column is dropped, not orphaned (#cr9)", {
+  spec <- mk_fn_spec() |>
+    footnote(
+      "Phantom.",
+      .at = cells_body(where = n_total >= 50, j = "does_not_exist")
+    )
+  groups <- tabular:::engine_subgroup_split(spec)
+  expect_warning(
+    reg <- tabular:::engine_footnotes_assign(spec, groups),
+    "matched no cells"
+  )
+  expect_null(reg)
 })

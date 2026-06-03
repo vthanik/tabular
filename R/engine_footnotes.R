@@ -114,24 +114,6 @@
   paste0(.FN_OPEN, paste0(markers, collapse = ","), .FN_CLOSE)
 }
 
-# Split a body cell into its base text and the trailing marker payload
-# (NULL when the cell carries no footnote). One sentinel per cell, at
-# the end, after the decimal-padded field.
-#' @noRd
-.split_fn_sentinel <- function(text) {
-  if (is.na(text)) {
-    return(list(base = text, marker = NULL))
-  }
-  pos <- regexpr(.FN_OPEN, text, fixed = TRUE)
-  if (pos < 0L) {
-    return(list(base = text, marker = NULL))
-  }
-  base <- substr(text, 1L, pos - 1L)
-  inner <- substr(text, pos + 1L, nchar(text))
-  marker <- sub(.FN_CLOSE, "", inner, fixed = TRUE)
-  list(base = base, marker = marker)
-}
-
 # Substitute the sentinel with its bare marker glyph(s) so column-width
 # measurement reserves room for the rendered superscript.
 #' @noRd
@@ -225,11 +207,18 @@
           error = function(e) 0L
         )
         requested <- col_names[cols[cols >= 1L]]
+        if (length(requested) == 0L) {
+          # `j` resolved to no column (unknown name / out-of-range index,
+          # or `.resolve_layer_cols` errored). The anchor targets nothing
+          # renderable, so drop it (warn upstream) rather than allocating
+          # a marker against a phantom column 0.
+          return(list(matched = FALSE))
+        }
         vis <- intersect(requested, visible_cols)
-        if (length(requested) > 0L && length(vis) == 0L) {
+        if (length(vis) == 0L) {
           return(list(matched = FALSE, hidden = TRUE, col = requested[[1L]]))
         }
-        ci <- if (length(vis) > 0L) match(vis, col_names) else cols
+        ci <- match(vis, col_names)
         return(list(matched = TRUE, key = c(rank, gi, min(rows), min(ci))))
       }
     }
@@ -280,6 +269,16 @@ engine_footnotes_assign <- function(
   # linear `Find()` per block line. Both scale with the (small) footnote
   # count, never with the data, so the simple loops are intentional.
   visible_cols <- col_names[.visible_col_indices(spec, col_names)]
+  # Reading-order numbering must follow the RENDERED row order, not the
+  # raw input order. Each subgroup is re-sorted by `engine_sort` inside
+  # `.resolve_single_to_grid` before body markers are stamped, so resolve
+  # the anchor keys against the same post-sort data here; otherwise a
+  # `sort_rows()` table numbers its markers upside-down relative to the
+  # rows the reader sees.
+  groups <- lapply(groups, function(g) {
+    g$spec <- engine_sort(g$spec)
+    g
+  })
 
   enriched <- vector("list", length(refs))
   for (k in seq_along(refs)) {
@@ -317,8 +316,21 @@ engine_footnotes_assign <- function(
     return(NULL)
   }
 
+  # Same id + different text would silently drop the later text (the
+  # block keeps the first); two distinct notes pinning the same symbol
+  # would render one marker for two notes. Warn on both before assigning.
+  .fn_warn_id_text_clash(enriched)
+  .fn_warn_pin_clash(enriched)
+
   keystr <- vapply(enriched, function(e) .fn_keystr(e$key), character(1L))
   reg <- .fn_registry_seed()
+  # Reserve every user-pinned symbol up front so the auto-allocator skips
+  # it regardless of where the pinned note falls in reading order (the
+  # `symbol` arg promises a pinned glyph never collides with an auto one).
+  reg$used <- unique(c(
+    reg$used,
+    unlist(lapply(enriched, function(e) e$symbol))
+  ))
   for (e in enriched[order(keystr)]) {
     reg <- .fn_assign(reg, e$id, e$symbol, scheme)
   }
@@ -336,6 +348,43 @@ engine_footnotes_assign <- function(
   block <- Filter(Negate(is.null), block)
 
   list(refs = enriched, markers = reg$markers, block_ast = block)
+}
+
+# Warn when one `id` is reused with different text: the block keeps the
+# first ref's text (Find() below), so any later text would vanish.
+#' @noRd
+.fn_warn_id_text_clash <- function(enriched) {
+  ids <- vapply(enriched, function(e) e$id, character(1L))
+  for (id in unique(ids)) {
+    txt <- lapply(enriched[ids == id], function(e) as.character(e$text))
+    if (length(unique(txt)) > 1L) {
+      cli::cli_warn(c(
+        "Footnote {.arg id} {.val {id}} reused with different text; keeping the first.",
+        "i" = "Give each distinct note its own {.arg id}, or omit {.arg id}."
+      ))
+    }
+  }
+}
+
+# Warn when two distinct footnotes pin the same `symbol`: they would
+# share one marker glyph while emitting two separate note lines.
+#' @noRd
+.fn_warn_pin_clash <- function(enriched) {
+  pin <- vapply(
+    enriched,
+    function(e) e$symbol %||% NA_character_,
+    character(1L)
+  )
+  ids <- vapply(enriched, function(e) e$id, character(1L))
+  for (sym in unique(pin[!is.na(pin)])) {
+    sel <- !is.na(pin) & pin == sym
+    if (length(unique(ids[sel])) > 1L) {
+      cli::cli_warn(c(
+        "Two footnotes pin the same {.arg symbol} {.val {sym}}; they will share one marker.",
+        "i" = "Pin distinct symbols, or share an {.arg id} to merge the notes."
+      ))
+    }
+  }
 }
 
 # Compose one marked-footnote line: the label (with `{m}` replaced by

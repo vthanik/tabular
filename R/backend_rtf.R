@@ -550,6 +550,10 @@ backend_rtf <- function(grid, file) {
   }
   bold_close <- if (identical(bold_open, "")) "" else "}"
   rows <- vector("list", n)
+  # Honour preset(whitespace=) on this default (trhdr) title path too;
+  # the sibling .render_rtf_title_block already threads it, so without
+  # this `collapse` is silently a no-op on repeated page titles.
+  ws_preserve <- .preset_ws_preserve(preset)
   for (i in seq_len(n)) {
     halign <- if (
       is_style_node(surface_node) &&
@@ -561,7 +565,7 @@ backend_rtf <- function(grid, file) {
       h <- .effective_title_halign(preset, line_index = i, n_lines = n)
       if (is.na(h)) "center" else h
     }
-    inner <- .render_rtf_inline(titles_ast[[i]])
+    inner <- .render_rtf_inline(titles_ast[[i]], preserve = ws_preserve)
     if (i == 1L && isTRUE(mark_continuation) && length(continuation) > 0L) {
       inner <- paste0(
         inner,

@@ -442,10 +442,12 @@ as.tags.tabular_spec <- function(x, ..., id = NULL) {
 knit_print.tabular_spec <- function(x, ..., inline = FALSE) {
   pandoc_to <- tryCatch(knitr::pandoc_to(), error = function(e) NULL)
 
-  if (isTRUE(pandoc_to %in% c("latex", "beamer", "docx", "rtf"))) {
-    # backend_latex pending — render markdown source as a
-    # transitional pandoc fallback for the paged, non-HTML targets.
-    # Quarto / Rmd compile it back before the engine ingests it.
+  if (isTRUE(pandoc_to %in% c("latex", "beamer", "docx", "rtf", "typst"))) {
+    # Render markdown source as a transitional pandoc fallback for
+    # non-HTML targets. The default branch below emits a raw `{=html}`
+    # block, which only survives writers that emit HTML; the typst
+    # writer silently drops a raw `{=html}` block, so route typst here
+    # too. Quarto / Rmd compile the md back before the engine ingests it.
     return(.knit_print_md(x))
   }
 
@@ -454,8 +456,9 @@ knit_print.tabular_spec <- function(x, ..., inline = FALSE) {
     return(knitr::knit_print(htmltools::as.tags(x, ...), ..., inline = TRUE))
   }
 
-  # HTML and every markdown-family target (html / revealjs / typst /
-  # gfm / commonmark / markdown / unknown / interactive autoprint).
+  # HTML and the raw-HTML-passthrough markdown targets (html / revealjs
+  # / gfm / commonmark / markdown / unknown / interactive autoprint).
+  # Typst is handled above: its writer does not pass raw HTML through.
   # Emit the self-contained table as a pandoc RAW `{=html}` block:
   # pandoc passes a raw block straight through to HTML and never
   # re-parses it, so multi-level header spanners, multi-line BigN

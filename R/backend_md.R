@@ -111,13 +111,20 @@ backend_md <- function(grid, file) {
     total_pages = total_for_chrome
   )
 
-  titles <- .render_md_title_block(meta$titles_ast)
+  # Whitespace mode applies to title / footnote chrome too, not just
+  # body cells: collapse must drop NBSP runs everywhere or it is a no-op
+  # on these surfaces while HTML/LaTeX honour it.
+  ws_preserve <- .preset_ws_preserve(meta$preset)
+  titles <- .render_md_title_block(meta$titles_ast, preserve = ws_preserve)
   title_block <- if (length(titles) > 0L) {
     c(rep("", pad_title_top), titles, rep("", pad_title_bottom))
   } else {
     character()
   }
-  footnote_block <- .render_md_footnote_block(meta$footnotes_ast)
+  footnote_block <- .render_md_footnote_block(
+    meta$footnotes_ast,
+    preserve = ws_preserve
+  )
 
   out <- list()
   if (length(chrome_top) > 0L) {
@@ -272,13 +279,13 @@ backend_md <- function(grid, file) {
 # Title block: each title line becomes a level-1 heading. Empty
 # title list returns an empty character vector so the caller can
 # skip the surrounding spacing.
-.render_md_title_block <- function(titles_ast) {
+.render_md_title_block <- function(titles_ast, preserve = TRUE) {
   if (length(titles_ast) == 0L) {
     return(character())
   }
   vapply(
     titles_ast,
-    function(ast) paste0("# ", .render_md_inline(ast)),
+    function(ast) paste0("# ", .render_md_inline(ast, preserve = preserve)),
     character(1L)
   )
 }
@@ -286,13 +293,13 @@ backend_md <- function(grid, file) {
 # Footnote block: each footnote line becomes a regular paragraph
 # separated by a blank line. Empty list returns an empty character
 # vector.
-.render_md_footnote_block <- function(footnotes_ast) {
+.render_md_footnote_block <- function(footnotes_ast, preserve = TRUE) {
   if (length(footnotes_ast) == 0L) {
     return(character())
   }
   rendered <- vapply(
     footnotes_ast,
-    function(ast) .render_md_inline(ast),
+    function(ast) .render_md_inline(ast, preserve = preserve),
     character(1L)
   )
   # Two-element interleave: line, blank, line, blank... drop
@@ -691,7 +698,7 @@ backend_md <- function(grid, file) {
   text <- as.character(text)
   # Peel any auto-footnote marker sentinel off the cell end; re-attach
   # it as a Pandoc superscript after the base is escaped.
-  sp <- .split_fn_sentinel(text)
+  sp <- .fn_peel(text)
   text <- sp$base
   text <- gsub("|", "\\|", text, fixed = TRUE)
   text <- gsub("\r\n", "<br/>", text, fixed = TRUE)
@@ -703,7 +710,7 @@ backend_md <- function(grid, file) {
   if (isTRUE(preserve)) {
     text <- .preserve_ws(text, "&nbsp;")
   }
-  if (!is.null(sp$marker)) {
+  if (isTRUE(sp$has)) {
     text <- paste0(text, "^", .md_escape_inline(sp$marker), "^")
   }
   text
@@ -720,6 +727,11 @@ backend_md <- function(grid, file) {
   }
   text <- as.character(text)
   text <- gsub("|", "\\|", text, fixed = TRUE)
+  # Escape literal asterisks so a plain-text run is never reparsed as
+  # emphasis/strong. The footnote symbols scheme spills to doubled
+  # glyphs ("**" at the 7th marker); without this, "^**^" reads as a
+  # strong delimiter inside the Pandoc superscript and corrupts the cell.
+  text <- gsub("*", "\\*", text, fixed = TRUE)
   text
 }
 

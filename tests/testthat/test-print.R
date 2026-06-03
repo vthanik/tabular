@@ -344,6 +344,20 @@ test_that("knit_print routes beamer to the md source backend (not a raw html blo
   expect_no_match(as.character(out), "```{=html}", fixed = TRUE)
 })
 
+test_that("knit_print routes typst to the md source backend, not a raw html block (#cr8)", {
+  # Pandoc's typst writer drops a raw `{=html}` block, so a printed
+  # tabular_spec must fall back to markdown source (which pandoc renders
+  # into typst) rather than vanishing from the output.
+  testthat::local_mocked_bindings(
+    pandoc_to = function() "typst",
+    .package = "knitr"
+  )
+  s <- tabular(data.frame(x = 1L), titles = "T")
+  out <- knit_print.tabular_spec(s)
+  expect_s3_class(out, "knit_asis")
+  expect_no_match(as.character(out), "```{=html}", fixed = TRUE)
+})
+
 test_that(".knit_print_md returns markdown source as knit_asis", {
   s <- tabular(data.frame(x = 1L), titles = "T")
   out <- tabular:::.knit_print_md(s)

@@ -1329,3 +1329,20 @@ test_that("RTF emits brdrcf for a coloured body-cell border (#border-color)", {
   expect_true(grepl("\\red255\\green0\\blue0", rtf, fixed = TRUE))
   expect_true(grepl("brdrcf", rtf, fixed = TRUE))
 })
+
+test_that("whitespace='collapse' collapses runs in the RTF title (#cr5)", {
+  mk <- function(ws) {
+    tabular(data.frame(x = 1L), titles = "Pop:    Safety") |>
+      preset(whitespace = ws)
+  }
+  fc <- withr::local_tempfile(fileext = ".rtf")
+  emit(mk("collapse"), fc)
+  txt_c <- paste(readLines(fc, warn = FALSE), collapse = "\n")
+  # collapse: the title's multi-space run must NOT survive as nbsp tokens
+  expect_no_match(txt_c, "\\~", fixed = TRUE)
+  # preserve (control): nbsp tokens are kept
+  fp <- withr::local_tempfile(fileext = ".rtf")
+  emit(mk("preserve"), fp)
+  txt_p <- paste(readLines(fp, warn = FALSE), collapse = "\n")
+  expect_match(txt_p, "\\~", fixed = TRUE)
+})

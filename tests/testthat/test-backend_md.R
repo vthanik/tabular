@@ -690,3 +690,33 @@ test_that("MD scenario G: label repeats over the two drug arms (no border concep
     perl = TRUE
   )
 })
+
+test_that(".md_escape_inline escapes literal asterisks so markers aren't reparsed (#cr7)", {
+  # The footnote symbols scheme spills to a doubled glyph at the 7th
+  # marker; "^**^" would otherwise read as a strong delimiter inside a
+  # Pandoc superscript and corrupt the cell.
+  expect_equal(tabular:::.md_escape_inline("**"), "\\*\\*")
+  expect_equal(tabular:::.md_escape_inline("*"), "\\*")
+  expect_equal(tabular:::.md_escape_inline("plain"), "plain")
+})
+
+test_that("whitespace='collapse' collapses runs in md title and footnotes (#cr5)", {
+  mk <- function(ws) {
+    tabular(
+      data.frame(x = 1L),
+      titles = "Pop:    Safety",
+      footnotes = "Note:    spaced"
+    ) |>
+      preset(whitespace = ws)
+  }
+  fc <- withr::local_tempfile(fileext = ".md")
+  emit(mk("collapse"), fc)
+  txt_c <- paste(readLines(fc, warn = FALSE), collapse = "\n")
+  # collapse: neither the title nor the footnote keeps nbsp runs
+  expect_no_match(txt_c, "&nbsp;", fixed = TRUE)
+  # preserve (control): nbsp runs survive in the chrome
+  fp <- withr::local_tempfile(fileext = ".md")
+  emit(mk("preserve"), fp)
+  txt_p <- paste(readLines(fp, warn = FALSE), collapse = "\n")
+  expect_match(txt_p, "&nbsp;", fixed = TRUE)
+})
