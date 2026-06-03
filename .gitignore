@@ -19,6 +19,15 @@ HANDOFF*.md
 docs/
 inst/doc/
 
+# Quarto render cache + per-vignette render artefacts (vignettes are .qmd).
+# Scoped to vignettes/ so it never shadows tracked snapshot .html under
+# tests/testthat/_snaps/.
+.quarto/
+*.quarto_ipynb
+vignettes/**/*_files/
+vignettes/*.html
+vignettes/articles/*.html
+
 # data-raw transient
 data-raw/cache/
 
