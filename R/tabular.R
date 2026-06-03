@@ -47,6 +47,12 @@
 #'
 #'   **Restriction:** No NAs.
 #'
+#'   Each element supports glue-style `{expr}` interpolation: braces
+#'   are evaluated as R code in the calling environment at build time,
+#'   e.g. `"N total = {sum(n)}"`. Double a brace (`{{` or `}}`) for a
+#'   literal one. An `md()` / `html()` element is passed through
+#'   without interpolation.
+#'
 #'   ```r
 #'   # Canonical 3-line title block with BigN-qualified population.
 #'   n <- stats::setNames(saf_n$n, saf_n$arm_short)
@@ -63,6 +69,9 @@
 #'   timestamp band below them at render time.
 #'
 #'   **Restriction:** No NAs.
+#'
+#'   Each element supports glue-style `{expr}` interpolation (see
+#'   `titles`).
 #'
 #'   ```r
 #'   # Canonical 3-line footnote block.
@@ -234,6 +243,9 @@ tabular <- function(data, titles = NULL, footnotes = NULL) {
     arg = "footnotes",
     call = call
   )
+
+  titles_val <- .interpolate_vec(titles_val, env = call, call = call)
+  footnotes_val <- .interpolate_vec(footnotes_val, env = call, call = call)
 
   tabular_spec(
     data = data,

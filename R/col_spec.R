@@ -122,6 +122,12 @@
 #'   accepted here, unlike [`headers()`] band labels which are
 #'   strict.
 #'
+#'   Supports glue-style `{expr}` interpolation: braces are evaluated
+#'   as R code in the calling environment at build time, so a BigN
+#'   value folds inline, `label = "Placebo (N={n['placebo']})"`.
+#'   Double a brace (`{{` or `}}`) for a literal one. An `md()` /
+#'   `html()` label is passed through without interpolation.
+#'
 #'   ```r
 #'   # Two-line header with arm name and BigN from saf_n.
 #'   n <- stats::setNames(saf_n$n, saf_n$arm_short)
@@ -581,6 +587,7 @@ col_spec <- function(
   align_val <- .check_col_align(align, call = call)
   valign_val <- .check_col_valign(valign, call = call)
   .check_col_label(label, call = call)
+  label <- .interp_one(label, env = call, call = call)
   .check_col_visible(visible, call = call)
   .check_col_width(width, call = call)
   group_display_val <- .check_col_group_display(group_display, call = call)

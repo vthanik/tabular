@@ -27,6 +27,12 @@ flush against the lowest used title.
 
 \strong{Restriction:} No NAs.
 
+Each element supports glue-style \code{{expr}} interpolation: braces
+are evaluated as R code in the calling environment at build time,
+e.g. \code{"N total = {sum(n)}"}. Double a brace (\verb{\{\{} or \verb{\}\}}) for a
+literal one. An \code{md()} / \code{html()} element is passed through
+without interpolation.
+
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Canonical 3-line title block with BigN-qualified population.
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 titles = c(
@@ -42,6 +48,9 @@ only; the backend appends its own program-path / program-name /
 timestamp band below them at render time.
 
 \strong{Restriction:} No NAs.
+
+Each element supports glue-style \code{{expr}} interpolation (see
+\code{titles}).
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Canonical 3-line footnote block.
 footnotes = c(

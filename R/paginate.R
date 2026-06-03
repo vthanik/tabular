@@ -127,9 +127,19 @@
 #'   `NULL` (the default) renders no marker — pick the wording your
 #'   submission style guide expects (e.g. `"(continued)"`,
 #'   `"(Cont'd)"`, `"Page %d of %d"`) and pass it explicitly.
-#'   **HTML / MD:** ignored. With one continuous document on screen
-#'   there is no continuing-page boundary to mark. Effective only
-#'   for the page-oriented backends (RTF, PDF, LaTeX, DOCX).
+#'
+#'   **Backend support is uneven** — verify against your render target:
+#'
+#'   *   **PDF / LaTeX** — full: the marker prints on every
+#'       continuation page (both vertical page overflow and horizontal
+#'       panels).
+#'   *   **RTF** — horizontal continuation *panels* only
+#'       (`paginate(panels = N)`); the marker does NOT appear on
+#'       vertical page-overflow continuations.
+#'   *   **DOCX** — not marked. DOCX paginates natively but emits no
+#'       continuation marker.
+#'   *   **HTML / MD** — ignored. With one continuous document on
+#'       screen there is no continuing-page boundary to mark.
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
 #'   [`style()`], [`preset()`], then render via [`emit()`] (or

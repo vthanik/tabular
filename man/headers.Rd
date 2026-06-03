@@ -26,7 +26,12 @@ declares a passthrough leaf (see the Passthrough section above).
 \strong{Restriction:} Every column referenced must exist in
 \code{.spec@data}. A column may appear under at most one leaf.
 Names must be unique within one \code{headers()} call.
-\strong{Tip:} Pass \code{headers()} with no arguments to clear the tree.}
+\strong{Tip:} Pass \code{headers()} with no arguments to clear the tree.
+\strong{Interaction:} Band labels support glue-style \code{{expr}}
+interpolation, evaluated as R code in the calling environment at
+build time (double a brace for a literal one). The non-blank and
+uniqueness checks apply to the raw author-typed name, before
+interpolation.}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with

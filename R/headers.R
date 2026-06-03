@@ -65,6 +65,11 @@
 #'   `.spec@data`. A column may appear under at most one leaf.
 #'   Names must be unique within one `headers()` call.
 #'   **Tip:** Pass `headers()` with no arguments to clear the tree.
+#'   **Interaction:** Band labels support glue-style `{expr}`
+#'   interpolation, evaluated as R code in the calling environment at
+#'   build time (double a brace for a literal one). The non-blank and
+#'   uniqueness checks apply to the raw author-typed name, before
+#'   interpolation.
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
 #'   [`sort_rows()`], [`style()`].
@@ -276,6 +281,10 @@ headers <- function(.spec, ...) {
 # `path` is the dotted path from root to here, used in error messages
 # so the user can locate the offending entry inside a nested tree.
 .build_header_node <- function(label, value, path, call) {
+  # Interpolate the display label only; `path` stays the raw author-typed
+  # name so dedup, blank-checks, and error provenance are unaffected. The
+  # passthrough leaf (label = NA_character_) is skipped by the NA guard.
+  label <- .interp_one(label, env = call, call = call)
   if (is.character(value)) {
     if (anyNA(value)) {
       cli::cli_abort(

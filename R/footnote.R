@@ -28,7 +28,10 @@
 #'
 #' @param text *The footnote text.* `<character(1)> | md() | html()`.
 #'   Wrap in [`md()`] / [`html()`] for inline markup; plain strings are
-#'   shown verbatim.
+#'   shown verbatim. A plain string supports glue-style `{expr}`
+#'   interpolation, evaluated as R code in the calling environment at
+#'   build time (double a brace for a literal one); an `md()` / `html()`
+#'   value is passed through without interpolation.
 #'
 #' @param .at *Where the marker is placed.* `<tabular_location>: default
 #'   [`cells_body()`]`. Any `cells_*()` location: a body-cell predicate
@@ -125,6 +128,7 @@ footnote <- function(
   call <- rlang::caller_env()
   check_tabular_spec(spec, call = call)
   .check_inline_input(text, arg = "text", call = call)
+  text <- .interp_one(text, env = call, call = call)
   if (!is_tabular_location(.at)) {
     cli::cli_abort(
       c(

@@ -11,7 +11,10 @@ footnote(spec, text, .at = cells_body(), id = NULL, symbol = NULL)
 
 \item{text}{\emph{The footnote text.} \verb{<character(1)> | md() | html()}.
 Wrap in \code{\link[=md]{md()}} / \code{\link[=html]{html()}} for inline markup; plain strings are
-shown verbatim.}
+shown verbatim. A plain string supports glue-style \code{{expr}}
+interpolation, evaluated as R code in the calling environment at
+build time (double a brace for a literal one); an \code{md()} / \code{html()}
+value is passed through without interpolation.}
 
 \item{.at}{\emph{Where the marker is placed.} \verb{<tabular_location>: default [}cells_body()\verb{]}. Any \verb{cells_*()} location: a body-cell predicate
 (\code{cells_body(where = ...)}), a column header (\code{cells_headers()}), a

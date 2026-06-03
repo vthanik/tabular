@@ -107,6 +107,12 @@ the input column name verbatim.
 accepted here, unlike \code{\link[=headers]{headers()}} band labels which are
 strict.
 
+Supports glue-style \code{{expr}} interpolation: braces are evaluated
+as R code in the calling environment at build time, so a BigN
+value folds inline, \code{label = "Placebo (N={n['placebo']})"}.
+Double a brace (\verb{\{\{} or \verb{\}\}}) for a literal one. An \code{md()} /
+\code{html()} label is passed through without interpolation.
+
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two-line header with arm name and BigN from saf_n.
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 col_spec(

@@ -85,9 +85,20 @@ table's title block.} \verb{<character(1) | NULL>: default NULL}.
 \code{NULL} (the default) renders no marker — pick the wording your
 submission style guide expects (e.g. \code{"(continued)"},
 \code{"(Cont'd)"}, \code{"Page \%d of \%d"}) and pass it explicitly.
-\strong{HTML / MD:} ignored. With one continuous document on screen
-there is no continuing-page boundary to mark. Effective only
-for the page-oriented backends (RTF, PDF, LaTeX, DOCX).}
+
+\strong{Backend support is uneven} — verify against your render target:
+\itemize{
+\item \strong{PDF / LaTeX} — full: the marker prints on every
+continuation page (both vertical page overflow and horizontal
+panels).
+\item \strong{RTF} — horizontal continuation \emph{panels} only
+(\code{paginate(panels = N)}); the marker does NOT appear on
+vertical page-overflow continuations.
+\item \strong{DOCX} — not marked. DOCX paginates natively but emits no
+continuation marker.
+\item \strong{HTML / MD} — ignored. With one continuous document on
+screen there is no continuing-page boundary to mark.
+}}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with
