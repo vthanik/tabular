@@ -36,6 +36,12 @@ jobs:
 
       - uses: r-lib/actions/setup-pandoc@v2
 
+      # Pin Quarto explicitly. The package ships quarto vignettes
+      # (VignetteBuilder: quarto), and relying on the runner image's
+      # pre-installed Quarto is fragile across platforms (Windows vignette
+      # rebuild began failing after a runner image bump).
+      - uses: quarto-dev/quarto-actions/setup@v2
+
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.config.r }}
