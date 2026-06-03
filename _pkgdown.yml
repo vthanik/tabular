@@ -75,6 +75,13 @@ reference:
   - md
   - html
 
+- title: Footnotes
+  desc: Attach an auto-numbered footnote to any `cells_*()` location. The
+        engine assigns the marker once, in reading order, deduped by id,
+        and byte-identical across every backend and page.
+  contents:
+  - footnote
+
 - title: Pagination
   desc: Configure page splits, group-run protection, and horizontal
         panel layout for wide tables. Row budget per page is computed

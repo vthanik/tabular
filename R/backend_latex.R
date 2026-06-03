@@ -1937,7 +1937,10 @@ backend_latex <- function(grid, file) {
   }
   text <- as.character(text)
   text[is.na(text)] <- ""
-  text <- .latex_escape(text)
+  # Peel any auto-footnote marker sentinel off the cell end before
+  # escaping; re-attach it as `\textsuperscript{}` afterwards.
+  peeled <- .fn_peel(text)
+  text <- .latex_escape(peeled$base)
   # LaTeX in-cell line break is `\\`; the trailing `{}` stops a
   # following `[...]` (e.g. a footnote marker like `[1]`) from being read
   # as the optional `\\[<dimen>]` argument, which would raise "Illegal
@@ -1950,6 +1953,14 @@ backend_latex <- function(grid, file) {
   # `\textasciitilde{}`. Single interior spaces stay breakable.
   if (isTRUE(preserve)) {
     text <- .preserve_ws(text, "~")
+  }
+  if (any(peeled$has)) {
+    text[peeled$has] <- paste0(
+      text[peeled$has],
+      "\\textsuperscript{",
+      .latex_escape(peeled$marker[peeled$has]),
+      "}"
+    )
   }
   text
 }

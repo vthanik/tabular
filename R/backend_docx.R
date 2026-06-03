@@ -2961,7 +2961,10 @@ backend_docx <- function(grid, file) {
   if (is.null(text) || length(text) == 0L || is.na(text)) {
     text <- ""
   }
-  text <- gsub("\r\n", "\n", as.character(text), fixed = TRUE)
+  # Peel any auto-footnote marker sentinel off the cell end; it becomes
+  # a superscript run appended after the body runs.
+  peeled <- .split_fn_sentinel(as.character(text))
+  text <- gsub("\r\n", "\n", peeled$base, fixed = TRUE)
   parts <- strsplit(text, "\n", fixed = TRUE)[[1L]]
   if (length(parts) == 0L) {
     parts <- ""
@@ -2975,9 +2978,32 @@ backend_docx <- function(grid, file) {
       "</w:t></w:r>"
     )
   }
-  paste0(
+  body <- paste0(
     vapply(parts, run, character(1L), USE.NAMES = FALSE),
     collapse = "<w:r><w:br/></w:r>"
+  )
+  if (!is.null(peeled$marker)) {
+    body <- paste0(body, .docx_fn_sup_run(peeled$marker, rpr))
+  }
+  body
+}
+
+# Emit a footnote-marker superscript run: the cell's inherited run
+# properties plus `<w:vertAlign w:val="superscript"/>`, canonically
+# ordered. `rpr` is the cell's full `<w:rPr>...</w:rPr>` block (or "").
+#' @noRd
+.docx_fn_sup_run <- function(marker, rpr) {
+  inner <- sub("^<w:rPr>(.*)</w:rPr>$", "\\1", rpr)
+  if (identical(inner, rpr)) {
+    inner <- "" # rpr was "" (no wrapper present)
+  }
+  inner <- paste0(inner, "<w:vertAlign w:val=\"superscript\"/>")
+  paste0(
+    "<w:r><w:rPr>",
+    .docx_sort_rpr(inner),
+    "</w:rPr><w:t xml:space=\"preserve\">",
+    .docx_escape(marker),
+    "</w:t></w:r>"
   )
 }
 

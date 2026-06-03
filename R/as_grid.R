@@ -293,12 +293,18 @@ as_grid <- function(spec) {
 # the per-spec pagination plans.
 .resolve_spec_to_grid <- function(spec, format, call) {
   groups <- engine_subgroup_split(spec)
+  # Assign footnote markers ONCE, at the spec level, in reading order
+  # across the full data (subgroup-major), so the marker at every anchor
+  # is byte-identical across subgroups and pages. NULL when the spec
+  # carries no `footnote()` refs (every downstream helper is a no-op).
+  registry <- engine_footnotes_assign(spec, groups, call)
   if (length(groups) == 1L && is.null(groups[[1L]]$runtime)) {
     return(.resolve_single_to_grid(
       groups[[1L]]$spec,
       format = format,
       call = call,
-      runtime = NULL
+      runtime = NULL,
+      registry = registry
     ))
   }
   sub_grids <- lapply(groups, function(g) {
@@ -306,7 +312,8 @@ as_grid <- function(spec) {
       g$spec,
       format = format,
       call = call,
-      runtime = g$runtime
+      runtime = g$runtime,
+      registry = registry
     )
   })
   .merge_subgroup_grids(sub_grids, format = format, spec = spec)
@@ -317,7 +324,13 @@ as_grid <- function(spec) {
 # parent spec carries no subgroup); when set, every page descriptor
 # is stamped with subgroup_* fields and a pre-rendered
 # subgroup_line_ast banner.
-.resolve_single_to_grid <- function(spec, format, call, runtime) {
+.resolve_single_to_grid <- function(
+  spec,
+  format,
+  call,
+  runtime,
+  registry = NULL
+) {
   spec <- engine_sort(spec)
 
   headers <- engine_headers(spec)
@@ -337,6 +350,25 @@ as_grid <- function(spec) {
   # parallel sidecar from the lowered cells_*() chrome layers.
   chrome_style_mat <- engine_chrome_borders(spec)
   fmt <- engine_format(spec)
+
+  # Footnotes — AST surfaces (column labels / titles) get a native
+  # superscript run now (never touched by decimal); the marked-footnote
+  # block is appended to `footnotes_ast` once. Identical across every
+  # subgroup, so the first-subgroup-only grid merge carries it correctly.
+  # Body-cell markers are stamped later, after engine_decimal. All
+  # no-ops when `registry` is NULL.
+  fn_ast <- engine_footnotes_mark_ast(
+    fmt$col_labels_ast,
+    fmt$titles_ast,
+    registry,
+    names(spec@data)
+  )
+  fmt$col_labels_ast <- fn_ast$col_labels_ast
+  fmt$titles_ast <- fn_ast$titles_ast
+  fmt$footnotes_ast <- engine_footnotes_append_block(
+    fmt$footnotes_ast,
+    registry
+  )
 
   # Snapshot of formatted cells BEFORE any cosmetic mutation. The
   # `data_file` QC artefact reads from this — never from
@@ -420,6 +452,19 @@ as_grid <- function(spec) {
     not_considered = .effective_preset(spec)@decimal_markers,
     metrics = decimal_metrics,
     afm_name = afm_name
+  )
+
+  # Stamp footnote markers on body cells AFTER decimal alignment (so the
+  # padded field is never disturbed) and BEFORE width measurement (so
+  # the column reserves room for the superscript). Anchors resolve
+  # against this (sub)grid's data; the marker glyph comes from the
+  # spec-level registry. No-op when `registry` is NULL.
+  cells_text <- engine_footnotes_mark_body(
+    cells_text,
+    registry,
+    data = spec@data,
+    col_names = names(spec@data),
+    call = call
   )
 
   # Resolve col widths via AFM Core 13 metrics (auto sizing).

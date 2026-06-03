@@ -122,6 +122,10 @@
   head_afm <- .resolve_afm_name(preset@font_family, bold = TRUE)
   font_size <- preset@font_size
 
+  # Footnote sentinels in body cells measure as their bare marker
+  # glyph(s), so the column reserves room for the rendered superscript.
+  cells <- .fn_width_text(cells)
+
   body_em <- if (length(cells) == 0L) {
     0L
   } else {

@@ -2334,7 +2334,12 @@ backend_rtf <- function(grid, file) {
   if (is.null(text) || length(text) == 0L) {
     return("")
   }
-  out <- .rtf_escape(text)
+  text <- as.character(text)
+  text[is.na(text)] <- ""
+  # Peel any auto-footnote marker sentinel off the cell end before
+  # escaping; re-attach it as a `{\super ...}` run afterwards.
+  peeled <- .fn_peel(text)
+  out <- .rtf_escape(peeled$base)
   out <- gsub("\r\n", "\\line ", out, fixed = TRUE)
   out <- gsub("\n", "\\line ", out, fixed = TRUE)
   # Preserve significant ASCII whitespace LAST, after the indent strip
@@ -2342,6 +2347,14 @@ backend_rtf <- function(grid, file) {
   # non-breaking space; inserted post-escape so it is not re-escaped.
   if (isTRUE(preserve)) {
     out <- .preserve_ws(out, "\\~")
+  }
+  if (any(peeled$has)) {
+    out[peeled$has] <- paste0(
+      out[peeled$has],
+      "{\\super ",
+      .rtf_escape(peeled$marker[peeled$has]),
+      "\\nosupersub}"
+    )
   }
   out
 }

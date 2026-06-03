@@ -1750,6 +1750,10 @@ backend_html <- function(grid, file) {
   }
   text <- as.character(text)
   text[is.na(text)] <- ""
+  # Peel any auto-footnote marker sentinel off the cell end before
+  # escaping; it is re-attached as a `<sup>` after the base is escaped.
+  peeled <- .fn_peel(text)
+  text <- peeled$base
   text <- gsub("&", "&amp;", text, fixed = TRUE)
   text <- gsub("<", "&lt;", text, fixed = TRUE)
   text <- gsub(">", "&gt;", text, fixed = TRUE)
@@ -1762,6 +1766,14 @@ backend_html <- function(grid, file) {
   # residual user spaces become `&nbsp;`, never the engine indent.
   if (isTRUE(preserve)) {
     text <- .preserve_ws(text, "&nbsp;")
+  }
+  if (any(peeled$has)) {
+    text[peeled$has] <- paste0(
+      text[peeled$has],
+      "<sup>",
+      .html_escape(peeled$marker[peeled$has]),
+      "</sup>"
+    )
   }
   text
 }

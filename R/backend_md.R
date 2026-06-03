@@ -689,6 +689,10 @@ backend_md <- function(grid, file) {
     return("")
   }
   text <- as.character(text)
+  # Peel any auto-footnote marker sentinel off the cell end; re-attach
+  # it as a Pandoc superscript after the base is escaped.
+  sp <- .split_fn_sentinel(text)
+  text <- sp$base
   text <- gsub("|", "\\|", text, fixed = TRUE)
   text <- gsub("\r\n", "<br/>", text, fixed = TRUE)
   text <- gsub("\n", "<br/>", text, fixed = TRUE)
@@ -698,6 +702,9 @@ backend_md <- function(grid, file) {
   # GFM -> HTML render instead of collapsing.
   if (isTRUE(preserve)) {
     text <- .preserve_ws(text, "&nbsp;")
+  }
+  if (!is.null(sp$marker)) {
+    text <- paste0(text, "^", .md_escape_inline(sp$marker), "^")
   }
   text
 }

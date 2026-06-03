@@ -38,6 +38,8 @@
   "decimal_markers",
   "chrome_onscreen",
   "whitespace",
+  "footnote_markers",
+  "footnote_label",
   "width_mode",
   "cell_padding",
   "spacing",

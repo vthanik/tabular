@@ -77,6 +77,7 @@
 .decimal_metrics_values <- c("chars")
 .chrome_onscreen_values <- c("auto", "off")
 .whitespace_values <- c("preserve", "collapse")
+.footnote_markers_values <- c("letters", "numbers", "symbols")
 
 # Recognised values for `preset_spec@width_mode`. Table-level
 # column-sizing policy that mirrors Word's Table Layout menu
@@ -789,6 +790,22 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "preserve"
     ),
+    # footnote_markers — symbol scheme for auto-numbered footnotes
+    # attached via `footnote()`. "letters" (a, b, ... aa), "numbers"
+    # (1, 2, ...), or "symbols" (dagger, ddagger, section, ...). The
+    # engine assigns markers once in reading order, deduped by id, and
+    # they are byte-identical across every backend and page.
+    footnote_markers = S7::new_property(
+      S7::class_character,
+      default = "letters"
+    ),
+    # footnote_label — template for the marked-footnote block line. The
+    # `{m}` token is replaced with the assigned marker; default emits
+    # just the marker (the superscript at the anchor disambiguates).
+    footnote_label = S7::new_property(
+      S7::class_character,
+      default = "{m}"
+    ),
     width_mode = S7::new_property(
       S7::class_character,
       default = "content"
@@ -854,6 +871,19 @@ preset_spec <- S7::new_class(
         "@whitespace must be one of ",
         paste(.sh_quote(.whitespace_values), collapse = ", ")
       ))
+    }
+    if (
+      !(length(self@footnote_markers) == 1L &&
+        !is.na(self@footnote_markers) &&
+        self@footnote_markers %in% .footnote_markers_values)
+    ) {
+      return(paste0(
+        "@footnote_markers must be one of ",
+        paste(.sh_quote(.footnote_markers_values), collapse = ", ")
+      ))
+    }
+    if (!(length(self@footnote_label) == 1L && !is.na(self@footnote_label))) {
+      return("@footnote_label must be a single non-NA string")
     }
     if (!(self@width_mode %in% .preset_width_mode_values)) {
       return(paste0(
@@ -953,6 +983,11 @@ tabular_spec <- S7::new_class(
       S7::class_character,
       default = character()
     ),
+    # footnote_refs — auto-numbered footnotes attached via `footnote()`.
+    # Each entry is list(text, id, symbol, location); the engine assigns
+    # markers once in reading order (deduped by id) and renders the
+    # marked-footnote block after any manual `footnotes`.
+    footnote_refs = S7::new_property(S7::class_list, default = list()),
     subgroup = S7::class_any
   )
 )
