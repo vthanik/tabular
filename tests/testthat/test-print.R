@@ -308,13 +308,40 @@ test_that(".extract_html_fragment falls back to whole string when no <body>", {
 # knit_print.tabular_spec
 # ---------------------------------------------------------------------
 
-test_that("knit_print delegates to as.tags by default (html target)", {
+test_that("knit_print wraps the table in a pandoc raw {=html} block by default (#table-md)", {
   skip_if_not_installed("knitr")
   s <- tabular(data.frame(x = 1L), titles = "T")
   out <- knit_print.tabular_spec(s)
-  # Default knit_print on a tagList returns a string with class
-  # 'knit_asis' that contains the HTML markup.
-  expect_match(as.character(out), "<table", fixed = TRUE)
+  txt <- as.character(out)
+  # The default branch must emit a pandoc RAW {=html} block so a
+  # markdown / GFM writer passes the <table> through verbatim instead
+  # of downgrading colspan/rowspan tables to the literal `[TABLE]`.
+  expect_s3_class(out, "knit_asis")
+  expect_match(txt, "```{=html}", fixed = TRUE)
+  expect_match(txt, "<table", fixed = TRUE)
+})
+
+test_that("knit_print returns the raw {=html} block under a gfm target (#table-md)", {
+  skip_if_not_installed("knitr")
+  testthat::local_mocked_bindings(
+    pandoc_to = function() "gfm",
+    .package = "knitr"
+  )
+  s <- tabular(data.frame(x = 1L), titles = "T")
+  txt <- as.character(knit_print.tabular_spec(s))
+  expect_match(txt, "```{=html}", fixed = TRUE)
+  expect_match(txt, "<table", fixed = TRUE)
+})
+
+test_that("knit_print routes beamer to the md source backend (not a raw html block)", {
+  testthat::local_mocked_bindings(
+    pandoc_to = function() "beamer",
+    .package = "knitr"
+  )
+  s <- tabular(data.frame(x = 1L), titles = "T")
+  out <- knit_print.tabular_spec(s)
+  expect_s3_class(out, "knit_asis")
+  expect_no_match(as.character(out), "```{=html}", fixed = TRUE)
 })
 
 test_that(".knit_print_md returns markdown source as knit_asis", {

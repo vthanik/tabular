@@ -442,23 +442,28 @@ as.tags.tabular_spec <- function(x, ..., id = NULL) {
 knit_print.tabular_spec <- function(x, ..., inline = FALSE) {
   pandoc_to <- tryCatch(knitr::pandoc_to(), error = function(e) NULL)
 
-  if (isTRUE(pandoc_to %in% c("latex", "beamer"))) {
+  if (isTRUE(pandoc_to %in% c("latex", "beamer", "docx", "rtf"))) {
     # backend_latex pending — render markdown source as a
-    # transitional pandoc fallback. Quarto / Rmd will compile it
-    # back into LaTeX before TeX-engine ingestion.
-    return(.knit_print_md(x))
-  }
-  if (isTRUE(pandoc_to == "docx")) {
-    return(.knit_print_md(x))
-  }
-  if (isTRUE(pandoc_to == "rtf")) {
+    # transitional pandoc fallback for the paged, non-HTML targets.
+    # Quarto / Rmd compile it back before the engine ingests it.
     return(.knit_print_md(x))
   }
 
-  # Default (html / revealjs / typst / unknown / interactive
-  # autoprint) routes through as.tags so knitr's tag handler
-  # renders inline.
-  knitr::knit_print(htmltools::as.tags(x, ...), ..., inline = inline)
+  if (isTRUE(inline)) {
+    # Inline code context: defer to knitr's inline tag handling.
+    return(knitr::knit_print(htmltools::as.tags(x, ...), ..., inline = TRUE))
+  }
+
+  # HTML and every markdown-family target (html / revealjs / typst /
+  # gfm / commonmark / markdown / unknown / interactive autoprint).
+  # Emit the self-contained table as a pandoc RAW `{=html}` block:
+  # pandoc passes a raw block straight through to HTML and never
+  # re-parses it, so multi-level header spanners, multi-line BigN
+  # headers, and group-header-row tables survive a CommonMark / GFM
+  # writer instead of collapsing to a `[TABLE]` placeholder. (Same
+  # mechanism as knit_print.tinytable.)
+  html <- as.character(htmltools::as.tags(x, ...))
+  knitr::asis_output(paste0("\n\n```{=html}\n", html, "\n```\n\n"))
 }
 
 # Knit-print fallback for non-HTML targets pending their real
