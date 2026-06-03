@@ -50,7 +50,7 @@
 # Render `grid` to a PDF file. Writes the LaTeX source to a
 # tempfile (via backend_latex), then compiles via
 # `tinytex::latexmk()`. Returns the file path invisibly.
-backend_pdf <- function(grid, file) {
+backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
   rlang::check_installed(
     "tinytex",
     reason = "to compile PDF output via xelatex"
@@ -64,13 +64,26 @@ backend_pdf <- function(grid, file) {
   backend_latex(grid, tex_file)
 
   result <- tryCatch(
-    tinytex::latexmk(tex_file, engine = "xelatex", pdf_file = file),
+    .compile(tex_file, file),
     error = function(e) e
   )
   if (inherits(result, "error")) {
     .pdf_compile_abort(result)
   }
   invisible(file)
+}
+
+# Internal compile seam over `tinytex::latexmk()`, injected as the
+# `.compile` default so tests can pass a fake without mocking. testthat's
+# `local_mocked_bindings` does NOT engage under covr instrumentation
+# (covr's traced binding wins), so the success / abort paths are tested
+# by injecting `.compile` directly. The body is a thin passthrough that
+# only runs with a real TeX install (exercised by the tinytex-gated
+# end-to-end compile tests), so it is excluded from coverage.
+.tabular_latexmk <- function(tex_file, file) {
+  # nocov start
+  tinytex::latexmk(tex_file, engine = "xelatex", pdf_file = file)
+  # nocov end
 }
 
 # Surface a friendly cli error when xelatex / latexmk fails.

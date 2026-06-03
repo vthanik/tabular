@@ -108,12 +108,15 @@ test_that(".pdf_compile_abort falls back to verbose-log hint for unknown errors"
 test_that("emit(.pdf) dispatches to backend_pdf", {
   skip_if_not_installed("tinytex")
   skip_on_cran()
-  # We don't actually compile here (heavy + tex-distro-dependent);
-  # we verify the dispatcher routes to backend_pdf by checking
-  # the registered backend identity.
+  # We don't actually compile here (heavy + tex-distro-dependent); we
+  # verify the dispatcher routes to backend_pdf. Compare by formals, not
+  # object identity: covr rewrites function bodies, so the registry copy
+  # (captured at package load) and the namespace copy are no longer the
+  # same object under instrumentation. Formals survive instrumentation.
   expect_true(tabular:::.has_backend("pdf"))
   fn <- tabular:::.tabular_backends[["pdf"]]
-  expect_identical(fn, tabular:::backend_pdf)
+  expect_true(is.function(fn))
+  expect_identical(formals(fn), formals(tabular:::backend_pdf))
 })
 
 # ---------------------------------------------------------------------
@@ -184,36 +187,41 @@ test_that("emit(.pdf) compiles footnote markers (letters + symbol glyphs) and ti
 # .pdf_compile_abort() without requiring tinytex on the test host.
 # ---------------------------------------------------------------------
 
+# These inject a fake compile step via backend_pdf()'s `.compile`
+# argument rather than mocking. testthat's local_mocked_bindings does not
+# engage under covr instrumentation (covr's traced binding wins, so the
+# real compile runs and fails the test); dependency injection is
+# covr-safe. See R/backend_pdf.R.
 test_that("backend_pdf() aborts with tabular_error_backend when latexmk fails", {
   skip_if_not_installed("tinytex")
-  testthat::local_mocked_bindings(
-    latexmk = function(file, engine, pdf_file) {
-      stop("! LaTeX Error: File `tabularray.sty' not found.")
-    },
-    .package = "tinytex"
-  )
   spec <- tabular(data.frame(x = 1:2), titles = "T")
   grid <- as_grid(spec)
   out <- withr::local_tempfile(fileext = ".pdf")
   expect_error(
-    backend_pdf(grid, out),
+    backend_pdf(
+      grid,
+      out,
+      .compile = function(tex_file, file) {
+        stop("! LaTeX Error: File `tabularray.sty' not found.")
+      }
+    ),
     class = "tabular_error_backend"
   )
 })
 
-test_that("backend_pdf() returns the file path invisibly on a mocked successful compile", {
+test_that("backend_pdf() returns the file path invisibly on a successful compile", {
   skip_if_not_installed("tinytex")
-  testthat::local_mocked_bindings(
-    latexmk = function(file, engine, pdf_file) {
-      writeLines("%PDF-stub", pdf_file)
-      pdf_file
-    },
-    .package = "tinytex"
-  )
   spec <- tabular(data.frame(x = 1L), titles = "T")
   grid <- as_grid(spec)
   out <- withr::local_tempfile(fileext = ".pdf")
-  result <- backend_pdf(grid, out)
+  result <- backend_pdf(
+    grid,
+    out,
+    .compile = function(tex_file, file) {
+      writeLines("%PDF-stub", file)
+      file
+    }
+  )
   expect_identical(result, out)
   expect_true(file.exists(out))
 })
