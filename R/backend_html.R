@@ -1670,11 +1670,7 @@ backend_html <- function(grid, file) {
 # plain text so labels / titles / footnotes preserve hand-built
 # indent identically to body cells.
 .html_escape_text_run <- function(text, preserve, lead = TRUE, trail = TRUE) {
-  out <- .html_escape(text)
-  if (isTRUE(preserve)) {
-    out <- .preserve_ws(out, "&nbsp;", lead = lead, trail = trail)
-  }
-  out
+  .escape_text_run(text, .html_escape, "&nbsp;", preserve, lead, trail)
 }
 
 # Render the children of a wrapping run. Each child's line-edge flags
@@ -1687,27 +1683,7 @@ backend_html <- function(grid, file) {
   lead = TRUE,
   trail = TRUE
 ) {
-  n <- length(children)
-  if (n == 0L) {
-    return("")
-  }
-  paste0(
-    vapply(
-      seq_len(n),
-      function(j) {
-        is_first <- j == 1L || identical(children[[j - 1L]]$type, "newline")
-        is_last <- j == n || identical(children[[j + 1L]]$type, "newline")
-        .render_html_run(
-          children[[j]],
-          preserve,
-          lead = lead && is_first,
-          trail = trail && is_last
-        )
-      },
-      character(1L)
-    ),
-    collapse = ""
-  )
+  .render_ast_children(children, .render_html_run, preserve, lead, trail)
 }
 
 # Render a link run as `<a href="..." title="...">text</a>`. The

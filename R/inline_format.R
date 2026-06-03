@@ -605,3 +605,65 @@ parse_inline <- function(x, call = rlang::caller_env()) {
   keys <- vapply(parts, function(p) trimws(p[[1L]]), character(1L))
   stats::setNames(vals, keys)
 }
+
+# ---------------------------------------------------------------------
+# Shared inline-render helpers (backend-agnostic)
+# ---------------------------------------------------------------------
+
+# Escape a plain-text run with `escaper`, then (when `preserve`) rewrite
+# significant whitespace runs to the backend's non-breaking token via
+# `.preserve_ws`. The per-backend `*_escape_text_run` wrappers differ
+# only in `escaper` + `nbsp`, so the preserve logic lives here once: a
+# change to the whitespace-mode handling cannot drift between backends.
+#' @noRd
+.escape_text_run <- function(
+  text,
+  escaper,
+  nbsp,
+  preserve,
+  lead = TRUE,
+  trail = TRUE
+) {
+  out <- escaper(text)
+  if (isTRUE(preserve)) {
+    out <- .preserve_ws(out, nbsp, lead = lead, trail = trail)
+  }
+  out
+}
+
+# Render the children of a wrapping inline run, deriving each child's
+# line-edge flags from its position: a child is line-leading only if it
+# is first (or follows a `newline` run) AND the parent is line-leading;
+# symmetric for trailing. `render_run_fn(run, preserve, lead, trail)` is
+# the backend's per-run renderer. The four AST backends (html / md /
+# latex / rtf) share this edge logic verbatim.
+#' @noRd
+.render_ast_children <- function(
+  children,
+  render_run_fn,
+  preserve = TRUE,
+  lead = TRUE,
+  trail = TRUE
+) {
+  n <- length(children)
+  if (n == 0L) {
+    return("")
+  }
+  paste0(
+    vapply(
+      seq_len(n),
+      function(j) {
+        is_first <- j == 1L || identical(children[[j - 1L]]$type, "newline")
+        is_last <- j == n || identical(children[[j + 1L]]$type, "newline")
+        render_run_fn(
+          children[[j]],
+          preserve,
+          lead = lead && is_first,
+          trail = trail && is_last
+        )
+      },
+      character(1L)
+    ),
+    collapse = ""
+  )
+}

@@ -2254,11 +2254,7 @@ backend_rtf <- function(grid, file) {
 # whitespace runs into `\~` (the single chokepoint for inline plain
 # text, mirroring the body-cell path).
 .rtf_escape_text_run <- function(text, preserve, lead = TRUE, trail = TRUE) {
-  out <- .rtf_escape(text)
-  if (isTRUE(preserve)) {
-    out <- .preserve_ws(out, "\\~", lead = lead, trail = trail)
-  }
-  out
+  .escape_text_run(text, .rtf_escape, "\\~", preserve, lead, trail)
 }
 
 # Render the children of a wrapping run. Each child's line-edge flags
@@ -2269,27 +2265,7 @@ backend_rtf <- function(grid, file) {
   lead = TRUE,
   trail = TRUE
 ) {
-  n <- length(children)
-  if (n == 0L) {
-    return("")
-  }
-  paste0(
-    vapply(
-      seq_len(n),
-      function(j) {
-        is_first <- j == 1L || identical(children[[j - 1L]]$type, "newline")
-        is_last <- j == n || identical(children[[j + 1L]]$type, "newline")
-        .render_rtf_run(
-          children[[j]],
-          preserve,
-          lead = lead && is_first,
-          trail = trail && is_last
-        )
-      },
-      character(1L)
-    ),
-    collapse = ""
-  )
+  .render_ast_children(children, .render_rtf_run, preserve, lead, trail)
 }
 
 # Render a link run as an RTF hyperlink field. Word and
