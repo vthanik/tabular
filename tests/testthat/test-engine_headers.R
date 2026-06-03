@@ -239,3 +239,31 @@ test_that(".band_labels_for_depth() selects per-depth bands independently", {
   expect_identical(d1, c(NA, "Treatment", "Treatment", "Treatment", NA))
   expect_identical(d2, c(NA, "Control", "Active", "Active", NA))
 })
+
+test_that("a header band tolerates a hidden column between its leaves (#cw5)", {
+  df <- data.frame(a = "1", hid = "x", b = "2", stringsAsFactors = FALSE)
+  spec <- tabular(df) |>
+    cols(
+      a = col_spec(label = "A"),
+      hid = col_spec(visible = FALSE),
+      b = col_spec(label = "B")
+    ) |>
+    headers("Span" = c("a", "b"))
+  out <- withr::local_tempfile(fileext = ".html")
+  expect_no_error(suppressWarnings(emit(spec, out)))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(txt, "Span", fixed = TRUE)
+})
+
+test_that("a header band still rejects a VISIBLE intruder column (#cw5)", {
+  df <- data.frame(a = "1", mid = "x", b = "2", stringsAsFactors = FALSE)
+  spec <- tabular(df) |>
+    cols(
+      a = col_spec(label = "A"),
+      mid = col_spec(label = "M"),
+      b = col_spec(label = "B")
+    ) |>
+    headers("Span" = c("a", "b"))
+  out <- withr::local_tempfile(fileext = ".html")
+  expect_error(emit(spec, out), class = "tabular_error_input")
+})

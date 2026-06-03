@@ -40,6 +40,11 @@ engine_headers <- function(spec) {
 
   call <- rlang::caller_env()
   col_order <- names(spec@data)
+  # Columns that actually render. A band whose two visible leaves are
+  # separated only by a hidden (visible = FALSE / header_row) column is
+  # contiguous on the page, so the contiguity check below tolerates a
+  # hidden intruder and rejects only a VISIBLE column splitting a band.
+  visible_cols <- col_order[.visible_col_indices(spec, col_order)]
 
   bands <- do.call(
     rbind,
@@ -48,6 +53,7 @@ engine_headers <- function(spec) {
         node,
         depth = 1L,
         col_order = col_order,
+        visible_cols = visible_cols,
         call = call
       )
     })
@@ -68,7 +74,7 @@ engine_headers <- function(spec) {
 #    abort with a clear message naming the offending band.
 # 3. Emit one row for this node, then recurse into children at
 #    depth + 1L.
-.flatten_header_node <- function(node, depth, col_order, call) {
+.flatten_header_node <- function(node, depth, col_order, visible_cols, call) {
   spans <- .collect_header_spans(node)
   # The verb (R/headers.R) has already validated every name is in
   # data, so `match()` cannot return NA here.
@@ -78,15 +84,21 @@ engine_headers <- function(spec) {
   if (!identical(positions, seq(col_start, col_end))) {
     intruders <- setdiff(seq(col_start, col_end), positions)
     intruder_names <- col_order[intruders]
-    cli::cli_abort(
-      c(
-        "{.fn headers} band {.val {node@label}} spans non-contiguous columns.",
-        "x" = "{length(intruder_names)} intruder column{?s} between its leaves: {.val {intruder_names}}.",
-        "i" = "Reorder data columns upstream, or place the intruder under the same band."
-      ),
-      class = "tabular_error_input",
-      call = call
-    )
+    # A hidden column between two visible leaves does not split the band
+    # on the rendered page (backends place bands by visible column name),
+    # so only a VISIBLE intruder is a genuine non-contiguity error.
+    visible_intruders <- intruder_names[intruder_names %in% visible_cols]
+    if (length(visible_intruders) > 0L) {
+      cli::cli_abort(
+        c(
+          "{.fn headers} band {.val {node@label}} spans non-contiguous columns.",
+          "x" = "{length(visible_intruders)} intruder column{?s} between its leaves: {.val {visible_intruders}}.",
+          "i" = "Reorder data columns upstream, or place the intruder under the same band."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
   }
 
   leaf <- length(node@children) == 0L
@@ -111,6 +123,7 @@ engine_headers <- function(spec) {
         c,
         depth = depth + 1L,
         col_order = col_order,
+        visible_cols = visible_cols,
         call = call
       )
     })
