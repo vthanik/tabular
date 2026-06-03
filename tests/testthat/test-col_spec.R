@@ -156,15 +156,33 @@ test_that("col_spec(na_text = c('a', 'b')) raises tabular_error_input", {
   expect_error(col_spec(na_text = c("a", "b")), "length 1")
 })
 
-test_that("col_spec(na_text = NA_character_) is rejected", {
-  expect_error(
-    col_spec(na_text = NA_character_),
-    class = "tabular_error_input"
-  )
+test_that("col_spec(na_text = NA_character_) is the inherit sentinel (#cw7)", {
+  # NA_character_ now means "inherit the preset na_text" (the default),
+  # so it is accepted rather than rejected.
+  expect_silent(col_spec(na_text = NA_character_))
+  expect_true(is.na(col_spec(na_text = NA_character_)@na_text))
+  expect_identical(col_spec()@na_text, NA_character_)
 })
 
-test_that("col_spec(na_text = '') is allowed (default)", {
-  expect_identical(col_spec()@na_text, "")
+test_that("an explicit na_text='' overrides a non-empty preset na_text (#cw7)", {
+  # nzchar('') was FALSE, so an explicit blank could not win over the
+  # preset token; the NA-vs-set distinction fixes that.
+  df <- data.frame(x = NA_real_, stringsAsFactors = FALSE)
+  blank <- tabular(df) |>
+    cols(x = col_spec(na_text = "")) |>
+    preset(na_text = "NR")
+  inherit <- tabular(df) |>
+    cols(x = col_spec()) |>
+    preset(na_text = "NR")
+  fmt_blank <- tabular:::engine_format(blank)
+  fmt_inherit <- tabular:::engine_format(inherit)
+  expect_identical(unname(fmt_blank$cells_text[1L, "x"]), "")
+  expect_identical(unname(fmt_inherit$cells_text[1L, "x"]), "NR")
+})
+
+test_that("col_spec(na_text = '') is an accepted explicit override", {
+  expect_silent(col_spec(na_text = ""))
+  expect_identical(col_spec(na_text = "")@na_text, "")
 })
 
 # Label / visible validation ------------------------------------------

@@ -45,7 +45,7 @@
 #' | `visible` | `TRUE` |
 #' | `width`   | `NA_real_` |
 #' | `align`   | `NA_character_` |
-#' | `na_text` | `""` |
+#' | `na_text` | `NA_character_` (inherit preset) |
 #'
 #' ```r
 #' # Three-stage build: label/usage first, alignment second, width
@@ -327,7 +327,7 @@ cols <- function(.spec, ...) {
   if (!is.na(new@align)) {
     out <- S7::set_props(out, align = new@align)
   }
-  if (!identical(new@na_text, "")) {
+  if (!is.na(new@na_text)) {
     out <- S7::set_props(out, na_text = new@na_text)
   }
   if (!is.na(new@indent_by)) {

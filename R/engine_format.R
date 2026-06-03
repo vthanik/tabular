@@ -165,9 +165,10 @@ engine_format <- function(spec) {
   n <- length(values)
   na_mask <- is.na(values)
   out <- character(n)
-  # A column that leaves `na_text` at its "" default inherits the
-  # table-wide preset NA token; an explicit per-column value wins.
-  na_text <- if (nzchar(cs@na_text)) cs@na_text else preset_na
+  # A column that leaves `na_text` at its NA default inherits the
+  # table-wide preset NA token; any explicit per-column value (including
+  # "" to force blank cells) wins over the preset.
+  na_text <- if (!is.na(cs@na_text)) cs@na_text else preset_na
 
   if (all(na_mask)) {
     out[] <- na_text

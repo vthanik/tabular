@@ -14,7 +14,7 @@ col_spec(
   group_skip = NA,
   align = NULL,
   valign = NULL,
-  na_text = "",
+  na_text = NA_character_,
   indent_by = NA_character_
 )
 }
@@ -321,8 +321,11 @@ row table so the label stays centred against the multi-line
 stat-block in the adjacent cell.}
 
 \item{na_text}{\emph{Text substituted for \code{NA} cells.}
-\verb{<character(1)>: default ""}. Substituted BEFORE the \code{format}
-step, so \code{format} does not need to anticipate \code{NA}.
+\verb{<character(1) | NA>: default NA}. Substituted BEFORE the \code{format}
+step, so \code{format} does not need to anticipate \code{NA}. \code{NA} (default)
+inherits the preset's table-wide \code{na_text}; any string overrides it
+for this column, including \code{""} to force blank cells even when the
+preset uses a non-empty token.
 
 \strong{Tip:} Use a sentinel (\code{"-"}, \code{"NR"}, \code{"."}) when blank cells
 would be ambiguous, e.g. when "not applicable" and "not

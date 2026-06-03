@@ -1661,12 +1661,20 @@ pivot_across <- function(
   n <- length(cells)
   chunk <- vector("list", n_levels + 3L)
   names(chunk) <- c(out_cols, "row_type", "arm", "cell_text")
+  # The leaf column (out_cols[n_levels], "label") always shows THIS row's
+  # own deepest level value (the display stub); the intermediate
+  # nesting-key columns hold the ancestor value at their depth, or NA for
+  # depths below this row's level.
+  display_val <- level_vals[[length(level_vals)]]
   for (i in seq_len(n_levels)) {
-    chunk[[out_cols[i]]] <- if (i <= length(level_vals)) {
-      rep(level_vals[i], n)
+    val <- if (i == n_levels) {
+      display_val
+    } else if (i <= length(level_vals)) {
+      level_vals[[i]]
     } else {
-      rep(NA_character_, n)
+      NA_character_
     }
+    chunk[[out_cols[i]]] <- rep(val, n)
   }
   chunk$row_type <- rep(row_type, n)
   chunk$arm <- names(cells)
@@ -1721,10 +1729,12 @@ pivot_across <- function(
       ,
       drop = FALSE
     ]
+    # Length == this row's depth: ancestors plus the current level value.
+    # `.hier_append_chunk` fills the leaf (display) column with the
+    # current value and leaves deeper nesting-key columns NA, rather than
+    # repeating the current value into them (which polluted l2.. for a
+    # 3+-level hierarchy).
     level_vals <- c(ancestors, lv_val)
-    while (length(level_vals) < n_levels) {
-      level_vals <- c(level_vals, lv_val)
-    }
     cells <- .interpolate_cells_all_arms(
       lv_subset,
       arm_levels,

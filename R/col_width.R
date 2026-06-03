@@ -429,7 +429,9 @@
   if (remaining <= 0) {
     cli::cli_warn(
       c(
-        "Pinned column widths exceed the available content width.",
+        # "Reserved" covers both pin and percent columns, either of which
+        # can be the cause; "Pinned" alone was misleading for a pct overflow.
+        "Reserved column widths exceed the available content width.",
         "i" = "Reserved: {round(reserved, 2)} in; available: {round(available, 2)} in.",
         "i" = "Auto-sized columns left at their natural width; layout may overflow."
       ),

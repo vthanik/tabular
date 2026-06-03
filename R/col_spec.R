@@ -338,8 +338,11 @@
 #'   stat-block in the adjacent cell.
 #'
 #' @param na_text *Text substituted for `NA` cells.*
-#'   `<character(1)>: default ""`. Substituted BEFORE the `format`
-#'   step, so `format` does not need to anticipate `NA`.
+#'   `<character(1) | NA>: default NA`. Substituted BEFORE the `format`
+#'   step, so `format` does not need to anticipate `NA`. `NA` (default)
+#'   inherits the preset's table-wide `na_text`; any string overrides it
+#'   for this column, including `""` to force blank cells even when the
+#'   preset uses a non-empty token.
 #'
 #'   **Tip:** Use a sentinel (`"-"`, `"NR"`, `"."`) when blank cells
 #'   would be ambiguous, e.g. when "not applicable" and "not
@@ -569,7 +572,7 @@ col_spec <- function(
   group_skip = NA,
   align = NULL,
   valign = NULL,
-  na_text = "",
+  na_text = NA_character_,
   indent_by = NA_character_
 ) {
   call <- rlang::caller_env()
@@ -841,12 +844,14 @@ col_spec <- function(
 }
 
 .check_col_na_text <- function(x, call) {
-  if (is.character(x) && length(x) == 1L && !is.na(x)) {
+  # NA_character_ is the "inherit the preset na_text" sentinel; any other
+  # length-1 string (including "") is an explicit override.
+  if (is.character(x) && length(x) == 1L) {
     return(invisible(x))
   }
   cli::cli_abort(
     c(
-      "{.arg na_text} must be a single non-NA character string (length 1).",
+      "{.arg na_text} must be a single character string or {.code NA} (length 1).",
       "x" = "You supplied {.obj_type_friendly {x}} of length {length(x)}."
     ),
     class = "tabular_error_input",

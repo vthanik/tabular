@@ -1138,3 +1138,36 @@ test_that("pivot_across() works on all bundled _card datasets", {
   expect_s3_class(out_h, "data.frame")
   expect_true("soc" %in% names(out_h))
 })
+
+test_that(".hier_append_chunk fills the leaf with the current value, deeper keys NA (#cw10)", {
+  # 3-level hierarchy out_cols = c("soc", "l2", "label"). A SOC (level-1)
+  # row must NOT pollute the intermediate l2 key with the SOC name; the
+  # leaf "label" column shows the row's own (deepest) value.
+  out_cols <- c("soc", "l2", "label")
+  cells <- stats::setNames("5", "armA")
+
+  state <- new.env(parent = emptyenv())
+  state$chunks <- list()
+  state$chunk_idx <- 0L
+
+  # level-1 SOC row: ancestors none, current = "Cardiac"
+  tabular:::.hier_append_chunk(state, "Cardiac", "soc", cells, out_cols, 3L)
+  soc_row <- state$chunks[[1L]]
+  expect_identical(soc_row$soc[[1L]], "Cardiac")
+  expect_true(is.na(soc_row$l2[[1L]])) # intermediate key not polluted
+  expect_identical(soc_row$label[[1L]], "Cardiac") # leaf = current value
+
+  # level-2 HLT row under Cardiac
+  tabular:::.hier_append_chunk(
+    state,
+    c("Cardiac", "Arrhythmias"),
+    "hlt",
+    cells,
+    out_cols,
+    3L
+  )
+  hlt_row <- state$chunks[[2L]]
+  expect_identical(hlt_row$soc[[1L]], "Cardiac")
+  expect_identical(hlt_row$l2[[1L]], "Arrhythmias")
+  expect_identical(hlt_row$label[[1L]], "Arrhythmias") # leaf = current value
+})

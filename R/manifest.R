@@ -202,7 +202,19 @@
   display_sections[[length(display_sections) + 1L]] <-
     .display_section_body(file)
 
-  footnote_section <- .display_section_footnote(spec@footnotes)
+  # Include footnote() refs (the auto-numbered block), not only the
+  # manual `footnotes` lines; otherwise the manifest under-reports the
+  # rendered table's footnotes. Marker prefixes are stripped to plain text.
+  fn_texts <- spec@footnotes
+  if (length(spec@footnote_refs) > 0L) {
+    ref_texts <- vapply(
+      spec@footnote_refs,
+      function(r) .strip_inline_marker(as.character(r$text)),
+      character(1L)
+    )
+    fn_texts <- c(fn_texts, ref_texts)
+  }
+  footnote_section <- .display_section_footnote(fn_texts)
   if (!is.null(footnote_section)) {
     display_sections[[length(display_sections) + 1L]] <- footnote_section
   }

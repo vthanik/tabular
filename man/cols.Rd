@@ -67,7 +67,7 @@ Default values that do NOT override the existing field:\tabular{ll}{
    \code{visible} \tab \code{TRUE} \cr
    \code{width} \tab \code{NA_real_} \cr
    \code{align} \tab \code{NA_character_} \cr
-   \code{na_text} \tab \code{""} \cr
+   \code{na_text} \tab \code{NA_character_} (inherit preset) \cr
 }
 
 

@@ -298,9 +298,12 @@ NULL
       S7::class_character,
       default = NA_character_
     ),
+    # @na_text — per-column NA token. NA_character_ (default) means
+    # "inherit the preset's table-wide na_text"; any string (including
+    # "") is an explicit override that wins over the preset.
     na_text = S7::new_property(
       S7::class_character,
-      default = ""
+      default = NA_character_
     ),
     # @indent_by — name of a column in `spec@data` whose per-row
     # integer / logical values drive the indent depth on THIS

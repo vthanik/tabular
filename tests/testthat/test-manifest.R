@@ -517,3 +517,24 @@ test_that("manifest is byte-identical across two runs modulo timestamp", {
   }
   expect_identical(drop_ts(first), drop_ts(second))
 })
+
+test_that("the audit manifest includes footnote() refs, not only manual footnotes (#cw8)", {
+  spec <- tabular(
+    data.frame(x = c(1L, 2L), y = c("a", "b")),
+    footnotes = "Source: ADSL."
+  ) |>
+    cols(x = col_spec(label = "X"), y = col_spec(label = "Y")) |>
+    footnote("Safety population.", .at = cells_headers(j = "x"))
+  grid <- as_grid(spec)
+  m <- tabular:::.build_manifest(
+    spec = spec,
+    grid = grid,
+    file = "out/t.md",
+    format = "md",
+    data_file_path = NULL
+  )
+  txt <- paste(unlist(m), collapse = " ")
+  # the footnote() note text must appear, alongside the manual footnote
+  expect_match(txt, "Safety population.", fixed = TRUE)
+  expect_match(txt, "Source: ADSL.", fixed = TRUE)
+})

@@ -1423,3 +1423,25 @@ test_that("legitimate negatives survive the hyphen fix", {
   out <- align(c("-5.3, 12.1", "-0.0 (1.47)"))
   expect_equal(out, c("-5.3, 12.1 ", "-0.0 (1.47)"))
 })
+
+test_that("scientific-notation cells pass through decimal alignment uncorrupted (#cw9)", {
+  # "1.23e-04" must not be split into "1.23  e-04"; the cell passes
+  # through verbatim and does not pollute the column's dominant signature.
+  out <- tabular:::.align_decimal_column(c("0.0342", "1.23e-04"), pad = " ")
+  expect_true(any(grepl("1.23e-04", out, fixed = TRUE)))
+  expect_false(any(grepl("1.23  e-04", out, fixed = TRUE)))
+  # a single e-notation cell does not widen a plain-float column with a
+  # phantom second slot
+  out2 <- tabular:::.align_decimal_column(
+    c("3.4e5", "0.5", "12.7"),
+    pad = "."
+  )
+  expect_true(any(grepl("3.4e5", out2, fixed = TRUE)))
+  # common numeric cells still align (no regression)
+  norm <- tabular:::.align_decimal_column(
+    c("217 (85.4)", "12 (4.7)"),
+    pad = " "
+  )
+  expect_equal(length(norm), 2L)
+  expect_true(any(grepl("(85.4)", norm, fixed = TRUE)))
+})

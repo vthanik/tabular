@@ -572,6 +572,20 @@ engine_decimal <- function(
     ))
   }
 
+  # Scientific notation (e.g. "1.23e-04") would tokenize as TWO floats
+  # (mantissa + exponent), splitting the value into garbage and skewing
+  # the column's dominant signature. The float grammar has no exponent
+  # branch, so treat any e-notation cell as a non-numeric literal: it
+  # passes through verbatim and never drives alignment. (e-notation is
+  # rare in TFLs, so unaligned-but-intact is the right trade.)
+  if (grepl("[0-9][eE][+-]?[0-9]", text)) {
+    return(list(
+      floats = character(),
+      literals = text,
+      parsed = list()
+    ))
+  }
+
   m <- gregexpr(.float_token_re, text, perl = TRUE)[[1L]]
   starts <- as.integer(m)
   if (length(starts) == 1L && starts[[1L]] == -1L) {
