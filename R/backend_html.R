@@ -506,10 +506,17 @@ backend_html <- function(grid, file) {
           cls <- c(cls, extra)
         }
       }
+      # Title borders ride the block edges (top on line 1, bottom on
+      # line n). The title surface has no region channel, so the
+      # surface-node border is the only path -- no double-emission.
+      line_style <- .html_merge_style_attr(
+        surface_style,
+        .html_chrome_block_border_decls(surface_node, i, n)
+      )
       sprintf(
         "<p class=\"%s\"%s>%s</p>",
         paste(cls, collapse = " "),
-        surface_style,
+        line_style,
         .render_html_inline(titles_ast[[i]])
       )
     },
@@ -557,10 +564,23 @@ backend_html <- function(grid, file) {
           cls <- c(cls, extra)
         }
       }
+      # Footnote borders ride the block edges. `top` is already drawn by
+      # the `footer_top` region (the separator rule above the block), so
+      # it is skipped here to keep that side single-channel; `bottom` /
+      # `left` / `right` come from the surface node.
+      line_style <- .html_merge_style_attr(
+        surface_style,
+        .html_chrome_block_border_decls(
+          surface_node,
+          i,
+          n,
+          skip = "top"
+        )
+      )
       sprintf(
         "<p class=\"%s\"%s>%s</p>",
         paste(cls, collapse = " "),
-        surface_style,
+        line_style,
         .render_html_inline(footnotes_ast[[i]])
       )
     },
@@ -752,6 +772,11 @@ backend_html <- function(grid, file) {
         if (nzchar(chrome_frag)) {
           decls <- c(decls, sub('^ style="(.*)"$', "\\1", chrome_frag))
         }
+        # Group-header borders: the row is a single merged `<td>` with no
+        # region channel, so the stamped host node's border props are the
+        # only path. Emit all four sides here (uniform with body cells);
+        # `.html_chrome_inline_style` deliberately carries no borders.
+        decls <- c(decls, sub(";$", "", .html_cell_border_decls(host_node)))
         header_style <- if (length(decls) > 0L) {
           sprintf(" style=\"%s\"", paste(decls, collapse = "; "))
         } else {
@@ -797,7 +822,7 @@ backend_html <- function(grid, file) {
               raw <- substr(raw, n_leading + 1L, nchar(raw))
             }
             # ADDITIVE over the baseline `.tabular-table td
-            # { padding: .35rem .6rem }` left slot via CSS `calc()`
+            # { padding: .18rem .6rem }` left slot via CSS `calc()`
             # -- a bare `padding-left: Xem` would REPLACE the .6rem
             # baseline. `calc(.6rem + Xem)` puts the indent ON TOP.
             # `%g` trims trailing zeros (1.2 stays 1.2). Caveat: the
@@ -1134,7 +1159,7 @@ backend_html <- function(grid, file) {
 # No `table-layout: fixed` is emitted. The engine's AFM-measured
 # widths slightly under-count the browser's rendered content width
 # (CSS `.tabular-table` font-size is `.9rem` ≈ 10.8pt vs AFM at
-# `preset@font_size` ≈ 10pt; CSS `padding: .35rem .6rem` ≈ 19pt
+# `preset@font_size` ≈ 10pt; CSS `padding: .18rem .6rem` ≈ 19pt
 # total vs AFM's 12pt). Under `table-layout: fixed` that gap caused
 # header / cell content to wrap inside too-narrow columns. With the
 # default `table-layout: auto`, the engine widths become hints; the
@@ -1279,7 +1304,13 @@ backend_html <- function(grid, file) {
     dashdot = "dashed",
     "solid"
   )
-  sprintf("border-%s: %gpt %s %s;", side, brd$width, css_style, brd$color)
+  sprintf(
+    "border-%s: %gpt %s %s;",
+    side,
+    brd$width,
+    css_style,
+    .resolve_rule_color(brd$color)
+  )
 }
 
 # `.tabular-table th/td` padding CSS. The default `cell_padding` keeps the
@@ -1289,7 +1320,7 @@ backend_html <- function(grid, file) {
 # the paged backends. Compared against the factory default so the common
 # case is byte-unchanged.
 .html_cell_padding_css <- function(preset) {
-  rem_default <- ".tabular-table th, .tabular-table td { padding: .35rem .6rem; }"
+  rem_default <- ".tabular-table th, .tabular-table td { padding: .18rem .6rem; }"
   if (!is_preset_spec(preset)) {
     return(rem_default)
   }
@@ -1395,6 +1426,64 @@ backend_html <- function(grid, file) {
     }
   }
   decls
+}
+
+# Block-edge border declarations for a multi-line chrome block (title /
+# footnote). The block renders one `<p>` per line, so a border on the
+# surface maps to the BLOCK edges: `top` rides the first line, `bottom`
+# the last line, `left` / `right` ride every line (stacking into a
+# continuous vertical edge). `skip` names sides already emitted through
+# the chrome region channel (e.g. footnote `top` == `footer_top`), so
+# they are not re-emitted here -- the single-channel guarantee.
+.html_chrome_block_border_decls <- function(node, i, n, skip = character()) {
+  if (!is_style_node(node)) {
+    return(character())
+  }
+  sides <- character()
+  if (i == 1L && !("top" %in% skip)) {
+    sides <- c(sides, "top")
+  }
+  if (i == n && !("bottom" %in% skip)) {
+    sides <- c(sides, "bottom")
+  }
+  if (!("left" %in% skip)) {
+    sides <- c(sides, "left")
+  }
+  if (!("right" %in% skip)) {
+    sides <- c(sides, "right")
+  }
+  out <- character()
+  for (side in sides) {
+    brd <- .effective_border(side, node)
+    if (is.null(brd)) {
+      next
+    }
+    if (identical(brd$style, "none")) {
+      out <- c(out, sprintf("border-%s: none;", side))
+      next
+    }
+    decl <- .html_border_decl(side, brd)
+    if (!is.null(decl)) {
+      out <- c(out, decl)
+    }
+  }
+  out
+}
+
+# Merge extra CSS declarations into an existing ` style="..."` attribute
+# fragment (or build one when the fragment is empty). Mirrors the fold
+# the subgroup banner uses so chrome border decls compose with the
+# text-prop inline style without re-parsing.
+.html_merge_style_attr <- function(style_attr, extra_decls) {
+  if (length(extra_decls) == 0L) {
+    return(style_attr)
+  }
+  extra <- paste(extra_decls, collapse = " ")
+  if (nzchar(style_attr)) {
+    sub("\"$", paste0("; ", extra, "\""), style_attr)
+  } else {
+    sprintf(" style=\"%s\"", extra)
+  }
 }
 
 # CSS declarations for the seven text properties on a style_node:

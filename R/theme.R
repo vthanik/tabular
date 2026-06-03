@@ -176,6 +176,22 @@
   switch(color, ink = .tabular_ink, muted = .tabular_muted, color)
 }
 
+# TRUE when a border colour is the unset-default `"ink"` token (the
+# `brdr()` / `.effective_border()` default). The paged backends (LaTeX
+# / RTF / DOCX) treat it exactly as they treated the prior
+# `"currentColor"` default -- omit an explicit colour directive and let
+# the native default rule colour (near-black) stand -- so their byte
+# output is unchanged. Only HTML behaves differently: it resolves the
+# token to the explicit ink hex (via `.resolve_rule_color`) so a rule
+# never inherits a recoloured surface's text colour (the `currentColor`
+# coupling bug). NOTE: this matches the TOKEN only, never the resolved
+# hex `.tabular_ink` -- the engine stamps that hex on the structural
+# default rules, where DOCX emits it explicitly (`w:color="212529"`),
+# and swallowing it here would wrongly downgrade those to `auto`.
+.is_default_ink <- function(color) {
+  identical(color, "ink")
+}
+
 .resolve_rule_tokens <- function(triple) {
   if (is.null(triple)) {
     return(NULL)

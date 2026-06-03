@@ -116,10 +116,12 @@
 #' backend would otherwise draw.
 #'
 #' **Color.** Hex (`"#212529"`), CSS colour name (`"black"`,
-#' `"slategray"`), or `"currentColor"` (default; resolves to the
-#' surrounding text colour per backend convention — `w:color="auto"`
-#' in DOCX, the document text colour in RTF, the CSS `currentColor`
-#' keyword in HTML).
+#' `"slategray"`), the `"ink"` token (default; resolves to the
+#' primary rule ink `#212529`, decoupled from the surrounding text
+#' colour so a recoloured header keeps a neutral rule), or
+#' `"currentColor"` (inherit the surrounding text colour per backend
+#' convention — `w:color="auto"` in DOCX, the document text colour in
+#' RTF, the CSS `currentColor` keyword in HTML).
 #'
 #' @param width *Stroke width.* `<numeric(1) | character(1)>:
 #'   default `"thin"`*. Either a numeric in points (>= 0) or one of
@@ -242,7 +244,7 @@
 brdr <- function(
   width = "thin",
   style = "solid",
-  color = "currentColor"
+  color = "ink"
 ) {
   call <- rlang::caller_env()
   resolved_width <- .resolve_brdr_width(width, call = call)

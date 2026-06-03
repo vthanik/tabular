@@ -5,7 +5,7 @@
 \alias{is_brdr}
 \title{Border-line specification}
 \usage{
-brdr(width = "thin", style = "solid", color = "currentColor")
+brdr(width = "thin", style = "solid", color = "ink")
 
 is_brdr(x)
 }
@@ -63,10 +63,12 @@ to \code{brdr(style = "none")} (or the bare string \code{"none"}) in
 backend would otherwise draw.
 
 \strong{Color.} Hex (\code{"#212529"}), CSS colour name (\code{"black"},
-\code{"slategray"}), or \code{"currentColor"} (default; resolves to the
-surrounding text colour per backend convention — \code{w:color="auto"}
-in DOCX, the document text colour in RTF, the CSS \code{currentColor}
-keyword in HTML).
+\code{"slategray"}), the \code{"ink"} token (default; resolves to the
+primary rule ink \verb{#212529}, decoupled from the surrounding text
+colour so a recoloured header keeps a neutral rule), or
+\code{"currentColor"} (inherit the surrounding text colour per backend
+convention — \code{w:color="auto"} in DOCX, the document text colour in
+RTF, the CSS \code{currentColor} keyword in HTML).
 }
 \examples{
 # ---- Example 1: A house-style rule set ----

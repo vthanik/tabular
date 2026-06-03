@@ -331,5 +331,10 @@ pre .tabular-doc {
   border: 1px solid $faint-border;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   overflow-x: auto;
-  line-height: 1.5;
+  // No line-height override here: the table fragment carries its own
+  // `.tabular-doc { line-height: 1.3 }` (class specificity beats the
+  // surrounding `pre { line-height: 1.55 }`), so reference-page previews
+  // render at the same print-grade density as article previews and the
+  // standalone HTML. A `line-height: 1.5` here used to win inside `<pre>`
+  // and inflated the row baseline (issue #1).
 }

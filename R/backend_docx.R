@@ -487,7 +487,11 @@ backend_docx <- function(grid, file) {
         runs,
         "</w:p>"
       )
-      .docx_full_width_row(total_twips, n_cols, para)
+      # Title border (block edges) + background from the title surface
+      # node. No region channel for the title, so the surface node is the
+      # only path; no double-emission.
+      tc_extra <- .docx_chrome_row_tc_extra(surface_node, i, n)
+      .docx_full_width_row(total_twips, n_cols, para, tc_extra = tc_extra)
     },
     character(1L)
   )
@@ -500,8 +504,15 @@ backend_docx <- function(grid, file) {
 
 # One full-width `<w:tr>` carrying `<w:tblHeader/>` and a single
 # `<w:gridSpan>` cell spanning every visible column. Used for the
-# repeating title rows and their blank spacing rows.
-.docx_full_width_row <- function(total_twips, n_cols, content) {
+# repeating title rows and their blank spacing rows. `tc_extra` injects
+# additional `<w:tcPr>` children (borders + shading) AFTER `gridSpan`
+# in canonical CT_TcPr order; default "" keeps blank spacing rows bare.
+.docx_full_width_row <- function(
+  total_twips,
+  n_cols,
+  content,
+  tc_extra = ""
+) {
   span <- if (n_cols > 1L) {
     sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols)
   } else {
@@ -511,10 +522,45 @@ backend_docx <- function(grid, file) {
     "<w:tr><w:trPr><w:tblHeader/></w:trPr><w:tc><w:tcPr>",
     sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", total_twips),
     span,
+    tc_extra,
     "</w:tcPr>",
     content,
     "</w:tc></w:tr>"
   )
+}
+
+# Build the `<w:tcBorders>` + `<w:shd>` `<w:tcPr>` children (canonical
+# order) for a merged full-width chrome row (e.g. a title row) from its
+# surface `style_node`. Block-edge semantics: `top` rides the first row
+# (i == 1), `bottom` the last (i == n); `left` / `right` ride every row.
+# `skip` names sides already drawn by a region channel. Returns "" when
+# the node carries no border or background (byte-identical default).
+.docx_chrome_row_tc_extra <- function(node, i, n, skip = character()) {
+  if (!is_style_node(node)) {
+    return("")
+  }
+  want <- function(side) {
+    !(side %in% skip) &&
+      (side != "top" || i == 1L) &&
+      (side != "bottom" || i == n)
+  }
+  edge <- function(side) {
+    if (!want(side)) {
+      return("")
+    }
+    brd <- .effective_border(side, node)
+    if (is.null(brd) || identical(brd$style, "none")) {
+      return("")
+    }
+    sprintf("<w:%s w:space=\"0\" %s/>", side, .docx_border_attrs(brd))
+  }
+  borders <- .docx_tcborders(
+    edge("top"),
+    edge("left"),
+    edge("bottom"),
+    edge("right")
+  )
+  paste0(borders, .docx_shd_from_style(node))
 }
 
 # Resolve the blank-line count for a chrome surface side. chrome_style
@@ -1281,13 +1327,33 @@ backend_docx <- function(grid, file) {
         } else {
           ""
         }
-        # Merged full-width group-header cell: both frame edges ride it,
-        # plus the host node's background (the stripe fill, or an explicit
-        # cells_group_headers(background = ...)). `<w:shd>` follows
+        # Merged full-width group-header cell: the host node's per-side
+        # borders (from `style(border_*, .at = cells_group_headers())`)
+        # ride it, composing with the outer frame edges. A user border
+        # wins over the frame on left / right; top / bottom come from the
+        # host node only (the row has no region channel). An explicit
+        # `brdr("none")` clears. No border set => frame edges only (byte-
+        # identical to the prior output). `<w:shd>` follows
         # `<w:tcBorders>` in CT_TcPr order.
+        gh_edge <- function(side, frame) {
+          brd <- .effective_border(side, host_node)
+          if (is.null(brd)) {
+            return(frame)
+          }
+          if (identical(brd$style, "none")) {
+            return("")
+          }
+          sprintf(
+            "<w:%s w:space=\"0\" %s/>",
+            side,
+            .docx_border_attrs(brd)
+          )
+        }
         merged_edges <- .docx_tcborders(
-          .docx_frame_edge("left", body_borders),
-          .docx_frame_edge("right", body_borders)
+          gh_edge("top", ""),
+          gh_edge("left", .docx_frame_edge("left", body_borders)),
+          gh_edge("bottom", ""),
+          gh_edge("right", .docx_frame_edge("right", body_borders))
         )
         group_shd <- .docx_shd_from_style(host_node)
         out <- c(
@@ -2472,7 +2538,9 @@ backend_docx <- function(grid, file) {
   )
   sz <- max(2L, as.integer(round(brd$width * 8)))
   color_attr <- if (
-    identical(brd$color, "currentColor") || is.na(brd$color)
+    identical(brd$color, "currentColor") ||
+      .is_default_ink(brd$color) ||
+      is.na(brd$color)
   ) {
     "auto"
   } else {

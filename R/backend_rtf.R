@@ -2136,6 +2136,7 @@ backend_rtf <- function(grid, file) {
       is.na(color) ||
       !nzchar(color) ||
       identical(color, "currentColor") ||
+      identical(color, "ink") ||
       identical(color, .tabular_ink)
   ) {
     return("")
@@ -2525,6 +2526,7 @@ backend_rtf <- function(grid, file) {
         border_cols <- border_cols[
           !is.na(border_cols) &
             border_cols != .tabular_ink &
+            border_cols != "ink" &
             border_cols != "currentColor"
         ]
         c(sn@color, sn@background, border_cols)

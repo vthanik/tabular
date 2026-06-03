@@ -67,7 +67,7 @@
   list(
     style = if (style_set) style else "solid",
     width = if (width_set) width else .tabular_rule_width,
-    color = if (color_set) color else "currentColor"
+    color = if (color_set) color else "ink"
   )
 }
 

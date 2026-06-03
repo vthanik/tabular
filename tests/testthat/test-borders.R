@@ -58,7 +58,7 @@ test_that(".effective_border with partial explicit fills defaults", {
   brd <- tabular:::.effective_border("top", sn)
   expect_identical(brd$style, "dotted")
   expect_identical(brd$width, 0.5)
-  expect_identical(brd$color, "currentColor")
+  expect_identical(brd$color, "ink")
 })
 
 test_that(".effective_border explicit 'none' returns clear sentinel", {
@@ -229,8 +229,9 @@ test_that(".html_cell_border_style_attr emits per-side decls", {
   )
   out <- tabular:::.html_cell_border_style_attr(sn)
   expect_true(grepl("border-top: 0.5pt solid #212529;", out, fixed = TRUE))
+  # Unset bottom colour now resolves to the ink hex (was currentColor).
   expect_true(grepl(
-    "border-bottom: 1pt dashed currentColor;",
+    "border-bottom: 1pt dashed #212529;",
     out,
     fixed = TRUE
   ))
@@ -247,6 +248,89 @@ test_that(".html_cell_border_style_attr emits 'none' for explicit clear", {
   sn <- style_node(border_top_style = "none")
   out <- tabular:::.html_cell_border_style_attr(sn)
   expect_true(grepl("border-top: none;", out, fixed = TRUE))
+})
+
+test_that("default border colour is ink, decoupled from text colour (#issue6)", {
+  # brdr() and the .effective_border default both resolve to the `ink`
+  # token, NOT `currentColor` -- so a rule under a recoloured header no
+  # longer inherits the header's text colour in HTML.
+  expect_identical(brdr()$color, "ink")
+  expect_identical(
+    tabular:::.effective_border(
+      "top",
+      style_node(border_top_style = "solid")
+    )$color,
+    "ink"
+  )
+  # HTML resolves the ink token to the explicit hex, never currentColor.
+  sn <- style_node(border_bottom_style = "solid", border_bottom_width = 1)
+  decls <- tabular:::.html_cell_border_decls(sn)
+  expect_true(any(grepl("#212529", decls, fixed = TRUE)))
+  expect_false(any(grepl("currentColor", decls)))
+  # A recoloured header with a default border: the rule is ink, the
+  # text is red, the two are independent in the emitted HTML.
+  spec <- tabular(data.frame(x = 1L), titles = "T") |>
+    style(color = "#ff1133", .at = cells_headers()) |>
+    style(border_bottom = brdr(), .at = cells_headers())
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_false(grepl("currentColor", txt))
+})
+
+test_that("cells_group_headers() border reaches HTML + DOCX (#issue5)", {
+  mk <- function() {
+    tabular(
+      data.frame(
+        grp = c("A", "A", "B"),
+        v = c("1", "2", "3"),
+        stringsAsFactors = FALSE
+      )
+    ) |>
+      cols(grp = col_spec(usage = "group", label = "Group")) |>
+      style(
+        border_bottom = brdr("thick", "dashed", "#ff1133"),
+        .at = cells_group_headers()
+      )
+  }
+  # HTML: the merged group-header <td> carries the inline border.
+  h <- withr::local_tempfile(fileext = ".html")
+  emit(mk(), h)
+  htxt <- paste(readLines(h, warn = FALSE), collapse = "\n")
+  expect_match(
+    htxt,
+    "tabular-group-header.*border-bottom: 1.5pt dashed #ff1133"
+  )
+  # DOCX: the merged group-header cell's <w:tcBorders> carries it.
+  d <- withr::local_tempfile(fileext = ".docx")
+  emit(mk(), d)
+  ddir <- withr::local_tempdir()
+  utils::unzip(d, exdir = ddir)
+  dx <- paste(
+    readLines(file.path(ddir, "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_match(dx, "<w:bottom[^>]*w:val=\"dashed\"[^>]*w:color=\"FF1133\"")
+})
+
+test_that("cells_title() border reaches HTML + LaTeX + DOCX (#issue5)", {
+  mk <- function() {
+    tabular(data.frame(x = 1L), titles = c("Line A", "Line B")) |>
+      style(border_bottom = brdr("medium"), .at = cells_title())
+  }
+  h <- withr::local_tempfile(fileext = ".html")
+  emit(mk(), h)
+  expect_match(
+    paste(readLines(h, warn = FALSE), collapse = "\n"),
+    "tabular-title[^>]*border-bottom: 1pt solid #212529"
+  )
+  tex <- withr::local_tempfile(fileext = ".tex")
+  emit(mk(), tex)
+  expect_match(
+    paste(readLines(tex, warn = FALSE), collapse = "\n"),
+    "\\\\rule\\{\\\\linewidth\\}\\{1pt\\}",
+    perl = TRUE
+  )
 })
 
 test_that("HTML emit injects style=... on body cell with border override", {

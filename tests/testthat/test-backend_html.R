@@ -1555,7 +1555,7 @@ test_that("HTML indent_by cells emit padding-left and strip engine prefix", {
   # value is AFM-derived from the default body font (Liberation Mono
   # / Courier): "  " is 1200/1000-em -> 1.2em per depth level. The
   # CSS `calc(.6rem + 1.2em)` is ADDITIVE over the baseline
-  # `.tabular-table td { padding: .35rem .6rem }` left slot so the
+  # `.tabular-table td { padding: .18rem .6rem }` left slot so the
   # PT cell sits a full 1.2em beyond the SOC cell (not just
   # 1.2em - .6rem). `%g` format trims trailing zeros.
   expect_true(grepl(
@@ -1753,7 +1753,7 @@ test_that("col_spec(align) routes through to <th> per the convention rule", {
 # pad, and emits with `%g`-trimmed format (no trailing zeros).
 #
 # Bug: `padding-left: 1.2000em` REPLACED the `.tabular-table td
-# { padding: .35rem .6rem }` left slot, so a PT cell visually sat
+# { padding: .18rem .6rem }` left slot, so a PT cell visually sat
 # only `1.2em - .6rem` (~4.8px in 12px Courier) further right than
 # its parent SOC cell -- sub-character, basically invisible. Fix:
 # emit `padding-left: calc(.6rem + Xem)` so the AFM-derived indent
@@ -2716,5 +2716,5 @@ test_that("default cell_padding keeps the responsive rem padding in HTML (#html-
   f <- withr::local_tempfile(fileext = ".html")
   emit(spec, f)
   html <- paste(readLines(f, warn = FALSE), collapse = "\n")
-  expect_true(grepl("padding: .35rem .6rem;", html, fixed = TRUE))
+  expect_true(grepl("padding: .18rem .6rem;", html, fixed = TRUE))
 })

@@ -1,11 +1,11 @@
 # test-brdr.R — brdr() constructor + tabular_brdr S3 class.
 
-test_that("brdr() defaults to thin solid currentColor", {
+test_that("brdr() defaults to thin solid ink", {
   b <- brdr()
   expect_true(is_brdr(b))
   expect_identical(b$style, "solid")
   expect_identical(b$width, 0.5)
-  expect_identical(b$color, "currentColor")
+  expect_identical(b$color, "ink")
 })
 
 test_that("brdr() resolves width keywords to numeric points", {

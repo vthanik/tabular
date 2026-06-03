@@ -294,7 +294,7 @@ backend_latex <- function(grid, file) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "title")
-  unlist(lapply(
+  lines <- unlist(lapply(
     seq_len(n),
     function(i) {
       halign <- if (
@@ -326,6 +326,15 @@ backend_latex <- function(grid, file) {
       .latex_aligned_paragraph(body = body, halign = halign)
     }
   ))
+  # Title borders ride the block edges as full-width rules (top above the
+  # first line, bottom below the last). No region channel for the title,
+  # so the surface node is the only path. NULL / no border => no rule
+  # (byte-identical default).
+  c(
+    .latex_foot_rule_line(.effective_border("top", surface_node)),
+    lines,
+    .latex_foot_rule_line(.effective_border("bottom", surface_node))
+  )
 }
 
 # Footnote block: each footnote line emits as a paragraph at
@@ -563,7 +572,8 @@ backend_latex <- function(grid, file) {
   has_color <- !is.null(triple$color) &&
     !is.na(triple$color) &&
     nzchar(triple$color) &&
-    !identical(triple$color, "currentColor")
+    !identical(triple$color, "currentColor") &&
+    !.is_default_ink(triple$color)
   if (has_color) {
     sprintf(
       "\\noindent{\\color{%s}\\rule{\\linewidth}{%gpt}}\\par",
@@ -865,7 +875,8 @@ backend_latex <- function(grid, file) {
     !is.null(triple$color) &&
       !is.na(triple$color) &&
       nzchar(triple$color) &&
-      !identical(triple$color, "currentColor")
+      !identical(triple$color, "currentColor") &&
+      !.is_default_ink(triple$color)
   ) {
     parts <- c(parts, paste0("fg=", .latex_border_color_token(triple$color)))
   }
