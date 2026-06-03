@@ -271,7 +271,12 @@ engine_group_display <- function(
   # contributes its transition row indices.
   header_row_plan <- NULL
   if (length(header_cols) > 0L) {
-    host_col <- .header_row_host_column(col_names, group_names, cols)
+    host_col <- .header_row_host_column(
+      col_names,
+      group_names,
+      cols,
+      hidden_extra = hide_union
+    )
     bands <- vector("list", length(header_cols))
     for (b in seq_along(header_cols)) {
       composite <- do.call(
@@ -409,7 +414,9 @@ engine_group_display <- function(
   ids[[1L]] <- 1L
   prev <- x[[1L]]
   current <- 1L
-  for (i in seq.int(2L, n)) {
+  # seq_len(n)[-1L] is empty when n == 1 (a single-row group); seq.int(2L, n)
+  # would count DOWN to c(2, 1) there and read x[[2]] out of bounds.
+  for (i in seq_len(n)[-1L]) {
     cur <- x[[i]]
     same <- (is.na(prev) && is.na(cur)) ||
       (!is.na(prev) && !is.na(cur) && identical(prev, cur))
@@ -463,15 +470,31 @@ engine_group_display <- function(
 # `usage = "group"` column whose `group_display = "header_row"`
 # (those are hidden). Falls back to NA when nothing visible
 # remains.
-.header_row_host_column <- function(col_names, group_names, cols) {
-  hidden <- character(0L)
+.header_row_host_column <- function(
+  col_names,
+  group_names,
+  cols,
+  hidden_extra = character(0L)
+) {
+  hidden <- hidden_extra
   for (nm in group_names) {
     cs <- cols[[nm]]
     if (identical(cs@group_display, "header_row")) {
       hidden <- c(hidden, nm)
     }
   }
-  candidates <- setdiff(col_names, hidden)
+  # A host column must actually render. Skip explicitly-hidden columns
+  # (visible = FALSE) and any caller-supplied hidden set (indent-by
+  # targets, subgroup auto-hidden cols); otherwise the host resolves to
+  # a hidden column, `match(host_col, visible_col_names)` is NA, and the
+  # entire section-header plan is silently dropped downstream.
+  for (nm in col_names) {
+    cs <- cols[[nm]]
+    if (is_col_spec(cs) && isFALSE(cs@visible)) {
+      hidden <- c(hidden, nm)
+    }
+  }
+  candidates <- setdiff(col_names, unique(hidden))
   if (length(candidates) == 0L) {
     return(NA_character_)
   }

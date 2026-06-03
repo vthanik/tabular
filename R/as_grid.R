@@ -752,10 +752,59 @@ as_grid <- function(spec) {
   meta$ncol_data <- ncol(spec@data)
   meta$col_names <- names(spec@data)
 
+  # Reassemble the QC snapshot across ALL subgroups. `first` carries
+  # only the first subgroup's rows, so without this the
+  # `emit(data_file=)` double-programming artefact is silently
+  # truncated to one group while reporting the full nrow_data.
+  dct <- Filter(
+    Negate(is.null),
+    lapply(sub_grids, function(g) g@metadata$data_cells_text)
+  )
+  if (length(dct) > 0L) {
+    meta$data_cells_text <- do.call(rbind, dct)
+  }
+
+  # Each subgroup resolved its own auto column widths, but the merged
+  # grid renders every subgroup from this single `cols` spec. Widen
+  # each column to the widest subgroup so a later group's content is
+  # not crammed into the first group's (narrower) column.
+  meta$cols <- .merge_subgroup_col_widths(sub_grids, first$cols)
+
   tabular_grid(
     pages = pages,
     metadata = meta
   )
+}
+
+# Per-column max of the resolved auto widths across subgroups. The
+# merged grid carries one width per column for every subgroup, so the
+# width must fit the widest group's content. Non-numeric / unresolved
+# widths are ignored (the base spec's value is kept).
+.merge_subgroup_col_widths <- function(sub_grids, base_cols) {
+  if (length(base_cols) == 0L) {
+    return(base_cols)
+  }
+  for (nm in names(base_cols)) {
+    widths <- vapply(
+      sub_grids,
+      function(g) {
+        cs <- g@metadata$cols[[nm]]
+        if (is.null(cs)) {
+          return(NA_real_)
+        }
+        w <- cs@width
+        if (length(w) == 1L && is.numeric(w) && !is.na(w)) w else NA_real_
+      },
+      numeric(1L)
+    )
+    if (any(!is.na(widths))) {
+      base_cols[[nm]] <- S7::set_props(
+        base_cols[[nm]],
+        width = max(widths, na.rm = TRUE)
+      )
+    }
+  }
+  base_cols
 }
 
 # Build the name-keyed col_spec map engine_decimal expects. Only

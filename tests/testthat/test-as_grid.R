@@ -549,3 +549,52 @@ test_that("pretext/posttext render on every paged + continuous backend (#affixes
   expect_true(grepl("PFX Mean", docx, fixed = TRUE))
   expect_true(grepl("75.2 SFX", docx, fixed = TRUE))
 })
+
+# ---------------------------------------------------------------------
+# Engine-wave regression: subgroup merge (QC rows + column widths)
+# ---------------------------------------------------------------------
+
+test_that("subgroup merge keeps every subgroup's QC rows (#cw2)", {
+  df <- data.frame(
+    grp = c("F", "F", "M", "M"),
+    stat = c("n", "Mean", "n", "Mean"),
+    placebo = c("16", "1.2", "18", "2.4"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      grp = col_spec(usage = "group"),
+      stat = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo")
+    ) |>
+    subgroup("grp")
+  g <- as_grid(spec)
+  # the data_file QC snapshot must span ALL subgroups, not just the first
+  expect_equal(nrow(g@metadata$data_cells_text), nrow(df))
+})
+
+test_that("subgroup merge widens a column to the widest subgroup (#cw2)", {
+  df <- data.frame(
+    grp = c("F", "F", "M", "M"),
+    stat = c("n", "Mean", "n", "Mean"),
+    val = c("1", "2", "3", "a very wide value indeed"),
+    stringsAsFactors = FALSE
+  )
+  mk <- function(sub) {
+    s <- tabular(df) |>
+      cols(
+        grp = col_spec(usage = "group"),
+        stat = col_spec(label = "Statistic"),
+        val = col_spec(label = "Value")
+      )
+    if (sub) {
+      s <- subgroup(s, "grp")
+    }
+    s
+  }
+  w_sub <- as_grid(mk(TRUE))@metadata$cols$val@width
+  w_flat <- as_grid(mk(FALSE))@metadata$cols$val@width
+  # subgroup width must accommodate group M's wide value, matching the
+  # flat table that measures all rows at once (not shrink to group F).
+  expect_equal(w_sub, w_flat)
+})

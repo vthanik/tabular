@@ -1482,3 +1482,59 @@ test_that(".header_row_columns returns ordered header_row group cols", {
     c("c", "d")
   )
 })
+
+# ---------------------------------------------------------------------
+# Engine-wave regression: single-row grouping crash
+# ---------------------------------------------------------------------
+
+test_that(".runs_grouping handles a single element without crashing (#cw1)", {
+  # seq.int(2L, 1L) counted DOWN to c(2, 1) and read x[[2]] out of bounds.
+  expect_identical(tabular:::.runs_grouping("a"), 1L)
+  expect_identical(tabular:::.runs_grouping(character(0L)), integer(0L))
+  expect_identical(tabular:::.runs_grouping(c("a", "a", "b")), c(1L, 1L, 2L))
+})
+
+test_that("a single-row grouped table renders without crashing (#cw1)", {
+  df <- data.frame(
+    soc = "A",
+    label = "only",
+    Total = "1",
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "PT"),
+      Total = col_spec(label = "Total")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  expect_no_error(suppressWarnings(emit(spec, out)))
+})
+
+test_that("header_row section headers survive a leading hidden column (#cw3)", {
+  # A visible=FALSE column declared first must not become the host: if it
+  # does, match(host_col, visible_col_names) is NA and every section
+  # header silently vanishes.
+  df <- data.frame(
+    depth = c(0L, 1L, 0L, 1L),
+    grp = c("SOCX", "SOCX", "SOCY", "SOCY"),
+    label = c("p1", "p2", "p3", "p4"),
+    Total = c("10", "4", "8", "3"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      depth = col_spec(visible = FALSE),
+      grp = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "PT"),
+      Total = col_spec(label = "Total")
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  suppressWarnings(emit(spec, out))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # The group values appear ONLY via the section-header rows (the grp
+  # column is hidden in header_row mode), so their presence proves the
+  # header plan was not dropped.
+  expect_match(txt, "SOCX", fixed = TRUE)
+  expect_match(txt, "SOCY", fixed = TRUE)
+})
