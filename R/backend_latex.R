@@ -294,6 +294,7 @@ backend_latex <- function(grid, file) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "title")
+  ws_preserve <- .preset_ws_preserve(preset)
   lines <- unlist(lapply(
     seq_len(n),
     function(i) {
@@ -318,7 +319,7 @@ backend_latex <- function(grid, file) {
       body <- .latex_wrap_text_props(
         paste0(
           bold_open,
-          .render_latex_inline(titles_ast[[i]]),
+          .render_latex_inline(titles_ast[[i]], preserve = ws_preserve),
           bold_close
         ),
         surface_node
@@ -351,6 +352,7 @@ backend_latex <- function(grid, file) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "footer")
+  ws_preserve <- .preset_ws_preserve(preset)
   rendered <- unlist(lapply(
     seq_len(n),
     function(i) {
@@ -369,7 +371,7 @@ backend_latex <- function(grid, file) {
         if (is.na(h)) "left" else h
       }
       body <- .latex_wrap_text_props(
-        .render_latex_inline(footnotes_ast[[i]]),
+        .render_latex_inline(footnotes_ast[[i]], preserve = ws_preserve),
         surface_node
       )
       .latex_aligned_paragraph(body = body, halign = halign)
@@ -1231,6 +1233,7 @@ backend_latex <- function(grid, file) {
   preset = NULL
 ) {
   surface_node <- .chrome_surface_at(cs, "header")
+  ws_preserve <- .preset_ws_preserve(preset)
   cells <- vapply(
     col_names_visible,
     function(nm) {
@@ -1238,7 +1241,7 @@ backend_latex <- function(grid, file) {
       raw <- if (is.null(ast)) {
         .latex_escape(nm)
       } else {
-        .render_latex_inline(ast)
+        .render_latex_inline(ast, preserve = ws_preserve)
       }
       body <- .latex_wrap_text_props(raw, surface_node)
       col <- cols[[nm]]
@@ -1418,6 +1421,7 @@ backend_latex <- function(grid, file) {
   indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
   indent_unit <- nchar(.indent_text_unit(indent_size))
   indent_pt_per_level <- .indent_native_pt_per_level(preset)
+  ws_preserve <- .preset_ws_preserve(preset)
   vapply(
     seq_len(nrow_data),
     function(i) {
@@ -1485,7 +1489,11 @@ backend_latex <- function(grid, file) {
         }
         bold_close <- if (identical(bold_open, "")) "" else "}"
         body <- .latex_wrap_text_props(
-          paste0(bold_open, .latex_escape_cell(host_text), bold_close),
+          paste0(
+            bold_open,
+            .latex_escape_cell(host_text, preserve = ws_preserve),
+            bold_close
+          ),
           host_node
         )
         body <- .latex_indent_wrap(body, header_indent_pt)
@@ -1529,7 +1537,7 @@ backend_latex <- function(grid, file) {
               indent_pt <- indent_pt_per_level * depth
             }
           }
-          text <- .latex_escape_cell(raw)
+          text <- .latex_escape_cell(raw, preserve = ws_preserve)
           nm <- col_names_vis[[j]]
           sn <- if (is.character(nm) && !is.na(nm)) {
             .cell_style_at(cells_style, i, nm)
@@ -1765,55 +1773,106 @@ backend_latex <- function(grid, file) {
 # Render an `inline_ast` to a single LaTeX string. Walks every
 # run in `ast@runs` recursively. Unknown run types fall through
 # to their (escaped) `text` field.
-.render_latex_inline <- function(ast) {
+.render_latex_inline <- function(ast, preserve = TRUE) {
   if (!is_inline_ast(ast)) {
     return("")
   }
-  paste0(
-    vapply(ast@runs, .render_latex_run, character(1L)),
-    collapse = ""
-  )
+  .render_latex_children(ast@runs, preserve, lead = TRUE, trail = TRUE)
 }
 
 # Render one AST run record to its LaTeX markup. Recurses
-# through `children` for wrapping types.
-.render_latex_run <- function(run) {
+# through `children` for wrapping types. `lead` / `trail` flag the
+# run's line-edge position (only line-edge whitespace becomes a `~`
+# tie; inter-run spaces stay breakable).
+.render_latex_run <- function(
+  run,
+  preserve = TRUE,
+  lead = TRUE,
+  trail = TRUE
+) {
   type <- run$type
   switch(
     type,
-    plain = .latex_escape(run$text %||% ""),
-    bold = paste0("\\textbf{", .render_latex_children(run$children), "}"),
-    italic = paste0("\\textit{", .render_latex_children(run$children), "}"),
+    plain = .latex_escape_text_run(run$text %||% "", preserve, lead, trail),
+    bold = paste0(
+      "\\textbf{",
+      .render_latex_children(run$children, preserve, lead, trail),
+      "}"
+    ),
+    italic = paste0(
+      "\\textit{",
+      .render_latex_children(run$children, preserve, lead, trail),
+      "}"
+    ),
     sup = paste0(
       "\\textsuperscript{",
-      .render_latex_children(run$children),
+      .render_latex_children(run$children, preserve, lead, trail),
       "}"
     ),
     sub = paste0(
       "\\textsubscript{",
-      .render_latex_children(run$children),
+      .render_latex_children(run$children, preserve, lead, trail),
       "}"
     ),
-    code = paste0("\\texttt{", .render_latex_children(run$children), "}"),
-    link = .render_latex_link(run),
-    span = .render_latex_children(run$children),
+    code = paste0(
+      "\\texttt{",
+      .render_latex_children(run$children, preserve, lead, trail),
+      "}"
+    ),
+    link = .render_latex_link(run, preserve, lead, trail),
+    span = .render_latex_children(run$children, preserve, lead, trail),
     # `\\{}` not bare `\\`: the trailing empty group stops LaTeX's `\\`
     # from swallowing a following `[...]` (e.g. a footnote marker like
     # `[1]` on the next line) as its optional `\\[<dimen>]` argument,
     # which would otherwise raise "Illegal unit of measure".
     newline = " \\\\{} ",
-    .latex_escape(run$text %||% "")
+    .latex_escape_text_run(run$text %||% "", preserve, lead, trail)
   )
 }
 
-# Render the children of a wrapping run. The children are
-# themselves a list of run records; walk each and concatenate.
-.render_latex_children <- function(children) {
-  if (length(children) == 0L) {
+# Escape a plain-text run and, when preserving, rewrite significant
+# whitespace runs into `~` active ties (the single chokepoint for
+# inline plain text, mirroring the body-cell path).
+.latex_escape_text_run <- function(
+  text,
+  preserve,
+  lead = TRUE,
+  trail = TRUE
+) {
+  out <- .latex_escape(text)
+  if (isTRUE(preserve)) {
+    out <- .preserve_ws(out, "~", lead = lead, trail = trail)
+  }
+  out
+}
+
+# Render the children of a wrapping run. Each child's line-edge flags
+# come from its position (first / after-newline -> line-leading, etc.).
+.render_latex_children <- function(
+  children,
+  preserve = TRUE,
+  lead = TRUE,
+  trail = TRUE
+) {
+  n <- length(children)
+  if (n == 0L) {
     return("")
   }
   paste0(
-    vapply(children, .render_latex_run, character(1L)),
+    vapply(
+      seq_len(n),
+      function(j) {
+        is_first <- j == 1L || identical(children[[j - 1L]]$type, "newline")
+        is_last <- j == n || identical(children[[j + 1L]]$type, "newline")
+        .render_latex_run(
+          children[[j]],
+          preserve,
+          lead = lead && is_first,
+          trail = trail && is_last
+        )
+      },
+      character(1L)
+    ),
     collapse = ""
   )
 }
@@ -1821,8 +1880,13 @@ backend_latex <- function(grid, file) {
 # Render a link run as `\href{url}{text}` (requires the
 # `hyperref` package, already in the preamble). Title attribute
 # from the inline_ast is dropped (no equivalent in `\href`).
-.render_latex_link <- function(run) {
-  text <- .render_latex_children(run$children)
+.render_latex_link <- function(
+  run,
+  preserve = TRUE,
+  lead = TRUE,
+  trail = TRUE
+) {
+  text <- .render_latex_children(run$children, preserve, lead, trail)
   href <- run$href %||% ""
   sprintf("\\href{%s}{%s}", .latex_escape_url(href), text)
 }
@@ -1867,7 +1931,7 @@ backend_latex <- function(grid, file) {
 # Cell-level escape — full LaTeX escape PLUS `\n` (and `\r\n`)
 # -> `\\` so multi-line strings emitted by engine_decimal
 # render as proper line breaks inside tblr cells.
-.latex_escape_cell <- function(text) {
+.latex_escape_cell <- function(text, preserve = TRUE) {
   if (is.null(text) || length(text) == 0L) {
     return("")
   }
@@ -1880,6 +1944,13 @@ backend_latex <- function(grid, file) {
   # unit of measure". Mirrors the newline run in `.render_latex_run`.
   text <- gsub("\r\n", " \\\\{} ", text, fixed = TRUE)
   text <- gsub("\n", " \\\\{} ", text, fixed = TRUE)
+  # Preserve significant ASCII whitespace LAST, after the indent strip
+  # at the call site and the `\n` -> `\\{}` conversion. The `~` active
+  # tie is non-breaking; inserted post-escape so it is not rewritten to
+  # `\textasciitilde{}`. Single interior spaces stay breakable.
+  if (isTRUE(preserve)) {
+    text <- .preserve_ws(text, "~")
+  }
   text
 }
 

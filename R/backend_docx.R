@@ -1369,11 +1369,8 @@ backend_docx <- function(grid, file) {
             "<w:p><w:pPr>",
             header_ind_tok,
             "<w:jc w:val=\"left\"/></w:pPr>",
-            "<w:r>",
-            header_rpr,
-            "<w:t xml:space=\"preserve\">",
-            .docx_escape(host_text),
-            "</w:t></w:r></w:p>",
+            .docx_body_runs(host_text, header_rpr),
+            "</w:p>",
             "</w:tc></w:tr>"
           )
         )
@@ -1457,11 +1454,9 @@ backend_docx <- function(grid, file) {
             keep_next_tok,
             ind_tok,
             align_tok,
-            "</w:pPr><w:r>",
-            r_pr,
-            "<w:t xml:space=\"preserve\">",
-            .docx_escape(raw),
-            "</w:t></w:r></w:p></w:tc>"
+            "</w:pPr>",
+            .docx_body_runs(raw, r_pr),
+            "</w:p></w:tc>"
           )
         },
         character(1L)
@@ -2951,6 +2946,38 @@ backend_docx <- function(grid, file) {
     "<w:t xml:space=\"preserve\">",
     .docx_escape(text),
     "</w:t></w:r>"
+  )
+}
+
+# Emit a body / section-header cell's text as one or more runs,
+# splitting embedded newlines (`\n`, `\r\n`) into `<w:br/>` breaks so a
+# multi-line cell value renders as separate lines instead of a single
+# space-joined line. `rpr` is the ready `<w:rPr>...</w:rPr>` block (or
+# ""), reused on every text run; the break run carries no props.
+# Significant spaces ride verbatim via `xml:space="preserve"`, so DOCX
+# needs no non-breaking token. A single-line value yields exactly the
+# prior one-run markup (byte-identical), so only multi-line cells move.
+.docx_body_runs <- function(text, rpr) {
+  if (is.null(text) || length(text) == 0L || is.na(text)) {
+    text <- ""
+  }
+  text <- gsub("\r\n", "\n", as.character(text), fixed = TRUE)
+  parts <- strsplit(text, "\n", fixed = TRUE)[[1L]]
+  if (length(parts) == 0L) {
+    parts <- ""
+  }
+  run <- function(p) {
+    paste0(
+      "<w:r>",
+      rpr,
+      "<w:t xml:space=\"preserve\">",
+      .docx_escape(p),
+      "</w:t></w:r>"
+    )
+  }
+  paste0(
+    vapply(parts, run, character(1L), USE.NAMES = FALSE),
+    collapse = "<w:r><w:br/></w:r>"
   )
 }
 

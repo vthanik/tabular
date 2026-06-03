@@ -500,6 +500,7 @@ backend_md <- function(grid, file) {
   }
   indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
   indent_unit_text <- .indent_text_unit(indent_size)
+  ws_preserve <- .preset_ws_preserve(preset)
   vapply(
     seq_len(nrow_data),
     function(i) {
@@ -543,14 +544,17 @@ backend_md <- function(grid, file) {
         }
         .md_warn_dropped_text_props(host_node, "group header")
         first_cell <- .md_emphasize(
-          paste0(header_prefix, .md_escape_cell(host_text)),
+          paste0(
+            header_prefix,
+            .md_escape_cell(host_text, preserve = ws_preserve)
+          ),
           host_node
         )
         return(.md_pipe_row(c(first_cell, rep("&nbsp;", ncols - 1L))))
       }
       cells <- vapply(
         seq_len(ncols),
-        function(j) .md_escape_cell(cells_text[i, j]),
+        function(j) .md_escape_cell(cells_text[i, j], preserve = ws_preserve),
         character(1L)
       )
       .md_pipe_row(cells)
@@ -567,44 +571,93 @@ backend_md <- function(grid, file) {
 # run in `ast@runs` recursively. Unknown run types fall through to
 # their `text` field (defensive — the inline_ast validator already
 # rejects unknown types at construction).
-.render_md_inline <- function(ast) {
+.render_md_inline <- function(ast, preserve = TRUE) {
   if (!is_inline_ast(ast)) {
     return("")
   }
-  paste0(
-    vapply(ast@runs, .render_md_run, character(1L)),
-    collapse = ""
-  )
+  .render_md_children(ast@runs, preserve, lead = TRUE, trail = TRUE)
 }
 
 # Render one AST run record (a named list with at minimum a `type`
 # field) to its markdown markup. Recurses through `children` for
-# wrapping types.
-.render_md_run <- function(run) {
+# wrapping types. `lead` / `trail` flag whether the run is at the
+# start / end of its visual line (only then is leading / trailing
+# whitespace made non-breaking; inter-run spaces stay breakable).
+.render_md_run <- function(run, preserve = TRUE, lead = TRUE, trail = TRUE) {
   type <- run$type
   switch(
     type,
-    plain = .md_escape_inline(run$text %||% ""),
-    bold = paste0("**", .render_md_children(run$children), "**"),
-    italic = paste0("*", .render_md_children(run$children), "*"),
-    sup = paste0("^", .render_md_children(run$children), "^"),
-    sub = paste0("~", .render_md_children(run$children), "~"),
-    code = paste0("`", .render_md_children(run$children), "`"),
-    link = .render_md_link(run),
-    span = .render_md_children(run$children),
+    plain = .md_escape_text_run(run$text %||% "", preserve, lead, trail),
+    bold = paste0(
+      "**",
+      .render_md_children(run$children, preserve, lead, trail),
+      "**"
+    ),
+    italic = paste0(
+      "*",
+      .render_md_children(run$children, preserve, lead, trail),
+      "*"
+    ),
+    sup = paste0(
+      "^",
+      .render_md_children(run$children, preserve, lead, trail),
+      "^"
+    ),
+    sub = paste0(
+      "~",
+      .render_md_children(run$children, preserve, lead, trail),
+      "~"
+    ),
+    code = paste0(
+      "`",
+      .render_md_children(run$children, preserve, lead, trail),
+      "`"
+    ),
+    link = .render_md_link(run, preserve, lead, trail),
+    span = .render_md_children(run$children, preserve, lead, trail),
     newline = "<br/>",
-    .md_escape_inline(run$text %||% "")
+    .md_escape_text_run(run$text %||% "", preserve, lead, trail)
   )
 }
 
-# Render the children of a wrapping run. The children are
-# themselves a list of run records; we walk each and concatenate.
-.render_md_children <- function(children) {
-  if (length(children) == 0L) {
+# Escape a plain-text run and, when preserving, rewrite significant
+# whitespace runs into `&nbsp;` (the single chokepoint for inline
+# plain text, mirroring the body-cell path).
+.md_escape_text_run <- function(text, preserve, lead = TRUE, trail = TRUE) {
+  out <- .md_escape_inline(text)
+  if (isTRUE(preserve)) {
+    out <- .preserve_ws(out, "&nbsp;", lead = lead, trail = trail)
+  }
+  out
+}
+
+# Render the children of a wrapping run. Each child's line-edge flags
+# come from its position (first / after-newline -> line-leading, etc.).
+.render_md_children <- function(
+  children,
+  preserve = TRUE,
+  lead = TRUE,
+  trail = TRUE
+) {
+  n <- length(children)
+  if (n == 0L) {
     return("")
   }
   paste0(
-    vapply(children, .render_md_run, character(1L)),
+    vapply(
+      seq_len(n),
+      function(j) {
+        is_first <- j == 1L || identical(children[[j - 1L]]$type, "newline")
+        is_last <- j == n || identical(children[[j + 1L]]$type, "newline")
+        .render_md_run(
+          children[[j]],
+          preserve,
+          lead = lead && is_first,
+          trail = trail && is_last
+        )
+      },
+      character(1L)
+    ),
     collapse = ""
   )
 }
@@ -613,8 +666,8 @@ backend_md <- function(grid, file) {
 # optional and rendered when set per CommonMark; parse_inline
 # emits a character NA when the source markdown carried no title,
 # so we guard against NA + empty string both.
-.render_md_link <- function(run) {
-  text <- .render_md_children(run$children)
+.render_md_link <- function(run, preserve = TRUE, lead = TRUE, trail = TRUE) {
+  text <- .render_md_children(run$children, preserve, lead, trail)
   href <- run$href %||% ""
   title <- run$title
   if (!is.null(title) && !is.na(title) && nzchar(title)) {
@@ -631,7 +684,7 @@ backend_md <- function(grid, file) {
 # as a column separator and `\n` as a row separator; we escape
 # both. NA cell values (caller-error guard) render as the empty
 # string.
-.md_escape_cell <- function(text) {
+.md_escape_cell <- function(text, preserve = TRUE) {
   if (is.null(text) || is.na(text)) {
     return("")
   }
@@ -639,6 +692,13 @@ backend_md <- function(grid, file) {
   text <- gsub("|", "\\|", text, fixed = TRUE)
   text <- gsub("\r\n", "<br/>", text, fixed = TRUE)
   text <- gsub("\n", "<br/>", text, fixed = TRUE)
+  # Preserve significant ASCII whitespace LAST. md has no CSS / twips
+  # indent channel, so the engine indent rides verbatim in `cells_text`;
+  # rewriting runs to `&nbsp;` is what makes that indent survive the
+  # GFM -> HTML render instead of collapsing.
+  if (isTRUE(preserve)) {
+    text <- .preserve_ws(text, "&nbsp;")
+  }
   text
 }
 

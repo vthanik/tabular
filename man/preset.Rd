@@ -244,6 +244,22 @@ responsive — the table always fills its parent and
 columns wrap when the viewport narrows, regardless of
 \code{width_mode}. Per-column widths (\code{col_spec(width)}) emit
 verbatim into the HTML colgroup per the gt convention.
+\item \strong{\code{whitespace}} — how significant ASCII spaces in labels and
+cells render. \verb{<character(1)>}. One of:
+\itemize{
+\item \strong{\code{"preserve"}} \emph{(default)} — leading, trailing, and
+interior runs of 2+ spaces become the backend
+non-breaking token (\verb{&nbsp;} / \code{~} / \verb{\\~}; DOCX preserves
+via \code{xml:space}), so a hand-built indent like
+\code{col_spec(label = "    Placebo")} renders verbatim across
+every backend. A single interior space stays breakable, so
+cells still wrap.
+\item \strong{\code{"collapse"}} — leave the backend's native run-folding
+in place (HTML / md / LaTeX collapse runs to one space).
+}
+
+\strong{Note:} never affects \code{col_spec(align = "decimal")} padding,
+which uses U+00A0 and is preserved unconditionally.
 \item \strong{\code{cell_padding}} — cell padding in points, CSS shorthand of
 length 1 / 2 / 4 (\code{all} | \verb{vertical horizontal} |
 \verb{top right bottom left}), parsed by the same length rule as

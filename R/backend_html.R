@@ -487,6 +487,7 @@ backend_html <- function(grid, file) {
   }
   surface_node <- .chrome_surface_at(cs, "title")
   surface_style <- .html_chrome_inline_style(surface_node)
+  ws_preserve <- .preset_ws_preserve(preset)
   vapply(
     seq_len(n),
     function(i) {
@@ -517,7 +518,7 @@ backend_html <- function(grid, file) {
         "<p class=\"%s\"%s>%s</p>",
         paste(cls, collapse = " "),
         line_style,
-        .render_html_inline(titles_ast[[i]])
+        .render_html_inline(titles_ast[[i]], preserve = ws_preserve)
       )
     },
     character(1L)
@@ -541,6 +542,7 @@ backend_html <- function(grid, file) {
   }
   surface_node <- .chrome_surface_at(cs, "footer")
   surface_style <- .html_chrome_inline_style(surface_node)
+  ws_preserve <- .preset_ws_preserve(preset)
   vapply(
     seq_len(n),
     function(i) {
@@ -581,7 +583,7 @@ backend_html <- function(grid, file) {
         "<p class=\"%s\"%s>%s</p>",
         paste(cls, collapse = " "),
         line_style,
-        .render_html_inline(footnotes_ast[[i]])
+        .render_html_inline(footnotes_ast[[i]], preserve = ws_preserve)
       )
     },
     character(1L)
@@ -698,6 +700,7 @@ backend_html <- function(grid, file) {
   indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
   indent_unit <- nchar(.indent_text_unit(indent_size))
   indent_em_per_level <- .indent_em_per_level(preset)
+  ws_preserve <- .preset_ws_preserve(preset)
   # Synthesised section-header rows + blank-gap rows from the engine
   # `group_display = "header_row"` plan. The host column carries the
   # group value; other cells are blank. Render as a single colspan'd
@@ -783,9 +786,13 @@ backend_html <- function(grid, file) {
           ""
         }
         inner <- if (is_bold) {
-          paste0("<strong>", .html_escape_cell(host_text), "</strong>")
+          paste0(
+            "<strong>",
+            .html_escape_cell(host_text, preserve = ws_preserve),
+            "</strong>"
+          )
         } else {
-          .html_escape_cell(host_text)
+          .html_escape_cell(host_text, preserve = ws_preserve)
         }
         return(sprintf(
           "<tr class=\"tabular-group-header\"><td colspan=\"%d\"%s>%s</td></tr>",
@@ -833,7 +840,7 @@ backend_html <- function(grid, file) {
               indent_em_per_level * depth
             )
           }
-          text <- .html_escape_cell(raw)
+          text <- .html_escape_cell(raw, preserve = ws_preserve)
           sn <- .cell_style_at(cells_style, i, col_names_visible[[j]])
           halign <- .effective_body_halign(sn, spec, preset)
           valign <- .effective_body_valign(sn, spec, preset)
@@ -990,6 +997,7 @@ backend_html <- function(grid, file) {
 ) {
   surface_node <- .chrome_surface_at(cs, "header")
   surface_style <- .html_chrome_inline_style(surface_node)
+  ws_preserve <- .preset_ws_preserve(preset)
   cells <- vapply(
     col_names_visible,
     function(nm) {
@@ -997,7 +1005,7 @@ backend_html <- function(grid, file) {
       label <- if (is.null(ast)) {
         .html_escape(nm)
       } else {
-        .render_html_inline(ast)
+        .render_html_inline(ast, preserve = ws_preserve)
       }
       col <- cols[[nm]]
       # col_spec wins over chrome surface for header halign (per-
@@ -1598,47 +1606,106 @@ backend_html <- function(grid, file) {
 # Render an `inline_ast` to a single HTML fragment. Walks every
 # run in `ast@runs` recursively. Unknown run types fall through
 # to their (escaped) `text` field.
-.render_html_inline <- function(ast) {
+.render_html_inline <- function(ast, preserve = TRUE) {
   if (!is_inline_ast(ast)) {
     return("")
   }
-  paste0(
-    vapply(ast@runs, .render_html_run, character(1L)),
-    collapse = ""
-  )
+  .render_html_children(ast@runs, preserve, lead = TRUE, trail = TRUE)
 }
 
 # Render one AST run record to its HTML markup. Recurses through
-# `children` for wrapping types.
-.render_html_run <- function(run) {
+# `children` for wrapping types. `preserve` rewrites significant
+# whitespace in plain-text leaves (labels with hand-built indent),
+# never inside structural markup. `lead` / `trail` say whether the run
+# sits at the start / end of its visual line, so only true line-edge
+# whitespace is made non-breaking (inter-run spaces stay breakable).
+.render_html_run <- function(
+  run,
+  preserve = TRUE,
+  lead = TRUE,
+  trail = TRUE
+) {
   type <- run$type
   switch(
     type,
-    plain = .html_escape(run$text %||% ""),
+    plain = .html_escape_text_run(run$text %||% "", preserve, lead, trail),
     bold = paste0(
       "<strong>",
-      .render_html_children(run$children),
+      .render_html_children(run$children, preserve, lead, trail),
       "</strong>"
     ),
-    italic = paste0("<em>", .render_html_children(run$children), "</em>"),
-    sup = paste0("<sup>", .render_html_children(run$children), "</sup>"),
-    sub = paste0("<sub>", .render_html_children(run$children), "</sub>"),
-    code = paste0("<code>", .render_html_children(run$children), "</code>"),
-    link = .render_html_link(run),
-    span = paste0("<span>", .render_html_children(run$children), "</span>"),
+    italic = paste0(
+      "<em>",
+      .render_html_children(run$children, preserve, lead, trail),
+      "</em>"
+    ),
+    sup = paste0(
+      "<sup>",
+      .render_html_children(run$children, preserve, lead, trail),
+      "</sup>"
+    ),
+    sub = paste0(
+      "<sub>",
+      .render_html_children(run$children, preserve, lead, trail),
+      "</sub>"
+    ),
+    code = paste0(
+      "<code>",
+      .render_html_children(run$children, preserve, lead, trail),
+      "</code>"
+    ),
+    link = .render_html_link(run, preserve, lead, trail),
+    span = paste0(
+      "<span>",
+      .render_html_children(run$children, preserve, lead, trail),
+      "</span>"
+    ),
     newline = "<br/>",
-    .html_escape(run$text %||% "")
+    .html_escape_text_run(run$text %||% "", preserve, lead, trail)
   )
 }
 
-# Render the children of a wrapping run. The children are
-# themselves a list of run records; walk each and concatenate.
-.render_html_children <- function(children) {
-  if (length(children) == 0L) {
+# Escape a plain-text run and, when preserving, rewrite significant
+# whitespace runs into `&nbsp;`. The single chokepoint for inline
+# plain text so labels / titles / footnotes preserve hand-built
+# indent identically to body cells.
+.html_escape_text_run <- function(text, preserve, lead = TRUE, trail = TRUE) {
+  out <- .html_escape(text)
+  if (isTRUE(preserve)) {
+    out <- .preserve_ws(out, "&nbsp;", lead = lead, trail = trail)
+  }
+  out
+}
+
+# Render the children of a wrapping run. Each child's line-edge flags
+# are derived from its position: a child is line-leading only if it is
+# the first child (or follows a newline) AND the parent is line-leading;
+# symmetric for trailing.
+.render_html_children <- function(
+  children,
+  preserve = TRUE,
+  lead = TRUE,
+  trail = TRUE
+) {
+  n <- length(children)
+  if (n == 0L) {
     return("")
   }
   paste0(
-    vapply(children, .render_html_run, character(1L)),
+    vapply(
+      seq_len(n),
+      function(j) {
+        is_first <- j == 1L || identical(children[[j - 1L]]$type, "newline")
+        is_last <- j == n || identical(children[[j + 1L]]$type, "newline")
+        .render_html_run(
+          children[[j]],
+          preserve,
+          lead = lead && is_first,
+          trail = trail && is_last
+        )
+      },
+      character(1L)
+    ),
     collapse = ""
   )
 }
@@ -1648,8 +1715,13 @@ backend_html <- function(grid, file) {
 # CommonMark; parse_inline emits a character NA when the source
 # markdown carried no title, so we guard against NA + empty
 # string both. `href` and `title` are attribute-escaped.
-.render_html_link <- function(run) {
-  text <- .render_html_children(run$children)
+.render_html_link <- function(
+  run,
+  preserve = TRUE,
+  lead = TRUE,
+  trail = TRUE
+) {
+  text <- .render_html_children(run$children, preserve, lead, trail)
   href <- run$href %||% ""
   title <- run$title
   if (!is.null(title) && !is.na(title) && nzchar(title)) {
@@ -1672,7 +1744,7 @@ backend_html <- function(grid, file) {
 # engine_decimal survive into the rendered table. Use only for
 # table-cell text; titles / footnotes / col labels go through the
 # inline AST which has its own newline-run handling.
-.html_escape_cell <- function(text) {
+.html_escape_cell <- function(text, preserve = TRUE) {
   if (is.null(text) || length(text) == 0L) {
     return("")
   }
@@ -1685,6 +1757,12 @@ backend_html <- function(grid, file) {
   text <- gsub("'", "&#39;", text, fixed = TRUE)
   text <- gsub("\r\n", "<br/>", text, fixed = TRUE)
   text <- gsub("\n", "<br/>", text, fixed = TRUE)
+  # Preserve significant ASCII whitespace LAST -- after the indent
+  # strip at the call site and after `\n` -> `<br/>` -- so only
+  # residual user spaces become `&nbsp;`, never the engine indent.
+  if (isTRUE(preserve)) {
+    text <- .preserve_ws(text, "&nbsp;")
+  }
   text
 }
 

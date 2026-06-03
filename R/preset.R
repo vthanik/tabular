@@ -37,6 +37,7 @@
   "decimal_metrics",
   "decimal_markers",
   "chrome_onscreen",
+  "whitespace",
   "width_mode",
   "cell_padding",
   "spacing",
@@ -349,6 +350,22 @@
 #'       columns wrap when the viewport narrows, regardless of
 #'       `width_mode`. Per-column widths (`col_spec(width)`) emit
 #'       verbatim into the HTML colgroup per the gt convention.
+#'
+#'   *   **`whitespace`** — how significant ASCII spaces in labels and
+#'       cells render. `<character(1)>`. One of:
+#'
+#'       *   **`"preserve"`** *(default)* — leading, trailing, and
+#'           interior runs of 2+ spaces become the backend
+#'           non-breaking token (`&nbsp;` / `~` / `\~`; DOCX preserves
+#'           via `xml:space`), so a hand-built indent like
+#'           `col_spec(label = "    Placebo")` renders verbatim across
+#'           every backend. A single interior space stays breakable, so
+#'           cells still wrap.
+#'       *   **`"collapse"`** — leave the backend's native run-folding
+#'           in place (HTML / md / LaTeX collapse runs to one space).
+#'
+#'       **Note:** never affects `col_spec(align = "decimal")` padding,
+#'       which uses U+00A0 and is preserved unconditionally.
 #'
 #'   *   **`cell_padding`** — cell padding in points, CSS shorthand of
 #'       length 1 / 2 / 4 (`all` | `vertical horizontal` |

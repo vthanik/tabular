@@ -542,8 +542,20 @@ test_that("MD emit indents data-row host-col cells under header_row mode", {
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Whitespace preservation (default) rewrites the engine indent into
+  # `&nbsp;` so the nesting survives the GFM -> HTML render instead of
+  # collapsing. md has no CSS / twips indent channel, so this is the
+  # only path for visible body indent.
+  expect_true(grepl("| &nbsp;&nbsp;Atrial fib | 3 |", txt, fixed = TRUE))
+  expect_true(grepl("| &nbsp;&nbsp;Nausea | 6 |", txt, fixed = TRUE))
+})
+
+test_that("MD body indent collapses to literal spaces under whitespace = collapse", {
+  spec <- mk_soc_pt_spec() |> preset(whitespace = "collapse")
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_true(grepl("|   Atrial fib | 3 |", txt, fixed = TRUE))
-  expect_true(grepl("|   Nausea | 6 |", txt, fixed = TRUE))
 })
 
 # ---------------------------------------------------------------------

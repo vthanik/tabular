@@ -76,6 +76,7 @@
 # were removed.
 .decimal_metrics_values <- c("chars")
 .chrome_onscreen_values <- c("auto", "off")
+.whitespace_values <- c("preserve", "collapse")
 
 # Recognised values for `preset_spec@width_mode`. Table-level
 # column-sizing policy that mirrors Word's Table Layout menu
@@ -779,6 +780,15 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "auto"
     ),
+    # whitespace — how significant ASCII spaces in labels / cells are
+    # rendered. "preserve" (default) rewrites leading / trailing /
+    # interior runs into backend non-breaking tokens (WYSIWYG, still
+    # wrap-safe via `.preserve_ws()`); "collapse" leaves the backend's
+    # native run-folding in place. Never affects U+00A0 decimal padding.
+    whitespace = S7::new_property(
+      S7::class_character,
+      default = "preserve"
+    ),
     width_mode = S7::new_property(
       S7::class_character,
       default = "content"
@@ -834,6 +844,16 @@ preset_spec <- S7::new_class(
     }
     if (!(self@chrome_onscreen %in% .chrome_onscreen_values)) {
       return("@chrome_onscreen must be auto or off")
+    }
+    if (
+      !(length(self@whitespace) == 1L &&
+        !is.na(self@whitespace) &&
+        self@whitespace %in% .whitespace_values)
+    ) {
+      return(paste0(
+        "@whitespace must be one of ",
+        paste(.sh_quote(.whitespace_values), collapse = ", ")
+      ))
     }
     if (!(self@width_mode %in% .preset_width_mode_values)) {
       return(paste0(

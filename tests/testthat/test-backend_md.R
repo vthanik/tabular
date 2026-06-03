@@ -569,9 +569,11 @@ test_that("Markdown preserves leading-space prefix on indented data rows (Change
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   md <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  # PT rows keep the engine-baked 2-space prefix in the rendered cell.
+  # PT rows keep the engine-baked indent in the rendered cell; under
+  # whitespace preservation (default) it is rewritten to `&nbsp;` so the
+  # nesting survives the GFM -> HTML render.
   expect_true(grepl("Atrial fibrillation", md, fixed = TRUE))
-  expect_match(md, "  Atrial fibrillation", perl = FALSE)
+  expect_match(md, "&nbsp;&nbsp;Atrial fibrillation", perl = FALSE)
   # Header rows (CARDIAC / GI) carry NO leading-space prefix.
   expect_match(md, "(?m)^\\| CARDIAC ", perl = TRUE)
 })

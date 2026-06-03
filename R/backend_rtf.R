@@ -964,6 +964,7 @@ backend_rtf <- function(grid, file) {
   }
   surface_node <- .chrome_surface_at(cs, "title")
   surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
+  ws_preserve <- .preset_ws_preserve(preset)
   vapply(
     seq_len(n),
     function(i) {
@@ -993,7 +994,7 @@ backend_rtf <- function(grid, file) {
         surface_props,
         " ",
         bold_open,
-        .render_rtf_inline(titles_ast[[i]]),
+        .render_rtf_inline(titles_ast[[i]], preserve = ws_preserve),
         bold_close,
         "\\par"
       )
@@ -1022,6 +1023,7 @@ backend_rtf <- function(grid, file) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "footer")
+  ws_preserve <- .preset_ws_preserve(preset)
   # Footer font size cascade: chrome_style@font_size > body font_size.
   # Footnotes default to the SAME size as the body (uniform typography);
   # a per-surface override still wins.
@@ -1067,7 +1069,7 @@ backend_rtf <- function(grid, file) {
         align_tok,
         sprintf("\\fs%d ", fs_half),
         surface_props_no_fs,
-        .render_rtf_inline(footnotes_ast[[i]]),
+        .render_rtf_inline(footnotes_ast[[i]], preserve = ws_preserve),
         "\\par"
       )
     },
@@ -1634,7 +1636,11 @@ backend_rtf <- function(grid, file) {
       sprintf("\\cellx%d", as.integer(cellx[[i]]))
     )
     ast <- col_labels_ast[[nm]]
-    label <- if (is.null(ast)) .rtf_escape(nm) else .render_rtf_inline(ast)
+    label <- if (is.null(ast)) {
+      .rtf_escape(nm)
+    } else {
+      .render_rtf_inline(ast, preserve = .preset_ws_preserve(preset))
+    }
     cell_bodies[[i]] <- paste0(
       "\\pard\\plain\\intbl ",
       .rtf_body_fs(preset),
@@ -1705,6 +1711,7 @@ backend_rtf <- function(grid, file) {
   indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
   indent_unit <- nchar(.indent_text_unit(indent_size))
   indent_twips_per_level <- .indent_native_twips_per_level(preset)
+  ws_preserve <- .preset_ws_preserve(preset)
 
   # Group-aware keep mask (per rendered row). Under native pagination the
   # `keep_with_next` vector (built in `.attach_keep_with_next`) is what
@@ -1816,7 +1823,7 @@ backend_rtf <- function(grid, file) {
           "\\ql ",
           host_props,
           bold_open,
-          .rtf_escape_cell(host_text),
+          .rtf_escape_cell(host_text, preserve = ws_preserve),
           bold_close
         ),
         cellx,
@@ -1880,7 +1887,7 @@ backend_rtf <- function(grid, file) {
           li_tok <- sprintf("\\li%d", indent_twips_per_level * depth)
         }
       }
-      text <- .rtf_escape_cell(raw)
+      text <- .rtf_escape_cell(raw, preserve = ws_preserve)
       text_props <- .rtf_cell_text_props(sn, colors, fonts)
       cell_bodies[[i]] <- paste0(
         "\\pard\\plain\\intbl ",
@@ -2191,50 +2198,92 @@ backend_rtf <- function(grid, file) {
 # Render an `inline_ast` to a single RTF fragment. Walks every run
 # in `ast@runs` recursively. Unknown run types fall through to
 # their escaped `text` field.
-.render_rtf_inline <- function(ast) {
+.render_rtf_inline <- function(ast, preserve = TRUE) {
   if (!is_inline_ast(ast)) {
     return("")
   }
-  paste0(
-    vapply(ast@runs, .render_rtf_run, character(1L)),
-    collapse = ""
-  )
+  .render_rtf_children(ast@runs, preserve, lead = TRUE, trail = TRUE)
 }
 
 # Render one AST run record to its RTF markup. Recurses through
-# `children` for wrapping types.
-.render_rtf_run <- function(run) {
+# `children` for wrapping types. `lead` / `trail` flag the run's
+# line-edge position (only line-edge whitespace becomes `\~`; inter-
+# run spaces stay breakable).
+.render_rtf_run <- function(run, preserve = TRUE, lead = TRUE, trail = TRUE) {
   type <- run$type
   switch(
     type,
-    plain = .rtf_escape(run$text %||% ""),
-    bold = paste0("{\\b ", .render_rtf_children(run$children), "}"),
-    italic = paste0("{\\i ", .render_rtf_children(run$children), "}"),
+    plain = .rtf_escape_text_run(run$text %||% "", preserve, lead, trail),
+    bold = paste0(
+      "{\\b ",
+      .render_rtf_children(run$children, preserve, lead, trail),
+      "}"
+    ),
+    italic = paste0(
+      "{\\i ",
+      .render_rtf_children(run$children, preserve, lead, trail),
+      "}"
+    ),
     sup = paste0(
       "{\\super ",
-      .render_rtf_children(run$children),
+      .render_rtf_children(run$children, preserve, lead, trail),
       "\\nosupersub}"
     ),
     sub = paste0(
       "{\\sub ",
-      .render_rtf_children(run$children),
+      .render_rtf_children(run$children, preserve, lead, trail),
       "\\nosupersub}"
     ),
-    code = paste0("{\\f1 ", .render_rtf_children(run$children), "}"),
-    link = .render_rtf_link(run),
-    span = .render_rtf_children(run$children),
+    code = paste0(
+      "{\\f1 ",
+      .render_rtf_children(run$children, preserve, lead, trail),
+      "}"
+    ),
+    link = .render_rtf_link(run, preserve, lead, trail),
+    span = .render_rtf_children(run$children, preserve, lead, trail),
     newline = "\\line ",
-    .rtf_escape(run$text %||% "")
+    .rtf_escape_text_run(run$text %||% "", preserve, lead, trail)
   )
 }
 
-# Render the children of a wrapping run.
-.render_rtf_children <- function(children) {
-  if (length(children) == 0L) {
+# Escape a plain-text run and, when preserving, rewrite significant
+# whitespace runs into `\~` (the single chokepoint for inline plain
+# text, mirroring the body-cell path).
+.rtf_escape_text_run <- function(text, preserve, lead = TRUE, trail = TRUE) {
+  out <- .rtf_escape(text)
+  if (isTRUE(preserve)) {
+    out <- .preserve_ws(out, "\\~", lead = lead, trail = trail)
+  }
+  out
+}
+
+# Render the children of a wrapping run. Each child's line-edge flags
+# come from its position (first / after-newline -> line-leading, etc.).
+.render_rtf_children <- function(
+  children,
+  preserve = TRUE,
+  lead = TRUE,
+  trail = TRUE
+) {
+  n <- length(children)
+  if (n == 0L) {
     return("")
   }
   paste0(
-    vapply(children, .render_rtf_run, character(1L)),
+    vapply(
+      seq_len(n),
+      function(j) {
+        is_first <- j == 1L || identical(children[[j - 1L]]$type, "newline")
+        is_last <- j == n || identical(children[[j + 1L]]$type, "newline")
+        .render_rtf_run(
+          children[[j]],
+          preserve,
+          lead = lead && is_first,
+          trail = trail && is_last
+        )
+      },
+      character(1L)
+    ),
     collapse = ""
   )
 }
@@ -2242,9 +2291,14 @@ backend_rtf <- function(grid, file) {
 # Render a link run as an RTF hyperlink field. Word and
 # LibreOffice both render the `\fldrslt` text as the clickable
 # anchor that resolves to the `HYPERLINK` URL on click.
-.render_rtf_link <- function(run) {
+.render_rtf_link <- function(
+  run,
+  preserve = TRUE,
+  lead = TRUE,
+  trail = TRUE
+) {
   href <- .rtf_escape(run$href %||% "")
-  text <- .render_rtf_children(run$children)
+  text <- .render_rtf_children(run$children, preserve, lead, trail)
   sprintf(
     "{\\field{\\*\\fldinst HYPERLINK \"%s\"}{\\fldrslt %s}}",
     href,
@@ -2276,13 +2330,19 @@ backend_rtf <- function(grid, file) {
 # Cell-text variant of `.rtf_escape` that also converts embedded
 # newlines (`\n`, `\r\n`) into RTF `\line` so multi-line cells
 # render without closing the cell (a `\par` would do that).
-.rtf_escape_cell <- function(text) {
+.rtf_escape_cell <- function(text, preserve = TRUE) {
   if (is.null(text) || length(text) == 0L) {
     return("")
   }
   out <- .rtf_escape(text)
   out <- gsub("\r\n", "\\line ", out, fixed = TRUE)
   out <- gsub("\n", "\\line ", out, fixed = TRUE)
+  # Preserve significant ASCII whitespace LAST, after the indent strip
+  # at the call site and the `\n` -> `\line` conversion. `\~` is the RTF
+  # non-breaking space; inserted post-escape so it is not re-escaped.
+  if (isTRUE(preserve)) {
+    out <- .preserve_ws(out, "\\~")
+  }
   out
 }
 

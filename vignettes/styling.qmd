@@ -219,6 +219,30 @@ tabular(
   )
 ```
 
+## Verbatim whitespace
+
+Significant ASCII spaces in labels and cells are preserved by default, so a
+hand-built indent renders exactly as typed across every backend (HTML, RTF,
+LaTeX, PDF, DOCX, Markdown). A single interior space stays breakable, so cells
+still wrap; leading, trailing, and interior runs of two or more spaces become
+non-breaking. Decimal padding is never affected.
+
+```{r}
+#| label: whitespace
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "     Placebo\n(N=86)", align = "decimal"),
+    drug_50    = col_spec(label = "     Drug 50\n(N=96)", align = "decimal"),
+    drug_100   = col_spec(label = "    Drug 100\n(N=72)", align = "decimal"),
+    Total      = col_spec(label = "       Total\n(N=254)", align = "decimal")
+  )
+```
+
+Set `preset(whitespace = "collapse")` to opt out and let each backend fold
+space runs natively.
+
 ::: {.callout-tip}
 ## The cascade
 

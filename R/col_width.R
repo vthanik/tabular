@@ -137,21 +137,30 @@
   head_em <- if (!nzchar(header)) {
     0L
   } else {
-    # Auto-fit "by word" (HTML parity): a header wraps at regular spaces,
-    # so its width contribution is the widest single WORD, not the full
-    # line. Newlines are author hard breaks (split first); then split on
-    # runs of ASCII space / tab. NBSP (U+00A0) is NOT a break point and
-    # is excluded by `[ \t]`, so engine_decimal padding and intentional
-    # non-breaking runs (e.g. "Mean (SD)" with NBSP) stay whole. The
-    # resolved width is still max(widest body line, widest header word,
-    # floor), so the body never overflows; only the header wraps.
+    # Auto-fit "by word": a header wraps at breakable spaces, so its
+    # width contribution is the widest non-breaking WRAP UNIT, not the
+    # full line. Newlines are author hard breaks (split first). NBSP
+    # (U+00A0) is never a break point, so engine_decimal padding and
+    # "Mean (SD)" NBSP runs stay whole. The resolved width is still
+    # max(widest body line, widest header unit, floor), so the body
+    # never overflows; only the header wraps.
     head_lines <- unlist(strsplit(header, "\n", fixed = TRUE))
-    head_words <- unlist(strsplit(head_lines, "[ \t]+"))
-    head_words <- head_words[nzchar(head_words)]
-    if (length(head_words) == 0L) {
+    head_lines <- head_lines[!is.na(head_lines)]
+    head_units <- if (.preset_ws_preserve(preset)) {
+      # Preserve: a hand-built leading / trailing indent and 2+-space
+      # runs are non-breaking, so they belong to their wrap unit and
+      # must be reserved. A single interior space still wraps.
+      unlist(lapply(head_lines, .ws_wrap_segments))
+    } else {
+      # Collapse: the backend folds every space run, so the header
+      # wraps at every ASCII space / tab; width is the widest word.
+      head_words <- unlist(strsplit(head_lines, "[ \t]+"))
+      head_words[nzchar(head_words)]
+    }
+    if (length(head_units) == 0L) {
       0L
     } else {
-      max(.text_width_em(head_words, head_afm))
+      max(.text_width_em(head_units, head_afm))
     }
   }
 

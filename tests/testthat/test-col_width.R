@@ -161,13 +161,30 @@ test_that(".compute_col_width never word-splits BODY cells (numerics never wrap)
   expect_gt(w_body, w_word)
 })
 
-test_that(".compute_col_width floors an empty / whitespace-only header", {
+test_that(".compute_col_width reserves a significant-space header under preserve, floors it under collapse", {
+  p_preserve <- preset_spec()
+  p_collapse <- preset_spec(whitespace = "collapse")
+  w_empty <- tabular:::.compute_col_width("1", "", p_preserve)
+  w_pre <- tabular:::.compute_col_width("1", "   ", p_preserve)
+  w_col <- tabular:::.compute_col_width("1", "   ", p_collapse)
+  # Preserve (default): a significant-space header is non-breaking, so its
+  # width is reserved beyond the empty / floor baseline (B5 indent fix).
+  expect_gt(w_pre, w_empty)
+  # Collapse: the backend folds the run, so the header floors to empty.
+  expect_equal(w_col, w_empty)
+})
+
+test_that(".compute_col_width reserves a hand-built leading indent under preserve", {
   p <- preset_spec()
-  w_empty <- tabular:::.compute_col_width("1", "", p)
-  w_spaces <- tabular:::.compute_col_width("1", "   ", p)
-  # Whitespace-only header contributes no word width; both fall back to
-  # the body / floor and agree.
-  expect_equal(w_empty, w_spaces)
+  # "     Placebo" is one non-breaking wrap unit under preserve, so the
+  # leading indent widens the column past the bare word.
+  w_indent <- tabular:::.compute_col_width("1", "     Placebo", p)
+  w_word <- tabular:::.compute_col_width("1", "Placebo", p)
+  expect_gt(w_indent, w_word)
+  # A normal multi-word header still wraps word-by-word (no over-reserve).
+  w_phrase <- tabular:::.compute_col_width("1", "Adverse Event Term", p)
+  w_widest <- tabular:::.compute_col_width("1", "Adverse", p)
+  expect_equal(w_phrase, w_widest)
 })
 
 test_that(".compute_col_width breaks a multi-line header on \\n (author break)", {
