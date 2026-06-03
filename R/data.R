@@ -574,6 +574,14 @@
 #'       "Adverse Events by SOC and PT",
 #'       "Safety Population"
 #'     )
+#'   ) |>
+#'   cols(
+#'     label    = col_spec(label = "SOC / PT", align = "left"),
+#'     soc      = col_spec(visible = FALSE),
+#'     row_type = col_spec(visible = FALSE),
+#'     `Placebo`              = col_spec(align = "decimal"),
+#'     `Xanomeline Low Dose`  = col_spec(align = "decimal"),
+#'     `Xanomeline High Dose` = col_spec(align = "decimal")
 #'   )
 "saf_aesocpt_card"
 

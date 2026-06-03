@@ -120,17 +120,18 @@ tabular(
 ) |>
   cols(
     soc          = col_spec(visible = FALSE),
-    label        = col_spec(usage = "group", indent_by = "indent_level",
-                            label = "System Organ Class / Preferred Term"),
     row_type     = col_spec(visible = FALSE),
     indent_level = col_spec(visible = FALSE),
     n_total      = col_spec(visible = FALSE),
     soc_n        = col_spec(visible = FALSE),
+    label        = col_spec(label = "System Organ Class / Preferred Term",
+                            indent_by = "indent_level"),
     placebo      = col_spec(label = "Placebo",  align = "decimal"),
     drug_50      = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100     = col_spec(label = "Drug 100", align = "decimal"),
     Total        = col_spec(label = "Total",    align = "decimal")
-  )
+  ) |>
+  style(bold = TRUE, .at = cells_body(where = row_type %in% c("overall", "soc")))
 ```
 
 ## BigN in the header
@@ -221,4 +222,3 @@ must be next to each other in the data frame. If `drug_50` and
 - **Where next.** [Rows, grouping & pagination](rows-grouping-pagination.html)
   covers row order and section groups; [Styling](styling.html) targets
   any header band or column with `style()` + `cells_headers()`.
-```

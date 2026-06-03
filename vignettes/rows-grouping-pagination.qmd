@@ -103,7 +103,8 @@ tabular(
     sex_n      = col_spec(visible = FALSE),
     agegr_n    = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group"),
+    param      = col_spec(usage = "group", group_display = "column",
+                          label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
@@ -181,4 +182,3 @@ to a paginated backend to see the splits.
   with `style()`.
 - **[Clinical cookbook](clinical-cookbook.html)** — full AE-by-SOC/PT and
   subgrouped vitals tables, sorted and paginated end to end.
-```

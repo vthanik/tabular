@@ -130,7 +130,7 @@ against their namespaces; `via gt` means `gtsummary` renders through `gt`):
 | | tabular | gt | rtables | gtsummary | flextable | huxtable |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | Computes statistics | — | — | ✓ | ✓ | — | — |
-| Live HTML preview | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Live HTML preview | ✓ | ✓ | — | ✓ | ✓ | ✓ |
 | Native RTF | ✓ | ✓ | — | via gt | ✓ | ✓ |
 | Native DOCX | ✓ | ✓ | — | via gt | ✓ | ✓ |
 | LaTeX | ✓ | ✓ | — | via gt | — | ✓ |
@@ -138,6 +138,22 @@ against their namespaces; `via gt` means `gtsummary` renders through `gt`):
 | Paginated submission output | ✓ | — | ✓ | — | — | — |
 | Decimal align via font metrics | ✓ | — | — | — | — | — |
 | CDISC ARS audit manifest | ✓ | — | — | — | — | — |
+
+Two notes on the marks:
+
+- **Live HTML preview** means the table renders as HTML *inline* when you
+  print it in a Quarto / R Markdown chunk or the RStudio viewer (a
+  `knit_print` method). `rtables` prints a monospace ASCII table by
+  default and ships no `knit_print` method, so it is `—` here; it can
+  still emit HTML through an explicit `as_html()` call.
+- **PDF** is compiled through LaTeX, so it needs a TeX installation.
+  `tabular` uses [`tinytex`](https://yihui.org/tinytex/) — install it once
+  per machine and PDF `emit()` works thereafter:
+
+  ```r
+  install.packages("tinytex")
+  tinytex::install_tinytex()   # one-time TeX setup
+  ```
 
 ## The verb surface
 
@@ -157,23 +173,6 @@ against their namespaces; `via gt` means `gtsummary` renders through `gt`):
 | `md()` / `html()` | Inline Markdown / HTML markup in labels and cells |
 | `emit()` | Render to a file (RTF / PDF / HTML / LaTeX / DOCX) |
 | `as_grid()` | Resolve to the backend-ready grid without writing a file |
-
-## Demo data
-
-Eleven pre-summarised datasets ship with the package to power every
-example, vignette, and test (the `*_card` pair are long-format `cards`
-ARDs that feed `pivot_across()`):
-
-| Dataset | Content |
-|---|---|
-| `saf_demo`, `saf_demo_card` | Demographics, Safety Population |
-| `saf_aeoverall` | High-level adverse-event summary |
-| `saf_aesocpt`, `saf_aesocpt_card` | Adverse events by SOC and Preferred Term |
-| `saf_vital` | Vital signs by parameter and visit |
-| `saf_subgroup` | Vital signs by Sex × Age-group subgroups |
-| `eff_resp` | Best Overall Response and response rates |
-| `eff_estimates` | Treatment-effect estimates (raw numerics) |
-| `saf_n`, `eff_n` | BigN denominators per arm |
 
 ## Documentation
 

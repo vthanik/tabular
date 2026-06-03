@@ -60,11 +60,15 @@ tabular(
 ## 2. Overall adverse-event summary
 
 A compact high-level AE table, ordered by descending total frequency so
-the most common categories lead.
+the most common categories lead. The `Total` cells are formatted strings
+(`"217 (85.4)"`), which sort *lexically* (`"157"` before `"3"`), so we
+derive a hidden integer key from the count and sort on that instead --
+the canonical "sort on a numeric key, never on display text" idiom.
 
 ```{r}
 #| label: ae-overall
 ae0 <- saf_aeoverall[c("stat_label", "placebo", "drug_50", "drug_100", "Total")]
+ae0$total_n <- as.integer(sub(" .*", "", ae0$Total))   # 217 (85.4) -> 217
 
 tabular(
   ae0,
@@ -77,20 +81,24 @@ tabular(
 ) |>
   cols(
     stat_label = col_spec(label = "Category"),
+    total_n    = col_spec(visible = FALSE),
     placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
     drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
     drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
     Total      = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
   ) |>
-  sort_rows(by = "Total", descending = TRUE)
+  sort_rows(by = "total_n", descending = TRUE)
 ```
 
 ## 3. Adverse events by system organ class and preferred term
 
-The hierarchical AE table. Preferred terms indent under their
-system-organ-class header via `indent_by`, and the columns that drive the
-hierarchy and sort order are hidden. The data arrives in canonical
-descending-frequency order, which `tabular` preserves.
+The hierarchical AE table. A single `label` column carries both levels:
+system-organ-class text sits flush, preferred terms indent beneath it via
+`indent_by = "indent_level"`. The columns that drive the hierarchy and the
+sort order ride along hidden (`visible = FALSE`), and a `style()` layer
+bolds the overall and SOC summary rows so the structure reads at a glance.
+The data arrives in canonical descending-frequency order, which `tabular`
+preserves.
 
 ```{r}
 #| label: ae-socpt
@@ -108,18 +116,19 @@ tabular(
 ) |>
   cols(
     soc          = col_spec(visible = FALSE),
-    label        = col_spec(usage = "group", indent_by = "indent_level",
-                            label = "System Organ Class / Preferred Term"),
     row_type     = col_spec(visible = FALSE),
     indent_level = col_spec(visible = FALSE),
     n_total      = col_spec(visible = FALSE),
     soc_n        = col_spec(visible = FALSE),
+    label        = col_spec(label = "System Organ Class / Preferred Term",
+                            indent_by = "indent_level"),
     placebo      = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
     drug_50      = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
     drug_100     = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
     Total        = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
   ) |>
-  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total"))
+  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
+  style(bold = TRUE, .at = cells_body(where = row_type %in% c("overall", "soc")))
 ```
 
 ::: {.callout-tip}
@@ -132,8 +141,12 @@ every page of this long table.
 
 ## 4. Vital signs by parameter and visit
 
-Each vital-sign parameter is a section; visit is an ordinary column so a
-reader scans across timepoints within a parameter.
+A two-level row hierarchy: each vital-sign parameter holds its four
+visits, and each visit holds the summary statistics. Both `param` and
+`visit` are `usage = "group"` with `group_display = "column"`, so each
+name prints once at the top of its block and the repeats blank out --
+the reader scans `Parameter`, then `Visit`, then `Statistic` down a clean
+stair, never re-reading a label.
 
 ```{r}
 #| label: vitals
@@ -148,8 +161,10 @@ tabular(
 ) |>
   cols(
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group"),
-    visit      = col_spec(label = "Visit"),
+    param      = col_spec(usage = "group", group_display = "column",
+                          label = "Parameter"),
+    visit      = col_spec(usage = "group", group_display = "column",
+                          label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
     drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
@@ -193,8 +208,13 @@ tabular(
 ## 6. Subgrouped vital signs (Sex × Age group)
 
 The same vitals analysis, partitioned into Sex × Age-group panels with
-`subgroup()`. Each combination becomes its own banner-labelled partition
-that starts a new page in the print backends.
+`subgroup()`. Each `{sex}, {agegr}` combination becomes its own
+banner-labelled partition that starts a new page in the print backends.
+Within every panel the two parameters are kept distinct by a `Parameter`
+column: `usage = "group"` with `group_display = "column"` prints each
+parameter name once at the top of its block and blanks the repeats, so a
+reader sees `Diastolic BP (mmHg)` then `Systolic BP (mmHg)` without the
+label repeating on every statistic row.
 
 ```{r}
 #| label: subgroup
@@ -213,13 +233,15 @@ tabular(
     sex_n      = col_spec(visible = FALSE),
     agegr_n    = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group"),
+    param      = col_spec(usage = "group", group_display = "column",
+                          label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = "Placebo",  align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
-    Total      = col_spec(label = "Total",    align = "decimal")
+    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
+    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
+    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
+    Total      = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
   ) |>
+  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
   subgroup(by = c("sex", "agegr"), label = "{sex}, {agegr}")
 ```
 
@@ -238,4 +260,3 @@ tab |> emit("t_14_1_1.pdf")     # paginated PDF (via tinytex)
 
 See [Fonts & fidelity](fonts-and-fidelity.html) for why the paginated
 RTF/PDF/DOCX, not the HTML preview, is the artefact of record.
-```

@@ -36,10 +36,13 @@ says *where* to apply them. Locations are the `cells_*()` helpers.
 
 ## The shape: attributes + a location
 
+Section-header rows are already bold by default, so to *see* a layer land
+we tint their background instead:
+
 ```{r}
 #| label: first-style
 base |>
-  style(bold = TRUE, .at = cells_group_headers())
+  style(background = "#eef2ff", .at = cells_group_headers())
 ```
 
 The `.at` argument names the surface. Everything else is the styling to
@@ -62,7 +65,7 @@ attribute.
 ```{r}
 #| label: locations
 base |>
-  style(bold = TRUE, .at = cells_group_headers()) |>
+  style(background = "#eef2ff", .at = cells_group_headers()) |>
   style(italic = TRUE, .at = cells_body(j = "Total")) |>
   style(border_bottom = brdr("thick"), .at = cells_headers())
 ```
@@ -124,7 +127,7 @@ base |>
     font_size   = 9,
     orientation = "landscape",
     rules  = list(midrule = brdr("thick")),
-    colors = list(header = c(text = "#1f2937"))
+    colors = list(header = c(text = "#1d4ed8", background = "#f3f4f6"))
   )
 ```
 
@@ -173,9 +176,12 @@ verb), then attach it to a preset so every table inherits it:
 
 ```{r}
 #| label: template
+# Headers and section rows are bold by default, so a house style earns
+# its keep with VISIBLE identity: a shaded column-header band, tinted
+# section rows, and thick rules above and below the header.
 house <- style_template() |>
-  style(bold = TRUE, .at = cells_headers()) |>
-  style(bold = TRUE, .at = cells_group_headers()) |>
+  style(background = "#f3f4f6", .at = cells_headers()) |>
+  style(background = "#eef2ff", .at = cells_group_headers()) |>
   style(border_top = brdr("thick"), border_bottom = brdr("thick"),
         .at = cells_headers())
 
@@ -198,10 +204,10 @@ italic, super/subscript) or `html()` for a constrained HTML subset:
 tabular(
   saf_demo,
   titles = c(
-    md("**Table 14.1.1**"),
-    "Demographic Characteristics"
+    "Table 14.1.1",
+    md("Demographic Characteristics^a^")
   ),
-  footnotes = md("Body mass index in kg/m^2^.")
+  footnotes = md("^a^ Body mass index summarised in kg/m^2^.")
 ) |>
   cols(
     variable   = col_spec(usage = "group"),
@@ -229,4 +235,3 @@ per-table `style()` overrides just what it names.
   to six complete production tables.
 - **[Fonts & fidelity](fonts-and-fidelity.html)** — fonts, decimal
   alignment, and why the print backends are the source of truth.
-```

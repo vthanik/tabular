@@ -162,4 +162,3 @@ With the model in hand, the rest of the guide fills in the options:
   order, groups, and page splits.
 - **[Styling](styling.html)** — `style()`, presets, and house styles.
 - **[Architecture](architecture.html)** — the engine phases in depth.
-```

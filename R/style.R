@@ -106,6 +106,8 @@
 #'                         indent_by = "indent_level"),
 #'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
+#'     soc_n    = col_spec(visible = FALSE),
+#'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = "Placebo",  align = "decimal"),
 #'     drug_50  = col_spec(label = "Drug 50",  align = "decimal"),
 #'     drug_100 = col_spec(label = "Drug 100", align = "decimal"),
@@ -119,9 +121,12 @@
 #'         .at = cells_body(where = row_type == "overall"))
 #'
 #' # ---- Chrome styling ----
+#' # Each layer changes the surface VISIBLY from its default: a coloured
+#' # rule under the header band, a dark-blue header text, a left-aligned
+#' # title (default is centred), and a blank line above + below the title.
 #' tabular(saf_demo) |>
-#'   style(bold = TRUE, .at = cells_headers()) |>
-#'   style(border_top = brdr("thick", "double"),
+#'   style(color = "#1a5276", .at = cells_headers()) |>
+#'   style(border_bottom = brdr("thick", "double", "#1a5276"),
 #'         .at = cells_headers()) |>
 #'   style(halign = "left", .at = cells_title()) |>
 #'   style(blank_above = 1, blank_below = 1,

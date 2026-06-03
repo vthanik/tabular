@@ -187,4 +187,3 @@ are the source of truth.
 - **[Styling](styling.html)** — `style()`, presets, and house styles.
 - **[Clinical cookbook](clinical-cookbook.html)** — six complete
   production tables end to end.
-```

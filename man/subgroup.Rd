@@ -179,6 +179,18 @@ tabular(saf_subgroup, titles = "Vital Signs by Sex and Age Group") |>
 # decides not to paginate by group after all — the call resets
 # the spec back to a single-page-set render.
 tabular(saf_subgroup, titles = "Pooled (no sex partition)") |>
+  cols(
+    sex_n      = col_spec(visible = FALSE),
+    agegr      = col_spec(visible = FALSE),
+    agegr_n    = col_spec(visible = FALSE),
+    paramcd    = col_spec(visible = FALSE),
+    param      = col_spec(usage = "group", label = "Parameter"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  ) |>
   subgroup("sex", label = "Sex: {sex}") |>
   # Decide later that the sex split was the wrong default —
   # clear it before rendering.

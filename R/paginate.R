@@ -259,6 +259,7 @@
 #'     soc      = col_spec(usage = "group", visible = FALSE,
 #'                         group_display = "column_repeat"),
 #'     soc_n    = col_spec(visible = FALSE),
+#'     n_total  = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = "Placebo",  align = "decimal",
 #'                         width = "2.0in"),

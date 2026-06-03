@@ -124,4 +124,3 @@ sp |> emit("t_14_1_1.docx")    # native Word
   metrics-aware grid that every backend consumes.
 - **[Clinical cookbook](clinical-cookbook.html)** — the recipes you would
   emit to these formats.
-```

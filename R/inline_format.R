@@ -141,12 +141,12 @@
 #'   walk the resulting `inline_ast`.
 #'
 #' @examples
-#' # ---- Example 1: Bold title with Pandoc-style footnote marker ----
+#' # ---- Example 1: Italic title qualifier with Pandoc footnote marker ----
 #' #
-#' # AE-by-SOC/PT table. The third title line bolds "Safety
-#' # Population" via `md("**...**")`; the first footnote
-#' # carries a Pandoc-style superscript marker `^a^` that the
-#' # backends render as a true superscript.
+#' # AE-by-SOC/PT table. Title lines are bold by default, so the third
+#' # line italicises "Safety Population" via `md("*...*")` for a visible
+#' # contrast; the first footnote carries a Pandoc-style superscript
+#' # marker `^a^` that the backends render as a true superscript.
 #' n <- stats::setNames(saf_n$n, saf_n$arm_short)
 #'
 #' tabular(
@@ -154,7 +154,7 @@
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by System Organ Class and Preferred Term",
-#'     md("**Safety Population**")
+#'     md("*Safety Population*")
 #'   ),
 #'   footnotes = c(
 #'     md("^a^ Subjects counted once per SOC and once per PT.")
@@ -164,7 +164,12 @@
 #'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
 #'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
-#'     Total    = col_spec(label = sprintf("Total\nN=%d", n["Total"]))
+#'     soc_n    = col_spec(visible = FALSE),
+#'     n_total  = col_spec(visible = FALSE),
+#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
+#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
+#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
+#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
 #'   )
 #'
 #' # ---- Example 2: Markdown link in a footnote ----
@@ -187,8 +192,13 @@
 #'   )
 #' ) |>
 #'   cols(
-#'     stat_label = col_spec(usage = "group", label = "Response"),
-#'     row_type   = col_spec(visible = FALSE)
+#'     stat_label  = col_spec(usage = "group", label = "Response"),
+#'     row_type    = col_spec(visible = FALSE),
+#'     groupid     = col_spec(visible = FALSE),
+#'     group_label = col_spec(visible = FALSE),
+#'     placebo     = col_spec(label = sprintf("Placebo\nN=%d",  ne["placebo"]),  align = "decimal"),
+#'     drug_50     = col_spec(label = sprintf("Drug 50\nN=%d",  ne["drug_50"]),  align = "decimal"),
+#'     drug_100    = col_spec(label = sprintf("Drug 100\nN=%d", ne["drug_100"]), align = "decimal")
 #'   )
 #'
 #' @seealso

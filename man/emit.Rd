@@ -218,11 +218,13 @@ emit(
 # CSR appendix).
 eff_spec <- tabular(eff_resp, titles = "Best Overall Response") |>
   cols(
-    stat_label = col_spec(usage = "group", label = "Response"),
-    row_type   = col_spec(visible = FALSE),
-    placebo    = col_spec(label = "Placebo",  align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100", align = "decimal")
+    stat_label  = col_spec(usage = "group", label = "Response"),
+    row_type    = col_spec(visible = FALSE),
+    groupid     = col_spec(visible = FALSE),
+    group_label = col_spec(visible = FALSE),
+    placebo     = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50     = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100    = col_spec(label = "Drug 100", align = "decimal")
   )
 
 out_dir <- tempfile()

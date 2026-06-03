@@ -103,6 +103,8 @@
 #'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
 #'     soc      = col_spec(usage = "group", group_display = "header_row"),
 #'     row_type = col_spec(visible = FALSE),
+#'     soc_n    = col_spec(visible = FALSE),
+#'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  demo_n["placebo"])),
 #'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  demo_n["drug_50"])),
 #'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", demo_n["drug_100"])),
