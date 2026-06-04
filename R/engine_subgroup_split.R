@@ -242,3 +242,56 @@ engine_subgroup_split <- function(spec) {
     node
   })
 }
+
+# Per-subgroup BigN records for the continuous backends (HTML / md).
+# Paged backends ride the N on each page's repeating header; continuous
+# backends have one header, so they instead emit a per-arm N row under
+# each subgroup banner. This builds the raw material for that row: one
+# record list per subgroup, each entry `list(name, kind, text)` where
+# `name` is the big_n value-column (a data column for a leaf target, a
+# band label for a band target), `kind` is "leaf" / "band", and `text`
+# is the formatted `(N=x)` cell. Returns NULL when big_n is absent, so
+# the merge leaves `page$subgroup_bign` NULL and non-big_n subgroup
+# tables render byte-identically.
+#
+# Recomputed from the raw `big_n` frame (never reverse-parsed from the
+# suffixed header AST), reusing `.subgroup_combos` / `.subgroup_match_mask`
+# / `.subgroup_bign_target` / `.subgroup_header_labels` so the combo
+# order, denominator pick, and leaf-vs-band placement can never diverge
+# from `.subgroup_apply_big_n`. List index `i` matches the split's
+# `runtime$index`.
+.subgroup_bign_records_all <- function(spec) {
+  sg <- spec@subgroup
+  if (is.null(sg) || is.null(sg@big_n)) {
+    return(NULL)
+  }
+  big_n <- sg@big_n
+  by_cols <- sg@by
+  fmt <- sg@big_n_fmt
+  data_names <- names(spec@data)
+  band_labels <- .subgroup_header_labels(spec@headers)
+  n_cols <- setdiff(names(big_n), by_cols)
+  combos <- .subgroup_combos(spec@data, by_cols)
+
+  lapply(seq_len(nrow(combos)), function(i) {
+    idx <- which(.subgroup_match_mask(
+      big_n,
+      by_cols,
+      combos[i, , drop = FALSE]
+    ))
+    if (length(idx) == 0L) {
+      return(list()) # nocov  (completeness enforced at verb time)
+    }
+    idx <- idx[[1L]]
+    lapply(n_cols, function(nm) {
+      n_val <- big_n[[nm]][[idx]]
+      suffix <- gsub("{n}", format(n_val, trim = TRUE), fmt, fixed = TRUE)
+      # Strip the leading newline/space the paged header carries (the
+      # default fmt is "\n(N={n})") so the row cell reads "(N=24)", not
+      # a blank-then-newline. Internal spacing is preserved.
+      text <- sub("^\\s+", "", suffix)
+      tgt <- .subgroup_bign_target(nm, data_names, band_labels)
+      list(name = nm, kind = tgt$kind, text = text)
+    })
+  })
+}

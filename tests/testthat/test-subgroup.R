@@ -900,16 +900,117 @@ test_that("non-contiguous band + big_n names the ORIGINAL band label", {
   expect_false(any(grepl("(N=24)", err, fixed = TRUE)))
 })
 
-test_that("big_n: HTML and Markdown show the clean base header (no N)", {
+test_that("big_n: HTML emits a per-arm N row under each banner; base header stays clean", {
   spec <- .bign_base() |>
     subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
-  for (ext in c(".html", ".md")) {
-    f <- withr::local_tempfile(fileext = ext)
-    emit(spec, f)
-    out <- paste(readLines(f, warn = FALSE), collapse = "\n")
-    expect_true(grepl("Placebo", out, fixed = TRUE))
-    # Continuous formats render one header -> the per-page N must NOT leak.
-    expect_false(grepl("(N=24)", out, fixed = TRUE))
-    expect_false(grepl("(N=18)", out, fixed = TRUE))
-  }
+  f <- withr::local_tempfile(fileext = ".html")
+  emit(spec, f)
+  lines <- readLines(f)
+  bign_rows <- grep("tabular-subgroup-bign", lines, value = TRUE)
+  # One per-arm N row per subgroup banner (F page, M page).
+  expect_length(bign_rows, 2L)
+  expect_match(bign_rows[[1L]], "(N=24)", fixed = TRUE)
+  expect_match(bign_rows[[1L]], "(N=42)", fixed = TRUE)
+  # The M page carries its own population.
+  expect_match(bign_rows[[2L]], "(N=18)", fixed = TRUE)
+  # The single base header is the un-suffixed one: the per-page N never
+  # leaks into <thead>.
+  thead <- lines[seq_len(grep("</thead>", lines, fixed = TRUE)[[1L]])]
+  expect_false(any(grepl("(N=24)", thead, fixed = TRUE)))
+  expect_true(any(grepl("Placebo", thead, fixed = TRUE)))
+})
+
+test_that("big_n HTML: adjacent equal Ns render as two cells, never one colspan", {
+  # The F page has drug_50 = 9 next to drug_100 = 9. Keying spans on the
+  # arm name (not the rendered text) must keep them two distinct cells.
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
+  f <- withr::local_tempfile(fileext = ".html")
+  emit(spec, f)
+  f_row <- grep("tabular-subgroup-bign", readLines(f), value = TRUE)[[1L]]
+  # Both Ns land in their own plain (colspan-free) cell. (The leading
+  # empty stub columns legitimately coalesce into one colspan cell; only
+  # the equal-N arms must stay separate.)
+  plain_n9 <- gregexpr(
+    "<td style=\"text-align: center;\">(N=9)</td>",
+    f_row,
+    fixed = TRUE
+  )[[1L]]
+  expect_identical(length(plain_n9), 2L)
+  expect_false(grepl(
+    "colspan=\"2\" style=\"text-align: center;\">(N=9)",
+    f_row,
+    fixed = TRUE
+  ))
+})
+
+test_that("big_n: Markdown emits a per-arm N pipe row under each banner", {
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
+  f <- withr::local_tempfile(fileext = ".md")
+  emit(spec, f)
+  lines <- readLines(f)
+  expect_true(any(grepl(
+    "| (N=24) | (N=9) | (N=9) | (N=42) |",
+    lines,
+    fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "| (N=18) | (N=15) | (N=14) | (N=47) |",
+    lines,
+    fixed = TRUE
+  )))
+})
+
+test_that("big_n band-keyed: HTML colspans the band; Markdown repeats the N", {
+  big_n <- data.frame(
+    sex = factor(c("F", "M"), levels = c("F", "M")),
+    placebo = c(24L, 18L),
+    Active = c(18L, 29L),
+    Total = c(42L, 47L)
+  )
+  spec <- .bign_base() |>
+    headers(Active = c("drug_50", "drug_100")) |>
+    subgroup("sex", label = "Sex: {sex}", big_n = big_n)
+  fh <- withr::local_tempfile(fileext = ".html")
+  emit(spec, fh)
+  h_row <- grep("tabular-subgroup-bign", readLines(fh), value = TRUE)[[1L]]
+  # One colspan=2 cell over the band's two leaves, carrying the band N.
+  expect_match(
+    h_row,
+    "colspan=\"2\" style=\"text-align: center;\">(N=18)",
+    fixed = TRUE
+  )
+  fm <- withr::local_tempfile(fileext = ".md")
+  emit(spec, fm)
+  # GFM has no colspan, so the band N repeats across its columns (the
+  # same convention header bands already follow).
+  expect_true(any(grepl(
+    "| (N=24) | (N=18) | (N=18) | (N=42) |",
+    readLines(fm),
+    fixed = TRUE
+  )))
+})
+
+test_that("big_n: the per-arm N row repeats with the banner across vertical page splits", {
+  # A large font shrinks the per-page row budget so each subgroup splits
+  # across vertical pages. The N row is gated on the banner being
+  # present, so it must repeat in lockstep with the banner after each
+  # break, never drifting.
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms()) |>
+    preset(font_size = 24L, width_mode = "fixed")
+  f <- withr::local_tempfile(fileext = ".html")
+  emit(spec, f)
+  lines <- readLines(f)
+  break_ct <- length(grep("tabular-page-break-row", lines, fixed = TRUE))
+  banner_ct <- length(grep("class=\"tabular-subgroup\"", lines, fixed = TRUE))
+  bign_ct <- length(grep(
+    "class=\"tabular-subgroup-bign\"",
+    lines,
+    fixed = TRUE
+  ))
+  expect_gt(break_ct, 0L) # a split actually happened
+  expect_gt(banner_ct, 2L) # banner repeated beyond the two subgroups
+  expect_identical(bign_ct, banner_ct) # N row tracks the banner exactly
 })

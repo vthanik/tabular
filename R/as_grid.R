@@ -788,11 +788,23 @@ as_grid <- function(spec) {
   # lookup to drift. For a subgroup table WITHOUT big_n every group's
   # bands are identical, so `page$headers` equals the global `headers`
   # byte-for-byte.
+  #
+  # `page$subgroup_bign` rides the same per-page model: the per-arm N
+  # records for the continuous-backend N row (one list per subgroup,
+  # keyed to the page's group via `runtime$index`). NULL without big_n,
+  # so HTML / md skip the row and render byte-identically.
+  bign_records <- .subgroup_bign_records_all(spec)
   pages <- unlist(
     lapply(sub_grids, function(g) {
       bands <- g@metadata$headers
+      recs <- if (is.null(bign_records)) {
+        NULL
+      } else {
+        bign_records[[g@metadata$subgroup_runtime$index]]
+      }
       lapply(g@pages, function(p) {
         p$headers <- bands
+        p$subgroup_bign <- recs
         p
       })
     }),

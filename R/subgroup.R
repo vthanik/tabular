@@ -123,11 +123,12 @@
 #'   exactly one leaf XOR one band. Every missing per-page N is a
 #'   call-time error, never a silently wrong denominator.
 #'
-#'   **Note:** the per-arm N renders in the paged backends (RTF, PDF /
-#'   LaTeX, DOCX), repeating on every page of its subgroup, banner
-#'   above header. HTML and Markdown are continuous (one stacked
-#'   table, one header), so they show the clean base header; surface
-#'   the per-page population in the `label` banner there.
+#'   **Note:** the per-arm N renders in every backend. The paged
+#'   backends (RTF, PDF / LaTeX, DOCX) carry it on the column header
+#'   that repeats on every page of the subgroup. HTML and Markdown are
+#'   continuous (one stacked table, one header), so they instead emit a
+#'   per-arm N row directly under each subgroup banner, the `(N=x)`
+#'   aligned beneath its arm column.
 #'
 #' @param big_n_fmt *Per-page BigN template.*
 #'   `<character(1)>: default "\n(N={n})"`. Appended to each arm's
@@ -229,8 +230,9 @@
 #' # the `by` column plus one column per arm (named as the data
 #' # column), cells are the page-specific Ns. Each arm header then
 #' # reads e.g. `Placebo` over `(N=24)` on the Female page and
-#' # `(N=18)` on the Male page. Renders in RTF / PDF / DOCX; HTML and
-#' # Markdown show the clean base header.
+#' # `(N=18)` on the Male page. RTF / PDF / DOCX carry the N on the
+#' # repeating header; HTML and Markdown add a per-arm N row under each
+#' # banner.
 #' big_n <- data.frame(
 #'   sex      = factor(c("F", "M"), levels = c("F", "M")),
 #'   placebo  = c(24L, 18L),

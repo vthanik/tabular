@@ -648,7 +648,8 @@ backend_html <- function(grid, file) {
         col_names_visible = col_names_visible,
         col_specs = col_specs,
         preset = preset,
-        cs = cs
+        cs = cs,
+        headers = meta$headers
       )
     )
   }
@@ -664,7 +665,8 @@ backend_html <- function(grid, file) {
   col_names_visible,
   col_specs,
   preset = NULL,
-  cs = NULL
+  cs = NULL,
+  headers = NULL
 ) {
   out <- character()
   banner_row <- .render_html_subgroup_banner_row(
@@ -675,6 +677,20 @@ backend_html <- function(grid, file) {
   )
   if (length(banner_row) > 0L) {
     out <- c(out, banner_row)
+    # Per-subgroup BigN: the continuous layout cannot vary the single
+    # header, so the per-arm `(N=x)` rides a dedicated row directly under
+    # the banner. Gated on the banner being present and the page carrying
+    # records, so non-big_n tables emit nothing here.
+    if (!is.null(page$subgroup_bign) && length(page$subgroup_bign) > 0L) {
+      out <- c(
+        out,
+        .render_html_subgroup_bign_row(
+          page$subgroup_bign,
+          headers,
+          col_names_visible
+        )
+      )
+    }
   }
   cells_text <- page$cells_text
   cells_style <- page$cells_style
@@ -1153,6 +1169,47 @@ backend_html <- function(grid, file) {
     bold_open,
     inner,
     bold_close
+  )
+}
+
+# Per-arm BigN row for a subgroup banner (continuous backends only).
+# Builds the visible-column span map via the shared `.subgroup_bign_spans`,
+# coalesces equal-target runs into colspans, and emits one centred
+# `<td>` per run. The `text-align: center` is inline on purpose: the
+# stylesheet is emitted inline in every output, so adding a CSS rule
+# would churn every HTML snapshot, and the body-`td` baseline
+# (`text-align:left`, specificity 0,1,1) would outrank a utility class
+# anyway. Inline always wins and touches no shared rule, so non-big_n
+# output stays byte-identical. The `tabular-subgroup-bign` row class is
+# a structural marker, no rule attached. Not bold (mirrors the paged
+# header's `(N=x)` line, which is plain under the bold arm name).
+.render_html_subgroup_bign_row <- function(
+  records,
+  headers,
+  col_names_visible
+) {
+  sp <- .subgroup_bign_spans(records, headers, col_names_visible)
+  runs <- .group_contiguous_runs(sp$key)
+  cells <- character(length(runs))
+  pos <- 1L
+  for (i in seq_along(runs)) {
+    run <- runs[[i]]
+    colspan_attr <- if (run$length > 1L) {
+      sprintf(" colspan=\"%d\"", run$length)
+    } else {
+      ""
+    }
+    cells[[i]] <- sprintf(
+      "<td%s style=\"text-align: center;\">%s</td>",
+      colspan_attr,
+      .html_escape(sp$text[[pos]])
+    )
+    pos <- pos + run$length
+  }
+  paste0(
+    "<tr class=\"tabular-subgroup-bign\">",
+    paste(cells, collapse = ""),
+    "</tr>"
   )
 }
 
