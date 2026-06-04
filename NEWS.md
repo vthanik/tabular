@@ -1,3 +1,7 @@
+# tabular (development version)
+
+* `emit(create_dir = TRUE)` creates missing parent directories instead of erroring (#E4).
+
 # tabular 0.1.0
 
 First release.
