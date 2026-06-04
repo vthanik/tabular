@@ -88,6 +88,52 @@
 #'   `spec@data`. Unknown columns raise
 #'   `tabular_error_subgroup_template_unknown_col`.
 #'
+#' @param big_n *Per-page BigN denominators.*
+#'   `<data.frame> | NULL: default NULL`. A table giving the `(N=x)`
+#'   denominator each arm's header should show on each subgroup page.
+#'   Each arm is named as it appears in the header — either a data
+#'   column (the N rides that column's leaf label) **or** a
+#'   [`headers()`] band label (the N rides that spanner band). Ns are
+#'   non-negative whole numbers; provide one per `by` combination
+#'   present in the data. Accepts **either** shape:
+#'
+#'   * **Wide** — the `by` column(s) plus one numeric column per arm
+#'     (cells are the Ns).
+#'   * **Long** — the `by` column(s) plus one arm-name column and one
+#'     numeric N column, i.e. `dplyr::count()` / `summarise()` output
+#'     used directly with no reshaping.
+#'
+#'   ```r
+#'   # Wide: one column per arm.
+#'   wide <- data.frame(
+#'     sex     = factor(c("F", "M")),
+#'     placebo = c(24L, 18L), drug_50 = c(9L, 15L), Total = c(42L, 47L)
+#'   )
+#'   # Long: count()-style, pivoted internally. Equivalent to `wide`.
+#'   long <- data.frame(
+#'     sex  = factor(rep(c("F", "M"), each = 3)),
+#'     arm  = rep(c("placebo", "drug_50", "Total"), 2),
+#'     n    = c(24L, 9L, 42L, 18L, 15L, 47L)
+#'   )
+#'   spec |> subgroup(by = "sex", big_n = long)
+#'   ```
+#'
+#'   **Requirement:** band keying needs [`headers()`] **before**
+#'   `subgroup()` in the pipeline; each arm name must resolve to
+#'   exactly one leaf XOR one band. Every missing per-page N is a
+#'   call-time error, never a silently wrong denominator.
+#'
+#'   **Note:** the per-arm N renders in the paged backends (RTF, PDF /
+#'   LaTeX, DOCX). HTML and Markdown are continuous (one stacked
+#'   table, one header), so they show the clean base header; surface
+#'   the per-page population in the `label` banner there.
+#'
+#' @param big_n_fmt *Per-page BigN template.*
+#'   `<character(1)>: default "\n(N={n})"`. Appended to each arm's
+#'   header label, with `{n}` substituted by that page/column's
+#'   integer N. Only the `{n}` token is allowed; the default puts the
+#'   N on its own line under the arm name.
+#'
 #' @return *The updated `tabular_spec`.* Continue chaining or
 #'   resolve via [`as_grid()`] / [`emit()`].
 #'
@@ -175,7 +221,38 @@
 #'     label = "Sex: {sex} / Age: {agegr}"
 #'   )
 #'
-#' # ---- Example 4: Clear a partition with subgroup(character()) ----
+#' # ---- Example 4: Per-page BigN — different (N=) per sex page ----
+#' #
+#' # Each sex page has a different per-arm population, so the `(N=x)`
+#' # in the arm headers must vary by page. `big_n` is a wide table:
+#' # the `by` column plus one column per arm (named as the data
+#' # column), cells are the page-specific Ns. Each arm header then
+#' # reads e.g. `Placebo` over `(N=24)` on the Female page and
+#' # `(N=18)` on the Male page. Renders in RTF / PDF / DOCX; HTML and
+#' # Markdown show the clean base header.
+#' big_n <- data.frame(
+#'   sex      = factor(c("F", "M"), levels = c("F", "M")),
+#'   placebo  = c(24L, 18L),
+#'   drug_50  = c(9L, 15L),
+#'   drug_100 = c(9L, 14L),
+#'   Total    = c(42L, 47L)
+#' )
+#' tabular(saf_subgroup, titles = "Vital Signs by Sex") |>
+#'   cols(
+#'     sex_n      = col_spec(visible = FALSE),
+#'     agegr      = col_spec(usage = "group", label = "Age Group"),
+#'     agegr_n    = col_spec(visible = FALSE),
+#'     paramcd    = col_spec(visible = FALSE),
+#'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
+#'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+#'     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+#'     Total      = col_spec(label = "Total",    align = "decimal")
+#'   ) |>
+#'   subgroup(by = "sex", label = "Sex: {sex}", big_n = big_n)
+#'
+#' # ---- Example 5: Clear a partition with subgroup(character()) ----
 #' #
 #' # `subgroup(by = character())` (or `subgroup(by = NULL)`)
 #' # explicitly clears any prior partition. Useful in
@@ -206,7 +283,13 @@
 #' **Resolve / render:** [`as_grid()`], [`emit()`].
 #'
 #' @export
-subgroup <- function(.spec, by, label = NULL) {
+subgroup <- function(
+  .spec,
+  by,
+  label = NULL,
+  big_n = NULL,
+  big_n_fmt = "\n(N={n})"
+) {
   call <- rlang::caller_env()
   check_tabular_spec(.spec, call = call)
 
@@ -227,6 +310,21 @@ subgroup <- function(.spec, by, label = NULL) {
     cli::cli_abort(
       c(
         "{.arg by} must not contain NA or empty strings."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+
+  # Per-page BigN is meaningless without a partition: a table with no
+  # subgroup uses the global `col_spec(label = "...(N={n['arm']})")`
+  # route instead. Catch the misuse loudly rather than silently drop N.
+  if (!is.null(big_n) && length(by) == 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg big_n} requires a non-empty {.arg by}.",
+        "i" = "Per-page BigN only applies to a {.fn subgroup}-paginated table.",
+        "i" = "For one global N, set it in the column label, e.g. {.code col_spec(label = \"Placebo (N=42)\")}."
       ),
       class = "tabular_error_input",
       call = call
@@ -302,8 +400,336 @@ subgroup <- function(.spec, by, label = NULL) {
     )
   }
 
-  sg <- subgroup_spec(by = by, label = label)
+  if (!is.null(big_n)) {
+    big_n <- .subgroup_bign_normalize(big_n, by, call)
+    .subgroup_check_big_n(big_n, big_n_fmt, by, label, .spec, call)
+  } else {
+    big_n_fmt <- NULL
+  }
+
+  sg <- subgroup_spec(
+    by = by,
+    label = label,
+    big_n = big_n,
+    big_n_fmt = big_n_fmt
+  )
   S7::set_props(.spec, subgroup = sg)
+}
+
+# ---------------------------------------------------------------------
+# Per-page BigN — shared target resolution + call-time validation
+# ---------------------------------------------------------------------
+
+# Collect every non-NA header band label from a `header_node` tree,
+# WITH multiplicity (so duplicate band labels are detectable). The
+# walk needs only the tree; do NOT call engine_headers() here, which
+# would run the contiguity check and surface an unrelated headers()
+# error on the subgroup() call.
+.subgroup_header_labels <- function(headers) {
+  out <- character()
+  walk <- function(node) {
+    lbl <- node@label
+    if (is.character(lbl) && length(lbl) == 1L && !is.na(lbl)) {
+      out[[length(out) + 1L]] <<- lbl
+    }
+    for (ch in node@children) {
+      walk(ch)
+    }
+  }
+  for (node in headers) {
+    walk(node)
+  }
+  out
+}
+
+# Resolve one big_n value-column name to its header target: a data
+# column (leaf label) XOR a header band label (spanner band). Exactly
+# one match is required. Returns list(kind, name) with kind one of
+# "leaf", "band", "none" (zero targets), "ambiguous" (>1 target).
+# The SINGLE source of truth used by both validation and application
+# so the two can never disagree.
+.subgroup_bign_target <- function(nm, data_names, band_labels) {
+  is_leaf <- nm %in% data_names
+  band_hits <- sum(band_labels == nm)
+  n_targets <- as.integer(is_leaf) + band_hits
+  if (n_targets == 0L) {
+    return(list(kind = "none", name = nm))
+  }
+  if (n_targets > 1L) {
+    return(list(kind = "ambiguous", name = nm))
+  }
+  if (is_leaf) {
+    list(kind = "leaf", name = nm)
+  } else {
+    list(kind = "band", name = nm)
+  }
+}
+
+# Build a per-row subgroup-combo key with an explicit NA sentinel so
+# NA / factor / character by-cols compare correctly across frames.
+.subgroup_combo_key <- function(df, by) {
+  cols <- lapply(by, function(b) {
+    v <- as.character(df[[b]])
+    v[is.na(v)] <- "<NA>"
+    v
+  })
+  do.call(paste, c(cols, list(sep = "\r")))
+}
+
+# Strict call-time validation of a `big_n` per-page denominator table.
+# Every deviation aborts `tabular_error_input`. `spec` is the whole
+# tabular_spec (header band labels + column visibility are needed).
+# Normalise a `big_n` table to the canonical WIDE shape (the `by`
+# column(s) plus one numeric column per arm). Accepts either:
+#   * WIDE  every non-`by` column is already numeric; returned as-is.
+#   * LONG  exactly one non-`by` character/factor column (arm names)
+#           plus one non-`by` numeric column (the N); pivoted to wide,
+#           so `dplyr::count(by, arm)` output works with no reshaping.
+# Any other shape aborts, showing both layouts. A non-data-frame or a
+# `by`-incomplete frame passes through untouched so the richer
+# `.subgroup_check_big_n` produces the precise downstream error.
+.subgroup_bign_normalize <- function(big_n, by, call) {
+  if (!is.data.frame(big_n) || !all(by %in% names(big_n))) {
+    return(big_n)
+  }
+  non_by <- setdiff(names(big_n), by)
+  if (length(non_by) == 0L) {
+    return(big_n)
+  }
+  numeric_mask <- vapply(
+    non_by,
+    function(nm) is.numeric(big_n[[nm]]),
+    logical(1L)
+  )
+  if (all(numeric_mask)) {
+    return(big_n) # already wide
+  }
+  key_cols <- non_by[!numeric_mask]
+  val_cols <- non_by[numeric_mask]
+  if (length(key_cols) == 1L && length(val_cols) == 1L) {
+    return(.subgroup_bign_long_to_wide(big_n, by, key_cols, val_cols, call))
+  }
+  cli::cli_abort(
+    c(
+      "{.arg big_n} shape is not recognised.",
+      "i" = "{cli::qty(by)}Wide: the {.arg by} column{?s} plus one numeric column per arm.",
+      "i" = "{cli::qty(by)}Long: the {.arg by} column{?s} plus one arm-name column and one numeric N column."
+    ),
+    class = "tabular_error_input",
+    call = call
+  )
+}
+
+# Pivot a long big_n (by..., key, value) to the wide shape: one column
+# per unique arm name, one row per unique by-combo. A missing
+# (arm, combo) cell becomes NA (rejected downstream by the non-NA value
+# check); a duplicate (by, arm) row aborts here.
+.subgroup_bign_long_to_wide <- function(long, by, key, val, call) {
+  key_vec <- as.character(long[[key]])
+  if (anyDuplicated(.subgroup_combo_key(long, c(by, key))) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg big_n} has duplicate rows for a {.arg by} / arm combination.",
+        "x" = "Each arm appears at most once per {.arg by} combination."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  combo_df <- unique(long[by])
+  row.names(combo_df) <- NULL
+  ckey <- .subgroup_combo_key(combo_df, by)
+  wide <- combo_df
+  for (a in unique(key_vec)) {
+    sel <- key_vec == a
+    lkey <- .subgroup_combo_key(long[sel, , drop = FALSE], by)
+    wide[[a]] <- long[[val]][sel][match(ckey, lkey)]
+  }
+  wide
+}
+
+.subgroup_check_big_n <- function(big_n, big_n_fmt, by, label, spec, call) {
+  data_names <- names(spec@data)
+
+  # (1) data frame
+  if (!is.data.frame(big_n)) {
+    cli::cli_abort(
+      c(
+        "{.arg big_n} must be a data frame.",
+        "x" = "You supplied {.obj_type_friendly {big_n}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # (2) at least one row
+  if (nrow(big_n) == 0L) {
+    cli::cli_abort(
+      "{.arg big_n} must have at least one row.",
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # (3) format scalar character
+  if (
+    !is.character(big_n_fmt) ||
+      length(big_n_fmt) != 1L ||
+      is.na(big_n_fmt)
+  ) {
+    cli::cli_abort(
+      c(
+        "{.arg big_n_fmt} must be a length-1 non-NA character.",
+        "i" = "Use a template with the {.code {{n}}} token, e.g. {.val \\n(N={{n}})}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # (4) format contains {n}
+  if (!grepl("{n}", big_n_fmt, fixed = TRUE)) {
+    cli::cli_abort(
+      "{.arg big_n_fmt} must contain the {.code {{n}}} placeholder.",
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # (5) format has no brace token other than {n} (catches {N} typos)
+  fmt_refs <- .subgroup_template_refs(big_n_fmt)
+  bad_refs <- setdiff(fmt_refs, "n")
+  if (length(bad_refs) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg big_n_fmt} may only reference the {.code {{n}}} token.",
+        "x" = "{cli::qty(bad_refs)}Unknown token{?s}: {.val {bad_refs}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # (6) every `by` column present
+  miss_by <- setdiff(by, names(big_n))
+  if (length(miss_by) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg big_n} is missing {cli::qty(miss_by)}{.arg by} column{?s}: {.val {miss_by}}.",
+        "i" = "{.arg big_n} carries the {cli::qty(miss_by)}{.arg by} column{?s} plus one column per arm."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # (7) at least one value column
+  n_cols <- setdiff(names(big_n), by)
+  if (length(n_cols) == 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg big_n} has no value columns.",
+        "i" = "Add one column per arm whose header should carry an N."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # (8) target resolution: each value column resolves to exactly one
+  #     leaf column XOR one header band label.
+  band_labels <- .subgroup_header_labels(spec@headers)
+  targets <- lapply(
+    n_cols,
+    function(nm) .subgroup_bign_target(nm, data_names, band_labels)
+  )
+  names(targets) <- n_cols
+  none <- n_cols[vapply(targets, function(t) t$kind == "none", logical(1L))]
+  if (length(none) > 0L) {
+    cli::cli_abort(
+      c(
+        "{cli::qty(none)}{.arg big_n} value column{?s} match{?es} no display column or header band: {.val {none}}.",
+        "i" = "Name each column as the arm appears, either a data column or a {.fn headers} band label.",
+        "i" = "Band keying needs {.fn headers} before {.fn subgroup} in the pipeline."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  ambiguous <- n_cols[vapply(
+    targets,
+    function(t) t$kind == "ambiguous",
+    logical(1L)
+  )]
+  if (length(ambiguous) > 0L) {
+    cli::cli_abort(
+      c(
+        "{cli::qty(ambiguous)}{.arg big_n} value column{?s} match{?es} more than one target: {.val {ambiguous}}.",
+        "x" = "A name maps to a data column AND a band label, or a duplicate band label.",
+        "i" = "Rename the arm so it resolves to one leaf or one band."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # (9) value columns are non-negative whole numbers
+  for (nm in n_cols) {
+    v <- big_n[[nm]]
+    if (!is.numeric(v) || anyNA(v) || any(v < 0) || any(v != floor(v))) {
+      cli::cli_abort(
+        c(
+          "{.arg big_n} column {.val {nm}} must be non-negative whole numbers.",
+          "x" = "Found a non-numeric, NA, negative, or fractional value."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+  }
+  # (9b) leaf targets must render — a hidden / auto-hidden leaf would
+  #      attach the N to a column that never appears (a silent-N trap).
+  auto_hidden <- .subgroup_template_refs(label %||% "")
+  for (nm in n_cols) {
+    if (targets[[nm]]$kind != "leaf") {
+      next
+    }
+    cs <- spec@cols[[nm]]
+    hidden <- (is_col_spec(cs) && isFALSE(cs@visible)) || nm %in% auto_hidden
+    if (hidden) {
+      cli::cli_abort(
+        c(
+          "{.arg big_n} value column {.val {nm}} targets a hidden column.",
+          "x" = "Its header never renders, so the N would be invisible.",
+          "i" = "Key the N to a visible column or a {.fn headers} band label."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+  }
+  # (10) unique by-combos in big_n
+  bn_key <- .subgroup_combo_key(big_n, by)
+  if (anyDuplicated(bn_key) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg big_n} has duplicate rows for a {.arg by} combination.",
+        "x" = "Each {.arg by} combination must appear at most once."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # (11) completeness: every PRESENT data combo has a big_n row.
+  #      Asymmetric: extra big_n rows are tolerated (table reuse),
+  #      missing rows error (the silent-wrong-N guard).
+  data_combos <- .subgroup_combos(spec@data, by)
+  data_key <- .subgroup_combo_key(data_combos, by)
+  missing_combo <- setdiff(unique(data_key), bn_key)
+  if (length(missing_combo) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg big_n} is missing a row for {length(missing_combo)} subgroup combination{?s} present in the data.",
+        "i" = "Provide one {.arg big_n} row per {.arg by} combination."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  invisible(TRUE)
 }
 
 # ---------------------------------------------------------------------

@@ -6,6 +6,7 @@
 * `cols()` gains a `.default` argument that sets a fallback `col_spec()` for columns not named explicitly.
 * `cols_apply()` applies one `col_spec()` to many columns selected by name or by predicate.
 * `emit()` gains `create_dir` to create missing parent directories instead of erroring.
+* `subgroup()` gains `big_n` and `big_n_fmt` for per-page BigN, so each subgroup page's column headers can carry that page's own `(N=)` denominators, keyed to either a leaf column or a `headers()` band; `big_n` accepts either a wide or a long (`count()`-style) table, and per-page Ns render in RTF, PDF/LaTeX, and DOCX, while HTML and Markdown show the clean base header.
 
 ## Bug fixes
 

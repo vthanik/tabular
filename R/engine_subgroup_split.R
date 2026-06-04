@@ -88,6 +88,11 @@ engine_subgroup_split <- function(spec) {
     )
 
     sub_spec <- S7::set_props(spec, data = sub_data)
+    sub_spec <- .subgroup_apply_big_n(
+      sub_spec,
+      combos[i, , drop = FALSE],
+      spec@subgroup
+    )
     out[[i]] <- list(spec = sub_spec, runtime = runtime)
   }
 
@@ -172,4 +177,68 @@ engine_subgroup_split <- function(spec) {
     },
     logical(1L)
   )
+}
+
+# Per-page BigN application. For the subgroup whose combo is
+# `combo_row`, append the formatted N suffix to each arm's header
+# element: a leaf column's label (via sub_spec@cols) or a spanner
+# band's label (via sub_spec@headers). No-op when sg@big_n is NULL.
+# The leaf-vs-band decision reuses `.subgroup_bign_target` so it can
+# never diverge from validation. Mutates labels via `set_props` (not
+# the col_spec()/header_node() constructors) so the appended `(N=x)`
+# is never re-evaluated as a `{n}` template.
+.subgroup_apply_big_n <- function(sub_spec, combo_row, sg) {
+  if (is.null(sg@big_n)) {
+    return(sub_spec)
+  }
+  by_cols <- sg@by
+  big_n <- sg@big_n
+  fmt <- sg@big_n_fmt
+  data_names <- names(sub_spec@data)
+  band_labels <- .subgroup_header_labels(sub_spec@headers)
+  n_cols <- setdiff(names(big_n), by_cols)
+
+  idx <- which(.subgroup_match_mask(big_n, by_cols, combo_row))
+  if (length(idx) == 0L) {
+    return(sub_spec) # nocov  (completeness enforced at verb time)
+  }
+  idx <- idx[[1L]]
+
+  cols <- sub_spec@cols
+  headers <- sub_spec@headers
+  for (nm in n_cols) {
+    n_val <- big_n[[nm]][[idx]]
+    suffix <- gsub("{n}", format(n_val, trim = TRUE), fmt, fixed = TRUE)
+    tgt <- .subgroup_bign_target(nm, data_names, band_labels)
+    if (tgt$kind == "leaf") {
+      cs <- cols[[nm]]
+      cs0 <- if (is_col_spec(cs)) cs else col_spec()
+      base <- if (!is.na(cs0@label)) cs0@label else nm
+      cols[[nm]] <- S7::set_props(
+        cs0,
+        label = paste0(base, suffix),
+        name = nm
+      )
+    } else if (tgt$kind == "band") {
+      headers <- .subgroup_suffix_band(headers, nm, suffix)
+    }
+  }
+  S7::set_props(sub_spec, cols = cols, headers = headers)
+}
+
+# Append `suffix` to the label of the (single, validated-unique)
+# header node whose label equals `target`, recursing into children.
+.subgroup_suffix_band <- function(nodes, target, suffix) {
+  lapply(nodes, function(node) {
+    if (identical(node@label, target)) {
+      node <- S7::set_props(node, label = paste0(node@label, suffix))
+    }
+    if (length(node@children) > 0L) {
+      node <- S7::set_props(
+        node,
+        children = .subgroup_suffix_band(node@children, target, suffix)
+      )
+    }
+    node
+  })
 }

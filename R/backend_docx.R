@@ -814,27 +814,43 @@ backend_docx <- function(grid, file) {
   mid_el <- .docx_chrome_border_seg(cs, "header_bottom", "bottom")
   has_bands <- is.data.frame(meta$headers) && nrow(meta$headers) > 0L
 
-  band_rows <- .render_docx_header_bands(
-    meta$headers,
-    col_names_vis,
-    widths,
-    cs = cs,
-    top_border = top_el,
-    body_borders = body_borders
-  )
-  label_row <- .render_docx_col_labels_row(
-    meta$col_labels_ast,
-    col_names_vis,
-    cols,
-    widths,
-    hyperlinks,
-    rid_map,
-    preset = preset,
-    cs = cs,
-    top_border = if (has_bands) "" else top_el,
-    bottom_border = mid_el,
-    body_borders = body_borders
-  )
+  # Per-page BigN: DOCX keeps one `<w:tbl>` per panel (subgroups stay
+  # inline). The top global header would carry the BASE (no-N) labels;
+  # emitting it AND a per-subgroup header would double the header for
+  # subgroup 1. So suppress the top band + leaf rows and re-emit a
+  # SUFFIXED per-subgroup header in the body loop at each subgroup
+  # boundary. Inert without big_n.
+  big_n_active <- isTRUE(meta$subgroup_big_n_active)
+
+  band_rows <- if (big_n_active) {
+    character()
+  } else {
+    .render_docx_header_bands(
+      meta$headers,
+      col_names_vis,
+      widths,
+      cs = cs,
+      top_border = top_el,
+      body_borders = body_borders
+    )
+  }
+  label_row <- if (big_n_active) {
+    ""
+  } else {
+    .render_docx_col_labels_row(
+      meta$col_labels_ast,
+      col_names_vis,
+      cols,
+      widths,
+      hyperlinks,
+      rid_map,
+      preset = preset,
+      cs = cs,
+      top_border = if (has_bands) "" else top_el,
+      bottom_border = mid_el,
+      body_borders = body_borders
+    )
+  }
   body_rows <- .render_docx_body_rows(
     pages,
     col_names_vis,
@@ -842,7 +858,13 @@ backend_docx <- function(grid, file) {
     widths,
     preset = preset,
     cs = cs,
-    body_borders = body_borders
+    body_borders = body_borders,
+    per_page_labels = big_n_active,
+    subgroup_headers = meta$subgroup_headers,
+    hyperlinks = hyperlinks,
+    rid_map = rid_map,
+    top_el = top_el,
+    mid_el = mid_el
   )
 
   paste0(
@@ -1021,14 +1043,43 @@ backend_docx <- function(grid, file) {
       content <- if (is.na(label)) {
         "<w:p/>"
       } else {
+        # Split on embedded newlines so a multi-line band label (e.g. a
+        # per-page BigN `\n(N=x)` suffix) breaks inside the cell via
+        # `<w:br/>`. A single-line label yields exactly one run, byte-
+        # identical to the prior output (and footnote-sentinel-agnostic,
+        # unlike `.docx_body_runs`).
+        parts <- strsplit(
+          gsub("\r\n", "\n", label, fixed = TRUE),
+          "\n",
+          fixed = TRUE
+        )[[1L]]
+        if (length(parts) == 0L) {
+          parts <- ""
+        }
+        # NB: not named `runs` — the enclosing band loop owns a `runs`
+        # list it iterates via `runs[[i]]`.
+        label_runs <- paste0(
+          vapply(
+            parts,
+            function(p) {
+              paste0(
+                "<w:r><w:rPr>",
+                band_rpr,
+                "</w:rPr>",
+                "<w:t xml:space=\"preserve\">",
+                .docx_escape(p),
+                "</w:t></w:r>"
+              )
+            },
+            character(1L),
+            USE.NAMES = FALSE
+          ),
+          collapse = "<w:r><w:br/></w:r>"
+        )
         paste0(
           "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr>",
-          "<w:r><w:rPr>",
-          band_rpr,
-          "</w:rPr>",
-          "<w:t xml:space=\"preserve\">",
-          .docx_escape(label),
-          "</w:t></w:r></w:p>"
+          label_runs,
+          "</w:p>"
         )
       }
       cells[[i]] <- paste0("<w:tc>", tc_pr, content, "</w:tc>")
@@ -1211,7 +1262,13 @@ backend_docx <- function(grid, file) {
   widths_twips,
   preset = NULL,
   cs = NULL,
-  body_borders = NULL
+  body_borders = NULL,
+  per_page_labels = FALSE,
+  subgroup_headers = NULL,
+  hyperlinks = character(),
+  rid_map = NULL,
+  top_el = "",
+  mid_el = ""
 ) {
   col_specs <- lapply(col_names_vis, function(nm) cols[[nm]])
   n_cols_vis <- length(col_names_vis)
@@ -1235,6 +1292,38 @@ backend_docx <- function(grid, file) {
       )
       if (length(banner_row) > 0L) {
         out <- c(out, banner_row)
+      }
+      # Per-page BigN: re-emit this subgroup's SUFFIXED header (bands +
+      # leaf labels) right after its banner, so each subgroup shows its
+      # own `(N=x)`. These rows carry their native `<w:tblHeader/>`, the
+      # same as the banner above them. Word repeats only a leading
+      # tblHeader block, so a per-subgroup header mid-table does not
+      # repeat on an internal continuation page (documented caveat).
+      if (isTRUE(per_page_labels)) {
+        sg_bands_df <- subgroup_headers[[sg_index]]
+        sg_has_bands <- is.data.frame(sg_bands_df) && nrow(sg_bands_df) > 0L
+        sg_band_rows <- .render_docx_header_bands(
+          sg_bands_df,
+          col_names_vis,
+          widths_twips,
+          cs = cs,
+          top_border = top_el,
+          body_borders = body_borders
+        )
+        sg_label_row <- .render_docx_col_labels_row(
+          page$col_labels_ast,
+          col_names_vis,
+          cols,
+          widths_twips,
+          hyperlinks,
+          rid_map,
+          preset = preset,
+          cs = cs,
+          top_border = if (sg_has_bands) "" else top_el,
+          bottom_border = mid_el,
+          body_borders = body_borders
+        )
+        out <- c(out, sg_band_rows, sg_label_row)
       }
       prev_subgroup_index <- sg_index
     }

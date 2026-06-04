@@ -4,7 +4,7 @@
 \alias{subgroup}
 \title{Partition the report by a variable}
 \usage{
-subgroup(.spec, by, label = NULL)
+subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\\n(N={n})")
 }
 \arguments{
 \item{.spec}{\emph{The \code{tabular_spec} to partition.}
@@ -33,6 +33,52 @@ any qualifier that is constant within group — e.g.
 \strong{Restriction:} Every \code{{col}} reference must be a column in
 \code{spec@data}. Unknown columns raise
 \code{tabular_error_subgroup_template_unknown_col}.}
+
+\item{big_n}{\emph{Per-page BigN denominators.}
+\verb{<data.frame> | NULL: default NULL}. A table giving the \code{(N=x)}
+denominator each arm's header should show on each subgroup page.
+Each arm is named as it appears in the header — either a data
+column (the N rides that column's leaf label) \strong{or} a
+\code{\link[=headers]{headers()}} band label (the N rides that spanner band). Ns are
+non-negative whole numbers; provide one per \code{by} combination
+present in the data. Accepts \strong{either} shape:
+\itemize{
+\item \strong{Wide} — the \code{by} column(s) plus one numeric column per arm
+(cells are the Ns).
+\item \strong{Long} — the \code{by} column(s) plus one arm-name column and one
+numeric N column, i.e. \code{dplyr::count()} / \code{summarise()} output
+used directly with no reshaping.
+}
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Wide: one column per arm.
+wide <- data.frame(
+  sex     = factor(c("F", "M")),
+  placebo = c(24L, 18L), drug_50 = c(9L, 15L), Total = c(42L, 47L)
+)
+# Long: count()-style, pivoted internally. Equivalent to `wide`.
+long <- data.frame(
+  sex  = factor(rep(c("F", "M"), each = 3)),
+  arm  = rep(c("placebo", "drug_50", "Total"), 2),
+  n    = c(24L, 9L, 42L, 18L, 15L, 47L)
+)
+spec |> subgroup(by = "sex", big_n = long)
+}\if{html}{\out{</div>}}
+
+\strong{Requirement:} band keying needs \code{\link[=headers]{headers()}} \strong{before}
+\code{subgroup()} in the pipeline; each arm name must resolve to
+exactly one leaf XOR one band. Every missing per-page N is a
+call-time error, never a silently wrong denominator.
+
+\strong{Note:} the per-arm N renders in the paged backends (RTF, PDF /
+LaTeX, DOCX). HTML and Markdown are continuous (one stacked
+table, one header), so they show the clean base header; surface
+the per-page population in the \code{label} banner there.}
+
+\item{big_n_fmt}{\emph{Per-page BigN template.}
+\verb{<character(1)>: default "\\n(N=\{n\})"}. Appended to each arm's
+header label, with \code{{n}} substituted by that page/column's
+integer N. Only the \code{{n}} token is allowed; the default puts the
+N on its own line under the arm name.}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining or
@@ -171,7 +217,38 @@ tabular(saf_subgroup, titles = "Vital Signs by Sex and Age Group") |>
     label = "Sex: {sex} / Age: {agegr}"
   )
 
-# ---- Example 4: Clear a partition with subgroup(character()) ----
+# ---- Example 4: Per-page BigN — different (N=) per sex page ----
+#
+# Each sex page has a different per-arm population, so the `(N=x)`
+# in the arm headers must vary by page. `big_n` is a wide table:
+# the `by` column plus one column per arm (named as the data
+# column), cells are the page-specific Ns. Each arm header then
+# reads e.g. `Placebo` over `(N=24)` on the Female page and
+# `(N=18)` on the Male page. Renders in RTF / PDF / DOCX; HTML and
+# Markdown show the clean base header.
+big_n <- data.frame(
+  sex      = factor(c("F", "M"), levels = c("F", "M")),
+  placebo  = c(24L, 18L),
+  drug_50  = c(9L, 15L),
+  drug_100 = c(9L, 14L),
+  Total    = c(42L, 47L)
+)
+tabular(saf_subgroup, titles = "Vital Signs by Sex") |>
+  cols(
+    sex_n      = col_spec(visible = FALSE),
+    agegr      = col_spec(usage = "group", label = "Age Group"),
+    agegr_n    = col_spec(visible = FALSE),
+    paramcd    = col_spec(visible = FALSE),
+    param      = col_spec(usage = "group", label = "Parameter"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  subgroup(by = "sex", label = "Sex: {sex}", big_n = big_n)
+
+# ---- Example 5: Clear a partition with subgroup(character()) ----
 #
 # `subgroup(by = character())` (or `subgroup(by = NULL)`)
 # explicitly clears any prior partition. Useful in

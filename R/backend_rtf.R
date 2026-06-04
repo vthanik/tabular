@@ -328,8 +328,20 @@ backend_rtf <- function(grid, file) {
     )
   }
 
+  # Per-page BigN: this panel is one subgroup, so read that subgroup's
+  # SUFFIXED bands + leaf labels (gated) instead of the un-suffixed
+  # global ones. Without big_n the gate is off and the global metadata
+  # is used, leaving existing output byte-identical.
+  if (isTRUE(meta$subgroup_big_n_active)) {
+    panel_headers <- meta$subgroup_headers[[first$subgroup_index]]
+    panel_col_labels_ast <- first$col_labels_ast
+  } else {
+    panel_headers <- meta$headers
+    panel_col_labels_ast <- meta$col_labels_ast
+  }
+
   table_rows[[length(table_rows) + 1L]] <- .render_rtf_header_bands(
-    meta$headers,
+    panel_headers,
     col_names_vis,
     cols,
     cellx,
@@ -343,9 +355,9 @@ backend_rtf <- function(grid, file) {
   # The full-width header top rule rides the topmost header row. When
   # spanner bands are present they own it; otherwise the column-labels
   # row is the top row and carries it.
-  has_bands <- is.data.frame(meta$headers) && nrow(meta$headers) > 0L
+  has_bands <- is.data.frame(panel_headers) && nrow(panel_headers) > 0L
   table_rows[[length(table_rows) + 1L]] <- .render_rtf_col_labels_row(
-    meta$col_labels_ast,
+    panel_col_labels_ast,
     col_names_vis,
     cols,
     cellx,
@@ -1499,7 +1511,13 @@ backend_rtf <- function(grid, file) {
         surface_props,
         " ",
         bold_open,
-        .rtf_escape(run$value),
+        # Convert embedded newlines to RTF `\line` so a multi-line band
+        # label (e.g. a per-page BigN `\n(N=x)` suffix) breaks inside the
+        # cell instead of closing it. A label with no `\n` is unchanged,
+        # so every existing single-line band stays byte-identical. Not
+        # `.rtf_escape_cell` here, which also peels footnote sentinels
+        # and rewrites significant whitespace on band labels.
+        gsub("\n", "\\line ", .rtf_escape(run$value), fixed = TRUE),
         bold_close,
         "\\cell"
       )

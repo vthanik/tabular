@@ -451,7 +451,9 @@ subgroup_spec <- S7::new_class(
   package = "tabular",
   properties = list(
     by = S7::new_property(S7::class_character, default = character()),
-    label = S7::class_any
+    label = S7::class_any,
+    big_n = S7::class_any,
+    big_n_fmt = S7::class_any
   ),
   validator = function(self) {
     if (anyNA(self@by)) {
@@ -469,6 +471,21 @@ subgroup_spec <- S7::new_class(
         return(
           "@label must be NULL or a length-1 non-NA character (glue-style template)"
         )
+      }
+    }
+    if (!is.null(self@big_n) && !is.data.frame(self@big_n)) {
+      return("@big_n must be NULL or a data frame")
+    }
+    if (!is.null(self@big_n_fmt)) {
+      if (
+        !is.character(self@big_n_fmt) ||
+          length(self@big_n_fmt) != 1L ||
+          is.na(self@big_n_fmt)
+      ) {
+        return("@big_n_fmt must be NULL or a length-1 non-NA character")
+      }
+      if (!grepl("{n}", self@big_n_fmt, fixed = TRUE)) {
+        return("@big_n_fmt must contain the {n} placeholder")
       }
     }
     NULL
