@@ -213,11 +213,66 @@ must be next to each other in the data frame. If `drug_50` and
 `drug_100` are separated by another column, reorder the data first.
 :::
 
+## Column widths and `width_mode`
+
+Width has two layers: a **per-column** pin on `col_spec(width = ...)`, and
+a **table-level** policy on `preset(width_mode = ...)` that decides what
+happens to the columns you did not pin.
+
+A `col_spec()` pin accepts `"auto"` (the engine measures the widest cell),
+a bare number in inches (`width = 1.8`), or a unit string
+(`"3cm"`, `"30mm"`, `"30pt"`, or a percent of the content width like
+`"25%"`):
+
+```{r}
+#| label: col-widths
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group", width = "2.4in"),
+    stat_label = col_spec(label = "Statistic", width = "1.2in"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  )
+```
+
+`width_mode` governs the columns left on `"auto"`. It mirrors Word's
+Table Layout menu:
+
+| `width_mode` | Auto columns | Word equivalent |
+|---|---|---|
+| `"content"` *(default)* | sized to `max(body, header)`; table need not fill the page | Auto-fit Contents |
+| `"window"` | expand to share the residual page width equally | Auto-fit Window |
+| `"fixed"` | collapse to a minimum sliver; only pinned widths drive layout | Fixed Column Width |
+
+```{r}
+#| label: width-mode
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  preset(width_mode = "window")   # auto columns fill the page width
+```
+
+::: {.callout-note}
+## `width_mode` drives the paper backends, not HTML
+
+`width_mode` shapes the **RTF, PDF, LaTeX, and DOCX** layouts. HTML is
+unconditionally responsive — the table always fills its parent and the
+columns wrap as the viewport narrows — so the preview above looks the
+same whatever `width_mode` you pick. Per-column `width` pins still emit
+verbatim into the HTML colgroup. Eyeball widths by emitting to a paper
+backend.
+:::
+
 ## Going deeper
 
-- **Widths.** `width = "auto"` lets the engine size the column to its
-  content. Pass a number for inches (`width = 1.8`) or a unit string
-  (`width = "3cm"`) to fix it.
 - **Formatters.** `format` accepts a function applied to the column's
   values before rendering — handy when the upstream data is numeric and
   you want display rounding at render time.
