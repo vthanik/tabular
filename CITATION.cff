@@ -1,11 +1,11 @@
 cff-version: 1.2.0
 message: "If you use tabular, please cite it as below."
 type: software
-title: "tabular: Render Tables, Listings and Figures for Clinical Submissions"
+title: "tabular: Render Tables and Listings for Clinical Submissions"
 version: 0.1.0
 abstract: >-
-  Native rendering of pre-summarised clinical submission tables, listings,
-  and figures to RTF, LaTeX, HTML, PDF, and DOCX from one immutable verb
+  Native rendering of pre-summarised clinical submission tables and
+  listings to RTF, LaTeX, HTML, PDF, and DOCX from one immutable verb
   pipeline, with no external Java or SAS dependency.
 authors:
   - family-names: Thanikachalam

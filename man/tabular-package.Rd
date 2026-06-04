@@ -3,11 +3,11 @@
 \docType{package}
 \name{tabular-package}
 \alias{tabular-package}
-\title{tabular: TFL Rendering for Regulatory Submissions}
+\title{tabular: Render Tables and Listings for Clinical Submissions}
 \description{
 \if{html}{\figure{logo.svg}{options: style='float: right' alt='logo' width='120'}}
 
-Native emission of clinical submission tables to RTF, LaTeX, HTML, PDF, and DOCX. Handles decimal alignment via font metrics, multi-level column headers with passthrough leaves, predicate-targeted styling, and group-aware pagination. Designed for CDISC ADaM workflows and FDA / EMA / PMDA regulatory submissions.
+Render clinical submission tables and listings to 'RTF', 'LaTeX', 'HTML', 'PDF', and 'DOCX' from pre-summarised data frames, with no external Java or 'SAS' dependency. Features include decimal alignment via font metrics, multi-level column headers with passthrough leaves, predicate-targeted cell styling, footnotes, and group-aware pagination. Built for Clinical Data Interchange Standards Consortium (CDISC) Analysis Data Model (ADaM) workflows and regulatory submissions to agencies such as the Food and Drug Administration (FDA), European Medicines Agency (EMA), and Pharmaceuticals and Medical Devices Agency (PMDA).
 }
 \seealso{
 Useful links:
