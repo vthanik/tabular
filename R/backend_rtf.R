@@ -329,16 +329,12 @@ backend_rtf <- function(grid, file) {
   }
 
   # Per-page BigN: this panel is one subgroup, so read that subgroup's
-  # SUFFIXED bands + leaf labels (gated) instead of the un-suffixed
-  # global ones. Without big_n the gate is off and the global metadata
-  # is used, leaving existing output byte-identical.
-  if (isTRUE(meta$subgroup_big_n_active)) {
-    panel_headers <- meta$subgroup_headers[[first$subgroup_index]]
-    panel_col_labels_ast <- first$col_labels_ast
-  } else {
-    panel_headers <- meta$headers
-    panel_col_labels_ast <- meta$col_labels_ast
-  }
+  # SUFFIXED bands + leaf labels from the page descriptor via the shared
+  # resolver. Without big_n it returns the global metadata, leaving
+  # existing output byte-identical.
+  panel_hdr <- .page_header_for_render(meta, first)
+  panel_headers <- panel_hdr$headers
+  panel_col_labels_ast <- panel_hdr$col_labels_ast
 
   table_rows[[length(table_rows) + 1L]] <- .render_rtf_header_bands(
     panel_headers,

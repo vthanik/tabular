@@ -124,7 +124,8 @@
 #'   call-time error, never a silently wrong denominator.
 #'
 #'   **Note:** the per-arm N renders in the paged backends (RTF, PDF /
-#'   LaTeX, DOCX). HTML and Markdown are continuous (one stacked
+#'   LaTeX, DOCX), repeating on every page of its subgroup, banner
+#'   above header. HTML and Markdown are continuous (one stacked
 #'   table, one header), so they show the clean base header; surface
 #'   the per-page population in the `label` banner there.
 #'
@@ -526,6 +527,20 @@ subgroup <- function(
 # check); a duplicate (by, arm) row aborts here.
 .subgroup_bign_long_to_wide <- function(long, by, key, val, call) {
   key_vec <- as.character(long[[key]])
+  # An arm name equal to a `by` column name would overwrite that column
+  # when the wide frame is built (`wide[[a]] <- ...`), corrupting the
+  # partition key. Reject it up front with a clear message.
+  arm_by_clash <- intersect(unique(key_vec), by)
+  if (length(arm_by_clash) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg big_n} arm name{?s} clash with a {.arg by} column: {.val {arm_by_clash}}.",
+        "i" = "Rename the arm, or key it to a different display column or {.fn headers} band."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
   if (anyDuplicated(.subgroup_combo_key(long, c(by, key))) > 0L) {
     cli::cli_abort(
       c(
@@ -715,10 +730,13 @@ subgroup <- function(
   }
   # (11) completeness: every PRESENT data combo has a big_n row.
   #      Asymmetric: extra big_n rows are tolerated (table reuse),
-  #      missing rows error (the silent-wrong-N guard).
-  data_combos <- .subgroup_combos(spec@data, by)
+  #      missing rows error (the silent-wrong-N guard). Only the SET of
+  #      present combos matters here, so take it straight from the data
+  #      (cheaper than `.subgroup_combos`, which also builds the full
+  #      expand.grid crossing the engine needs for ordering).
+  data_combos <- unique(spec@data[, by, drop = FALSE])
   data_key <- .subgroup_combo_key(data_combos, by)
-  missing_combo <- setdiff(unique(data_key), bn_key)
+  missing_combo <- setdiff(data_key, bn_key)
   if (length(missing_combo) > 0L) {
     cli::cli_abort(
       c(

@@ -660,14 +660,11 @@ backend_latex <- function(grid, file) {
     )
 
   # Per-page BigN: one longtblr per subgroup, so read that subgroup's
-  # SUFFIXED bands + leaf labels (gated). Inert without big_n.
-  if (isTRUE(meta$subgroup_big_n_active)) {
-    page_headers <- meta$subgroup_headers[[page$subgroup_index]]
-    page_col_labels_ast <- page$col_labels_ast
-  } else {
-    page_headers <- meta$headers
-    page_col_labels_ast <- meta$col_labels_ast
-  }
+  # SUFFIXED bands + leaf labels from the page descriptor via the shared
+  # resolver. Inert (global metadata) without big_n.
+  page_hdr <- .page_header_for_render(meta, page)
+  page_headers <- page_hdr$headers
+  page_col_labels_ast <- page_hdr$col_labels_ast
 
   bands <- .render_latex_header_bands(page_headers, col_names_vis, cs)
   band_rows <- bands$rows

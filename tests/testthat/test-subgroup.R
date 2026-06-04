@@ -413,9 +413,16 @@ test_that("big_n keyed by a spanner band label suffixes the band", {
       )
     )
   g <- as_grid(spec)
-  sh <- g@metadata$subgroup_headers
-  expect_true(any(grepl("(N=24)", sh[[1L]]$label, fixed = TRUE)))
-  expect_true(any(grepl("(N=18)", sh[[2L]]$label, fixed = TRUE)))
+  # Each subgroup's SUFFIXED band frame rides its page descriptors.
+  idx <- vapply(
+    g@pages,
+    function(p) p$subgroup_index %||% NA_integer_,
+    integer(1L)
+  )
+  f_bands <- g@pages[[which(idx == 1L)[1L]]]$headers
+  m_bands <- g@pages[[which(idx == 2L)[1L]]]$headers
+  expect_true(any(grepl("(N=24)", f_bands$label, fixed = TRUE)))
+  expect_true(any(grepl("(N=18)", m_bands$label, fixed = TRUE)))
   # Base bands clean; leaf labels under the band untouched.
   expect_false(any(grepl("(N=", g@metadata$headers$label, fixed = TRUE)))
 })
@@ -427,15 +434,14 @@ test_that("big_n leaf keying leaves a covering spanner band untouched", {
     ) |>
     subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
   g <- as_grid(spec)
-  sh <- g@metadata$subgroup_headers
-  # The band label never gains an N (the leaves do).
-  expect_false(any(grepl("(N=", sh[[1L]]$label, fixed = TRUE)))
   idx <- vapply(
     g@pages,
     function(p) p$subgroup_index %||% NA_integer_,
     integer(1L)
   )
   f1 <- g@pages[[which(idx == 1L)[1L]]]
+  # The band label never gains an N (the leaves do).
+  expect_false(any(grepl("(N=", f1$headers$label, fixed = TRUE)))
   expect_match(
     .bign_flat(f1$col_labels_ast[["placebo"]]),
     "(N=24)",
@@ -468,7 +474,7 @@ test_that("big_n per-page N renders in RTF and LaTeX, in distinct segments", {
   expect_true(grepl("(N=18)", tex, fixed = TRUE))
 })
 
-test_that("big_n per-page N renders in DOCX; top header stays clean", {
+test_that("big_n DOCX: one table per subgroup, N header repeats per page", {
   spec <- .bign_base() |>
     subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
   f <- withr::local_tempfile(fileext = ".docx")
@@ -481,6 +487,22 @@ test_that("big_n per-page N renders in DOCX; top header stays clean", {
   )
   expect_true(grepl("N=24", xml, fixed = TRUE))
   expect_true(grepl("N=18", xml, fixed = TRUE))
+  # One `<w:tbl>` per subgroup so each table's header is a LEADING
+  # tblHeader block that Word repeats on every continuation page.
+  expect_length(gregexpr("<w:tbl>", xml, fixed = TRUE)[[1L]], 2L)
+  # Canonical order: the Sex banner sits above its (N=x) header.
+  expect_lt(
+    regexpr("Sex: F", xml, fixed = TRUE),
+    regexpr("N=24", xml, fixed = TRUE)
+  )
+  # The N header is in the lead block (before the table's first body
+  # row), which is what makes Word repeat it.
+  t1 <- strsplit(xml, "<w:tbl>", fixed = TRUE)[[1L]]
+  t1 <- t1[grepl("N=24", t1)][[1L]]
+  expect_lt(
+    regexpr("N=24", t1, fixed = TRUE),
+    regexpr("Mean|Median|Diastolic", t1)
+  )
 })
 
 test_that("big_n honours a custom big_n_fmt", {
@@ -802,4 +824,92 @@ test_that("subgroup_spec() rejects a big_n_fmt without the {n} token", {
     tabular:::subgroup_spec(by = "a", big_n_fmt = "(N=)"),
     regexp = "n.*placeholder|placeholder"
   )
+})
+
+# ---- big_n: arm/by clash, contiguity message, continuous backends --------
+
+test_that("big_n long rejects an arm name that clashes with a by column", {
+  # Partition by `param`; a long arm literally named "param".
+  base <- tabular(saf_subgroup, titles = "t") |>
+    cols(
+      sex = col_spec(visible = FALSE),
+      sex_n = col_spec(visible = FALSE),
+      agegr = col_spec(visible = FALSE),
+      agegr_n = col_spec(visible = FALSE),
+      paramcd = col_spec(visible = FALSE),
+      param = col_spec(label = "P"),
+      stat_label = col_spec(label = "S"),
+      placebo = col_spec(label = "Placebo"),
+      drug_50 = col_spec(visible = FALSE),
+      drug_100 = col_spec(visible = FALSE),
+      Total = col_spec(visible = FALSE)
+    )
+  params <- unique(saf_subgroup$param)
+  long <- data.frame(
+    param = rep(params, 2L),
+    arm = rep(c("param", "placebo"), each = length(params)),
+    n = seq_len(2L * length(params))
+  )
+  expect_error(
+    base |> subgroup("param", label = "P: {param}", big_n = long),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("non-contiguous band + big_n names the ORIGINAL band label", {
+  # placebo and placebo_pct are NOT adjacent (drug_50 between) -> the band
+  # is non-contiguous; the error must name "Placebo", not "Placebo (N=24)".
+  d <- saf_subgroup
+  d$placebo_pct <- d$placebo
+  d <- d[, c(
+    "sex",
+    "sex_n",
+    "agegr",
+    "agegr_n",
+    "paramcd",
+    "param",
+    "stat_label",
+    "placebo",
+    "drug_50",
+    "placebo_pct"
+  )]
+  spec <- tabular(d, titles = "t") |>
+    cols(
+      sex = col_spec(visible = FALSE),
+      sex_n = col_spec(visible = FALSE),
+      agegr = col_spec(visible = FALSE),
+      agegr_n = col_spec(visible = FALSE),
+      paramcd = col_spec(visible = FALSE),
+      param = col_spec(usage = "group", label = "P"),
+      stat_label = col_spec(label = "S"),
+      placebo = col_spec(label = "n"),
+      drug_50 = col_spec(label = "d"),
+      placebo_pct = col_spec(label = "%")
+    ) |>
+    headers("Placebo" = c("placebo", "placebo_pct")) |>
+    subgroup(
+      "sex",
+      label = "Sex: {sex}",
+      big_n = data.frame(
+        sex = factor(c("F", "M"), levels = c("F", "M")),
+        Placebo = c(24L, 18L)
+      )
+    )
+  err <- tryCatch(as_grid(spec), error = function(e) conditionMessage(e))
+  expect_true(any(grepl("Placebo", err, fixed = TRUE)))
+  expect_false(any(grepl("(N=24)", err, fixed = TRUE)))
+})
+
+test_that("big_n: HTML and Markdown show the clean base header (no N)", {
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
+  for (ext in c(".html", ".md")) {
+    f <- withr::local_tempfile(fileext = ext)
+    emit(spec, f)
+    out <- paste(readLines(f, warn = FALSE), collapse = "\n")
+    expect_true(grepl("Placebo", out, fixed = TRUE))
+    # Continuous formats render one header -> the per-page N must NOT leak.
+    expect_false(grepl("(N=24)", out, fixed = TRUE))
+    expect_false(grepl("(N=18)", out, fixed = TRUE))
+  }
 })

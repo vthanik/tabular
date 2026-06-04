@@ -70,7 +70,8 @@ exactly one leaf XOR one band. Every missing per-page N is a
 call-time error, never a silently wrong denominator.
 
 \strong{Note:} the per-arm N renders in the paged backends (RTF, PDF /
-LaTeX, DOCX). HTML and Markdown are continuous (one stacked
+LaTeX, DOCX), repeating on every page of its subgroup, banner
+above header. HTML and Markdown are continuous (one stacked
 table, one header), so they show the clean base header; surface
 the per-page population in the \code{label} banner there.}
 
