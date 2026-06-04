@@ -1171,3 +1171,46 @@ test_that(".hier_append_chunk fills the leaf with the current value, deeper keys
   expect_identical(hlt_row$l2[[1L]], "Arrhythmias")
   expect_identical(hlt_row$label[[1L]], "Arrhythmias") # leaf = current value
 })
+
+# ---------------------------------------------------------------------
+# Regression: mixed ard_summary + ard_tabulate stack keeps categorical
+# rows; only the .by by-variable's own tabulation is dropped (B1)
+# ---------------------------------------------------------------------
+
+test_that("pivot_across keeps ard_tabulate categorical rows (B1)", {
+  testthat::skip_if_not_installed("cards")
+
+  set.seed(1)
+  d <- data.frame(
+    ARM = rep(c("A", "B"), each = 10L),
+    AGE = stats::rnorm(20L, 40, 5),
+    SEX = rep(c("F", "M"), 10L)
+  )
+  ard <- cards::ard_stack(
+    d,
+    .by = ARM,
+    cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = SEX)
+  )
+
+  out <- pivot_across(
+    ard,
+    statistic = list(
+      summary = "{mean} ({sd})",
+      tabulate = "{n} ({p}%)"
+    )
+  )
+
+  # Both the continuous (summary) and categorical (tabulate) variables
+  # survive the internal-row filter.
+  expect_setequal(unique(out$variable), c("AGE", "SEX"))
+
+  # SEX levels appear in the output (stat_label is indented for display).
+  sex_rows <- out[out$variable == "SEX", , drop = FALSE]
+  expect_setequal(trimws(sex_rows$stat_label), c("F", "M"))
+
+  # The ARM by-variable's own tabulation is still filtered out, and the
+  # arm levels became the across columns.
+  expect_false("ARM" %in% out$variable)
+  expect_true(all(c("A", "B") %in% names(out)))
+})
