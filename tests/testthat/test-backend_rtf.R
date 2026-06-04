@@ -309,6 +309,52 @@ test_that("inline AST formatting survives into the page band (bold)", {
   expect_true(grepl("{\\b Bold protocol}", m, fixed = TRUE))
 })
 
+test_that("pagehead chrome inherits preset font_size, not RTF default 12pt", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(font_size = 8, pagehead = list(left = "Protocol: ABC-123"))
+  rtf <- .rtf_emit_text(spec)
+  m <- regmatches(
+    rtf,
+    regexpr("\\{\\\\header[\\s\\S]*?\\n\\}", rtf, perl = TRUE)
+  )
+  # font_size 8 -> \fs16; without the fix the chrome cell carries no \fsN
+  # and Word renders it at the RTF default 12pt.
+  expect_true(grepl("\\fs16", m, fixed = TRUE))
+})
+
+test_that("pagefoot chrome inherits preset font_size; family unaffected", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      font_size = 8,
+      font_family = "sans",
+      pagefoot = list(left = "{program}")
+    )
+  rtf <- .rtf_emit_text(spec)
+  m <- regmatches(
+    rtf,
+    regexpr("\\{\\\\footer[\\s\\S]*?\\n\\}", rtf, perl = TRUE)
+  )
+  expect_true(grepl("\\fs16", m, fixed = TRUE))
+})
+
+test_that("explicit style() on pagehead overrides the inherited preset size", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(font_size = 8, pagehead = list(left = "Protocol")) |>
+    style(font_size = 14, .at = cells_pagehead(slot = "left"))
+  rtf <- .rtf_emit_text(spec)
+  m <- regmatches(
+    rtf,
+    regexpr("\\{\\\\header[\\s\\S]*?\\n\\}", rtf, perl = TRUE)
+  )
+  # Both the inherited base (\fs16) and the explicit override (\fs28) are
+  # emitted; RTF is last-wins, so the base must come BEFORE the override.
+  expect_true(grepl("\\fs28", m, fixed = TRUE))
+  expect_lt(
+    regexpr("\\fs16", m, fixed = TRUE),
+    regexpr("\\fs28", m, fixed = TRUE)
+  )
+})
+
 # ---------------------------------------------------------------------
 # Header bands + body cells
 # ---------------------------------------------------------------------

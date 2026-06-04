@@ -1,3 +1,10 @@
+# tabular (development version)
+
+## Bug fixes
+
+* The RTF backend now renders `pagehead` / `pagefoot` page chrome at the
+  preset `font_size` rather than the RTF default 12pt.
+
 # tabular 0.1.0
 
 First release.
