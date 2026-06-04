@@ -13,6 +13,7 @@
 * The DOCX backend now honours the `halign` cascade on group-header rows instead of always left-aligning them.
 * The PDF backend now declares its full LaTeX package set, so a missing-dependency error names every required package.
 * The RTF backend now renders `pagehead` / `pagefoot` page chrome at the preset `font_size` instead of the RTF default 12pt.
+* The RTF backend now renders blank section-separator rows at the preset `font_size` instead of the RTF default 12pt, so the spacer line matches the body height.
 * `pivot_across()` no longer silently drops `ard_tabulate()` categorical rows, nor blanks their pooled `overall` column, from a mixed `ard_stack()` ARD.
 
 # tabular 0.1.0

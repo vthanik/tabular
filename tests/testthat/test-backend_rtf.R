@@ -355,6 +355,28 @@ test_that("explicit style() on pagehead overrides the inherited preset size", {
   )
 })
 
+test_that("RTF blank spacer rows re-stamp preset font size, not RTF 12pt default", {
+  # Section group columns synthesise a blank-gap row between blocks. That
+  # row resets with \plain; if it omits \fsN it reverts to the RTF 12pt
+  # default and the spacer line prints taller than the 8pt body (Word shows
+  # 12 in the size box on the blank line). It must carry the body \fsN.
+  spec <- tabular(saf_demo) |>
+    cols(
+      variable = col_spec(usage = "group"),
+      stat_label = col_spec(),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    preset(font_size = 8)
+  rtf <- .rtf_emit_text(spec)
+  # Buggy blank-row first cell was "\pard\plain\intbl\ql\cell" (no \fsN).
+  expect_no_match(rtf, "\\pard\\plain\\intbl\\ql\\cell", fixed = TRUE)
+  # The fixed blank row carries \fs16 (8pt) before the \ql alignment token.
+  expect_match(rtf, "\\pard\\plain\\intbl\\fs16", fixed = TRUE)
+})
+
 # ---------------------------------------------------------------------
 # Header bands + body cells
 # ---------------------------------------------------------------------

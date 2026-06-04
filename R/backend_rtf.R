@@ -1754,7 +1754,15 @@ backend_rtf <- function(grid, file) {
       }
       blank_shd <- .rtf_cell_shading(blank_node, colors)
       out[[r]] <- .rtf_merged_row(
-        paste0("\\pard\\plain\\intbl", keepn_tok, "\\ql"),
+        # `\plain` resets to the RTF 12pt default; re-emit the preset body
+        # size so the blank-gap line matches the body height (mirrors the
+        # header-row branch below and the chrome / title / footnote rows).
+        paste0(
+          "\\pard\\plain\\intbl",
+          .rtf_body_fs(preset),
+          keepn_tok,
+          "\\ql"
+        ),
         cellx,
         preset,
         trhdr = FALSE,
