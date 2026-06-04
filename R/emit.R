@@ -190,6 +190,12 @@
 #'   section for what the file contains and the determinism
 #'   contract it satisfies.
 #'
+#' @param create_dir *Create the destination directory if it is missing.*
+#'   `<logical(1)>: default FALSE`. When `TRUE`, the parent directory of
+#'   `file` (and any missing ancestors) is created recursively before
+#'   rendering, instead of aborting. The default `FALSE` keeps the safe
+#'   behaviour of erroring on a missing parent.
+#'
 #' @return *The `file` path, invisibly.* Use this when chaining
 #'   `emit()` into a downstream consumer that needs the resolved
 #'   path (e.g. printing the link in a Quarto chunk, copying the
@@ -307,6 +313,15 @@
 #' file.exists(rtf_out)
 #' file.exists(data_out)
 #'
+#' # ---- Example 5: Render into a not-yet-existing output folder ----
+#' #
+#' # `create_dir = TRUE` builds the destination directory tree on the
+#' # fly, so a submission-folder layout can be written in one pass
+#' # without a separate `dir.create()` step.
+#' nested <- file.path(tempfile(), "tables", "safety", "eff.md")
+#' emit(eff_spec, nested, create_dir = TRUE)
+#' file.exists(nested)
+#'
 #' @seealso
 #' **No-I/O sibling:** [`as_grid()`] returns the resolved grid
 #' without writing a file — use during development to inspect what
@@ -325,12 +340,13 @@ emit <- function(
   file,
   format = NULL,
   data_file = NULL,
-  manifest = FALSE
+  manifest = FALSE,
+  create_dir = FALSE
 ) {
   call <- rlang::caller_env()
 
   check_tabular_spec(spec, call = call)
-  file <- .check_emit_file(file, call = call)
+  file <- .check_emit_file(file, call = call, create_dir = create_dir)
   format <- .resolve_format(file, format, call = call)
   .check_emit_manifest_flag(manifest, call = call)
 
@@ -375,9 +391,10 @@ emit <- function(
 # ---------------------------------------------------------------------
 
 # Validate `file`. Must be scalar character, non-NA, non-empty. The
-# parent directory must already exist (we do not auto-create).
-# Returns the input path unchanged on success.
-.check_emit_file <- function(file, call) {
+# parent directory must already exist, unless `create_dir` is TRUE in
+# which case we create it (recursively). Returns the input path
+# unchanged on success.
+.check_emit_file <- function(file, call, create_dir = FALSE) {
   if (
     !is.character(file) ||
       length(file) != 1L ||
@@ -393,17 +410,35 @@ emit <- function(
       call = call
     )
   }
-  parent <- dirname(file)
-  if (!dir.exists(parent)) {
+  if (
+    !is.logical(create_dir) ||
+      length(create_dir) != 1L ||
+      is.na(create_dir)
+  ) {
     cli::cli_abort(
       c(
-        "Parent directory of {.arg file} does not exist.",
-        "x" = "Missing directory: {.path {parent}}.",
-        "i" = "Create it first, or pass a path inside an existing directory."
+        "{.arg create_dir} must be a single TRUE or FALSE.",
+        "x" = "You supplied {.obj_type_friendly {create_dir}}."
       ),
       class = "tabular_error_input",
       call = call
     )
+  }
+  parent <- dirname(file)
+  if (!dir.exists(parent)) {
+    if (isTRUE(create_dir)) {
+      dir.create(parent, recursive = TRUE, showWarnings = FALSE)
+    } else {
+      cli::cli_abort(
+        c(
+          "Parent directory of {.arg file} does not exist.",
+          "x" = "Missing directory: {.path {parent}}.",
+          "i" = "Create it first, pass {.code create_dir = TRUE}, or use an existing directory."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
   }
   file
 }

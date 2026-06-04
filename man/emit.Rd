@@ -4,7 +4,14 @@
 \alias{emit}
 \title{Render a \code{tabular_spec} to a file}
 \usage{
-emit(spec, file, format = NULL, data_file = NULL, manifest = FALSE)
+emit(
+  spec,
+  file,
+  format = NULL,
+  data_file = NULL,
+  manifest = FALSE,
+  create_dir = FALSE
+)
 }
 \arguments{
 \item{spec}{\emph{The \code{tabular_spec} to render.}
@@ -60,6 +67,12 @@ data_file = \\(f) file.path(
 keys; see the \strong{\code{manifest = TRUE}} invariant in the Details
 section for what the file contains and the determinism
 contract it satisfies.}
+
+\item{create_dir}{\emph{Create the destination directory if it is missing.}
+\verb{<logical(1)>: default FALSE}. When \code{TRUE}, the parent directory of
+\code{file} (and any missing ancestors) is created recursively before
+rendering, instead of aborting. The default \code{FALSE} keeps the safe
+behaviour of erroring on a missing parent.}
 }
 \value{
 \emph{The \code{file} path, invisibly.} Use this when chaining
@@ -245,6 +258,15 @@ data_out <- tempfile(fileext = ".csv")
 emit(eff_spec, rtf_out, data_file = data_out)
 file.exists(rtf_out)
 file.exists(data_out)
+
+# ---- Example 5: Render into a not-yet-existing output folder ----
+#
+# `create_dir = TRUE` builds the destination directory tree on the
+# fly, so a submission-folder layout can be written in one pass
+# without a separate `dir.create()` step.
+nested <- file.path(tempfile(), "tables", "safety", "eff.md")
+emit(eff_spec, nested, create_dir = TRUE)
+file.exists(nested)
 
 }
 \seealso{
