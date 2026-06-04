@@ -75,6 +75,43 @@ test_that(".tabular_required_tex_packages includes the core regulatory bundles",
   expect_true("fancyhdr" %in% pkgs)
   expect_true("lastpage" %in% pkgs)
   expect_true("ninecolors" %in% pkgs)
+  # The named-font .sty files (helvet, courier) ship inside psnfss, which
+  # IS declared; they must NOT appear as standalone entries because neither
+  # is a separately installable tlmgr package (false-negative + broken
+  # install hint otherwise) (#review).
+  expect_true("psnfss" %in% pkgs)
+  expect_false("helvet" %in% pkgs)
+  expect_false("courier" %in% pkgs)
+})
+
+test_that(".latex_sty_to_ctan maps .sty stems to their CTAN package (#review)", {
+  expect_identical(tabular:::.latex_sty_to_ctan("graphicx"), "graphics")
+  expect_identical(tabular:::.latex_sty_to_ctan("fontenc"), "base")
+  expect_identical(tabular:::.latex_sty_to_ctan("inputenc"), "base")
+  expect_identical(tabular:::.latex_sty_to_ctan("helvet"), "psnfss")
+  expect_identical(tabular:::.latex_sty_to_ctan("courier"), "psnfss")
+  expect_identical(tabular:::.latex_sty_to_ctan("tgtermes"), "tex-gyre")
+  # Unmapped stems install under their own name.
+  expect_identical(tabular:::.latex_sty_to_ctan("tabularray"), "tabularray")
+})
+
+test_that(".pdf_compile_abort install hint uses CTAN names, not .sty stems (#review)", {
+  # A real compile error names the missing .sty stem (graphicx); the
+  # remediation must point at the installable CTAN package (graphics), not
+  # `tlmgr install graphicx` which fails.
+  err <- simpleError("! LaTeX Error: File `graphicx.sty' not found.")
+  expect_error(
+    tabular:::.pdf_compile_abort(err),
+    class = "tabular_error_backend"
+  )
+  msg <- tryCatch(
+    tabular:::.pdf_compile_abort(err),
+    tabular_error_backend = function(e) {
+      paste(conditionMessage(e), paste(unlist(e$body), collapse = " "))
+    }
+  )
+  expect_true(grepl("graphics", msg, fixed = TRUE))
+  expect_false(grepl("tlmgr_install(c('graphicx'", msg, fixed = TRUE))
 })
 
 test_that(".tabular_required_tex_packages is a superset of every emitted directive (#B3)", {
@@ -109,26 +146,13 @@ test_that(".tabular_required_tex_packages is a superset of every emitted directi
   stys <- unique(stys)
   expect_gt(length(stys), 0L)
 
-  # Map each emitted .sty stem / tblr library to its CTAN package
-  # name (the unit declared in .tabular_required_tex_packages):
-  # graphicx.sty ships in `graphics`; fontenc / inputenc ship in
-  # `base`; the TeX Gyre font commands (tg*) all ship in `tex-gyre`.
-  sty_to_ctan <- function(sty) {
-    if (sty == "graphicx") {
-      return("graphics")
-    }
-    if (sty %in% c("fontenc", "inputenc")) {
-      return("base")
-    }
-    if (grepl("^tg", sty)) {
-      return("tex-gyre")
-    }
-    if (sty %in% c("mathptmx", "mathpazo")) {
-      return("psnfss")
-    }
-    sty
-  }
-  ctan <- vapply(stys, sty_to_ctan, character(1L))
+  # Map each emitted .sty stem / tblr library to its CTAN package name
+  # (the unit declared in .tabular_required_tex_packages) via the package's
+  # own single-source-of-truth helper: graphicx.sty ships in `graphics`;
+  # fontenc / inputenc in `base`; the named font .sty files (helvet,
+  # courier, mathptmx, mathpazo) in `psnfss`; the TeX Gyre commands (tg*)
+  # in `tex-gyre`.
+  ctan <- vapply(stys, tabular:::.latex_sty_to_ctan, character(1L))
 
   declared <- tabular:::.tabular_required_tex_packages
   missing <- setdiff(ctan, declared)

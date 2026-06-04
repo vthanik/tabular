@@ -113,6 +113,21 @@ test_that("emit() rejects non-logical create_dir (#E4)", {
   )
 })
 
+test_that("emit(create_dir = TRUE) errors clearly when the dir cannot be created (#review)", {
+  # A regular file sitting where a parent directory must go makes dir.create
+  # fail; the suppressed warning must not be swallowed into a cryptic later
+  # 'cannot open the connection'. Surface a tabular_error_runtime naming the
+  # path instead.
+  spec <- .simple_spec()
+  blocker <- withr::local_tempfile(fileext = "")
+  writeLines("x", blocker)
+  nested <- file.path(blocker, "sub", "out.md")
+  expect_error(
+    emit(spec, nested, create_dir = TRUE),
+    class = "tabular_error_runtime"
+  )
+})
+
 test_that("emit() rejects malformed format override", {
   spec <- .simple_spec()
   f <- tempfile(fileext = ".md")

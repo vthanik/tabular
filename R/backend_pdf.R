@@ -38,15 +38,17 @@
 #   fontenc + inputenc under pdflatex (see `.latex_font_lines()`);
 # * conditional on the resolved font_family: the TeX Gyre bundles
 #   (tgtermes / tgheros / tgcursor -> tex-gyre) for the generic
-#   families, and the classic pdflatex font bundles (mathptmx /
-#   mathpazo -> psnfss, helvet, courier) for named families
-#   (see `.latex_pdftex_font_pkg()`).
+#   families, and the classic pdflatex font `.sty` files (mathptmx /
+#   mathpazo / helvet / courier -- all four shipped by CTAN `psnfss`)
+#   for named families (see `.latex_pdftex_font_pkg()`).
 #
 # Each entry is the CTAN package name passed to `tlmgr install`,
 # which is NOT always the `.sty` stem: `\usepackage{graphicx}` ships
 # in CTAN `graphics`; `\usepackage{fontenc}` / `inputenc` ship in
-# CTAN `base`; tabularray pulls `ninecolors` as a hard dependency, so
-# we declare it explicitly so the diagnostic doesn't miss it.
+# CTAN `base`; `\usepackage{helvet}` / `courier` ship in CTAN `psnfss`;
+# tabularray pulls `ninecolors` as a hard dependency, so we declare it
+# explicitly so the diagnostic doesn't miss it. The stem -> CTAN map
+# lives in `.latex_sty_to_ctan()`.
 # ---------------------------------------------------------------------
 
 .tabular_required_tex_packages <- c(
@@ -64,10 +66,12 @@
   "fontspec", # \setmainfont under xelatex / lualatex
   # TeX Gyre bundles — used when font_family resolves to a generic.
   "tex-gyre",
-  # pdflatex font bundles — used when font_family is named.
-  "psnfss",
-  "courier",
-  "helvet"
+  # pdflatex font bundle — used when font_family is named. `psnfss`
+  # provides mathptmx.sty / mathpazo.sty AND helvet.sty / courier.sty, so
+  # the named-family sans / mono `.sty` files need no separate entry; a
+  # `courier` / `helvet` entry would be a false-negative, since neither is
+  # a separately installed tlmgr package (both live inside psnfss).
+  "psnfss"
 )
 
 # ---------------------------------------------------------------------
@@ -120,13 +124,21 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
 .pdf_compile_abort <- function(err) {
   msg <- conditionMessage(err)
   missing_pkg <- .pdf_extract_missing_pkg(msg)
+  # The error names the missing `.sty` stem (graphicx, fontenc, helvet);
+  # tlmgr installs by CTAN package name (graphics, base, psnfss), so map
+  # the stems before suggesting the install command.
+  install_pkg <- unique(vapply(
+    missing_pkg,
+    .latex_sty_to_ctan,
+    character(1L)
+  ))
 
   hints <- if (length(missing_pkg) > 0L) {
     c(
       "x" = "Missing LaTeX package{?s}: {.val {missing_pkg}}.",
-      "i" = "On a local machine: install via {.run tinytex::tlmgr_install(c({paste(.sh_quote(missing_pkg), collapse = ', ')}))}.",
+      "i" = "On a local machine: install via {.run tinytex::tlmgr_install(c({paste(.sh_quote(install_pkg), collapse = ', ')}))}.",
       "i" = "See {.fn tabular::check_latex} for the full required-package set and remediation.",
-      "i" = "In a containerised workspace (Domino / Posit Workbench / Databricks): ask admin to add {.val {paste(missing_pkg, collapse = ' ')}} to the image build.",
+      "i" = "In a containerised workspace (Domino / Posit Workbench / Databricks): ask admin to add {.val {paste(install_pkg, collapse = ' ')}} to the image build.",
       "i" = "On an OS-managed TeX Live (RHEL/dnf, Debian/apt): tlmgr is locked, so install a user-space TinyTeX with {.run tinytex::install_tinytex()} instead. Never pass {.code --ignore-warning} to force a locked tlmgr."
     )
   } else {
@@ -168,6 +180,28 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
     }
   }
   unique(hits)
+}
+
+# Map an emitted `.sty` stem to the CTAN / tlmgr package that ships it.
+# graphicx ships in `graphics`; fontenc / inputenc in `base`; the named
+# pdflatex font `.sty` files (helvet, courier, mathptmx, mathpazo) in
+# `psnfss`; the TeX Gyre font commands (tg*) in `tex-gyre`. Anything
+# else is installed under its own name. Single source of truth for the
+# stem -> CTAN mapping (also used by the #B3 superset test).
+.latex_sty_to_ctan <- function(sty) {
+  if (identical(sty, "graphicx")) {
+    return("graphics")
+  }
+  if (sty %in% c("fontenc", "inputenc")) {
+    return("base")
+  }
+  if (sty %in% c("helvet", "courier", "mathptmx", "mathpazo")) {
+    return("psnfss")
+  }
+  if (grepl("^tg", sty)) {
+    return("tex-gyre")
+  }
+  sty
 }
 
 # ---------------------------------------------------------------------
@@ -258,10 +292,9 @@ check_latex <- function(quiet = FALSE) {
   )
 
   pkgs <- .tabular_required_tex_packages
-  installed <- vapply(pkgs, .latex_pkg_installed, logical(1L))
   out <- data.frame(
     package = pkgs,
-    installed = installed,
+    installed = .latex_pkgs_installed(pkgs),
     row.names = NULL,
     stringsAsFactors = FALSE
   )
@@ -272,22 +305,23 @@ check_latex <- function(quiet = FALSE) {
   invisible(out)
 }
 
-# Is a single CTAN package present in the local TeX tree? Returns
-# NA when availability cannot be determined (tlmgr unreachable).
-# `base` is part of every TeX install (fontenc / inputenc live
-# there), so short-circuit it as present rather than querying.
-.latex_pkg_installed <- function(pkg) {
-  if (identical(pkg, "base")) {
-    return(TRUE)
-  }
+# Vectorised local-availability check for CTAN packages. One
+# `tinytex::check_installed()` call (it queries the installed list once,
+# then does `pkgs %in% list`), not one tlmgr shell-out per package.
+# `base` is part of every TeX install (fontenc / inputenc live there),
+# so short-circuit it as present. Returns NA for the queried packages
+# when tlmgr is unreachable (treated as missing for remediation).
+.latex_pkgs_installed <- function(pkgs) {
+  is_base <- pkgs == "base"
+  queried <- pkgs[!is_base]
   res <- tryCatch(
-    tinytex::check_installed(pkg),
-    error = function(e) NA
+    as.logical(tinytex::check_installed(queried)),
+    error = function(e) rep(NA, length(queried))
   )
-  if (length(res) != 1L) {
-    return(NA)
-  }
-  as.logical(res)
+  out <- logical(length(pkgs))
+  out[is_base] <- TRUE
+  out[!is_base] <- res
+  out
 }
 
 # Print the cli report for a check_latex() result data frame.
