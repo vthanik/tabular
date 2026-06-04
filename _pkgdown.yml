@@ -42,6 +42,7 @@ reference:
         and returns the updated spec for chaining.
   contents:
   - cols
+  - cols_apply
   - col_spec
   - headers
   - sort_rows

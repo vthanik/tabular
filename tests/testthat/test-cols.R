@@ -200,3 +200,124 @@ test_that("cols() still rejects an unnamed !!! splice", {
     class = "tabular_error_input"
   )
 })
+
+# E1: cols_apply() — one col_spec to many columns --------------------
+
+mk_arms_spec <- function() {
+  tabular(data.frame(
+    param = c("Age", "Sex"),
+    ARM_A = c("60", "30"),
+    ARM_B = c("62", "28"),
+    ARM_C = c("59", "31"),
+    stringsAsFactors = FALSE
+  ))
+}
+
+test_that("cols_apply() applies a col_spec to each named column (#E1)", {
+  arm_cols <- c("ARM_A", "ARM_B", "ARM_C")
+  s <- mk_arms_spec() |>
+    cols_apply(arm_cols, col_spec(align = "decimal"))
+  expect_named(s@cols, arm_cols)
+  for (nm in arm_cols) {
+    expect_identical(s@cols[[nm]]@align, "decimal")
+    expect_identical(s@cols[[nm]]@name, nm)
+  }
+})
+
+test_that("cols_apply() accepts a predicate over data column names (#E1)", {
+  s <- mk_arms_spec() |>
+    cols_apply(\(nm) startsWith(nm, "ARM_"), col_spec(align = "decimal"))
+  expect_named(s@cols, c("ARM_A", "ARM_B", "ARM_C"))
+  expect_identical(s@cols$ARM_A@align, "decimal")
+  expect_false("param" %in% names(s@cols))
+})
+
+test_that("cols_apply() errors on a non-existent column (#E1)", {
+  expect_error(
+    mk_arms_spec() |>
+      cols_apply(c("ARM_A", "nope"), col_spec(align = "decimal")),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cols_apply() field-merges into an existing spec (#E1)", {
+  s <- mk_arms_spec() |>
+    cols(ARM_A = col_spec(label = "Arm A")) |>
+    cols_apply(c("ARM_A", "ARM_B"), col_spec(align = "decimal"))
+  # Existing label preserved, new align merged in.
+  expect_identical(s@cols$ARM_A@label, "Arm A")
+  expect_identical(s@cols$ARM_A@align, "decimal")
+  expect_identical(s@cols$ARM_B@align, "decimal")
+})
+
+test_that("cols_apply() rejects a non-tabular_spec (#E1)", {
+  expect_error(
+    cols_apply("not a spec", "ARM_A", col_spec()),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cols_apply() rejects a non-col_spec .col_spec (#E1)", {
+  expect_error(
+    mk_arms_spec() |> cols_apply("ARM_A", "not a col_spec"),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cols_apply() rejects a predicate returning non-logical (#E1)", {
+  expect_error(
+    mk_arms_spec() |> cols_apply(\(nm) nm, col_spec()),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cols_apply() rejects a predicate returning wrong length (#E1)", {
+  expect_error(
+    mk_arms_spec() |> cols_apply(\(nm) c(TRUE, FALSE), col_spec()),
+    class = "tabular_error_input"
+  )
+})
+
+# E2: cols(.default = ) ----------------------------------------------
+
+test_that("cols(.default=) applies to unmentioned columns (#E2)", {
+  s <- mk_arms_spec() |>
+    cols(
+      param = col_spec(usage = "group", label = "Parameter"),
+      .default = col_spec(align = "decimal")
+    )
+  # Explicit spec wins for `param`.
+  expect_identical(s@cols$param@usage, "group")
+  expect_true(is.na(s@cols$param@align))
+  # Default applies to every unmentioned data column.
+  for (nm in c("ARM_A", "ARM_B", "ARM_C")) {
+    expect_identical(s@cols[[nm]]@align, "decimal")
+    expect_identical(s@cols[[nm]]@name, nm)
+  }
+})
+
+test_that("cols(.default=) skips columns already carrying a spec (#E2)", {
+  s <- mk_arms_spec() |>
+    cols(ARM_A = col_spec(label = "Arm A")) |>
+    cols(.default = col_spec(align = "decimal"))
+  # ARM_A already had a spec from a prior cols() call: default does
+  # not touch it (label kept, no align applied).
+  expect_identical(s@cols$ARM_A@label, "Arm A")
+  expect_true(is.na(s@cols$ARM_A@align))
+  # param/ARM_B/ARM_C had no spec: they get the default fresh.
+  expect_identical(s@cols$param@align, "decimal")
+  expect_identical(s@cols$ARM_B@align, "decimal")
+})
+
+test_that("cols(.default=) rejects a non-col_spec (#E2)", {
+  expect_error(
+    mk_arms_spec() |> cols(.default = "nope"),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("cols(.default = NULL) is the current behaviour (#E2)", {
+  s <- mk_arms_spec() |>
+    cols(param = col_spec(usage = "group"), .default = NULL)
+  expect_named(s@cols, "param")
+})
