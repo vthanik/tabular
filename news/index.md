@@ -4,9 +4,12 @@
 
 First release.
 
-`tabular` renders pre-summarised clinical tables, listings, and figures
-to RTF, LaTeX, HTML, PDF, and DOCX from one immutable verb pipeline,
-with no external Java or SAS dependency.
+`tabular` renders pre-summarised clinical tables and listings to RTF,
+LaTeX, HTML, PDF, and DOCX from one immutable verb pipeline, with no
+external Java or SAS dependency.
+
+**Scope.** This release covers tables and listings. Figure (graph)
+output is not yet supported and is the focus of the next release.
 
 ### Build pipeline
 

@@ -1,9 +1,15 @@
 # Get started with tabular
 
 `tabular` turns a **pre-summarised data frame** into a regulatory
-**table, listing, or figure** (a “TFL”) and renders it natively to RTF,
-PDF, HTML, LaTeX, and DOCX. This article gets you from raw numbers to a
-finished table in about ten minutes.
+**table or listing** and renders it natively to RTF, PDF, HTML, LaTeX,
+and DOCX. This article gets you from raw numbers to a finished table in
+about ten minutes.
+
+> **Note**
+>
+> Figure (graph) output is **not yet supported** in this release.
+> `tabular` covers tables and listings today; figure rendering is the
+> focus of the next release.
 
 > **New to clinical tables?**
 >
@@ -291,7 +297,7 @@ emit(tab, paste0(out, ".tex"))    # tabularray LaTeX
 > the paginated RTF, PDF, or DOCX — same spec, same numbers, but laid
 > out for the page with repeated headers, footnotes, and the
 > four-section submission layout. See [Fonts &
-> fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.md)
+> fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.html)
 > for why the print backends are the source of truth.
 
 ## Where to next
@@ -312,5 +318,5 @@ emit(tab, paste0(out, ".tex"))    # tabularray LaTeX
   [`style()`](https://vthanik.github.io/tabular/reference/style.md),
   presets, and house styles.
 - **[Clinical
-  cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.md)**
+  cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)**
   — six complete production tables end to end.

@@ -11,6 +11,10 @@ It is the only R table package that pairs a **live HTML preview** with a
 **paginated print deliverable**: the same spec you eyeball in a notebook
 is the one that paginates into the RTF you ship.
 
+> **Scope.** `tabular` renders **tables and listings** today. Figure
+> (graph) output is **not yet supported** and is the focus of the next
+> release.
+
 ## Installation
 
 Install the released version from CRAN:

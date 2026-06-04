@@ -184,5 +184,5 @@ With the model in hand, the rest of the guide fills in the options:
 - **[Styling](https://vthanik.github.io/tabular/articles/styling.md)** —
   [`style()`](https://vthanik.github.io/tabular/reference/style.md),
   presets, and house styles.
-- **[Architecture](https://vthanik.github.io/tabular/articles/architecture.md)**
+- **[Architecture](https://vthanik.github.io/tabular/articles/architecture.html)**
   — the engine phases in depth.

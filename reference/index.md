@@ -149,7 +149,7 @@ live HTML preview.
 Class predicates for tabular’s S7 objects.
 
 - [`tabular-package`](https://vthanik.github.io/tabular/reference/tabular-package.md)
-  : tabular: TFL Rendering for Regulatory Submissions
+  : tabular: Render Tables and Listings for Clinical Submissions
 - [`tabular_classes`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`.col_spec_class`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`header_node`](https://vthanik.github.io/tabular/reference/tabular_classes.md)

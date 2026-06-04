@@ -351,6 +351,6 @@ What the arguments do:
   target rows, groups, and subgroup banners with
   [`style()`](https://vthanik.github.io/tabular/reference/style.md).
 - **[Clinical
-  cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.md)**
+  cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)**
   — full AE-by-SOC/PT and subgrouped vitals tables, sorted and paginated
   end to end.

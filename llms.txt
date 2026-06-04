@@ -11,6 +11,10 @@ It is the only R table package that pairs a **live HTML preview** with a
 **paginated print deliverable**: the same spec you eyeball in a notebook
 is the one that paginates into the RTF you ship.
 
+> **Scope.** `tabular` renders **tables and listings** today. Figure
+> (graph) output is **not yet supported** and is the focus of the next
+> release.
+
 ## Installation
 
 Install the released version from CRAN:
@@ -319,7 +323,7 @@ live HTML preview.
 Class predicates for tabular’s S7 objects.
 
 - [`tabular-package`](https://vthanik.github.io/tabular/reference/tabular-package.md)
-  : tabular: TFL Rendering for Regulatory Submissions
+  : tabular: Render Tables and Listings for Clinical Submissions
 - [`tabular_classes`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`.col_spec_class`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`header_node`](https://vthanik.github.io/tabular/reference/tabular_classes.md)

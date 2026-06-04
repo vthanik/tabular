@@ -712,7 +712,7 @@ you. When you want the marker assigned and placed *automatically* —
 deduped across cells, byte-identical across backends — use
 \[[`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)\]
 instead (see the *Auto-numbered footnotes* recipe in the [clinical
-cookbook](https://vthanik.github.io/tabular/articles/articles/clinical-cookbook.md)).
+cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)).
 
 ## Verbatim whitespace
 
@@ -759,9 +759,9 @@ fold space runs natively.
 ## Where to next
 
 - **[Clinical
-  cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.md)**
+  cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)**
   — these tools applied to six complete production tables.
 - **[Fonts &
-  fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.md)**
+  fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.html)**
   — fonts, decimal alignment, and why the print backends are the source
   of truth.
