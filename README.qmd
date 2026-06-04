@@ -58,6 +58,38 @@ pak::pak("vthanik/tabular")
 remotes::install_github("vthanik/tabular")
 ```
 
+R dependencies install automatically. The five backends differ in what
+*else* they need:
+
+| Backend | Extra requirement |
+|---|:---|
+| RTF, DOCX, HTML, Markdown | none — pure R, no Java, no `pandoc`, no Office |
+| LaTeX (`.tex` source) | none — `tabular` writes the fragment |
+| PDF | a TeX install (xelatex) with `tabularray` + `ninecolors` |
+
+PDF is the only backend that shells out. Install [`tinytex`](https://yihui.org/tinytex/)
+once per machine and `tabular` compiles with `xelatex` thereafter:
+
+``` r
+install.packages("tinytex")
+tinytex::install_tinytex()                                  # one-time TeX setup
+tinytex::tlmgr_install(c("tabularray", "ninecolors"))       # the table engine
+```
+
+`check_latex()` reports which LaTeX packages are present and prints the
+exact `tlmgr_install()` line for anything missing; `check_fonts(spec)`
+does the same for the fonts a spec asks for, per backend.
+
+``` r
+tabular::check_latex()   # PDF readiness, with the install remedy
+```
+
+> **TeX Live on a managed OS.** If TeX Live came from the system package
+> manager (RHEL `dnf`, Debian/Ubuntu `apt`), its `tlmgr` is usually locked
+> and `tlmgr_install()` fails on permissions. Install user-space TinyTeX
+> alongside it rather than fighting the system copy — and never reach for
+> `--ignore-warning` to force it.
+
 ## A table in one pipeline
 
 The pipeline starts from a pre-summarised wide data frame (one row in =

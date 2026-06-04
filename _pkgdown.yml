@@ -130,6 +130,7 @@ articles:
   - rows-grouping-pagination
   - styling
   - articles/clinical-cookbook
+  - articles/clinical-recipe
 
 - title: Advanced
   navbar: Advanced

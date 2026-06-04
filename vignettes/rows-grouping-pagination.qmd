@@ -84,6 +84,52 @@ tabular(saf_demo) |>
   )
 ```
 
+### When the section label is also a row
+
+A `usage = "group"` column lifts every distinct value into its own
+**header row**. That is exactly what you want when the group label
+(*Skin and Subcutaneous Tissue Disorders*) is structurally separate from
+the rows beneath it. But some clinical tables carry a label that is
+*itself* a meaningful data row — the AE table's overall
+*Total Subjects With An Event* line, which has its own counts and sits
+flush at the left margin, not above a block.
+
+If you forced that pattern through `group_display = "header_row"`, a value
+that equals its own row label would surface twice: once as the bold
+section header, once as the indented data row underneath. The cleaner
+pattern keeps every label in **one ordinary column** and drives section
+depth with `indent_by` — one row per label, no duplication:
+
+```{r}
+#| label: overall-row
+# saf_aesocpt already carries label / row_type / indent_level columns.
+# indent_level is 0 for the overall row and each SOC, 1 for preferred
+# terms. indent_by reads it and indents the PTs; the overall row and the
+# SOC labels stay flush -- no synthetic header rows, no duplicates.
+ae <- saf_aesocpt[1:8, ]
+
+tabular(ae) |>
+  cols(
+    soc          = col_spec(visible = FALSE),
+    row_type     = col_spec(visible = FALSE),
+    n_total      = col_spec(visible = FALSE),
+    soc_n        = col_spec(visible = FALSE),
+    indent_level = col_spec(visible = FALSE),
+    label        = col_spec(label = "System Organ Class / Preferred Term",
+                            indent_by = "indent_level"),
+    placebo      = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50      = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100     = col_spec(label = "Drug 100", align = "decimal"),
+    Total        = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  style(bold = TRUE, .at = cells_body(where = row_type %in% c("overall", "soc")))
+```
+
+The bold weight that visually separates the *overall* and *SOC* rows from
+the preferred terms comes from a `style()` predicate, not from a group
+column — so the *Total Subjects With An Event* row reads as the single
+flush row it is.
+
 ## Partitioning with `subgroup()`
 
 Where a group column stacks blocks *within* one table, `subgroup()`
@@ -174,6 +220,91 @@ The HTML backend is a single continuous document, so `paginate()` has no
 visible effect in the live previews above — it shapes the **RTF, PDF, and
 DOCX** output, where pages are real. Build and preview in HTML, then emit
 to a paginated backend to see the splits.
+:::
+
+## Running headers and footers
+
+Every page of a submission table carries chrome outside the table body —
+the *Protocol: xxx* / *Page x of y* band a reviewer expects, and the
+program path and run timestamp at the foot. Set them on the preset with
+`pagehead` and `pagefoot`. Each is a named list of slots — `left`,
+`center`, `right` — and each slot is text (or a character vector for
+multiple rows):
+
+```{r}
+#| label: page-chrome
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  preset(
+    pagehead = list(
+      left  = "Protocol: ABC-12345",
+      right = "Page {page} of {npages}"
+    ),
+    pagefoot = list(
+      left  = "{program_path}",
+      right = "{datetime}"
+    )
+  )
+```
+
+### Substitution tokens
+
+Slot text may carry `{...}` tokens that the engine or backend fills in:
+
+| Token | Filled with |
+|---|---|
+| `{page}` | the current page number |
+| `{npages}` | the total page count |
+| `{program}` | the calling script's base name |
+| `{program_path}` | the calling script's full path |
+| `{datetime}` | the render timestamp (`DDMMMYYYY HH:MM:SS`, UTC) |
+
+`{page}` and `{npages}` resolve per page in the paper backends (they map
+to native field codes), so *Page 1 of 7* counts correctly as the table
+flows. `{program}`, `{program_path}`, and `{datetime}` resolve once, when
+the spec is rendered.
+
+### Stacking direction
+
+A slot can hold several rows — pass a character vector. Index 1 is always
+the row **closest to the table body**. A `pagehead` stacks **upward** away
+from the table; a `pagefoot` stacks **downward**. Shorter slots pad with
+blank rows at the *far* end, so a one-line slot naturally lands on the
+body-edge row next to its multi-line neighbour:
+
+```{r}
+#| label: page-chrome-stacked
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  preset(
+    pagehead = list(
+      left  = c("Protocol: ABC-12345", "Analysis Set: Safety"),
+      right = "Page {page} of {npages}"   # scalar -> body-edge row
+    )
+  )
+```
+
+::: {.callout-note}
+## Page chrome is a print concept
+
+Like pagination, `pagehead` / `pagefoot` shape the **RTF, PDF, and DOCX**
+deliverables, where pages and field codes are real. They have no visible
+effect in the continuous HTML preview, and `{page}` / `{npages}` only mean
+something once a table spans more than one page.
 :::
 
 ## Where to next

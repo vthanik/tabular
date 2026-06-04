@@ -151,6 +151,36 @@ pivot_across(
 alone is not enough; `column` selects which grouping variable becomes the
 columns when an ARD carries more than one.
 
+### Integer percentages
+
+`decimals` is a named vector keyed by statistic. Some sponsor shells show
+percentages as whole numbers — pass `decimals = c(p = 0)` to drop the
+decimal place on the `{p}` stat while leaving the others untouched:
+
+```{r}
+#| label: integer-pct
+pivot_across(
+  saf_demo_card,
+  decimals = c(p = 0),
+  label = c(SEX = "Sex, n (%)", RACE = "Race, n (%)")
+) |>
+  tabular(titles = "Demographics with integer percentages") |>
+  cols(
+    variable               = col_spec(usage = "group", label = "Characteristic"),
+    stat_label             = col_spec(label = "Statistic"),
+    Placebo                = col_spec(label = "Placebo",  align = "decimal"),
+    `Xanomeline Low Dose`  = col_spec(label = "Drug 50",  align = "decimal"),
+    `Xanomeline High Dose` = col_spec(label = "Drug 100", align = "decimal"),
+    Total                  = col_spec(label = "Total",    align = "decimal")
+  )
+```
+
+The pharma rounding threshold tracks the precision you ask for: at
+`decimals = c(p = 0)` a non-zero percentage that would round to `0`
+renders as `<1`, and one that would round to `100` renders as `>99`, so a
+rare event never disappears into `0%`. Raise the precision and the
+threshold follows — `decimals = c(p = 2)` gives `<0.01` / `>99.99`.
+
 ## 5. A hierarchical AE ARD
 
 `saf_aesocpt_card` is a *hierarchical* AE ARD -- preferred terms nested
