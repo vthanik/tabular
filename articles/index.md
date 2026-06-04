@@ -42,6 +42,13 @@
   adverse events, vital signs, best overall response, and a subgrouped
   analysis. Copy a recipe and swap in your own summarised data.
 
+- [A submission table, end to
+  end](https://vthanik.github.io/tabular/articles/clinical-recipe.md):
+
+  One recipe from a pre-summarised frame to a shippable RTF: nested
+  section groups, per-page BigN under each subgroup banner, a running
+  page header, group-aware pagination, and a QC sidecar.
+
 ### Advanced
 
 - [From a cards

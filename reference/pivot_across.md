@@ -2,10 +2,8 @@
 
 `pivot_across()` is tabular's input-side helper: it consumes a long
 Analysis Results Data (ARD) data frame (typically produced by
-[`cards::ard_stack()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html)
-or
-[`cards::ard_stack_hierarchical()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack_hierarchical.html))
-and returns a wide display data.frame ready to pass to
+`cards::ard_stack()` or `cards::ard_stack_hierarchical()`) and returns a
+wide display data.frame ready to pass to
 [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md).
 
 ## Usage
@@ -57,8 +55,23 @@ pivot_across(
 
   ### Form 2: named list by context
 
-  Different formats for continuous vs categorical contexts. This is the
-  typical clinical-table form because demographics mix the two.
+  Different formats per context. This is the typical clinical-table form
+  because demographics mix continuous and categorical variables.
+
+  **The list names must match the values in the ARD's `context` column
+  verbatim.** Which strings appear there depends on how the ARD was
+  built:
+
+  - `cards::ard_continuous()` / `ard_categorical()` emit `"continuous"`
+    / `"categorical"`.
+
+  - `cards::ard_summary()` / `ard_tabulate()` emit `"summary"` /
+    `"tabulate"`.
+
+  So an ARD assembled with
+  `ard_stack(ard_summary(...), ard_tabulate(...))` is keyed `summary` /
+  `tabulate`, not `continuous` / `categorical`. Inspect
+  `unique(ard$context)` when unsure.
 
       # AGE (continuous) -> "75.2 (8.59)"; SEX (categorical) -> "53 (62%)"
       pivot_across(
@@ -297,19 +310,19 @@ saf_demo_card |>
     variable   = col_spec(usage = "group", label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
     Placebo    = col_spec(
-      label = sprintf("Placebo\nN=%d", n["placebo"]),
+      label = "Placebo\nN={n['placebo']}",
       align = "decimal"
     ),
     `Xanomeline Low Dose` = col_spec(
-      label = sprintf("Drug 50\nN=%d", n["drug_50"]),
+      label = "Drug 50\nN={n['drug_50']}",
       align = "decimal"
     ),
     `Xanomeline High Dose` = col_spec(
-      label = sprintf("Drug 100\nN=%d", n["drug_100"]),
+      label = "Drug 100\nN={n['drug_100']}",
       align = "decimal"
     ),
     Total = col_spec(
-      label = sprintf("Total\nN=%d", n["Total"]),
+      label = "Total\nN={n['Total']}",
       align = "decimal"
     )
   )

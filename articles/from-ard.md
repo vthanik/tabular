@@ -17,11 +17,10 @@ rendered table.
 >
 > An *Analysis Results Data* frame is the tidy, long representation of a
 > table’s contents: each row carries one statistic, for one group level,
-> of one variable. It is produced upstream by
-> [`cards::ard_stack()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html)
-> and friends. `tabular` does not compute it – it consumes it. The
-> division of labour is deliberate: `cards` (or `gtsummary`, `dplyr`,
-> SAS) *computes* the numbers;
+> of one variable. It is produced upstream by `cards::ard_stack()` and
+> friends. `tabular` does not compute it – it consumes it. The division
+> of labour is deliberate: `cards` (or `gtsummary`, `dplyr`, SAS)
+> *computes* the numbers;
 > [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
 > *reshapes* them;
 > [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md)
@@ -278,6 +277,81 @@ Demographics with a custom statistic format
 `decimals` and `fmt` give finer control over rounding when a template
 alone is not enough; `column` selects which grouping variable becomes
 the columns when an ARD carries more than one.
+
+### Integer percentages
+
+`decimals` is a named vector keyed by statistic. Some sponsor shells
+show percentages as whole numbers — pass `decimals = c(p = 0)` to drop
+the decimal place on the `{p}` stat while leaving the others untouched:
+
+``` r
+
+pivot_across(
+  saf_demo_card,
+  decimals = c(p = 0),
+  label = c(SEX = "Sex, n (%)", RACE = "Race, n (%)")
+) |>
+  tabular(titles = "Demographics with integer percentages") |>
+  cols(
+    variable               = col_spec(usage = "group", label = "Characteristic"),
+    stat_label             = col_spec(label = "Statistic"),
+    Placebo                = col_spec(label = "Placebo",  align = "decimal"),
+    `Xanomeline Low Dose`  = col_spec(label = "Drug 50",  align = "decimal"),
+    `Xanomeline High Dose` = col_spec(label = "Drug 100", align = "decimal"),
+    Total                  = col_spec(label = "Total",    align = "decimal")
+  )
+```
+
+| Statistic | Placebo | Drug 100 | Drug 50 | Total |
+|----|----|----|----|----|
+| **AGE** |  |  |  |  |
+| AGE |  75.2 (8.59)  |  73.8 (7.94)  |  76.0 (8.11)  |  75.1 (8.25)  |
+|   |  |  |  |  |
+| **WEIGHT** |  |  |  |  |
+| WEIGHT |  62.8 (12.77) |  69.5 (14.35) |  68.0 (14.50) |  66.6 (14.13) |
+|   |  |  |  |  |
+| **HEIGHT** |  |  |  |  |
+| HEIGHT | 162.6 (11.52) | 165.9 (10.28) | 163.7 (10.30) | 163.9 (10.76) |
+|   |  |  |  |  |
+| **BMI** |  |  |  |  |
+| BMI |  23.6 (3.67)  |  25.2 (3.97)  |  25.2 (4.40)  |  24.7 (4.09)  |
+|   |  |  |  |  |
+| **AGEGR1** |  |  |  |  |
+|   18-64 |  14 (16%)     |  11 (15%)     |   8 ( 8%)     |  33 (13%)     |
+|   \>64 |  72 (84%)     |  61 (85%)     |  88 (92%)     | 221 (87%)     |
+|   |  |  |  |  |
+| **Sex, n (%)** |  |  |  |  |
+|   F |  53 (62%)     |  35 (49%)     |  55 (57%)     | 143 (56%)     |
+|   M |  33 (38%)     |  37 (51%)     |  41 (43%)     | 111 (44%)     |
+|   |  |  |  |  |
+| **Race, n (%)** |  |  |  |  |
+|   WHITE |  78 (91%)     |  62 (86%)     |  90 (94%)     | 230 (91%)     |
+|   BLACK OR AFRICAN AMERICAN |   8 ( 9%)     |   9 (12%)     |   6 ( 6%)     |  23 ( 9%)     |
+|   ASIAN |   0           |   0           |   0           |   0           |
+|   AMERICAN INDIAN OR ALASKA NATIVE |   0           |   1 ( 1%)     |   0           |   1 (\<1%)     |
+|   |  |  |  |  |
+| **ETHNIC** |  |  |  |  |
+|   HISPANIC OR LATINO |   3 ( 3%)     |   3 ( 4%)     |   6 ( 6%)     |  12 ( 5%)     |
+|   NOT HISPANIC OR LATINO |  83 (97%)     |  69 (96%)     |  90 (94%)     | 242 (95%)     |
+|   NOT REPORTED |   0           |   0           |   0           |   0           |
+|   |  |  |  |  |
+| **BMI_CAT** |  |  |  |  |
+|   Underweight (\<18.5) |   3 ( 3%)     |   1 ( 1%)     |   4 ( 4%)     |   8 ( 3%)     |
+|   Normal (18.5-24.9) |  57 (66%)     |  39 (54%)     |  46 (48%)     | 142 (56%)     |
+|   Overweight (25-29.9) |  20 (23%)     |  23 (32%)     |  32 (34%)     |  75 (30%)     |
+|   Obese (\>=30) |   6 ( 7%)     |   9 (12%)     |  13 (14%)     |  28 (11%)     |
+
+ 
+
+Demographics with integer percentages
+
+ 
+
+The pharma rounding threshold tracks the precision you ask for: at
+`decimals = c(p = 0)` a non-zero percentage that would round to `0`
+renders as `<1`, and one that would round to `100` renders as `>99`, so
+a rare event never disappears into `0%`. Raise the precision and the
+threshold follows — `decimals = c(p = 2)` gives `<0.01` / `>99.99`.
 
 ## 5. A hierarchical AE ARD
 

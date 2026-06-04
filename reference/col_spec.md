@@ -130,7 +130,7 @@ col_spec(
       # Two-line header with arm name and BigN from saf_n.
       n <- stats::setNames(saf_n$n, saf_n$arm_short)
       col_spec(
-        label = sprintf("Placebo\nN=%d", n["placebo"]),
+        label = "Placebo\nN={n['placebo']}",
         align = "decimal"
       )
 
@@ -473,19 +473,19 @@ tabular(
     ),
     stat_label = col_spec(label = "Statistic", align = "left"),
     placebo  = col_spec(
-      label = sprintf("Placebo\nN=%d", n["placebo"]),
+      label = "Placebo\nN={n['placebo']}",
       align = "decimal", na_text = "-"
     ),
     drug_50  = col_spec(
-      label = sprintf("Drug 50\nN=%d", n["drug_50"]),
+      label = "Drug 50\nN={n['drug_50']}",
       align = "decimal", na_text = "-"
     ),
     drug_100 = col_spec(
-      label = sprintf("Drug 100\nN=%d", n["drug_100"]),
+      label = "Drug 100\nN={n['drug_100']}",
       align = "decimal", na_text = "-"
     ),
     Total    = col_spec(
-      label = sprintf("Total\nN=%d", n["Total"]),
+      label = "Total\nN={n['Total']}",
       align = "decimal", na_text = "-"
     )
   ) |>

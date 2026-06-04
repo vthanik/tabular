@@ -17,6 +17,8 @@ for chaining.
 
 - [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) :
   Attach per-column specifications
+- [`cols_apply()`](https://vthanik.github.io/tabular/reference/cols_apply.md)
+  : Apply one column spec to many columns
 - [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
   : Per-column display specification
 - [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
@@ -119,8 +121,10 @@ file;
 [`as_grid()`](https://vthanik.github.io/tabular/reference/as_grid.md)
 resolves the spec without I/O;
 [`check_fonts()`](https://vthanik.github.io/tabular/reference/check_fonts.md)
-audits font availability; the print and `as.tags()` methods drive the
-live HTML preview.
+and
+[`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
+audit font and LaTeX-package availability; the print and `as.tags()`
+methods drive the live HTML preview.
 
 - [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) :
 
@@ -133,6 +137,9 @@ live HTML preview.
 
 - [`check_fonts()`](https://vthanik.github.io/tabular/reference/check_fonts.md)
   : Check font availability across backends
+
+- [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
+  : Check LaTeX-package availability for PDF output
 
 - [`print.tabular_spec`](https://vthanik.github.io/tabular/reference/print.tabular_spec.md)
   :

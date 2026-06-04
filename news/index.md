@@ -1,5 +1,44 @@
 # Changelog
 
+## tabular (development version)
+
+### New features
+
+- [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
+  reports LaTeX-package availability for PDF output and prints the exact
+  `tlmgr_install()` remedy for anything missing.
+- [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) gains
+  a `.default` argument that sets a fallback
+  [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
+  for columns not named explicitly.
+- [`cols_apply()`](https://vthanik.github.io/tabular/reference/cols_apply.md)
+  applies one
+  [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
+  to many columns selected by name or by predicate.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) gains
+  `create_dir` to create missing parent directories instead of erroring.
+- [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
+  gains `big_n` and `big_n_fmt` for per-page BigN, so each subgroup
+  page’s column headers can carry that page’s own `(N=)` denominators,
+  keyed to either a leaf column or a
+  [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
+  band; `big_n` accepts either a wide or a long (`count()`-style) table,
+  and per-page Ns render in RTF, PDF/LaTeX, and DOCX on the repeating
+  header, while HTML and Markdown emit a per-arm N row under each
+  subgroup banner.
+
+### Bug fixes
+
+- The DOCX backend now honours the `halign` cascade on group-header rows
+  instead of always left-aligning them.
+- The PDF backend now declares its full LaTeX package set, so a
+  missing-dependency error names every required package.
+- The RTF backend now renders `pagehead` / `pagefoot` page chrome at the
+  preset `font_size` instead of the RTF default 12pt.
+- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
+  no longer silently drops `ard_tabulate()` categorical rows, nor blanks
+  their pooled `overall` column, from a mixed `ard_stack()` ARD.
+
 ## tabular 0.1.0
 
 First release.

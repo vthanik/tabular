@@ -30,7 +30,45 @@ Or the development version from GitHub:
 
 # install.packages("pak")
 pak::pak("vthanik/tabular")
+# or
+remotes::install_github("vthanik/tabular")
 ```
+
+R dependencies install automatically. The five backends differ in what
+*else* they need:
+
+| Backend | Extra requirement |
+|----|:---|
+| RTF, DOCX, HTML, Markdown | none — pure R, no Java, no `pandoc`, no Office |
+| LaTeX (`.tex` source) | none — `tabular` writes the fragment |
+| PDF | a TeX install (xelatex) with `tabularray` + `ninecolors` |
+
+PDF is the only backend that shells out. Install
+[`tinytex`](https://yihui.org/tinytex/) once per machine and `tabular`
+compiles with `xelatex` thereafter:
+
+``` r
+
+install.packages("tinytex")
+tinytex::install_tinytex()                                  # one-time TeX setup
+tinytex::tlmgr_install(c("tabularray", "ninecolors"))       # the table engine
+```
+
+[`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
+reports which LaTeX packages are present and prints the exact
+`tlmgr_install()` line for anything missing; `check_fonts(spec)` does
+the same for the fonts a spec asks for, per backend.
+
+``` r
+
+tabular::check_latex()   # PDF readiness, with the install remedy
+```
+
+> **TeX Live on a managed OS.** If TeX Live came from the system package
+> manager (RHEL `dnf`, Debian/Ubuntu `apt`), its `tlmgr` is usually
+> locked and `tlmgr_install()` fails on permissions. Install user-space
+> TinyTeX alongside it rather than fighting the system copy — and never
+> reach for `--ignore-warning` to force it.
 
 ## A table in one pipeline
 
@@ -63,10 +101,10 @@ tab <- tabular(
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = sprintf("Placebo (N=%d)",  n["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50 (N=%d)",  n["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100 (N=%d)", n["drug_100"]), align = "decimal"),
-    Total      = col_spec(label = sprintf("Total (N=%d)",    n["Total"]),    align = "decimal")
+    placebo    = col_spec(label = "Placebo (N={n['placebo']})",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50 (N={n['drug_50']})",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100 (N={n['drug_100']})", align = "decimal"),
+    Total      = col_spec(label = "Total (N={n['Total']})",    align = "decimal")
   )
 
 # render to any backend by file extension (or format = "...")

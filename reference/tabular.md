@@ -102,9 +102,7 @@ resolve without writing.
 **Pre-summarised input contract.** `data` is one row per displayed row
 of the final table. `tabular()` does not aggregate, filter, weight, or
 generate subtotal rows — those happen upstream in `cards`, `dplyr`, or
-SAS. If the upstream is a long
-[`cards::ard_stack()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html)
-ARD, pipe through
+SAS. If the upstream is a long `cards::ard_stack()` ARD, pipe through
 [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
 first to land in the wide shape `tabular()` accepts.
 
@@ -175,10 +173,10 @@ tabular(
     soc_n    = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
-    placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"])),
-    drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"])),
-    drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"])),
-    Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]))
+    placebo  = col_spec(label = "Placebo\nN={n['placebo']}"),
+    drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}"),
+    drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}"),
+    Total    = col_spec(label = "Total\nN={n['Total']}")
   ) |>
   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 

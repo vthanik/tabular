@@ -73,8 +73,7 @@ A data frame with 61 rows and 10 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from
-[`pharmaverseadam::adae`](https://pharmaverse.github.io/pharmaverseadam/reference/adae.html).
+Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::adae`.
 Filtered to the top 10 SOCs by total incidence and the top 5 PTs per
 SOC. Body rows are pre-sorted with the cards-style two-level rule
 (`arrange(desc(soc_n), soc, desc(n_total))`) so the canonical render
@@ -118,19 +117,19 @@ tabular(
     n_total  = col_spec(visible = FALSE),
     soc_n    = col_spec(visible = FALSE),
     placebo  = col_spec(
-      label = sprintf("Placebo\nN=%d", n["placebo"]),
+      label = "Placebo\nN={n['placebo']}",
       align = "decimal"
     ),
     drug_50  = col_spec(
-      label = sprintf("Drug 50\nN=%d", n["drug_50"]),
+      label = "Drug 50\nN={n['drug_50']}",
       align = "decimal"
     ),
     drug_100 = col_spec(
-      label = sprintf("Drug 100\nN=%d", n["drug_100"]),
+      label = "Drug 100\nN={n['drug_100']}",
       align = "decimal"
     ),
     Total    = col_spec(
-      label = sprintf("Total\nN=%d", n["Total"]),
+      label = "Total\nN={n['Total']}",
       align = "decimal"
     )
   ) |>

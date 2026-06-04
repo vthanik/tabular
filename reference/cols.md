@@ -13,7 +13,7 @@ default
 ## Usage
 
 ``` r
-cols(.spec, ...)
+cols(.spec, ..., .default = NULL)
 ```
 
 ## Arguments
@@ -30,15 +30,36 @@ cols(.spec, ...)
 
   *Named `col_spec` objects, one per column.* Each name is the input
   column name in `.spec@data`. Names must match an existing column —
-  pre-compute derived columns upstream with
-  [`dplyr::mutate()`](https://dplyr.tidyverse.org/reference/mutate.html)
-  (or equivalent) before
+  pre-compute derived columns upstream with `dplyr::mutate()` (or
+  equivalent) before
   [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md).
 
   **Restriction:** Names must be unique within a single `cols()` call
   (duplicates warn; "last value wins"). **Tip:** To override an
   attribute already declared, use a second `cols()` call downstream and
   let the merge rule apply.
+
+- .default:
+
+  *Fallback `col_spec` for unmentioned columns.*
+  `<col_spec | NULL>: default NULL`. When a `col_spec`, it is
+  field-merged onto every data column that is NOT named in `...` and
+  does not already carry a spec from an earlier `cols()` call. `NULL`
+  (default) leaves unmentioned columns to the engine-time default. Use
+  it to set one alignment / format across a variable number of arm
+  columns in a single call.
+
+  **Interaction:** Explicit `...` specs always win — `.default` only
+  fills the gaps. A column carried over from a prior `cols()` call is
+  treated as already specified and is left untouched.
+
+      # Decimal-align every arm column without listing each by name.
+      tabular(saf_demo) |>
+        cols(
+          variable   = col_spec(usage = "group", label = "Parameter"),
+          stat_label = col_spec(label = "Statistic"),
+          .default   = col_spec(align = "decimal")
+        )
 
 ## Value
 
@@ -133,10 +154,10 @@ tabular(
   cols(
     variable   = col_spec(usage = "group", label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
-    Total      = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
+    placebo    = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
+    Total      = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
   sort_rows(by = c("variable", "stat_label"))
 

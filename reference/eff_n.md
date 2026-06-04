@@ -2,10 +2,9 @@
 
 Per-arm subject counts (BigN) for the efficacy population used by
 `eff_resp` / `eff_resp_card` — subjects with a `BOR` record in
-[`pharmaverseadam::adrs_onco`](https://pharmaverse.github.io/pharmaverseadam/reference/adrs_onco.html).
-Same two-column naming convention as `saf_n`; the totals differ from
-`saf_n` because not every safety-pop subject contributes a
-best-overall-response record.
+`pharmaverseadam::adrs_onco`. Same two-column naming convention as
+`saf_n`; the totals differ from `saf_n` because not every safety-pop
+subject contributes a best-overall-response record.
 
 ## Usage
 
@@ -34,6 +33,6 @@ safety-population counterpart.
 ``` r
 # Efficacy BigN joined into column headers.
 ne <- stats::setNames(eff_n$n, eff_n$arm_short)
-sprintf("Placebo\nN=%d", ne["placebo"])
+col_spec(label = "Placebo\nN={ne['placebo']}")@label
 #> [1] "Placebo\nN=86"
 ```

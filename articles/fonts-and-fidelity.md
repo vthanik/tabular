@@ -145,19 +145,19 @@ stacks <- check_fonts(sp)
 #> 
 #> ── Font resolution for `font_family = mono`
 #> backend: html
-#> x Liberation Mono (not on this machine)
-#> v Courier New
+#> v Liberation Mono
+#> x Courier New (not on this machine)
 #> x Courier (not on this machine)
 #> o monospace (generic, always available)
 #> backend: latex
-#> x Liberation Mono (not on this machine)
-#> v Courier New
+#> v Liberation Mono
+#> x Courier New (not on this machine)
 #> x Courier (not on this machine)
 #> x TeX Gyre Cursor (not on this machine)
 #> x Latin Modern Mono (not on this machine)
 #> backend: rtf
-#> x Liberation Mono (not on this machine)
-#> v Courier New
+#> v Liberation Mono
+#> x Courier New (not on this machine)
 #> x Courier (not on this machine)
 stacks$rtf
 #> [1] "Liberation Mono" "Courier New"     "Courier"

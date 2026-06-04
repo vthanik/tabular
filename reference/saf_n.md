@@ -1,12 +1,10 @@
 # Safety-population BigN per arm
 
 Per-arm subject counts (BigN) for the safety population, plus a `Total`
-row. Use this table to embed BigN inline in column headers via
-[`sprintf()`](https://rdrr.io/r/base/sprintf.html) /
-[`paste()`](https://rdrr.io/r/base/paste.html) against
-`cols(col_spec(label = ...))`; there is no dedicated BigN field on
-`col_spec` because the denominator already lives here in a discoverable,
-joinable form.
+row. Use this table to embed BigN inline in column headers with a
+glue-style `{expr}` template against `cols(col_spec(label = ...))`;
+there is no dedicated BigN field on `col_spec` because the denominator
+already lives here in a discoverable, joinable form.
 
 ## Usage
 
@@ -37,8 +35,7 @@ A data frame with 4 rows and 3 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from
-[`pharmaverseadam::adsl`](https://pharmaverse.github.io/pharmaverseadam/reference/adsl.html)
+Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::adsl`
 filtered to `SAFFL == "Y"` and the three CDISCPILOT01 arms.
 
 ## Details
@@ -59,12 +56,12 @@ efficacy-population counterpart.
 # Use saf_n$arm_short when joining into the wide datasets
 # (saf_demo, saf_aeoverall, saf_aesocpt, saf_vital).
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
-sprintf("Placebo\nN=%d", n["placebo"])
+col_spec(label = "Placebo\nN={n['placebo']}")@label
 #> [1] "Placebo\nN=86"
 
 # Use saf_n$arm when joining into pivot_across() output
 # (column names match the raw pharmaverseadam arm labels).
 n_arm <- stats::setNames(saf_n$n, saf_n$arm)
-sprintf("Placebo\nN=%d", n_arm["Placebo"])
+col_spec(label = "Placebo\nN={n_arm['Placebo']}")@label
 #> [1] "Placebo\nN=86"
 ```

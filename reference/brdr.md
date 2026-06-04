@@ -127,10 +127,10 @@ tabular(
 ) |>
   cols(
     stat_label = col_spec(usage = "group", label = "Category"),
-    placebo    = col_spec(label = sprintf("Placebo\nN=%d",  demo_n["placebo"])),
-    drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  demo_n["drug_50"])),
-    drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", demo_n["drug_100"])),
-    Total      = col_spec(label = sprintf("Total\nN=%d",    demo_n["Total"]))
+    placebo    = col_spec(label = "Placebo\nN={demo_n['placebo']}"),
+    drug_50    = col_spec(label = "Drug 50\nN={demo_n['drug_50']}"),
+    drug_100   = col_spec(label = "Drug 100\nN={demo_n['drug_100']}"),
+    Total      = col_spec(label = "Total\nN={demo_n['Total']}")
   ) |>
   preset(
     rules = list(

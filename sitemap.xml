@@ -4,6 +4,7 @@
 <url><loc>https://vthanik.github.io/tabular/LICENSE.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/articles/architecture.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/articles/clinical-cookbook.html</loc></url>
+<url><loc>https://vthanik.github.io/tabular/articles/clinical-recipe.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/articles/columns-and-headers.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/articles/core-concepts.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/articles/fonts-and-fidelity.html</loc></url>
@@ -20,8 +21,10 @@
 <url><loc>https://vthanik.github.io/tabular/reference/brdr.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/reference/cells.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/reference/check_fonts.html</loc></url>
+<url><loc>https://vthanik.github.io/tabular/reference/check_latex.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/reference/col_spec.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/reference/cols.html</loc></url>
+<url><loc>https://vthanik.github.io/tabular/reference/cols_apply.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/reference/eff_estimates.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/reference/eff_n.html</loc></url>
 <url><loc>https://vthanik.github.io/tabular/reference/eff_resp.html</loc></url>

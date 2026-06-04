@@ -267,8 +267,10 @@ Table 14.3.1  Adverse Events by System Organ Class and Preferred Term
 ## BigN in the header
 
 Treatment-group denominators belong in the column headers. Pull them
-from the bundled `saf_n` and build the labels with
-[`sprintf()`](https://rdrr.io/r/base/sprintf.html):
+from the bundled `saf_n` and interpolate them into the labels with a
+glue-style `{expr}` template — the expression is evaluated when
+[`cols()`](https://vthanik.github.io/tabular/reference/cols.md) runs, so
+any object in scope (here the named vector `n`) is fair game:
 
 ``` r
 
@@ -278,10 +280,10 @@ tabular(saf_demo) |>
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  n["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  n["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", n["drug_100"]), align = "decimal"),
-    Total      = col_spec(label = sprintf("Total\n(N=%d)",    n["Total"]),    align = "decimal")
+    placebo    = col_spec(label = "Placebo\n(N={n['placebo']})",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50\n(N={n['drug_50']})",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100\n(N={n['drug_100']})", align = "decimal"),
+    Total      = col_spec(label = "Total\n(N={n['Total']})",    align = "decimal")
   )
 ```
 
@@ -308,10 +310,10 @@ base <- tabular(saf_demo) |>
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  n["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  n["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", n["drug_100"]), align = "decimal"),
-    Total      = col_spec(label = sprintf("Total\n(N=%d)",    n["Total"]),    align = "decimal")
+    placebo    = col_spec(label = "Placebo\n(N={n['placebo']})",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50\n(N={n['drug_50']})",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100\n(N={n['drug_100']})", align = "decimal"),
+    Total      = col_spec(label = "Total\n(N={n['Total']})",    align = "decimal")
   )
 
 base |>
@@ -346,11 +348,175 @@ base |>
 > band must be next to each other in the data frame. If `drug_50` and
 > `drug_100` are separated by another column, reorder the data first.
 
+## Column widths and `width_mode`
+
+Width has two layers: a **per-column** pin on `col_spec(width = ...)`,
+and a **table-level** policy on `preset(width_mode = ...)` that decides
+what happens to the columns you did not pin.
+
+A
+[`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
+pin accepts `"auto"` (the engine measures the widest cell), a bare
+number in inches (`width = 1.8`), or a unit string (`"3cm"`, `"30mm"`,
+`"30pt"`, or a percent of the content width like `"25%"`):
+
+``` r
+
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group", width = "2.4in"),
+    stat_label = col_spec(label = "Statistic", width = "1.2in"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  )
+```
+
+| Statistic | Placebo | Drug 100 | Drug 50 | Total |
+|----|----|----|----|----|
+| **Age (years)** |  |  |  |  |
+| n |  86           |  72           |  96           | 254           |
+| Mean (SD) |  75.2 (8.59)  |  73.8 (7.94)  |  76.0 (8.11)  |  75.1 (8.25)  |
+| Median |  76.0         |  75.5         |  78.0         |  77.0         |
+| Q1, Q3 |  69.2, 81.8   |  70.5, 79.0   |  71.0, 82.0   |  70.0, 81.0   |
+| Min, Max |  52  , 89     |  56  , 88     |  51  , 88     |  51  , 89     |
+|   |  |  |  |  |
+| **Age Group, n (%)** |  |  |  |  |
+| 18-64 |  14 (16.3)    |  11 (15.3)    |   8 ( 8.3)    |  33 (13.0)    |
+| \>64 |  72 (83.7)    |  61 (84.7)    |  88 (91.7)    | 221 (87.0)    |
+|   |  |  |  |  |
+| **Sex, n (%)** |  |  |  |  |
+| F |  53 (61.6)    |  35 (48.6)    |  55 (57.3)    | 143 (56.3)    |
+| M |  33 (38.4)    |  37 (51.4)    |  41 (42.7)    | 111 (43.7)    |
+|   |  |  |  |  |
+| **Race, n (%)** |  |  |  |  |
+| WHITE |  78 (90.7)    |  62 (86.1)    |  90 (93.8)    | 230 (90.6)    |
+| BLACK OR AFRICAN AMERICAN |   8 ( 9.3)    |   9 (12.5)    |   6 ( 6.2)    |  23 ( 9.1)    |
+| ASIAN |   0           |   0           |   0           |   0           |
+| AMERICAN INDIAN OR ALASKA NATIVE |   0           |   1 ( 1.4)    |   0           |   1 ( 0.4)    |
+|   |  |  |  |  |
+| **Ethnicity, n (%)** |  |  |  |  |
+| HISPANIC OR LATINO |   3 ( 3.5)    |   3 ( 4.2)    |   6 ( 6.2)    |  12 ( 4.7)    |
+| NOT HISPANIC OR LATINO |  83 (96.5)    |  69 (95.8)    |  90 (93.8)    | 242 (95.3)    |
+| NOT REPORTED |   0           |   0           |   0           |   0           |
+|   |  |  |  |  |
+| **Weight (kg)** |  |  |  |  |
+| n |  86           |  72           |  95           | 253           |
+| Mean (SD) |  62.8 (12.77) |  69.5 (14.35) |  68.0 (14.50) |  66.6 (14.13) |
+| Median |  60.6         |  69.0         |  66.7         |  66.7         |
+| Q1, Q3 |  53.6, 74.2   |  56.9,  80.3  |  56.0,  78.2  |  55.3,  77.1  |
+| Min, Max |  34  , 86     |  44  , 108    |  42  , 106    |  34  , 108    |
+|   |  |  |  |  |
+| **Height (cm)** |  |  |  |  |
+| n |  86           |  72           |  96           | 254           |
+| Mean (SD) | 162.6 (11.52) | 165.9 (10.28) | 163.7 (10.30) | 163.9 (10.76) |
+| Median | 162.6         | 165.1         | 162.6         | 162.8         |
+| Q1, Q3 | 154.0, 171.1  | 157.5, 172.8  | 157.5, 170.2  | 156.2, 171.4  |
+| Min, Max | 137  , 185    | 146  , 190    | 136  , 196    | 136  , 196    |
+|   |  |  |  |  |
+| **BMI (kg/m^2)** |  |  |  |  |
+| n |  86           |  72           |  95           | 253           |
+| Mean (SD) |  23.6 (3.67)  |  25.2 (3.97)  |  25.2 (4.40)  |  24.7 (4.09)  |
+| Median |  23.4         |  24.8         |  24.8         |  24.2         |
+| Q1, Q3 |  21.2, 25.6   |  22.7, 27.6   |  22.3, 28.2   |  21.9, 27.3   |
+| Min, Max |  15  , 33     |  14  , 35     |  15  , 40     |  14  , 40     |
+|   |  |  |  |  |
+| **BMI Category, n (%)** |  |  |  |  |
+| Underweight (\<18.5) |   3 ( 3.5)    |   1 ( 1.4)    |   4 ( 4.2)    |   8 ( 3.1)    |
+| Normal (18.5-24.9) |  57 (66.3)    |  39 (54.2)    |  46 (47.9)    | 142 (55.9)    |
+| Overweight (25-29.9) |  20 (23.3)    |  23 (31.9)    |  32 (33.3)    |  75 (29.5)    |
+| Obese (\>=30) |   6 ( 7.0)    |   9 (12.5)    |  13 (13.5)    |  28 (11.0)    |
+
+`width_mode` governs the columns left on `"auto"`. It mirrors Word’s
+Table Layout menu:
+
+| `width_mode` | Auto columns | Word equivalent |
+|----|----|----|
+| `"content"` *(default)* | sized to `max(body, header)`; table need not fill the page | Auto-fit Contents |
+| `"window"` | expand to share the residual page width equally | Auto-fit Window |
+| `"fixed"` | collapse to a minimum sliver; only pinned widths drive layout | Fixed Column Width |
+
+``` r
+
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
+  ) |>
+  preset(width_mode = "window")   # auto columns fill the page width
+```
+
+| Statistic | Placebo | Drug 100 | Drug 50 | Total |
+|----|----|----|----|----|
+| **Age (years)** |  |  |  |  |
+| n |  86           |  72           |  96           | 254           |
+| Mean (SD) |  75.2 (8.59)  |  73.8 (7.94)  |  76.0 (8.11)  |  75.1 (8.25)  |
+| Median |  76.0         |  75.5         |  78.0         |  77.0         |
+| Q1, Q3 |  69.2, 81.8   |  70.5, 79.0   |  71.0, 82.0   |  70.0, 81.0   |
+| Min, Max |  52  , 89     |  56  , 88     |  51  , 88     |  51  , 89     |
+|   |  |  |  |  |
+| **Age Group, n (%)** |  |  |  |  |
+| 18-64 |  14 (16.3)    |  11 (15.3)    |   8 ( 8.3)    |  33 (13.0)    |
+| \>64 |  72 (83.7)    |  61 (84.7)    |  88 (91.7)    | 221 (87.0)    |
+|   |  |  |  |  |
+| **Sex, n (%)** |  |  |  |  |
+| F |  53 (61.6)    |  35 (48.6)    |  55 (57.3)    | 143 (56.3)    |
+| M |  33 (38.4)    |  37 (51.4)    |  41 (42.7)    | 111 (43.7)    |
+|   |  |  |  |  |
+| **Race, n (%)** |  |  |  |  |
+| WHITE |  78 (90.7)    |  62 (86.1)    |  90 (93.8)    | 230 (90.6)    |
+| BLACK OR AFRICAN AMERICAN |   8 ( 9.3)    |   9 (12.5)    |   6 ( 6.2)    |  23 ( 9.1)    |
+| ASIAN |   0           |   0           |   0           |   0           |
+| AMERICAN INDIAN OR ALASKA NATIVE |   0           |   1 ( 1.4)    |   0           |   1 ( 0.4)    |
+|   |  |  |  |  |
+| **Ethnicity, n (%)** |  |  |  |  |
+| HISPANIC OR LATINO |   3 ( 3.5)    |   3 ( 4.2)    |   6 ( 6.2)    |  12 ( 4.7)    |
+| NOT HISPANIC OR LATINO |  83 (96.5)    |  69 (95.8)    |  90 (93.8)    | 242 (95.3)    |
+| NOT REPORTED |   0           |   0           |   0           |   0           |
+|   |  |  |  |  |
+| **Weight (kg)** |  |  |  |  |
+| n |  86           |  72           |  95           | 253           |
+| Mean (SD) |  62.8 (12.77) |  69.5 (14.35) |  68.0 (14.50) |  66.6 (14.13) |
+| Median |  60.6         |  69.0         |  66.7         |  66.7         |
+| Q1, Q3 |  53.6, 74.2   |  56.9,  80.3  |  56.0,  78.2  |  55.3,  77.1  |
+| Min, Max |  34  , 86     |  44  , 108    |  42  , 106    |  34  , 108    |
+|   |  |  |  |  |
+| **Height (cm)** |  |  |  |  |
+| n |  86           |  72           |  96           | 254           |
+| Mean (SD) | 162.6 (11.52) | 165.9 (10.28) | 163.7 (10.30) | 163.9 (10.76) |
+| Median | 162.6         | 165.1         | 162.6         | 162.8         |
+| Q1, Q3 | 154.0, 171.1  | 157.5, 172.8  | 157.5, 170.2  | 156.2, 171.4  |
+| Min, Max | 137  , 185    | 146  , 190    | 136  , 196    | 136  , 196    |
+|   |  |  |  |  |
+| **BMI (kg/m^2)** |  |  |  |  |
+| n |  86           |  72           |  95           | 253           |
+| Mean (SD) |  23.6 (3.67)  |  25.2 (3.97)  |  25.2 (4.40)  |  24.7 (4.09)  |
+| Median |  23.4         |  24.8         |  24.8         |  24.2         |
+| Q1, Q3 |  21.2, 25.6   |  22.7, 27.6   |  22.3, 28.2   |  21.9, 27.3   |
+| Min, Max |  15  , 33     |  14  , 35     |  15  , 40     |  14  , 40     |
+|   |  |  |  |  |
+| **BMI Category, n (%)** |  |  |  |  |
+| Underweight (\<18.5) |   3 ( 3.5)    |   1 ( 1.4)    |   4 ( 4.2)    |   8 ( 3.1)    |
+| Normal (18.5-24.9) |  57 (66.3)    |  39 (54.2)    |  46 (47.9)    | 142 (55.9)    |
+| Overweight (25-29.9) |  20 (23.3)    |  23 (31.9)    |  32 (33.3)    |  75 (29.5)    |
+| Obese (\>=30) |   6 ( 7.0)    |   9 (12.5)    |  13 (13.5)    |  28 (11.0)    |
+
+> **`width_mode` drives the paper backends, not HTML**
+>
+> `width_mode` shapes the **RTF, PDF, LaTeX, and DOCX** layouts. HTML is
+> unconditionally responsive — the table always fills its parent and the
+> columns wrap as the viewport narrows — so the preview above looks the
+> same whatever `width_mode` you pick. Per-column `width` pins still
+> emit verbatim into the HTML colgroup. Eyeball widths by emitting to a
+> paper backend.
+
 ## Going deeper
 
-- **Widths.** `width = "auto"` lets the engine size the column to its
-  content. Pass a number for inches (`width = 1.8`) or a unit string
-  (`width = "3cm"`) to fix it.
 - **Formatters.** `format` accepts a function applied to the column’s
   values before rendering — handy when the upstream data is numeric and
   you want display rounding at render time.

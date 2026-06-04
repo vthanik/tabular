@@ -11,7 +11,7 @@ canonical submission page-layout convention.
 ## Usage
 
 ``` r
-subgroup(.spec, by, label = NULL)
+subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\n(N={n})")
 ```
 
 ## Arguments
@@ -46,6 +46,57 @@ subgroup(.spec, by, label = NULL)
   **Restriction:** Every `{col}` reference must be a column in
   `spec@data`. Unknown columns raise
   `tabular_error_subgroup_template_unknown_col`.
+
+- big_n:
+
+  *Per-page BigN denominators.* `<data.frame> | NULL: default NULL`. A
+  table giving the `(N=x)` denominator each arm's header should show on
+  each subgroup page. Each arm is named as it appears in the header —
+  either a data column (the N rides that column's leaf label) **or** a
+  [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
+  band label (the N rides that spanner band). Ns are non-negative whole
+  numbers; provide one per `by` combination present in the data. Accepts
+  **either** shape:
+
+  - **Wide** — the `by` column(s) plus one numeric column per arm (cells
+    are the Ns).
+
+  - **Long** — the `by` column(s) plus one arm-name column and one
+    numeric N column, i.e. `dplyr::count()` / `summarise()` output used
+    directly with no reshaping.
+
+      # Wide: one column per arm.
+      wide <- data.frame(
+        sex     = factor(c("F", "M")),
+        placebo = c(24L, 18L), drug_50 = c(9L, 15L), Total = c(42L, 47L)
+      )
+      # Long: count()-style, pivoted internally. Equivalent to `wide`.
+      long <- data.frame(
+        sex  = factor(rep(c("F", "M"), each = 3)),
+        arm  = rep(c("placebo", "drug_50", "Total"), 2),
+        n    = c(24L, 9L, 42L, 18L, 15L, 47L)
+      )
+      spec |> subgroup(by = "sex", big_n = long)
+
+  **Requirement:** band keying needs
+  [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
+  **before** `subgroup()` in the pipeline; each arm name must resolve to
+  exactly one leaf XOR one band. Every missing per-page N is a call-time
+  error, never a silently wrong denominator.
+
+  **Note:** the per-arm N renders in every backend. The paged backends
+  (RTF, PDF / LaTeX, DOCX) carry it on the column header that repeats on
+  every page of the subgroup. HTML and Markdown are continuous (one
+  stacked table, one header), so they instead emit a per-arm N row
+  directly under each subgroup banner, the `(N=x)` aligned beneath its
+  arm column.
+
+- big_n_fmt:
+
+  *Per-page BigN template.* `<character(1)>: default "\n(N={n})"`.
+  Appended to each arm's header label, with `{n}` substituted by that
+  page/column's integer N. Only the `{n}` token is allowed; the default
+  puts the N on its own line under the arm name.
 
 ## Value
 
