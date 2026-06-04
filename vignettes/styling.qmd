@@ -223,7 +223,7 @@ Here the `^a^` marker and its note are hand-typed and kept in sync by
 you. When you want the marker assigned and placed *automatically* —
 deduped across cells, byte-identical across backends — use [`footnote()`]
 instead (see the *Auto-numbered footnotes* recipe in the
-[clinical cookbook](articles/clinical-cookbook.html)).
+[clinical cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)).
 
 ## Verbatim whitespace
 
@@ -261,7 +261,7 @@ per-table `style()` overrides just what it names.
 
 ## Where to next
 
-- **[Clinical cookbook](clinical-cookbook.html)** — these tools applied
+- **[Clinical cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)** — these tools applied
   to six complete production tables.
-- **[Fonts & fidelity](fonts-and-fidelity.html)** — fonts, decimal
+- **[Fonts & fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.html)** — fonts, decimal
   alignment, and why the print backends are the source of truth.

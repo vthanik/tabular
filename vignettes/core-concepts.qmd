@@ -162,4 +162,4 @@ With the model in hand, the rest of the guide fills in the options:
 - **[Rows, grouping & pagination](rows-grouping-pagination.html)** — row
   order, groups, and page splits.
 - **[Styling](styling.html)** — `style()`, presets, and house styles.
-- **[Architecture](architecture.html)** — the engine phases in depth.
+- **[Architecture](https://vthanik.github.io/tabular/articles/architecture.html)** — the engine phases in depth.

@@ -171,7 +171,7 @@ The live HTML above is a faithful *preview*. The artefact you ship is the
 paginated RTF, PDF, or DOCX — same spec, same numbers, but laid out for
 the page with repeated headers, footnotes, and the four-section
 submission layout. See
-[Fonts & fidelity](fonts-and-fidelity.html) for why the print backends
+[Fonts & fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.html) for why the print backends
 are the source of truth.
 :::
 
@@ -185,5 +185,5 @@ are the source of truth.
 - **[Rows, grouping & pagination](rows-grouping-pagination.html)** — sort
   order, section groups, subgroups, and page splits.
 - **[Styling](styling.html)** — `style()`, presets, and house styles.
-- **[Clinical cookbook](clinical-cookbook.html)** — six complete
+- **[Clinical cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)** — six complete
   production tables end to end.

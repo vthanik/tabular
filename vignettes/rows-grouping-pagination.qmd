@@ -180,5 +180,5 @@ to a paginated backend to see the splits.
 
 - **[Styling](styling.html)** — target rows, groups, and subgroup banners
   with `style()`.
-- **[Clinical cookbook](clinical-cookbook.html)** — full AE-by-SOC/PT and
+- **[Clinical cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)** — full AE-by-SOC/PT and
   subgrouped vitals tables, sorted and paginated end to end.
