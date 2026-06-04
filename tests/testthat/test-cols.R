@@ -278,6 +278,33 @@ test_that("cols_apply() rejects a predicate returning wrong length (#E1)", {
   )
 })
 
+test_that("cols_apply() merges valign/group_display/width onto an existing spec (#review)", {
+  # .merge_col_spec previously copied only 9 of col_spec's fields, silently
+  # dropping valign / group_display / group_skip / width_user on merge, so
+  # cols_apply()'s 'non-default field overrides' contract failed for them.
+  s <- mk_arms_spec() |>
+    cols(ARM_A = col_spec(label = "Arm A")) |>
+    cols_apply(
+      "ARM_A",
+      col_spec(valign = "top", group_display = "column", width = "40%")
+    )
+  expect_identical(s@cols$ARM_A@label, "Arm A") # existing kept
+  expect_identical(s@cols$ARM_A@valign, "top") # override applied
+  expect_identical(s@cols$ARM_A@group_display, "column")
+  expect_identical(s@cols$ARM_A@width, "40%")
+  # width_user must track width so the HTML percent-width path stays right.
+  expect_identical(s@cols$ARM_A@width_user, "40%")
+})
+
+test_that("cols_apply() warns and no-ops when a predicate matches nothing (#review)", {
+  expect_warning(
+    s <- mk_arms_spec() |>
+      cols_apply(\(nm) startsWith(nm, "ZZZ"), col_spec(align = "decimal")),
+    "matched no columns"
+  )
+  expect_length(s@cols, 0L)
+})
+
 # E2: cols(.default = ) ----------------------------------------------
 
 test_that("cols(.default=) applies to unmentioned columns (#E2)", {

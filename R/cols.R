@@ -322,11 +322,7 @@ cols <- function(.spec, ..., .default = NULL) {
   for (i in seq_along(args)) {
     nm <- arg_names[[i]]
     incoming <- S7::set_props(args[[i]], name = nm)
-    if (nm %in% names(new_cols)) {
-      new_cols[[nm]] <- .merge_col_spec(new_cols[[nm]], incoming)
-    } else {
-      new_cols[[nm]] <- incoming
-    }
+    new_cols <- .set_col_spec(new_cols, nm, incoming)
   }
 
   # `.default` fills every data column not named in `...` and not
@@ -468,15 +464,21 @@ cols_apply <- function(.spec, .cols, .col_spec) {
 
   data_cols <- names(.spec@data)
   matched <- .resolve_col_selection(.cols, data_cols, call = call)
+  if (length(matched) == 0L) {
+    cli::cli_warn(
+      c(
+        "{.fn cols_apply} matched no columns; the spec was not applied.",
+        "i" = "Check {.arg .cols} against the data columns: {.val {data_cols}}."
+      ),
+      call = call
+    )
+    return(.spec)
+  }
 
   new_cols <- .spec@cols
   for (nm in matched) {
     incoming <- S7::set_props(col_spec_arg, name = nm)
-    if (nm %in% names(new_cols)) {
-      new_cols[[nm]] <- .merge_col_spec(new_cols[[nm]], incoming)
-    } else {
-      new_cols[[nm]] <- incoming
-    }
+    new_cols <- .set_col_spec(new_cols, nm, incoming)
   }
 
   S7::set_props(.spec, cols = new_cols)
@@ -534,6 +536,18 @@ cols_apply <- function(.spec, .cols, .col_spec) {
   )
 }
 
+# Field-merge `incoming` onto the spec already stored under `nm`, or
+# assign it fresh when `nm` has none. Shared by `cols()` and
+# `cols_apply()` so the merge / assign rule lives in one place.
+.set_col_spec <- function(new_cols, nm, incoming) {
+  if (nm %in% names(new_cols)) {
+    new_cols[[nm]] <- .merge_col_spec(new_cols[[nm]], incoming)
+  } else {
+    new_cols[[nm]] <- incoming
+  }
+  new_cols
+}
+
 # Merge `new` into `existing` field-by-field. A non-default value in
 # `new` overrides the corresponding field in `existing`; a default
 # (NA / NULL / "") leaves the existing field unchanged. Defaults map
@@ -555,10 +569,21 @@ cols_apply <- function(.spec, .cols, .col_spec) {
     out <- S7::set_props(out, visible = new@visible)
   }
   if (!is.na(new@width)) {
-    out <- S7::set_props(out, width = new@width)
+    # `width_user` is the immutable snapshot of the user width; keep it in
+    # lockstep with `width` so the HTML percent-width path stays correct.
+    out <- S7::set_props(out, width = new@width, width_user = new@width_user)
   }
   if (!is.na(new@align)) {
     out <- S7::set_props(out, align = new@align)
+  }
+  if (!is.na(new@valign)) {
+    out <- S7::set_props(out, valign = new@valign)
+  }
+  if (!identical(new@group_display, "header_row")) {
+    out <- S7::set_props(out, group_display = new@group_display)
+  }
+  if (!is.na(new@group_skip)) {
+    out <- S7::set_props(out, group_skip = new@group_skip)
   }
   if (!is.na(new@na_text)) {
     out <- S7::set_props(out, na_text = new@na_text)

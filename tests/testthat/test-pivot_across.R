@@ -1205,3 +1205,75 @@ test_that("pivot_across keeps tabulate-context categorical rows (B1)", {
   # filtered out.
   expect_false("TRT01A" %in% out$variable)
 })
+
+test_that("pivot_across keeps the Total column for tabulate categoricals (B1)", {
+  # Regression for the over-broad is_by_var_selfrow mask: a genuine
+  # categorical variable's pooled/overall row (NA arm, tabulate context)
+  # is the one `overall =` relabels to "Total". The old structural mask
+  # `ctx == "tabulate" & is.na(arm)` dropped it, blanking the Total column
+  # for every categorical variable. The by-variable self-row is removed by
+  # NAME (variable == column) instead, leaving genuine Total rows intact.
+  card_st <- saf_demo_card
+  card_st$context[card_st$context == "continuous"] <- "summary"
+  card_st$context[card_st$context == "categorical"] <- "tabulate"
+
+  out <- pivot_across(
+    card_st,
+    statistic = list(
+      summary = "{mean} ({sd})",
+      tabulate = "{n} ({p}%)"
+    )
+  )
+
+  # The pooled denominator column survives for a tabulate categorical.
+  expect_true("Total" %in% names(out))
+  sex_rows <- out[out$variable == "SEX", , drop = FALSE]
+  expect_true(all(nzchar(trimws(sex_rows$Total))))
+  # A continuous (summary) variable's Total is populated too (control).
+  age_rows <- out[out$variable == "AGE", , drop = FALSE]
+  expect_true(all(nzchar(trimws(age_rows$Total))))
+})
+
+test_that("pivot_across renders an arm-less tabulate ARD without aborting (B1)", {
+  # Corollary of the same over-broad mask: a single-population ard_tabulate
+  # ARD (no treatment split, every arm NA) had ALL rows match the mask and
+  # errored with "No displayable rows remain". With no grouping column
+  # (Shape C) the rows must be kept and pooled under `overall`.
+  card <- saf_demo_card[
+    saf_demo_card$context == "categorical",
+    ,
+    drop = FALSE
+  ]
+  # Drop the grouping dimension entirely so every row is single-population.
+  card$group1 <- NULL
+  card$group1_level <- NULL
+  card$context <- "tabulate"
+
+  out <- pivot_across(card, statistic = list(tabulate = "{n} ({p}%)"))
+  expect_true(nrow(out) > 0L)
+  expect_true("SEX" %in% out$variable)
+})
+
+test_that(".normalise_shape_d normalises a list-column arm to NA, not 'NULL' (B1)", {
+  # Shape D (no `variable` column) reconstructs the ARD and previously used
+  # as.character() on the arm column, stringifying a cards list-column NULL
+  # element (the pooled / self row) to the literal "NULL". It must use
+  # .normalise_ard_chr like the shape-B path, yielding NA.
+  data <- data.frame(
+    context = c("categorical", "categorical", "categorical"),
+    stat_name = c("n", "n", "n"),
+    stat_label = c("F", "M", "F"),
+    stat = c(53, 33, NA_real_),
+    stringsAsFactors = FALSE
+  )
+  data$SEX <- c("F", "M", "F")
+  data$TRT <- I(list("Placebo", "Placebo", NULL))
+
+  res <- tabular:::.normalise_shape_d(
+    data,
+    column = "TRT",
+    call = rlang::current_env()
+  )
+  expect_identical(res$df$arm, c("Placebo", "Placebo", NA))
+  expect_false(any(res$df$arm %in% "NULL"))
+})

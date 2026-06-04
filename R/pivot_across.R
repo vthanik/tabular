@@ -820,7 +820,10 @@ pivot_across <- function(
     call = call
   )
   df <- reconstructed$df
-  df$arm <- as.character(df[[reconstructed$column]])
+  # Canonical list-col normaliser, not as.character(): a cards list-column
+  # with NULL elements would otherwise stringify to the literal "NULL"
+  # instead of NA (mirrors `.normalise_shape_b_or_c`).
+  df$arm <- .normalise_ard_chr(df[[reconstructed$column]])
   df$stat_val <- .normalise_ard_num(df$stat)
   df$stat_chr <- .normalise_ard_chr(df$stat)
   df$var_level <- .normalise_ard_chr(df$variable_level)
@@ -1047,18 +1050,17 @@ pivot_across <- function(
     rep(FALSE, nrow(df))
   }
   # The `.by` by-variable's own ungrouped tabulation row. `ard_stack(.by =
-  # ARM)` injects an `ard_tabulate(ARM)` row carrying `context ==
-  # "tabulate"`; treating every "tabulate" row as internal (the old
-  # behaviour) would also drop genuine `ard_tabulate()` categorical
-  # variables (e.g. SEX). A by-variable self-row is identifiable
-  # structurally: it is a tabulate-context row with no treatment-arm
-  # assignment (`arm` is NA), because it tabulates the grouping variable
-  # itself rather than an analysis variable within an arm. Genuine
-  # categorical variables produced by `ard_stack(.by = ...)` always carry a
-  # non-NA arm; their pooled / overall rows (NA arm) use the continuous or
-  # categorical context, not tabulate.
-  is_by_var_selfrow <- df$ctx %in% "tabulate" & is.na(df$arm)
-  keep <- !(is_dot_var | is_internal_ctx | is_column_var | is_by_var_selfrow)
+  # ARM)` injects an `ard_tabulate(ARM)` row whose `variable` IS the
+  # grouping variable (e.g. "ARM" / "TRT01A") and whose context is
+  # "tabulate". That row is already removed by `is_column_var` above: the
+  # resolved `column` is the grouping variable's name, so `variable ==
+  # column` drops the self-row by NAME. We must NOT additionally drop every
+  # NA-arm tabulate row: a genuine `ard_tabulate()` categorical variable
+  # (SEX, RACE, ...) carries its pooled / overall row (the one a later
+  # `overall =` relabels to "Total") with NA arm and the SAME tabulate
+  # context, so a blanket structural mask would blank the entire Total
+  # column for every categorical variable.
+  keep <- !(is_dot_var | is_internal_ctx | is_column_var)
   df[keep, , drop = FALSE]
 }
 
@@ -1845,7 +1847,8 @@ pivot_across <- function(
   # Internal contexts to filter out. `tabulate` is NOT here: it is a
   # genuine categorical context from `cards::ard_tabulate()`. The
   # `.by` by-variable's own tabulation row is dropped by VARIABLE NAME
-  # in `.filter_internal_rows()`, not by blanket context.
+  # (`variable == column`, via `is_column_var` in
+  # `.filter_internal_rows()`), not by blanket context.
   internal_contexts = c("attributes", "total_n"),
 
   # stat_name values that hold character values (not numeric).

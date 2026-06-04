@@ -427,7 +427,18 @@ emit <- function(
   parent <- dirname(file)
   if (!dir.exists(parent)) {
     if (isTRUE(create_dir)) {
-      dir.create(parent, recursive = TRUE, showWarnings = FALSE)
+      ok <- dir.create(parent, recursive = TRUE, showWarnings = FALSE)
+      if (!ok && !dir.exists(parent)) {
+        cli::cli_abort(
+          c(
+            "Could not create the parent directory of {.arg file}.",
+            "x" = "Failed to create: {.path {parent}}.",
+            "i" = "Check write permissions and that no file blocks the path."
+          ),
+          class = "tabular_error_runtime",
+          call = call
+        )
+      }
     } else {
       cli::cli_abort(
         c(
