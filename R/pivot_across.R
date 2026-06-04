@@ -387,33 +387,27 @@
 #'     )
 #'   )
 #'
-#' # ---- Example 5: Mixed ard_stack() keyed by summary / tabulate ----
+#' # ---- Example 5: ARD keyed by summary / tabulate contexts ----
 #' #
-#' # A `cards::ard_stack(.by = ARM, ard_summary(), ard_tabulate())` ARD
-#' # carries `context` values of `"summary"` and `"tabulate"` (not
-#' # `"continuous"` / `"categorical"`), so the `statistic` list is keyed
-#' # to match. The `.by` by-variable's own row is dropped automatically;
-#' # both the continuous and the categorical variable survive.
-#' if (requireNamespace("cards", quietly = TRUE)) {
-#'   demo <- data.frame(
-#'     ARM = rep(c("Placebo", "Active"), each = 30L),
-#'     AGE = round(rnorm(60L, 65, 9)),
-#'     SEX = rep(c("F", "M"), 30L)
+#' # The `statistic` list names must match the ARD's `context` column
+#' # verbatim. `cards::ard_summary()` / `ard_tabulate()` emit `"summary"` /
+#' # `"tabulate"` (not the `"continuous"` / `"categorical"` of
+#' # `ard_continuous()` / `ard_categorical()`), so a list keyed
+#' # `continuous`/`categorical` would silently match nothing. Always check
+#' # `unique(ard$context)` first. Here the bundled `saf_demo_card` is
+#' # relabelled to mimic `ard_summary()` + `ard_tabulate()` output; the
+#' # by-variable's own row drops automatically and both the summary and
+#' # the tabulate variables survive.
+#' card_st <- saf_demo_card
+#' card_st$context[card_st$context == "continuous"] <- "summary"
+#' card_st$context[card_st$context == "categorical"] <- "tabulate"
+#' pivot_across(
+#'   card_st,
+#'   statistic = list(
+#'     summary  = "{mean} ({sd})",
+#'     tabulate = "{n} ({p}%)"
 #'   )
-#'   ard_mixed <- cards::ard_stack(
-#'     demo,
-#'     .by = ARM,
-#'     cards::ard_summary(variables = AGE),
-#'     cards::ard_tabulate(variables = SEX)
-#'   )
-#'   pivot_across(
-#'     ard_mixed,
-#'     statistic = list(
-#'       summary  = "{mean} ({sd})",
-#'       tabulate = "{n} ({p}%)"
-#'     )
-#'   )
-#' }
+#' )
 #'
 #' @seealso
 #' **Pipeline entry consumer:** [`tabular()`] — wraps the wide data

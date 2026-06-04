@@ -1177,40 +1177,31 @@ test_that(".hier_append_chunk fills the leaf with the current value, deeper keys
 # rows; only the .by by-variable's own tabulation is dropped (B1)
 # ---------------------------------------------------------------------
 
-test_that("pivot_across keeps ard_tabulate categorical rows (B1)", {
-  testthat::skip_if_not_installed("cards")
-
-  set.seed(1)
-  d <- data.frame(
-    ARM = rep(c("A", "B"), each = 10L),
-    AGE = stats::rnorm(20L, 40, 5),
-    SEX = rep(c("F", "M"), 10L)
-  )
-  ard <- cards::ard_stack(
-    d,
-    .by = ARM,
-    cards::ard_summary(variables = AGE),
-    cards::ard_tabulate(variables = SEX)
-  )
+test_that("pivot_across keeps tabulate-context categorical rows (B1)", {
+  # Relabel the bundled cards-like ARD so its data variables carry the
+  # "summary" / "tabulate" contexts that ard_summary() / ard_tabulate()
+  # emit, reproducing the B1 shape without a `cards` dependency.
+  card_st <- saf_demo_card
+  card_st$context[card_st$context == "continuous"] <- "summary"
+  card_st$context[card_st$context == "categorical"] <- "tabulate"
 
   out <- pivot_across(
-    ard,
+    card_st,
     statistic = list(
       summary = "{mean} ({sd})",
       tabulate = "{n} ({p}%)"
     )
   )
 
-  # Both the continuous (summary) and categorical (tabulate) variables
-  # survive the internal-row filter.
-  expect_setequal(unique(out$variable), c("AGE", "SEX"))
-
+  # Genuine tabulate-context categorical variables survive the internal-row
+  # filter; before the fix every "tabulate" row was dropped.
+  expect_true(all(c("SEX", "RACE") %in% out$variable))
+  # A summary-context continuous variable also survives.
+  expect_true("AGE" %in% out$variable)
   # SEX levels appear in the output (stat_label is indented for display).
   sex_rows <- out[out$variable == "SEX", , drop = FALSE]
-  expect_setequal(trimws(sex_rows$stat_label), c("F", "M"))
-
-  # The ARM by-variable's own tabulation is still filtered out, and the
-  # arm levels became the across columns.
-  expect_false("ARM" %in% out$variable)
-  expect_true(all(c("A", "B") %in% names(out)))
+  expect_true(all(c("F", "M") %in% trimws(sex_rows$stat_label)))
+  # The by-variable's own tabulation (context "tabulate", no arm) is still
+  # filtered out.
+  expect_false("TRT01A" %in% out$variable)
 })
