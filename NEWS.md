@@ -1,3 +1,8 @@
+# tabular (development version)
+
+* `cols_apply()` applies one `col_spec()` to many columns selected by name or predicate (#E1).
+* `cols(.default=)` sets a fallback `col_spec()` for unmentioned columns (#E2).
+
 # tabular 0.1.0
 
 First release.

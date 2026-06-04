@@ -4,7 +4,7 @@
 \alias{cols}
 \title{Attach per-column specifications}
 \usage{
-cols(.spec, ...)
+cols(.spec, ..., .default = NULL)
 }
 \arguments{
 \item{.spec}{\emph{The \code{tabular_spec} to extend.}
@@ -23,6 +23,27 @@ existing column — pre-compute derived columns upstream with
 call (duplicates warn; "last value wins").
 \strong{Tip:} To override an attribute already declared, use a
 second \code{cols()} call downstream and let the merge rule apply.}
+
+\item{.default}{\emph{Fallback \code{col_spec} for unmentioned columns.}
+\verb{<col_spec | NULL>: default NULL}. When a \code{col_spec}, it is
+field-merged onto every data column that is NOT named in \code{...}
+and does not already carry a spec from an earlier \code{cols()} call.
+\code{NULL} (default) leaves unmentioned columns to the engine-time
+default. Use it to set one alignment / format across a variable
+number of arm columns in a single call.
+
+\strong{Interaction:} Explicit \code{...} specs always win — \code{.default}
+only fills the gaps. A column carried over from a prior \code{cols()}
+call is treated as already specified and is left untouched.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Decimal-align every arm column without listing each by name.
+tabular(saf_demo) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Parameter"),
+    stat_label = col_spec(label = "Statistic"),
+    .default   = col_spec(align = "decimal")
+  )
+}\if{html}{\out{</div>}}}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with
