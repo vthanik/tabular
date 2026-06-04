@@ -48,9 +48,23 @@ pivot_across(
 
 \subsection{Form 2: named list by context}{
 
-Different formats for continuous vs categorical contexts. This
-is the typical clinical-table form because demographics mix
-the two.
+Different formats per context. This is the typical clinical-table
+form because demographics mix continuous and categorical
+variables.
+
+\strong{The list names must match the values in the ARD's \code{context}
+column verbatim.} Which strings appear there depends on how the
+ARD was built:
+\itemize{
+\item \code{cards::ard_continuous()} / \code{ard_categorical()} emit
+\code{"continuous"} / \code{"categorical"}.
+\item \code{cards::ard_summary()} / \code{ard_tabulate()} emit \code{"summary"} /
+\code{"tabulate"}.
+}
+
+So an ARD assembled with \code{ard_stack(ard_summary(...), ard_tabulate(...))} is keyed \code{summary} / \code{tabulate}, not
+\code{continuous} / \code{categorical}. Inspect \code{unique(ard$context)} when
+unsure.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# AGE (continuous) -> "75.2 (8.59)"; SEX (categorical) -> "53 (62\%)"
 pivot_across(
@@ -369,6 +383,34 @@ saf_demo_card |>
       BMI    = "BMI (kg/m^2)"
     )
   )
+
+# ---- Example 5: Mixed ard_stack() keyed by summary / tabulate ----
+#
+# A `cards::ard_stack(.by = ARM, ard_summary(), ard_tabulate())` ARD
+# carries `context` values of `"summary"` and `"tabulate"` (not
+# `"continuous"` / `"categorical"`), so the `statistic` list is keyed
+# to match. The `.by` by-variable's own row is dropped automatically;
+# both the continuous and the categorical variable survive.
+if (requireNamespace("cards", quietly = TRUE)) {
+  demo <- data.frame(
+    ARM = rep(c("Placebo", "Active"), each = 30L),
+    AGE = round(rnorm(60L, 65, 9)),
+    SEX = rep(c("F", "M"), 30L)
+  )
+  ard_mixed <- cards::ard_stack(
+    demo,
+    .by = ARM,
+    cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = SEX)
+  )
+  pivot_across(
+    ard_mixed,
+    statistic = list(
+      summary  = "{mean} ({sd})",
+      tabulate = "{n} ({p}\%)"
+    )
+  )
+}
 
 }
 \seealso{

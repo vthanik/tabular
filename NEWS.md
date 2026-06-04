@@ -1,3 +1,7 @@
+# tabular (development version)
+
+* `pivot_across()` no longer drops `ard_tabulate()` categorical rows from a mixed `ard_stack()` ARD (#B1).
+
 # tabular 0.1.0
 
 First release.

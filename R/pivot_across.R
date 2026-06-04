@@ -68,9 +68,23 @@
 #'
 #'   ## Form 2: named list by context
 #'
-#'   Different formats for continuous vs categorical contexts. This
-#'   is the typical clinical-table form because demographics mix
-#'   the two.
+#'   Different formats per context. This is the typical clinical-table
+#'   form because demographics mix continuous and categorical
+#'   variables.
+#'
+#'   **The list names must match the values in the ARD's `context`
+#'   column verbatim.** Which strings appear there depends on how the
+#'   ARD was built:
+#'
+#'   - `cards::ard_continuous()` / `ard_categorical()` emit
+#'     `"continuous"` / `"categorical"`.
+#'   - `cards::ard_summary()` / `ard_tabulate()` emit `"summary"` /
+#'     `"tabulate"`.
+#'
+#'   So an ARD assembled with `ard_stack(ard_summary(...),
+#'   ard_tabulate(...))` is keyed `summary` / `tabulate`, not
+#'   `continuous` / `categorical`. Inspect `unique(ard$context)` when
+#'   unsure.
 #'
 #'   ```r
 #'   # AGE (continuous) -> "75.2 (8.59)"; SEX (categorical) -> "53 (62%)"
@@ -372,6 +386,34 @@
 #'       BMI    = "BMI (kg/m^2)"
 #'     )
 #'   )
+#'
+#' # ---- Example 5: Mixed ard_stack() keyed by summary / tabulate ----
+#' #
+#' # A `cards::ard_stack(.by = ARM, ard_summary(), ard_tabulate())` ARD
+#' # carries `context` values of `"summary"` and `"tabulate"` (not
+#' # `"continuous"` / `"categorical"`), so the `statistic` list is keyed
+#' # to match. The `.by` by-variable's own row is dropped automatically;
+#' # both the continuous and the categorical variable survive.
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   demo <- data.frame(
+#'     ARM = rep(c("Placebo", "Active"), each = 30L),
+#'     AGE = round(rnorm(60L, 65, 9)),
+#'     SEX = rep(c("F", "M"), 30L)
+#'   )
+#'   ard_mixed <- cards::ard_stack(
+#'     demo,
+#'     .by = ARM,
+#'     cards::ard_summary(variables = AGE),
+#'     cards::ard_tabulate(variables = SEX)
+#'   )
+#'   pivot_across(
+#'     ard_mixed,
+#'     statistic = list(
+#'       summary  = "{mean} ({sd})",
+#'       tabulate = "{n} ({p}%)"
+#'     )
+#'   )
+#' }
 #'
 #' @seealso
 #' **Pipeline entry consumer:** [`tabular()`] — wraps the wide data
@@ -761,7 +803,10 @@ pivot_across <- function(
 
   arm_info <- .detect_renamed_arm(df, column = column, call = call)
   if (!is.null(arm_info)) {
-    df$arm <- as.character(df[[arm_info$col_name]])
+    # Use the canonical list-col normaliser, not as.character(): a cards
+    # list-column with NULL elements (the by-variable's own ungrouped row)
+    # would otherwise stringify to the literal "NULL" instead of NA.
+    df$arm <- .normalise_ard_chr(df[[arm_info$col_name]])
     return(list(
       df = df,
       column = arm_info$col_name,
@@ -1007,7 +1052,19 @@ pivot_across <- function(
   } else {
     rep(FALSE, nrow(df))
   }
-  keep <- !(is_dot_var | is_internal_ctx | is_column_var)
+  # The `.by` by-variable's own ungrouped tabulation row. `ard_stack(.by =
+  # ARM)` injects an `ard_tabulate(ARM)` row carrying `context ==
+  # "tabulate"`; treating every "tabulate" row as internal (the old
+  # behaviour) would also drop genuine `ard_tabulate()` categorical
+  # variables (e.g. SEX). A by-variable self-row is identifiable
+  # structurally: it is a tabulate-context row with no treatment-arm
+  # assignment (`arm` is NA), because it tabulates the grouping variable
+  # itself rather than an analysis variable within an arm. Genuine
+  # categorical variables produced by `ard_stack(.by = ...)` always carry a
+  # non-NA arm; their pooled / overall rows (NA arm) use the continuous or
+  # categorical context, not tabulate.
+  is_by_var_selfrow <- df$ctx %in% "tabulate" & is.na(df$arm)
+  keep <- !(is_dot_var | is_internal_ctx | is_column_var | is_by_var_selfrow)
   df[keep, , drop = FALSE]
 }
 
@@ -1791,8 +1848,11 @@ pivot_across <- function(
   # Sentinels that represent real display rows; never filter.
   keep_sentinels = c("..ard_hierarchical_overall.."),
 
-  # Internal contexts to filter out.
-  internal_contexts = c("tabulate", "attributes", "total_n"),
+  # Internal contexts to filter out. `tabulate` is NOT here: it is a
+  # genuine categorical context from `cards::ard_tabulate()`. The
+  # `.by` by-variable's own tabulation row is dropped by VARIABLE NAME
+  # in `.filter_internal_rows()`, not by blanket context.
+  internal_contexts = c("attributes", "total_n"),
 
   # stat_name values that hold character values (not numeric).
   char_stat_names = c("method", "alternative", "label", "class", "conf.type"),

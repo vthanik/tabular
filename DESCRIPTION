@@ -30,6 +30,7 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     withr,
+    cards,
     digest,
     ggplot2,
     htmltools,
