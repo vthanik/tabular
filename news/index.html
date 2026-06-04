@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,62 +48,34 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.0.9000" id="tabular-0009000">tabular 0.0.0.9000<a class="anchor" aria-label="anchor" href="#tabular-0009000"></a></h2>
-<ul><li>Initial development. Public surface (verb signatures, S7 class shapes, error contracts) will churn until v0.1.0. This file is rewritten at first tagged release; see <code>git log</code> for live change history in the interim.</li>
-</ul><div class="section level3">
-<h3 id="auto-numbered-footnotes-0-0-0-9000">Auto-numbered footnotes<a class="anchor" aria-label="anchor" href="#auto-numbered-footnotes-0-0-0-9000"></a></h3>
+<h2 class="pkg-version" data-toc-text="0.1.0" id="tabular-010">tabular 0.1.0<a class="anchor" aria-label="anchor" href="#tabular-010"></a></h2>
+<p>First release.</p>
+<p><code>tabular</code> renders pre-summarised clinical tables, listings, and figures to RTF, LaTeX, HTML, PDF, and DOCX from one immutable verb pipeline, with no external Java or SAS dependency.</p>
+<div class="section level3">
+<h3 id="build-pipeline-0-1-0">Build pipeline<a class="anchor" aria-label="anchor" href="#build-pipeline-0-1-0"></a></h3>
 <ul><li>
-<code>footnote(spec, text, .at = cells_*())</code> attaches an auto-numbered footnote to any cell, column header, or title line. The resolve engine assigns each marker once, in reading order (titles, then headers, then body), deduped by <code>id</code>, and the marker is allocated after decimal alignment so it never disturbs a column. The result is byte-identical across every backend (RTF / LaTeX / PDF / HTML / DOCX) and every page. Pass <code>id</code> to share one marker across anchors, or <code>symbol</code> to pin an explicit glyph.</li>
+<code><a href="../reference/tabular.html">tabular()</a></code> takes a pre-summarised wide data frame (one input row is one display row) plus multi-line <code>titles</code> and <code>footnotes</code>.</li>
 <li>
-<code>preset(footnote_markers = ...)</code> chooses the marker scheme: <code>"letters"</code> (default, bijective base-26), <code>"numbers"</code>, or <code>"symbols"</code> (Lamport’s <code>* † ‡ § ¶ ‖</code>, doubled on spill). <code>preset(footnote_label = ...)</code> sets the block-line template (default <code>"{m}"</code>; the <code>{m}</code> token is replaced by the allocated marker).</li>
-<li>A footnote anchored only to hidden columns (<code>col_spec(visible = FALSE)</code>) now warns and is dropped, so a block line is never orphaned without an on-page marker.</li>
-</ul></div>
-<div class="section level3">
-<h3 id="verbatim-whitespace-0-0-0-9000">Verbatim whitespace<a class="anchor" aria-label="anchor" href="#verbatim-whitespace-0-0-0-9000"></a></h3>
-<ul><li>
-<code>preset(whitespace = "preserve")</code> (the default) keeps significant ASCII spaces in labels and cells across every backend: leading, trailing, and interior runs of two or more spaces become the backend’s non-breaking token (<code>&amp;nbsp;</code> / <code>~</code> / <code>\~</code>; DOCX uses <code>xml:space</code>), so a hand-built indent renders verbatim. A single interior space stays breakable, so cells still wrap. Decimal-alignment padding (U+00A0) is preserved unconditionally and is unaffected. <code>preset(whitespace = "collapse")</code> restores the backends’ native run-folding.</li>
-</ul></div>
-<div class="section level3">
-<h3 id="html--md-backends--continuous-document-0-0-0-9000">HTML / MD backends — continuous document<a class="anchor" aria-label="anchor" href="#html--md-backends--continuous-document-0-0-0-9000"></a></h3>
-<ul><li>
-<code>backend_html</code> and <code>backend_md</code> render the resolved grid as one continuous document instead of one section per logical page. The HTML backend emits a single <code>&lt;table&gt;</code> per horizontal panel with one <code>&lt;thead&gt;</code> and one <code>&lt;tbody&gt;</code>; vertical-page boundaries are carried by invisible <code>&lt;tr class="tabular-page-break-row"&gt;</code> markers that fire as <code>page-break-before: always</code> only under <code>@media print</code>. Browsers natively repeat <code>&lt;thead&gt;</code> across the resulting printed page breaks. The MD backend emits one pipe table per horizontal panel with all body rows concatenated.</li>
+<code><a href="../reference/cols.html">cols()</a></code> / <code><a href="../reference/col_spec.html">col_spec()</a></code> set per-column usage, label, format, width, alignment (including decimal alignment via bundled font metrics), visibility, NA text, per-row indent (<code>indent_by</code>), and group display.</li>
 <li>
-<code>paginate(repeat_headers = ...)</code> and <code>paginate(continuation = ...)</code> are now ignored by the HTML and MD backends — they are effective only for the page-oriented backends (RTF / PDF / LaTeX / DOCX), where per-printed-page headers and continuation markers are part of the regulatory output contract.</li>
-<li>Removed DOM / CSS classes from the HTML backend: <code>&lt;section class="tabular-page"&gt;</code>, <code>&lt;hr class="tabular-page-break"/&gt;</code>, the <code>&lt;!-- page N of M --&gt;</code> comment, the <code>&lt;p class="tabular-continuation"&gt;</code> paragraph, and the corresponding <code>.tabular-page</code> / <code>.tabular-page-break</code> / <code>.tabular-continuation</code> CSS rules. With <code>paginate(panels = N)</code> on HTML / MD output, each panel renders as its own table; in HTML print a single rule on <code>.tabular-table + .tabular-table</code> forces each subsequent panel onto a new printed page.</li>
-</ul></div>
-<div class="section level3">
-<h3 id="new-features-0-0-0-9000">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-0-9000"></a></h3>
-<ul><li>
-<p><code>col_spec(indent_by = "&lt;column_name&gt;")</code> declares per-row indent depth on the target column. The referenced column carries integer (or logical) values; the engine prefixes the target column’s text + AST in each row with <code>paste(rep(preset@indent_chars, depth), collapse = "")</code>. Synthetic header rows from <code>group_display = "header_row"</code> are NEVER prefixed — they stay flush as the parent at depth 0.</p>
-<p>Typical clinical AE shape:</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">ae</span><span class="op">$</span><span class="va">indent_level</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">ae</span><span class="op">$</span><span class="va">row_type</span> <span class="op">==</span> <span class="st">"pt"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">ae</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    soc          <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, group_display <span class="op">=</span> <span class="st">"header_row"</span><span class="op">)</span>,</span>
-<span>    label        <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Category"</span>, indent_by <span class="op">=</span> <span class="st">"indent_level"</span><span class="op">)</span>,</span>
-<span>    indent_level <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    row_type     <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="co"># Overall + SOC summary rows stay flush; PT rows indent.</span></span></code></pre></div>
-<p>Custom indent characters via <code>preset(indent_chars = "    ")</code> (4 spaces), <code>preset(indent_chars = "&gt; ")</code> (custom marker), or <code>preset(indent_chars = "")</code> (disable). The depth column is auto-hidden — no need to remember <code>visible = FALSE</code> on it.</p>
-<p>Works in flat listings too (no <code>group_display = "header_row"</code> required) — any column can declare <code>indent_by</code> to drive its own per-row depth.</p>
-</li>
-</ul></div>
-<div class="section level3">
-<h3 id="breaking-changes-default-on-indent-removed-0-0-0-9000">Breaking changes (default-on indent removed)<a class="anchor" aria-label="anchor" href="#breaking-changes-default-on-indent-removed-0-0-0-9000"></a></h3>
-<ul><li>The PR-#2 default-on behaviour (“every data row’s host-column text gets a uniform <code>indent_chars</code> prefix when <code>group_display = "header_row"</code> is active”) is removed. Indent now requires explicit <code>col_spec(indent_by = "&lt;col&gt;")</code> on the target column. Rationale: the default-on prefix mis-indented overall summary rows and SOC summary rows in the regulatory AE pattern; the new mechanism puts the user in control per row.</li>
-</ul></div>
-<div class="section level3">
-<h3 id="breaking-changes-task-slot-cut-0-0-0-9000">Breaking changes (Task 4/5 slot cut)<a class="anchor" aria-label="anchor" href="#breaking-changes-task-slot-cut-0-0-0-9000"></a></h3>
-<ul><li>
-<code>preset_spec</code> class drops the five list-valued slots (<code>@alignment</code>, <code>@borders</code>, <code>@fonts</code>, <code>@colors</code>, <code>@padding</code>). These named-list knobs are still accepted by <code><a href="../reference/preset.html">preset()</a></code> and <code><a href="../reference/set_preset.html">set_preset()</a></code>, but they lower to <code>style_layer</code> records on <code>preset_spec@style</code> via <code>.preset_args_to_layers()</code> instead of landing on a slot. Direct <code>preset_spec(borders = list(...))</code> / <code>preset_spec(fonts = list(...))</code> / etc. now raise “unused argument” — wrap the chain in <code>tabular(...) |&gt; preset(...)</code> to hit the lowering.</li>
+<code><a href="../reference/headers.html">headers()</a></code> builds multi-level column-header bands with passthrough leaves; <code><a href="../reference/sort_rows.html">sort_rows()</a></code> sorts on hidden numeric keys; <code><a href="../reference/subgroup.html">subgroup()</a></code> partitions with a <code>{col}</code> banner template.</li>
 <li>
-<code>colors$border</code>, <code>colors$border_muted</code>, and <code>colors$text_muted</code> tokens are rejected at validation time. Use <code>style(at = cells_table(side = "rows"), border_top = brdr(color = ...))</code> (and analogous outer / cols variants) for table-wide stroke colour; <code>style(at = cells_footnotes(), color = ...)</code> for muted chrome text.</li>
-<li>Vector-form alignment (e.g. <code>alignment = list(title_halign = c("left", "right"))</code>) is rejected. Each <code>_halign</code> / <code>_valign</code> key now accepts a single character scalar.</li>
-<li>LaTeX backend no longer emits the table-wide preamble <code>\definecolor{tabular_text}{HTML}{...}</code> + <code>\AtBeginDocument{\color{tabular_text}}</code> block when <code>preset(colors = list(text = ...))</code> is set. Per-cell <code>\SetCell{...}</code> carries the colour via the cells_style cascade.</li>
-<li>HTML backend no longer emits the <code>.tabular-table td { color: ... }</code> / <code>.tabular-table { background: ... }</code> / <code>.tabular-table tbody td { padding: ... }</code> CSS overrides when <code>preset(colors = ...)</code> / <code>preset(padding = ...)</code> is set. Each body cell’s inline <code>style="..."</code> attribute now carries the colour / background / padding triple stamped by the cells_body() layer.</li>
+<code><a href="../reference/style.html">style()</a></code> applies predicate-targeted cell styling through the <code>cells_*()</code> location helpers; <code><a href="../reference/preset.html">preset()</a></code> / <code><a href="../reference/set_preset.html">set_preset()</a></code> / <code><a href="../reference/get_preset.html">get_preset()</a></code> set cosmetic defaults (fonts, colours, rules, padding, alignment, page chrome) per table or per session.</li>
+<li>
+<code><a href="../reference/footnote.html">footnote()</a></code> attaches auto-numbered footnotes (letters, numbers, or symbols) to any cell, column header, or title, deduped by <code>id</code> and byte-identical across backends.</li>
+<li>
+<code><a href="../reference/paginate.html">paginate()</a></code> does group-aware pagination with an auto-computed per-page row budget; <code><a href="../reference/emit.html">emit()</a></code> writes the chosen backend, and <code><a href="../reference/as_grid.html">as_grid()</a></code> resolves the grid without I/O.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="rendering-0-1-0">Rendering<a class="anchor" aria-label="anchor" href="#rendering-0-1-0"></a></h3>
+<ul><li>Native emission to RTF, LaTeX, HTML, PDF (via LaTeX), and DOCX from a single resolved grid; output is verified by per-backend byte snapshots.</li>
+<li>Inline markup via <code><a href="../reference/md.html">md()</a></code> and <code><a href="../reference/html.html">html()</a></code>.</li>
+<li>Glue-style <code>{expr}</code> interpolation in static labels, titles, footnotes, and header band labels, evaluated in the calling environment at build time.</li>
+<li>Significant-whitespace preservation across all backends (<code>preset(whitespace = "preserve")</code>, the default).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="data-0-1-0">Data<a class="anchor" aria-label="anchor" href="#data-0-1-0"></a></h3>
+<ul><li>Bundled synthetic CDISC-pilot demo data (<code>saf_demo</code>, <code>saf_aeoverall</code>, <code>saf_aesocpt</code>, <code>saf_vital</code>, <code>eff_resp</code>, and BigN frames <code>saf_n</code> / <code>eff_n</code>) for examples and vignettes.</li>
 </ul></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

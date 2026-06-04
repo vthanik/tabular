@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -87,7 +87,11 @@
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
+<p>Install the released version from CRAN:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"tabular"</span><span class="op">)</span></span></code></pre></div>
+<p>Or the development version from GitHub:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"vthanik/tabular"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -95,7 +99,7 @@
 <h2 id="a-table-in-one-pipeline">A table in one pipeline<a class="anchor" aria-label="anchor" href="#a-table-in-one-pipeline"></a>
 </h2>
 <p>The pipeline starts from a pre-summarised wide data frame (one row in = one display row — <code>tabular</code> does no aggregation) and chains one verb per concern. Every verb returns an updated, immutable <code>tabular_spec</code>; the engine resolves it at render time.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://vthanik.github.io/tabular/">tabular</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># BigN denominators, keyed by arm</span></span>
@@ -255,7 +259,7 @@
 <li><p><strong>Live HTML preview</strong> means the table renders as HTML <em>inline</em> when you print it in a Quarto / R Markdown chunk or the RStudio viewer (a <code>knit_print</code> method). <code>rtables</code> prints a monospace ASCII table by default and ships no <code>knit_print</code> method, so it is <code>—</code> here; it can still emit HTML through an explicit <code>as_html()</code> call.</p></li>
 <li>
 <p><strong>PDF</strong> is compiled through LaTeX, so it needs a TeX installation. <code>tabular</code> uses <a href="https://yihui.org/tinytex/" class="external-link"><code>tinytex</code></a> — install it once per machine and PDF <code><a href="reference/emit.html">emit()</a></code> works thereafter:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"tinytex"</span><span class="op">)</span></span>
 <span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">install_tinytex</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># one-time TeX setup</span></span></code></pre></div>
 </li>
@@ -308,7 +312,7 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Vignesh Thanikachalam <br><small class="roles"> Author, maintainer </small>   </li>
+<li>Vignesh Thanikachalam <br><small class="roles"> Author, maintainer, copyright holder </small>   </li>
 </ul>
 </div>
 
