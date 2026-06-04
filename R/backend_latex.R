@@ -97,7 +97,7 @@ backend_latex <- function(grid, file) {
   .latex_warn_long_table(meta$nrow_data %||% total)
 
   cs <- meta$chrome_style %||% chrome_style()
-  panels <- .latex_group_pages_into_panels(pages)
+  panels <- .group_pages_into_panels(pages)
   body <- list()
   for (k in seq_along(panels)) {
     if (k > 1L) {
@@ -126,32 +126,6 @@ backend_latex <- function(grid, file) {
       cs = cs
     )
   )
-}
-
-# Group the engine's flat page list into render panels keyed by
-# `(subgroup_index, panel_index)`, each sorted by `page_index`. For a
-# native (unsplit) grid each group is a single page; for a split
-# inspection grid the group's pages are concatenated downstream into one
-# continuous table. First-appearance order of groups is preserved.
-# Port of `.rtf_group_pages_into_panels`.
-.latex_group_pages_into_panels <- function(pages) {
-  keys <- vapply(
-    pages,
-    function(p) {
-      sg <- p$subgroup_index %||% 0L
-      sprintf("%d\x1f%d", as.integer(sg), as.integer(p$panel_index %||% 1L))
-    },
-    character(1L)
-  )
-  lapply(unique(keys), function(k) {
-    grp <- pages[keys == k]
-    idx <- vapply(
-      grp,
-      function(p) as.integer(p$page_index %||% 1L),
-      integer(1L)
-    )
-    grp[order(idx)]
-  })
 }
 
 # Concatenate a panel's page slices into one body. For a native (unsplit)

@@ -748,8 +748,9 @@ as_grid <- function(spec) {
 #
 #   * Bands ride `page$headers` (stamped per subgroup in the merge, the
 #     SUFFIXED frame under big_n). `%||%` is safe ungated: a page only
-#     carries `$headers` on a subgroup table, where it equals the base
-#     bands byte-for-byte when big_n is off.
+#     carries `$headers` on a subgroup table, where it is content-equal
+#     to the base bands when big_n is off (a distinct but equal frame),
+#     so the rendered output is unchanged.
 #   * Leaf labels stay flag-gated: every page (subgroup or not) carries
 #     a visible-sliced `$col_labels_ast`, so reading it unconditionally
 #     would change non-subgroup output. Only read it when big_n is on.
@@ -765,6 +766,49 @@ as_grid <- function(spec) {
       meta$col_labels_ast
     }
   )
+}
+
+# Group a flat page list into the render segments a paged backend
+# emits as one continuous table each. Shared by the RTF, LaTeX, and
+# DOCX panel renderers so the segmentation rule lives in one place.
+#
+#   * `by_subgroup = TRUE` (RTF / LaTeX, and DOCX under per-page BigN):
+#     key by `(subgroup_index, panel_index)` so every subgroup is its
+#     own table.
+#   * `by_subgroup = FALSE` (DOCX without big_n): key by `panel_index`
+#     only, so subgroups stay inline in one table per panel.
+#
+# Each group's pages are returned in `page_index` order. Group order
+# follows first appearance of each key (subgroup-major, since the
+# merged page list is subgroup-major).
+#
+# @keywords internal
+# @noRd
+.group_pages_into_panels <- function(pages, by_subgroup = TRUE) {
+  if (length(pages) == 0L) {
+    return(list())
+  }
+  keys <- vapply(
+    pages,
+    function(p) {
+      panel <- as.integer(p$panel_index %||% 1L)
+      if (by_subgroup) {
+        sprintf("%d\x1f%d", as.integer(p$subgroup_index %||% 0L), panel)
+      } else {
+        sprintf("%d", panel)
+      }
+    },
+    character(1L)
+  )
+  lapply(unique(keys), function(k) {
+    grp <- pages[keys == k]
+    idx <- vapply(
+      grp,
+      function(p) as.integer(p$page_index %||% 1L),
+      integer(1L)
+    )
+    grp[order(idx)]
+  })
 }
 
 # Merge per-group sub-grids into one tabular_grid. Pages
@@ -786,8 +830,8 @@ as_grid <- function(spec) {
   # `col_labels_ast`. Backends read `page$headers` directly, so there
   # is one source of truth per header element and no index-keyed
   # lookup to drift. For a subgroup table WITHOUT big_n every group's
-  # bands are identical, so `page$headers` equals the global `headers`
-  # byte-for-byte.
+  # bands are content-equal, so `page$headers` renders identically to
+  # the global `headers` (a distinct but equal frame).
   #
   # `page$subgroup_bign` rides the same per-page model: the per-arm N
   # records for the continuous-backend N row (one list per subgroup,
