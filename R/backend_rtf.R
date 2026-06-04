@@ -103,7 +103,7 @@ backend_rtf <- function(grid, file) {
     return(c(preamble, section, "}"))
   }
 
-  panels <- .rtf_group_pages_into_panels(pages)
+  panels <- .group_pages_into_panels(pages)
   body <- lapply(panels, function(panel_pages) {
     .render_rtf_panel(
       panel_pages = panel_pages,
@@ -115,31 +115,6 @@ backend_rtf <- function(grid, file) {
     )
   })
   c(preamble, unlist(body, use.names = FALSE), "}")
-}
-
-# Group the engine's flat page list into render panels keyed by
-# `(subgroup_index, panel_index)`, each sorted by `page_index`. For a
-# native (unsplit) grid each group is a single page; for a split
-# inspection grid the group's pages are concatenated downstream into one
-# continuous table. First-appearance order of groups is preserved.
-.rtf_group_pages_into_panels <- function(pages) {
-  keys <- vapply(
-    pages,
-    function(p) {
-      sg <- p$subgroup_index %||% 0L
-      sprintf("%d\x1f%d", as.integer(sg), as.integer(p$panel_index %||% 1L))
-    },
-    character(1L)
-  )
-  lapply(unique(keys), function(k) {
-    grp <- pages[keys == k]
-    idx <- vapply(
-      grp,
-      function(p) as.integer(p$page_index %||% 1L),
-      integer(1L)
-    )
-    grp[order(idx)]
-  })
 }
 
 # Render the RTF skeleton for a spec whose grid has zero pages

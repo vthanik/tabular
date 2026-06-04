@@ -310,7 +310,7 @@ backend_docx <- function(grid, file) {
   # matching RTF; otherwise it renders once as paragraphs above panel 1
   # (`titles_block`). An empty grid falls through one call so the
   # "(no rows)" marker still appears.
-  panel_groups <- .docx_group_pages_by_panel(
+  panel_groups <- .group_pages_into_panels(
     grid@pages,
     by_subgroup = isTRUE(grid@metadata$subgroup_big_n_active)
   )
@@ -722,36 +722,11 @@ backend_docx <- function(grid, file) {
 # Table emission
 # ---------------------------------------------------------------------
 
-# Group the grid's pages by `panel_index` (first-appearance order),
-# preserving original order within each panel. Each group renders as
-# one `<w:tbl>` in `.docx_document_xml`. Distinct from RTF's
-# `(subgroup x panel)` sectioning: DOCX keeps subgroups inline within
-# a panel's table (via the banner rows), so a single-panel document is
-# byte-identical to the pre-native-flip baseline regardless of
-# subgroups. Returns `list()` for an empty grid.
-.docx_group_pages_by_panel <- function(pages, by_subgroup = FALSE) {
-  if (length(pages) == 0L) {
-    return(list())
-  }
-  # Per-page BigN: each subgroup needs its OWN `<w:tbl>` so its
-  # SUFFIXED `(N=x)` header is that table's LEADING `<w:tblHeader/>`
-  # block and therefore repeats on every Word page (a mid-table header
-  # does not). Key by (subgroup, panel) then, in subgroup-major order;
-  # otherwise key by panel only (subgroups stay inline, unchanged).
-  keys <- vapply(
-    pages,
-    function(p) {
-      panel <- as.integer(p$panel_index %||% 1L)
-      if (by_subgroup) {
-        sprintf("%d\x1f%d", as.integer(p$subgroup_index %||% 1L), panel)
-      } else {
-        sprintf("%d", panel)
-      }
-    },
-    character(1L)
-  )
-  lapply(unique(keys), function(k) pages[keys == k])
-}
+# Page grouping uses the shared `.group_pages_into_panels()`
+# (R/as_grid.R). DOCX passes `by_subgroup = FALSE` normally (subgroups
+# stay inline in one table per panel) and `TRUE` under per-page BigN
+# (each subgroup gets its own `<w:tbl>` so its `(N=x)` header leads the
+# table and Word repeats it on every page).
 
 # Compose one `<w:tbl>` for the pages in `grid` (one horizontal panel
 # after grouping). Renders: multi-level header bands -> column-labels
@@ -827,78 +802,58 @@ backend_docx <- function(grid, file) {
     .docx_chrome_border_seg(cs, "header_top", "top")
   }
   mid_el <- .docx_chrome_border_seg(cs, "header_bottom", "bottom")
-  has_bands <- is.data.frame(meta$headers) && nrow(meta$headers) > 0L
 
-  # Per-page BigN: each `<w:tbl>` here is ONE subgroup (the document
-  # grouper segments by subgroup when big_n is active). Render that
-  # subgroup's SUFFIXED header as the table's LEADING `<w:tblHeader/>`
-  # block, in canonical order: banner, then spanner bands, then the
-  # column labels. Because the block leads the table, Word repeats it
-  # on every continuation page, so the `(N=x)` header (and its banner)
-  # reprint on every page, matching RTF / PDF. The banner is dropped
-  # from the body (`emit_banner = FALSE`) so it is not duplicated.
+  # Resolve the header source once via the shared per-page resolver:
+  # under per-page BigN it returns this segment's SUFFIXED bands + leaf
+  # labels (each `<w:tbl>` is one subgroup), otherwise the global base
+  # header. `.page_header_for_render` returns the global metadata when
+  # big_n is off, so the non-big_n path is byte-identical.
   big_n_active <- isTRUE(meta$subgroup_big_n_active)
   first_page <- pages[[1L]]
+  hdr <- .page_header_for_render(meta, first_page)
+  has_bands <- is.data.frame(hdr$headers) && nrow(hdr$headers) > 0L
 
-  if (big_n_active) {
-    hdr <- .page_header_for_render(meta, first_page)
-    seg_has_bands <- is.data.frame(hdr$headers) && nrow(hdr$headers) > 0L
-    banner_lead <- .render_docx_subgroup_banner_row(
+  # Per-page BigN: lead the table with the SUFFIXED header in canonical
+  # order (banner, then spanner bands, then column labels). Because the
+  # block leads the table, Word repeats it on every continuation page,
+  # so the `(N=x)` header and its banner reprint on every page, matching
+  # RTF / PDF. The next-page section break between segments owns the
+  # page break, so the lead banner must not also force one, and the body
+  # drops the banner (`emit_banner = FALSE`) to avoid duplicating it.
+  banner_lead <- if (big_n_active) {
+    .render_docx_subgroup_banner_row(
       first_page$subgroup_line_ast,
       n_cols = length(col_names_vis),
       widths_twips = widths,
-      # The next-page section break between segments owns the page
-      # break, so the banner must not also force one.
       page_break_before = FALSE,
       preset = preset,
       cs = cs,
       body_borders = body_borders
     )
-    band_rows <- .render_docx_header_bands(
-      hdr$headers,
-      col_names_vis,
-      widths,
-      cs = cs,
-      top_border = top_el,
-      body_borders = body_borders
-    )
-    label_row <- .render_docx_col_labels_row(
-      hdr$col_labels_ast,
-      col_names_vis,
-      cols,
-      widths,
-      hyperlinks,
-      rid_map,
-      preset = preset,
-      cs = cs,
-      top_border = if (seg_has_bands) "" else top_el,
-      bottom_border = mid_el,
-      body_borders = body_borders
-    )
   } else {
-    banner_lead <- character()
-    band_rows <- .render_docx_header_bands(
-      meta$headers,
-      col_names_vis,
-      widths,
-      cs = cs,
-      top_border = top_el,
-      body_borders = body_borders
-    )
-    label_row <- .render_docx_col_labels_row(
-      meta$col_labels_ast,
-      col_names_vis,
-      cols,
-      widths,
-      hyperlinks,
-      rid_map,
-      preset = preset,
-      cs = cs,
-      top_border = if (has_bands) "" else top_el,
-      bottom_border = mid_el,
-      body_borders = body_borders
-    )
+    character()
   }
+  band_rows <- .render_docx_header_bands(
+    hdr$headers,
+    col_names_vis,
+    widths,
+    cs = cs,
+    top_border = top_el,
+    body_borders = body_borders
+  )
+  label_row <- .render_docx_col_labels_row(
+    hdr$col_labels_ast,
+    col_names_vis,
+    cols,
+    widths,
+    hyperlinks,
+    rid_map,
+    preset = preset,
+    cs = cs,
+    top_border = if (has_bands) "" else top_el,
+    bottom_border = mid_el,
+    body_borders = body_borders
+  )
   body_rows <- .render_docx_body_rows(
     pages,
     col_names_vis,

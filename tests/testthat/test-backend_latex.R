@@ -1351,19 +1351,31 @@ test_that(".latex_minipage_wrap falls back to \\linewidth on NA width", {
   expect_match(fixed_w[[1L]], "\\begin{minipage}{3.5in}", fixed = TRUE)
 })
 
-test_that(".latex_group_pages_into_panels keys by (subgroup, panel), sorts pages", {
+test_that(".group_pages_into_panels keys by (subgroup, panel), sorts pages", {
   pages <- list(
     list(subgroup_index = 1L, panel_index = 1L, page_index = 2L),
     list(subgroup_index = 1L, panel_index = 1L, page_index = 1L),
     list(subgroup_index = 1L, panel_index = 2L, page_index = 1L)
   )
-  grouped <- tabular:::.latex_group_pages_into_panels(pages)
+  grouped <- tabular:::.group_pages_into_panels(pages)
   expect_length(grouped, 2L)
   # First group (panel 1) sorted by page_index ascending.
   expect_identical(
     vapply(grouped[[1L]], function(p) p$page_index, integer(1L)),
     c(1L, 2L)
   )
+  # by_subgroup = FALSE (DOCX without big_n) keys by panel only, so two
+  # subgroups in the same panel collapse into one group.
+  two_sg <- list(
+    list(subgroup_index = 1L, panel_index = 1L, page_index = 1L),
+    list(subgroup_index = 2L, panel_index = 1L, page_index = 1L)
+  )
+  expect_length(tabular:::.group_pages_into_panels(two_sg), 2L)
+  expect_length(
+    tabular:::.group_pages_into_panels(two_sg, by_subgroup = FALSE),
+    1L
+  )
+  expect_length(tabular:::.group_pages_into_panels(list()), 0L)
 })
 
 test_that(".latex_concat_panel_body: single page passes through, multi rbinds", {
