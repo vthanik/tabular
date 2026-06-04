@@ -6,7 +6,7 @@
 
 <!-- badges: start -->
 
-[![R-CMD-check](https://github.com/vthanik/tabular/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/tabular/actions/workflows/R-CMD-check.yaml) [![Codecov test coverage](https://codecov.io/gh/vthanik/tabular/graph/badge.svg)](https://app.codecov.io/gh/vthanik/tabular) [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental) [![Project Status: Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) <!-- badges: end -->
+[![CRAN status](https://www.r-pkg.org/badges/version/tabular)](https://CRAN.R-project.org/package=tabular) [![R-CMD-check](https://github.com/vthanik/tabular/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/tabular/actions/workflows/R-CMD-check.yaml) [![Codecov test coverage](https://codecov.io/gh/vthanik/tabular/graph/badge.svg)](https://app.codecov.io/gh/vthanik/tabular) [![Project Status: Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) <!-- badges: end -->
 
 **tabular** turns a pre-summarised data frame into a submission-grade clinical table and emits it natively to **RTF, PDF, HTML, LaTeX, and DOCX** — no Java, no LibreOffice, no Word automation. One short pipeline gives you decimal alignment via real font metrics, multi-level column headers, predicate-targeted styling, and group-aware pagination, built for CDISC ADaM workflows and FDA / EMA / PMDA submissions.
 
