@@ -14,6 +14,14 @@ It is the only R table package that pairs a **live HTML preview** with a **pagin
 
 ## Installation
 
+Install the released version from CRAN:
+
+``` r
+install.packages("tabular")
+```
+
+Or the development version from GitHub:
+
 ``` r
 # install.packages("pak")
 pak::pak("vthanik/tabular")
