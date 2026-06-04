@@ -71,15 +71,15 @@ tabular(
     groupid     = col_spec(visible = FALSE),
     row_type    = col_spec(visible = FALSE),
     placebo     = col_spec(
-      label = sprintf("Placebo\nN=\%d", ne["placebo"]),
+      label = "Placebo\nN={ne['placebo']}",
       align = "decimal"
     ),
     drug_50     = col_spec(
-      label = sprintf("Drug 50\nN=\%d", ne["drug_50"]),
+      label = "Drug 50\nN={ne['drug_50']}",
       align = "decimal"
     ),
     drug_100    = col_spec(
-      label = sprintf("Drug 100\nN=\%d", ne["drug_100"]),
+      label = "Drug 100\nN={ne['drug_100']}",
       align = "decimal"
     )
   )

@@ -25,7 +25,7 @@ safety-pop subject contributes a best-overall-response record.
 \examples{
 # Efficacy BigN joined into column headers.
 ne <- stats::setNames(eff_n$n, eff_n$arm_short)
-sprintf("Placebo\nN=\%d", ne["placebo"])
+col_spec(label = "Placebo\nN={ne['placebo']}")@label
 }
 \seealso{
 \link{saf_n} for the safety-population counterpart.

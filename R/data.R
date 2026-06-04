@@ -57,19 +57,19 @@
 #'     variable   = col_spec(usage = "group", label = "Parameter"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(
-#'       label = sprintf("Placebo\nN=%d", n["placebo"]),
+#'       label = "Placebo\nN={n['placebo']}",
 #'       align = "decimal"
 #'     ),
 #'     drug_50    = col_spec(
-#'       label = sprintf("Drug 50\nN=%d", n["drug_50"]),
+#'       label = "Drug 50\nN={n['drug_50']}",
 #'       align = "decimal"
 #'     ),
 #'     drug_100   = col_spec(
-#'       label = sprintf("Drug 100\nN=%d", n["drug_100"]),
+#'       label = "Drug 100\nN={n['drug_100']}",
 #'       align = "decimal"
 #'     ),
 #'     Total      = col_spec(
-#'       label = sprintf("Total\nN=%d", n["Total"]),
+#'       label = "Total\nN={n['Total']}",
 #'       align = "decimal"
 #'     )
 #'   )
@@ -120,19 +120,19 @@
 #'   cols(
 #'     stat_label = col_spec(usage = "group", label = ""),
 #'     placebo    = col_spec(
-#'       label = sprintf("Placebo\nN=%d", n["placebo"]),
+#'       label = "Placebo\nN={n['placebo']}",
 #'       align = "decimal"
 #'     ),
 #'     drug_50    = col_spec(
-#'       label = sprintf("Drug 50\nN=%d", n["drug_50"]),
+#'       label = "Drug 50\nN={n['drug_50']}",
 #'       align = "decimal"
 #'     ),
 #'     drug_100   = col_spec(
-#'       label = sprintf("Drug 100\nN=%d", n["drug_100"]),
+#'       label = "Drug 100\nN={n['drug_100']}",
 #'       align = "decimal"
 #'     ),
 #'     Total      = col_spec(
-#'       label = sprintf("Total\nN=%d", n["Total"]),
+#'       label = "Total\nN={n['Total']}",
 #'       align = "decimal"
 #'     )
 #'   )
@@ -219,19 +219,19 @@
 #'     n_total  = col_spec(visible = FALSE),
 #'     soc_n    = col_spec(visible = FALSE),
 #'     placebo  = col_spec(
-#'       label = sprintf("Placebo\nN=%d", n["placebo"]),
+#'       label = "Placebo\nN={n['placebo']}",
 #'       align = "decimal"
 #'     ),
 #'     drug_50  = col_spec(
-#'       label = sprintf("Drug 50\nN=%d", n["drug_50"]),
+#'       label = "Drug 50\nN={n['drug_50']}",
 #'       align = "decimal"
 #'     ),
 #'     drug_100 = col_spec(
-#'       label = sprintf("Drug 100\nN=%d", n["drug_100"]),
+#'       label = "Drug 100\nN={n['drug_100']}",
 #'       align = "decimal"
 #'     ),
 #'     Total    = col_spec(
-#'       label = sprintf("Total\nN=%d", n["Total"]),
+#'       label = "Total\nN={n['Total']}",
 #'       align = "decimal"
 #'     )
 #'   ) |>
@@ -283,15 +283,15 @@
 #'     visit      = col_spec(usage = "group", label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(
-#'       label = sprintf("Placebo\nN=%d", n["placebo"]),
+#'       label = "Placebo\nN={n['placebo']}",
 #'       align = "decimal"
 #'     ),
 #'     drug_50    = col_spec(
-#'       label = sprintf("Drug 50\nN=%d", n["drug_50"]),
+#'       label = "Drug 50\nN={n['drug_50']}",
 #'       align = "decimal"
 #'     ),
 #'     drug_100   = col_spec(
-#'       label = sprintf("Drug 100\nN=%d", n["drug_100"]),
+#'       label = "Drug 100\nN={n['drug_100']}",
 #'       align = "decimal"
 #'     )
 #'   )
@@ -423,15 +423,15 @@
 #'     groupid     = col_spec(visible = FALSE),
 #'     row_type    = col_spec(visible = FALSE),
 #'     placebo     = col_spec(
-#'       label = sprintf("Placebo\nN=%d", ne["placebo"]),
+#'       label = "Placebo\nN={ne['placebo']}",
 #'       align = "decimal"
 #'     ),
 #'     drug_50     = col_spec(
-#'       label = sprintf("Drug 50\nN=%d", ne["drug_50"]),
+#'       label = "Drug 50\nN={ne['drug_50']}",
 #'       align = "decimal"
 #'     ),
 #'     drug_100    = col_spec(
-#'       label = sprintf("Drug 100\nN=%d", ne["drug_100"]),
+#'       label = "Drug 100\nN={ne['drug_100']}",
 #'       align = "decimal"
 #'     )
 #'   )
@@ -589,8 +589,8 @@
 #'
 #' Per-arm subject counts (BigN) for the safety population, plus a
 #' `Total` row. Use this table to embed BigN inline in column headers
-#' via `sprintf()` / `paste()` against `cols(col_spec(label = ...))`;
-#' there is no dedicated BigN field on `col_spec` because the
+#' with a glue-style `{expr}` template against `cols(col_spec(label =
+#' ...))`; there is no dedicated BigN field on `col_spec` because the
 #' denominator already lives here in a discoverable, joinable form.
 #'
 #' Two arm-naming columns are shipped side by side so the same table
@@ -622,12 +622,12 @@
 #' # Use saf_n$arm_short when joining into the wide datasets
 #' # (saf_demo, saf_aeoverall, saf_aesocpt, saf_vital).
 #' n <- stats::setNames(saf_n$n, saf_n$arm_short)
-#' sprintf("Placebo\nN=%d", n["placebo"])
+#' col_spec(label = "Placebo\nN={n['placebo']}")@label
 #'
 #' # Use saf_n$arm when joining into pivot_across() output
 #' # (column names match the raw pharmaverseadam arm labels).
 #' n_arm <- stats::setNames(saf_n$n, saf_n$arm)
-#' sprintf("Placebo\nN=%d", n_arm["Placebo"])
+#' col_spec(label = "Placebo\nN={n_arm['Placebo']}")@label
 "saf_n"
 
 #' Efficacy-population BigN per arm
@@ -649,5 +649,5 @@
 #' @examples
 #' # Efficacy BigN joined into column headers.
 #' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
-#' sprintf("Placebo\nN=%d", ne["placebo"])
+#' col_spec(label = "Placebo\nN={ne['placebo']}")@label
 "eff_n"

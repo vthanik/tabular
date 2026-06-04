@@ -30,8 +30,7 @@ saf_n
 \description{
 Per-arm subject counts (BigN) for the safety population, plus a
 \code{Total} row. Use this table to embed BigN inline in column headers
-via \code{sprintf()} / \code{paste()} against \code{cols(col_spec(label = ...))};
-there is no dedicated BigN field on \code{col_spec} because the
+with a glue-style \code{{expr}} template against \code{cols(col_spec(label = ...))}; there is no dedicated BigN field on \code{col_spec} because the
 denominator already lives here in a discoverable, joinable form.
 }
 \details{
@@ -44,12 +43,12 @@ column names).
 # Use saf_n$arm_short when joining into the wide datasets
 # (saf_demo, saf_aeoverall, saf_aesocpt, saf_vital).
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
-sprintf("Placebo\nN=\%d", n["placebo"])
+col_spec(label = "Placebo\nN={n['placebo']}")@label
 
 # Use saf_n$arm when joining into pivot_across() output
 # (column names match the raw pharmaverseadam arm labels).
 n_arm <- stats::setNames(saf_n$n, saf_n$arm)
-sprintf("Placebo\nN=\%d", n_arm["Placebo"])
+col_spec(label = "Placebo\nN={n_arm['Placebo']}")@label
 }
 \seealso{
 \link{eff_n} for the efficacy-population counterpart.

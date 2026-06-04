@@ -61,19 +61,19 @@ tabular(
     variable   = col_spec(usage = "group", label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(
-      label = sprintf("Placebo\nN=\%d", n["placebo"]),
+      label = "Placebo\nN={n['placebo']}",
       align = "decimal"
     ),
     drug_50    = col_spec(
-      label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
+      label = "Drug 50\nN={n['drug_50']}",
       align = "decimal"
     ),
     drug_100   = col_spec(
-      label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
+      label = "Drug 100\nN={n['drug_100']}",
       align = "decimal"
     ),
     Total      = col_spec(
-      label = sprintf("Total\nN=\%d", n["Total"]),
+      label = "Total\nN={n['Total']}",
       align = "decimal"
     )
   )

@@ -49,10 +49,10 @@ tabular(
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
-    Total      = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
+    placebo    = col_spec(label = "Placebo\n(N={saf['placebo']})",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50\n(N={saf['drug_50']})",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100\n(N={saf['drug_100']})", align = "decimal"),
+    Total      = col_spec(label = "Total\n(N={saf['Total']})",    align = "decimal")
   ) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total"))
 ```
@@ -82,10 +82,10 @@ tabular(
   cols(
     stat_label = col_spec(label = "Category"),
     total_n    = col_spec(visible = FALSE),
-    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
-    Total      = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
+    placebo    = col_spec(label = "Placebo\n(N={saf['placebo']})",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50\n(N={saf['drug_50']})",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100\n(N={saf['drug_100']})", align = "decimal"),
+    Total      = col_spec(label = "Total\n(N={saf['Total']})",    align = "decimal")
   ) |>
   sort_rows(by = "total_n", descending = TRUE)
 ```
@@ -122,10 +122,10 @@ tabular(
     soc_n        = col_spec(visible = FALSE),
     label        = col_spec(label = "System Organ Class / Preferred Term",
                             indent_by = "indent_level"),
-    placebo      = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
-    drug_50      = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
-    drug_100     = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
-    Total        = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
+    placebo      = col_spec(label = "Placebo\n(N={saf['placebo']})",  align = "decimal"),
+    drug_50      = col_spec(label = "Drug 50\n(N={saf['drug_50']})",  align = "decimal"),
+    drug_100     = col_spec(label = "Drug 100\n(N={saf['drug_100']})", align = "decimal"),
+    Total        = col_spec(label = "Total\n(N={saf['Total']})",    align = "decimal")
   ) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
   style(bold = TRUE, .at = cells_body(where = row_type %in% c("overall", "soc")))
@@ -168,10 +168,10 @@ tabular(
     soc_n        = col_spec(visible = FALSE),
     label        = col_spec(label = "System Organ Class / Preferred Term",
                             indent_by = "indent_level"),
-    placebo      = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
-    drug_50      = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
-    drug_100     = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
-    Total        = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
+    placebo      = col_spec(label = "Placebo\n(N={saf['placebo']})",  align = "decimal"),
+    drug_50      = col_spec(label = "Drug 50\n(N={saf['drug_50']})",  align = "decimal"),
+    drug_100     = col_spec(label = "Drug 100\n(N={saf['drug_100']})", align = "decimal"),
+    Total        = col_spec(label = "Total\n(N={saf['Total']})",    align = "decimal")
   ) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
   style(bold = TRUE, .at = cells_body(where = row_type %in% c("overall", "soc"))) |>
@@ -218,9 +218,9 @@ tabular(
     visit      = col_spec(usage = "group", group_display = "column",
                           label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal")
+    placebo    = col_spec(label = "Placebo\n(N={saf['placebo']})",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50\n(N={saf['drug_50']})",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100\n(N={saf['drug_100']})", align = "decimal")
   ) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100"))
 ```
@@ -250,9 +250,9 @@ tabular(
     groupid     = col_spec(visible = FALSE),
     group_label = col_spec(usage = "group"),
     stat_label  = col_spec(label = "Response"),
-    placebo     = col_spec(label = sprintf("Placebo\n(N=%d)",  eff["placebo"]),  align = "decimal"),
-    drug_50     = col_spec(label = sprintf("Drug 50\n(N=%d)",  eff["drug_50"]),  align = "decimal"),
-    drug_100    = col_spec(label = sprintf("Drug 100\n(N=%d)", eff["drug_100"]), align = "decimal")
+    placebo     = col_spec(label = "Placebo\n(N={eff['placebo']})",  align = "decimal"),
+    drug_50     = col_spec(label = "Drug 50\n(N={eff['drug_50']})",  align = "decimal"),
+    drug_100    = col_spec(label = "Drug 100\n(N={eff['drug_100']})", align = "decimal")
   ) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100"))
 ```
@@ -288,10 +288,10 @@ tabular(
     param      = col_spec(usage = "group", group_display = "column",
                           label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  saf["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  saf["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", saf["drug_100"]), align = "decimal"),
-    Total      = col_spec(label = sprintf("Total\n(N=%d)",    saf["Total"]),    align = "decimal")
+    placebo    = col_spec(label = "Placebo\n(N={saf['placebo']})",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50\n(N={saf['drug_50']})",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100\n(N={saf['drug_100']})", align = "decimal"),
+    Total      = col_spec(label = "Total\n(N={saf['Total']})",    align = "decimal")
   ) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
   subgroup(by = c("sex", "agegr"), label = "{sex}, {agegr}")
