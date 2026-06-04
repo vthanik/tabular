@@ -1356,6 +1356,20 @@ backend_docx <- function(grid, file) {
           gh_edge("right", .docx_frame_edge("right", body_borders))
         )
         group_shd <- .docx_shd_from_style(host_node)
+        # Group-header halign cascade: an explicit `style(halign,
+        # .at = cells_group_headers())` lands on the host node; fall
+        # back to "left" (the historical default) when unset. Mirrors
+        # the subgroup-banner resolution below.
+        header_halign <- if (
+          is_style_node(host_node) &&
+            length(host_node@halign) == 1L &&
+            !is.na(host_node@halign)
+        ) {
+          host_node@halign
+        } else {
+          "left"
+        }
+        header_jc_tok <- .docx_align_token(header_halign)
         out <- c(
           out,
           paste0(
@@ -1368,7 +1382,8 @@ backend_docx <- function(grid, file) {
             "</w:tcPr>",
             "<w:p><w:pPr>",
             header_ind_tok,
-            "<w:jc w:val=\"left\"/></w:pPr>",
+            header_jc_tok,
+            "</w:pPr>",
             .docx_body_runs(host_text, header_rpr),
             "</w:p>",
             "</w:tc></w:tr>"

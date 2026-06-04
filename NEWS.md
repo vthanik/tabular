@@ -1,3 +1,7 @@
+# tabular (development version)
+
+* DOCX group-header rows now honour the `halign` cascade instead of always left-aligning (#PAR2).
+
 # tabular 0.1.0
 
 First release.
