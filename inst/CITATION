@@ -1,0 +1,10 @@
+citHeader("To cite tabular in publications use:")
+
+bibentry(
+  bibtype = "Manual",
+  title   = "{tabular}: Render Tables, Listings and Figures for Clinical Submissions",
+  author  = person("Vignesh", "Thanikachalam"),
+  year    = "2026",
+  note    = sprintf("R package version %s", meta$Version),
+  url     = "https://vthanik.github.io/tabular/"
+)

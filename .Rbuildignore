@@ -25,3 +25,4 @@
 ^doc$
 ^Meta$
 ^cran-comments\.md$
+^CITATION\.cff$
