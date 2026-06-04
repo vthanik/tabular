@@ -70,6 +70,98 @@ test_that(".tabular_required_tex_packages includes the core regulatory bundles",
   expect_true("xcolor" %in% pkgs)
   expect_true("hyperref" %in% pkgs)
   expect_true("geometry" %in% pkgs)
+  # Previously-undeclared deps that the backend can emit (B3).
+  expect_true("fontspec" %in% pkgs)
+  expect_true("fancyhdr" %in% pkgs)
+  expect_true("lastpage" %in% pkgs)
+  expect_true("ninecolors" %in% pkgs)
+})
+
+test_that(".tabular_required_tex_packages is a superset of every emitted directive (#B3)", {
+  # Build a spec that exercises EVERY conditional preamble branch:
+  # a populated pagehead (fancyhdr + lastpage) over the default font
+  # (tgcursor -> tex-gyre under pdflatex, fontspec under xelatex).
+  spec <- tabular(data.frame(x = c(1L, 2L)), titles = "T") |>
+    preset(
+      pagehead = list(
+        left = "Protocol: ABC-123",
+        right = "Page {page} of {npages}"
+      )
+    )
+  tex <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, tex)
+  txt <- paste(readLines(tex, warn = FALSE), collapse = "\n")
+
+  # Pull every \usepackage{X} / \UseTblrLibrary{X} token from the
+  # emitted source (ignore option brackets like [T1] / [utf8]).
+  m <- regmatches(
+    txt,
+    gregexpr(
+      "\\\\(usepackage|RequirePackage|UseTblrLibrary)(\\[[^]]*\\])?\\{([^}]+)\\}",
+      txt
+    )
+  )[[1L]]
+  stys <- sub(
+    ".*\\{([^}]+)\\}$",
+    "\\1",
+    m
+  )
+  stys <- unique(stys)
+  expect_gt(length(stys), 0L)
+
+  # Map each emitted .sty stem / tblr library to its CTAN package
+  # name (the unit declared in .tabular_required_tex_packages):
+  # graphicx.sty ships in `graphics`; fontenc / inputenc ship in
+  # `base`; the TeX Gyre font commands (tg*) all ship in `tex-gyre`.
+  sty_to_ctan <- function(sty) {
+    if (sty == "graphicx") {
+      return("graphics")
+    }
+    if (sty %in% c("fontenc", "inputenc")) {
+      return("base")
+    }
+    if (grepl("^tg", sty)) {
+      return("tex-gyre")
+    }
+    if (sty %in% c("mathptmx", "mathpazo")) {
+      return("psnfss")
+    }
+    sty
+  }
+  ctan <- vapply(stys, sty_to_ctan, character(1L))
+
+  declared <- tabular:::.tabular_required_tex_packages
+  missing <- setdiff(ctan, declared)
+  expect_identical(
+    missing,
+    character(),
+    info = paste(
+      "Emitted directives not declared in .tabular_required_tex_packages:",
+      paste(missing, collapse = ", ")
+    )
+  )
+})
+
+test_that("check_latex() runs and returns the required set invisibly (#B3)", {
+  skip_if_not_installed("tinytex")
+  out <- withr::with_options(
+    list(cli.default_handler = function(...) invisible()),
+    check_latex(quiet = TRUE)
+  )
+  expect_s3_class(out, "data.frame")
+  expect_named(out, c("package", "installed"))
+  expect_identical(out$package, tabular:::.tabular_required_tex_packages)
+  expect_type(out$installed, "logical")
+  # Invisible return: capturing autoprint yields nothing.
+  expect_output(invisible(check_latex(quiet = TRUE)), regexp = NA)
+})
+
+test_that("check_latex() rejects a non-scalar quiet (#B3)", {
+  skip_if_not_installed("tinytex")
+  expect_error(
+    check_latex(quiet = c(TRUE, FALSE)),
+    class = "tabular_error_input"
+  )
 })
 
 # ---------------------------------------------------------------------

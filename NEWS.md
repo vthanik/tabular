@@ -1,3 +1,8 @@
+# tabular (development version)
+
+* `check_latex()` reports LaTeX-package availability for PDF output and names the exact `tlmgr_install()` remedy (#B3).
+* The PDF backend now declares its full LaTeX package set so missing-dependency errors are complete (#B3).
+
 # tabular 0.1.0
 
 First release.
