@@ -2177,3 +2177,43 @@ test_that("DOCX pagehead slot honors background shading (#page-chrome)", {
   )
   expect_true(grepl("<w:shd", hdr) && grepl("FFFF00", hdr))
 })
+
+# ---- DOCX group-header halign cascade (#PAR2) --------------------------
+
+test_that("DOCX group-header rows honor the halign cascade (#PAR2)", {
+  df <- data.frame(
+    group_label = c(
+      "Best Overall Response",
+      "Best Overall Response",
+      "Objective Response Rate",
+      "Objective Response Rate"
+    ),
+    stat_label = c("CR", "PR", "ORR (CR + PR)", "95% CI"),
+    placebo = c("1", "1", "2", "(0.3, 8.1)"),
+    drug_50 = c("1", "0", "1", "(0.0, 6.5)"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "Eff") |>
+    cols(
+      group_label = col_spec(usage = "group", group_display = "header_row"),
+      stat_label = col_spec(usage = "indent", label = "Response"),
+      placebo = col_spec(label = "Placebo"),
+      drug_50 = col_spec(label = "Drug 50")
+    ) |>
+    style(halign = "center", .at = cells_group_headers())
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  td <- withr::local_tempdir()
+  utils::unzip(out, exdir = td)
+  doc <- paste(
+    readLines(file.path(td, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  # The group-header paragraph picks up the cascade alignment, not the
+  # hardcoded left.
+  expect_match(
+    doc,
+    "<w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Best Overall Response</w:t>",
+    fixed = TRUE
+  )
+})

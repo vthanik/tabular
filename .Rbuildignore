@@ -1,6 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^plan\.md$
+^plan-ib-backlog\.md$
 ^handoff\.md$
 ^build\.md$
 ^debugging\.md$

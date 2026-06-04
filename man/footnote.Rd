@@ -85,9 +85,9 @@ tabular(saf_aesocpt) |>
     row_type = col_spec(visible = FALSE),
     soc_n    = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
-    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"])),
-    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"])),
-    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]))
+    placebo  = col_spec(label = "Placebo\nN={n['placebo']}"),
+    drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}"),
+    Total    = col_spec(label = "Total\nN={n['Total']}")
   ) |>
   footnote(
     "Safety population: all randomised subjects who took study drug.",

@@ -175,10 +175,10 @@
 #'     row_type = col_spec(visible = FALSE),
 #'     soc_n    = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
-#'     placebo  = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"])),
-#'     drug_50  = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"])),
-#'     drug_100 = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"])),
-#'     Total    = col_spec(label = sprintf("Total\nN=%d",    n["Total"]))
+#'     placebo  = col_spec(label = "Placebo\nN={n['placebo']}"),
+#'     drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}"),
+#'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}"),
+#'     Total    = col_spec(label = "Total\nN={n['Total']}")
 #'   ) |>
 #'   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
 #'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
@@ -218,9 +218,9 @@
 #'     row_type    = col_spec(visible = FALSE),
 #'     groupid     = col_spec(visible = FALSE),
 #'     group_label = col_spec(visible = FALSE),
-#'     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  ne["placebo"])),
-#'     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  ne["drug_50"])),
-#'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", ne["drug_100"]))
+#'     placebo    = col_spec(label = "Placebo\nN={ne['placebo']}"),
+#'     drug_50    = col_spec(label = "Drug 50\nN={ne['drug_50']}"),
+#'     drug_100   = col_spec(label = "Drug 100\nN={ne['drug_100']}")
 #'   ) |>
 #'   sort_rows(by = c("groupid", "stat_label")) |>
 #'   paginate(panels = 2, repeat_content = c("titles", "headers", "footnotes"))

@@ -48,9 +48,23 @@ pivot_across(
 
 \subsection{Form 2: named list by context}{
 
-Different formats for continuous vs categorical contexts. This
-is the typical clinical-table form because demographics mix
-the two.
+Different formats per context. This is the typical clinical-table
+form because demographics mix continuous and categorical
+variables.
+
+\strong{The list names must match the values in the ARD's \code{context}
+column verbatim.} Which strings appear there depends on how the
+ARD was built:
+\itemize{
+\item \code{cards::ard_continuous()} / \code{ard_categorical()} emit
+\code{"continuous"} / \code{"categorical"}.
+\item \code{cards::ard_summary()} / \code{ard_tabulate()} emit \code{"summary"} /
+\code{"tabulate"}.
+}
+
+So an ARD assembled with \code{ard_stack(ard_summary(...), ard_tabulate(...))} is keyed \code{summary} / \code{tabulate}, not
+\code{continuous} / \code{categorical}. Inspect \code{unique(ard$context)} when
+unsure.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# AGE (continuous) -> "75.2 (8.59)"; SEX (categorical) -> "53 (62\%)"
 pivot_across(
@@ -271,19 +285,19 @@ saf_demo_card |>
     variable   = col_spec(usage = "group", label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
     Placebo    = col_spec(
-      label = sprintf("Placebo\nN=\%d", n["placebo"]),
+      label = "Placebo\nN={n['placebo']}",
       align = "decimal"
     ),
     `Xanomeline Low Dose` = col_spec(
-      label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
+      label = "Drug 50\nN={n['drug_50']}",
       align = "decimal"
     ),
     `Xanomeline High Dose` = col_spec(
-      label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
+      label = "Drug 100\nN={n['drug_100']}",
       align = "decimal"
     ),
     Total = col_spec(
-      label = sprintf("Total\nN=\%d", n["Total"]),
+      label = "Total\nN={n['Total']}",
       align = "decimal"
     )
   )
@@ -318,15 +332,15 @@ tabular(
     soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     Placebo  = col_spec(
-      label = sprintf("Placebo\nN=\%d", n["placebo"]),
+      label = "Placebo\nN={n['placebo']}",
       align = "decimal"
     ),
     `Xanomeline Low Dose` = col_spec(
-      label = sprintf("Drug 50\nN=\%d", n["drug_50"]),
+      label = "Drug 50\nN={n['drug_50']}",
       align = "decimal"
     ),
     `Xanomeline High Dose` = col_spec(
-      label = sprintf("Drug 100\nN=\%d", n["drug_100"]),
+      label = "Drug 100\nN={n['drug_100']}",
       align = "decimal"
     )
   )
@@ -369,6 +383,28 @@ saf_demo_card |>
       BMI    = "BMI (kg/m^2)"
     )
   )
+
+# ---- Example 5: ARD keyed by summary / tabulate contexts ----
+#
+# The `statistic` list names must match the ARD's `context` column
+# verbatim. `cards::ard_summary()` / `ard_tabulate()` emit `"summary"` /
+# `"tabulate"` (not the `"continuous"` / `"categorical"` of
+# `ard_continuous()` / `ard_categorical()`), so a list keyed
+# `continuous`/`categorical` would silently match nothing. Always check
+# `unique(ard$context)` first. Here the bundled `saf_demo_card` is
+# relabelled to mimic `ard_summary()` + `ard_tabulate()` output; the
+# by-variable's own row drops automatically and both the summary and
+# the tabulate variables survive.
+card_st <- saf_demo_card
+card_st$context[card_st$context == "continuous"] <- "summary"
+card_st$context[card_st$context == "categorical"] <- "tabulate"
+pivot_across(
+  card_st,
+  statistic = list(
+    summary  = "{mean} ({sd})",
+    tabulate = "{n} ({p}\%)"
+  )
+)
 
 }
 \seealso{

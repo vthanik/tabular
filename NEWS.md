@@ -1,3 +1,19 @@
+# tabular (development version)
+
+## New features
+
+* `check_latex()` reports LaTeX-package availability for PDF output and prints the exact `tlmgr_install()` remedy for anything missing.
+* `cols()` gains a `.default` argument that sets a fallback `col_spec()` for columns not named explicitly.
+* `cols_apply()` applies one `col_spec()` to many columns selected by name or by predicate.
+* `emit()` gains `create_dir` to create missing parent directories instead of erroring.
+
+## Bug fixes
+
+* The DOCX backend now honours the `halign` cascade on group-header rows instead of always left-aligning them.
+* The PDF backend now declares its full LaTeX package set, so a missing-dependency error names every required package.
+* The RTF backend now renders `pagehead` / `pagefoot` page chrome at the preset `font_size` instead of the RTF default 12pt.
+* `pivot_across()` no longer silently drops `ard_tabulate()` categorical rows from a mixed `ard_stack()` ARD.
+
 # tabular 0.1.0
 
 First release.

@@ -77,6 +77,40 @@ test_that("emit() rejects when parent directory does not exist", {
     emit(spec, missing),
     class = "tabular_error_input"
   )
+  expect_snapshot(
+    error = TRUE,
+    emit(spec, missing),
+    transform = \(x) {
+      sub("Missing directory: .*", "Missing directory: <path>.", x)
+    }
+  )
+})
+
+test_that("emit(create_dir = TRUE) creates missing parent dirs (#E4)", {
+  spec <- .simple_spec()
+  root <- withr::local_tempdir()
+  nested <- file.path(root, "a", "b", "c", "out.md")
+  expect_false(dir.exists(dirname(nested)))
+  emit(spec, nested, create_dir = TRUE)
+  expect_true(dir.exists(dirname(nested)))
+  expect_true(file.exists(nested))
+})
+
+test_that("emit() rejects non-logical create_dir (#E4)", {
+  spec <- .simple_spec()
+  f <- tempfile(fileext = ".md")
+  expect_error(
+    emit(spec, f, create_dir = "yes"),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    emit(spec, f, create_dir = NA),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    emit(spec, f, create_dir = c(TRUE, FALSE)),
+    class = "tabular_error_input"
+  )
 })
 
 test_that("emit() rejects malformed format override", {

@@ -23,18 +23,45 @@
 
 # ---------------------------------------------------------------------
 # Required TeX packages — the preamble emitted by backend_latex
-# uses these. install_latex_deps() (future) bundles the list as a
-# tinytex::tlmgr_install() call.
+# uses these. `check_latex()` reports per-package availability and
+# bundles the missing ones into a tinytex::tlmgr_install() call.
+#
+# This list is a SUPERSET of every `\usepackage{}` / `\RequirePackage{}`
+# / `\UseTblrLibrary{}` directive the LaTeX backend can emit — both the
+# unconditional preamble and every conditional branch:
+#
+# * unconditional: tabularray (+ siunitx library), xcolor, graphicx,
+#   hyperref, iftex, geometry;
+# * conditional on a populated pagehead / pagefoot band: fancyhdr,
+#   lastpage (see `.latex_pagestyle_block()`);
+# * conditional on the engine: fontspec under xelatex / lualatex;
+#   fontenc + inputenc under pdflatex (see `.latex_font_lines()`);
+# * conditional on the resolved font_family: the TeX Gyre bundles
+#   (tgtermes / tgheros / tgcursor -> tex-gyre) for the generic
+#   families, and the classic pdflatex font bundles (mathptmx /
+#   mathpazo -> psnfss, helvet, courier) for named families
+#   (see `.latex_pdftex_font_pkg()`).
+#
+# Each entry is the CTAN package name passed to `tlmgr install`,
+# which is NOT always the `.sty` stem: `\usepackage{graphicx}` ships
+# in CTAN `graphics`; `\usepackage{fontenc}` / `inputenc` ship in
+# CTAN `base`; tabularray pulls `ninecolors` as a hard dependency, so
+# we declare it explicitly so the diagnostic doesn't miss it.
 # ---------------------------------------------------------------------
 
 .tabular_required_tex_packages <- c(
   "tabularray", # the table engine
+  "ninecolors", # hard dependency of tabularray
   "xcolor", # colours
-  "graphicx", # figures
-  "siunitx", # number formatting / decimal alignment
+  "graphics", # graphicx.sty (CTAN package is `graphics`)
+  "siunitx", # number formatting / decimal alignment (tblr library)
   "geometry", # margins / paper size
   "hyperref", # \href links
   "iftex", # engine detection
+  "base", # fontenc.sty / inputenc.sty (pdflatex branch)
+  "fancyhdr", # running page header / footer bands
+  "lastpage", # {npages} -> "Page x of y"
+  "fontspec", # \setmainfont under xelatex / lualatex
   # TeX Gyre bundles — used when font_family resolves to a generic.
   "tex-gyre",
   # pdflatex font bundles — used when font_family is named.
@@ -98,7 +125,9 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
     c(
       "x" = "Missing LaTeX package{?s}: {.val {missing_pkg}}.",
       "i" = "On a local machine: install via {.run tinytex::tlmgr_install(c({paste(.sh_quote(missing_pkg), collapse = ', ')}))}.",
-      "i" = "In a containerised workspace (Domino / Posit Workbench / Databricks): ask admin to add {.val {paste(missing_pkg, collapse = ' ')}} to the image build."
+      "i" = "See {.fn tabular::check_latex} for the full required-package set and remediation.",
+      "i" = "In a containerised workspace (Domino / Posit Workbench / Databricks): ask admin to add {.val {paste(missing_pkg, collapse = ' ')}} to the image build.",
+      "i" = "On an OS-managed TeX Live (RHEL/dnf, Debian/apt): tlmgr is locked, so install a user-space TinyTeX with {.run tinytex::install_tinytex()} instead. Never pass {.code --ignore-warning} to force a locked tlmgr."
     )
   } else {
     c(
@@ -139,6 +168,164 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
     }
   }
   unique(hits)
+}
+
+# ---------------------------------------------------------------------
+# check_latex() — local-availability diagnostic for PDF output
+# ---------------------------------------------------------------------
+
+#' Check LaTeX-package availability for PDF output
+#'
+#' Reports, for every TeX package the LaTeX / PDF backend can emit,
+#' whether it is present in the local TeX tree, and prints the exact
+#' [`tinytex::tlmgr_install()`] call that installs any that are
+#' missing. Run this before `emit(spec, "out.pdf")` on a fresh
+#' machine to turn a cryptic mid-compile `File 'tabularray.sty' not
+#' found` into an up-front, actionable checklist.
+#'
+#' @details
+#'
+#' The required set is a superset of every `\\usepackage{}` /
+#' `\\UseTblrLibrary{}` directive the backend emits, across all
+#' conditional branches (running headers / footers pull `fancyhdr` +
+#' `lastpage`; `xelatex` pulls `fontspec`; `pdflatex` pulls the
+#' classic font bundles). The check is informational, it does not
+#' install anything.
+#'
+#' **OS-managed TeX Live gotcha.** On Linux distributions that ship
+#' TeX Live through the system package manager (RHEL / Fedora via
+#' `dnf`, Debian / Ubuntu via `apt`), `tlmgr` is locked against
+#' user installs and `tlmgr_install()` will fail. The fix is to
+#' install a user-space TinyTeX with [`tinytex::install_tinytex()`]
+#' and let that tree own the packages. Never force a locked `tlmgr`
+#' with `--ignore-warning`: it leaves the system tree half-written.
+#'
+#' **Status markers:**
+#'
+#' * `v` — package is installed in the local TeX tree.
+#' * `x` — package is missing; the `tlmgr_install()` line at the
+#'   bottom of the report installs every missing package at once.
+#' * `?` — availability could not be determined (no `tinytex`, or
+#'   `tlmgr` not reachable); treated as missing for remediation.
+#'
+#' Requires the `tinytex` package (in `Suggests`); call
+#' `install.packages("tinytex")` first if it isn't installed.
+#'
+#' @param quiet *Suppress the printed cli report.*
+#'   `<logical(1)>: default FALSE`. When `TRUE`, runs the checks and
+#'   returns the result invisibly without printing. Use in scripts
+#'   that branch on the return value.
+#'
+#' @return *Invisibly returns a data frame* with one row per
+#'   required package and columns `package` (`<character>`) and
+#'   `installed` (`<logical>`, `NA` when undeterminable). Side
+#'   effect: prints a cli report with a per-package status marker
+#'   and, when anything is missing, the exact `tlmgr_install()`
+#'   remedy.
+#'
+#' @examples
+#' # ---- Example 1: Audit the PDF toolchain before emitting ----
+#' #
+#' # Run check_latex() on a fresh machine to confirm every LaTeX
+#' # package the PDF backend needs is present. The call prints a
+#' # status line per package and, if any are missing, the exact
+#' # tinytex::tlmgr_install() command to fix them in one shot. It is
+#' # guarded on tinytex so it is a no-op where TeX is unavailable.
+#' if (requireNamespace("tinytex", quietly = TRUE)) {
+#'   check_latex()
+#' }
+#'
+#' @seealso
+#' **Companion diagnostic:** [`check_fonts()`].
+#'
+#' **Consumes the result:** [`emit()`].
+#'
+#' @export
+check_latex <- function(quiet = FALSE) {
+  if (!is.logical(quiet) || length(quiet) != 1L || anyNA(quiet)) {
+    cli::cli_abort(
+      c(
+        "{.arg quiet} must be a single {.cls logical}.",
+        "x" = "You supplied {.obj_type_friendly {quiet}}."
+      ),
+      class = "tabular_error_input",
+      call = rlang::caller_env()
+    )
+  }
+  rlang::check_installed(
+    "tinytex",
+    reason = "to check LaTeX-package availability for PDF output"
+  )
+
+  pkgs <- .tabular_required_tex_packages
+  installed <- vapply(pkgs, .latex_pkg_installed, logical(1L))
+  out <- data.frame(
+    package = pkgs,
+    installed = installed,
+    row.names = NULL,
+    stringsAsFactors = FALSE
+  )
+
+  if (!quiet) {
+    .check_latex_report(out)
+  }
+  invisible(out)
+}
+
+# Is a single CTAN package present in the local TeX tree? Returns
+# NA when availability cannot be determined (tlmgr unreachable).
+# `base` is part of every TeX install (fontenc / inputenc live
+# there), so short-circuit it as present rather than querying.
+.latex_pkg_installed <- function(pkg) {
+  if (identical(pkg, "base")) {
+    return(TRUE)
+  }
+  res <- tryCatch(
+    tinytex::check_installed(pkg),
+    error = function(e) NA
+  )
+  if (length(res) != 1L) {
+    return(NA)
+  }
+  as.logical(res)
+}
+
+# Print the cli report for a check_latex() result data frame.
+.check_latex_report <- function(out) {
+  cli::cli_h3("LaTeX packages for PDF output")
+  for (i in seq_len(nrow(out))) {
+    pkg <- out$package[[i]]
+    ok <- out$installed[[i]]
+    marker <- if (isTRUE(ok)) {
+      "v"
+    } else if (isFALSE(ok)) {
+      "x"
+    } else {
+      "?"
+    }
+    cli::cli_text("  {marker} {pkg}")
+  }
+
+  missing <- out$package[!.is_true_vec(out$installed)]
+  if (length(missing) == 0L) {
+    cli::cli_alert_success("All required LaTeX packages are installed.")
+    return(invisible(NULL))
+  }
+  cli::cli_alert_warning(
+    "Missing {length(missing)} LaTeX package{?s}: {.val {missing}}."
+  )
+  cli::cli_text(
+    "Install with {.run tinytex::tlmgr_install(c({paste(.sh_quote(missing), collapse = ', ')}))}."
+  )
+  cli::cli_text(
+    "On an OS-managed TeX Live (RHEL/dnf, Debian/apt) tlmgr is locked: install a user-space TinyTeX with {.run tinytex::install_tinytex()} instead. Never force a locked tlmgr with {.code --ignore-warning}."
+  )
+  invisible(NULL)
+}
+
+# Vectorised "is exactly TRUE" — NA and FALSE both count as not-installed.
+.is_true_vec <- function(x) {
+  !is.na(x) & x
 }
 
 # ---------------------------------------------------------------------

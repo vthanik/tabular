@@ -886,7 +886,13 @@ backend_rtf <- function(grid, file) {
     cells,
     function(c) {
       paste0(
-        "\\pard\\plain\\intbl ",
+        "\\pard\\plain\\intbl",
+        # `\plain` resets to the RTF default 12pt; re-emit the preset body
+        # size so page chrome matches the table (mirrors the title / footnote
+        # / body surfaces). `c$props` follows, so an explicit
+        # `style(.at = cells_pagehead())` font override still wins (last-wins).
+        .rtf_body_fs(preset),
+        " ",
         c$align,
         c$props,
         " ",

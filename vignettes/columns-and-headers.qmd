@@ -137,7 +137,9 @@ tabular(
 ## BigN in the header
 
 Treatment-group denominators belong in the column headers. Pull them
-from the bundled `saf_n` and build the labels with `sprintf()`:
+from the bundled `saf_n` and interpolate them into the labels with a
+glue-style `{expr}` template — the expression is evaluated when `cols()`
+runs, so any object in scope (here the named vector `n`) is fair game:
 
 ```{r}
 #| label: bign
@@ -147,10 +149,10 @@ tabular(saf_demo) |>
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  n["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  n["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", n["drug_100"]), align = "decimal"),
-    Total      = col_spec(label = sprintf("Total\n(N=%d)",    n["Total"]),    align = "decimal")
+    placebo    = col_spec(label = "Placebo\n(N={n['placebo']})",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50\n(N={n['drug_50']})",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100\n(N={n['drug_100']})", align = "decimal"),
+    Total      = col_spec(label = "Total\n(N={n['Total']})",    align = "decimal")
   )
 ```
 
@@ -176,10 +178,10 @@ base <- tabular(saf_demo) |>
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = sprintf("Placebo\n(N=%d)",  n["placebo"]),  align = "decimal"),
-    drug_50    = col_spec(label = sprintf("Drug 50\n(N=%d)",  n["drug_50"]),  align = "decimal"),
-    drug_100   = col_spec(label = sprintf("Drug 100\n(N=%d)", n["drug_100"]), align = "decimal"),
-    Total      = col_spec(label = sprintf("Total\n(N=%d)",    n["Total"]),    align = "decimal")
+    placebo    = col_spec(label = "Placebo\n(N={n['placebo']})",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50\n(N={n['drug_50']})",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100\n(N={n['drug_100']})", align = "decimal"),
+    Total      = col_spec(label = "Total\n(N={n['Total']})",    align = "decimal")
   )
 
 base |>

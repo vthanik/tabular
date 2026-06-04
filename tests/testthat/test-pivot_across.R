@@ -1171,3 +1171,37 @@ test_that(".hier_append_chunk fills the leaf with the current value, deeper keys
   expect_identical(hlt_row$l2[[1L]], "Arrhythmias")
   expect_identical(hlt_row$label[[1L]], "Arrhythmias") # leaf = current value
 })
+
+# ---------------------------------------------------------------------
+# Regression: mixed ard_summary + ard_tabulate stack keeps categorical
+# rows; only the .by by-variable's own tabulation is dropped (B1)
+# ---------------------------------------------------------------------
+
+test_that("pivot_across keeps tabulate-context categorical rows (B1)", {
+  # Relabel the bundled cards-like ARD so its data variables carry the
+  # "summary" / "tabulate" contexts that ard_summary() / ard_tabulate()
+  # emit, reproducing the B1 shape without a `cards` dependency.
+  card_st <- saf_demo_card
+  card_st$context[card_st$context == "continuous"] <- "summary"
+  card_st$context[card_st$context == "categorical"] <- "tabulate"
+
+  out <- pivot_across(
+    card_st,
+    statistic = list(
+      summary = "{mean} ({sd})",
+      tabulate = "{n} ({p}%)"
+    )
+  )
+
+  # Genuine tabulate-context categorical variables survive the internal-row
+  # filter; before the fix every "tabulate" row was dropped.
+  expect_true(all(c("SEX", "RACE") %in% out$variable))
+  # A summary-context continuous variable also survives.
+  expect_true("AGE" %in% out$variable)
+  # SEX levels appear in the output (stat_label is indented for display).
+  sex_rows <- out[out$variable == "SEX", , drop = FALSE]
+  expect_true(all(c("F", "M") %in% trimws(sex_rows$stat_label)))
+  # The by-variable's own tabulation (context "tabulate", no arm) is still
+  # filtered out.
+  expect_false("TRT01A" %in% out$variable)
+})

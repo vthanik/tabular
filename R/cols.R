@@ -75,6 +75,28 @@
 #'   **Tip:** To override an attribute already declared, use a
 #'   second `cols()` call downstream and let the merge rule apply.
 #'
+#' @param .default *Fallback `col_spec` for unmentioned columns.*
+#'   `<col_spec | NULL>: default NULL`. When a `col_spec`, it is
+#'   field-merged onto every data column that is NOT named in `...`
+#'   and does not already carry a spec from an earlier `cols()` call.
+#'   `NULL` (default) leaves unmentioned columns to the engine-time
+#'   default. Use it to set one alignment / format across a variable
+#'   number of arm columns in a single call.
+#'
+#'   **Interaction:** Explicit `...` specs always win — `.default`
+#'   only fills the gaps. A column carried over from a prior `cols()`
+#'   call is treated as already specified and is left untouched.
+#'
+#'   ```r
+#'   # Decimal-align every arm column without listing each by name.
+#'   tabular(saf_demo) |>
+#'     cols(
+#'       variable   = col_spec(usage = "group", label = "Parameter"),
+#'       stat_label = col_spec(label = "Statistic"),
+#'       .default   = col_spec(align = "decimal")
+#'     )
+#'   ```
+#'
 #' @return *The updated `tabular_spec`.* Continue chaining with
 #'   [`headers()`], [`sort_rows()`], [`style()`].
 #'
@@ -100,10 +122,10 @@
 #'   cols(
 #'     variable   = col_spec(usage = "group", label = "Parameter"),
 #'     stat_label = col_spec(label = "Statistic"),
-#'     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  n["placebo"]),  align = "decimal"),
-#'     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  n["drug_50"]),  align = "decimal"),
-#'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", n["drug_100"]), align = "decimal"),
-#'     Total      = col_spec(label = sprintf("Total\nN=%d",    n["Total"]),    align = "decimal")
+#'     placebo    = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
+#'     drug_50    = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
+#'     drug_100   = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
+#'     Total      = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
 #'   ) |>
 #'   sort_rows(by = c("variable", "stat_label"))
 #'
@@ -136,9 +158,9 @@
 #'     row_type    = col_spec(visible = FALSE),
 #'     groupid     = col_spec(visible = FALSE),
 #'     group_label = col_spec(visible = FALSE),
-#'     placebo    = col_spec(label = sprintf("Placebo\nN=%d",  ne["placebo"]),  align = "decimal"),
-#'     drug_50    = col_spec(label = sprintf("Drug 50\nN=%d",  ne["drug_50"]),  align = "decimal"),
-#'     drug_100   = col_spec(label = sprintf("Drug 100\nN=%d", ne["drug_100"]), align = "decimal")
+#'     placebo    = col_spec(label = "Placebo\nN={ne['placebo']}",  align = "decimal"),
+#'     drug_50    = col_spec(label = "Drug 50\nN={ne['drug_50']}",  align = "decimal"),
+#'     drug_100   = col_spec(label = "Drug 100\nN={ne['drug_100']}", align = "decimal")
 #'   ) |>
 #'   sort_rows(by = c("groupid", "stat_label"))
 #'
@@ -217,17 +239,30 @@
 #' [`as_grid()`].
 #'
 #' @export
-cols <- function(.spec, ...) {
+cols <- function(.spec, ..., .default = NULL) {
   call <- rlang::caller_env()
   check_tabular_spec(.spec, call = call)
 
+  default_spec <- .default
+  if (!is.null(default_spec) && !is_col_spec(default_spec)) {
+    cli::cli_abort(
+      c(
+        "{.arg .default} must be a {.cls col_spec} or {.code NULL}.",
+        "x" = "You supplied {.obj_type_friendly {default_spec}}.",
+        "i" = "Use {.fn col_spec} to build one."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+
   args <- rlang::list2(...)
-  if (length(args) == 0L) {
+  if (length(args) == 0L && is.null(default_spec)) {
     return(.spec)
   }
 
   arg_names <- names(args)
-  if (is.null(arg_names) || any(arg_names == "")) {
+  if (length(args) > 0L && (is.null(arg_names) || any(arg_names == ""))) {
     cli::cli_abort(
       c(
         "All arguments to {.fn cols} must be named.",
@@ -294,12 +329,210 @@ cols <- function(.spec, ...) {
     }
   }
 
+  # `.default` fills every data column not named in `...` and not
+  # already carrying a spec (from this or a prior cols() call).
+  if (!is.null(default_spec)) {
+    specified <- names(new_cols)
+    unmentioned <- setdiff(names(.spec@data), specified)
+    for (nm in unmentioned) {
+      new_cols[[nm]] <- S7::set_props(default_spec, name = nm)
+    }
+  }
+
+  S7::set_props(.spec, cols = new_cols)
+}
+
+#' Apply one column spec to many columns
+#'
+#' Field-merge a single [`col_spec()`] onto every column matched by
+#' name or by a predicate. The vectorized companion to [`cols()`] for
+#' the common case of a variable number of treatment-arm columns that
+#' all share the same display rule (decimal alignment, a numeric
+#' format), so you avoid `do.call()` / `!!!` splicing one named
+#' argument per arm.
+#'
+#' @details
+#'
+#' **Field-merge, not replace.** `cols_apply()` reuses the same
+#' field-by-field merge as repeated [`cols()`] calls: a non-default
+#' field on `.col_spec` overrides; a default-valued field leaves any
+#' prior attribute on the matched column intact. Set the shared rule
+#' across arms first, then refine an individual arm with a later
+#' [`cols()`] call (or the reverse).
+#'
+#' @param .spec *The `tabular_spec` to extend.*
+#'   `<tabular_spec>: required`. Dot-prefixed so partial matching
+#'   cannot bind a user name in another slot.
+#'
+#' @param .cols *Columns to match.*
+#'   `<character | function>: required`. Either a character vector of
+#'   input column names in `.spec@data`, or a predicate
+#'   `function(names) -> logical` evaluated against `names(.spec@data)`
+#'   (one logical per column, same length).
+#'
+#'   **Restriction:** Named columns must exist in `.spec@data`. A
+#'   predicate must return a logical vector the length of
+#'   `names(.spec@data)`.
+#'   **Tip:** No tidyselect helpers ship; pass a base vector
+#'   (`grep("^ARM", names(df), value = TRUE)`) or a predicate
+#'   (`\(nm) startsWith(nm, "ARM")`).
+#'
+#' @param .col_spec *The spec to field-merge onto every match.*
+#'   `<col_spec>: required`. Built with [`col_spec()`].
+#'
+#' @return *The updated `tabular_spec`.* Continue chaining with
+#'   [`headers()`], [`sort_rows()`], [`style()`].
+#'
+#' @examples
+#' # ---- Example 1: Decimal-align every arm column by name vector ----
+#' #
+#' # Demographics table whose treatment-arm columns are selected by a
+#' # name vector (`grep()` against the data) and given one shared
+#' # decimal-alignment spec, while the two row-label columns keep
+#' # their own roles set with `cols()`.
+#' arm_cols <- grep("^placebo$|^drug_|^Total$", names(saf_demo), value = TRUE)
+#'
+#' tabular(
+#'   saf_demo,
+#'   titles = c(
+#'     "Table 14.1.1",
+#'     "Demographics and Baseline Characteristics",
+#'     "Safety Population"
+#'   )
+#' ) |>
+#'   cols(
+#'     variable   = col_spec(usage = "group", label = "Parameter"),
+#'     stat_label = col_spec(label = "Statistic")
+#'   ) |>
+#'   cols_apply(arm_cols, col_spec(align = "decimal")) |>
+#'   sort_rows(by = c("variable", "stat_label"))
+#'
+#' # ---- Example 2: Select arm columns with a predicate ----
+#' #
+#' # Best Overall Response table. The arm columns are matched with a
+#' # predicate over the column names; the hidden sort helpers and the
+#' # response label are declared with `cols()`. The predicate scales
+#' # to any number of arms without editing the call.
+#' bor_levels <- c(
+#'   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
+#'   "ORR (CR + PR)", "CBR (CR + PR + SD)",
+#'   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95% CI (Clopper-Pearson)"
+#' )
+#' eff <- eff_resp
+#' eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
+#'
+#' tabular(
+#'   eff,
+#'   titles = c(
+#'     "Table 14.2.1",
+#'     "Best Overall Response and Response Rates",
+#'     "Efficacy Evaluable Population"
+#'   )
+#' ) |>
+#'   cols(
+#'     stat_label  = col_spec(label = "Response"),
+#'     row_type    = col_spec(visible = FALSE),
+#'     groupid     = col_spec(visible = FALSE),
+#'     group_label = col_spec(visible = FALSE)
+#'   ) |>
+#'   cols_apply(
+#'     \(nm) nm %in% c("placebo", "drug_50", "drug_100"),
+#'     col_spec(align = "decimal")
+#'   ) |>
+#'   sort_rows(by = c("groupid", "stat_label"))
+#'
+#' @seealso
+#' **Companion verbs:** [`cols()`] attaches per-column specs by name;
+#' [`col_spec()`] builds the spec.
+#'
+#' **Sibling build verbs:** [`headers()`], [`sort_rows()`],
+#' [`style()`], [`paginate()`], [`preset()`].
+#'
+#' @export
+cols_apply <- function(.spec, .cols, .col_spec) {
+  call <- rlang::caller_env()
+  check_tabular_spec(.spec, call = call)
+
+  col_spec_arg <- .col_spec
+  if (!is_col_spec(col_spec_arg)) {
+    cli::cli_abort(
+      c(
+        "{.arg .col_spec} must be a {.cls col_spec}.",
+        "x" = "You supplied {.obj_type_friendly {col_spec_arg}}.",
+        "i" = "Use {.fn col_spec} to build one."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+
+  data_cols <- names(.spec@data)
+  matched <- .resolve_col_selection(.cols, data_cols, call = call)
+
+  new_cols <- .spec@cols
+  for (nm in matched) {
+    incoming <- S7::set_props(col_spec_arg, name = nm)
+    if (nm %in% names(new_cols)) {
+      new_cols[[nm]] <- .merge_col_spec(new_cols[[nm]], incoming)
+    } else {
+      new_cols[[nm]] <- incoming
+    }
+  }
+
   S7::set_props(.spec, cols = new_cols)
 }
 
 # ---------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------
+
+# Resolve `.cols` (a character vector of column names or a predicate
+# over the data column names) to a character vector of matched column
+# names. Errors with tabular_error_input on missing names, a
+# non-logical / wrong-length predicate result, or an unsupported type.
+.resolve_col_selection <- function(cols, data_cols, call) {
+  if (is.function(cols)) {
+    hit <- cols(data_cols)
+    if (!is.logical(hit) || length(hit) != length(data_cols)) {
+      cli::cli_abort(
+        c(
+          "The {.arg .cols} predicate must return a logical vector.",
+          "x" = "It returned {.obj_type_friendly {hit}} of length {length(hit)}.",
+          "i" = "Expected a logical of length {length(data_cols)} (one per column)."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    hit[is.na(hit)] <- FALSE
+    return(data_cols[hit])
+  }
+
+  if (is.character(cols)) {
+    missing <- setdiff(cols, data_cols)
+    if (length(missing) > 0L) {
+      cli::cli_abort(
+        c(
+          "{cli::qty(missing)} Column{?s} {.val {missing}} {?is/are} not in {.arg data}.",
+          "x" = "Available columns: {.val {data_cols}}.",
+          "i" = "Pre-compute derived columns upstream with {.fn dplyr::mutate} (or equivalent) before {.fn tabular}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    return(unique(cols))
+  }
+
+  cli::cli_abort(
+    c(
+      "{.arg .cols} must be a character vector or a predicate function.",
+      "x" = "You supplied {.obj_type_friendly {cols}}."
+    ),
+    class = "tabular_error_input",
+    call = call
+  )
+}
 
 # Merge `new` into `existing` field-by-field. A non-default value in
 # `new` overrides the corresponding field in `existing`; a default

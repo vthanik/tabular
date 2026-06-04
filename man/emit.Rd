@@ -4,7 +4,14 @@
 \alias{emit}
 \title{Render a \code{tabular_spec} to a file}
 \usage{
-emit(spec, file, format = NULL, data_file = NULL, manifest = FALSE)
+emit(
+  spec,
+  file,
+  format = NULL,
+  data_file = NULL,
+  manifest = FALSE,
+  create_dir = FALSE
+)
 }
 \arguments{
 \item{spec}{\emph{The \code{tabular_spec} to render.}
@@ -60,6 +67,12 @@ data_file = \\(f) file.path(
 keys; see the \strong{\code{manifest = TRUE}} invariant in the Details
 section for what the file contains and the determinism
 contract it satisfies.}
+
+\item{create_dir}{\emph{Create the destination directory if it is missing.}
+\verb{<logical(1)>: default FALSE}. When \code{TRUE}, the parent directory of
+\code{file} (and any missing ancestors) is created recursively before
+rendering, instead of aborting. The default \code{FALSE} keeps the safe
+behaviour of erroring on a missing parent.}
 }
 \value{
 \emph{The \code{file} path, invisibly.} Use this when chaining
@@ -157,10 +170,10 @@ demo <- tabular(
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"]),  align = "decimal"),
-    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"]),  align = "decimal"),
-    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"]), align = "decimal"),
-    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]),    align = "decimal")
+    placebo  = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
+    drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
+    drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
+    Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
   sort_rows(by = c("variable", "stat_label"))
 
@@ -194,10 +207,10 @@ ae_spec <- tabular(
     row_type = col_spec(visible = FALSE),
     soc_n    = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
-    placebo  = col_spec(label = sprintf("Placebo\nN=\%d",  n["placebo"]),  align = "decimal"),
-    drug_50  = col_spec(label = sprintf("Drug 50\nN=\%d",  n["drug_50"]),  align = "decimal"),
-    drug_100 = col_spec(label = sprintf("Drug 100\nN=\%d", n["drug_100"]), align = "decimal"),
-    Total    = col_spec(label = sprintf("Total\nN=\%d",    n["Total"]),    align = "decimal")
+    placebo  = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
+    drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
+    drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
+    Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
 
@@ -245,6 +258,15 @@ data_out <- tempfile(fileext = ".csv")
 emit(eff_spec, rtf_out, data_file = data_out)
 file.exists(rtf_out)
 file.exists(data_out)
+
+# ---- Example 5: Render into a not-yet-existing output folder ----
+#
+# `create_dir = TRUE` builds the destination directory tree on the
+# fly, so a submission-folder layout can be written in one pass
+# without a separate `dir.create()` step.
+nested <- file.path(tempfile(), "tables", "safety", "eff.md")
+emit(eff_spec, nested, create_dir = TRUE)
+file.exists(nested)
 
 }
 \seealso{
