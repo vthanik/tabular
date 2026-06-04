@@ -166,7 +166,13 @@ backend_md <- function(grid, file) {
       for (page in panel_pages) {
         panel_lines <- c(
           panel_lines,
-          .render_md_page_body_rows(page, preset = meta$preset, cs = cs)
+          .render_md_page_body_rows(
+            page,
+            preset = meta$preset,
+            cs = cs,
+            headers = meta$headers,
+            col_names = col_names
+          )
         )
       }
       if (k > 1L) {
@@ -189,11 +195,27 @@ backend_md <- function(grid, file) {
 }
 
 # Render one page slice's body lines: an optional subgroup banner
-# (bold) followed by one pipe-table row per data row. Returns
-# character(0) when the slice is empty (no banner, zero rows).
-.render_md_page_body_rows <- function(page, preset = NULL, cs = NULL) {
+# (bold), an optional per-arm BigN row under it, then one pipe-table
+# row per data row. Returns character(0) when the slice is empty (no
+# banner, zero rows).
+.render_md_page_body_rows <- function(
+  page,
+  preset = NULL,
+  cs = NULL,
+  headers = NULL,
+  col_names = NULL
+) {
+  banner <- .render_md_subgroup_banner(page, cs)
+  # Per-subgroup BigN: emit the per-arm N row only alongside the banner
+  # (gated on the banner being present and the page carrying records).
+  bign <- if (length(banner) > 0L) {
+    .render_md_subgroup_bign_row(page$subgroup_bign, headers, col_names)
+  } else {
+    character()
+  }
   c(
-    .render_md_subgroup_banner(page, cs),
+    banner,
+    bign,
     .render_md_body_rows(
       page$cells_text,
       is_header_row = page$is_header_row,
@@ -203,6 +225,20 @@ backend_md <- function(grid, file) {
       cells_style = page$cells_style
     )
   )
+}
+
+# Per-arm BigN row for a subgroup banner: one pipe row aligned to the
+# visible columns, the `(N=x)` under each arm and "" elsewhere. A band
+# target's N repeats across the band's visible columns -- the same way
+# `.render_md_header_bands` repeats a band label, since GFM has no
+# colspan -- so no first-leaf degradation and no extra fidelity warning.
+# Returns character(0) when the page carries no records.
+.render_md_subgroup_bign_row <- function(records, headers, col_names) {
+  if (is.null(records) || length(records) == 0L) {
+    return(character())
+  }
+  sp <- .subgroup_bign_spans(records, headers, col_names)
+  .md_pipe_row(vapply(sp$text, .md_escape_cell, character(1L)))
 }
 
 # Resolve the blank-line count for a chrome surface side. chrome_style

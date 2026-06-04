@@ -659,10 +659,17 @@ backend_latex <- function(grid, file) {
       keep_with_next = page$keep_with_next
     )
 
-  bands <- .render_latex_header_bands(meta$headers, col_names_vis, cs)
+  # Per-page BigN: one longtblr per subgroup, so read that subgroup's
+  # SUFFIXED bands + leaf labels from the page descriptor via the shared
+  # resolver. Inert (global metadata) without big_n.
+  page_hdr <- .page_header_for_render(meta, page)
+  page_headers <- page_hdr$headers
+  page_col_labels_ast <- page_hdr$col_labels_ast
+
+  bands <- .render_latex_header_bands(page_headers, col_names_vis, cs)
   band_rows <- bands$rows
   label_row <- .render_latex_col_labels_row(
-    meta$col_labels_ast,
+    page_col_labels_ast,
     col_names_vis,
     cols,
     cs,

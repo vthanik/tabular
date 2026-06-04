@@ -159,6 +159,53 @@ engine_headers <- function(spec) {
   unname(lookup)
 }
 
+# Map per-subgroup BigN records onto the visible column order for the
+# continuous-backend N row (the per-arm `(N=x)` under a subgroup
+# banner). Parallels `.band_labels_for_depth`: returns two aligned
+# vectors of length `length(col_names_visible)` -- a `key` (the target
+# name over each covered column, `NA` elsewhere) and a `text` (the
+# `(N=x)` string over each covered column, "" elsewhere).
+#
+# Keying on the target NAME, not the rendered text, is deliberate: two
+# arms with an equal N (e.g. adjacent `(N=9)` columns) keep distinct
+# keys, so the backend's run-grouping never coalesces them into one
+# `colspan=2` cell. A band target's N rides every visible leaf under
+# that band -- HTML colspans the contiguous run, md repeats it across
+# the columns (matching `.band_labels_for_depth`'s band repeat).
+#
+# `headers` is the base (un-suffixed) band frame from `engine_headers`;
+# `span_cols` carries data-column NAMES (suffix-independent) and the
+# record's `name` is the original band label, so the match holds
+# regardless of any per-page `(N=x)` suffix.
+#
+# @keywords internal
+# @noRd
+.subgroup_bign_spans <- function(records, headers, col_names_visible) {
+  n <- length(col_names_visible)
+  key <- rep(NA_character_, n)
+  text <- rep("", n)
+  for (rec in records) {
+    if (identical(rec$kind, "leaf")) {
+      pos <- match(rec$name, col_names_visible)
+      if (!is.na(pos)) {
+        key[[pos]] <- rec$name
+        text[[pos]] <- rec$text
+      }
+    } else if (identical(rec$kind, "band")) {
+      hit <- which(headers$label == rec$name)
+      if (length(hit) == 0L) {
+        next
+      }
+      spans <- headers$span_cols[[hit[[1L]]]]
+      pos <- match(intersect(spans, col_names_visible), col_names_visible)
+      pos <- pos[!is.na(pos)]
+      key[pos] <- rec$name
+      text[pos] <- rec$text
+    }
+  }
+  list(key = key, text = text)
+}
+
 # Empty header-grid skeleton — matches the populated frame's schema
 # so backends can iterate uniformly when no header tree is set.
 .empty_header_grid <- function() {

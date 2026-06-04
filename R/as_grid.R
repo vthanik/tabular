@@ -307,6 +307,31 @@ as_grid <- function(spec) {
       registry = registry
     ))
   }
+  # Per-page BigN: each sub-grid's leaf labels + header bands carry
+  # that subgroup's `(N=x)` suffix (paged backends read them per page).
+  # The GLOBAL header must stay un-suffixed so the continuous backends
+  # (HTML/MD) and the DOCX top header show clean arm names. Compute the
+  # base (un-suffixed) labels + bands from the PARENT spec, where the
+  # footnote `registry` is in scope, so column-label superscripts
+  # survive onto the global header.
+  #
+  # Computed BEFORE the sub-grid loop on purpose: `engine_headers(spec)`
+  # runs the band-contiguity check against the user's ORIGINAL band
+  # labels, so a non-contiguous band aborts naming "Placebo", not the
+  # engine-suffixed "Placebo (N=24)" a sub-spec would surface first.
+  base_labels <- NULL
+  base_headers <- NULL
+  if (!is.null(spec@subgroup) && !is.null(spec@subgroup@big_n)) {
+    base_cols <- .cols_by_name(spec@cols, names(spec@data))
+    base_labels <- engine_footnotes_mark_ast(
+      .parse_col_labels(base_cols, names(spec@data), call),
+      NULL,
+      registry,
+      names(spec@data)
+    )$col_labels_ast
+    base_headers <- engine_headers(spec)
+  }
+
   sub_grids <- lapply(groups, function(g) {
     .resolve_single_to_grid(
       g$spec,
@@ -316,7 +341,14 @@ as_grid <- function(spec) {
       registry = registry
     )
   })
-  .merge_subgroup_grids(sub_grids, format = format, spec = spec)
+
+  .merge_subgroup_grids(
+    sub_grids,
+    format = format,
+    spec = spec,
+    base_col_labels_ast = base_labels,
+    base_headers = base_headers
+  )
 }
 
 # Resolve a single (sub-)spec into a tabular_grid. `runtime` is the
@@ -710,6 +742,31 @@ as_grid <- function(spec) {
   })
 }
 
+# Resolve the header band frame + column-label AST a backend should
+# render for one page/segment. Shared by the RTF, LaTeX, and DOCX
+# header renderers so the per-page BigN read is identical across them.
+#
+#   * Bands ride `page$headers` (stamped per subgroup in the merge, the
+#     SUFFIXED frame under big_n). `%||%` is safe ungated: a page only
+#     carries `$headers` on a subgroup table, where it equals the base
+#     bands byte-for-byte when big_n is off.
+#   * Leaf labels stay flag-gated: every page (subgroup or not) carries
+#     a visible-sliced `$col_labels_ast`, so reading it unconditionally
+#     would change non-subgroup output. Only read it when big_n is on.
+#
+# @keywords internal
+# @noRd
+.page_header_for_render <- function(meta, page) {
+  list(
+    headers = page$headers %||% meta$headers,
+    col_labels_ast = if (isTRUE(meta$subgroup_big_n_active)) {
+      page$col_labels_ast
+    } else {
+      meta$col_labels_ast
+    }
+  )
+}
+
 # Merge per-group sub-grids into one tabular_grid. Pages
 # concatenate in group order; each page keeps its per-group
 # page_index (1..rows_per_page) so {page} / {npages} tokens resolve
@@ -717,9 +774,40 @@ as_grid <- function(spec) {
 # (total_pages, nrow_data) sums across groups; the per-group
 # runtime list is published at `metadata$subgroup_groups` for
 # backends or downstream tooling that wants to enumerate groups.
-.merge_subgroup_grids <- function(sub_grids, format, spec) {
+.merge_subgroup_grids <- function(
+  sub_grids,
+  format,
+  spec,
+  base_col_labels_ast = NULL,
+  base_headers = NULL
+) {
+  # Stamp each page with its own subgroup's header band frame (the
+  # SUFFIXED bands when big_n is active), the same per-page model as
+  # `col_labels_ast`. Backends read `page$headers` directly, so there
+  # is one source of truth per header element and no index-keyed
+  # lookup to drift. For a subgroup table WITHOUT big_n every group's
+  # bands are identical, so `page$headers` equals the global `headers`
+  # byte-for-byte.
+  #
+  # `page$subgroup_bign` rides the same per-page model: the per-arm N
+  # records for the continuous-backend N row (one list per subgroup,
+  # keyed to the page's group via `runtime$index`). NULL without big_n,
+  # so HTML / md skip the row and render byte-identically.
+  bign_records <- .subgroup_bign_records_all(spec)
   pages <- unlist(
-    lapply(sub_grids, function(g) g@pages),
+    lapply(sub_grids, function(g) {
+      bands <- g@metadata$headers
+      recs <- if (is.null(bign_records)) {
+        NULL
+      } else {
+        bign_records[[g@metadata$subgroup_runtime$index]]
+      }
+      lapply(g@pages, function(p) {
+        p$headers <- bands
+        p$subgroup_bign <- recs
+        p
+      })
+    }),
     recursive = FALSE,
     use.names = FALSE
   )
@@ -745,6 +833,17 @@ as_grid <- function(spec) {
   meta$nrow_data <- as.integer(nrow_data)
   meta$subgroup_runtime <- NULL
   meta$subgroup_groups <- subgroup_groups
+
+  # Per-page BigN: force the GLOBAL leaf labels + bands to the
+  # un-suffixed base so the continuous backends (HTML/MD) and the DOCX
+  # top header show clean arm names. The SUFFIXED per-subgroup bands +
+  # leaf labels ride the page descriptors (`page$headers`,
+  # `page$col_labels_ast`); paged backends read those per page.
+  if (!is.null(base_col_labels_ast)) {
+    meta$col_labels_ast <- base_col_labels_ast
+    meta$headers <- base_headers
+    meta$subgroup_big_n_active <- TRUE
+  }
 
   # Restore aggregate ncol_data + col_names from the parent spec so
   # the merged grid reports the unfiltered shape (each sub-spec has

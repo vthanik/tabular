@@ -88,6 +88,11 @@ engine_subgroup_split <- function(spec) {
     )
 
     sub_spec <- S7::set_props(spec, data = sub_data)
+    sub_spec <- .subgroup_apply_big_n(
+      sub_spec,
+      combos[i, , drop = FALSE],
+      spec@subgroup
+    )
     out[[i]] <- list(spec = sub_spec, runtime = runtime)
   }
 
@@ -172,4 +177,121 @@ engine_subgroup_split <- function(spec) {
     },
     logical(1L)
   )
+}
+
+# Per-page BigN application. For the subgroup whose combo is
+# `combo_row`, append the formatted N suffix to each arm's header
+# element: a leaf column's label (via sub_spec@cols) or a spanner
+# band's label (via sub_spec@headers). No-op when sg@big_n is NULL.
+# The leaf-vs-band decision reuses `.subgroup_bign_target` so it can
+# never diverge from validation. Mutates labels via `set_props` (not
+# the col_spec()/header_node() constructors) so the appended `(N=x)`
+# is never re-evaluated as a `{n}` template.
+.subgroup_apply_big_n <- function(sub_spec, combo_row, sg) {
+  if (is.null(sg@big_n)) {
+    return(sub_spec)
+  }
+  by_cols <- sg@by
+  big_n <- sg@big_n
+  fmt <- sg@big_n_fmt
+  data_names <- names(sub_spec@data)
+  band_labels <- .subgroup_header_labels(sub_spec@headers)
+  n_cols <- setdiff(names(big_n), by_cols)
+
+  idx <- which(.subgroup_match_mask(big_n, by_cols, combo_row))
+  if (length(idx) == 0L) {
+    return(sub_spec) # nocov  (completeness enforced at verb time)
+  }
+  idx <- idx[[1L]]
+
+  cols <- sub_spec@cols
+  headers <- sub_spec@headers
+  for (nm in n_cols) {
+    n_val <- big_n[[nm]][[idx]]
+    suffix <- gsub("{n}", format(n_val, trim = TRUE), fmt, fixed = TRUE)
+    tgt <- .subgroup_bign_target(nm, data_names, band_labels)
+    if (tgt$kind == "leaf") {
+      cs <- cols[[nm]]
+      cs0 <- if (is_col_spec(cs)) cs else col_spec()
+      base <- if (!is.na(cs0@label)) cs0@label else nm
+      cols[[nm]] <- S7::set_props(
+        cs0,
+        label = paste0(base, suffix),
+        name = nm
+      )
+    } else if (tgt$kind == "band") {
+      headers <- .subgroup_suffix_band(headers, nm, suffix)
+    }
+  }
+  S7::set_props(sub_spec, cols = cols, headers = headers)
+}
+
+# Append `suffix` to the label of the (single, validated-unique)
+# header node whose label equals `target`, recursing into children.
+.subgroup_suffix_band <- function(nodes, target, suffix) {
+  lapply(nodes, function(node) {
+    if (identical(node@label, target)) {
+      node <- S7::set_props(node, label = paste0(node@label, suffix))
+    }
+    if (length(node@children) > 0L) {
+      node <- S7::set_props(
+        node,
+        children = .subgroup_suffix_band(node@children, target, suffix)
+      )
+    }
+    node
+  })
+}
+
+# Per-subgroup BigN records for the continuous backends (HTML / md).
+# Paged backends ride the N on each page's repeating header; continuous
+# backends have one header, so they instead emit a per-arm N row under
+# each subgroup banner. This builds the raw material for that row: one
+# record list per subgroup, each entry `list(name, kind, text)` where
+# `name` is the big_n value-column (a data column for a leaf target, a
+# band label for a band target), `kind` is "leaf" / "band", and `text`
+# is the formatted `(N=x)` cell. Returns NULL when big_n is absent, so
+# the merge leaves `page$subgroup_bign` NULL and non-big_n subgroup
+# tables render byte-identically.
+#
+# Recomputed from the raw `big_n` frame (never reverse-parsed from the
+# suffixed header AST), reusing `.subgroup_combos` / `.subgroup_match_mask`
+# / `.subgroup_bign_target` / `.subgroup_header_labels` so the combo
+# order, denominator pick, and leaf-vs-band placement can never diverge
+# from `.subgroup_apply_big_n`. List index `i` matches the split's
+# `runtime$index`.
+.subgroup_bign_records_all <- function(spec) {
+  sg <- spec@subgroup
+  if (is.null(sg) || is.null(sg@big_n)) {
+    return(NULL)
+  }
+  big_n <- sg@big_n
+  by_cols <- sg@by
+  fmt <- sg@big_n_fmt
+  data_names <- names(spec@data)
+  band_labels <- .subgroup_header_labels(spec@headers)
+  n_cols <- setdiff(names(big_n), by_cols)
+  combos <- .subgroup_combos(spec@data, by_cols)
+
+  lapply(seq_len(nrow(combos)), function(i) {
+    idx <- which(.subgroup_match_mask(
+      big_n,
+      by_cols,
+      combos[i, , drop = FALSE]
+    ))
+    if (length(idx) == 0L) {
+      return(list()) # nocov  (completeness enforced at verb time)
+    }
+    idx <- idx[[1L]]
+    lapply(n_cols, function(nm) {
+      n_val <- big_n[[nm]][[idx]]
+      suffix <- gsub("{n}", format(n_val, trim = TRUE), fmt, fixed = TRUE)
+      # Strip the leading newline/space the paged header carries (the
+      # default fmt is "\n(N={n})") so the row cell reads "(N=24)", not
+      # a blank-then-newline. Internal spacing is preserved.
+      text <- sub("^\\s+", "", suffix)
+      tgt <- .subgroup_bign_target(nm, data_names, band_labels)
+      list(name = nm, kind = tgt$kind, text = text)
+    })
+  })
 }
