@@ -35,6 +35,16 @@
 #' **Multi-line band labels.** Embed `\n` in a band label for a
 #' two-line band cell (arm name on row 1, BigN on row 2).
 #'
+#' **Spanner underline trim (backend limitation).** Each spanner's
+#' underline is trimmed at both ends, booktabs `\cmidrule(lr)` style,
+#' so adjacent spanners are separated by a visible gap rather than
+#' merging into one continuous line. PDF / LaTeX (tabularray
+#' `leftpos`/`rightpos`) and HTML (an inset rule) render the trim
+#' natively. RTF and DOCX cannot inset a cell border horizontally, so
+#' there the spanner underline spans the full band width (adjacent
+#' spanner rules abut). This is a known, documented limitation of the
+#' OOXML / RTF cell-border model, not a bug.
+#'
 #' @section Passthrough leaves inside a nested band:
 #'
 #' Inside a nested-list value, a child entry may be **unnamed** —

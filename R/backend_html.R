@@ -1430,6 +1430,39 @@ backend_html <- function(grid, file) {
   sprintf("%s { %s }", selector, decl)
 }
 
+# Spanner band underline, trimmed at both ends (booktabs `\cmidrule(lr)`
+# parity with the LaTeX backend). A `border-bottom` spans the full cell
+# width, so adjacent spanners' underlines abut into one continuous line.
+# Instead we paint the rule as an inset `background` gradient: a
+# horizontal stripe at the cell bottom, COLOUR only between `<inset>` and
+# `100% - <inset>`, transparent at the ends. Each band cell insets by
+# `<inset>` on both sides, so adjacent spanners are separated by a
+# `2 * <inset>` gap and the outer ends sit inside the column edge.
+# Returns NULL when the rule is off (so `rules = list(spanrule = "none")`
+# still clears it).
+.html_band_rule_trimmed <- function(selector, triple, inset = "0.5em") {
+  if (is.null(triple) || identical(triple$style, "none")) {
+    return(NULL)
+  }
+  colour <- .resolve_rule_color(triple$color)
+  sprintf(
+    paste0(
+      "%s { background-image: linear-gradient(to right, ",
+      "transparent %s, %s %s, %s calc(100%% - %s), transparent calc(100%% - %s)); ",
+      "background-repeat: no-repeat; background-position: left bottom; ",
+      "background-size: 100%% %gpt; }"
+    ),
+    selector,
+    inset,
+    colour,
+    inset,
+    colour,
+    inset,
+    inset,
+    triple$width
+  )
+}
+
 # Stamp `triple` as the bottom border of every cell in the LAST data
 # row of the LAST page. Used by the HTML footnoterule -> bottomrule
 # fold: when `bottomrule = "none"` clears the per-cell bottom border,
@@ -1905,9 +1938,8 @@ backend_html <- function(grid, file) {
       "bottom",
       .chrome_border_at(cs, "header_bottom")
     ),
-    .html_structural_rule(
+    .html_band_rule_trimmed(
       ".tabular-table thead .tabular-band",
-      "bottom",
       .chrome_border_at(cs, "header_between")
     ),
     .html_structural_rule(

@@ -2380,3 +2380,55 @@ test_that("keep-with-next markers are consistent across docx / rtf / latex (#kee
   # HTML still renders a continuous table (no row-level keep concept).
   expect_true(file.exists(html))
 })
+
+test_that("keep_together glues group runs consistently across docx / rtf / latex (#keep-together)", {
+  # A group column with multi-row runs + paginate(keep_together) makes the
+  # engine keep_with_next mask glue each run. Every backend with a keep
+  # marker must reflect it: docx <w:keepNext/> (rows that carry it),
+  # rtf \keepn, latex \\*.
+  df <- data.frame(
+    grp = rep(c("G1", "G2", "G3"), each = 3),
+    lab = rep(c("r1", "r2", "r3"), 3),
+    a = as.character(1:9),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "T") |>
+    cols(
+      grp = col_spec(usage = "group", label = "Group"),
+      lab = col_spec(label = "L"),
+      a = col_spec(label = "A")
+    ) |>
+    paginate(keep_together = "grp")
+
+  docx <- withr::local_tempfile(fileext = ".docx")
+  rtf <- withr::local_tempfile(fileext = ".rtf")
+  tex <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, docx)
+  emit(spec, rtf)
+  emit(spec, tex)
+
+  u <- .unzip_docx(docx)
+  docx_xml <- paste(
+    readLines(file.path(u, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  rtf_txt <- paste(readLines(rtf, warn = FALSE), collapse = "")
+  tex_txt <- paste(readLines(tex, warn = FALSE), collapse = "")
+
+  # docx: number of body rows that carry at least one <w:keepNext/>.
+  docx_rows <- regmatches(
+    docx_xml,
+    gregexpr("<w:tr\\b.*?</w:tr>", docx_xml)
+  )[[1]]
+  n_docx_rows <- sum(grepl("<w:keepNext/>", docx_rows, fixed = TRUE))
+  n_rtf <- lengths(regmatches(rtf_txt, gregexpr("\\\\keepn", rtf_txt)))
+  n_tex <- lengths(regmatches(tex_txt, gregexpr("\\\\\\\\\\*", tex_txt)))
+
+  # keep_together is honoured in every backend (markers present). Exact
+  # counts differ by backend: each synthesises group-header / blank-gap
+  # rows differently and glues those too, so the invariant is "present in
+  # all", not equal counts.
+  expect_gt(n_docx_rows, 0L)
+  expect_gt(n_rtf, 0L)
+  expect_gt(n_tex, 0L)
+})

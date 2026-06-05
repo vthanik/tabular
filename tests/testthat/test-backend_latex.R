@@ -1045,10 +1045,12 @@ test_that("LaTeX band underline rides an outer multi-range hline (no inline cmid
   expect_match(tex, "hline\\{2\\}=\\{2-3,4-5\\}", perl = TRUE)
   # The band underline is the SSOT muted `spanrule` (0.5pt, #adb5bd),
   # matching HTML's muted band -- not the legacy hardcoded `0.4pt`
-  # black rule.
+  # black rule. `leftpos=-1, rightpos=-1` trims each spanner segment by
+  # colsep at both ends (tabularray's booktabs cmidrule(lr) equivalent),
+  # so adjacent spanners' underlines are separated by a gap.
   expect_match(
     tex,
-    "hline{2}={2-3,4-5}{0.5pt, solid, fg=tabularruleADB5BD}",
+    "hline{2}={2-3,4-5}{0.5pt, solid, fg=tabularruleADB5BD, leftpos=-1, rightpos=-1}",
     fixed = TRUE
   )
 })

@@ -2317,12 +2317,16 @@ test_that("HTML scenario G: band underline scopes to .tabular-band cells only", 
   # left (label, soc_n, placebo), one on the right (Total).
   expect_match(html, "<th colspan=\"3\"></th>")
   expect_match(html, "<th colspan=\"1\"></th>")
-  # CSS: old blanket rule gone, new band-scoped rule present.
+  # CSS: old blanket rule gone, new band-scoped rule present. The band
+  # underline is trimmed at both ends (booktabs cmidrule(lr) parity), so
+  # it is painted as an inset background gradient, not a full-width
+  # border-bottom (which would abut adjacent spanners into one line).
   expect_no_match(
     html,
     ".tabular-table thead tr:not\\(:last-child\\) th \\{ border-bottom"
   )
-  expect_match(html, "\\.tabular-band \\{ border-bottom")
+  expect_match(html, "\\.tabular-band \\{ background-image: linear-gradient")
+  expect_match(html, "calc\\(100% - 0\\.5em\\)")
 })
 
 test_that("HTML band: top rule scopes to first thead row only (col-labels row has no extra border-top)", {
