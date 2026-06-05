@@ -305,19 +305,20 @@ NULL
 #' #
 #' # Compose two tabular tables in one parent container. `as.tags(spec)`
 #' # is the entry point `print()` and `knit_print()` use under the hood.
-#' # Wrap the `tagList` in `htmltools::browsable()` so it renders as live
-#' # HTML in a viewer / Quarto chunk / pkgdown page instead of printing
-#' # its source, the same convention `gt` and `flextable` follow.
 #' s1 <- tabular(cdisc_saf_demo, titles = "Demographics")
 #' s2 <- tabular(cdisc_saf_ae, titles = "AE overall")
 #'
-#' if (requireNamespace("htmltools", quietly = TRUE)) {
-#'   htmltools::browsable(
-#'     htmltools::tagList(
-#'       htmltools::as.tags(s1),
-#'       htmltools::as.tags(s2)
-#'     )
-#'   )
+#' tables <- htmltools::tagList(
+#'   htmltools::as.tags(s1),
+#'   htmltools::as.tags(s2)
+#' )
+#'
+#' # `browsable()` makes the tagList render as live HTML in a viewer /
+#' # Quarto chunk instead of printing its source, the convention `gt` and
+#' # `flextable` follow. Guard with `interactive()` so a non-interactive
+#' # session (`R CMD check`, CI) never launches a browser.
+#' if (interactive()) {
+#'   htmltools::browsable(tables)
 #' }
 #'
 #' @seealso
