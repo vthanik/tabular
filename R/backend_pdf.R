@@ -234,6 +234,13 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
 #' and let that tree own the packages. Never force a locked `tlmgr`
 #' with `--ignore-warning`: it leaves the system tree half-written.
 #'
+#' **Slow / stuck install (often Windows).** The default CTAN
+#' repository `mirror.ctan.org` redirects to a random mirror on
+#' every call, and a slow or stale one makes [`tinytex::tlmgr_install()`]
+#' appear to hang. Pin a concrete mirror once with
+#' [`tinytex::tlmgr_repo()`]`("auto")` (it follows the redirect a
+#' single time and remembers the result), then retry the install.
+#'
 #' **Status markers:**
 #'
 #' * `v` — package is installed in the local TeX tree.
@@ -350,6 +357,9 @@ check_latex <- function(quiet = FALSE) {
   )
   cli::cli_text(
     "Install with {.run tinytex::tlmgr_install(c({paste(.sh_quote(missing), collapse = ', ')}))}."
+  )
+  cli::cli_text(
+    "If the install stalls (commonly on Windows, where the default CTAN mirror redirects on every call), pin a concrete mirror once with {.run tinytex::tlmgr_repo(\"auto\")} then retry."
   )
   cli::cli_text(
     "On an OS-managed TeX Live (RHEL/dnf, Debian/apt) tlmgr is locked: install a user-space TinyTeX with {.run tinytex::install_tinytex()} instead. Never force a locked tlmgr with {.code --ignore-warning}."

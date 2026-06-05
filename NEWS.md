@@ -47,8 +47,10 @@ yet supported and is the focus of the next release.
 * Significant-whitespace preservation across all backends
   (`preset(whitespace = "preserve")`, the default).
 * `check_latex()` reports LaTeX-package availability for PDF output and
-  prints the exact `tlmgr_install()` remedy for anything missing;
-  `check_fonts()` does the same for fonts, per backend.
+  prints the exact `tlmgr_install()` remedy for anything missing — including a
+  CTAN-mirror pin (`tinytex::tlmgr_repo("auto")`) when an install stalls behind
+  the redirecting default mirror (commonly on Windows); `check_fonts()` does the
+  same for fonts, per backend.
 
 ## Data
 

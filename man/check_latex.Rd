@@ -43,6 +43,13 @@ install a user-space TinyTeX with \code{\link[tinytex:install_tinytex]{tinytex::
 and let that tree own the packages. Never force a locked \code{tlmgr}
 with \code{--ignore-warning}: it leaves the system tree half-written.
 
+\strong{Slow / stuck install (often Windows).} The default CTAN
+repository \code{mirror.ctan.org} redirects to a random mirror on
+every call, and a slow or stale one makes \code{\link[tinytex:tlmgr_install]{tinytex::tlmgr_install()}}
+appear to hang. Pin a concrete mirror once with
+\code{\link[tinytex:tlmgr_repo]{tinytex::tlmgr_repo()}}\code{("auto")} (it follows the redirect a
+single time and remembers the result), then retry the install.
+
 \strong{Status markers:}
 \itemize{
 \item \code{v} — package is installed in the local TeX tree.
