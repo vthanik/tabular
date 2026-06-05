@@ -163,8 +163,10 @@
 #tabular-e29ca3de86 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
 #tabular-e29ca3de86 .tabular-table tbody tr td { border-top: none; }
 #tabular-e29ca3de86 .tabular-band { text-align: center; }
-#tabular-e29ca3de86 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-e29ca3de86 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
 #tabular-e29ca3de86 .tabular-subgroup-label { font-weight: 600; }
+#tabular-e29ca3de86 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-e29ca3de86 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-e29ca3de86 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
 #tabular-e29ca3de86 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
 #tabular-e29ca3de86 .text-left { text-align: left; }
@@ -508,51 +510,53 @@
 <span><span class="va">vitals</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-d50b16f299 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-d50b16f299 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-d50b16f299 p { line-height: inherit; }
-#tabular-d50b16f299 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-d50b16f299 .tabular-caption { margin: 0; padding: 0; }
-#tabular-d50b16f299 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-d50b16f299 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-d50b16f299 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-d50b16f299 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-d50b16f299 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-d50b16f299 .tabular-table th, #tabular-d50b16f299 .tabular-table td { padding: .18rem .6rem; }
-#tabular-d50b16f299 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-d50b16f299 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-d50b16f299 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-d50b16f299 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-d50b16f299 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-d50b16f299 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-d50b16f299 .tabular-table tbody tr td { border-top: none; }
-#tabular-d50b16f299 .tabular-band { text-align: center; }
-#tabular-d50b16f299 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-d50b16f299 .tabular-subgroup-label { font-weight: 600; }
-#tabular-d50b16f299 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-d50b16f299 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-d50b16f299 .text-left { text-align: left; }
-#tabular-d50b16f299 .text-center { text-align: center; }
-#tabular-d50b16f299 .text-right { text-align: right; }
-#tabular-d50b16f299 .tabular-table thead th.text-left { text-align: left; }
-#tabular-d50b16f299 .tabular-table thead th.text-center { text-align: center; }
-#tabular-d50b16f299 .tabular-table thead th.text-right { text-align: right; }
-#tabular-d50b16f299 .valign-top { vertical-align: top; }
-#tabular-d50b16f299 .valign-middle { vertical-align: middle; }
-#tabular-d50b16f299 .valign-bottom { vertical-align: bottom; }
-#tabular-d50b16f299 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-d50b16f299 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-d50b16f299 .tabular-page-break-row { display: none; }
-#tabular-d50b16f299 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-d50b16f299 .tabular-page-header, #tabular-d50b16f299 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-d50b16f299 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-d50b16f299 .tabular-page-footer { margin-top: 1rem; }
-#tabular-d50b16f299 .tabular-page-header-left, #tabular-d50b16f299 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-d50b16f299 .tabular-page-header-center, #tabular-d50b16f299 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-d50b16f299 .tabular-page-header-right, #tabular-d50b16f299 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-d50b16f299 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-d50b16f299 .tabular-table tr { page-break-inside: avoid; } #tabular-d50b16f299 .tabular-page-header, #tabular-d50b16f299 .tabular-page-footer { display: none; } #tabular-d50b16f299 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-d50b16f299 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-d50b16f299 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-94071ced8e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-94071ced8e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-94071ced8e p { line-height: inherit; }
+#tabular-94071ced8e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-94071ced8e .tabular-caption { margin: 0; padding: 0; }
+#tabular-94071ced8e .tabular-pad { margin: 0; line-height: 1; }
+#tabular-94071ced8e .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-94071ced8e .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-94071ced8e .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-94071ced8e .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-94071ced8e .tabular-table th, #tabular-94071ced8e .tabular-table td { padding: .18rem .6rem; }
+#tabular-94071ced8e .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-94071ced8e .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-94071ced8e .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-94071ced8e .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-94071ced8e .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-94071ced8e .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-94071ced8e .tabular-table tbody tr td { border-top: none; }
+#tabular-94071ced8e .tabular-band { text-align: center; }
+#tabular-94071ced8e .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-94071ced8e .tabular-subgroup-label { font-weight: 600; }
+#tabular-94071ced8e .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-94071ced8e .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-94071ced8e .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-94071ced8e .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-94071ced8e .text-left { text-align: left; }
+#tabular-94071ced8e .text-center { text-align: center; }
+#tabular-94071ced8e .text-right { text-align: right; }
+#tabular-94071ced8e .tabular-table thead th.text-left { text-align: left; }
+#tabular-94071ced8e .tabular-table thead th.text-center { text-align: center; }
+#tabular-94071ced8e .tabular-table thead th.text-right { text-align: right; }
+#tabular-94071ced8e .valign-top { vertical-align: top; }
+#tabular-94071ced8e .valign-middle { vertical-align: middle; }
+#tabular-94071ced8e .valign-bottom { vertical-align: bottom; }
+#tabular-94071ced8e .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-94071ced8e .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-94071ced8e .tabular-page-break-row { display: none; }
+#tabular-94071ced8e { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-94071ced8e .tabular-page-header, #tabular-94071ced8e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-94071ced8e .tabular-page-header { margin-bottom: 1rem; }
+#tabular-94071ced8e .tabular-page-footer { margin-top: 1rem; }
+#tabular-94071ced8e .tabular-page-header-left, #tabular-94071ced8e .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-94071ced8e .tabular-page-header-center, #tabular-94071ced8e .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-94071ced8e .tabular-page-header-right, #tabular-94071ced8e .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-94071ced8e .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-94071ced8e .tabular-table tr { page-break-inside: avoid; } #tabular-94071ced8e .tabular-page-header, #tabular-94071ced8e .tabular-page-footer { display: none; } #tabular-94071ced8e .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-94071ced8e .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-94071ced8e .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-d50b16f299" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-94071ced8e" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Table 14.2.1</p>
 <p class="tabular-title">Vital Signs Summary by Sex</p>
 <p class="tabular-title">Safety Population</p>
@@ -568,7 +572,7 @@
 <th class="text-center" data-quarto-table-cell-role="th">Total</th>
 </tr></thead>
 <tbody>
-<tr class="tabular-subgroup odd">
+<tr class="tabular-subgroup tabular-subgroup-closed odd">
 <td colspan="5" class="tabular-subgroup-label"><strong>Sex: F</strong></td>
 </tr>
 <tr class="tabular-group-header even">
@@ -713,7 +717,7 @@
 <tr class="tabular-page-break-row odd" aria-hidden="true">
 <td colspan="5"></td>
 </tr>
-<tr class="tabular-subgroup even">
+<tr class="tabular-subgroup tabular-subgroup-closed even">
 <td colspan="5" class="tabular-subgroup-label"><strong>Sex: M</strong></td>
 </tr>
 <tr class="tabular-group-header odd">
@@ -906,8 +910,10 @@
 #tabular-9f5dedaa70 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
 #tabular-9f5dedaa70 .tabular-table tbody tr td { border-top: none; }
 #tabular-9f5dedaa70 .tabular-band { text-align: center; }
-#tabular-9f5dedaa70 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-9f5dedaa70 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
 #tabular-9f5dedaa70 .tabular-subgroup-label { font-weight: 600; }
+#tabular-9f5dedaa70 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-9f5dedaa70 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-9f5dedaa70 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
 #tabular-9f5dedaa70 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
 #tabular-9f5dedaa70 .text-left { text-align: left; }
@@ -1305,10 +1311,10 @@
 <code class="sourceCode R"><span><span class="kw">for</span> <span class="op">(</span><span class="va">ext</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">".rtf"</span>, <span class="st">".html"</span>, <span class="st">".tex"</span>, <span class="st">".docx"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">ext</span>, <span class="st">"-&gt;"</span>, <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">basename</a></span><span class="op">(</span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">vitals</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="va">ext</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt; .rtf -&gt; file32bb4f077b8d.rtf </span></span>
-<span><span class="co">#&gt; .html -&gt; file32bb78015f9a.html </span></span>
-<span><span class="co">#&gt; .tex -&gt; file32bb66bcd70b.tex </span></span>
-<span><span class="co">#&gt; .docx -&gt; file32bb7cee391e.docx</span></span></code></pre></div>
+<span><span class="co">#&gt; .rtf -&gt; file323447e539e1.rtf </span></span>
+<span><span class="co">#&gt; .html -&gt; file32344d63d97c.html </span></span>
+<span><span class="co">#&gt; .tex -&gt; file323475bb4997.tex </span></span>
+<span><span class="co">#&gt; .docx -&gt; file32344a99a760.docx</span></span></code></pre></div>
 </div>
 <p><code>.pdf</code> works the same way; it compiles through <code>xelatex</code>, so it needs a TeX install (<code><a href="../reference/check_latex.html">check_latex()</a></code> reports readiness — see the <a href="https://vthanik.github.io/tabular/#installation">README</a>).</p>
 </section><section class="level2"><h2 id="where-this-fits">Where this fits<a class="anchor" aria-label="anchor" href="#where-this-fits"></a>

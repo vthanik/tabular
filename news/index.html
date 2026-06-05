@@ -65,9 +65,14 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
-<ul><li>The DOCX backend now honours the <code>halign</code> cascade on group-header rows instead of always left-aligning them.</li>
+<ul><li>
+<code><a href="../reference/subgroup.html">subgroup()</a></code> now folds per-page <code>big_n</code> into the column header when the denominators are identical across every subgroup, instead of repeating an <code>(N=)</code> row (HTML / Markdown) for an N that never changes.</li>
+<li>
+<code><a href="../reference/subgroup.html">subgroup()</a></code> banners now render above the column-header band, left-aligned, set off by a blank row above and below, in the paged backends (RTF, PDF / LaTeX, DOCX); HTML and Markdown keep the banner centered, and HTML now draws the closing rule below the per-arm <code>(N=)</code> row, or under the banner itself when there is no such row, rather than boxing the banner.</li>
+<li>The DOCX backend now honours the <code>halign</code> cascade on group-header rows instead of always left-aligning them.</li>
 <li>The PDF backend now declares its full LaTeX package set, so a missing-dependency error names every required package.</li>
 <li>The RTF backend now renders <code>pagehead</code> / <code>pagefoot</code> page chrome at the preset <code>font_size</code> instead of the RTF default 12pt.</li>
+<li>The RTF backend now renders blank section-separator rows, and the footnote and non-repeating-title spacer paragraphs, at the preset <code>font_size</code> instead of the RTF default 12pt, so every spacer line matches the body height.</li>
 <li>
 <code><a href="../reference/pivot_across.html">pivot_across()</a></code> no longer silently drops <code>ard_tabulate()</code> categorical rows, nor blanks their pooled <code>overall</code> column, from a mixed <code>ard_stack()</code> ARD.</li>
 </ul></div>

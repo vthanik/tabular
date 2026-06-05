@@ -136,8 +136,10 @@ tabular(
 #tabular-4dde9970a0 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
 #tabular-4dde9970a0 .tabular-table tbody tr td { border-top: none; }
 #tabular-4dde9970a0 .tabular-band { text-align: center; }
-#tabular-4dde9970a0 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-4dde9970a0 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
 #tabular-4dde9970a0 .tabular-subgroup-label { font-weight: 600; }
+#tabular-4dde9970a0 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-4dde9970a0 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-4dde9970a0 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
 #tabular-4dde9970a0 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
 #tabular-4dde9970a0 .text-left { text-align: left; }

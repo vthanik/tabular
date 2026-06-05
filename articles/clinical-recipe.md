@@ -408,10 +408,10 @@ across unchanged:
 for (ext in c(".rtf", ".html", ".tex", ".docx")) {
   cat(ext, "->", basename(emit(vitals, tempfile(fileext = ext))), "\n")
 }
-#> .rtf -> file32bb4f077b8d.rtf 
-#> .html -> file32bb78015f9a.html 
-#> .tex -> file32bb66bcd70b.tex 
-#> .docx -> file32bb7cee391e.docx
+#> .rtf -> file323447e539e1.rtf 
+#> .html -> file32344d63d97c.html 
+#> .tex -> file323475bb4997.tex 
+#> .docx -> file32344a99a760.docx
 ```
 
 `.pdf` works the same way; it compiles through `xelatex`, so it needs a

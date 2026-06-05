@@ -146,8 +146,10 @@ tabular(saf_aesocpt) |>
 #tabular-74b81993fc .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
 #tabular-74b81993fc .tabular-table tbody tr td { border-top: none; }
 #tabular-74b81993fc .tabular-band { text-align: center; }
-#tabular-74b81993fc .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-74b81993fc .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
 #tabular-74b81993fc .tabular-subgroup-label { font-weight: 600; }
+#tabular-74b81993fc .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-74b81993fc .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-74b81993fc .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
 #tabular-74b81993fc .tabular-blank-row td { padding: .25rem .6rem; border: none; }
 #tabular-74b81993fc .text-left { text-align: left; }

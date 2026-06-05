@@ -138,8 +138,10 @@
 #tabular-8ba5c42bba .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
 #tabular-8ba5c42bba .tabular-table tbody tr td { border-top: none; }
 #tabular-8ba5c42bba .tabular-band { text-align: center; }
-#tabular-8ba5c42bba .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-8ba5c42bba .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
 #tabular-8ba5c42bba .tabular-subgroup-label { font-weight: 600; }
+#tabular-8ba5c42bba .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-8ba5c42bba .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-8ba5c42bba .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
 #tabular-8ba5c42bba .tabular-blank-row td { padding: .25rem .6rem; border: none; }
 #tabular-8ba5c42bba .text-left { text-align: left; }
@@ -281,8 +283,10 @@
 #tabular-aac3145f60 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
 #tabular-aac3145f60 .tabular-table tbody tr td { border-top: none; }
 #tabular-aac3145f60 .tabular-band { text-align: center; }
-#tabular-aac3145f60 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-aac3145f60 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
 #tabular-aac3145f60 .tabular-subgroup-label { font-weight: 600; }
+#tabular-aac3145f60 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-aac3145f60 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-aac3145f60 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
 #tabular-aac3145f60 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
 #tabular-aac3145f60 .text-left { text-align: left; }
@@ -667,8 +671,10 @@
 #tabular-e67b9a485f .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
 #tabular-e67b9a485f .tabular-table tbody tr td { border-top: none; }
 #tabular-e67b9a485f .tabular-band { text-align: center; }
-#tabular-e67b9a485f .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-e67b9a485f .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
 #tabular-e67b9a485f .tabular-subgroup-label { font-weight: 600; }
+#tabular-e67b9a485f .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-e67b9a485f .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-e67b9a485f .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
 #tabular-e67b9a485f .tabular-blank-row td { padding: .25rem .6rem; border: none; }
 #tabular-e67b9a485f .text-left { text-align: left; }
@@ -793,51 +799,53 @@
 <span>  <span class="fu"><a href="../reference/subgroup.html">subgroup</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"agegr"</span><span class="op">)</span>, label <span class="op">=</span> <span class="st">"{sex}, {agegr}"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-dc3883bfb8 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-dc3883bfb8 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-dc3883bfb8 p { line-height: inherit; }
-#tabular-dc3883bfb8 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-dc3883bfb8 .tabular-caption { margin: 0; padding: 0; }
-#tabular-dc3883bfb8 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-dc3883bfb8 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-dc3883bfb8 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-dc3883bfb8 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-dc3883bfb8 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-dc3883bfb8 .tabular-table th, #tabular-dc3883bfb8 .tabular-table td { padding: .18rem .6rem; }
-#tabular-dc3883bfb8 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-dc3883bfb8 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-dc3883bfb8 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-dc3883bfb8 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-dc3883bfb8 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-dc3883bfb8 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-dc3883bfb8 .tabular-table tbody tr td { border-top: none; }
-#tabular-dc3883bfb8 .tabular-band { text-align: center; }
-#tabular-dc3883bfb8 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-dc3883bfb8 .tabular-subgroup-label { font-weight: 600; }
-#tabular-dc3883bfb8 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-dc3883bfb8 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-dc3883bfb8 .text-left { text-align: left; }
-#tabular-dc3883bfb8 .text-center { text-align: center; }
-#tabular-dc3883bfb8 .text-right { text-align: right; }
-#tabular-dc3883bfb8 .tabular-table thead th.text-left { text-align: left; }
-#tabular-dc3883bfb8 .tabular-table thead th.text-center { text-align: center; }
-#tabular-dc3883bfb8 .tabular-table thead th.text-right { text-align: right; }
-#tabular-dc3883bfb8 .valign-top { vertical-align: top; }
-#tabular-dc3883bfb8 .valign-middle { vertical-align: middle; }
-#tabular-dc3883bfb8 .valign-bottom { vertical-align: bottom; }
-#tabular-dc3883bfb8 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-dc3883bfb8 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-dc3883bfb8 .tabular-page-break-row { display: none; }
-#tabular-dc3883bfb8 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-dc3883bfb8 .tabular-page-header, #tabular-dc3883bfb8 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-dc3883bfb8 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-dc3883bfb8 .tabular-page-footer { margin-top: 1rem; }
-#tabular-dc3883bfb8 .tabular-page-header-left, #tabular-dc3883bfb8 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-dc3883bfb8 .tabular-page-header-center, #tabular-dc3883bfb8 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-dc3883bfb8 .tabular-page-header-right, #tabular-dc3883bfb8 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-dc3883bfb8 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-dc3883bfb8 .tabular-table tr { page-break-inside: avoid; } #tabular-dc3883bfb8 .tabular-page-header, #tabular-dc3883bfb8 .tabular-page-footer { display: none; } #tabular-dc3883bfb8 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-dc3883bfb8 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-dc3883bfb8 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-b6a671d0bc { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-b6a671d0bc .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-b6a671d0bc p { line-height: inherit; }
+#tabular-b6a671d0bc .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-b6a671d0bc .tabular-caption { margin: 0; padding: 0; }
+#tabular-b6a671d0bc .tabular-pad { margin: 0; line-height: 1; }
+#tabular-b6a671d0bc .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-b6a671d0bc .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-b6a671d0bc .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-b6a671d0bc .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-b6a671d0bc .tabular-table th, #tabular-b6a671d0bc .tabular-table td { padding: .18rem .6rem; }
+#tabular-b6a671d0bc .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-b6a671d0bc .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-b6a671d0bc .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-b6a671d0bc .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-b6a671d0bc .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-b6a671d0bc .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-b6a671d0bc .tabular-table tbody tr td { border-top: none; }
+#tabular-b6a671d0bc .tabular-band { text-align: center; }
+#tabular-b6a671d0bc .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-b6a671d0bc .tabular-subgroup-label { font-weight: 600; }
+#tabular-b6a671d0bc .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-b6a671d0bc .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-b6a671d0bc .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-b6a671d0bc .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-b6a671d0bc .text-left { text-align: left; }
+#tabular-b6a671d0bc .text-center { text-align: center; }
+#tabular-b6a671d0bc .text-right { text-align: right; }
+#tabular-b6a671d0bc .tabular-table thead th.text-left { text-align: left; }
+#tabular-b6a671d0bc .tabular-table thead th.text-center { text-align: center; }
+#tabular-b6a671d0bc .tabular-table thead th.text-right { text-align: right; }
+#tabular-b6a671d0bc .valign-top { vertical-align: top; }
+#tabular-b6a671d0bc .valign-middle { vertical-align: middle; }
+#tabular-b6a671d0bc .valign-bottom { vertical-align: bottom; }
+#tabular-b6a671d0bc .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-b6a671d0bc .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-b6a671d0bc .tabular-page-break-row { display: none; }
+#tabular-b6a671d0bc { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-b6a671d0bc .tabular-page-header, #tabular-b6a671d0bc .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-b6a671d0bc .tabular-page-header { margin-bottom: 1rem; }
+#tabular-b6a671d0bc .tabular-page-footer { margin-top: 1rem; }
+#tabular-b6a671d0bc .tabular-page-header-left, #tabular-b6a671d0bc .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-b6a671d0bc .tabular-page-header-center, #tabular-b6a671d0bc .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-b6a671d0bc .tabular-page-header-right, #tabular-b6a671d0bc .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-b6a671d0bc .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-b6a671d0bc .tabular-table tr { page-break-inside: avoid; } #tabular-b6a671d0bc .tabular-page-header, #tabular-b6a671d0bc .tabular-page-footer { display: none; } #tabular-b6a671d0bc .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-b6a671d0bc .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-b6a671d0bc .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-dc3883bfb8" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-b6a671d0bc" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Table 14.2.3  Vital Signs by Sex and Age Group</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
@@ -852,7 +860,7 @@
 <th class="text-center" data-quarto-table-cell-role="th">Total</th>
 </tr></thead>
 <tbody>
-<tr class="tabular-subgroup odd">
+<tr class="tabular-subgroup tabular-subgroup-closed odd">
 <td colspan="6" class="tabular-subgroup-label"><strong>F, &lt;65</strong></td>
 </tr>
 <tr class="even">
@@ -922,7 +930,7 @@
 <tr class="tabular-page-break-row even" aria-hidden="true">
 <td colspan="6"></td>
 </tr>
-<tr class="tabular-subgroup odd">
+<tr class="tabular-subgroup tabular-subgroup-closed odd">
 <td colspan="6" class="tabular-subgroup-label"><strong>F, &gt;=65</strong></td>
 </tr>
 <tr class="even">
@@ -992,7 +1000,7 @@
 <tr class="tabular-page-break-row even" aria-hidden="true">
 <td colspan="6"></td>
 </tr>
-<tr class="tabular-subgroup odd">
+<tr class="tabular-subgroup tabular-subgroup-closed odd">
 <td colspan="6" class="tabular-subgroup-label"><strong>M, &lt;65</strong></td>
 </tr>
 <tr class="even">
@@ -1062,7 +1070,7 @@
 <tr class="tabular-page-break-row even" aria-hidden="true">
 <td colspan="6"></td>
 </tr>
-<tr class="tabular-subgroup odd">
+<tr class="tabular-subgroup tabular-subgroup-closed odd">
 <td colspan="6" class="tabular-subgroup-label"><strong>M, &gt;=65</strong></td>
 </tr>
 <tr class="even">
@@ -1184,8 +1192,10 @@
 #tabular-aac3145f60 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
 #tabular-aac3145f60 .tabular-table tbody tr td { border-top: none; }
 #tabular-aac3145f60 .tabular-band { text-align: center; }
-#tabular-aac3145f60 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-aac3145f60 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
 #tabular-aac3145f60 .tabular-subgroup-label { font-weight: 600; }
+#tabular-aac3145f60 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-aac3145f60 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-aac3145f60 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
 #tabular-aac3145f60 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
 #tabular-aac3145f60 .text-left { text-align: left; }
@@ -1567,49 +1577,51 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-fe08ea5f38 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-fe08ea5f38 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-fe08ea5f38 p { line-height: inherit; }
-#tabular-fe08ea5f38 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-fe08ea5f38 .tabular-caption { margin: 0; padding: 0; }
-#tabular-fe08ea5f38 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-fe08ea5f38 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-fe08ea5f38 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-fe08ea5f38 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-fe08ea5f38 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-fe08ea5f38 .tabular-table th, #tabular-fe08ea5f38 .tabular-table td { padding: .18rem .6rem; }
-#tabular-fe08ea5f38 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-fe08ea5f38 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-fe08ea5f38 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-fe08ea5f38 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-fe08ea5f38 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-fe08ea5f38 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-fe08ea5f38 .tabular-table tbody tr td { border-top: none; }
-#tabular-fe08ea5f38 .tabular-band { text-align: center; }
-#tabular-fe08ea5f38 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-fe08ea5f38 .tabular-subgroup-label { font-weight: 600; }
-#tabular-fe08ea5f38 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-fe08ea5f38 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-fe08ea5f38 .text-left { text-align: left; }
-#tabular-fe08ea5f38 .text-center { text-align: center; }
-#tabular-fe08ea5f38 .text-right { text-align: right; }
-#tabular-fe08ea5f38 .tabular-table thead th.text-left { text-align: left; }
-#tabular-fe08ea5f38 .tabular-table thead th.text-center { text-align: center; }
-#tabular-fe08ea5f38 .tabular-table thead th.text-right { text-align: right; }
-#tabular-fe08ea5f38 .valign-top { vertical-align: top; }
-#tabular-fe08ea5f38 .valign-middle { vertical-align: middle; }
-#tabular-fe08ea5f38 .valign-bottom { vertical-align: bottom; }
-#tabular-fe08ea5f38 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-fe08ea5f38 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-fe08ea5f38 .tabular-page-break-row { display: none; }
-#tabular-fe08ea5f38 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-fe08ea5f38 .tabular-page-header, #tabular-fe08ea5f38 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-fe08ea5f38 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-fe08ea5f38 .tabular-page-footer { margin-top: 1rem; }
-#tabular-fe08ea5f38 .tabular-page-header-left, #tabular-fe08ea5f38 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-fe08ea5f38 .tabular-page-header-center, #tabular-fe08ea5f38 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-fe08ea5f38 .tabular-page-header-right, #tabular-fe08ea5f38 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-fe08ea5f38 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-fe08ea5f38 .tabular-table tr { page-break-inside: avoid; } #tabular-fe08ea5f38 .tabular-page-header, #tabular-fe08ea5f38 .tabular-page-footer { display: none; } #tabular-fe08ea5f38 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-fe08ea5f38 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-fe08ea5f38 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-c51cfa9b57 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-c51cfa9b57 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-c51cfa9b57 p { line-height: inherit; }
+#tabular-c51cfa9b57 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-c51cfa9b57 .tabular-caption { margin: 0; padding: 0; }
+#tabular-c51cfa9b57 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-c51cfa9b57 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-c51cfa9b57 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-c51cfa9b57 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-c51cfa9b57 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-c51cfa9b57 .tabular-table th, #tabular-c51cfa9b57 .tabular-table td { padding: .18rem .6rem; }
+#tabular-c51cfa9b57 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-c51cfa9b57 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-c51cfa9b57 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-c51cfa9b57 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-c51cfa9b57 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-c51cfa9b57 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-c51cfa9b57 .tabular-table tbody tr td { border-top: none; }
+#tabular-c51cfa9b57 .tabular-band { text-align: center; }
+#tabular-c51cfa9b57 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-c51cfa9b57 .tabular-subgroup-label { font-weight: 600; }
+#tabular-c51cfa9b57 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-c51cfa9b57 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-c51cfa9b57 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-c51cfa9b57 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-c51cfa9b57 .text-left { text-align: left; }
+#tabular-c51cfa9b57 .text-center { text-align: center; }
+#tabular-c51cfa9b57 .text-right { text-align: right; }
+#tabular-c51cfa9b57 .tabular-table thead th.text-left { text-align: left; }
+#tabular-c51cfa9b57 .tabular-table thead th.text-center { text-align: center; }
+#tabular-c51cfa9b57 .tabular-table thead th.text-right { text-align: right; }
+#tabular-c51cfa9b57 .valign-top { vertical-align: top; }
+#tabular-c51cfa9b57 .valign-middle { vertical-align: middle; }
+#tabular-c51cfa9b57 .valign-bottom { vertical-align: bottom; }
+#tabular-c51cfa9b57 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-c51cfa9b57 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-c51cfa9b57 .tabular-page-break-row { display: none; }
+#tabular-c51cfa9b57 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-c51cfa9b57 .tabular-page-header, #tabular-c51cfa9b57 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-c51cfa9b57 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-c51cfa9b57 .tabular-page-footer { margin-top: 1rem; }
+#tabular-c51cfa9b57 .tabular-page-header-left, #tabular-c51cfa9b57 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-c51cfa9b57 .tabular-page-header-center, #tabular-c51cfa9b57 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-c51cfa9b57 .tabular-page-header-right, #tabular-c51cfa9b57 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-c51cfa9b57 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-c51cfa9b57 .tabular-table tr { page-break-inside: avoid; } #tabular-c51cfa9b57 .tabular-page-header, #tabular-c51cfa9b57 .tabular-page-footer { display: none; } #tabular-c51cfa9b57 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-c51cfa9b57 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-c51cfa9b57 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 @page {
   white-space: pre-line;
   @top-left { content: "Protocol: ABC-12345"; }
@@ -1617,10 +1629,10 @@
   @top-right { content: "Page " counter(page) " of " counter(pages); }
   @bottom-left { content: "/opt/quarto/share/rmd/rmd.R"; }
   @bottom-center { content: ""; }
-  @bottom-right { content: "04JUN2026 22:34:34"; }
+  @bottom-right { content: "05JUN2026 07:54:30"; }
 }
 </style>
-<div id="tabular-fe08ea5f38" class="tabular-doc" style="overflow-x:auto;max-width:100%;">
+<div id="tabular-c51cfa9b57" class="tabular-doc" style="overflow-x:auto;max-width:100%;">
 <header class="tabular-page-header"><div class="tabular-page-header-left">Protocol: ABC-12345</div>
   <div class="tabular-page-header-right">Page 1 of 1</div>
 </header><figure class="tabular-content"><div class="tabular-table-wrap">
@@ -1934,7 +1946,7 @@
 </table>
 </div>
 </figure><footer class="tabular-page-footer"><div class="tabular-page-footer-left">/opt/quarto/share/rmd/rmd.R</div>
-  <div class="tabular-page-footer-right">04JUN2026 22:34:34</div>
+  <div class="tabular-page-footer-right">05JUN2026 07:54:30</div>
 </footer>
 </div>
 </div>
@@ -2012,8 +2024,10 @@
 #tabular-848cc54834 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
 #tabular-848cc54834 .tabular-table tbody tr td { border-top: none; }
 #tabular-848cc54834 .tabular-band { text-align: center; }
-#tabular-848cc54834 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
+#tabular-848cc54834 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
 #tabular-848cc54834 .tabular-subgroup-label { font-weight: 600; }
+#tabular-848cc54834 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-848cc54834 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-848cc54834 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
 #tabular-848cc54834 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
 #tabular-848cc54834 .text-left { text-align: left; }

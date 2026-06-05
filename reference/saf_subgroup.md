@@ -97,49 +97,51 @@ tabular(saf_subgroup, titles = "Vital Signs at End of Treatment") |>
   ) |>
   subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
 
-#tabular-5ca2059c05 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-5ca2059c05 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-5ca2059c05 p { line-height: inherit; }
-#tabular-5ca2059c05 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-5ca2059c05 .tabular-caption { margin: 0; padding: 0; }
-#tabular-5ca2059c05 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-5ca2059c05 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-5ca2059c05 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-5ca2059c05 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-5ca2059c05 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-5ca2059c05 .tabular-table th, #tabular-5ca2059c05 .tabular-table td { padding: .18rem .6rem; }
-#tabular-5ca2059c05 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-5ca2059c05 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-5ca2059c05 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-5ca2059c05 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-5ca2059c05 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-5ca2059c05 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-5ca2059c05 .tabular-table tbody tr td { border-top: none; }
-#tabular-5ca2059c05 .tabular-band { text-align: center; }
-#tabular-5ca2059c05 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }
-#tabular-5ca2059c05 .tabular-subgroup-label { font-weight: 600; }
-#tabular-5ca2059c05 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-5ca2059c05 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-5ca2059c05 .text-left { text-align: left; }
-#tabular-5ca2059c05 .text-center { text-align: center; }
-#tabular-5ca2059c05 .text-right { text-align: right; }
-#tabular-5ca2059c05 .tabular-table thead th.text-left { text-align: left; }
-#tabular-5ca2059c05 .tabular-table thead th.text-center { text-align: center; }
-#tabular-5ca2059c05 .tabular-table thead th.text-right { text-align: right; }
-#tabular-5ca2059c05 .valign-top { vertical-align: top; }
-#tabular-5ca2059c05 .valign-middle { vertical-align: middle; }
-#tabular-5ca2059c05 .valign-bottom { vertical-align: bottom; }
-#tabular-5ca2059c05 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-5ca2059c05 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-5ca2059c05 .tabular-page-break-row { display: none; }
-#tabular-5ca2059c05 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-5ca2059c05 .tabular-page-header, #tabular-5ca2059c05 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-5ca2059c05 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-5ca2059c05 .tabular-page-footer { margin-top: 1rem; }
-#tabular-5ca2059c05 .tabular-page-header-left, #tabular-5ca2059c05 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-5ca2059c05 .tabular-page-header-center, #tabular-5ca2059c05 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-5ca2059c05 .tabular-page-header-right, #tabular-5ca2059c05 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-5ca2059c05 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-5ca2059c05 .tabular-table tr { page-break-inside: avoid; } #tabular-5ca2059c05 .tabular-page-header, #tabular-5ca2059c05 .tabular-page-footer { display: none; } #tabular-5ca2059c05 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-5ca2059c05 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-5ca2059c05 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-091df1279b { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-091df1279b .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-091df1279b p { line-height: inherit; }
+#tabular-091df1279b .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-091df1279b .tabular-caption { margin: 0; padding: 0; }
+#tabular-091df1279b .tabular-pad { margin: 0; line-height: 1; }
+#tabular-091df1279b .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-091df1279b .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-091df1279b .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-091df1279b .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-091df1279b .tabular-table th, #tabular-091df1279b .tabular-table td { padding: .18rem .6rem; }
+#tabular-091df1279b .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-091df1279b .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-091df1279b .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-091df1279b .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-091df1279b .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-091df1279b .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-091df1279b .tabular-table tbody tr td { border-top: none; }
+#tabular-091df1279b .tabular-band { text-align: center; }
+#tabular-091df1279b .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-091df1279b .tabular-subgroup-label { font-weight: 600; }
+#tabular-091df1279b .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-091df1279b .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-091df1279b .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-091df1279b .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-091df1279b .text-left { text-align: left; }
+#tabular-091df1279b .text-center { text-align: center; }
+#tabular-091df1279b .text-right { text-align: right; }
+#tabular-091df1279b .tabular-table thead th.text-left { text-align: left; }
+#tabular-091df1279b .tabular-table thead th.text-center { text-align: center; }
+#tabular-091df1279b .tabular-table thead th.text-right { text-align: right; }
+#tabular-091df1279b .valign-top { vertical-align: top; }
+#tabular-091df1279b .valign-middle { vertical-align: middle; }
+#tabular-091df1279b .valign-bottom { vertical-align: bottom; }
+#tabular-091df1279b .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-091df1279b .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-091df1279b .tabular-page-break-row { display: none; }
+#tabular-091df1279b { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-091df1279b .tabular-page-header, #tabular-091df1279b .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-091df1279b .tabular-page-header { margin-bottom: 1rem; }
+#tabular-091df1279b .tabular-page-footer { margin-top: 1rem; }
+#tabular-091df1279b .tabular-page-header-left, #tabular-091df1279b .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-091df1279b .tabular-page-header-center, #tabular-091df1279b .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-091df1279b .tabular-page-header-right, #tabular-091df1279b .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-091df1279b .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-091df1279b .tabular-table tr { page-break-inside: avoid; } #tabular-091df1279b .tabular-page-header, #tabular-091df1279b .tabular-page-footer { display: none; } #tabular-091df1279b .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-091df1279b .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-091df1279b .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Vital Signs at End of Treatment
