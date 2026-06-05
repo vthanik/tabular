@@ -975,20 +975,40 @@ backend_html <- function(grid, file) {
     function(d) {
       labels <- .band_labels_for_depth(headers, d, col_names_visible)
       runs <- .group_contiguous_runs(labels)
+      n_cols <- length(col_names_visible)
+      pos <- 0L
       cells <- vapply(
         runs,
         function(run) {
           lbl <- run$value
           span <- run$length
+          start_col <- pos + 1L
+          end_col <- pos + span
+          pos <<- end_col
           if (is.na(lbl)) {
             # Empty flanking cell over unmapped columns: it must carry the
             # header surface style (background) too, so a coloured band
             # reads end-to-end instead of leaving white flanks.
             sprintf("<th colspan=\"%d\"%s></th>", span, surface_style)
           } else {
+            # Edge rule (LaTeX parity): a spanner touching column 1 or the
+            # last column keeps that outer end flush (un-inset) so its rule
+            # runs to the table edge; interior ends stay trimmed.
+            flush_l <- start_col == 1L
+            flush_r <- end_col == n_cols
+            modifier <- if (flush_l && flush_r) {
+              " tabular-band-flush-both"
+            } else if (flush_l) {
+              " tabular-band-flush-left"
+            } else if (flush_r) {
+              " tabular-band-flush-right"
+            } else {
+              ""
+            }
             sprintf(
-              "<th colspan=\"%d\" class=\"tabular-band\"%s>%s</th>",
+              "<th colspan=\"%d\" class=\"tabular-band%s\"%s>%s</th>",
               span,
+              modifier,
               surface_style,
               .html_escape(lbl)
             )
@@ -1445,21 +1465,48 @@ backend_html <- function(grid, file) {
     return(NULL)
   }
   colour <- .resolve_rule_color(triple$color)
-  sprintf(
-    paste0(
-      "%s { background-image: linear-gradient(to right, ",
-      "transparent %s, %s %s, %s calc(100%% - %s), transparent calc(100%% - %s)); ",
-      "background-repeat: no-repeat; background-position: left bottom; ",
-      "background-size: 100%% %gpt; }"
-    ),
-    selector,
-    inset,
-    colour,
-    inset,
-    colour,
-    inset,
-    inset,
+  common <- sprintf(
+    "background-repeat: no-repeat; background-position: left bottom; background-size: 100%% %gpt;",
     triple$width
+  )
+  grad <- function(left, right) {
+    # Stops as (start, end) of the painted segment. left/right are the
+    # insets (a CSS length or "0"); the rule is `colour` between them.
+    sprintf(
+      "background-image: linear-gradient(to right, transparent %s, %s %s, %s calc(100%% - %s), transparent calc(100%% - %s));",
+      left,
+      colour,
+      left,
+      colour,
+      right,
+      right
+    )
+  }
+  # Default: inset both ends (interior spanners). The `flush-*` modifiers
+  # keep the table's OUTER edge un-inset so a spanner touching column 1
+  # or the last column runs to the table edge (parity with the LaTeX
+  # leftpos/rightpos=1 edge rule). `flush-both` = a spanner over the whole
+  # width: no inset at all.
+  c(
+    sprintf("%s { %s %s }", selector, grad(inset, inset), common),
+    sprintf(
+      "%s.tabular-band-flush-left { %s %s }",
+      selector,
+      grad("0px", inset),
+      common
+    ),
+    sprintf(
+      "%s.tabular-band-flush-right { %s %s }",
+      selector,
+      grad(inset, "0px"),
+      common
+    ),
+    sprintf(
+      "%s.tabular-band-flush-both { %s %s }",
+      selector,
+      grad("0px", "0px"),
+      common
+    )
   )
 }
 

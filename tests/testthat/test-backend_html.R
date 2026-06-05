@@ -828,8 +828,11 @@ test_that("header band labels emit as <th colspan=\"N\"> above the column-labels
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
+  # The band covers the 3 arm columns, which end at the last column, so
+  # it carries the flush-right edge modifier (its underline runs to the
+  # table edge rather than being inset there).
   expect_true(grepl(
-    "<th colspan=\"3\" class=\"tabular-band\">Treatment Arm</th>",
+    "<th colspan=\"3\" class=\"tabular-band tabular-band-flush-right\">Treatment Arm</th>",
     txt,
     fixed = TRUE
   ))

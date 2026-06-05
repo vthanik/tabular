@@ -1046,6 +1046,9 @@ test_that("LaTeX band underline rides an outer multi-range hline (no inline cmid
   # spanner but trimmed at that spanner's own ends -- booktabs
   # cmidrule(lr) parity, leaving a gap between adjacent spanners. The
   # band underline is the SSOT muted `spanrule` (0.5pt, #adb5bd).
+  # Group A {2-3} is interior on both sides -> trim both. Group B {4-5}
+  # ends at the last column (the page-width edge) -> trim left only, flush
+  # right (rightpos=1) so the rule runs to the table edge.
   expect_match(
     tex,
     "hline{2}={2-3}{0.5pt, solid, fg=tabularruleADB5BD, leftpos=-1, rightpos=-1, endpos}",
@@ -1053,7 +1056,7 @@ test_that("LaTeX band underline rides an outer multi-range hline (no inline cmid
   )
   expect_match(
     tex,
-    "hline{2}={4-5}{0.5pt, solid, fg=tabularruleADB5BD, leftpos=-1, rightpos=-1, endpos}",
+    "hline{2}={4-5}{0.5pt, solid, fg=tabularruleADB5BD, leftpos=-1, rightpos=1, endpos}",
     fixed = TRUE
   )
 })
