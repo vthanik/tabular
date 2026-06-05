@@ -1172,17 +1172,41 @@ backend_latex <- function(grid, file) {
     band <- .runs_to_band_row(runs, surface_node)
     rows[[k]] <- band$row
     if (length(band$ranges) > 0L && nzchar(band_spec)) {
-      cols_spec <- paste(
-        vapply(
-          band$ranges,
-          function(r) sprintf("%d-%d", r[[1L]], r[[2L]]),
-          character(1L)
-        ),
-        collapse = ","
-      )
+      # One hline directive PER spanner range (not comma-joined). The
+      # trim keys `leftpos`/`rightpos = -1` trim by colsep; `endpos`
+      # restricts the trim to the range's OUTERMOST columns only, so the
+      # rule runs continuously under all of a spanner's columns and is
+      # trimmed only at that spanner's ends -- tabularray's equivalent of
+      # booktabs `\cmidrule(lr)`. It must be one directive per range, not
+      # a comma-joined `{2-7,8-13}`: without `endpos` the trim hits every
+      # interior vline; with a comma-joined range `endpos` trims only the
+      # overall ends, merging adjacent spanners into one line.
+      #
+      # Edge rule: trim only at INTERIOR boundaries (between spanners),
+      # never at the table's outer edge. A range touching column 1 keeps
+      # its left flush; a range touching the last column keeps its right
+      # flush (the rule runs to the page-width edge over the last cell).
+      # `<pos> = 1` means "touch all vlines" (flush); `-1` trims.
+      n_cols <- length(col_names_visible)
       band_hlines <- c(
         band_hlines,
-        sprintf("hline{%d}={%s}{%s}", k + 1L + offset, cols_spec, band_spec)
+        vapply(
+          band$ranges,
+          function(r) {
+            left_pos <- if (r[[1L]] == 1L) 1L else -1L
+            right_pos <- if (r[[2L]] == n_cols) 1L else -1L
+            sprintf(
+              "hline{%d}={%d-%d}{%s, leftpos=%d, rightpos=%d, endpos}",
+              k + 1L + offset,
+              r[[1L]],
+              r[[2L]],
+              band_spec,
+              left_pos,
+              right_pos
+            )
+          },
+          character(1L)
+        )
       )
     }
   }

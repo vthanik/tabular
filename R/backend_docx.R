@@ -310,9 +310,18 @@ backend_docx <- function(grid, file) {
   # matching RTF; otherwise it renders once as paragraphs above panel 1
   # (`titles_block`). An empty grid falls through one call so the
   # "(no rows)" marker still appears.
+  # Any active subgroup (not only the per-page BigN case) renders one
+  # `<w:tbl>` per subgroup so its banner can lead ABOVE the column-header
+  # band (anatomy), matching RTF / PDF. Inline body banners landed below
+  # the header and duplicated as repeating `<w:tblHeader/>` rows.
+  sg_active <- any(vapply(
+    grid@pages,
+    function(p) !is.null(p$subgroup_index),
+    logical(1L)
+  ))
   panel_groups <- .group_pages_into_panels(
     grid@pages,
-    by_subgroup = isTRUE(grid@metadata$subgroup_big_n_active)
+    by_subgroup = isTRUE(grid@metadata$subgroup_big_n_active) || sg_active
   )
   if (length(panel_groups) <= 1L) {
     table_block <- .render_docx_table(
@@ -810,6 +819,11 @@ backend_docx <- function(grid, file) {
   # big_n is off, so the non-big_n path is byte-identical.
   big_n_active <- isTRUE(meta$subgroup_big_n_active)
   first_page <- pages[[1L]]
+  # A subgroup is active for this table when its lead page carries a
+  # banner AST. Such tables lead with the banner above the header band
+  # (RTF / PDF parity) even without per-page BigN; only the `(N=x)`
+  # header suffix is BigN-specific.
+  subgroup_active <- !is.null(first_page$subgroup_line_ast)
   hdr <- .page_header_for_render(meta, first_page)
   has_bands <- is.data.frame(hdr$headers) && nrow(hdr$headers) > 0L
 
@@ -820,7 +834,7 @@ backend_docx <- function(grid, file) {
   # RTF / PDF. The next-page section break between segments owns the
   # page break, so the lead banner must not also force one, and the body
   # drops the banner (`emit_banner = FALSE`) to avoid duplicating it.
-  banner_lead <- if (big_n_active) {
+  banner_lead <- if (big_n_active || subgroup_active) {
     banner <- .render_docx_subgroup_banner_row(
       first_page$subgroup_line_ast,
       n_cols = length(col_names_vis),
@@ -870,7 +884,7 @@ backend_docx <- function(grid, file) {
     preset = preset,
     cs = cs,
     body_borders = body_borders,
-    emit_banner = !big_n_active
+    emit_banner = !(big_n_active || subgroup_active)
   )
 
   paste0(
@@ -1460,12 +1474,22 @@ backend_docx <- function(grid, file) {
         next
       }
       # Word-side keep-with-next: `<w:keepNext/>` is a paragraph
-      # property that glues a paragraph to the next paragraph on
-      # the same page. Stamping it inside every cell's `<w:pPr>`
-      # for every row except the last on the page makes Word treat
-      # the page tabular has split as a single keep-together unit.
-      is_last_row <- (i == nrows)
-      keep_next_tok <- if (is_last_row) "" else "<w:keepNext/>"
+      # property that glues a paragraph to the next paragraph on the
+      # same page. The engine `page$keep_with_next` mask (shared with
+      # the RTF / LaTeX backends) says which rows must NOT break apart:
+      # keep_together groups glue fully, section headers glue to their
+      # following row, blanks break freely. Only those rows get the
+      # token, so an un-paginated table flows and breaks naturally
+      # instead of Word forcing the whole body onto one page. Fallback
+      # (NULL mask, e.g. a hand-built grid) glues every row but the
+      # last, the legacy single-page behaviour.
+      kwn <- page$keep_with_next
+      keep_row <- if (is.null(kwn) || length(kwn) < i) {
+        i < nrows
+      } else {
+        isTRUE(kwn[[i]])
+      }
+      keep_next_tok <- if (keep_row) "<w:keepNext/>" else ""
       cells <- vapply(
         seq_along(col_names_vis),
         function(j) {

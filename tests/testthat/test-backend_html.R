@@ -828,8 +828,11 @@ test_that("header band labels emit as <th colspan=\"N\"> above the column-labels
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
+  # The band covers the 3 arm columns, which end at the last column, so
+  # it carries the flush-right edge modifier (its underline runs to the
+  # table edge rather than being inset there).
   expect_true(grepl(
-    "<th colspan=\"3\" class=\"tabular-band\">Treatment Arm</th>",
+    "<th colspan=\"3\" class=\"tabular-band tabular-band-flush-right\">Treatment Arm</th>",
     txt,
     fixed = TRUE
   ))
@@ -2317,12 +2320,16 @@ test_that("HTML scenario G: band underline scopes to .tabular-band cells only", 
   # left (label, soc_n, placebo), one on the right (Total).
   expect_match(html, "<th colspan=\"3\"></th>")
   expect_match(html, "<th colspan=\"1\"></th>")
-  # CSS: old blanket rule gone, new band-scoped rule present.
+  # CSS: old blanket rule gone, new band-scoped rule present. The band
+  # underline is trimmed at both ends (booktabs cmidrule(lr) parity), so
+  # it is painted as an inset background gradient, not a full-width
+  # border-bottom (which would abut adjacent spanners into one line).
   expect_no_match(
     html,
     ".tabular-table thead tr:not\\(:last-child\\) th \\{ border-bottom"
   )
-  expect_match(html, "\\.tabular-band \\{ border-bottom")
+  expect_match(html, "\\.tabular-band \\{ background-image: linear-gradient")
+  expect_match(html, "calc\\(100% - 0\\.5em\\)")
 })
 
 test_that("HTML band: top rule scopes to first thead row only (col-labels row has no extra border-top)", {

@@ -2258,3 +2258,177 @@ test_that("emit() relative paths still work for RTF and HTML (#B-DOCX no-regress
   expect_no_error(emit(spec, "x.html"))
   expect_true(file.exists("x.html"))
 })
+
+# ---------------------------------------------------------------------
+# Cross-backend keep-with-next parity + subgroup banner placement
+# ---------------------------------------------------------------------
+
+# Helper: read word/document.xml of an emitted spec as one string.
+.docx_doc_xml <- function(spec) {
+  out <- withr::local_tempfile(
+    fileext = ".docx",
+    .local_envir = parent.frame()
+  )
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  paste(
+    readLines(file.path(unzipped, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+}
+
+test_that("docx honours keep_with_next instead of gluing every row (#docx-keepnext)", {
+  # A flat, un-paginated table has no keep_together groups, so the engine
+  # keep_with_next mask is empty: DOCX must emit zero <w:keepNext/>, the
+  # same as RTF emits zero \keepn. The bug stamped <w:keepNext/> on every
+  # non-last row, forcing Word to keep the whole table on one page.
+  df <- data.frame(
+    lab = paste0("Row", 1:6),
+    a = as.character(1:6),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "T") |>
+    cols(lab = col_spec(label = "L"), a = col_spec(label = "A"))
+
+  docx_xml <- .docx_doc_xml(spec)
+  rtf_out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, rtf_out)
+  rtf_txt <- paste(readLines(rtf_out, warn = FALSE), collapse = "")
+
+  n_keepnext <- lengths(regmatches(
+    docx_xml,
+    gregexpr("<w:keepNext/>", docx_xml)
+  ))
+  n_keepn <- lengths(regmatches(rtf_txt, gregexpr("\\\\keepn", rtf_txt)))
+  expect_equal(n_keepnext, 0L)
+  expect_equal(n_keepnext, n_keepn)
+})
+
+test_that("docx subgroup banner leads above the column header (#docx-subgroup-banner)", {
+  # Anatomy contract: the subgroup banner sits ABOVE the column-header
+  # band (RTF/PDF do this). The bug emitted the banner inline in the body,
+  # below the header, and as a repeating tblHeader row that duplicated at
+  # the next subgroup.
+  df <- data.frame(
+    PARAM = rep(c("Param One", "Param Two"), each = 3),
+    lab = rep(c("r1", "r2", "r3"), 2),
+    a = as.character(1:6),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "T") |>
+    cols(lab = col_spec(label = "Lab"), a = col_spec(label = "A")) |>
+    subgroup(by = "PARAM")
+
+  docx_xml <- .docx_doc_xml(spec)
+  pos_banner <- regexpr("Param One", docx_xml)
+  pos_label <- regexpr("Lab", docx_xml)
+  expect_gt(pos_banner, 0L)
+  expect_gt(pos_label, 0L)
+  # Banner before the column-label band.
+  expect_lt(pos_banner, pos_label)
+  # Each subgroup banner appears exactly once (no duplication).
+  n_p1 <- lengths(regmatches(docx_xml, gregexpr("Param One", docx_xml)))
+  n_p2 <- lengths(regmatches(docx_xml, gregexpr("Param Two", docx_xml)))
+  expect_equal(n_p1, 1L)
+  expect_equal(n_p2, 1L)
+})
+
+test_that("keep-with-next markers are consistent across docx / rtf / latex (#keep-parity)", {
+  # A flat, un-paginated table has no keep_together groups: every
+  # backend that has a keep-with-next marker must emit zero of them.
+  # docx -> <w:keepNext/>, rtf -> \keepn, latex -> \\* (vs plain \\).
+  # HTML is a single continuous table and has no row-level keep marker.
+  df <- data.frame(
+    lab = paste0("Row", 1:8),
+    a = as.character(1:8),
+    b = as.character(8:1),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "T", footnotes = "F") |>
+    cols(
+      lab = col_spec(label = "L"),
+      a = col_spec(label = "A"),
+      b = col_spec(label = "B")
+    )
+
+  docx <- withr::local_tempfile(fileext = ".docx")
+  rtf <- withr::local_tempfile(fileext = ".rtf")
+  tex <- withr::local_tempfile(fileext = ".tex")
+  html <- withr::local_tempfile(fileext = ".html")
+  emit(spec, docx)
+  emit(spec, rtf)
+  emit(spec, tex)
+  emit(spec, html)
+
+  docx_xml <- {
+    u <- .unzip_docx(docx)
+    paste(
+      readLines(file.path(u, "word", "document.xml"), warn = FALSE),
+      collapse = ""
+    )
+  }
+  rtf_txt <- paste(readLines(rtf, warn = FALSE), collapse = "")
+  tex_txt <- paste(readLines(tex, warn = FALSE), collapse = "")
+
+  n_docx <- lengths(regmatches(docx_xml, gregexpr("<w:keepNext/>", docx_xml)))
+  n_rtf <- lengths(regmatches(rtf_txt, gregexpr("\\\\keepn", rtf_txt)))
+  n_tex <- lengths(regmatches(tex_txt, gregexpr("\\\\\\\\\\*", tex_txt)))
+
+  expect_equal(n_docx, 0L)
+  expect_equal(n_rtf, 0L)
+  expect_equal(n_tex, 0L)
+  # HTML still renders a continuous table (no row-level keep concept).
+  expect_true(file.exists(html))
+})
+
+test_that("keep_together glues group runs consistently across docx / rtf / latex (#keep-together)", {
+  # A group column with multi-row runs + paginate(keep_together) makes the
+  # engine keep_with_next mask glue each run. Every backend with a keep
+  # marker must reflect it: docx <w:keepNext/> (rows that carry it),
+  # rtf \keepn, latex \\*.
+  df <- data.frame(
+    grp = rep(c("G1", "G2", "G3"), each = 3),
+    lab = rep(c("r1", "r2", "r3"), 3),
+    a = as.character(1:9),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "T") |>
+    cols(
+      grp = col_spec(usage = "group", label = "Group"),
+      lab = col_spec(label = "L"),
+      a = col_spec(label = "A")
+    ) |>
+    paginate(keep_together = "grp")
+
+  docx <- withr::local_tempfile(fileext = ".docx")
+  rtf <- withr::local_tempfile(fileext = ".rtf")
+  tex <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, docx)
+  emit(spec, rtf)
+  emit(spec, tex)
+
+  u <- .unzip_docx(docx)
+  docx_xml <- paste(
+    readLines(file.path(u, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  rtf_txt <- paste(readLines(rtf, warn = FALSE), collapse = "")
+  tex_txt <- paste(readLines(tex, warn = FALSE), collapse = "")
+
+  # docx: number of body rows that carry at least one <w:keepNext/>.
+  docx_rows <- regmatches(
+    docx_xml,
+    gregexpr("<w:tr\\b.*?</w:tr>", docx_xml)
+  )[[1]]
+  n_docx_rows <- sum(grepl("<w:keepNext/>", docx_rows, fixed = TRUE))
+  n_rtf <- lengths(regmatches(rtf_txt, gregexpr("\\\\keepn", rtf_txt)))
+  n_tex <- lengths(regmatches(tex_txt, gregexpr("\\\\\\\\\\*", tex_txt)))
+
+  # keep_together is honoured in every backend (markers present). Exact
+  # counts differ by backend: each synthesises group-header / blank-gap
+  # rows differently and glues those too, so the invariant is "present in
+  # all", not equal counts.
+  expect_gt(n_docx_rows, 0L)
+  expect_gt(n_rtf, 0L)
+  expect_gt(n_tex, 0L)
+})

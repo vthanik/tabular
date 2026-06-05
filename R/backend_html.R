@@ -975,20 +975,40 @@ backend_html <- function(grid, file) {
     function(d) {
       labels <- .band_labels_for_depth(headers, d, col_names_visible)
       runs <- .group_contiguous_runs(labels)
+      n_cols <- length(col_names_visible)
+      pos <- 0L
       cells <- vapply(
         runs,
         function(run) {
           lbl <- run$value
           span <- run$length
+          start_col <- pos + 1L
+          end_col <- pos + span
+          pos <<- end_col
           if (is.na(lbl)) {
             # Empty flanking cell over unmapped columns: it must carry the
             # header surface style (background) too, so a coloured band
             # reads end-to-end instead of leaving white flanks.
             sprintf("<th colspan=\"%d\"%s></th>", span, surface_style)
           } else {
+            # Edge rule (LaTeX parity): a spanner touching column 1 or the
+            # last column keeps that outer end flush (un-inset) so its rule
+            # runs to the table edge; interior ends stay trimmed.
+            flush_l <- start_col == 1L
+            flush_r <- end_col == n_cols
+            modifier <- if (flush_l && flush_r) {
+              " tabular-band-flush-both"
+            } else if (flush_l) {
+              " tabular-band-flush-left"
+            } else if (flush_r) {
+              " tabular-band-flush-right"
+            } else {
+              ""
+            }
             sprintf(
-              "<th colspan=\"%d\" class=\"tabular-band\"%s>%s</th>",
+              "<th colspan=\"%d\" class=\"tabular-band%s\"%s>%s</th>",
               span,
+              modifier,
               surface_style,
               .html_escape(lbl)
             )
@@ -1428,6 +1448,66 @@ backend_html <- function(grid, file) {
     return(NULL)
   }
   sprintf("%s { %s }", selector, decl)
+}
+
+# Spanner band underline, trimmed at both ends (booktabs `\cmidrule(lr)`
+# parity with the LaTeX backend). A `border-bottom` spans the full cell
+# width, so adjacent spanners' underlines abut into one continuous line.
+# Instead we paint the rule as an inset `background` gradient: a
+# horizontal stripe at the cell bottom, COLOUR only between `<inset>` and
+# `100% - <inset>`, transparent at the ends. Each band cell insets by
+# `<inset>` on both sides, so adjacent spanners are separated by a
+# `2 * <inset>` gap and the outer ends sit inside the column edge.
+# Returns NULL when the rule is off (so `rules = list(spanrule = "none")`
+# still clears it).
+.html_band_rule_trimmed <- function(selector, triple, inset = "0.5em") {
+  if (is.null(triple) || identical(triple$style, "none")) {
+    return(NULL)
+  }
+  colour <- .resolve_rule_color(triple$color)
+  common <- sprintf(
+    "background-repeat: no-repeat; background-position: left bottom; background-size: 100%% %gpt;",
+    triple$width
+  )
+  grad <- function(left, right) {
+    # Stops as (start, end) of the painted segment. left/right are the
+    # insets (a CSS length or "0"); the rule is `colour` between them.
+    sprintf(
+      "background-image: linear-gradient(to right, transparent %s, %s %s, %s calc(100%% - %s), transparent calc(100%% - %s));",
+      left,
+      colour,
+      left,
+      colour,
+      right,
+      right
+    )
+  }
+  # Default: inset both ends (interior spanners). The `flush-*` modifiers
+  # keep the table's OUTER edge un-inset so a spanner touching column 1
+  # or the last column runs to the table edge (parity with the LaTeX
+  # leftpos/rightpos=1 edge rule). `flush-both` = a spanner over the whole
+  # width: no inset at all.
+  c(
+    sprintf("%s { %s %s }", selector, grad(inset, inset), common),
+    sprintf(
+      "%s.tabular-band-flush-left { %s %s }",
+      selector,
+      grad("0px", inset),
+      common
+    ),
+    sprintf(
+      "%s.tabular-band-flush-right { %s %s }",
+      selector,
+      grad(inset, "0px"),
+      common
+    ),
+    sprintf(
+      "%s.tabular-band-flush-both { %s %s }",
+      selector,
+      grad("0px", "0px"),
+      common
+    )
+  )
 }
 
 # Stamp `triple` as the bottom border of every cell in the LAST data
@@ -1905,9 +1985,8 @@ backend_html <- function(grid, file) {
       "bottom",
       .chrome_border_at(cs, "header_bottom")
     ),
-    .html_structural_rule(
+    .html_band_rule_trimmed(
       ".tabular-table thead .tabular-band",
-      "bottom",
       .chrome_border_at(cs, "header_between")
     ),
     .html_structural_rule(
@@ -2074,7 +2153,13 @@ backend_html <- function(grid, file) {
     # padding above so each band reads as a unit. Blank-gap rows: a
     # thin spacer (no borders) between consecutive sections.
     ".tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }",
-    ".tabular-blank-row td { padding: .25rem .6rem; border: none; }",
+    # Blank-gap row: exactly one tight blank line, sized in `em` so it
+    # tracks the table font size (preset@font_size) rather than the root
+    # font. `line-height: 1em` (vs the inherited 1.5) and zero padding
+    # keep it to a single line height; the previous full 1.5-line `&nbsp;`
+    # plus the following group-header `padding-top` stacked into an
+    # oversized gap.
+    ".tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }",
     ".text-left { text-align: left; }",
     ".text-center { text-align: center; }",
     ".text-right { text-align: right; }",
