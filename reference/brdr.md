@@ -163,7 +163,7 @@ tabular(
 #tabular-6c93b3da7c .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
 #tabular-6c93b3da7c .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-6c93b3da7c .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-6c93b3da7c .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-6c93b3da7c .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
 #tabular-6c93b3da7c .text-left { text-align: left; }
 #tabular-6c93b3da7c .text-center { text-align: center; }
 #tabular-6c93b3da7c .text-right { text-align: right; }

@@ -133,7 +133,10 @@ tabular(
 #tabular-4bdb0a2bfd .tabular-table td { text-align: left; vertical-align: top; }
 #tabular-4bdb0a2bfd .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
 #tabular-4bdb0a2bfd .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-4bdb0a2bfd .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-4bdb0a2bfd .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-4bdb0a2bfd .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-4bdb0a2bfd .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-4bdb0a2bfd .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
 #tabular-4bdb0a2bfd .tabular-table tbody tr td { border-top: none; }
 #tabular-4bdb0a2bfd .tabular-band { text-align: center; }
 #tabular-4bdb0a2bfd .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
@@ -141,7 +144,7 @@ tabular(
 #tabular-4bdb0a2bfd .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
 #tabular-4bdb0a2bfd .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
 #tabular-4bdb0a2bfd .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-4bdb0a2bfd .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-4bdb0a2bfd .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
 #tabular-4bdb0a2bfd .text-left { text-align: left; }
 #tabular-4bdb0a2bfd .text-center { text-align: center; }
 #tabular-4bdb0a2bfd .text-right { text-align: right; }
