@@ -8,6 +8,7 @@ pivot_across(
   data,
   statistic = list(continuous = "{mean} ({sd})", categorical = "{n} ({p}\%)"),
   column = NULL,
+  row_group = NULL,
   label = NULL,
   overall = "Total",
   decimals = NULL,
@@ -121,6 +122,24 @@ from the ARD's \code{group1} value or — for renamed input — picks
 the single non-standard column. Pass a string when multiple
 group columns exist.}
 
+\item{row_group}{\emph{Second, non-column grouping dimension.}
+\verb{<character(1) | NULL>: default NULL}. Names the non-arm group
+variable of a two-variable \code{.by} (e.g. \code{SEX} in
+\code{ard_stack(.by = c(ARM, SEX))}). It widens into a leading row
+column (not a pivoted arm column), so the result composes with
+\code{\link[=subgroup]{subgroup(by = ...)}} or
+\code{col_spec(usage = "group")} downstream.
+
+\strong{Why it is required.} cards encodes a crossing factor and a
+SOC/PT hierarchy identically (the second group variable appears
+in \code{variable} on its by-marginal rows), so the two cannot be told
+apart automatically. Naming \code{row_group} declares "this is a
+crossing factor": the by-marginal rows are dropped and the flat
+path is used. Leave it \code{NULL} for a genuine hierarchy.
+
+\strong{Restriction:} Must name a second grouping variable present in
+the ARD and must differ from \code{column}.}
+
 \item{label}{\emph{Variable-name to display-label map.}
 \verb{<character> | NULL: default NULL}. Named character vector
 mapping variable names to display labels (e.g.
@@ -166,6 +185,8 @@ fmt = list(
 \item One column per arm level (named after the \code{group1_level}
 values or the renamed arm column).
 \item \code{Total} (or whatever \code{overall} is set to) when applicable.
+\item A leading column named after \code{row_group} when set (the second
+grouping dimension).
 \item Hierarchical ARD adds \code{soc}, \code{label}, \code{row_type} instead of
 \code{variable}.
 }
@@ -187,6 +208,35 @@ It does not aggregate — it pivots arms to columns, interpolates
 per-cell display strings from the stat values, and applies
 decimal precision. Filtering, weighting, and aggregation happen
 upstream in cards or your own data-prep step.
+\subsection{Key \code{statistic} by the ARD \code{context}}{
+
+\code{statistic} (and \code{fmt}) are matched against the ARD's \code{context}
+column verbatim, and that value differs per generating function.
+Keying by the wrong name silently drops the format. Inspect
+\code{unique(ard$context)} first and key to match (or pass a single
+format string / \verb{default =} to cover everything). When an
+explicitly-supplied \code{statistic} matches no context at all,
+\code{pivot_across()} warns rather than silently emitting \code{{n}}.\tabular{ll}{
+   Generating function \tab \code{context} to key on \cr
+   \code{cards::ard_summary()} \tab \code{summary} \cr
+   \code{cards::ard_tabulate()} \tab \code{tabulate} \cr
+   \code{cards::ard_continuous()} \tab \code{continuous} \cr
+   \code{cards::ard_categorical()} \tab \code{categorical} \cr
+   \code{cards::ard_stack_hierarchical()} \tab \code{tabulate} + \code{hierarchical} \cr
+   \code{cardx::ard_categorical_ci()} \tab \code{proportion_ci} \cr
+   \code{cardx::ard_continuous_ci()} \tab \code{continuous_ci} \cr
+}
+
+}
+
+\subsection{Indentation of \code{stat_label}}{
+
+Categorical levels and the multi-row continuous stat labels come
+back already indented with two leading spaces, ready to render as a
+plain display column. Do \strong{not} also set \code{col_spec(usage = "indent")} on \code{stat_label} — that stacks the engine indent on top of
+the string indent (a double indent). Use one or the other.
+}
+
 \subsection{Zero-suppression (always-on default)}{
 
 A row whose \code{n} value equals zero renders the whole cell as the

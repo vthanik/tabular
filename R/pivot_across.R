@@ -140,6 +140,24 @@
 #'   the single non-standard column. Pass a string when multiple
 #'   group columns exist.
 #'
+#' @param row_group *Second, non-column grouping dimension.*
+#'   `<character(1) | NULL>: default NULL`. Names the non-arm group
+#'   variable of a two-variable `.by` (e.g. `SEX` in
+#'   `ard_stack(.by = c(ARM, SEX))`). It widens into a leading row
+#'   column (not a pivoted arm column), so the result composes with
+#'   [`subgroup(by = ...)`][subgroup()] or
+#'   `col_spec(usage = "group")` downstream.
+#'
+#'   **Why it is required.** cards encodes a crossing factor and a
+#'   SOC/PT hierarchy identically (the second group variable appears
+#'   in `variable` on its by-marginal rows), so the two cannot be told
+#'   apart automatically. Naming `row_group` declares "this is a
+#'   crossing factor": the by-marginal rows are dropped and the flat
+#'   path is used. Leave it `NULL` for a genuine hierarchy.
+#'
+#'   **Restriction:** Must name a second grouping variable present in
+#'   the ARD and must differ from `column`.
+#'
 #' @param label *Variable-name to display-label map.*
 #'   `<character> | NULL: default NULL`. Named character vector
 #'   mapping variable names to display labels (e.g.
@@ -177,6 +195,34 @@
 #'   )
 #'   ```
 #' @details
+#'
+#' ## Key `statistic` by the ARD `context`
+#'
+#' `statistic` (and `fmt`) are matched against the ARD's `context`
+#' column verbatim, and that value differs per generating function.
+#' Keying by the wrong name silently drops the format. Inspect
+#' `unique(ard$context)` first and key to match (or pass a single
+#' format string / `default =` to cover everything). When an
+#' explicitly-supplied `statistic` matches no context at all,
+#' `pivot_across()` warns rather than silently emitting `{n}`.
+#'
+#' | Generating function | `context` to key on |
+#' |---|---|
+#' | `cards::ard_summary()` | `summary` |
+#' | `cards::ard_tabulate()` | `tabulate` |
+#' | `cards::ard_continuous()` | `continuous` |
+#' | `cards::ard_categorical()` | `categorical` |
+#' | `cards::ard_stack_hierarchical()` | `tabulate` + `hierarchical` |
+#' | `cardx::ard_categorical_ci()` | `proportion_ci` |
+#' | `cardx::ard_continuous_ci()` | `continuous_ci` |
+#'
+#' ## Indentation of `stat_label`
+#'
+#' Categorical levels and the multi-row continuous stat labels come
+#' back already indented with two leading spaces, ready to render as a
+#' plain display column. Do **not** also set `col_spec(usage =
+#' "indent")` on `stat_label` — that stacks the engine indent on top of
+#' the string indent (a double indent). Use one or the other.
 #'
 #' ## Zero-suppression (always-on default)
 #'
@@ -246,6 +292,8 @@
 #'   *   One column per arm level (named after the `group1_level`
 #'       values or the renamed arm column).
 #'   *   `Total` (or whatever `overall` is set to) when applicable.
+#'   *   A leading column named after `row_group` when set (the second
+#'       grouping dimension).
 #'   *   Hierarchical ARD adds `soc`, `label`, `row_type` instead of
 #'       `variable`.
 #'
@@ -427,12 +475,18 @@ pivot_across <- function(
     categorical = "{n} ({p}%)"
   ),
   column = NULL,
+  row_group = NULL,
   label = NULL,
   overall = "Total",
   decimals = NULL,
   fmt = NULL
 ) {
   call <- rlang::caller_env()
+  # Captured before `statistic` is reassigned: the unmatched-context
+  # warning fires only when the user supplied keys explicitly. The
+  # default `{n}` fallback is the correct output for tabulate /
+  # hierarchical counts, so a default call must never warn.
+  stat_explicit <- !missing(statistic)
 
   data <- .check_ard_data(data, call = call)
   statistic <- .resolve_statistic_arg(statistic, call = call)
@@ -444,14 +498,37 @@ pivot_across <- function(
   extra_groups <- norm$extra_groups
   shape <- norm$shape
 
+  row_group <- .check_row_group(
+    row_group,
+    column = column,
+    extra_groups = extra_groups,
+    call = call
+  )
+
   df <- .extract_context(df)
   df <- .filter_internal_rows(df, column = column)
+
+  # A user-declared second grouping dimension (`row_group`, e.g. SEX in
+  # `ard_stack(.by = c(ARM, SEX))`) carries by-marginal rows whose
+  # `variable` IS the group var name. Those marginals (a) make the group
+  # var name appear in `variable`, which mis-trips hierarchy detection,
+  # and (b) would leak into a phantom Total. Drop them: the dimension
+  # already rides the `extra_groups` column, and the table composes with
+  # `subgroup(by = row_group)` downstream.
+  if (!is.null(row_group)) {
+    df <- df[is.na(df$variable) | df$variable != row_group, , drop = FALSE]
+  }
 
   # Hierarchy detection runs AFTER internal-row filtering so that
   # multi-group `.by` ARDs (where variable transiently holds the
   # by-variable names in tabulate / total_n rows) aren't misclassified
-  # as hierarchical (SOC / PT).
+  # as hierarchical (SOC / PT). A declared `row_group` forces the flat
+  # path: cards encodes a crossing factor and a SOC/PT hierarchy
+  # identically, so only the user's declaration disambiguates them.
   hierarchy <- .detect_ard_hierarchy(df)
+  if (!is.null(row_group)) {
+    hierarchy$is_hierarchical <- FALSE
+  }
 
   if (nrow(df) == 0L) {
     cli::cli_abort(
@@ -466,6 +543,19 @@ pivot_across <- function(
 
   df <- .apply_overall_label(df, overall = overall)
   df <- .filter_to_column_group(df, column = column, overall = overall)
+
+  # Warn once when an explicitly-supplied `statistic` matches no context
+  # or variable in the ARD: every cell falls back to `{n}`, the single
+  # most common way to get silently wrong output (the canonical
+  # `summary`-vs-`continuous` mis-key). Skipped on the hierarchical path,
+  # which formats counts directly regardless of the statistic keys.
+  .warn_unmatched_context(
+    df,
+    statistic,
+    stat_explicit = stat_explicit,
+    is_hierarchical = hierarchy$is_hierarchical,
+    call = call
+  )
 
   # nocov start — defensive: .filter_to_column_group only narrows, and
   # the earlier post-internal-filter check at L286 catches the realistic
@@ -1130,6 +1220,108 @@ pivot_across <- function(
     statistic[[context]] %||%
     statistic[["default"]] %||%
     "{n}"
+}
+
+# Emit one warning when NONE of the `statistic` keys match any context
+# or variable present in the ARD: the whole list is mis-keyed (the
+# canonical `summary`-vs-`continuous` footgun), so every cell falls to
+# the `{n}` fallback, the most common cause of silently wrong output.
+#
+# Deliberately narrow: a `{n}` fallback is the CORRECT output for some
+# contexts (hierarchical AE counts, plain tabulate counts), so when at
+# least one key is relevant the user is trusted and no warning fires.
+# A `default` key covers everything, so it also suppresses the warning.
+.warn_unmatched_context <- function(
+  df,
+  statistic,
+  stat_explicit,
+  is_hierarchical,
+  call
+) {
+  if (!stat_explicit || is_hierarchical) {
+    return(invisible(NULL))
+  }
+  keys <- names(statistic)
+  if (is.null(keys) || "default" %in% keys) {
+    return(invisible(NULL))
+  }
+  rows <- df[
+    !is.na(df$variable) &
+      !(df$variable %in% .tabular_ard_const$keep_sentinels),
+    ,
+    drop = FALSE
+  ]
+  # nocov start — defensive: the earlier empty-after-filter abort means
+  # at least one displayable row always remains by the time we get here.
+  if (nrow(rows) == 0L) {
+    return(invisible(NULL))
+  }
+  # nocov end
+  present <- unique(c(rows$ctx, rows$variable))
+  if (any(keys %in% present)) {
+    return(invisible(NULL))
+  }
+  ctxs <- sort(unique(rows$ctx))
+  cli::cli_warn(
+    c(
+      "No {.arg statistic} key matches this ARD; every cell fell back to {.code {{n}}}.",
+      "x" = "Provided key{cli::qty(keys)}{?s}: {.val {keys}}.",
+      "x" = "ARD context{cli::qty(ctxs)}{?s}: {.val {ctxs}}.",
+      "i" = "Key {.arg statistic} by {.code unique(ard$context)}, for example {.code list({ctxs[1]} = \"...\")}, or pass a {.code default}."
+    ),
+    class = "tabular_warning_unmatched_context",
+    call = call
+  )
+  invisible(NULL)
+}
+
+# Validate the `row_group` argument: a single second-dimension grouping
+# variable (the non-column `.by` var, e.g. SEX). NULL is the default
+# (single dimension). Must name a group surfaced by normalisation
+# (`extra_groups`) and must differ from `column`.
+.check_row_group <- function(row_group, column, extra_groups, call) {
+  if (is.null(row_group)) {
+    return(NULL)
+  }
+  if (
+    !is.character(row_group) || length(row_group) != 1L || is.na(row_group)
+  ) {
+    cli::cli_abort(
+      c(
+        "{.arg row_group} must be a single column name or {.code NULL}.",
+        "x" = "You supplied {.obj_type_friendly {row_group}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  if (!is.null(column) && identical(row_group, column)) {
+    cli::cli_abort(
+      c(
+        "{.arg row_group} must differ from {.arg column}.",
+        "x" = "Both are {.val {column}}.",
+        "i" = "{.arg column} pivots into arm columns; {.arg row_group} stays a leading row dimension."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  if (!(row_group %in% extra_groups)) {
+    cli::cli_abort(
+      c(
+        "{.arg row_group} {.val {row_group}} is not a second grouping variable in {.arg data}.",
+        "i" = if (length(extra_groups) > 0L) {
+          "Available second-dimension group{?s}: {.val {extra_groups}}."
+        } else {
+          "The ARD has no second grouping variable; it was built with a single {.code .by}."
+        },
+        "i" = "For a 2-variable {.code .by}, pass the non-arm group var as {.arg row_group}, or page it with {.fn subgroup} instead."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  row_group
 }
 
 .is_multirow_spec <- function(fmt_spec) {

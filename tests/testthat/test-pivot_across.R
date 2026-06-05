@@ -1277,3 +1277,235 @@ test_that(".normalise_shape_d normalises a list-column arm to NA, not 'NULL' (B1
   expect_identical(res$df$arm, c("Placebo", "Placebo", NA))
   expect_false(any(res$df$arm %in% "NULL"))
 })
+
+# B2: row_group — second non-column grouping dimension ---------------
+
+# Mimics ard_stack(.by = c(ARM, SEX)): RACE counts crossed by ARM and
+# SEX, plus the by-marginal SEX tabulate rows ard_stack injects (the
+# rows that mis-trip hierarchy detection on the column-only path).
+mk_2by_ard <- function() {
+  arms <- c("Placebo", "Drug")
+  sexes <- c("F", "M")
+  races <- c("WHITE", "BLACK")
+  rows <- list()
+  for (a in arms) {
+    for (s in sexes) {
+      for (r in races) {
+        rows[[length(rows) + 1L]] <- data.frame(
+          group1 = "ARM",
+          group1_level = a,
+          group2 = "SEX",
+          group2_level = s,
+          variable = "RACE",
+          variable_level = r,
+          context = "categorical",
+          stat_name = c("n", "p"),
+          stat = I(list(10, 0.25)),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+  }
+  for (a in arms) {
+    for (s in sexes) {
+      rows[[length(rows) + 1L]] <- data.frame(
+        group1 = "ARM",
+        group1_level = a,
+        group2 = NA,
+        group2_level = NA,
+        variable = "SEX",
+        variable_level = s,
+        context = "tabulate",
+        stat_name = c("n", "p"),
+        stat = I(list(20, 0.5)),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  do.call(rbind, rows)
+}
+
+test_that("row_group widens a 2-variable .by cleanly with no phantom Total (#B2)", {
+  out <- pivot_across(
+    mk_2by_ard(),
+    column = "ARM",
+    row_group = "SEX",
+    statistic = list(categorical = "{n} ({p}%)")
+  )
+  # SEX is a leading row-group column, not a hierarchy and not a column.
+  expect_true("SEX" %in% names(out))
+  expect_false("Total" %in% names(out))
+  expect_false("soc" %in% names(out)) # not mis-read as a hierarchy
+  expect_setequal(out$SEX, c("F", "M"))
+  # Only the RACE content survives; the by-marginal SEX rows are dropped.
+  expect_setequal(unique(out$variable), "RACE")
+  expect_true(all(c("Placebo", "Drug") %in% names(out)))
+})
+
+test_that("row_group factor level order is preserved (#B2)", {
+  ard <- mk_2by_ard()
+  out <- pivot_across(
+    ard,
+    column = "ARM",
+    row_group = "SEX",
+    statistic = list(categorical = "{n}")
+  )
+  expect_identical(unique(out$SEX), c("F", "M"))
+})
+
+test_that("row_group output composes with subgroup() (#B2)", {
+  out <- pivot_across(
+    mk_2by_ard(),
+    column = "ARM",
+    row_group = "SEX",
+    statistic = list(categorical = "{n} ({p}%)")
+  )
+  # The SEX column is an ordinary column the downstream verb can page on.
+  spec <- tabular(out) |> subgroup(by = "SEX")
+  expect_s3_class(spec, "tabular::tabular_spec")
+})
+
+test_that("row_group errors when not a second grouping variable (#B2)", {
+  expect_error(
+    pivot_across(
+      mk_2by_ard(),
+      column = "ARM",
+      row_group = "NOPE",
+      statistic = list(categorical = "{n}")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("row_group errors when equal to column (#B2)", {
+  expect_error(
+    pivot_across(
+      mk_2by_ard(),
+      column = "ARM",
+      row_group = "ARM",
+      statistic = list(categorical = "{n}")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("row_group errors on a non-character value (#B2)", {
+  expect_error(
+    pivot_across(
+      mk_2by_ard(),
+      column = "ARM",
+      row_group = 1L,
+      statistic = list(categorical = "{n}")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("row_group errors when the ARD has no second grouping variable (#B2)", {
+  # A single-.by ARD has no extra_groups; the error names that case.
+  single_by <- data.frame(
+    group1 = "ARM",
+    group1_level = c("Placebo", "Drug"),
+    variable = "SEX",
+    variable_level = "F",
+    context = "categorical",
+    stat_name = "n",
+    stat = I(list(40, 38)),
+    stringsAsFactors = FALSE
+  )
+  expect_error(
+    pivot_across(
+      single_by,
+      column = "ARM",
+      row_group = "SEX",
+      statistic = list(categorical = "{n}")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("a real SOC/PT hierarchy is still detected with no row_group (#B2 no-regress)", {
+  out <- pivot_across(
+    saf_aesocpt_card,
+    statistic = list(continuous = "{mean} ({sd})", categorical = "{n} ({p}%)")
+  )
+  expect_true("soc" %in% names(out)) # hierarchy path intact (compat row F)
+})
+
+# B1: warn on a totally mis-keyed statistic ---------------------------
+
+mk_cat_ard <- function() {
+  rows <- list()
+  for (a in c("Placebo", "Drug")) {
+    rows[[length(rows) + 1L]] <- data.frame(
+      group1 = "ARM",
+      group1_level = a,
+      variable = "SEX",
+      variable_level = "F",
+      context = "categorical",
+      stat_name = c("n", "p"),
+      stat = I(list(40, 0.5)),
+      stringsAsFactors = FALSE
+    )
+  }
+  do.call(rbind, rows)
+}
+
+test_that("an explicit statistic matching no context warns (#B1)", {
+  expect_warning(
+    pivot_across(
+      mk_cat_ard(),
+      column = "ARM",
+      statistic = list(continuous = "{mean}")
+    ),
+    class = "tabular_warning_unmatched_context"
+  )
+})
+
+test_that("the unmatched-context warning names the keys and contexts (#B1)", {
+  w <- tryCatch(
+    pivot_across(
+      mk_cat_ard(),
+      column = "ARM",
+      statistic = list(summary = "{mean}")
+    ),
+    warning = function(w) conditionMessage(w)
+  )
+  expect_match(w, "summary")
+  expect_match(w, "categorical")
+})
+
+test_that("a default (un-supplied) statistic never warns (#B1)", {
+  # The {n} fallback is the correct output for a plain count ARD; a
+  # default call must stay silent.
+  expect_no_warning(
+    pivot_across(mk_cat_ard(), column = "ARM")
+  )
+})
+
+test_that("a partially-matching statistic does not warn (#B1)", {
+  # categorical matches; the user is trusted for any other contexts.
+  expect_no_warning(
+    pivot_across(
+      mk_cat_ard(),
+      column = "ARM",
+      statistic = list(categorical = "{n}")
+    )
+  )
+})
+
+test_that("a default = key suppresses the unmatched-context warning (#B1)", {
+  expect_no_warning(
+    pivot_across(
+      mk_cat_ard(),
+      column = "ARM",
+      statistic = list(continuous = "{mean}", default = "{n}")
+    )
+  )
+})
+
+test_that("a hierarchical ARD never warns even when keys do not match (#B1)", {
+  expect_no_warning(
+    pivot_across(saf_aesocpt_card, statistic = list(continuous = "{mean}"))
+  )
+})
