@@ -75,7 +75,9 @@ output is not yet supported and is the focus of the next release.
   (`preset(whitespace = "preserve")`, the default).
 - [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
   reports LaTeX-package availability for PDF output and prints the exact
-  `tlmgr_install()` remedy for anything missing;
+  `tlmgr_install()` remedy for anything missing — including a
+  CTAN-mirror pin (`tinytex::tlmgr_repo("auto")`) when an install stalls
+  behind the redirecting default mirror (commonly on Windows);
   [`check_fonts()`](https://vthanik.github.io/tabular/reference/check_fonts.md)
   does the same for fonts, per backend.
 

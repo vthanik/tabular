@@ -11,7 +11,7 @@ Two things to internalise up front:
     computes statistics. You bring a summarised data frame (one input
     row = one display row); tabular lays it out and renders it.
     (Producing that frame from a cards ARD is the [*Data
-    in*](https://vthanik.github.io/tabular/articles/data-in.md)
+    in*](https://vthanik.github.io/tabular/articles/data-in.html)
     article.)
 2.  **One immutable spec, built with verbs.** You pipe a
     [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md)
@@ -208,25 +208,25 @@ margins, fonts).
 The rest of the docs are task-oriented — read the one that matches what
 you are doing:
 
-- **[Data in](https://vthanik.github.io/tabular/articles/data-in.md)** —
-  turn a cards/cardx ARD (or any long ARD) into the wide frame, with
+- **[Data in](https://vthanik.github.io/tabular/articles/data-in.html)**
+  — turn a cards/cardx ARD (or any long ARD) into the wide frame, with
   [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md).
-- **[Structure](https://vthanik.github.io/tabular/articles/structure.md)**
+- **[Structure](https://vthanik.github.io/tabular/articles/structure.html)**
   — columns, headers, BigN, and splitting wide or long tables across
   pages
   ([`cols()`](https://vthanik.github.io/tabular/reference/cols.md),
   [`headers()`](https://vthanik.github.io/tabular/reference/headers.md),
   [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md),
   [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)).
-- **[Presentation](https://vthanik.github.io/tabular/articles/presentation.md)**
+- **[Presentation](https://vthanik.github.io/tabular/articles/presentation.html)**
   — titles, footnotes, running headers, and cell styling
   ([`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md),
   [`preset()`](https://vthanik.github.io/tabular/reference/preset.md),
   [`style()`](https://vthanik.github.io/tabular/reference/style.md)).
-- **[Recipes](https://vthanik.github.io/tabular/articles/recipes.md)** —
-  the canonical CDISC-pilot safety and efficacy tables built end to end,
-  each rendered live.
+- **[Recipes](https://vthanik.github.io/tabular/articles/recipes.html)**
+  — the canonical CDISC-pilot safety and efficacy tables built end to
+  end, each rendered live.
 - **[Output &
-  qualification](https://vthanik.github.io/tabular/articles/output.md)**
+  qualification](https://vthanik.github.io/tabular/articles/output.html)**
   — the backends, their system requirements, and the CDISC-pilot
   cross-backend validation.

@@ -11,12 +11,12 @@ can never desynchronise from its note.
 ## Usage
 
 ``` r
-footnote(spec, text, .at = cells_body(), id = NULL, symbol = NULL)
+footnote(.spec, text, .at = cells_body(), id = NULL, symbol = NULL)
 ```
 
 ## Arguments
 
-- spec:
+- .spec:
 
   *The `tabular_spec` to annotate.* `<tabular_spec>: required`.
 

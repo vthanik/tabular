@@ -10,7 +10,7 @@ can sit at the bottom of a pipe without losing the path.
 
 ``` r
 emit(
-  spec,
+  .spec,
   file,
   format = NULL,
   data_file = NULL,
@@ -21,7 +21,7 @@ emit(
 
 ## Arguments
 
-- spec:
+- .spec:
 
   *The `tabular_spec` to render.* `<tabular_spec>: required`. The full
   verb chain

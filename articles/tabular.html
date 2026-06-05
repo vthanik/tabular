@@ -85,7 +85,7 @@
 <p>Two things to internalise up front:</p>
 <ol type="1">
 <li>
-<strong>tabular is display-only.</strong> It never aggregates, filters, or computes statistics. You bring a summarised data frame (one input row = one display row); tabular lays it out and renders it. (Producing that frame from a cards ARD is the <a href="data-in.html"><em>Data in</em></a> article.)</li>
+<strong>tabular is display-only.</strong> It never aggregates, filters, or computes statistics. You bring a summarised data frame (one input row = one display row); tabular lays it out and renders it. (Producing that frame from a cards ARD is the <a href="https://vthanik.github.io/tabular/articles/data-in.html"><em>Data in</em></a> article.)</li>
 <li>
 <strong>One immutable spec, built with verbs.</strong> You pipe a <code><a href="../reference/tabular.html">tabular()</a></code> object through verbs (<code><a href="../reference/cols.html">cols()</a></code>, <code><a href="../reference/headers.html">headers()</a></code>, <code><a href="../reference/paginate.html">paginate()</a></code>, <code><a href="../reference/preset.html">preset()</a></code>, …) and finish with <code><a href="../reference/emit.html">emit()</a></code>. Each verb returns a new spec; nothing renders until <code><a href="../reference/emit.html">emit()</a></code>.</li>
 </ol>
@@ -530,15 +530,15 @@
 <p>The rest of the docs are task-oriented — read the one that matches what you are doing:</p>
 <ul>
 <li>
-<strong><a href="data-in.html">Data in</a></strong> — turn a cards/cardx ARD (or any long ARD) into the wide frame, with <code><a href="../reference/pivot_across.html">pivot_across()</a></code>.</li>
+<strong><a href="https://vthanik.github.io/tabular/articles/data-in.html">Data in</a></strong> — turn a cards/cardx ARD (or any long ARD) into the wide frame, with <code><a href="../reference/pivot_across.html">pivot_across()</a></code>.</li>
 <li>
-<strong><a href="structure.html">Structure</a></strong> — columns, headers, BigN, and splitting wide or long tables across pages (<code><a href="../reference/cols.html">cols()</a></code>, <code><a href="../reference/headers.html">headers()</a></code>, <code><a href="../reference/paginate.html">paginate()</a></code>, <code><a href="../reference/subgroup.html">subgroup()</a></code>).</li>
+<strong><a href="https://vthanik.github.io/tabular/articles/structure.html">Structure</a></strong> — columns, headers, BigN, and splitting wide or long tables across pages (<code><a href="../reference/cols.html">cols()</a></code>, <code><a href="../reference/headers.html">headers()</a></code>, <code><a href="../reference/paginate.html">paginate()</a></code>, <code><a href="../reference/subgroup.html">subgroup()</a></code>).</li>
 <li>
-<strong><a href="presentation.html">Presentation</a></strong> — titles, footnotes, running headers, and cell styling (<code><a href="../reference/footnote.html">footnote()</a></code>, <code><a href="../reference/preset.html">preset()</a></code>, <code><a href="../reference/style.html">style()</a></code>).</li>
+<strong><a href="https://vthanik.github.io/tabular/articles/presentation.html">Presentation</a></strong> — titles, footnotes, running headers, and cell styling (<code><a href="../reference/footnote.html">footnote()</a></code>, <code><a href="../reference/preset.html">preset()</a></code>, <code><a href="../reference/style.html">style()</a></code>).</li>
 <li>
-<strong><a href="recipes.html">Recipes</a></strong> — the canonical CDISC-pilot safety and efficacy tables built end to end, each rendered live.</li>
+<strong><a href="https://vthanik.github.io/tabular/articles/recipes.html">Recipes</a></strong> — the canonical CDISC-pilot safety and efficacy tables built end to end, each rendered live.</li>
 <li>
-<strong><a href="output.html">Output &amp; qualification</a></strong> — the backends, their system requirements, and the CDISC-pilot cross-backend validation.</li>
+<strong><a href="https://vthanik.github.io/tabular/articles/output.html">Output &amp; qualification</a></strong> — the backends, their system requirements, and the CDISC-pilot cross-backend validation.</li>
 </ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

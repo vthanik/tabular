@@ -7,12 +7,12 @@ preview I'm seeing the same fonts the downstream reviewer will see?".
 ## Usage
 
 ``` r
-check_fonts(spec)
+check_fonts(.spec)
 ```
 
 ## Arguments
 
-- spec:
+- .spec:
 
   *A `tabular_spec` or `preset_spec`.*
   `<tabular_spec | preset_spec>: required`. The spec whose effective

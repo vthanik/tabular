@@ -66,7 +66,7 @@
 <li>Glue-style <code>{expr}</code> interpolation in static labels, titles, footnotes, and header band labels, evaluated in the calling environment at build time.</li>
 <li>Significant-whitespace preservation across all backends (<code>preset(whitespace = "preserve")</code>, the default).</li>
 <li>
-<code><a href="../reference/check_latex.html">check_latex()</a></code> reports LaTeX-package availability for PDF output and prints the exact <code>tlmgr_install()</code> remedy for anything missing; <code><a href="../reference/check_fonts.html">check_fonts()</a></code> does the same for fonts, per backend.</li>
+<code><a href="../reference/check_latex.html">check_latex()</a></code> reports LaTeX-package availability for PDF output and prints the exact <code>tlmgr_install()</code> remedy for anything missing — including a CTAN-mirror pin (<code>tinytex::tlmgr_repo("auto")</code>) when an install stalls behind the redirecting default mirror (commonly on Windows); <code><a href="../reference/check_fonts.html">check_fonts()</a></code> does the same for fonts, per backend.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="data-0-1-0">Data<a class="anchor" aria-label="anchor" href="#data-0-1-0"></a></h3>

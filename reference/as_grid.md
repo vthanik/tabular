@@ -13,12 +13,12 @@ a Quarto notebook).
 ## Usage
 
 ``` r
-as_grid(spec)
+as_grid(.spec)
 ```
 
 ## Arguments
 
-- spec:
+- .spec:
 
   *The `tabular_spec` to resolve.* `<tabular_spec>: required`. Built by
   the verb chain

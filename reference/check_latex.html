@@ -97,6 +97,12 @@ user installs and <code>tlmgr_install()</code> will fail. The fix is to
 install a user-space TinyTeX with <code><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">tinytex::install_tinytex()</a></code>
 and let that tree own the packages. Never force a locked <code>tlmgr</code>
 with <code>--ignore-warning</code>: it leaves the system tree half-written.</p>
+<p><strong>Slow / stuck install (often Windows).</strong> The default CTAN
+repository <code>mirror.ctan.org</code> redirects to a random mirror on
+every call, and a slow or stale one makes <code><a href="https://rdrr.io/pkg/tinytex/man/tlmgr.html" class="external-link">tinytex::tlmgr_install()</a></code>
+appear to hang. Pin a concrete mirror once with
+<code><a href="https://rdrr.io/pkg/tinytex/man/tlmgr.html" class="external-link">tinytex::tlmgr_repo()</a></code><code>("auto")</code> (it follows the redirect a
+single time and remembers the result), then retry the install.</p>
 <p><strong>Status markers:</strong></p><ul><li><p><code>v</code> — package is installed in the local TeX tree.</p></li>
 <li><p><code>x</code> — package is missing; the <code>tlmgr_install()</code> line at the
 bottom of the report installs every missing package at once.</p></li>
@@ -143,6 +149,9 @@ bottom of the report installs every missing package at once.</p></li>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Install with `tinytex::tlmgr_install(c('tabularray', 'ninecolors',</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 'xcolor', 'graphics', 'siunitx', 'geometry', 'hyperref', 'iftex',</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 'fancyhdr', 'lastpage', 'fontspec', 'tex-gyre', 'psnfss'))`.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> If the install stalls (commonly on Windows, where the default CTAN</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> mirror redirects on every call), pin a concrete mirror once with</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `tinytex::tlmgr_repo("auto")` then retry.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> On an OS-managed TeX Live (RHEL/dnf, Debian/apt) tlmgr is locked:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> install a user-space TinyTeX with `tinytex::install_tinytex()`</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> instead. Never force a locked tlmgr with `--ignore-warning`.</span>

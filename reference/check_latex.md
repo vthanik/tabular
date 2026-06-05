@@ -47,6 +47,15 @@ with
 and let that tree own the packages. Never force a locked `tlmgr` with
 `--ignore-warning`: it leaves the system tree half-written.
 
+**Slow / stuck install (often Windows).** The default CTAN repository
+`mirror.ctan.org` redirects to a random mirror on every call, and a slow
+or stale one makes
+[`tinytex::tlmgr_install()`](https://rdrr.io/pkg/tinytex/man/tlmgr.html)
+appear to hang. Pin a concrete mirror once with
+[`tinytex::tlmgr_repo()`](https://rdrr.io/pkg/tinytex/man/tlmgr.html)`("auto")`
+(it follows the redirect a single time and remembers the result), then
+retry the install.
+
 **Status markers:**
 
 - `v` — package is installed in the local TeX tree.
@@ -101,6 +110,9 @@ if (requireNamespace("tinytex", quietly = TRUE)) {
 #> Install with `tinytex::tlmgr_install(c('tabularray', 'ninecolors',
 #> 'xcolor', 'graphics', 'siunitx', 'geometry', 'hyperref', 'iftex',
 #> 'fancyhdr', 'lastpage', 'fontspec', 'tex-gyre', 'psnfss'))`.
+#> If the install stalls (commonly on Windows, where the default CTAN
+#> mirror redirects on every call), pin a concrete mirror once with
+#> `tinytex::tlmgr_repo("auto")` then retry.
 #> On an OS-managed TeX Live (RHEL/dnf, Debian/apt) tlmgr is locked:
 #> install a user-space TinyTeX with `tinytex::install_tinytex()`
 #> instead. Never force a locked tlmgr with `--ignore-warning`.

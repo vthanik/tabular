@@ -12,7 +12,7 @@ not set rows-per-page directly.
 
 ``` r
 paginate(
-  spec,
+  .spec,
   keep_together = character(),
   panels = 1,
   orphan_floor = 3,
@@ -24,7 +24,7 @@ paginate(
 
 ## Arguments
 
-- spec:
+- .spec:
 
   *The `tabular_spec` to attach pagination to.*
   `<tabular_spec>: required`.
