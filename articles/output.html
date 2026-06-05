@@ -168,7 +168,8 @@
 </tr>
 </tbody>
 </table>
-<p>¹ HTML/MD are one continuous document; the browser repeats <code>&lt;thead&gt;</code> on print. ² On HTML/MD the per-page N renders as a row under each subgroup banner instead of in the repeating header.</p>
+<p>¹ HTML/MD are one continuous document; the browser repeats <code>&lt;thead&gt;</code> on print.</p>
+<p>² On HTML/MD the per-page N renders as a row under each subgroup banner instead of in the repeating header.</p>
 </section><section class="level2"><h2 id="system-requirements">System requirements<a class="anchor" aria-label="anchor" href="#system-requirements"></a>
 </h2>
 <p><strong>RTF, HTML, DOCX, Markdown need nothing beyond the R package.</strong> Only PDF has a system dependency — a LaTeX engine plus the packages the backend uses (<code>tabularray</code>, <code>ninecolors</code>, <code>siunitx</code>, <code>tex-gyre</code>, …). Check and install:</p>
@@ -190,17 +191,19 @@
 <strong>If a PDF build appears to hang,</strong> it is the LaTeX engine stopping at an interactive error prompt — fix the underlying LaTeX dependency (run <code><a href="../reference/check_latex.html">check_latex()</a></code>); render RTF/HTML to keep working in the meantime.</li>
 </ul></section><section class="level2"><h2 id="cross-backend-qualification-cdisc-pilot">Cross-backend qualification (CDISC pilot)<a class="anchor" aria-label="anchor" href="#cross-backend-qualification-cdisc-pilot"></a>
 </h2>
-<p>The package ships a qualification (<code>inst/qualification/</code>) that rebuilds representative CDISC-pilot tables (demographics, populations, AE overview, AE by SOC/PT) from the public PHUSE Test Data Factory ADaM and renders <strong>each to every backend</strong>, checking three things per cell: it emits without error, the file is structurally valid, and an <strong>independent count computed from the ADaM appears in the rendered text of that backend</strong> (cross-backend content parity). The four pilot tables across RTF, HTML, and DOCX (the backends needing no system dependency) give a 12/12 PASS matrix:</p>
+<p>The package ships a qualification (<code>inst/qualification/</code>) that rebuilds representative CDISC-pilot tables (demographics, populations, AE overview, AE by SOC/PT) from the public PHUSE Test Data Factory ADaM and renders <strong>each to every backend</strong>, checking three things per cell: it emits without error, the file is structurally valid, and an <strong>independent count computed from the ADaM appears in the rendered text of that backend</strong> (cross-backend content parity). The four pilot tables across all four file backends give a 16/16 PASS matrix:</p>
 <table class="table caption-top">
 <thead><tr class="header">
 <th>Table</th>
 <th style="text-align: center;">RTF</th>
 <th style="text-align: center;">HTML</th>
 <th style="text-align: center;">DOCX</th>
+<th style="text-align: center;">PDF¹</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td>14-2.01 Demographics</td>
+<td style="text-align: center;">PASS</td>
 <td style="text-align: center;">PASS</td>
 <td style="text-align: center;">PASS</td>
 <td style="text-align: center;">PASS</td>
@@ -210,9 +213,11 @@
 <td style="text-align: center;">PASS</td>
 <td style="text-align: center;">PASS</td>
 <td style="text-align: center;">PASS</td>
+<td style="text-align: center;">PASS</td>
 </tr>
 <tr class="odd">
 <td>14-3.01 TEAE overview</td>
+<td style="text-align: center;">PASS</td>
 <td style="text-align: center;">PASS</td>
 <td style="text-align: center;">PASS</td>
 <td style="text-align: center;">PASS</td>
@@ -222,10 +227,12 @@
 <td style="text-align: center;">PASS</td>
 <td style="text-align: center;">PASS</td>
 <td style="text-align: center;">PASS</td>
+<td style="text-align: center;">PASS</td>
 </tr>
 </tbody>
 </table>
-<p>PDF renders identically once a LaTeX engine is available (<code><a href="../reference/check_latex.html">check_latex()</a></code>). The runnable script (<code>qualify_tabular_cdisc.R</code>) and how to fetch the data are in the qualification README; it is the most direct evidence that one <code>tabular</code> spec produces consistent, correct output across all backends.</p>
+<p>¹ The PDF column is verified <strong>manually in a local environment</strong> with a LaTeX engine (<code><a href="../reference/check_latex.html">check_latex()</a></code>) and <code>pdftotext</code> for the text-parity check. It is <strong>not run in continuous integration</strong>, which carries no TeX install; CI exercises the RTF, HTML, and DOCX backends.</p>
+<p>The runnable script (<code>inst/qualification/qualify_tabular_cdisc.R</code>) and how to fetch the data are in the qualification README in that same <code>inst/qualification/</code> folder; it is the most direct evidence that one <code>tabular</code> spec produces consistent, correct output across all backends.</p>
 </section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

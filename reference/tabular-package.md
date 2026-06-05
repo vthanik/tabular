@@ -2,7 +2,7 @@
 
 Render clinical submission tables and listings to 'RTF', 'LaTeX',
 'HTML', 'PDF', and 'DOCX' from pre-summarised data frames, with no
-external Java or 'SAS' dependency. Features include decimal alignment
+external 'Java' or 'SAS' dependency. Features include decimal alignment
 via font metrics, multi-level column headers with passthrough leaves,
 predicate-targeted cell styling, footnotes, and group-aware pagination.
 Built for Clinical Data Interchange Standards Consortium (CDISC)

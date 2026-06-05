@@ -1,89 +1,13 @@
 # Changelog
 
-## tabular (development version)
-
-### Breaking changes
-
-- The bundled demo datasets were renamed to the `cdisc_` namespace and
-  the `_card` ARD companions to `_ard` (for example `saf_demo` is now
-  `cdisc_saf_demo` and `saf_demo_card` is now `cdisc_saf_demo_ard`);
-  update any references.
-
-### New features
-
-- [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
-  reports LaTeX-package availability for PDF output and prints the exact
-  `tlmgr_install()` remedy for anything missing.
-- [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) gains
-  a `.default` argument that sets a fallback
-  [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
-  for columns not named explicitly.
-- [`cols_apply()`](https://vthanik.github.io/tabular/reference/cols_apply.md)
-  applies one
-  [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
-  to many columns selected by name or by predicate.
-- [`cols_apply()`](https://vthanik.github.io/tabular/reference/cols_apply.md)
-  and [`cols()`](https://vthanik.github.io/tabular/reference/cols.md)
-  resolve a `{.name}` token (alias `{.col}`) in a `col_spec(label = )`
-  to each matched column name, so a variable-N arm header is a single
-  declarative call instead of a per-arm loop.
-- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) gains
-  `create_dir` to create missing parent directories instead of erroring.
-- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
-  gains `row_group` to widen the second variable of a two-variable `.by`
-  (such as `ard_stack(.by = c(ARM, SEX))`) into a leading row column
-  instead of mis-reading it as a SOC/PT hierarchy.
-- [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
-  gains `big_n` and `big_n_fmt` for per-page BigN, so each subgroup
-  page’s column headers can carry that page’s own `(N=)` denominators,
-  keyed to either a leaf column or a
-  [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
-  band; `big_n` accepts either a wide or a long (`count()`-style) table,
-  and per-page Ns render in RTF, PDF/LaTeX, and DOCX on the repeating
-  header, while HTML and Markdown emit a per-arm N row under each
-  subgroup banner.
-
-### Bug fixes
-
-- [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
-  now folds per-page `big_n` into the column header when the
-  denominators are identical across every subgroup, instead of repeating
-  an `(N=)` row (HTML / Markdown) for an N that never changes.
-- [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
-  banners now render above the column-header band, left-aligned, set off
-  by a blank row above and below, in the paged backends (RTF, PDF /
-  LaTeX, DOCX); HTML and Markdown keep the banner centered, and HTML now
-  draws the closing rule below the per-arm `(N=)` row, or under the
-  banner itself when there is no such row, rather than boxing the
-  banner.
-- The DOCX backend now honours the `halign` cascade on group-header rows
-  instead of always left-aligning them.
-- The PDF backend now declares its full LaTeX package set, so a
-  missing-dependency error names every required package.
-- The RTF backend now renders `pagehead` / `pagefoot` page chrome at the
-  preset `font_size` instead of the RTF default 12pt.
-- The RTF backend now renders blank section-separator rows, and the
-  footnote and non-repeating-title spacer paragraphs, at the preset
-  `font_size` instead of the RTF default 12pt, so every spacer line
-  matches the body height.
-- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) now
-  accepts a relative output path for DOCX output; the path is
-  absolutised before the OOXML zip is staged, where previously a
-  relative path failed with a `zip` I/O error.
-- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
-  now warns when an explicitly-supplied `statistic` matches no context
-  or variable in the ARD, instead of silently falling back to `{n}`.
-- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
-  no longer silently drops `ard_tabulate()` categorical rows, nor blanks
-  their pooled `overall` column, from a mixed `ard_stack()` ARD.
-
 ## tabular 0.1.0
 
-First release.
-
-`tabular` renders pre-summarised clinical tables and listings to RTF,
-LaTeX, HTML, PDF, and DOCX from one immutable verb pipeline, with no
-external Java or SAS dependency.
+First release. `tabular` renders pre-summarised clinical tables and
+listings to RTF, LaTeX, HTML, PDF, and DOCX from one immutable verb
+pipeline, with no external Java or SAS dependency. This initial CRAN
+version consolidates the entire pre-release development cycle: every
+feature and bug fix below was designed, implemented, and tested before
+this first release.
 
 **Scope.** This release covers tables and listings. Figure (graph)
 output is not yet supported and is the focus of the next release.
@@ -98,12 +22,22 @@ output is not yet supported and is the focus of the next release.
   set per-column usage, label, format, width, alignment (including
   decimal alignment via bundled font metrics), visibility, NA text,
   per-row indent (`indent_by`), and group display.
+  [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) takes
+  a `.default` fallback
+  [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md),
+  and
+  [`cols_apply()`](https://vthanik.github.io/tabular/reference/cols_apply.md)
+  applies one
+  [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
+  to many columns (by name or predicate), resolving a `{.name}` token in
+  a label to each matched column.
 - [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
   builds multi-level column-header bands with passthrough leaves;
   [`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md)
   sorts on hidden numeric keys;
   [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
-  partitions with a `{col}` banner template.
+  partitions with a `{col}` banner template and optional per-page
+  `big_n`.
 - [`style()`](https://vthanik.github.io/tabular/reference/style.md)
   applies predicate-targeted cell styling through the `cells_*()`
   location helpers;
@@ -112,7 +46,8 @@ output is not yet supported and is the focus of the next release.
   /
   [`get_preset()`](https://vthanik.github.io/tabular/reference/get_preset.md)
   set cosmetic defaults (fonts, colours, rules, padding, alignment, page
-  chrome) per table or per session.
+  chrome) per table or per session, with reusable house styles via
+  [`style_template()`](https://vthanik.github.io/tabular/reference/style_template.md).
 - [`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)
   attaches auto-numbered footnotes (letters, numbers, or symbols) to any
   cell, column header, or title, deduped by `id` and byte-identical
@@ -120,15 +55,16 @@ output is not yet supported and is the focus of the next release.
 - [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
   does group-aware pagination with an auto-computed per-page row budget;
   [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) writes
-  the chosen backend, and
+  the chosen backend (creating parent directories with `create_dir`),
+  and
   [`as_grid()`](https://vthanik.github.io/tabular/reference/as_grid.md)
   resolves the grid without I/O.
 
 ### Rendering
 
 - Native emission to RTF, LaTeX, HTML, PDF (via LaTeX), and DOCX from a
-  single resolved grid; output is verified by per-backend byte
-  snapshots.
+  single resolved grid; output is verified by per-backend byte snapshots
+  and a cross-backend CDISC-pilot qualification (`inst/qualification/`).
 - Inline markup via
   [`md()`](https://vthanik.github.io/tabular/reference/md.md) and
   [`html()`](https://vthanik.github.io/tabular/reference/html.md).
@@ -137,9 +73,16 @@ output is not yet supported and is the focus of the next release.
   time.
 - Significant-whitespace preservation across all backends
   (`preset(whitespace = "preserve")`, the default).
+- [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
+  reports LaTeX-package availability for PDF output and prints the exact
+  `tlmgr_install()` remedy for anything missing;
+  [`check_fonts()`](https://vthanik.github.io/tabular/reference/check_fonts.md)
+  does the same for fonts, per backend.
 
 ### Data
 
-- Bundled synthetic CDISC-pilot demo data (`saf_demo`, `saf_aeoverall`,
-  `saf_aesocpt`, `saf_vital`, `eff_resp`, and BigN frames `saf_n` /
-  `eff_n`) for examples and vignettes.
+- Bundled synthetic CDISC-pilot demo data (`cdisc_saf_demo`,
+  `cdisc_saf_ae`, `cdisc_saf_aesocpt`, `cdisc_saf_vital`,
+  `cdisc_eff_resp`, the BigN frames `cdisc_saf_n` / `cdisc_eff_n`, and
+  the long-format ARD companions `cdisc_saf_demo_ard` /
+  `cdisc_saf_aesocpt_ard`) for examples and vignettes.
