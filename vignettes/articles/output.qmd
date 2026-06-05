@@ -41,6 +41,7 @@ One spec renders to every backend, but the page-oriented features differ:
 | System dependency | none | none | none | LaTeX | none |
 
 ¹ HTML/MD are one continuous document; the browser repeats `<thead>` on print.
+
 ² On HTML/MD the per-page N renders as a row under each subgroup banner instead
 of in the repeating header.
 
@@ -81,17 +82,21 @@ SOC/PT) from the public PHUSE Test Data Factory ADaM and renders **each to every
 backend**, checking three things per cell: it emits without error, the file is
 structurally valid, and an **independent count computed from the ADaM appears in
 the rendered text of that backend** (cross-backend content parity). The four
-pilot tables across RTF, HTML, and DOCX (the backends needing no system
-dependency) give a 12/12 PASS matrix:
+pilot tables across all four file backends give a 16/16 PASS matrix:
 
-| Table | RTF | HTML | DOCX |
-|---|:--:|:--:|:--:|
-| 14-2.01 Demographics | PASS | PASS | PASS |
-| 14-1.01 Populations | PASS | PASS | PASS |
-| 14-3.01 TEAE overview | PASS | PASS | PASS |
-| 14-3.04 TEAE by SOC/PT | PASS | PASS | PASS |
+| Table | RTF | HTML | DOCX | PDF¹ |
+|---|:--:|:--:|:--:|:--:|
+| 14-2.01 Demographics | PASS | PASS | PASS | PASS |
+| 14-1.01 Populations | PASS | PASS | PASS | PASS |
+| 14-3.01 TEAE overview | PASS | PASS | PASS | PASS |
+| 14-3.04 TEAE by SOC/PT | PASS | PASS | PASS | PASS |
 
-PDF renders identically once a LaTeX engine is available (`check_latex()`). The
-runnable script (`qualify_tabular_cdisc.R`) and how to fetch the data are in the
-qualification README; it is the most direct evidence that one `tabular` spec
-produces consistent, correct output across all backends.
+¹ The PDF column is verified **manually in a local environment** with a LaTeX
+engine (`check_latex()`) and `pdftotext` for the text-parity check. It is **not
+run in continuous integration**, which carries no TeX install; CI exercises the
+RTF, HTML, and DOCX backends.
+
+The runnable script (`inst/qualification/qualify_tabular_cdisc.R`) and how to
+fetch the data are in the qualification README in that same `inst/qualification/`
+folder; it is the most direct evidence that one `tabular` spec produces
+consistent, correct output across all backends.

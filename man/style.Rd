@@ -132,8 +132,9 @@ house <- style_template() |>
   style(border_bottom = brdr("thick"), .at = cells_headers()) |>
   style(border_bottom = brdr("medium"),
         .at = cells_table(side = "outer_bottom"))
-# Attach once via set_preset(); every tabular() chain inherits.
-# set_preset(style = house, font_size = 9)
+# Attach once via set_preset(); every tabular() chain then inherits it.
+set_preset(.style = house, font_size = 9)
+set_preset(.reset = TRUE) # restore the default for later examples
 
 }
 \seealso{
