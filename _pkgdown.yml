@@ -1,7 +1,18 @@
 url: https://vthanik.github.io/tabular/
 
+development:
+  mode: auto
+
+authors:
+  Vignesh Thanikachalam:
+    href: https://github.com/vthanik
+
 template:
   bootstrap: 5
+  opengraph:
+    image:
+      src: man/figures/README-hero.png
+      alt: "A demographic and baseline characteristics table rendered by tabular, with decimal-aligned arm columns."
   bslib:
     primary: "#3b82f6"
     base_font: { google: "DM Sans" }
@@ -28,6 +39,13 @@ home:
     Native emission of clinical submission tables to RTF, LaTeX, HTML,
     PDF, and DOCX. Decimal alignment, multi-level column headers,
     group-aware pagination.
+  links:
+  - text: CDISC Analysis Results Standard
+    href: https://github.com/cdisc-org/analysis-results-standard
+  - text: cards — Analysis Results Datasets
+    href: https://insightsengineering.github.io/cards/
+  - text: PHUSE Test Data Factory (demo ADaM)
+    href: https://github.com/phuse-org/phuse-scripts/tree/master/data/adam
 
 reference:
 - title: Entry verbs
@@ -123,4 +141,5 @@ articles:
   - articles/data-in
   - articles/structure
   - articles/presentation
+  - articles/recipes
   - articles/output

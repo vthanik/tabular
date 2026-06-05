@@ -67,8 +67,12 @@ otherwise PDF is validated structurally only (`%PDF` magic + size).
 To skip PDF (e.g. no LaTeX in a CI image), drop `"pdf"` from the `BACKENDS`
 vector — the other three backends need no system dependencies.
 
-## Known issue surfaced by this run
+## Notes
 
-The DOCX backend currently requires an **absolute** output path — a relative
-path fails with a `zip` I/O error. The driver works around it by absolutising
-`CDISC_OUT` (`normalizePath`). See `TABULAR_POLISH_FEEDBACK.md` item **B-DOCX**.
+An earlier run of this qualification surfaced a DOCX bug: `emit()` failed for a
+relative output path because the DOCX backend `setwd()`s into a temp staging dir
+before `utils::zip`, so the relative path resolved against the stage and `zip`
+aborted. **This is now fixed** in `emit()` itself (the path is absolutised once
+at the backend handoff), so no caller-side workaround is needed. The driver
+still absolutises `CDISC_OUT` with `normalizePath()`, but it is now belt-and-
+braces rather than required.

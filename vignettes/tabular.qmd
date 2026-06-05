@@ -35,35 +35,71 @@ data(cdisc_saf_demo, package = "tabular")
 head(cdisc_saf_demo)
 ```
 
-Describe the columns and emit:
+Describe the columns. The spec prints as a live HTML table — this is the same
+render `emit()` produces, shown inline:
 
 ```{r}
 spec <- tabular(
   cdisc_saf_demo,
-  titles = c("Table 14-2.01",
-             "Demographic and Baseline Characteristics", "ITT Population")
+  titles = c(
+    "Table 14-2.01",
+    "Demographic and Baseline Characteristics",
+    "ITT Population"
+  )
 ) |>
   cols(
-    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    variable = col_spec(
+      usage = "group",
+      group_display = "header_row",
+      label = ""
+    ),
     stat_label = col_spec(usage = "indent", label = "")
   )
 
-out <- tempfile(fileext = ".html")
-emit(spec, out)         # dispatches on the file extension
+spec
+```
+
+To write a file, hand the spec to `emit()`; the backend is chosen by the file
+extension (or an explicit `format =`):
+
+```{r}
+out <- tempfile(fileext = ".rtf")
+emit(spec, out) # RTF here; swap to .docx / .pdf / .html / .md
 file.exists(out)
 ```
 
-That is the whole loop: **wide frame → `tabular()` → `cols()` → `emit()`**.
-Swap the extension to `.rtf`, `.docx`, `.pdf`, or `.md` and the same spec renders
-to that backend.
+That is the whole loop: **wide frame → `tabular()` → `cols()` → `emit()`** — one
+spec, any backend.
 
 ## The pipeline at a glance
 
-```
-            cards / cardx                     tabular
-  data ───► aggregate ──► pivot_across() ──► tabular() |> cols() |> … |> emit() ──► file
-            (ARD, long)    (long → wide)        (one spec, any backend)
-```
+Read it left to right. You **summarise upstream** — with cards/cardx, dplyr, or
+SAS — into a long ARD, widen that to a display-ready frame with `pivot_across()`,
+then hand it to tabular. Inside the package the work happens in three phases
+(**Build → Resolve → Emit**), and the *same* resolved spec emits to every
+backend, so the HTML you preview and the RTF you ship can never disagree.
+
+![tabular's pipeline: summarise upstream into a long ARD, widen it with `pivot_across()`, then build, resolve, and emit one immutable spec to every backend.](../man/figures/workflow.svg){fig-alt="An ADaM dataset is aggregated into a long ARD, widened by pivot_across into a wide data frame, then Build, Resolve, and Emit render that one spec to RTF, PDF, HTML, LaTeX, and DOCX." width="100%"}
+
+## Anatomy of a clinical table page
+
+A submission table is not just a grid of numbers — it is a page with four stacked
+sections, and a reviewer expects each one in its place. Every tabular verb maps
+onto a piece of this picture:
+
+![The four-section clinical page and the verb that fills each section.](../man/figures/anatomy.svg){fig-alt="A clinical table page split into header section, title lines, data section, and footnote lines, each annotated with the tabular verb that produces it."}
+
+- **Header section** — the running protocol, optional status, and *page x of y*,
+  set as page chrome with `preset(pagehead =, pagefoot =)`.
+- **Title lines** — the table number and up to four centred titles, passed to
+  `tabular(titles =)`.
+- **Data section** — an optional `subgroup()` banner, the column-header band built
+  by `cols()` and `headers()`, then the decimal-aligned data.
+- **Footnote lines** — your static `footnotes =` plus any auto-numbered
+  `footnote()` markers, then the program path, name, and timestamp.
+
+`preset()` frames all four by controlling the page geometry (paper, orientation,
+margins, fonts).
 
 ## Where to next
 
@@ -77,5 +113,7 @@ doing:
   `subgroup()`).
 - **[Presentation](presentation.html)** — titles, footnotes, running headers,
   and cell styling (`footnote()`, `preset()`, `style()`).
+- **[Recipes](recipes.html)** — the canonical CDISC-pilot safety and efficacy
+  tables built end to end, each rendered live.
 - **[Output & qualification](output.html)** — the backends, their system
   requirements, and the CDISC-pilot cross-backend validation.

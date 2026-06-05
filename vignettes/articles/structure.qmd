@@ -30,11 +30,14 @@ arms <- c("placebo", "drug_50", "drug_100", "Total")
 
 tabular(cdisc_saf_demo, titles = "Demographics") |>
   cols(
-    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    variable = col_spec(
+      usage = "group",
+      group_display = "header_row",
+      label = ""
+    ),
     stat_label = col_spec(usage = "indent", label = "")
   ) |>
-  cols_apply(arms, col_spec(align = "decimal")) |>
-  emit(tempfile(fileext = ".html")) |> invisible()
+  cols_apply(arms, col_spec(align = "decimal"))
 ```
 
 `cols_apply()` attaches one shared `col_spec` to **all** the arm columns at once —
@@ -58,14 +61,26 @@ N <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(cdisc_saf_demo, titles = "Demographics") |>
   cols(
-    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    variable = col_spec(
+      usage = "group",
+      group_display = "header_row",
+      label = ""
+    ),
     stat_label = col_spec(usage = "indent", label = ""),
-    placebo    = col_spec(label = "Placebo\n(N={N['placebo']})",   align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50\n(N={N['drug_50']})",   align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100\n(N={N['drug_100']})", align = "decimal"),
-    Total      = col_spec(label = "Total\n(N={N['Total']})",       align = "decimal")
-  ) |>
-  emit(tempfile(fileext = ".html")) |> invisible()
+    placebo = col_spec(
+      label = "Placebo\n(N={N['placebo']})",
+      align = "decimal"
+    ),
+    drug_50 = col_spec(
+      label = "Drug 50\n(N={N['drug_50']})",
+      align = "decimal"
+    ),
+    drug_100 = col_spec(
+      label = "Drug 100\n(N={N['drug_100']})",
+      align = "decimal"
+    ),
+    Total = col_spec(label = "Total\n(N={N['Total']})", align = "decimal")
+  )
 ```
 
 > **Clinical convention:** BigN is the population denominator (from ADSL), **not**
@@ -82,14 +97,17 @@ arm_cols <- c("placebo", "drug_50", "drug_100", "Total")
 
 tabular(cdisc_saf_demo, titles = "Demographics") |>
   cols(
-    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    variable = col_spec(
+      usage = "group",
+      group_display = "header_row",
+      label = ""
+    ),
     stat_label = col_spec(usage = "indent", label = "")
   ) |>
   cols_apply(
     arm_cols,
     col_spec(label = "{.name}\n(N={N[.name]})", align = "decimal")
-  ) |>
-  emit(tempfile(fileext = ".html")) |> invisible()
+  )
 ```
 
 ## Multi-level headers and widths
@@ -99,12 +117,15 @@ tabular(cdisc_saf_demo, titles = "Demographics") |>
 ```{r}
 tabular(cdisc_saf_demo, titles = "Demographics") |>
   cols(
-    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    variable = col_spec(
+      usage = "group",
+      group_display = "header_row",
+      label = ""
+    ),
     stat_label = col_spec(usage = "indent", label = "", width = "2.2in")
   ) |>
   cols_apply(arms, col_spec(align = "decimal", width = "1in")) |>
-  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
-  emit(tempfile(fileext = ".html")) |> invisible()
+  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total"))
 ```
 
 Widths: `"auto"` (default) sizes to content; a pinned value (`"1in"`, `1.0`,
@@ -120,17 +141,40 @@ by hand. `keep_together` stops a page break landing inside a section's run:
 
 ```{r}
 data(cdisc_saf_aesocpt, package = "tabular")
-tabular(cdisc_saf_aesocpt, titles = "AEs by SOC and PT") |>
+ae_pages <- tabular(cdisc_saf_aesocpt, titles = "AEs by SOC and PT") |>
   cols(
-    label    = col_spec(label = "SOC / Preferred Term", indent_by = "indent_level"),
-    soc      = col_spec(usage = "group", visible = FALSE, group_display = "column_repeat"),
-    row_type = col_spec(visible = FALSE), n_total = col_spec(visible = FALSE),
-    soc_n    = col_spec(visible = FALSE)
+    label = col_spec(
+      label = "SOC / Preferred Term",
+      indent_by = "indent_level"
+    ),
+    soc = col_spec(
+      usage = "group",
+      visible = FALSE,
+      group_display = "column_repeat"
+    ),
+    row_type = col_spec(visible = FALSE),
+    n_total = col_spec(visible = FALSE),
+    soc_n = col_spec(visible = FALSE)
   ) |>
-  cols_apply(c("placebo", "drug_50", "drug_100", "Total"), col_spec(align = "decimal")) |>
-  paginate(keep_together = "soc", orphan_floor = 4, widow_floor = 2,
-           continuation = "(continued)") |>
-  emit(tempfile(fileext = ".html")) |> invisible()
+  cols_apply(
+    c("placebo", "drug_50", "drug_100", "Total"),
+    col_spec(align = "decimal")
+  ) |>
+  paginate(
+    keep_together = "soc",
+    orphan_floor = 4,
+    widow_floor = 2,
+    continuation = "(continued)"
+  )
+ae_pages
+```
+
+The preview above is one continuous table: row pagination, `keep_together`, and
+the `continuation` marker materialise only in the **paged backends** (RTF, PDF,
+DOCX), not in HTML. Emit to one of those to see the page breaks:
+
+```{r eval = FALSE}
+emit(ae_pages, "ae_soc_pt.pdf") # continuation marker repeats on each continued page
 ```
 
 ## Panels — wide tables
@@ -141,14 +185,27 @@ each panel (so the row labels reappear). Make the row label `usage = "id"` so it
 rides every panel:
 
 ```{r}
-tabular(cdisc_saf_demo, titles = "Demographics (wide split)") |>
+wide_split <- tabular(cdisc_saf_demo, titles = "Demographics (wide split)") |>
   cols(
-    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
-    stat_label = col_spec(usage = "id", label = "")          # repeats on every panel
+    variable = col_spec(
+      usage = "group",
+      group_display = "header_row",
+      label = ""
+    ),
+    stat_label = col_spec(usage = "id", label = "") # repeats on every panel
   ) |>
   cols_apply(arms, col_spec(align = "decimal")) |>
-  paginate(panels = 2, continuation = "(continued)") |>
-  emit(tempfile(fileext = ".html")) |> invisible()
+  paginate(panels = 2, continuation = "(continued)")
+wide_split
+```
+
+Panels are a paged-backend feature: in HTML and Markdown the table stays one
+continuous block (the preview above), while RTF, PDF, and DOCX place each panel
+on its own page with the `id` / `group` columns repeated. Emit to a paged
+backend to see the split:
+
+```{r eval = FALSE}
+emit(wide_split, "demographics_wide.pdf") # panel 2 carries the (continued) marker
 ```
 
 Two things to know:
@@ -169,15 +226,19 @@ hard page break. A partition-constant column can ride into the banner:
 data(cdisc_saf_subgroup, package = "tabular")
 tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>
   cols(
-    sex        = col_spec(visible = FALSE), sex_n = col_spec(visible = FALSE),
-    agegr      = col_spec(visible = FALSE), agegr_n = col_spec(visible = FALSE),
-    paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group", label = "Parameter"),
+    sex = col_spec(visible = FALSE),
+    sex_n = col_spec(visible = FALSE),
+    agegr = col_spec(visible = FALSE),
+    agegr_n = col_spec(visible = FALSE),
+    paramcd = col_spec(visible = FALSE),
+    param = col_spec(usage = "group", label = "Parameter"),
     stat_label = col_spec(usage = "id", label = "Statistic")
   ) |>
-  cols_apply(c("placebo", "drug_50", "drug_100", "Total"), col_spec(align = "decimal")) |>
-  subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})") |>   # page total in banner
-  emit(tempfile(fileext = ".html")) |> invisible()
+  cols_apply(
+    c("placebo", "drug_50", "drug_100", "Total"),
+    col_spec(align = "decimal")
+  ) |>
+  subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})") # page total in banner
 ```
 
 For a **different `(N=)` per arm on each page** (the column headers re-resolving
@@ -187,23 +248,27 @@ shape `big_n` expects):
 
 ```{r}
 big_n <- data.frame(
-  sex      = c("F", "M"),
-  placebo  = c(53L, 33L),
-  drug_50  = c(50L, 46L),
+  sex = c("F", "M"),
+  placebo = c(53L, 33L),
+  drug_50 = c(50L, 46L),
   drug_100 = c(40L, 32L),
-  Total    = c(143L, 111L)
+  Total = c(143L, 111L)
 )
 
 tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>
   cols(
-    sex_n = col_spec(visible = FALSE), agegr = col_spec(visible = FALSE),
-    agegr_n = col_spec(visible = FALSE), paramcd = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group", label = "Parameter"),
+    sex_n = col_spec(visible = FALSE),
+    agegr = col_spec(visible = FALSE),
+    agegr_n = col_spec(visible = FALSE),
+    paramcd = col_spec(visible = FALSE),
+    param = col_spec(usage = "group", label = "Parameter"),
     stat_label = col_spec(usage = "id", label = "Statistic")
   ) |>
-  cols_apply(c("placebo", "drug_50", "drug_100", "Total"), col_spec(align = "decimal")) |>
-  subgroup(by = "sex", label = "Sex: {sex}", big_n = big_n) |>   # per-page (N=) per arm
-  emit(tempfile(fileext = ".html")) |> invisible()
+  cols_apply(
+    c("placebo", "drug_50", "drug_100", "Total"),
+    col_spec(align = "decimal")
+  ) |>
+  subgroup(by = "sex", label = "Sex: {sex}", big_n = big_n) # per-page (N=) per arm
 ```
 
 `big_n` accepts this wide shape (page column + one column per arm) or a long

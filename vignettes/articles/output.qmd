@@ -16,11 +16,11 @@ or styling a table (see the other articles).
 `emit()` writes a file, dispatching on the extension:
 
 ```{r eval = FALSE}
-emit(spec, "table.rtf")    # RTF
-emit(spec, "table.html")   # HTML
-emit(spec, "table.docx")   # Word
-emit(spec, "table.pdf")    # PDF (via LaTeX)
-emit(spec, "table.md")     # Markdown
+emit(spec, "table.rtf") # RTF
+emit(spec, "table.html") # HTML
+emit(spec, "table.docx") # Word
+emit(spec, "table.pdf") # PDF (via LaTeX)
+emit(spec, "table.md") # Markdown
 ```
 
 `as_grid(spec)` resolves the fully-laid-out grid **without** writing a file —
@@ -51,7 +51,7 @@ system dependency — a LaTeX engine plus the packages the backend uses
 (`tabularray`, `ninecolors`, `siunitx`, `tex-gyre`, …). Check and install:
 
 ```{r eval = FALSE}
-check_latex()                                       # reports what's missing + the exact command
+check_latex() # reports what's missing + the exact command
 tinytex::tlmgr_install(c("tabularray", "ninecolors", "siunitx", "tex-gyre"))
 ```
 

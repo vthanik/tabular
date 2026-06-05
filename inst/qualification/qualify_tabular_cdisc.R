@@ -28,7 +28,7 @@ suppressWarnings(suppressMessages({
 ADAM <- Sys.getenv("CDISC_ADAM", "data/adam")
 OUT  <- Sys.getenv("CDISC_OUT",  "qual_out")
 dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
-OUT  <- normalizePath(OUT)   # absolute: the DOCX backend mishandles relative paths
+OUT  <- normalizePath(OUT)   # belt-and-braces; emit() now absolutises paths itself
 BACKENDS <- c("rtf", "html", "docx", "pdf")   # PDF needs LaTeX deps (tabular::check_latex())
 
 # Treatment arms (pilot TRT01P) + Total, in display order.
