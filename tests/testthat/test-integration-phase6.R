@@ -179,6 +179,10 @@ test_that("demographics frame + stripe + group + page-band styling renders on al
 
   # LaTeX -> PDF: compiles end to end (frame vlines + SetRow + fancyhdr
   # rule + slot props all valid tabularray / fancyhdr).
+  # skip_on_cran: CRAN machines (win-builder, Debian with pdflatex) would
+  # otherwise run this LaTeX compile -- slow and detritus-prone. Verified
+  # locally and on CI.
+  skip_on_cran()
   skip_if_not(tinytex::is_tinytex() || nzchar(Sys.which("pdflatex")))
   pdf <- withr::local_tempfile(fileext = ".pdf")
   expect_no_error(suppressWarnings(emit(spec, pdf)))
