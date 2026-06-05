@@ -884,9 +884,24 @@ as_grid <- function(spec) {
   # leaf labels ride the page descriptors (`page$headers`,
   # `page$col_labels_ast`); paged backends read those per page.
   if (!is.null(base_col_labels_ast)) {
-    meta$col_labels_ast <- base_col_labels_ast
-    meta$headers <- base_headers
-    meta$subgroup_big_n_active <- TRUE
+    if (.subgroup_bign_constant(spec)) {
+      # Constant BigN: every subgroup carries the same denominators, so
+      # there is nothing per-subgroup to surface. Keep the SUFFIXED header
+      # `meta` already holds from the first sub-grid (the N folds into the
+      # global column header once), disable per-subgroup treatment, and
+      # drop the per-arm N records so HTML / md emit no repeated `(N=x)`
+      # row. Paged backends read the global suffixed header per page, so
+      # the N still prints on every page.
+      meta$subgroup_big_n_active <- FALSE
+      pages <- lapply(pages, function(p) {
+        p$subgroup_bign <- NULL
+        p
+      })
+    } else {
+      meta$col_labels_ast <- base_col_labels_ast
+      meta$headers <- base_headers
+      meta$subgroup_big_n_active <- TRUE
+    }
   }
 
   # Restore aggregate ncol_data + col_names from the parent spec so

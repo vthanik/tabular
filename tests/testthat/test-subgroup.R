@@ -358,6 +358,18 @@ test_that("subgroup auto-hide is a no-op when no subgroup is attached", {
   )
 }
 
+# Same denominators for every subgroup: N does not vary, so the engine
+# folds it into the column header instead of emitting a per-subgroup row.
+.bign_arms_constant <- function() {
+  data.frame(
+    sex = factor(c("F", "M"), levels = c("F", "M")),
+    placebo = c(24L, 24L),
+    drug_50 = c(9L, 9L),
+    drug_100 = c(9L, 9L),
+    Total = c(42L, 42L)
+  )
+}
+
 test_that("big_n suffixes each subgroup's leaf labels; base stays clean", {
   spec <- .bign_base() |>
     subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
@@ -520,6 +532,66 @@ test_that("big_n honours a custom big_n_fmt", {
     "Placebo [n=24]",
     fixed = TRUE
   )
+})
+
+# ---- big_n collapses when the N does not vary across subgroups -----------
+
+test_that(".subgroup_bign_constant detects identical-vs-varying denominators", {
+  vary <- .bign_base() |> subgroup("sex", big_n = .bign_arms())
+  same <- .bign_base() |> subgroup("sex", big_n = .bign_arms_constant())
+  none <- .bign_base() |> subgroup("sex")
+  expect_false(tabular:::.subgroup_bign_constant(vary))
+  expect_true(tabular:::.subgroup_bign_constant(same))
+  expect_false(tabular:::.subgroup_bign_constant(none))
+})
+
+test_that("constant big_n: HTML folds N into the column header, no per-subgroup row", {
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms_constant())
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # No repeated per-subgroup (N=x) row; N rides the single column header.
+  expect_no_match(html, "tabular-subgroup-bign", fixed = TRUE)
+  expect_match(html, "Placebo<br/>(N=24)", fixed = TRUE)
+  # The N appears once per arm (in the header), not once per subgroup.
+  expect_length(gregexpr("(N=24)", html, fixed = TRUE)[[1L]], 1L)
+})
+
+test_that("varying big_n: HTML keeps the per-subgroup (N=x) row", {
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # F (N=24) and M (N=18) differ, so each subgroup carries its own N row.
+  expect_match(html, "tabular-subgroup-bign", fixed = TRUE)
+  expect_match(html, "(N=24)", fixed = TRUE)
+  expect_match(html, "(N=18)", fixed = TRUE)
+})
+
+test_that("no big_n: HTML emits no per-subgroup N row", {
+  spec <- .bign_base() |> subgroup("sex", label = "Sex: {sex}")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_no_match(html, "tabular-subgroup-bign", fixed = TRUE)
+})
+
+test_that("constant big_n: MD folds N into the column header, paged keeps it inline", {
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms_constant())
+  md_f <- withr::local_tempfile(fileext = ".md")
+  emit(spec, md_f)
+  md <- readLines(md_f, warn = FALSE)
+  # N is on the column-header row, not a separate per-subgroup pipe row.
+  expect_match(md[grep("Statistic", md)[1L]], "(N=24)", fixed = TRUE)
+  # Paged (RTF) still prints N once per arm in the (repeating) header.
+  rtf_f <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, rtf_f)
+  rtf <- paste(readLines(rtf_f, warn = FALSE), collapse = "\n")
+  expect_match(rtf, "(N=24)", fixed = TRUE)
+  expect_match(rtf, "Sex: F", fixed = TRUE)
 })
 
 test_that("big_n applies to a leaf with no explicit col_spec", {

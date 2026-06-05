@@ -10,6 +10,7 @@
 
 ## Bug fixes
 
+* `subgroup()` now folds per-page `big_n` into the column header when the denominators are identical across every subgroup, instead of repeating an `(N=)` row (HTML / Markdown) for an N that never changes.
 * The DOCX backend now honours the `halign` cascade on group-header rows instead of always left-aligning them.
 * The PDF backend now declares its full LaTeX package set, so a missing-dependency error names every required package.
 * The RTF backend now renders `pagehead` / `pagefoot` page chrome at the preset `font_size` instead of the RTF default 12pt.

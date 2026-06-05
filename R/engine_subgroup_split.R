@@ -260,6 +260,23 @@ engine_subgroup_split <- function(spec) {
 # order, denominator pick, and leaf-vs-band placement can never diverge
 # from `.subgroup_apply_big_n`. List index `i` matches the split's
 # `runtime$index`.
+# TRUE when `big_n` carries the SAME denominators for every subgroup —
+# i.e. the N does not actually vary by group. The value columns then have
+# a single distinct row, so there is nothing per-subgroup to show and the
+# engine folds the N into the global column header (no repeated `(N=x)`
+# row in HTML / md, no per-page header variation). FALSE without big_n.
+.subgroup_bign_constant <- function(spec) {
+  sg <- spec@subgroup
+  if (is.null(sg) || is.null(sg@big_n)) {
+    return(FALSE)
+  }
+  val_cols <- setdiff(names(sg@big_n), sg@by)
+  if (length(val_cols) == 0L) {
+    return(FALSE)
+  }
+  nrow(unique(sg@big_n[val_cols])) <= 1L
+}
+
 .subgroup_bign_records_all <- function(spec) {
   sg <- spec@subgroup
   if (is.null(sg) || is.null(sg@big_n)) {
