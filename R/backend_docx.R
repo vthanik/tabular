@@ -821,7 +821,7 @@ backend_docx <- function(grid, file) {
   # page break, so the lead banner must not also force one, and the body
   # drops the banner (`emit_banner = FALSE`) to avoid duplicating it.
   banner_lead <- if (big_n_active) {
-    .render_docx_subgroup_banner_row(
+    banner <- .render_docx_subgroup_banner_row(
       first_page$subgroup_line_ast,
       n_cols = length(col_names_vis),
       widths_twips = widths,
@@ -830,6 +830,14 @@ backend_docx <- function(grid, file) {
       cs = cs,
       body_borders = body_borders
     )
+    # A blank row above and below the banner (anatomy). `.docx_full_width_row`
+    # carries `<w:tblHeader/>`, so they repeat per page with the banner.
+    blank <- .docx_full_width_row(
+      sum(widths),
+      length(col_names_vis),
+      "<w:p/>"
+    )
+    c(blank, banner, blank)
   } else {
     character()
   }
@@ -1616,7 +1624,9 @@ backend_docx <- function(grid, file) {
     surface_node@halign
   } else {
     h <- .effective_subgroup_halign(preset)
-    if (is.na(h)) "center" else h
+    # Paged backends left-align the banner by default (anatomy); an
+    # explicit cells_subgroup_labels() halign override still wins.
+    if (is.na(h)) "left" else h
   }
   valign <- if (
     is_style_node(surface_node) &&
