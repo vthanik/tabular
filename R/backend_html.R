@@ -2047,8 +2047,12 @@ backend_html <- function(grid, file) {
     structural_rules,
     ".tabular-table tbody tr td { border-top: none; }",
     ".tabular-band { text-align: center; }",
-    ".tabular-subgroup td { text-align: center; vertical-align: middle; padding: .5rem .6rem; border-top: 1px solid #adb5bd; border-bottom: 1px solid #adb5bd; }",
+    ".tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }",
     ".tabular-subgroup-label { font-weight: 600; }",
+    # The closing rule rides the BOTTOM of the per-arm (N=x) row (when
+    # present), so the banner + its N read as one header block above the
+    # data rather than being boxed on their own.
+    ".tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }",
     # Synthesised section-header rows (col_spec(usage = "group",
     # group_display = "header_row")) — bold, flush-left, slight extra
     # padding above so each band reads as a unit. Blank-gap rows: a

@@ -311,6 +311,33 @@ backend_rtf <- function(grid, file) {
   panel_headers <- panel_hdr$headers
   panel_col_labels_ast <- panel_hdr$col_labels_ast
 
+  # Subgroup banner sits ABOVE the column-header band (anatomy: optional
+  # subgroup row, then the header band between rules, then data), set off
+  # by a blank row above and below. Banner + blanks repeat per page with
+  # the header band (`trhdr`).
+  banner <- .render_rtf_subgroup_banner_row(
+    first$subgroup_line_ast,
+    cellx = cellx,
+    preset = preset,
+    cs = cs,
+    colors = colors,
+    fonts = fonts,
+    trhdr = rep_headers,
+    body_borders = body_borders
+  )
+  if (length(banner) > 0L) {
+    table_rows[[length(table_rows) + 1L]] <- .rtf_blank_trhdr_rows(
+      1L,
+      cellx,
+      preset
+    )
+    table_rows[[length(table_rows) + 1L]] <- banner
+    table_rows[[length(table_rows) + 1L]] <- .rtf_blank_trhdr_rows(
+      1L,
+      cellx,
+      preset
+    )
+  }
   table_rows[[length(table_rows) + 1L]] <- .render_rtf_header_bands(
     panel_headers,
     col_names_vis,
@@ -338,16 +365,6 @@ backend_rtf <- function(grid, file) {
     fonts,
     trhdr = rep_headers,
     outer_top = !has_bands,
-    body_borders = body_borders
-  )
-  table_rows[[length(table_rows) + 1L]] <- .render_rtf_subgroup_banner_row(
-    first$subgroup_line_ast,
-    cellx = cellx,
-    preset = preset,
-    cs = cs,
-    colors = colors,
-    fonts = fonts,
-    trhdr = rep_headers,
     body_borders = body_borders
   )
 
@@ -1207,7 +1224,9 @@ backend_rtf <- function(grid, file) {
     surface_node@halign
   } else {
     h <- .effective_subgroup_halign(preset)
-    if (is.na(h)) "center" else h
+    # Paged backends left-align the banner by default (anatomy); an
+    # explicit style(.at = cells_subgroup_labels()) override still wins.
+    if (is.na(h)) "left" else h
   }
   valign <- if (
     is_style_node(surface_node) &&
@@ -1221,10 +1240,11 @@ backend_rtf <- function(grid, file) {
   align_tok <- .rtf_align_token(halign)
   valign_tok <- .rtf_valign_token(valign)
   # Subgroup banner chrome rules: chrome_style$borders takes priority
-  # over the legacy `solid top / solid bottom` backend defaults. The
-  # prelude rides every merged cell so the rules span the full width.
-  top_tok <- .rtf_chrome_border_seg(cs, "subgroup_top", "top", "solid")
-  bot_tok <- .rtf_chrome_border_seg(cs, "subgroup_bottom", "bottom", "solid")
+  # over the backend default. The banner now sits above the header band
+  # set off by blank rows, so the default is borderless (no boxed look);
+  # an explicit cells_subgroup_labels() border still applies.
+  top_tok <- .rtf_chrome_border_seg(cs, "subgroup_top", "top", "none")
+  bot_tok <- .rtf_chrome_border_seg(cs, "subgroup_bottom", "bottom", "none")
   shading <- .rtf_cell_shading(surface_node, colors)
   prelude <- paste0(
     top_tok,

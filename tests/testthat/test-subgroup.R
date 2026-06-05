@@ -552,7 +552,7 @@ test_that("constant big_n: HTML folds N into the column header, no per-subgroup 
   emit(spec, out)
   html <- paste(readLines(out, warn = FALSE), collapse = "\n")
   # No repeated per-subgroup (N=x) row; N rides the single column header.
-  expect_no_match(html, "tabular-subgroup-bign", fixed = TRUE)
+  expect_no_match(html, "<tr class=\"tabular-subgroup-bign\"", fixed = TRUE)
   expect_match(html, "Placebo<br/>(N=24)", fixed = TRUE)
   # The N appears once per arm (in the header), not once per subgroup.
   expect_length(gregexpr("(N=24)", html, fixed = TRUE)[[1L]], 1L)
@@ -565,7 +565,7 @@ test_that("varying big_n: HTML keeps the per-subgroup (N=x) row", {
   emit(spec, out)
   html <- paste(readLines(out, warn = FALSE), collapse = "\n")
   # F (N=24) and M (N=18) differ, so each subgroup carries its own N row.
-  expect_match(html, "tabular-subgroup-bign", fixed = TRUE)
+  expect_match(html, "<tr class=\"tabular-subgroup-bign\"", fixed = TRUE)
   expect_match(html, "(N=24)", fixed = TRUE)
   expect_match(html, "(N=18)", fixed = TRUE)
 })
@@ -575,7 +575,7 @@ test_that("no big_n: HTML emits no per-subgroup N row", {
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   html <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_no_match(html, "tabular-subgroup-bign", fixed = TRUE)
+  expect_no_match(html, "<tr class=\"tabular-subgroup-bign\"", fixed = TRUE)
 })
 
 test_that("constant big_n: MD folds N into the column header, paged keeps it inline", {
@@ -592,6 +592,48 @@ test_that("constant big_n: MD folds N into the column header, paged keeps it inl
   rtf <- paste(readLines(rtf_f, warn = FALSE), collapse = "\n")
   expect_match(rtf, "(N=24)", fixed = TRUE)
   expect_match(rtf, "Sex: F", fixed = TRUE)
+})
+
+# ---- subgroup banner layout: above the header band, left-aligned --------
+
+test_that("RTF/LaTeX place the subgroup banner above the header band, left", {
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
+  rtf_f <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, rtf_f)
+  rtf <- readLines(rtf_f, warn = FALSE)
+  banner <- grep("Sex: F", rtf)[[1L]]
+  header <- grep("Statistic", rtf)[[1L]]
+  expect_lt(banner, header) # banner ABOVE the column-header band
+  expect_match(rtf[[banner]], "\\ql", fixed = TRUE) # left-aligned
+
+  tex_f <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, tex_f)
+  tex <- readLines(tex_f, warn = FALSE)
+  t_banner <- grep("Sex: F", tex)[[1L]]
+  t_header <- grep("Statistic", tex)[[1L]]
+  expect_lt(t_banner, t_header)
+  expect_match(tex[[t_banner]], "{l}", fixed = TRUE) # \SetCell[c=N]{l}
+})
+
+test_that("HTML banner is unboxed; the closing rule rides the (N=x) row", {
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # The banner row carries no border of its own (no boxed look)...
+  expect_match(
+    html,
+    ".tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }",
+    fixed = TRUE
+  )
+  # ...and the closing rule sits on the per-arm N row instead.
+  expect_match(
+    html,
+    ".tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }",
+    fixed = TRUE
+  )
 })
 
 test_that("big_n applies to a leaf with no explicit col_spec", {
@@ -978,7 +1020,12 @@ test_that("big_n: HTML emits a per-arm N row under each banner; base header stay
   f <- withr::local_tempfile(fileext = ".html")
   emit(spec, f)
   lines <- readLines(f)
-  bign_rows <- grep("tabular-subgroup-bign", lines, value = TRUE)
+  bign_rows <- grep(
+    "<tr class=\"tabular-subgroup-bign\"",
+    lines,
+    value = TRUE,
+    fixed = TRUE
+  )
   # One per-arm N row per subgroup banner (F page, M page).
   expect_length(bign_rows, 2L)
   expect_match(bign_rows[[1L]], "(N=24)", fixed = TRUE)
@@ -999,7 +1046,12 @@ test_that("big_n HTML: adjacent equal Ns render as two cells, never one colspan"
     subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
   f <- withr::local_tempfile(fileext = ".html")
   emit(spec, f)
-  f_row <- grep("tabular-subgroup-bign", readLines(f), value = TRUE)[[1L]]
+  f_row <- grep(
+    "<tr class=\"tabular-subgroup-bign\"",
+    readLines(f),
+    value = TRUE,
+    fixed = TRUE
+  )[[1L]]
   # Both Ns land in their own plain (colspan-free) cell. (The leading
   # empty stub columns legitimately coalesce into one colspan cell; only
   # the equal-N arms must stay separate.)
@@ -1046,7 +1098,12 @@ test_that("big_n band-keyed: HTML colspans the band; Markdown repeats the N", {
     subgroup("sex", label = "Sex: {sex}", big_n = big_n)
   fh <- withr::local_tempfile(fileext = ".html")
   emit(spec, fh)
-  h_row <- grep("tabular-subgroup-bign", readLines(fh), value = TRUE)[[1L]]
+  h_row <- grep(
+    "<tr class=\"tabular-subgroup-bign\"",
+    readLines(fh),
+    value = TRUE,
+    fixed = TRUE
+  )[[1L]]
   # One colspan=2 cell over the band's two leaves, carrying the band N.
   expect_match(
     h_row,

@@ -640,7 +640,33 @@ backend_latex <- function(grid, file) {
   page_headers <- page_hdr$headers
   page_col_labels_ast <- page_hdr$col_labels_ast
 
-  bands <- .render_latex_header_bands(page_headers, col_names_vis, cs)
+  # Subgroup banner row, computed first so the header band can be offset
+  # below it (anatomy: subgroup banner, then the column-header band, then
+  # data). The banner + a blank row above and below ride the `rowhead`
+  # block so they repeat on every continuation page with the band.
+  banner_row <- .render_latex_subgroup_banner_row(
+    page$subgroup_line_ast,
+    n_cols = length(col_names_vis),
+    preset = meta$preset,
+    cs = cs
+  )
+  banner_block <- if (length(banner_row) > 0L) {
+    c(
+      .latex_blank_row(length(col_names_vis)),
+      banner_row,
+      .latex_blank_row(length(col_names_vis))
+    )
+  } else {
+    character()
+  }
+  head_offset <- length(banner_block)
+
+  bands <- .render_latex_header_bands(
+    page_headers,
+    col_names_vis,
+    cs,
+    offset = head_offset
+  )
   band_rows <- bands$rows
   label_row <- .render_latex_col_labels_row(
     page_col_labels_ast,
@@ -649,7 +675,7 @@ backend_latex <- function(grid, file) {
     cs,
     preset = meta$preset
   )
-  rowhead <- length(band_rows) + 1L
+  rowhead <- head_offset + length(band_rows) + 1L
 
   # Header rules ride tabularray-native outer `hline{i}={1-N}{spec}`
   # directives (spliced into `outer_args` below), exactly like the
@@ -667,9 +693,11 @@ backend_latex <- function(grid, file) {
   header_rule_dirs <- .latex_header_rule_directives(
     nbands = length(band_rows),
     n_cols = length(col_names_vis),
-    cs = cs
+    cs = cs,
+    offset = head_offset
   )
-  header_rules <- c(band_rows, label_row)
+  # Banner block (blank, banner, blank) leads the rowhead, then the band.
+  header_rules <- c(banner_block, band_rows, label_row)
   body_rows <- .render_latex_body_rows(
     src$cells_text,
     col_names_vis = col_names_vis,
@@ -681,17 +709,6 @@ backend_latex <- function(grid, file) {
     keep_with_next = src$keep_with_next,
     cols = cols,
     preset = meta$preset
-  )
-  # Subgroup banner row — `\SetCell[c=N]{c|l|r}` spanning every
-  # visible column. Inserted between the header rule and the first
-  # body row so it sits directly under the column-header band on
-  # every page of the group. Returns character(0) when the page
-  # has no subgroup runtime.
-  banner_row <- .render_latex_subgroup_banner_row(
-    page$subgroup_line_ast,
-    n_cols = length(col_names_vis),
-    preset = meta$preset,
-    cs = cs
   )
 
   # Table-level row baseline from cells_style[r,c]@valign
@@ -740,7 +757,6 @@ backend_latex <- function(grid, file) {
       "}"
     ),
     header_rules,
-    banner_row,
     body_rows,
     "\\end{longtblr}"
   )
@@ -949,7 +965,9 @@ backend_latex <- function(grid, file) {
     surface_node@halign
   } else {
     h <- .effective_subgroup_halign(preset)
-    if (is.na(h)) "center" else h
+    # Paged backends left-align the banner by default (anatomy); an
+    # explicit cells_subgroup_labels() halign override still wins.
+    if (is.na(h)) "left" else h
   }
   letter <- .latex_halign_letter(halign)
   bold_open <- if (
@@ -1004,20 +1022,38 @@ backend_latex <- function(grid, file) {
 # caller emits these directives BEFORE the body border directives so an
 # explicit user body border wins (last write in tabularray's arg list).
 # A region whose spec resolves to "" (style = "none") is skipped.
-.latex_header_rule_directives <- function(nbands, n_cols, cs = NULL) {
+# `offset` = number of rows ABOVE the header band (the subgroup banner
+# plus its blank rows), so the band's top rule rides `hline{1 + offset}`
+# and the bottom rule `hline{nbands + 2 + offset}`. The banner rows above
+# carry no rule.
+.latex_header_rule_directives <- function(
+  nbands,
+  n_cols,
+  cs = NULL,
+  offset = 0L
+) {
   out <- character()
   top <- .latex_chrome_hline_spec(cs, "header_top")
   if (nzchar(top)) {
-    out <- c(out, sprintf("hline{1}={1-%d}{%s}", n_cols, top))
+    out <- c(out, sprintf("hline{%d}={1-%d}{%s}", 1L + offset, n_cols, top))
   }
   bottom <- .latex_chrome_hline_spec(cs, "header_bottom")
   if (nzchar(bottom)) {
     out <- c(
       out,
-      sprintf("hline{%d}={1-%d}{%s}", nbands + 2L, n_cols, bottom)
+      sprintf("hline{%d}={1-%d}{%s}", nbands + 2L + offset, n_cols, bottom)
     )
   }
   out
+}
+
+# Empty full-width row for the blank line above / below the subgroup
+# banner: (n-1) trailing `&` placeholders keep tabularray's column count.
+.latex_blank_row <- function(n_cols) {
+  paste0(
+    if (n_cols == 1L) " " else paste(rep(" &", n_cols - 1L), collapse = ""),
+    " \\\\"
+  )
 }
 
 # Compose the `colspec={...}` portion of the longtblr arg list.
@@ -1114,7 +1150,8 @@ backend_latex <- function(grid, file) {
 .render_latex_header_bands <- function(
   headers,
   col_names_visible,
-  cs = NULL
+  cs = NULL,
+  offset = 0L
 ) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(list(rows = character(), band_hlines = character()))
@@ -1145,7 +1182,7 @@ backend_latex <- function(grid, file) {
       )
       band_hlines <- c(
         band_hlines,
-        sprintf("hline{%d}={%s}{%s}", k + 1L, cols_spec, band_spec)
+        sprintf("hline{%d}={%s}{%s}", k + 1L + offset, cols_spec, band_spec)
       )
     }
   }

@@ -11,6 +11,7 @@
 ## Bug fixes
 
 * `subgroup()` now folds per-page `big_n` into the column header when the denominators are identical across every subgroup, instead of repeating an `(N=)` row (HTML / Markdown) for an N that never changes.
+* `subgroup()` banners now render above the column-header band, left-aligned, set off by a blank row above and below, in the paged backends (RTF, PDF / LaTeX, DOCX); HTML and Markdown keep the banner centered, and HTML now draws the closing rule below the per-arm `(N=)` row rather than boxing the banner.
 * The DOCX backend now honours the `halign` cascade on group-header rows instead of always left-aligning them.
 * The PDF backend now declares its full LaTeX package set, so a missing-dependency error names every required package.
 * The RTF backend now renders `pagehead` / `pagefoot` page chrome at the preset `font_size` instead of the RTF default 12pt.
