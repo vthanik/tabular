@@ -1,8 +1,12 @@
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 1 note
 
-* This is a new release.
+* This is a new release, so the only NOTE is the standard CRAN
+  incoming-feasibility "New submission" note, which also lists some
+  possibly-misspelled words in the Description (all intentional, see
+  below). Local `R CMD check --as-cran` and the GitHub Actions runs
+  report 0 errors / 0 warnings / 0 notes.
 
 ## Test environments
 

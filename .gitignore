@@ -55,3 +55,6 @@ tests/testthat/testthat-problems.rds
 handoff.md
 /doc/
 /Meta/
+
+# Claude Code local harness state (settings, schedule locks)
+.claude/
