@@ -20,7 +20,7 @@ Two things to internalise up front:
 1. **tabular is display-only.** It never aggregates, filters, or computes
    statistics. You bring a summarised data frame (one input row = one display
    row); tabular lays it out and renders it. (Producing that frame from a cards
-   ARD is the [*Data in*](data-in.html) article.)
+   ARD is the [*Data in*](https://vthanik.github.io/tabular/articles/data-in.html) article.)
 2. **One immutable spec, built with verbs.** You pipe a `tabular()` object
    through verbs (`cols()`, `headers()`, `paginate()`, `preset()`, …) and finish
    with `emit()`. Each verb returns a new spec; nothing renders until `emit()`.
@@ -106,14 +106,14 @@ margins, fonts).
 The rest of the docs are task-oriented — read the one that matches what you are
 doing:
 
-- **[Data in](data-in.html)** — turn a cards/cardx ARD (or any long ARD) into
+- **[Data in](https://vthanik.github.io/tabular/articles/data-in.html)** — turn a cards/cardx ARD (or any long ARD) into
   the wide frame, with `pivot_across()`.
-- **[Structure](structure.html)** — columns, headers, BigN, and splitting wide
+- **[Structure](https://vthanik.github.io/tabular/articles/structure.html)** — columns, headers, BigN, and splitting wide
   or long tables across pages (`cols()`, `headers()`, `paginate()`,
   `subgroup()`).
-- **[Presentation](presentation.html)** — titles, footnotes, running headers,
+- **[Presentation](https://vthanik.github.io/tabular/articles/presentation.html)** — titles, footnotes, running headers,
   and cell styling (`footnote()`, `preset()`, `style()`).
-- **[Recipes](recipes.html)** — the canonical CDISC-pilot safety and efficacy
+- **[Recipes](https://vthanik.github.io/tabular/articles/recipes.html)** — the canonical CDISC-pilot safety and efficacy
   tables built end to end, each rendered live.
-- **[Output & qualification](output.html)** — the backends, their system
+- **[Output & qualification](https://vthanik.github.io/tabular/articles/output.html)** — the backends, their system
   requirements, and the CDISC-pilot cross-backend validation.
