@@ -260,21 +260,46 @@ engine_subgroup_split <- function(spec) {
 # order, denominator pick, and leaf-vs-band placement can never diverge
 # from `.subgroup_apply_big_n`. List index `i` matches the split's
 # `runtime$index`.
-# TRUE when `big_n` carries the SAME denominators for every subgroup —
-# i.e. the N does not actually vary by group. The value columns then have
-# a single distinct row, so there is nothing per-subgroup to show and the
-# engine folds the N into the global column header (no repeated `(N=x)`
-# row in HTML / md, no per-page header variation). FALSE without big_n.
+# TRUE when `big_n` carries the SAME denominators for every DISPLAYED
+# subgroup — i.e. the N does not actually vary by group. The value
+# columns then have a single distinct row, so there is nothing
+# per-subgroup to show and the engine folds the N into the global column
+# header (no repeated `(N=x)` row in HTML / md, no per-page header
+# variation). FALSE without big_n.
+#
+# The decision is made over the rendered combos (`.subgroup_combos`)
+# joined to `big_n`, not over the raw `big_n` rows: table reuse may carry
+# extra denominator rows for subgroups absent from the data, and those
+# must not influence whether the displayed Ns vary.
 .subgroup_bign_constant <- function(spec) {
   sg <- spec@subgroup
   if (is.null(sg) || is.null(sg@big_n)) {
     return(FALSE)
   }
-  val_cols <- setdiff(names(sg@big_n), sg@by)
+  big_n <- sg@big_n
+  by_cols <- sg@by
+  val_cols <- setdiff(names(big_n), by_cols)
   if (length(val_cols) == 0L) {
     return(FALSE)
   }
-  nrow(unique(sg@big_n[val_cols])) <= 1L
+  combos <- .subgroup_combos(spec@data, by_cols)
+  idx <- vapply(
+    seq_len(nrow(combos)),
+    function(i) {
+      m <- which(.subgroup_match_mask(
+        big_n,
+        by_cols,
+        combos[i, , drop = FALSE]
+      ))
+      if (length(m) == 0L) NA_integer_ else m[[1L]]
+    },
+    integer(1L)
+  )
+  idx <- idx[!is.na(idx)]
+  if (length(idx) == 0L) {
+    return(FALSE)
+  }
+  nrow(unique(big_n[idx, val_cols, drop = FALSE])) <= 1L
 }
 
 .subgroup_bign_records_all <- function(spec) {

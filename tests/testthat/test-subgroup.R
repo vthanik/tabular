@@ -543,6 +543,75 @@ test_that(".subgroup_bign_constant detects identical-vs-varying denominators", {
   expect_false(tabular:::.subgroup_bign_constant(vary))
   expect_true(tabular:::.subgroup_bign_constant(same))
   expect_false(tabular:::.subgroup_bign_constant(none))
+
+  # Table reuse: big_n carries an extra row (M, N=18) for a subgroup
+  # absent from the data; the decision must look only at the DISPLAYED
+  # subgroup (F), which has a single N, and still fold.
+  reuse_data <- saf_subgroup[saf_subgroup$sex == "F", , drop = FALSE]
+  reuse <- .bign_base(reuse_data) |> subgroup("sex", big_n = .bign_arms())
+  expect_true(tabular:::.subgroup_bign_constant(reuse))
+})
+
+test_that("constant big_n: DOCX keeps the banner above the header band", {
+  # The constant fold disables the per-arm N row but must NOT collapse the
+  # paged backends to the inline body banner. DOCX must keep one table per
+  # subgroup with the banner above the column-header band, matching RTF /
+  # LaTeX (not the below-header body path used for no-big_n tables).
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms_constant())
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  td <- withr::local_tempdir()
+  utils::unzip(out, files = "word/document.xml", exdir = td)
+  doc <- paste(
+    readLines(file.path(td, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  banner <- regexpr("Sex: F", doc, fixed = TRUE)
+  header <- regexpr("Statistic", doc, fixed = TRUE)
+  expect_gt(banner, 0L)
+  expect_lt(banner, header) # banner ABOVE the column-header band
+  # One <w:tbl> per subgroup (F, M), not a single collapsed inline table.
+  expect_length(gregexpr("<w:tbl>", doc, fixed = TRUE)[[1L]], 2L)
+})
+
+test_that("HTML banner keeps a closing rule when there is no per-arm N row", {
+  # No big_n and constant big_n both emit no `.tabular-subgroup-bign` row,
+  # so the banner itself must carry the closing rule (the unboxed banner
+  # would otherwise float into the data block with no separator).
+  expect_closed <- function(spec) {
+    out <- withr::local_tempfile(fileext = ".html")
+    emit(spec, out)
+    html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+    expect_no_match(html, "<tr class=\"tabular-subgroup-bign\"", fixed = TRUE)
+    expect_match(
+      html,
+      "<tr class=\"tabular-subgroup tabular-subgroup-closed\">",
+      fixed = TRUE
+    )
+    expect_match(
+      html,
+      ".tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }",
+      fixed = TRUE
+    )
+  }
+  expect_closed(.bign_base() |> subgroup("sex", label = "Sex: {sex}"))
+  expect_closed(
+    .bign_base() |>
+      subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms_constant())
+  )
+})
+
+test_that("varying big_n: HTML banner is unclosed (the N row carries the rule)", {
+  # With a per-arm N row present, the banner must NOT also carry the closing
+  # rule, so banner + N read as one block with a single rule below the N.
+  spec <- .bign_base() |>
+    subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms())
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_no_match(html, "tabular-subgroup-closed\"", fixed = TRUE)
+  expect_match(html, "<tr class=\"tabular-subgroup-bign\"", fixed = TRUE)
 })
 
 test_that("constant big_n: HTML folds N into the column header, no per-subgroup row", {

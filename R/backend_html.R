@@ -669,11 +669,14 @@ backend_html <- function(grid, file) {
   headers = NULL
 ) {
   out <- character()
+  has_bign <- !is.null(page$subgroup_bign) && length(page$subgroup_bign) > 0L
   banner_row <- .render_html_subgroup_banner_row(
     page$subgroup_line_ast,
     n_cols = length(col_names_visible),
     preset = preset,
-    cs = cs
+    cs = cs,
+    # No per-arm N row to carry the closing rule -> the banner carries it.
+    closing = !has_bign
   )
   if (length(banner_row) > 0L) {
     out <- c(out, banner_row)
@@ -681,7 +684,7 @@ backend_html <- function(grid, file) {
     # header, so the per-arm `(N=x)` rides a dedicated row directly under
     # the banner. Gated on the banner being present and the page carrying
     # records, so non-big_n tables emit nothing here.
-    if (!is.null(page$subgroup_bign) && length(page$subgroup_bign) > 0L) {
+    if (has_bign) {
       out <- c(
         out,
         .render_html_subgroup_bign_row(
@@ -1098,7 +1101,8 @@ backend_html <- function(grid, file) {
   subgroup_line_ast,
   n_cols,
   preset = NULL,
-  cs = NULL
+  cs = NULL,
+  closing = FALSE
 ) {
   if (
     is.null(subgroup_line_ast) ||
@@ -1156,13 +1160,21 @@ backend_html <- function(grid, file) {
     "<strong>"
   }
   bold_close <- if (identical(bold_open, "")) "" else "</strong>"
+  # `closing` adds the closing-rule class when no per-arm (N=x) row will
+  # follow, so the banner is not left without any separator from the data.
+  row_class <- if (isTRUE(closing)) {
+    "tabular-subgroup tabular-subgroup-closed"
+  } else {
+    "tabular-subgroup"
+  }
   sprintf(
     paste0(
-      "<tr class=\"tabular-subgroup\">",
+      "<tr class=\"%s\">",
       "<td colspan=\"%d\"%s%s>",
       "%s%s%s",
       "</td></tr>"
     ),
+    row_class,
     n_cols,
     attr,
     surface_style,
@@ -2053,6 +2065,10 @@ backend_html <- function(grid, file) {
     # present), so the banner + its N read as one header block above the
     # data rather than being boxed on their own.
     ".tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }",
+    # When there is no per-arm (N=x) row (no big_n, or a constant big_n
+    # folded into the column header), the banner carries the closing rule
+    # itself so it stays separated from the data block.
+    ".tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }",
     # Synthesised section-header rows (col_spec(usage = "group",
     # group_display = "header_row")) — bold, flush-left, slight extra
     # padding above so each band reads as a unit. Blank-gap rows: a

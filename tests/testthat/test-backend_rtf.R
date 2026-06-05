@@ -377,6 +377,33 @@ test_that("RTF blank spacer rows re-stamp preset font size, not RTF 12pt default
   expect_match(rtf, "\\pard\\plain\\intbl\\fs16", fixed = TRUE)
 })
 
+test_that("RTF footnote + non-repeating-title spacers re-stamp font size", {
+  # foot_pad (the blank line above the footnote block) and the
+  # non-repeating-title spacer both reset with \plain; if they omit \fsN
+  # they revert to the RTF 12pt default and print taller than the 8pt
+  # body. Both must carry the body \fsN, like the in-table blank rows.
+  spec <- tabular(
+    saf_demo,
+    titles = c("Table 1", "A subtitle"),
+    footnotes = "Note: a footnote."
+  ) |>
+    cols(
+      variable = col_spec(usage = "group"),
+      stat_label = col_spec(),
+      placebo = col_spec(align = "decimal"),
+      drug_50 = col_spec(align = "decimal"),
+      drug_100 = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    ) |>
+    paginate(repeat_content = "footnotes") |>
+    preset(font_size = 8, spacing = list(footnote = c(above = 1L)))
+  rtf <- .rtf_emit_text(spec)
+  # No bare 12pt spacer paragraph survives (foot_pad or title pad).
+  expect_no_match(rtf, "\\pard\\plain\\par", fixed = TRUE)
+  # The spacer paragraphs carry the body \fs16 (8pt).
+  expect_match(rtf, "\\pard\\plain\\fs16\\par", fixed = TRUE)
+})
+
 # ---------------------------------------------------------------------
 # Header bands + body cells
 # ---------------------------------------------------------------------

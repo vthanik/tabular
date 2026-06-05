@@ -837,7 +837,16 @@ as_grid <- function(spec) {
   # records for the continuous-backend N row (one list per subgroup,
   # keyed to the page's group via `runtime$index`). NULL without big_n,
   # so HTML / md skip the row and render byte-identically.
-  bign_records <- .subgroup_bign_records_all(spec)
+  # Constant fold: HTML / md show the N once in the suffixed column
+  # header (kept on `meta` below), so there are no per-arm N records to
+  # build or stamp. Decide once and skip the record build entirely.
+  constant_fold <- !is.null(base_col_labels_ast) &&
+    .subgroup_bign_constant(spec)
+  bign_records <- if (constant_fold) {
+    NULL
+  } else {
+    .subgroup_bign_records_all(spec)
+  }
   pages <- unlist(
     lapply(sub_grids, function(g) {
       bands <- g@metadata$headers
@@ -878,29 +887,26 @@ as_grid <- function(spec) {
   meta$subgroup_runtime <- NULL
   meta$subgroup_groups <- subgroup_groups
 
-  # Per-page BigN: force the GLOBAL leaf labels + bands to the
-  # un-suffixed base so the continuous backends (HTML/MD) and the DOCX
-  # top header show clean arm names. The SUFFIXED per-subgroup bands +
-  # leaf labels ride the page descriptors (`page$headers`,
-  # `page$col_labels_ast`); paged backends read those per page.
+  # Per-page BigN: the per-subgroup treatment stays active for BOTH the
+  # folded and the unfolded case so every paged backend agrees, each
+  # subgroup is its own table with the banner above the header band and
+  # the suffixed header printed per page. The only difference is where
+  # the N surfaces:
+  #
+  #   * Varying BigN: force the GLOBAL leaf labels + bands back to the
+  #     un-suffixed base so the continuous backends (HTML/MD) and the
+  #     DOCX top header show clean arm names; the N rides the per-arm
+  #     `(N=x)` row. The SUFFIXED per-subgroup bands + leaf labels ride
+  #     the page descriptors, which paged backends read per page.
+  #   * Constant fold: keep the SUFFIXED header `meta` already holds from
+  #     the first sub-grid (every subgroup is content-equal), so the N
+  #     folds into the single column header once. No per-arm records were
+  #     built, so HTML / md emit no repeated `(N=x)` row.
   if (!is.null(base_col_labels_ast)) {
-    if (.subgroup_bign_constant(spec)) {
-      # Constant BigN: every subgroup carries the same denominators, so
-      # there is nothing per-subgroup to surface. Keep the SUFFIXED header
-      # `meta` already holds from the first sub-grid (the N folds into the
-      # global column header once), disable per-subgroup treatment, and
-      # drop the per-arm N records so HTML / md emit no repeated `(N=x)`
-      # row. Paged backends read the global suffixed header per page, so
-      # the N still prints on every page.
-      meta$subgroup_big_n_active <- FALSE
-      pages <- lapply(pages, function(p) {
-        p$subgroup_bign <- NULL
-        p
-      })
-    } else {
+    meta$subgroup_big_n_active <- TRUE
+    if (!constant_fold) {
       meta$col_labels_ast <- base_col_labels_ast
       meta$headers <- base_headers
-      meta$subgroup_big_n_active <- TRUE
     }
   }
 

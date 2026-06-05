@@ -179,7 +179,10 @@ backend_rtf <- function(grid, file) {
   # `body_to_footnote` spacing gap. Stands in for the bottomrule when
   # `preset_minimal()` drops it.
   foot_pad <- rep(
-    "\\pard\\plain\\par",
+    # `\plain` resets to the RTF 12pt default; re-emit the preset body
+    # size so the blank spacer line matches the body height (mirrors the
+    # blank table rows and the title / footnote rows).
+    paste0("\\pard\\plain", .rtf_body_fs(preset), "\\par"),
     .rtf_blank_count(
       cs,
       "footer",
@@ -255,7 +258,9 @@ backend_rtf <- function(grid, file) {
       fonts
     )
     if (length(titles) > 0L) {
-      blank_par <- "\\pard\\plain\\par"
+      # Re-emit the preset body size: `\plain` reverts to RTF 12pt, which
+      # would print the spacer line taller than the title block below it.
+      blank_par <- paste0("\\pard\\plain", .rtf_body_fs(preset), "\\par")
       out[[length(out) + 1L]] <- c(
         rep(blank_par, pad_top),
         titles,
@@ -326,16 +331,21 @@ backend_rtf <- function(grid, file) {
     body_borders = body_borders
   )
   if (length(banner) > 0L) {
+    # The blank rows share the banner's repeat flag (`rep_headers`): when
+    # the header band does not repeat, the banner and its blanks must drop
+    # off continuation pages together, not leave orphaned blank rows.
     table_rows[[length(table_rows) + 1L]] <- .rtf_blank_trhdr_rows(
       1L,
       cellx,
-      preset
+      preset,
+      trhdr = rep_headers
     )
     table_rows[[length(table_rows) + 1L]] <- banner
     table_rows[[length(table_rows) + 1L]] <- .rtf_blank_trhdr_rows(
       1L,
       cellx,
-      preset
+      preset,
+      trhdr = rep_headers
     )
   }
   table_rows[[length(table_rows) + 1L]] <- .render_rtf_header_bands(
@@ -591,7 +601,7 @@ backend_rtf <- function(grid, file) {
 # Emit `n` blank `\trhdr` merged rows for vertical spacing inside the
 # repeating header block (so the gap repeats with the header at every
 # Word page break).
-.rtf_blank_trhdr_rows <- function(n, cellx, preset) {
+.rtf_blank_trhdr_rows <- function(n, cellx, preset, trhdr = TRUE) {
   if (n <= 0L || length(cellx) == 0L) {
     return(character())
   }
@@ -599,7 +609,7 @@ backend_rtf <- function(grid, file) {
     paste0("\\pard\\plain\\intbl", .rtf_body_fs(preset)),
     cellx,
     preset,
-    trhdr = TRUE
+    trhdr = trhdr
   )
   rep(one, n)
 }
