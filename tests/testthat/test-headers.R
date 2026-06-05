@@ -4,7 +4,7 @@
 # ---- happy path: flat band ------------------------------------------
 
 test_that("headers() stores a flat-band tree of header_nodes", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Arms" = c("placebo", "drug_50", "drug_100", "Total"))
   expect_length(spec@headers, 1L)
   expect_true(is_header_node(spec@headers[[1]]))
@@ -18,7 +18,7 @@ test_that("headers() stores a flat-band tree of header_nodes", {
 # ---- happy path: nested -----------------------------------------------
 
 test_that("headers() builds a nested tree from a named list value", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers(
       "Treatment Group" = list(
         "Control" = "placebo",
@@ -37,19 +37,19 @@ test_that("headers() builds a nested tree from a named list value", {
 # ---- edge case 7: single column as "col" or c("col") -----------------
 
 test_that("headers() accepts single column as bare string", {
-  spec <- tabular(saf_demo) |> headers("Placebo arm" = "placebo")
+  spec <- tabular(cdisc_saf_demo) |> headers("Placebo arm" = "placebo")
   expect_identical(spec@headers[[1]]@span, "placebo")
 })
 
 test_that("headers() accepts single column as length-1 c()", {
-  spec <- tabular(saf_demo) |> headers("Placebo arm" = c("placebo"))
+  spec <- tabular(cdisc_saf_demo) |> headers("Placebo arm" = c("placebo"))
   expect_identical(spec@headers[[1]]@span, "placebo")
 })
 
 # ---- edge case 5: header label contains \n ---------------------------
 
 test_that("headers() accepts multi-line band labels via embedded \\n", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Treatment\nGroup" = c("placebo", "drug_50", "drug_100", "Total"))
   expect_identical(spec@headers[[1]]@label, "Treatment\nGroup")
 })
@@ -57,7 +57,7 @@ test_that("headers() accepts multi-line band labels via embedded \\n", {
 # ---- edge case 4: deep nesting --------------------------------------
 
 test_that("headers() accepts arbitrary nesting depth", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers(
       "L1" = list(
         "L2" = list(
@@ -82,7 +82,7 @@ test_that("headers() accepts arbitrary nesting depth", {
 # ---- edge case 6: repeat call replaces ------------------------------
 
 test_that("headers() called twice replaces (does not stack)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("First" = c("placebo", "drug_50")) |>
     headers("Second" = c("drug_100", "Total"))
   expect_length(spec@headers, 1L)
@@ -90,7 +90,7 @@ test_that("headers() called twice replaces (does not stack)", {
 })
 
 test_that("headers() with zero arguments clears the tree", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Arms" = c("placebo", "drug_50", "drug_100", "Total")) |>
     headers()
   expect_length(spec@headers, 0L)
@@ -99,7 +99,7 @@ test_that("headers() with zero arguments clears the tree", {
 # ---- edge case 3: columns not under any header ----------------------
 
 test_that("headers() leaves uncovered columns alone (no error)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Arms" = c("placebo", "drug_50"))
   # variable, stat_label, drug_100, Total are not under a header --
   # accepted; they render without a band row.
@@ -110,7 +110,7 @@ test_that("headers() leaves uncovered columns alone (no error)", {
 
 test_that("headers() errors when a band spans a missing column", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers("Arms" = c("placebo", "no_such_col")),
     class = "tabular_error_input"
   )
@@ -118,7 +118,7 @@ test_that("headers() errors when a band spans a missing column", {
 
 test_that("headers() error names the missing column", {
   err <- tryCatch(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers("Arms" = c("placebo", "phantom_arm")),
     tabular_error_input = function(e) e
   )
@@ -130,7 +130,7 @@ test_that("headers() error names the missing column", {
 
 test_that("headers() errors when a column appears under two bands", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers(
         "Arms 1" = c("placebo", "drug_50"),
         "Arms 2" = c("drug_50", "drug_100")
@@ -150,14 +150,14 @@ test_that("headers() rejects non-spec first argument", {
 
 test_that("headers() rejects unnamed top-level argument", {
   expect_error(
-    tabular(saf_demo) |> headers(c("placebo", "drug_50")),
+    tabular(cdisc_saf_demo) |> headers(c("placebo", "drug_50")),
     class = "tabular_error_input"
   )
 })
 
 test_that("headers() rejects duplicate band labels in one call", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers("Arms" = "placebo", "Arms" = "drug_50"),
     class = "tabular_error_input"
   )
@@ -170,7 +170,7 @@ test_that("headers() rejects duplicate band labels in one call", {
 
 test_that("headers() accepts a dynamic band label via :=", {
   lbl <- "Treatment Group"
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers(!!lbl := c("placebo", "drug_50", "drug_100", "Total"))
   expect_length(spec@headers, 1L)
   expect_identical(spec@headers[[1]]@label, "Treatment Group")
@@ -185,7 +185,7 @@ test_that("headers() accepts a named list spliced with !!!", {
     "Control" = "placebo",
     "Active" = c("drug_50", "drug_100")
   )
-  spec <- tabular(saf_demo) |> headers(!!!bands)
+  spec <- tabular(cdisc_saf_demo) |> headers(!!!bands)
   expect_length(spec@headers, 2L)
   expect_identical(spec@headers[[1]]@label, "Control")
   expect_identical(spec@headers[[2]]@span, c("drug_50", "drug_100"))
@@ -196,7 +196,7 @@ test_that("headers() accepts a named list spliced with !!!", {
 test_that("headers() rejects a whitespace-only top-level label", {
   bands <- setNames(list(c("placebo", "drug_50")), "   ")
   expect_error(
-    do.call(headers, c(list(tabular(saf_demo)), bands)),
+    do.call(headers, c(list(tabular(cdisc_saf_demo)), bands)),
     class = "tabular_error_input"
   )
 })
@@ -204,7 +204,7 @@ test_that("headers() rejects a whitespace-only top-level label", {
 test_that("headers() rejects an empty-string top-level label via splice", {
   bands <- setNames(list(c("placebo", "drug_50")), "")
   expect_error(
-    do.call(headers, c(list(tabular(saf_demo)), bands)),
+    do.call(headers, c(list(tabular(cdisc_saf_demo)), bands)),
     class = "tabular_error_input"
   )
 })
@@ -212,14 +212,14 @@ test_that("headers() rejects an empty-string top-level label via splice", {
 test_that("headers() rejects a tab-only top-level label", {
   bands <- setNames(list(c("placebo", "drug_50")), "\t")
   expect_error(
-    do.call(headers, c(list(tabular(saf_demo)), bands)),
+    do.call(headers, c(list(tabular(cdisc_saf_demo)), bands)),
     class = "tabular_error_input"
   )
 })
 
 test_that("headers() rejects a whitespace-only child label", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers("Top" = setNames(list("placebo", "drug_50"), c("Active", " "))),
     class = "tabular_error_input"
   )
@@ -227,7 +227,7 @@ test_that("headers() rejects a whitespace-only child label", {
 
 test_that("headers() rejects an NA child label", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers("Top" = setNames(list("placebo", "drug_50"), c("Active", NA))),
     class = "tabular_error_input"
   )
@@ -238,7 +238,7 @@ test_that("headers() rejects an NA child label", {
 # directly under the parent band with no intermediate label.
 
 test_that("headers() accepts an unnamed character vector as passthrough leaves", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers(
       "Treatment Active" = list(
         "Treatment Low" = c("placebo", "drug_100"),
@@ -256,7 +256,7 @@ test_that("headers() accepts an unnamed character vector as passthrough leaves",
 })
 
 test_that("headers() passthrough accepts multi-column unnamed vectors", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers(
       "Top" = list(
         "Inner" = "placebo",
@@ -272,7 +272,7 @@ test_that("headers() passthrough accepts multi-column unnamed vectors", {
 
 test_that("headers() passthrough validates that columns exist in data", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers(
         "Top" = list(
           "Inner" = "placebo",
@@ -285,7 +285,7 @@ test_that("headers() passthrough validates that columns exist in data", {
 
 test_that("headers() rejects an unnamed nested list (no label, but is a list)", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers(
         "Top" = list(
           list("X" = "placebo")
@@ -297,7 +297,7 @@ test_that("headers() rejects an unnamed nested list (no label, but is a list)", 
 
 test_that("headers() passthrough rejects NA inside the column vector", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers(
         "Top" = list(
           "Inner" = "placebo",
@@ -310,7 +310,7 @@ test_that("headers() passthrough rejects NA inside the column vector", {
 
 test_that("headers() catches duplicate columns across passthrough and named child", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers(
         "Top" = list(
           "Inner" = c("placebo", "drug_50"),
@@ -323,7 +323,7 @@ test_that("headers() catches duplicate columns across passthrough and named chil
 
 test_that("headers() rejects duplicate child labels inside a nested list", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers(
         "Top" = list("A" = "placebo", "A" = "drug_50")
       ),
@@ -333,14 +333,14 @@ test_that("headers() rejects duplicate child labels inside a nested list", {
 
 test_that("headers() rejects non-character non-list values", {
   expect_error(
-    tabular(saf_demo) |> headers("Arms" = 1:3),
+    tabular(cdisc_saf_demo) |> headers("Arms" = 1:3),
     class = "tabular_error_input"
   )
 })
 
 test_that("headers() rejects NA in a span vector", {
   expect_error(
-    tabular(saf_demo) |> headers("Arms" = c("placebo", NA)),
+    tabular(cdisc_saf_demo) |> headers("Arms" = c("placebo", NA)),
     class = "tabular_error_input"
   )
 })
@@ -350,12 +350,12 @@ test_that("headers() rejects NA in a span vector", {
 test_that("headers() error snapshots", {
   expect_snapshot(
     error = TRUE,
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers("Arms" = c("placebo", "phantom_arm"))
   )
   expect_snapshot(
     error = TRUE,
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       headers(
         "Arms 1" = c("placebo", "drug_50"),
         "Arms 2" = c("drug_50", "drug_100")

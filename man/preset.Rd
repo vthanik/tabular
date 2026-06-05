@@ -389,9 +389,9 @@ bor_levels <- c(
   "ORR (CR + PR)", "CBR (CR + PR + SD)",
   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95\% CI (Clopper-Pearson)"
 )
-eff <- eff_resp
+eff <- cdisc_eff_resp
 eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
-ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 
 tabular(
   eff,
@@ -431,10 +431,10 @@ tabular(
 # `{program}` and `{datetime}` tokens.
 set_preset(font_size = 9, paper_size = "letter")
 
-ae <- saf_aesocpt
+ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
   ae,

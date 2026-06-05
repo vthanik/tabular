@@ -1,7 +1,7 @@
 # Tests for auto-numbered footnote resolution (R/engine_footnotes.R).
 
 mk_fn_spec <- function() {
-  tabular(saf_aesocpt) |>
+  tabular(cdisc_saf_aesocpt) |>
     cols(
       soc = col_spec(usage = "group"),
       label = col_spec(label = "PT"),
@@ -156,7 +156,7 @@ test_that("a header anchor on an unknown column is dropped (assign returns NULL)
 # ---------------------------------------------------------------------
 
 mk_hidden_fn_spec <- function() {
-  tabular(saf_aesocpt) |>
+  tabular(cdisc_saf_aesocpt) |>
     cols(
       soc = col_spec(usage = "group"),
       label = col_spec(label = "PT"),
@@ -304,7 +304,7 @@ test_that("an anchor that matches nothing warns and is dropped", {
 })
 
 test_that("a title-anchored footnote marks the last title line", {
-  spec <- tabular(saf_aesocpt, titles = c("Table 1", "AE Table")) |>
+  spec <- tabular(cdisc_saf_aesocpt, titles = c("Table 1", "AE Table")) |>
     cols(
       soc = col_spec(usage = "group"),
       label = col_spec(label = "PT"),
@@ -351,7 +351,7 @@ test_that("unsupported footnote anchors are rejected at call time (#cr2, #cr3)",
 })
 
 test_that("the marker is identical across subgroups and the block emits once", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group"),
       stat_label = col_spec(label = "Statistic"),

@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------
 
 test_that("style(..., .at = cells_body()) appends a style_layer", {
-  spec <- tabular(saf_demo) |> style(bold = TRUE, .at = cells_body())
+  spec <- tabular(cdisc_saf_demo) |> style(bold = TRUE, .at = cells_body())
   expect_length(spec@styles@layers, 1L)
   layer <- spec@styles@layers[[1]]
   expect_true(is_style_layer(layer))
@@ -16,7 +16,7 @@ test_that("style(..., .at = cells_body()) appends a style_layer", {
 })
 
 test_that("style(..., .at = cells_body(i = 1:3, j = 'Total')) keeps i/j on the location", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(bold = TRUE, .at = cells_body(i = 1:3, j = "Total"))
   loc <- spec@styles@layers[[1]]@location
   expect_identical(loc$i, 1:3)
@@ -24,7 +24,7 @@ test_that("style(..., .at = cells_body(i = 1:3, j = 'Total')) keeps i/j on the l
 })
 
 test_that("multiple at-style calls accumulate in declaration order", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(bold = TRUE, .at = cells_body()) |>
     style(italic = TRUE, .at = cells_headers()) |>
     style(blank_above = 1L, .at = cells_title())
@@ -68,7 +68,7 @@ test_that("style(template, bold = TRUE) defaults `.at` to cells_body()", {
 # ---------------------------------------------------------------------
 
 test_that("border_top = brdr(...) expands to per-side scalars", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(
       border_top = brdr("thick", "double", "#000"),
       .at = cells_headers()
@@ -80,7 +80,7 @@ test_that("border_top = brdr(...) expands to per-side scalars", {
 })
 
 test_that("border = brdr(...) sets all four sides", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(border = brdr("thin", "solid", "#666"), .at = cells_table())
   node <- spec@styles@layers[[1]]@style
   for (side in c("top", "bottom", "left", "right")) {
@@ -96,7 +96,7 @@ test_that("border = brdr(...) sets all four sides", {
 })
 
 test_that("border_top = 'none' kills the border on that side", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(border_top = "none", .at = cells_footnotes())
   node <- spec@styles@layers[[1]]@style
   expect_identical(node@border_top_style, "none")
@@ -108,7 +108,7 @@ test_that("border_top = 'none' kills the border on that side", {
 # ---------------------------------------------------------------------
 
 test_that("blank_above / blank_below land on style_node", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(blank_above = 1L, blank_below = 2L, .at = cells_title())
   node <- spec@styles@layers[[1]]@style
   expect_identical(node@blank_above, 1L)
@@ -125,30 +125,30 @@ test_that("`where` passed at top level lands as an unknown style attribute warni
   # style_node field). Use `.at = cells_body(where = pred)` instead.
   withr::local_options(list(rlang_warning_verbosity = "quiet"))
   expect_warning(
-    tabular(saf_demo) |> style(bold = TRUE, where = TRUE),
+    tabular(cdisc_saf_demo) |> style(bold = TRUE, where = TRUE),
     "where"
   )
 })
 
 test_that("style(spec, bold = TRUE) defaults `.at` to cells_body()", {
-  spec <- tabular(saf_demo) |> style(bold = TRUE)
+  spec <- tabular(cdisc_saf_demo) |> style(bold = TRUE)
   expect_length(spec@styles@layers, 1L)
   expect_identical(spec@styles@layers[[1]]@location$surface, "body")
 })
 
 test_that("at must be a tabular_location", {
   expect_error(
-    tabular(saf_demo) |> style(bold = TRUE, .at = "body"),
+    tabular(cdisc_saf_demo) |> style(bold = TRUE, .at = "body"),
     class = "tabular_error_input"
   )
   expect_error(
-    tabular(saf_demo) |> style(bold = TRUE, .at = list(surface = "body")),
+    tabular(cdisc_saf_demo) |> style(bold = TRUE, .at = list(surface = "body")),
     class = "tabular_error_input"
   )
 })
 
 test_that("style(.at = cells_body(where = ...)) appends one layer", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(bold = TRUE, .at = cells_body(where = TRUE))
   expect_length(spec@styles@layers, 1L)
 })

@@ -102,12 +102,12 @@ engine resolves it at render time.
 library(tabular)
 
 # BigN denominators, keyed by arm
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 # columns render in data-frame order, so put them in dose order first;
 # subset to Age / Sex / Race for a compact display
 keep <- c("Age (years)", "Sex, n (%)", "Race, n (%)")
-demo <- saf_demo[saf_demo$variable %in% keep, c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")]
+demo <- cdisc_saf_demo[cdisc_saf_demo$variable %in% keep, c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")]
 
 tab <- tabular(
   demo,

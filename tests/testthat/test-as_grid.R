@@ -244,7 +244,7 @@ test_that("stripe never overwrites an explicit per-cell background", {
 })
 
 test_that("stripe fills synthesised group-header + blank rows (look-ahead parity)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", group_display = "header_row"),
       stat_label = col_spec(align = "left"),
@@ -279,7 +279,7 @@ test_that("stripe fills synthesised group-header + blank rows (look-ahead parity
 })
 
 test_that("explicit cells_group_headers(background=) beats the stripe fill", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", group_display = "header_row"),
       stat_label = col_spec(align = "left"),

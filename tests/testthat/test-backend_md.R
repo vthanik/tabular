@@ -31,9 +31,9 @@ test_that("emit(.md) writes a non-empty .md file", {
   expect_true(any(grepl("^F", lines)))
 })
 
-test_that("emit(.md) renders saf_demo golden pipeline end to end", {
+test_that("emit(.md) renders cdisc_saf_demo golden pipeline end to end", {
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
@@ -134,7 +134,7 @@ test_that("two footnotes on one body cell render as a single ^a,b^ superscript",
   # Distinct ids on the same body anchor accumulate into one comma-joined
   # sentinel; the md backend emits ^a,b^ (valid Pandoc superscript). The
   # header path differs by design: it stacks native sup runs (^a^^b^).
-  spec <- tabular(saf_aesocpt) |>
+  spec <- tabular(cdisc_saf_aesocpt) |>
     cols(
       soc = col_spec(usage = "group"),
       label = col_spec(label = "PT"),
@@ -527,9 +527,9 @@ test_that(".render_md_link emits the optional title attribute when set", {
 # Snapshot pin on the golden pipeline
 # ---------------------------------------------------------------------
 
-test_that("saf_demo golden pipeline matches the pinned .md snapshot", {
+test_that("cdisc_saf_demo golden pipeline matches the pinned .md snapshot", {
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>

@@ -4,7 +4,7 @@
 # ---- happy path ------------------------------------------------------
 
 test_that("sort_rows() stores a sort_spec on the spec", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     sort_rows(by = c("variable", "stat_label"))
 
   expect_true(is_sort_spec(spec@sort))
@@ -13,14 +13,14 @@ test_that("sort_rows() stores a sort_spec on the spec", {
 })
 
 test_that("sort_rows() recycles length-1 descending across keys", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     sort_rows(by = c("variable", "stat_label"), descending = TRUE)
 
   expect_identical(spec@sort@descending, c(TRUE, TRUE))
 })
 
 test_that("sort_rows() accepts per-key descending vector", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     sort_rows(
       by = c("variable", "stat_label"),
       descending = c(TRUE, FALSE)
@@ -31,13 +31,13 @@ test_that("sort_rows() accepts per-key descending vector", {
 # ---- edge case 2: by length 0 ---------------------------------------
 
 test_that("sort_rows() with length-0 by is accepted (no-op sort)", {
-  spec <- tabular(saf_demo) |> sort_rows(by = character())
+  spec <- tabular(cdisc_saf_demo) |> sort_rows(by = character())
   expect_true(is_sort_spec(spec@sort))
   expect_identical(spec@sort@by, character())
 })
 
 test_that("sort_rows() default arguments are a no-op", {
-  spec <- tabular(saf_demo) |> sort_rows()
+  spec <- tabular(cdisc_saf_demo) |> sort_rows()
   expect_true(is_sort_spec(spec@sort))
   expect_length(spec@sort@by, 0L)
 })
@@ -45,7 +45,7 @@ test_that("sort_rows() default arguments are a no-op", {
 # ---- edge case 5: repeat call replaces -------------------------------
 
 test_that("sort_rows() called twice replaces (not stacks)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     sort_rows(by = "variable") |>
     sort_rows(by = "stat_label", descending = TRUE)
 
@@ -56,8 +56,8 @@ test_that("sort_rows() called twice replaces (not stacks)", {
 # ---- edge case 6: sort-only column (not in cols()) ------------------
 
 test_that("sort_rows() accepts a column not declared in cols()", {
-  # row_type is in eff_resp's data but not in any cols() call.
-  spec <- tabular(eff_resp) |>
+  # row_type is in cdisc_eff_resp's data but not in any cols() call.
+  spec <- tabular(cdisc_eff_resp) |>
     sort_rows(by = "row_type")
   expect_identical(spec@sort@by, "row_type")
 })
@@ -66,14 +66,14 @@ test_that("sort_rows() accepts a column not declared in cols()", {
 
 test_that("sort_rows() errors when by references unknown column", {
   expect_error(
-    tabular(saf_demo) |> sort_rows(by = "missing_col"),
+    tabular(cdisc_saf_demo) |> sort_rows(by = "missing_col"),
     class = "tabular_error_input"
   )
 })
 
 test_that("sort_rows() error names the missing column", {
   err <- tryCatch(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       sort_rows(by = c("variable", "no_such_col")),
     tabular_error_input = function(e) e
   )
@@ -84,7 +84,7 @@ test_that("sort_rows() error names the missing column", {
 # ---- edge case 3: by references an arm column from pivot_across() ---
 
 test_that("sort_rows() rejects sort by an arm column stamped by pivot_across()", {
-  d <- saf_demo
+  d <- cdisc_saf_demo
   attr(d, "across_cols") <- "drug_50"
   spec <- tabular(d)
   expect_error(
@@ -97,7 +97,7 @@ test_that("sort_rows() rejects sort by an arm column stamped by pivot_across()",
 
 test_that("sort_rows() errors when descending length neither 1 nor length(by)", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       sort_rows(
         by = c("variable", "stat_label"),
         descending = c(TRUE, FALSE, TRUE)
@@ -117,21 +117,21 @@ test_that("sort_rows() rejects non-spec first argument", {
 
 test_that("sort_rows() rejects non-character by", {
   expect_error(
-    tabular(saf_demo) |> sort_rows(by = 1:3),
+    tabular(cdisc_saf_demo) |> sort_rows(by = 1:3),
     class = "tabular_error_input"
   )
 })
 
 test_that("sort_rows() rejects NA in by", {
   expect_error(
-    tabular(saf_demo) |> sort_rows(by = c("variable", NA)),
+    tabular(cdisc_saf_demo) |> sort_rows(by = c("variable", NA)),
     class = "tabular_error_input"
   )
 })
 
 test_that("sort_rows() rejects non-logical descending", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       sort_rows(by = "variable", descending = "yes"),
     class = "tabular_error_input"
   )
@@ -139,7 +139,7 @@ test_that("sort_rows() rejects non-logical descending", {
 
 test_that("sort_rows() rejects NA descending", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       sort_rows(by = "variable", descending = NA),
     class = "tabular_error_input"
   )
@@ -150,11 +150,11 @@ test_that("sort_rows() rejects NA descending", {
 test_that("sort_rows() error snapshots", {
   expect_snapshot(
     error = TRUE,
-    tabular(saf_demo) |> sort_rows(by = "no_such_col")
+    tabular(cdisc_saf_demo) |> sort_rows(by = "no_such_col")
   )
   expect_snapshot(
     error = TRUE,
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       sort_rows(
         by = c("variable", "stat_label"),
         descending = c(TRUE, FALSE, TRUE)
@@ -163,18 +163,18 @@ test_that("sort_rows() error snapshots", {
 })
 
 # ---------------------------------------------------------------------
-# Regression: cards-style hierarchical sort on saf_aesocpt
+# Regression: cards-style hierarchical sort on cdisc_saf_aesocpt
 #
 # Bug: `sort_rows(by = c("row_type", "n_total"), descending = c(FALSE,
 # TRUE))` flattened the SOC -> PT hierarchy because the engine sort is
 # pure lexicographic (no group awareness). Fix bakes a parent-broadcast
-# `soc_n` + per-row `n_total` into `saf_aesocpt` so the two-key sort
+# `soc_n` + per-row `n_total` into `cdisc_saf_aesocpt` so the two-key sort
 # `(desc(soc_n), desc(n_total))` keeps PTs clustered under their parent
 # SOC and orders both levels by descending count.
 # ---------------------------------------------------------------------
 
-test_that("saf_aesocpt body is cards-sorted: SOC clusters intact, PT desc within", {
-  ae <- saf_aesocpt
+test_that("cdisc_saf_aesocpt body is cards-sorted: SOC clusters intact, PT desc within", {
+  ae <- cdisc_saf_aesocpt
 
   # Overall row floats to the top (carries overall TEAE count on both
   # keys).
@@ -199,11 +199,11 @@ test_that("saf_aesocpt body is cards-sorted: SOC clusters intact, PT desc within
   expect_identical(soc_n_vec, sort(soc_n_vec, decreasing = TRUE))
 })
 
-test_that("sort_rows(soc_n, n_total) on saf_aesocpt preserves cards order", {
+test_that("sort_rows(soc_n, n_total) on cdisc_saf_aesocpt preserves cards order", {
   # The render-time sort using the two new keys must reproduce the
   # baked order (it does because the engine's `order()` is stable and
   # the data ships in the canonical sort already).
-  spec <- tabular(saf_aesocpt) |>
+  spec <- tabular(cdisc_saf_aesocpt) |>
     sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
   sorted <- engine_sort(spec)@data
   expect_identical(sorted$row_type[1L], "overall")

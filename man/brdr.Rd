@@ -77,9 +77,9 @@ RTF, the CSS \code{currentColor} keyword in HTML).
 # thick column-label divider (midrule), a hairline dotted rule
 # between body rows (rowrule), and the muted spanner rule dropped.
 # Unlisted rules keep their booktabs defaults.
-demo_n <- stats::setNames(saf_n$n, saf_n$arm_short)
+demo_n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 tabular(
-  saf_aeoverall,
+  cdisc_saf_ae,
   titles = c(
     "Table 14.3.1",
     "Overall Summary of Adverse Events",
@@ -118,7 +118,7 @@ custom_style <- function(spec) {
     )
 }
 
-tabular(saf_n) |>
+tabular(cdisc_saf_n) |>
   custom_style() |>
   preset(rules = list(rowrule = brdr("hairline", "dashed")))
 
@@ -144,7 +144,7 @@ lapply(
 # outer frame and inter-column separators, hand brdr() to
 # `style(.at = cells_table(side = ...))`. Here a medium outer frame
 # plus hairline column separators on a demographics table.
-tabular(saf_demo, titles = "Demographics with a full grid") |>
+tabular(cdisc_saf_demo, titles = "Demographics with a full grid") |>
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),

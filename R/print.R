@@ -85,7 +85,7 @@
 #' # Quarto / Rmd chunk it inlines under the chunk; at a plain
 #' # console the HTML source is `cat()`-ed.
 #' tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c("Table 14.1.1", "Demographics"),
 #'   footnotes = "Safety Population."
 #' )
@@ -95,7 +95,7 @@
 #' # The cli-tree summary shows props at a glance. Useful for
 #' # debugging spec composition without paying the HTML render
 #' # cost.
-#' spec <- tabular(saf_demo, titles = "Demographics") |>
+#' spec <- tabular(cdisc_saf_demo, titles = "Demographics") |>
 #'   cols(variable = col_spec(usage = "group", label = "Characteristic"))
 #'
 #' print(spec, output = "cli")
@@ -308,8 +308,8 @@ NULL
 #' # Wrap the `tagList` in `htmltools::browsable()` so it renders as live
 #' # HTML in a viewer / Quarto chunk / pkgdown page instead of printing
 #' # its source, the same convention `gt` and `flextable` follow.
-#' s1 <- tabular(saf_demo, titles = "Demographics")
-#' s2 <- tabular(saf_aeoverall, titles = "AE overall")
+#' s1 <- tabular(cdisc_saf_demo, titles = "Demographics")
+#' s2 <- tabular(cdisc_saf_ae, titles = "AE overall")
 #'
 #' if (requireNamespace("htmltools", quietly = TRUE)) {
 #'   htmltools::browsable(

@@ -237,12 +237,12 @@ test_that("engine_format() stamps the data column name on each col_spec", {
 })
 
 # ---------------------------------------------------------------------
-# Integration: saf_demo end-to-end
+# Integration: cdisc_saf_demo end-to-end
 # ---------------------------------------------------------------------
 
-test_that("engine_format() handles the bundled saf_demo without erroring", {
+test_that("engine_format() handles the bundled cdisc_saf_demo without erroring", {
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1", md("**Demographics**")),
     footnotes = c("Note: percentages by arm.")
   ) |>
@@ -251,16 +251,16 @@ test_that("engine_format() handles the bundled saf_demo without erroring", {
       drug_100 = col_spec(label = "Drug 100\nN=72")
     )
   out <- tabular:::engine_format(spec)
-  expect_equal(dim(out$cells_text), c(nrow(saf_demo), ncol(saf_demo)))
+  expect_equal(dim(out$cells_text), c(nrow(cdisc_saf_demo), ncol(cdisc_saf_demo)))
   expect_length(out$titles_ast, 2L)
   expect_length(out$footnotes_ast, 1L)
-  expect_equal(names(out$col_labels_ast), names(saf_demo))
+  expect_equal(names(out$col_labels_ast), names(cdisc_saf_demo))
 })
 
 test_that("engine_format() output composes with engine_decimal()", {
   # The natural pipeline: engine_format gives cells_text, then
   # engine_decimal aligns decimal-marked columns.
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       placebo = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal")
@@ -269,7 +269,7 @@ test_that("engine_format() output composes with engine_decimal()", {
   aligned <- tabular:::engine_decimal(
     out$cells_text,
     spec@cols,
-    sections = saf_demo$variable
+    sections = cdisc_saf_demo$variable
   )
   # Decimal-aligned columns rewritten; others passed through.
   expect_false(identical(aligned[, "placebo"], out$cells_text[, "placebo"]))

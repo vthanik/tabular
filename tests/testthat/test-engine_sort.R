@@ -5,13 +5,13 @@
 # ---- no-op cases ----------------------------------------------------
 
 test_that("engine_sort() returns spec unchanged when no sort set", {
-  spec <- tabular(saf_demo)
+  spec <- tabular(cdisc_saf_demo)
   out <- engine_sort(spec)
   expect_identical(out@data, spec@data)
 })
 
 test_that("engine_sort() returns spec unchanged for length-0 by", {
-  spec <- tabular(saf_demo) |> sort_rows(by = character())
+  spec <- tabular(cdisc_saf_demo) |> sort_rows(by = character())
   out <- engine_sort(spec)
   expect_identical(out@data, spec@data)
 })
@@ -108,8 +108,8 @@ test_that("engine_sort() places NA values last when descending", {
 
 # ---- real demo data round-trip --------------------------------------
 
-test_that("engine_sort() orders eff_resp's stat_label alphabetically", {
-  spec <- tabular(eff_resp) |> sort_rows(by = "stat_label")
+test_that("engine_sort() orders cdisc_eff_resp's stat_label alphabetically", {
+  spec <- tabular(cdisc_eff_resp) |> sort_rows(by = "stat_label")
   out <- engine_sort(spec)
   labels <- out@data$stat_label
   expect_identical(labels, sort(labels))

@@ -6,14 +6,14 @@
 # ---- happy path ------------------------------------------------------
 
 test_that("subgroup() stores a subgroup_spec on the spec", {
-  spec <- tabular(saf_demo) |> subgroup("variable")
+  spec <- tabular(cdisc_saf_demo) |> subgroup("variable")
   expect_true(is_subgroup_spec(spec@subgroup))
   expect_identical(spec@subgroup@by, "variable")
   expect_null(spec@subgroup@label)
 })
 
 test_that("subgroup() accepts a template label", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     subgroup("variable", label = "Characteristic: {variable}")
   expect_identical(spec@subgroup@label, "Characteristic: {variable}")
 })
@@ -29,14 +29,14 @@ test_that("subgroup() accepts a multi-column template", {
 # ---- edge case: empty vars clears the slot ---------------------------
 
 test_that("subgroup() with character(0) clears the slot", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     subgroup("variable") |>
     subgroup(character(0))
   expect_null(spec@subgroup)
 })
 
 test_that("subgroup() with NULL vars clears the slot", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     subgroup("variable") |>
     subgroup(by = NULL)
   expect_null(spec@subgroup)
@@ -45,7 +45,7 @@ test_that("subgroup() with NULL vars clears the slot", {
 # ---- edge case: repeat call replaces ---------------------------------
 
 test_that("subgroup() called twice replaces (not stacks)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     subgroup("variable") |>
     subgroup("stat_label")
   expect_identical(spec@subgroup@by, "stat_label")
@@ -55,7 +55,7 @@ test_that("subgroup() called twice replaces (not stacks)", {
 
 test_that("subgroup() rejects unknown columns in vars", {
   expect_error(
-    tabular(saf_demo) |> subgroup("not_a_column"),
+    tabular(cdisc_saf_demo) |> subgroup("not_a_column"),
     class = "tabular_error_subgroup_unknown_var"
   )
 })
@@ -64,7 +64,7 @@ test_that("subgroup() rejects unknown columns in vars", {
 
 test_that("subgroup() rejects templates that reference unknown columns", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       subgroup("variable", label = "Cohort: {nonexistent}"),
     class = "tabular_error_subgroup_template_unknown_col"
   )
@@ -74,13 +74,13 @@ test_that("subgroup() rejects templates that reference unknown columns", {
 
 test_that("subgroup() multi-var requires an explicit label", {
   expect_error(
-    tabular(saf_demo) |> subgroup(c("variable", "stat_label")),
+    tabular(cdisc_saf_demo) |> subgroup(c("variable", "stat_label")),
     class = "tabular_error_subgroup_label_required"
   )
 })
 
 test_that("subgroup() multi-var with explicit label is accepted", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     subgroup(
       c("variable", "stat_label"),
       label = "{variable} / {stat_label}"
@@ -92,7 +92,7 @@ test_that("subgroup() multi-var with explicit label is accepted", {
 
 test_that("subgroup() rejects duplicate columns in by", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       subgroup(c("variable", "variable"), label = "{variable}"),
     class = "tabular_error_input"
   )
@@ -102,28 +102,28 @@ test_that("subgroup() rejects duplicate columns in by", {
 
 test_that("subgroup() rejects non-character vars", {
   expect_error(
-    tabular(saf_demo) |> subgroup(by = 1L),
+    tabular(cdisc_saf_demo) |> subgroup(by = 1L),
     class = "tabular_error_input"
   )
 })
 
 test_that("subgroup() rejects NA in vars", {
   expect_error(
-    tabular(saf_demo) |> subgroup(by = NA_character_),
+    tabular(cdisc_saf_demo) |> subgroup(by = NA_character_),
     class = "tabular_error_input"
   )
 })
 
 test_that("subgroup() rejects empty-string vars", {
   expect_error(
-    tabular(saf_demo) |> subgroup(by = ""),
+    tabular(cdisc_saf_demo) |> subgroup(by = ""),
     class = "tabular_error_input"
   )
 })
 
 test_that("subgroup() rejects non-character label", {
   expect_error(
-    tabular(saf_demo) |> subgroup("variable", label = 1L),
+    tabular(cdisc_saf_demo) |> subgroup("variable", label = 1L),
     class = "tabular_error_input"
   )
 })
@@ -131,7 +131,7 @@ test_that("subgroup() rejects non-character label", {
 test_that("subgroup() rejects length-N label vector", {
   # label is now a single template string, not a per-var vector.
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       subgroup("variable", label = c("Too", "Many")),
     class = "tabular_error_input"
   )
@@ -139,7 +139,7 @@ test_that("subgroup() rejects length-N label vector", {
 
 test_that("subgroup() rejects NA label", {
   expect_error(
-    tabular(saf_demo) |> subgroup("variable", label = NA_character_),
+    tabular(cdisc_saf_demo) |> subgroup("variable", label = NA_character_),
     class = "tabular_error_input"
   )
 })
@@ -191,14 +191,14 @@ test_that(".subgroup_render_label() substitutes from a one-row df", {
 test_that("subgroup() unknown-var error message names the bad column", {
   expect_snapshot(
     error = TRUE,
-    tabular(saf_demo) |> subgroup("not_a_column")
+    tabular(cdisc_saf_demo) |> subgroup("not_a_column")
   )
 })
 
 test_that("subgroup() template-unknown-col error message names the bad ref", {
   expect_snapshot(
     error = TRUE,
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       subgroup("variable", label = "Cohort: {nonexistent}")
   )
 })
@@ -251,7 +251,7 @@ test_that(".subgroup_auto_hide_cols returns character(0) when no subgroup", {
 })
 
 test_that(".subgroup_auto_hide_cols returns the by var for single-var partition", {
-  spec <- tabular(saf_subgroup) |> subgroup(by = "sex")
+  spec <- tabular(cdisc_saf_subgroup) |> subgroup(by = "sex")
   expect_identical(
     sort(tabular:::.subgroup_auto_hide_cols(spec)),
     sort("sex")
@@ -259,7 +259,7 @@ test_that(".subgroup_auto_hide_cols returns the by var for single-var partition"
 })
 
 test_that(".subgroup_auto_hide_cols unions `by` with template-ref columns", {
-  spec <- tabular(saf_subgroup) |>
+  spec <- tabular(cdisc_saf_subgroup) |>
     subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
   expect_identical(
     sort(tabular:::.subgroup_auto_hide_cols(spec)),
@@ -268,7 +268,7 @@ test_that(".subgroup_auto_hide_cols unions `by` with template-ref columns", {
 })
 
 test_that(".subgroup_auto_hide_cols covers multi-var partition + multi-ref label", {
-  spec <- tabular(saf_subgroup) |>
+  spec <- tabular(cdisc_saf_subgroup) |>
     subgroup(
       by = c("sex", "agegr"),
       label = "Sex: {sex} / Age: {agegr} (N total {sex_n})"
@@ -280,7 +280,7 @@ test_that(".subgroup_auto_hide_cols covers multi-var partition + multi-ref label
 })
 
 test_that("subgroup auto-hide flips partition + template-ref cols from the body", {
-  spec <- tabular(saf_subgroup) |>
+  spec <- tabular(cdisc_saf_subgroup) |>
     cols(
       agegr = col_spec(usage = "group", label = "Age Group"),
       agegr_n = col_spec(visible = FALSE),
@@ -307,7 +307,7 @@ test_that("subgroup auto-hide flips partition + template-ref cols from the body"
 test_that("subgroup auto-hide is a no-op when no subgroup is attached", {
   # Sanity: same spec, no subgroup → `sex` and `sex_n` should NOT
   # be auto-hidden (the user might want them visible in that case).
-  spec <- tabular(saf_subgroup) |>
+  spec <- tabular(cdisc_saf_subgroup) |>
     cols(
       agegr = col_spec(usage = "group", label = "Age Group"),
       agegr_n = col_spec(visible = FALSE),
@@ -333,7 +333,7 @@ test_that("subgroup auto-hide is a no-op when no subgroup is attached", {
 
 # Base safety/vitals spec used across the BigN tests. Leaf arm columns
 # placebo / drug_50 / drug_100 / Total; `sex` is the partition.
-.bign_base <- function(data = saf_subgroup) {
+.bign_base <- function(data = cdisc_saf_subgroup) {
   tabular(data, titles = "Vital Signs") |>
     cols(
       agegr = col_spec(usage = "group", label = "Age Group"),
@@ -388,7 +388,7 @@ test_that("big_n suffixes each subgroup's leaf labels; base stays clean", {
 })
 
 test_that("big_n keyed by a spanner band label suffixes the band", {
-  d <- saf_subgroup
+  d <- cdisc_saf_subgroup
   d$placebo_pct <- d$placebo
   spec <- tabular(d, titles = "t") |>
     cols(
@@ -524,7 +524,7 @@ test_that("big_n honours a custom big_n_fmt", {
 
 test_that("big_n applies to a leaf with no explicit col_spec", {
   # `Total` has no col_spec here; big_n still suffixes its default label.
-  spec <- tabular(saf_subgroup, titles = "t") |>
+  spec <- tabular(cdisc_saf_subgroup, titles = "t") |>
     cols(
       agegr = col_spec(usage = "group", label = "Age"),
       agegr_n = col_spec(visible = FALSE),
@@ -593,7 +593,7 @@ test_that("big_n tolerates an extra combo absent from the data", {
 
 test_that("big_n requires a non-empty by", {
   expect_error(
-    tabular(saf_subgroup) |> subgroup(character(), big_n = .bign_arms()),
+    tabular(cdisc_saf_subgroup) |> subgroup(character(), big_n = .bign_arms()),
     class = "tabular_error_input"
   )
 })
@@ -683,7 +683,7 @@ test_that("big_n validation rejects every malformed input", {
 })
 
 test_that("big_n ambiguous target (data col and band label collide) errors", {
-  d <- saf_subgroup
+  d <- cdisc_saf_subgroup
   d$placebo_pct <- d$placebo
   spec <- tabular(d, titles = "t") |>
     cols(
@@ -830,7 +830,7 @@ test_that("subgroup_spec() rejects a big_n_fmt without the {n} token", {
 
 test_that("big_n long rejects an arm name that clashes with a by column", {
   # Partition by `param`; a long arm literally named "param".
-  base <- tabular(saf_subgroup, titles = "t") |>
+  base <- tabular(cdisc_saf_subgroup, titles = "t") |>
     cols(
       sex = col_spec(visible = FALSE),
       sex_n = col_spec(visible = FALSE),
@@ -844,7 +844,7 @@ test_that("big_n long rejects an arm name that clashes with a by column", {
       drug_100 = col_spec(visible = FALSE),
       Total = col_spec(visible = FALSE)
     )
-  params <- unique(saf_subgroup$param)
+  params <- unique(cdisc_saf_subgroup$param)
   long <- data.frame(
     param = rep(params, 2L),
     arm = rep(c("param", "placebo"), each = length(params)),
@@ -859,7 +859,7 @@ test_that("big_n long rejects an arm name that clashes with a by column", {
 test_that("non-contiguous band + big_n names the ORIGINAL band label", {
   # placebo and placebo_pct are NOT adjacent (drug_50 between) -> the band
   # is non-contiguous; the error must name "Placebo", not "Placebo (N=24)".
-  d <- saf_subgroup
+  d <- cdisc_saf_subgroup
   d$placebo_pct <- d$placebo
   d <- d[, c(
     "sex",

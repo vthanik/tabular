@@ -90,10 +90,10 @@ backend write step.
 # The first page's `cells_text` matrix is the decimal-aligned
 # output as the backend would render it; the metadata carries the
 # pagination plan + header / title / footnote ASTs.
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 demo <- tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = c(
     "Table 14.1.1",
     "Demographics and Baseline Characteristics",
@@ -123,7 +123,7 @@ demo_grid@pages[[1]]$cells_text[1:3, c("stat_label", "placebo")]
 # the full data, and every page carries the full header band grid
 # at `grid@metadata$headers` so backends can re-render the header
 # on every continuation page.
-ae <- saf_aesocpt
+ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 
@@ -157,13 +157,13 @@ length(ae_grid@pages)
 # ---- Example 3: Subgroup partition — one page set per group ----
 #
 # When `subgroup()` is attached, `as_grid()` runs the resolve
-# pipeline once per group and concatenates the pages. `saf_subgroup`
+# pipeline once per group and concatenates the pages. `cdisc_saf_subgroup`
 # carries `sex` as a natural partition axis; inspect
 # `@pages[[i]]$subgroup_index` and `@pages[[i]]$subgroup_line_ast`
 # to confirm each page knows its group identity and banner text.
 # `sex` auto-hides as the partition `by` column; no explicit
 # `col_spec(visible = FALSE)` needed.
-sg_spec <- tabular(saf_subgroup) |>
+sg_spec <- tabular(cdisc_saf_subgroup) |>
   cols(
     agegr      = col_spec(usage = "group", label = "Age Group"),
     sex_n      = col_spec(visible = FALSE),
@@ -184,9 +184,9 @@ vapply(sg_grid@pages, function(p) p$subgroup_index \%||\% NA_integer_, integer(1
 # tests, for snapshotting cell text under different presets, or
 # for spec-introspection inside higher-level wrappers that need
 # to know how many pages a render will produce.
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 demog_spec <- tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = "Demographics"
 ) |>
   cols(

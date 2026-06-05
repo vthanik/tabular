@@ -82,12 +82,12 @@
 #'
 #'   ```r
 #'   # End-to-end ARD → wide → tabular pipeline. The cards ARD
-#'   # `saf_demo_card` is the long upstream input; `pivot_across()`
+#'   # `cdisc_saf_demo_ard` is the long upstream input; `pivot_across()`
 #'   # widens to one column per arm and stamps an internal marker
 #'   # so [`sort_rows()`] can reject sort keys on those arm columns.
 #'   # `cols()` then attaches per-column display rules.
 #'   wide <- pivot_across(
-#'     saf_demo_card,
+#'     cdisc_saf_demo_ard,
 #'     statistic = list(
 #'       continuous  = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})"),
 #'       categorical = "{n} ({p}%)"
@@ -135,8 +135,8 @@
 #'   loop-free idiom.
 #'
 #'   ```r
-#'   # Two-line header with arm name and BigN from saf_n.
-#'   n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#'   # Two-line header with arm name and BigN from cdisc_saf_n.
+#'   n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'   col_spec(
 #'     label = "Placebo\nN={n['placebo']}",
 #'     align = "decimal"
@@ -373,7 +373,7 @@
 #'   The referenced depth column is auto-hidden — no need to set
 #'   `visible = FALSE` on it.
 #'
-#'   Typical SOC / PT pattern (the bundled `saf_aesocpt` ships with
+#'   Typical SOC / PT pattern (the bundled `cdisc_saf_aesocpt` ships with
 #'   the canonical depth column already attached, so no upstream
 #'   construction is needed):
 #'
@@ -407,10 +407,10 @@
 #' # the row-label columns are pinned to a fixed width and aligned
 #' # left, the four arm columns embed BigN inline in the header,
 #' # decimal-align numeric content, and render `NA` cells as "-".
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c(
 #'     "Table 14.1.1",
 #'     "Demographics and Baseline Characteristics",
@@ -451,7 +451,7 @@
 #' # rendered page. Demonstrates `indent_by` plus `visible = FALSE`
 #' # for sort-only columns, fixed width on the wide label column, and
 #' # decimal alignment on all four arm columns.
-#' ae <- saf_aesocpt
+#' ae <- cdisc_saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 #'
@@ -479,13 +479,13 @@
 #'
 #' # ---- Example 3: Format string + na_text for clean numeric display ----
 #' #
-#' # `eff_estimates` ships four competing efficacy models with
+#' # `cdisc_eff_estimates` ships four competing efficacy models with
 #' # pre-computed numeric estimates, 95% CI bounds (NA on the MMRM
 #' # row), and a nominal p-value. `format =` pins the printed
 #' # precision; `na_text` renders the missing CI bounds as a dash
 #' # rather than a literal "NA". `valign = "top"` keeps the multi-
 #' # line cell text aligned to the top.
-#' tabular(eff_estimates, titles = "Treatment-effect estimates by model") |>
+#' tabular(cdisc_eff_estimates, titles = "Treatment-effect estimates by model") |>
 #'   cols(
 #'     model    = col_spec(usage = "group",  label = "Model",   valign = "top"),
 #'     estimate = col_spec(label = "Estimate", align = "decimal", format = "%.2f"),
@@ -515,9 +515,9 @@
 #' # group-column setup demonstrates the alignment cascade —
 #' # col_spec@align beats the engine default but yields to a more
 #' # specific style() rule downstream.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' tabular(
-#'   saf_vital,
+#'   cdisc_saf_vital,
 #'   titles = "Vital Signs at Baseline and End of Treatment"
 #' ) |>
 #'   cols(
@@ -550,9 +550,9 @@
 #' # panels collapse into one scrollable table with a "Panel 1 / Panel
 #' # 2" header note; on RTF / Word each panel is its own page with the
 #' # `variable` + `stat_label` stub repeated.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c("Table 14.1.1", "Demographics", "Safety Population")
 #' ) |>
 #'   cols(

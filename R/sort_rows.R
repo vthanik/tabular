@@ -64,14 +64,14 @@
 #' #
 #' # AE-by-SOC/PT table where the SOCs and PTs appear in descending
 #' # order of subject count within the row-type hierarchy (overall
-#' # first, then SOCs, then PTs). `saf_aesocpt$Total` cells are
+#' # first, then SOCs, then PTs). `cdisc_saf_aesocpt$Total` cells are
 #' # formatted text ("171 (67.3)"), so a lexical sort on `Total`
 #' # would be wrong ("14" < "171" < "29") — attach a numeric rank
 #' # column upstream and sort on (row_type, n_total).
-#' ae <- saf_aesocpt
+#' ae <- cdisc_saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
 #'   ae,
@@ -100,7 +100,7 @@
 #' # Efficacy BOR table that must appear in CDISC clinical order
 #' # (CR < PR < SD < NON-CR/NON-PD < PD < NE < MISSING), then the
 #' # derived ORR / CBR / DCR rate rows ordered by `groupid`,
-#' # not alphabetical. `eff_resp$stat_label` arrives as character, so
+#' # not alphabetical. `cdisc_eff_resp$stat_label` arrives as character, so
 #' # coerce to a factor with the canonical levels upstream and
 #' # `sort_rows()` uses those levels directly.
 #' bor_levels <- c(
@@ -108,9 +108,9 @@
 #'   "ORR (CR + PR)", "CBR (CR + PR + SD)",
 #'   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95% CI (Clopper-Pearson)"
 #' )
-#' eff <- eff_resp
+#' eff <- cdisc_eff_resp
 #' eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
-#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+#' ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 #'
 #' tabular(
 #'   eff,
@@ -139,7 +139,7 @@
 #' # one value per `by` entry so each key can flip direction
 #' # independently. The helper column rides in `spec@data` for the
 #' # sort but never renders (visible = FALSE on its col_spec).
-#' demo <- saf_demo
+#' demo <- cdisc_saf_demo
 #' demo$display_order <- match(demo$variable, unique(demo$variable))
 #'
 #' tabular(demo, titles = "Demographics, ranked within section") |>
@@ -164,7 +164,7 @@
 #' # `pt` detail rows inside each SOC) regardless of input order. The
 #' # numeric inner key sorts PTs within each SOC by descending total
 #' # subject count.
-#' ae <- saf_aesocpt
+#' ae <- cdisc_saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total  <- as.integer(sub(" .*", "", ae$Total))
 #' tabular(ae, titles = "AE by SOC and PT, ranked within SOC") |>

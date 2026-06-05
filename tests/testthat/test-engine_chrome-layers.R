@@ -9,7 +9,7 @@
 # ---------------------------------------------------------------------
 
 test_that("cells_headers() text props land on chrome_style$surfaces$header", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(bold = TRUE, color = "navy", .at = cells_headers())
   cs <- tabular:::engine_chrome_borders(spec)
   node <- cs$surfaces$header
@@ -18,7 +18,7 @@ test_that("cells_headers() text props land on chrome_style$surfaces$header", {
 })
 
 test_that("cells_title() text props land on chrome_style$surfaces$title", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(halign = "left", font_size = 12, .at = cells_title())
   cs <- tabular:::engine_chrome_borders(spec)
   node <- cs$surfaces$title
@@ -27,7 +27,7 @@ test_that("cells_title() text props land on chrome_style$surfaces$title", {
 })
 
 test_that("cells_footnotes() text props land on chrome_style$surfaces$footer", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(italic = TRUE, font_size = 8, .at = cells_footnotes())
   cs <- tabular:::engine_chrome_borders(spec)
   node <- cs$surfaces$footer
@@ -36,7 +36,7 @@ test_that("cells_footnotes() text props land on chrome_style$surfaces$footer", {
 })
 
 test_that("cells_pagehead() (no slot) broadcasts text props to every pagehead slot", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(font_family = "Inter", .at = cells_pagehead())
   cs <- tabular:::engine_chrome_borders(spec)
   for (s in c("left", "center", "right")) {
@@ -45,7 +45,7 @@ test_that("cells_pagehead() (no slot) broadcasts text props to every pagehead sl
 })
 
 test_that("cells_pagefoot() (no slot) broadcasts text props to every pagefoot slot", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(font_size = 7, .at = cells_pagefoot())
   cs <- tabular:::engine_chrome_borders(spec)
   for (s in c("left", "center", "right")) {
@@ -54,7 +54,7 @@ test_that("cells_pagefoot() (no slot) broadcasts text props to every pagefoot sl
 })
 
 test_that("cells_pagehead(slot = ...) targets exactly one slot", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(
       bold = TRUE,
       color = "#ff0000",
@@ -68,7 +68,7 @@ test_that("cells_pagehead(slot = ...) targets exactly one slot", {
 })
 
 test_that("cells_subgroup_labels() text props land on chrome_style$surfaces$subgroup", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(background = "#eef", .at = cells_subgroup_labels())
   cs <- tabular:::engine_chrome_borders(spec)
   expect_identical(cs$surfaces$subgroup@background, "#eef")
@@ -79,7 +79,7 @@ test_that("cells_subgroup_labels() text props land on chrome_style$surfaces$subg
 # ---------------------------------------------------------------------
 
 test_that("cells_headers(border_top = brdr) writes header_top region", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(border_top = brdr("thick", "double"), .at = cells_headers())
   cs <- tabular:::engine_chrome_borders(spec)
   expect_identical(cs$borders$header_top$style, "double")
@@ -87,35 +87,35 @@ test_that("cells_headers(border_top = brdr) writes header_top region", {
 })
 
 test_that("cells_headers(border_bottom = brdr) writes header_bottom region", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(border_bottom = brdr("thin"), .at = cells_headers())
   cs <- tabular:::engine_chrome_borders(spec)
   expect_identical(cs$borders$header_bottom$style, "solid")
 })
 
 test_that("cells_pagehead(border_bottom = brdr) writes pagehead_bottom", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(border_bottom = brdr("thin"), .at = cells_pagehead())
   cs <- tabular:::engine_chrome_borders(spec)
   expect_identical(cs$borders$pagehead_bottom$style, "solid")
 })
 
 test_that("cells_pagefoot(border_top = brdr) writes pagefoot_top", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(border_top = brdr("thin"), .at = cells_pagefoot())
   cs <- tabular:::engine_chrome_borders(spec)
   expect_identical(cs$borders$pagefoot_top$style, "solid")
 })
 
 test_that("cells_footnotes(border_top = brdr) writes footer_top", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(border_top = brdr("thin"), .at = cells_footnotes())
   cs <- tabular:::engine_chrome_borders(spec)
   expect_identical(cs$borders$footer_top$style, "solid")
 })
 
 test_that("cells_subgroup_labels(border_bottom = brdr) writes subgroup_bottom", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(border_bottom = brdr("thin"), .at = cells_subgroup_labels())
   cs <- tabular:::engine_chrome_borders(spec)
   expect_identical(cs$borders$subgroup_bottom$style, "solid")
@@ -126,7 +126,7 @@ test_that("cells_subgroup_labels(border_bottom = brdr) writes subgroup_bottom", 
 # ---------------------------------------------------------------------
 
 test_that("multiple layers on the same surface compose (later wins per attr)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(bold = TRUE, color = "red", .at = cells_headers()) |>
     style(color = "blue", .at = cells_headers())
   cs <- tabular:::engine_chrome_borders(spec)
@@ -140,12 +140,12 @@ test_that("session preset style template flows into chrome_style", {
     .style = style_template() |>
       style(bold = TRUE, .at = cells_headers())
   )
-  cs <- tabular:::engine_chrome_borders(tabular(saf_demo))
+  cs <- tabular:::engine_chrome_borders(tabular(cdisc_saf_demo))
   expect_identical(cs$surfaces$header@bold, TRUE)
 })
 
 test_that("style(cells_headers) layer over the rules toprule wins", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     preset(rules = list(toprule = brdr("thick", "double"))) |>
     style(border_top = brdr("thin", "solid"), .at = cells_headers())
   cs <- tabular:::engine_chrome_borders(spec)

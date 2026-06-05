@@ -80,10 +80,10 @@ broadcast it across arms.
 # name vector (`grep()` against the data) and given one shared
 # decimal-alignment spec, while the two row-label columns keep
 # their own roles set with `cols()`.
-arm_cols <- grep("^placebo$|^drug_|^Total$", names(saf_demo), value = TRUE)
+arm_cols <- grep("^placebo$|^drug_|^Total$", names(cdisc_saf_demo), value = TRUE)
 
 tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = c(
     "Table 14.1.1",
     "Demographics and Baseline Characteristics",
@@ -108,7 +108,7 @@ bor_levels <- c(
   "ORR (CR + PR)", "CBR (CR + PR + SD)",
   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95\% CI (Clopper-Pearson)"
 )
-eff <- eff_resp
+eff <- cdisc_eff_resp
 eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
 
 tabular(

@@ -147,8 +147,8 @@
 #' # banner above the column-header rule on every page, separated by
 #' # hard page breaks. The default label uses the variable's `label`
 #' # attribute when present, falling back to the column name.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
-#' ae <- saf_aesocpt
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+#' ae <- cdisc_saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total  <- as.integer(sub(" .*", "", ae$Total))
 #' attr(ae$row_type, "label") <- "Row Type"
@@ -179,12 +179,12 @@
 #' # ---- Example 2: Partition by Sex with inline BigN via template ----
 #' #
 #' # `label` is a glue-style template; any column whose value is
-#' # constant within group can ride into the banner. `saf_subgroup`
+#' # constant within group can ride into the banner. `cdisc_saf_subgroup`
 #' # ships partition-constant `sex_n` / `agegr_n` BigN columns
 #' # alongside the value cells, so each banner reads
 #' # `"Sex: F (N = 106)"`, etc. `sex` and `sex_n` auto-hide from the
 #' # body (partition `by` and template-referenced columns).
-#' tabular(saf_subgroup, titles = "Vital Signs at End of Treatment") |>
+#' tabular(cdisc_saf_subgroup, titles = "Vital Signs at End of Treatment") |>
 #'   cols(
 #'     agegr      = col_spec(usage = "group", label = "Age Group"),
 #'     agegr_n    = col_spec(visible = FALSE),
@@ -206,7 +206,7 @@
 #' # generalise. expand.grid order: first var (sex) varies slowest,
 #' # second (agegr) fastest, giving banner sequence F/<65, F/>=65,
 #' # M/<65, M/>=65.
-#' tabular(saf_subgroup, titles = "Vital Signs by Sex and Age Group") |>
+#' tabular(cdisc_saf_subgroup, titles = "Vital Signs by Sex and Age Group") |>
 #'   cols(
 #'     sex_n      = col_spec(visible = FALSE),
 #'     agegr_n    = col_spec(visible = FALSE),
@@ -240,7 +240,7 @@
 #'   drug_100 = c(9L, 14L),
 #'   Total    = c(42L, 47L)
 #' )
-#' tabular(saf_subgroup, titles = "Vital Signs by Sex") |>
+#' tabular(cdisc_saf_subgroup, titles = "Vital Signs by Sex") |>
 #'   cols(
 #'     sex_n      = col_spec(visible = FALSE),
 #'     agegr      = col_spec(usage = "group", label = "Age Group"),
@@ -262,7 +262,7 @@
 #' # programmatically-built pipelines where a downstream branch
 #' # decides not to paginate by group after all — the call resets
 #' # the spec back to a single-page-set render.
-#' tabular(saf_subgroup, titles = "Pooled (no sex partition)") |>
+#' tabular(cdisc_saf_subgroup, titles = "Pooled (no sex partition)") |>
 #'   cols(
 #'     sex_n      = col_spec(visible = FALSE),
 #'     agegr      = col_spec(visible = FALSE),

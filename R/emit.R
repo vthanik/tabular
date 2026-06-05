@@ -210,10 +210,10 @@
 #' # then the registered md backend writes a GFM pipe table you can
 #' # preview in any Markdown renderer. tempfile() keeps the example
 #' # clean for `R CMD check`.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' demo <- tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c(
 #'     "Table 14.1.1",
 #'     "Demographics and Baseline Characteristics",
@@ -242,7 +242,7 @@
 #' # for submission packaging. The lambda derives the QC path from
 #' # the render path so the sponsor's naming convention lives in one
 #' # place.
-#' ae <- saf_aesocpt
+#' ae <- cdisc_saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 #'
@@ -283,7 +283,7 @@
 #' # across formats during development and for shipping a build
 #' # artefact set (RTF for submission, HTML for review, PDF for the
 #' # CSR appendix).
-#' eff_spec <- tabular(eff_resp, titles = "Best Overall Response") |>
+#' eff_spec <- tabular(cdisc_eff_resp, titles = "Best Overall Response") |>
 #'   cols(
 #'     stat_label  = col_spec(usage = "group", label = "Response"),
 #'     row_type    = col_spec(visible = FALSE),

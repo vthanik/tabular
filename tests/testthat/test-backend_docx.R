@@ -146,7 +146,7 @@ test_that("DOCX header-band underline is the SSOT spanrule (override + 'none' ho
   # w:color="adb5bd"`, so `preset(rules = list(spanrule = ...))`
   # overrides were ignored on DOCX. It now resolves through the
   # chrome_style `header_between` region.
-  base <- tabular(saf_demo) |>
+  base <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "C"),
       stat_label = col_spec(label = "S"),
@@ -209,7 +209,7 @@ test_that("DOCX footnoterule (opt-in) draws a table-width rule above the footnot
   # the user opts in, the rule is a single-cell table sized to the
   # table grid (table width), NOT a paragraph border (<w:pBdr>, which
   # spans the full page text column).
-  base <- tabular(saf_demo, footnotes = "Source: ADSL.") |>
+  base <- tabular(cdisc_saf_demo, footnotes = "Source: ADSL.") |>
     cols(
       variable = col_spec(usage = "group", label = "C"),
       stat_label = col_spec(label = "S"),
@@ -791,7 +791,7 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
   # Letter portrait (the engine warns; landscape is the fix). The
   # widths therefore sum to the natural total, not the page width.
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
@@ -858,7 +858,7 @@ test_that("toprule + midrule bracket the column-label band from the SSOT chrome 
   # Flat header (no bands): the toprule (header_top) and midrule
   # (header_bottom) both ride the column-label row, full table width,
   # bracketing the headers per the submission layout (TL-RTF-101).
-  flat <- tabular(saf_demo) |>
+  flat <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "C"),
       stat_label = col_spec(label = "S"),
@@ -892,7 +892,7 @@ test_that("toprule + midrule bracket the column-label band from the SSOT chrome 
 })
 
 test_that("toprule rides the first band row (not the label row) when bands exist", {
-  banded <- tabular(saf_demo) |>
+  banded <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "C"),
       stat_label = col_spec(label = "S"),
@@ -934,7 +934,7 @@ test_that("toprule rides the first band row (not the label row) when bands exist
 })
 
 test_that("rules = list(toprule/midrule = 'none') suppress the bracket rules", {
-  base <- tabular(saf_demo) |>
+  base <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "C"),
       stat_label = col_spec(label = "S"),
@@ -1383,7 +1383,7 @@ test_that("emit(.docx) is byte-deterministic across repeated calls", {
   # resolved widths, per-cell style cascade. Two identical emit()
   # calls must produce bit-identical .docx bytes.
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics"),
     footnotes = md("Source: [ADSL](https://example.com)")
   ) |>
@@ -1421,9 +1421,9 @@ test_that("backend_docx() is callable directly with a grid + file", {
 # Snapshot pin on the golden pipeline (word/document.xml)
 # ---------------------------------------------------------------------
 
-test_that("saf_demo golden pipeline matches the pinned word/document.xml snapshot", {
+test_that("cdisc_saf_demo golden pipeline matches the pinned word/document.xml snapshot", {
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
@@ -2015,7 +2015,7 @@ test_that("preset(padding=list(header=...)) emits header <w:tcMar> (#thread-C)",
 })
 
 test_that("rules='frame' draws <w:left/right> on table-proper rows incl. blank/group (#thread-D)", {
-  spec <- tabular(saf_demo, titles = "T", footnotes = "F") |>
+  spec <- tabular(cdisc_saf_demo, titles = "T", footnotes = "F") |>
     cols(
       variable = col_spec(usage = "group", group_display = "header_row"),
       stat_label = col_spec(align = "left"),
@@ -2048,7 +2048,7 @@ test_that("rules='frame' draws <w:left/right> on table-proper rows incl. blank/g
   # Non-frame preset emits no frame edges (no regression).
   out2 <- withr::local_tempfile(fileext = ".docx")
   suppressWarnings(
-    emit(tabular(saf_demo) |> preset(rules = "booktabs"), out2)
+    emit(tabular(cdisc_saf_demo) |> preset(rules = "booktabs"), out2)
   )
   doc2 <- paste(
     readLines(
@@ -2061,7 +2061,7 @@ test_that("rules='frame' draws <w:left/right> on table-proper rows incl. blank/g
 })
 
 test_that("stripe + header background reach special rows in DOCX (#thread-B)", {
-  spec <- tabular(saf_demo, titles = "T", footnotes = "F") |>
+  spec <- tabular(cdisc_saf_demo, titles = "T", footnotes = "F") |>
     cols(
       variable = col_spec(usage = "group", group_display = "header_row"),
       stat_label = col_spec(align = "left"),
@@ -2093,7 +2093,7 @@ test_that("stripe + header background reach special rows in DOCX (#thread-B)", {
 })
 
 test_that("cells_pagehead(slot=) styles one slot + band border in DOCX (#thread-G)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     preset(pagehead = list(left = "L", center = "C")) |>
     style(
       bold = TRUE,

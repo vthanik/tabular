@@ -5,7 +5,7 @@
 # ---- empty tree -----------------------------------------------------
 
 test_that("engine_headers() returns an empty schema when no headers set", {
-  spec <- tabular(saf_demo)
+  spec <- tabular(cdisc_saf_demo)
   out <- tabular:::engine_headers(spec)
   expect_s3_class(out, "data.frame")
   expect_named(
@@ -18,13 +18,13 @@ test_that("engine_headers() returns an empty schema when no headers set", {
 # ---- flat one-band tree --------------------------------------------
 
 test_that("engine_headers() flattens a single flat band", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Arms" = c("placebo", "drug_50", "drug_100", "Total"))
   out <- tabular:::engine_headers(spec)
   expect_equal(nrow(out), 1L)
   expect_equal(out$depth, 1L)
   expect_equal(out$label, "Arms")
-  # saf_demo column order: variable, stat_label, placebo, drug_100, drug_50, Total
+  # cdisc_saf_demo column order: variable, stat_label, placebo, drug_100, drug_50, Total
   # placebo at 3, drug_100 at 4, drug_50 at 5, Total at 6 — but our span lists
   # them in declaration order which doesn't have to be data order. After sort,
   # positions are 3..6 contiguous.
@@ -36,7 +36,7 @@ test_that("engine_headers() flattens a single flat band", {
 # ---- nested tree, depth ordering -----------------------------------
 
 test_that("engine_headers() rows are ordered by depth then col_start", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers(
       "Treatment Group" = list(
         "Control" = "placebo",
@@ -55,9 +55,9 @@ test_that("engine_headers() rows are ordered by depth then col_start", {
 # ---- non-contiguous span: error ------------------------------------
 
 test_that("engine_headers() errors when a band's leaves are non-contiguous", {
-  # saf_demo column order: variable, stat_label, placebo, drug_100, drug_50, Total
+  # cdisc_saf_demo column order: variable, stat_label, placebo, drug_100, drug_50, Total
   # Spanning c("placebo", "Total") leaves drug_100 and drug_50 between them.
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Bad" = c("placebo", "Total"))
   expect_error(
     tabular:::engine_headers(spec),
@@ -66,7 +66,7 @@ test_that("engine_headers() errors when a band's leaves are non-contiguous", {
 })
 
 test_that("engine_headers() error names the intruder column", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Bad" = c("placebo", "Total"))
   err <- tryCatch(
     tabular:::engine_headers(spec),
@@ -79,7 +79,7 @@ test_that("engine_headers() error names the intruder column", {
 # ---- arbitrary nesting depth ---------------------------------------
 
 test_that("engine_headers() preserves depth across arbitrary nesting", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers(
       "L1" = list(
         "L2" = list(
@@ -99,7 +99,7 @@ test_that("engine_headers() preserves depth across arbitrary nesting", {
 # ---- two top-level bands at depth 1 --------------------------------
 
 test_that("engine_headers() handles two top-level bands at same depth", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers(
       "Left" = c("variable", "stat_label"),
       "Right" = c("placebo", "drug_100", "drug_50", "Total")
@@ -115,7 +115,7 @@ test_that("engine_headers() handles two top-level bands at same depth", {
 # ---- span_cols preserved -------------------------------------------
 
 test_that("engine_headers() preserves the spanned column names", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Arms" = c("placebo", "drug_50", "drug_100", "Total"))
   out <- tabular:::engine_headers(spec)
   expect_identical(
@@ -129,8 +129,8 @@ test_that("engine_headers() preserves the spanned column names", {
 # ---- passthrough leaves in the flattened output --------------------
 
 test_that("engine_headers() emits NA label for a passthrough leaf", {
-  # saf_demo column order: variable, stat_label, placebo, drug_100, drug_50, Total
-  spec <- tabular(saf_demo) |>
+  # cdisc_saf_demo column order: variable, stat_label, placebo, drug_100, drug_50, Total
+  spec <- tabular(cdisc_saf_demo) |>
     headers(
       "Top" = list(
         "Inner" = c("placebo", "drug_100"),
@@ -150,7 +150,7 @@ test_that("engine_headers() emits NA label for a passthrough leaf", {
 })
 
 test_that("engine_headers() error snapshot", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Bad" = c("placebo", "Total"))
   expect_snapshot(error = TRUE, tabular:::engine_headers(spec))
 })
@@ -164,7 +164,7 @@ test_that(".band_labels_for_depth() returns all-NA when no bands exist", {
 })
 
 test_that(".band_labels_for_depth() labels each spanned visible column", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Treatment" = c("placebo", "drug_50", "drug_100", "Total"))
   headers <- tabular:::engine_headers(spec)
   out <- tabular:::.band_labels_for_depth(
@@ -179,7 +179,7 @@ test_that(".band_labels_for_depth() labels each spanned visible column", {
 })
 
 test_that(".band_labels_for_depth() silently drops hidden columns inside a span", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Treatment" = c("placebo", "drug_50", "drug_100", "Total"))
   headers <- tabular:::engine_headers(spec)
   out <- tabular:::.band_labels_for_depth(
@@ -191,7 +191,7 @@ test_that(".band_labels_for_depth() silently drops hidden columns inside a span"
 })
 
 test_that(".band_labels_for_depth() returns NA for columns not in any span", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("Arms" = c("placebo", "drug_50", "drug_100"))
   headers <- tabular:::engine_headers(spec)
   out <- tabular:::.band_labels_for_depth(
@@ -203,7 +203,7 @@ test_that(".band_labels_for_depth() returns NA for columns not in any span", {
 })
 
 test_that(".band_labels_for_depth() handles two peer bands at same depth", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers(
       "A" = "placebo",
       "B" = c("drug_50", "drug_100")
@@ -218,7 +218,7 @@ test_that(".band_labels_for_depth() handles two peer bands at same depth", {
 })
 
 test_that(".band_labels_for_depth() selects per-depth bands independently", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers(
       "Treatment" = list(
         "Control" = "placebo",

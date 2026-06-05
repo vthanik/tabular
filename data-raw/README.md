@@ -2,11 +2,11 @@
 
 Source scripts for the five lazy-loaded demo datasets in `data/`:
 
-- `saf_demo` — Demographics, Safety Population
-- `saf_aeoverall` — High-level AE summary
-- `saf_aesocpt` — AEs by SOC and PT
-- `saf_vital` — Vital-signs summary
-- `eff_resp` — Best Overall Response + ORR / DCR
+- `cdisc_saf_demo` — Demographics, Safety Population
+- `cdisc_saf_ae` — High-level AE summary
+- `cdisc_saf_aesocpt` — AEs by SOC and PT
+- `cdisc_saf_vital` — Vital-signs summary
+- `cdisc_eff_resp` — Best Overall Response + ORR / DCR
 
 ## Build
 
@@ -36,7 +36,7 @@ install.packages(c("pharmaverseadam", "dplyr", "tidyr", "tibble",
   integer vector (named by the same arm conventions plus `Total`).
 - Each `.rda` capped at 50 KB by the size guard at the bottom of
   `bundle-demo.R`. If size grows, trim rows (e.g. top-N SOCs in
-  `saf_aesocpt`) rather than columns.
+  `cdisc_saf_aesocpt`) rather than columns.
 - Values are illustrative — they're derived from `pharmaverseadam`'s
   synthetic CDISC Pilot 03 dataset, not real subjects.
 

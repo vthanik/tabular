@@ -50,7 +50,7 @@
 #' ```r
 #' # Three-stage build: label/usage first, alignment second, width
 #' # third. Each stage leaves earlier fields intact.
-#' tabular(saf_demo) |>
+#' tabular(cdisc_saf_demo) |>
 #'   cols(variable = col_spec(usage = "group", label = "Parameter")) |>
 #'   cols(variable = col_spec(align = "left")) |>
 #'   cols(variable = col_spec(width = 2.0))
@@ -89,7 +89,7 @@
 #'
 #'   ```r
 #'   # Decimal-align every arm column without listing each by name.
-#'   tabular(saf_demo) |>
+#'   tabular(cdisc_saf_demo) |>
 #'     cols(
 #'       variable   = col_spec(usage = "group", label = "Parameter"),
 #'       stat_label = col_spec(label = "Statistic"),
@@ -105,13 +105,13 @@
 #' #
 #' # Demographics table where the row-label columns sit on the left
 #' # and the four treatment-arm columns embed BigN in the header
-#' # label (drawn inline from the bundled `saf_n` data frame). Every
+#' # label (drawn inline from the bundled `cdisc_saf_n` data frame). Every
 #' # arm column is decimal-aligned so mixed-format cells like
 #' # "5 (3.2%)" line up on the decimal mark.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c(
 #'     "Table 14.1.1",
 #'     "Demographics and Baseline Characteristics",
@@ -140,9 +140,9 @@
 #'   "ORR (CR + PR)", "CBR (CR + PR + SD)",
 #'   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95% CI (Clopper-Pearson)"
 #' )
-#' eff <- eff_resp
+#' eff <- cdisc_eff_resp
 #' eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
-#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+#' ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 #'
 #' tabular(
 #'   eff,
@@ -173,7 +173,7 @@
 #' # once the user knows the page geometry; the repeat-call merge
 #' # preserves prior attributes (label, indent_by, align, visible)
 #' # without restating them.
-#' ae <- saf_aesocpt
+#' ae <- cdisc_saf_aesocpt
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #'
@@ -211,7 +211,7 @@
 #' # declares each column's display role. The same pattern handles
 #' # any post-pivot derivation (`pivot_across() |> mutate(...) |>
 #' # tabular()`).
-#' ae <- saf_aeoverall
+#' ae <- cdisc_saf_ae
 #' ae$active <- paste0(ae$drug_50, " / ", ae$drug_100)
 #'
 #' tabular(
@@ -417,10 +417,10 @@ cols <- function(.spec, ..., .default = NULL) {
 #' # name vector (`grep()` against the data) and given one shared
 #' # decimal-alignment spec, while the two row-label columns keep
 #' # their own roles set with `cols()`.
-#' arm_cols <- grep("^placebo$|^drug_|^Total$", names(saf_demo), value = TRUE)
+#' arm_cols <- grep("^placebo$|^drug_|^Total$", names(cdisc_saf_demo), value = TRUE)
 #'
 #' tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c(
 #'     "Table 14.1.1",
 #'     "Demographics and Baseline Characteristics",
@@ -445,7 +445,7 @@ cols <- function(.spec, ..., .default = NULL) {
 #'   "ORR (CR + PR)", "CBR (CR + PR + SD)",
 #'   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95% CI (Clopper-Pearson)"
 #' )
-#' eff <- eff_resp
+#' eff <- cdisc_eff_resp
 #' eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
 #'
 #' tabular(

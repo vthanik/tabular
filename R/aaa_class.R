@@ -1151,7 +1151,7 @@ tabular_grid <- S7::new_class(
 #'   spec
 #' }
 #'
-#' demo <- tabular(saf_demo, titles = "Demographics")
+#' demo <- tabular(cdisc_saf_demo, titles = "Demographics")
 #' is_tabular_spec(demo)         # TRUE
 #' is_tabular_spec("not a spec") # FALSE — does not raise
 #' add_safety_footnote(demo)
@@ -1162,10 +1162,10 @@ tabular_grid <- S7::new_class(
 #' # gives a clear stack trace if a verb silently returns the wrong
 #' # type. Predicates are cheap (single S7 dispatch each) and never
 #' # error, so they are safe to leave in pipelines during dev.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' spec <- tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c("Table 14.1.1", "Demographics",
 #'              "Safety Population")
 #' ) |>

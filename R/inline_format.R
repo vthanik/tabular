@@ -147,10 +147,10 @@
 #' # line italicises "Safety Population" via `md("*...*")` for a visible
 #' # contrast; the first footnote carries a Pandoc-style superscript
 #' # marker `^a^` that the backends render as a true superscript.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
-#'   saf_aesocpt,
+#'   cdisc_saf_aesocpt,
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by System Organ Class and Preferred Term",
@@ -178,10 +178,10 @@
 #' # a Markdown link. HTML / PDF / DOCX render as clickable; RTF /
 #' # LaTeX render the link text with the URL inline (backend
 #' # decides).
-#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+#' ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 #'
 #' tabular(
-#'   eff_resp,
+#'   cdisc_eff_resp,
 #'   titles = c(
 #'     "Table 14.2.1",
 #'     "Best Overall Response",
@@ -265,10 +265,10 @@ md <- function(text) {
 #' # Demographics table title with the population subset shaded
 #' # red. The HTML wrapper carries an inline CSS style; backends
 #' # translate (RTF: \cf, LaTeX: \textcolor, HTML: inline style).
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c(
 #'     "Table 14.1.1",
 #'     "Demographics",
@@ -283,7 +283,7 @@ md <- function(text) {
 #' # would be awkward (e.g. attributes that Markdown does not
 #' # surface).
 #' tabular(
-#'   saf_aeoverall,
+#'   cdisc_saf_ae,
 #'   titles = c("Table 14.3.0", "Overall Adverse Event Summary"),
 #'   footnotes = c(
 #'     html('See <a href="https://www.meddra.org/">MedDRA</a> coding<sup>1</sup>.')

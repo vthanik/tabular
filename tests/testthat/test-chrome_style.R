@@ -124,7 +124,7 @@ test_that("engine_chrome_borders() injects the booktabs chrome defaults", {
   # by default: the body `bottomrule` closes the data->footnote
   # boundary (the two are mutually exclusive). page-band and subgroup
   # regions stay NULL until set.
-  spec <- tabular(saf_demo)
+  spec <- tabular(cdisc_saf_demo)
   cs <- tabular:::engine_chrome_borders(spec)
   expect_false(is.null(cs$borders$header_top))
   expect_false(is.null(cs$borders$header_bottom))
@@ -134,7 +134,7 @@ test_that("engine_chrome_borders() injects the booktabs chrome defaults", {
 })
 
 test_that("rules knob targets each header / footnote chrome region distinctly", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     preset(
       rules = list(
         toprule = brdr(color = "#000000"),
@@ -151,7 +151,7 @@ test_that("rules knob targets each header / footnote chrome region distinctly", 
 })
 
 test_that("style(cells_subgroup_labels) sets the subgroup chrome border", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(
       border_bottom = brdr(width = 0.75, color = "#cc0000"),
       .at = cells_subgroup_labels()
@@ -162,7 +162,7 @@ test_that("style(cells_subgroup_labels) sets the subgroup chrome border", {
 })
 
 test_that("rules knob honours the 'none' explicit-clear sentinel on midrule", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     preset(rules = list(midrule = "none"))
   cs <- tabular:::engine_chrome_borders(spec)
   expect_equal(cs$borders$header_bottom$style, "none")
@@ -173,7 +173,7 @@ test_that("rules knob honours the 'none' explicit-clear sentinel on midrule", {
 # ---------------------------------------------------------------------
 
 test_that("as_grid() puts chrome_style on grid@metadata", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     preset(rules = list(midrule = brdr(width = 1, color = "#000000")))
   grid <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   cs <- grid@metadata$chrome_style

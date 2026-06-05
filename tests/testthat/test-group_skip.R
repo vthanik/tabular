@@ -70,7 +70,7 @@ test_that(".effective_group_skip() honours explicit TRUE / FALSE", {
 # ---------------------------------------------------------------------
 
 test_that("as_grid() default header_row group injects blanks between sections", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
@@ -85,7 +85,7 @@ test_that("as_grid() default header_row group injects blanks between sections", 
 })
 
 test_that("explicit group_skip = FALSE on a header_row column suppresses blanks", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
         usage = "group",
@@ -104,7 +104,7 @@ test_that("explicit group_skip = FALSE on a header_row column suppresses blanks"
 })
 
 test_that("explicit group_skip = TRUE on a 'column' group injects blanks too", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
         usage = "group",
@@ -129,7 +129,7 @@ test_that("explicit group_skip = TRUE on a 'column' group injects blanks too", {
 })
 
 test_that("blank row sits BEFORE the header row of the next group", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),

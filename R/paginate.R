@@ -154,10 +154,10 @@
 #' # from the preset's orientation + font_size + paper size and from
 #' # the title / footnote / header line counts on the spec — no
 #' # manual rows-per-page knob to keep in sync.
-#' ae <- saf_aesocpt
+#' ae <- cdisc_saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
 #'   ae,
@@ -200,9 +200,9 @@
 #'   "ORR (CR + PR)", "CBR (CR + PR + SD)",
 #'   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95% CI (Clopper-Pearson)"
 #' )
-#' eff <- eff_resp
+#' eff <- cdisc_eff_resp
 #' eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
-#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+#' ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 #'
 #' tabular(
 #'   eff,
@@ -233,7 +233,7 @@
 #' # a group landing alone at the top of the next page; the
 #' # continuation marker prints on every page after the first.
 #' tabular(
-#'   saf_vital,
+#'   cdisc_saf_vital,
 #'   titles = c("Table 14.4.1", "Vital Signs Summary at Each Visit")
 #' ) |>
 #'   cols(
@@ -260,7 +260,7 @@
 #' # every horizontal page) so the SOC / PT label band re-appears
 #' # alongside whichever arm columns land on each panel.
 #' tabular(
-#'   saf_aesocpt,
+#'   cdisc_saf_aesocpt,
 #'   titles = c("Table 14.3.1", "AEs by SOC and PT (wide-page split)")
 #' ) |>
 #'   cols(

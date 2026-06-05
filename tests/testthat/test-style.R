@@ -6,7 +6,7 @@
 # ---- happy path -----------------------------------------------------
 
 test_that("style() stores one style_layer per call", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(bold = TRUE, .at = cells_body(where = TRUE))
   expect_true(is_style_spec(spec@styles))
   expect_length(spec@styles@layers, 1L)
@@ -14,7 +14,7 @@ test_that("style() stores one style_layer per call", {
 })
 
 test_that("style() captures `at` as a tabular_location", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(bold = TRUE, .at = cells_body(where = TRUE))
   loc <- spec@styles@layers[[1]]@location
   expect_true(is_tabular_location(loc))
@@ -22,7 +22,7 @@ test_that("style() captures `at` as a tabular_location", {
 })
 
 test_that("style() builds a style_node from variadic attrs", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(
       bold = TRUE,
       color = "red",
@@ -39,7 +39,7 @@ test_that("style() builds a style_node from variadic attrs", {
 # ---- multiple calls accumulate --------------------------------------
 
 test_that("style() called twice accumulates layers", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(bold = TRUE, .at = cells_body(where = TRUE)) |>
     style(italic = TRUE, .at = cells_body(where = TRUE))
   expect_length(spec@styles@layers, 2L)
@@ -49,14 +49,14 @@ test_that("style() called twice accumulates layers", {
 
 test_that("style() errors when no attributes supplied", {
   expect_error(
-    tabular(saf_demo) |> style(.at = cells_body(where = TRUE)),
+    tabular(cdisc_saf_demo) |> style(.at = cells_body(where = TRUE)),
     class = "tabular_error_input"
   )
 })
 
 test_that("style() warns on an unknown attribute name", {
   expect_warning(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       style(jiggle = TRUE, .at = cells_body(where = TRUE)),
     "jiggle"
   )
@@ -65,7 +65,7 @@ test_that("style() warns on an unknown attribute name", {
 test_that("style() drops unknown attrs from the constructed node", {
   withr::local_options(list(rlang_warning_verbosity = "quiet"))
   suppressWarnings({
-    spec <- tabular(saf_demo) |>
+    spec <- tabular(cdisc_saf_demo) |>
       style(bold = TRUE, jiggle = TRUE, .at = cells_body(where = TRUE))
   })
   node <- spec@styles@layers[[1]]@style
@@ -81,14 +81,14 @@ test_that("style() rejects non-spec / non-template first argument", {
 
 test_that("style() errors when .at is not a tabular_location", {
   expect_error(
-    tabular(saf_demo) |> style(bold = TRUE, .at = "not a location"),
+    tabular(cdisc_saf_demo) |> style(bold = TRUE, .at = "not a location"),
     class = "tabular_error_input"
   )
 })
 
 test_that("style() rejects unnamed attribute args", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       style(TRUE, .at = cells_body(where = TRUE)),
     class = "tabular_error_input"
   )
@@ -99,23 +99,23 @@ test_that("style() rejects unnamed attribute args", {
 test_that("style() error snapshots", {
   expect_snapshot(
     error = TRUE,
-    tabular(saf_demo) |> style(.at = cells_body(where = TRUE))
+    tabular(cdisc_saf_demo) |> style(.at = cells_body(where = TRUE))
   )
   expect_snapshot(
     error = TRUE,
-    tabular(saf_demo) |> style(bold = TRUE, .at = "not a location")
+    tabular(cdisc_saf_demo) |> style(bold = TRUE, .at = "not a location")
   )
 })
 
 test_that("a whole-number double blank_above is coerced to integer", {
-  spec <- tabular(saf_demo, titles = "T") |>
+  spec <- tabular(cdisc_saf_demo, titles = "T") |>
     style(blank_above = 2, .at = cells_title())
   node <- spec@styles@layers[[1L]]@style
   expect_identical(node@blank_above, 2L)
 })
 
 test_that("a scalar padding broadcasts to all four per-side fields", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(padding = 3, .at = cells_body())
   node <- spec@styles@layers[[1L]]@style
   expect_identical(node@padding_top, 3)
@@ -125,7 +125,7 @@ test_that("a scalar padding broadcasts to all four per-side fields", {
 })
 
 test_that("a named padding vector sets only the listed per-side fields", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     style(padding = c(top = 1, left = 2), .at = cells_body())
   node <- spec@styles@layers[[1L]]@style
   expect_identical(node@padding_top, 1)
@@ -136,7 +136,7 @@ test_that("a named padding vector sets only the listed per-side fields", {
 
 test_that("style() rejects the legacy nested-list padding form (#knob-shape)", {
   expect_error(
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       style(padding = list(top = 5, bottom = 3), .at = cells_body()),
     class = "tabular_error_input"
   )

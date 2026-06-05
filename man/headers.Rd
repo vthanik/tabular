@@ -85,10 +85,10 @@ column."
 # spanning the four arm columns and the Total column. The
 # row-label column (`soc`) sits to the left of the band with no
 # header covering it — the canonical clinical layout.
-ae <- saf_aesocpt
+ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
   ae,
@@ -127,9 +127,9 @@ bor_levels <- c(
   "ORR (CR + PR)", "CBR (CR + PR + SD)",
   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95\% CI (Clopper-Pearson)"
 )
-eff <- eff_resp
+eff <- cdisc_eff_resp
 eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
-ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 
 tabular(
   eff,
@@ -164,7 +164,7 @@ tabular(
 # band, and the arm columns sit on the right under "Treatment
 # Group". Demonstrates multiple top-level bands in one call --
 # bands render side by side in the order declared.
-vit <- saf_vital
+vit <- cdisc_saf_vital
 tabular(vit, titles = c("Table 14.4.1", "Vital Signs Summary")) |>
   cols(
     param      = col_spec(usage = "group", label = "Parameter"),
@@ -187,8 +187,8 @@ tabular(vit, titles = c("Table 14.4.1", "Vital Signs Summary")) |>
 # bands carry the per-arm column labels. Each child within a
 # `list(...)` may itself be a `list(...)` — bands nest to
 # arbitrary depth using nested list literals.
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
-tabular(saf_demo, titles = "Demographics, hierarchical headers") |>
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+tabular(cdisc_saf_demo, titles = "Demographics, hierarchical headers") |>
   cols(
     variable   = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),

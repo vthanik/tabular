@@ -15,7 +15,7 @@
 # ---------------------------------------------------------------------
 
 bold_red_spec <- function() {
-  tabular(saf_demo) |>
+  tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
@@ -54,7 +54,7 @@ test_that("HTML body cells consume bold/italic/underline/color/background/font_f
 })
 
 test_that("HTML body cells with no style overrides emit no inline style attribute", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),

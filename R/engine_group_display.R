@@ -262,7 +262,7 @@ engine_group_display <- function(
   # `data_depth = length(bands)` is added to `cells_indent[, host_col]`
   # for every body row -- UNLESS the host column itself declares
   # `indent_by`, in which case the user's per-row depth wins and the
-  # auto-contribution is suppressed (preserves saf_aesocpt's SOC/PT
+  # auto-contribution is suppressed (preserves cdisc_saf_aesocpt's SOC/PT
   # rendering exactly).
   #
   # Per-column `group_skip` (TRUE / FALSE / NA-defaulting-via-

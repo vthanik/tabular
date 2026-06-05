@@ -37,9 +37,9 @@ test_that("emit(.tex) writes a non-empty self-contained .tex file", {
   expect_match(txt, "\\end{document}", fixed = TRUE)
 })
 
-test_that("emit(.tex) renders saf_demo golden pipeline end to end", {
+test_that("emit(.tex) renders cdisc_saf_demo golden pipeline end to end", {
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
@@ -715,9 +715,9 @@ test_that("backend_latex() is callable directly with a grid + file", {
 # Snapshot pin on the golden pipeline
 # ---------------------------------------------------------------------
 
-test_that("saf_demo golden pipeline matches the pinned .tex snapshot", {
+test_that("cdisc_saf_demo golden pipeline matches the pinned .tex snapshot", {
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
@@ -1672,7 +1672,7 @@ test_that("preset(padding=list(header=...)) emits \\SetRow rowsep (#thread-C)", 
 })
 
 test_that("cells_pagehead band border drives headrulewidth + per-slot props in LaTeX (#thread-G)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     preset(pagehead = list(center = "Draft")) |>
     style(
       bold = TRUE,
