@@ -245,6 +245,11 @@ test_that("the same id shares one marker and one block line", {
 })
 
 test_that("markers are byte-identical across all five backends", {
+  # skip_on_cran: this renders all five backends to compare footnote
+  # markers byte-for-byte -- a thorough cross-backend sweep that is the
+  # single slowest non-compile test on CRAN's Windows farm. covr runs it
+  # under NOT_CRAN, so coverage is unaffected; CI exercises every backend.
+  skip_on_cran()
   spec <- mk_fn_spec() |>
     footnote("Note.", .at = cells_headers(j = "Total"))
   rd <- function(ext, fmt) {

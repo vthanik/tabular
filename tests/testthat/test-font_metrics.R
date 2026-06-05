@@ -196,6 +196,11 @@ test_that("ZapfDingbats AFM is bundled with > 100 glyphs", {
 })
 
 test_that(".agl_latin1 entries match a real glyph in every Core-12 AFM", {
+  # skip_on_cran: an exhaustive glyph-list-vs-AFM data-integrity sweep
+  # across every Core-12 font, second-slowest non-compile test on CRAN's
+  # Windows farm. covr runs it under NOT_CRAN (coverage unaffected); CI
+  # exercises the full sweep on every push.
+  skip_on_cran()
   # The bridge is only as good as the AFM coverage. Every name in
   # .agl_latin1 must resolve to a non-missing width in every
   # Latin-text Core-12 font (Times, Helvetica, Courier × 4). Symbol
