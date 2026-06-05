@@ -67,24 +67,28 @@ container.
 ## Examples
 
 ``` r
-# ---- Example 1: Embed two tables in a custom htmltools page ----
-#
-# Compose two tabular tables in one parent container. `as.tags(spec)`
-# is the entry point `print()` and `knit_print()` use under the hood.
-# Wrap the `tagList` in `htmltools::browsable()` so it renders as live
-# HTML in a viewer / Quarto chunk / pkgdown page instead of printing
-# its source, the same convention `gt` and `flextable` follow.
+# `as.tags()` converts a spec into an htmltools tagList you can drop into
+# a custom HTML page, a Shiny UI, or a Quarto / Rmd chunk. `print()` and
+# `knit_print()` call it under the hood, so you seldom call it directly --
+# but it is the seam for composing several tables into one container.
 s1 <- tabular(cdisc_saf_demo, titles = "Demographics")
 s2 <- tabular(cdisc_saf_ae, titles = "AE overall")
 
-if (requireNamespace("htmltools", quietly = TRUE)) {
-  htmltools::browsable(
-    htmltools::tagList(
-      htmltools::as.tags(s1),
-      htmltools::as.tags(s2)
-    )
-  )
-}
+# Compose two tables into one parent tagList. Autoprinting `tables` in a
+# Quarto / Rmd chunk renders both inline (via knit_print); embed it with
+# htmltools::save_html() or a Shiny renderUI().
+tables <- htmltools::tagList(
+  htmltools::as.tags(s1),
+  htmltools::as.tags(s2)
+)
+
+# The common path is autoprinting a spec: the viewer at an interactive
+# prompt, an inline live table under pkgdown / knitr, and HTML source
+# under R CMD check. This is the gt / flextable / tinytable convention --
+# end on a bare table object and let the registered print method choose,
+# with no browsable() / if (interactive()) wrapper, so R CMD check never
+# launches a browser.
+s1
 
 #tabular-5cd051e19e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-5cd051e19e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
