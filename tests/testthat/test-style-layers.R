@@ -142,7 +142,8 @@ test_that("at must be a tabular_location", {
     class = "tabular_error_input"
   )
   expect_error(
-    tabular(cdisc_saf_demo) |> style(bold = TRUE, .at = list(surface = "body")),
+    tabular(cdisc_saf_demo) |>
+      style(bold = TRUE, .at = list(surface = "body")),
     class = "tabular_error_input"
   )
 })

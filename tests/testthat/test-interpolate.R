@@ -276,6 +276,7 @@ test_that("preset page chrome tokens are NOT caller-env interpolated", {
 })
 
 test_that("subgroup label keeps its {col} data-frame template", {
-  spec <- tabular(cdisc_saf_subgroup) |> subgroup(by = "sex", label = "Sex: {sex}")
+  spec <- tabular(cdisc_saf_subgroup) |>
+    subgroup(by = "sex", label = "Sex: {sex}")
   expect_identical(spec@subgroup@label, "Sex: {sex}")
 })

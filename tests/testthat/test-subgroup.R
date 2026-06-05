@@ -593,7 +593,8 @@ test_that("big_n tolerates an extra combo absent from the data", {
 
 test_that("big_n requires a non-empty by", {
   expect_error(
-    tabular(cdisc_saf_subgroup) |> subgroup(character(), big_n = .bign_arms()),
+    tabular(cdisc_saf_subgroup) |>
+      subgroup(character(), big_n = .bign_arms()),
     class = "tabular_error_input"
   )
 })

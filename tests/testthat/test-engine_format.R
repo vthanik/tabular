@@ -251,7 +251,10 @@ test_that("engine_format() handles the bundled cdisc_saf_demo without erroring",
       drug_100 = col_spec(label = "Drug 100\nN=72")
     )
   out <- tabular:::engine_format(spec)
-  expect_equal(dim(out$cells_text), c(nrow(cdisc_saf_demo), ncol(cdisc_saf_demo)))
+  expect_equal(
+    dim(out$cells_text),
+    c(nrow(cdisc_saf_demo), ncol(cdisc_saf_demo))
+  )
   expect_length(out$titles_ast, 2L)
   expect_length(out$footnotes_ast, 1L)
   expect_equal(names(out$col_labels_ast), names(cdisc_saf_demo))

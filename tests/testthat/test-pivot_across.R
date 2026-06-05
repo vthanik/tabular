@@ -172,7 +172,11 @@ test_that("Other ^\\.\\. internal rows are filtered", {
 
 test_that("Single-string statistic applies to all variables", {
   # Use ard that only has categorical rows so n/p are available
-  ard <- cdisc_saf_demo_ard[cdisc_saf_demo_ard$context == "categorical", , drop = FALSE]
+  ard <- cdisc_saf_demo_ard[
+    cdisc_saf_demo_ard$context == "categorical",
+    ,
+    drop = FALSE
+  ]
   out <- pivot_across(ard, statistic = "{n} ({p}%)")
   expect_s3_class(out, "data.frame")
   expect_true(nrow(out) >= 1L)
@@ -204,7 +208,8 @@ test_that("Named-list-by-variable: per-variable spec wins, default falls through
   # everything; WEIGHT/HEIGHT/BMI now also live in cdisc_saf_demo_ard and need
   # their own continuous rule which is not the scenario under test here.
   ard <- cdisc_saf_demo_ard[
-    cdisc_saf_demo_ard$variable %in% c("AGE", "AGEGR1", "SEX", "RACE", "ETHNIC"),
+    cdisc_saf_demo_ard$variable %in%
+      c("AGE", "AGEGR1", "SEX", "RACE", "ETHNIC"),
     ,
     drop = FALSE
   ]
@@ -1506,6 +1511,9 @@ test_that("a default = key suppresses the unmatched-context warning (#B1)", {
 
 test_that("a hierarchical ARD never warns even when keys do not match (#B1)", {
   expect_no_warning(
-    pivot_across(cdisc_saf_aesocpt_ard, statistic = list(continuous = "{mean}"))
+    pivot_across(
+      cdisc_saf_aesocpt_ard,
+      statistic = list(continuous = "{mean}")
+    )
   )
 })
