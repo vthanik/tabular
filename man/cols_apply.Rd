@@ -46,6 +46,32 @@ field on \code{.col_spec} overrides; a default-valued field leaves any
 prior attribute on the matched column intact. Set the shared rule
 across arms first, then refine an individual arm with a later
 \code{\link[=cols]{cols()}} call (or the reverse).
+
+\strong{Per-column label token.} A \code{label} that references \code{{.name}} (or
+its alias \code{{.col}}) inside a \code{{expr}} is resolved \emph{per matched
+column}, with \code{.name} and \code{.col} both bound to that column's name.
+This makes a variable-N arm header a single declarative call instead
+of a hand-written loop. The rest of the \code{{expr}} evaluates in the
+calling environment, so a per-arm BigN looked up from a named vector
+works directly:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{n <- c(placebo = 86, drug_50 = 84, drug_100 = 84)
+cols_apply(
+  spec, c("placebo", "drug_50", "drug_100"),
+  col_spec(label = "\{.name\}\\n(N=\{n[.name]\})", align = "decimal")
+)
+# placebo  -> "placebo\\n(N=86)" ; drug_50 -> "drug_50\\n(N=84)" ; ...
+}\if{html}{\out{</div>}}
+
+The token is a plain-string feature; a label wrapped in \code{\link[=md]{md()}} /
+\code{\link[=html]{html()}} is parsed eagerly and does not interpolate. A failing
+token expression aborts naming the offending column.
+
+\strong{\code{width} merge.} \code{width}'s default sentinel for the merge is
+\code{"auto"}: a later \code{cols()} / \code{cols_apply()} call carrying the default
+\code{width = "auto"} leaves a previously pinned width intact (only an
+explicit non-\code{"auto"} width overrides). Apply a shared width last to
+broadcast it across arms.
 }
 \examples{
 # ---- Example 1: Decimal-align every arm column by name vector ----
@@ -54,10 +80,10 @@ across arms first, then refine an individual arm with a later
 # name vector (`grep()` against the data) and given one shared
 # decimal-alignment spec, while the two row-label columns keep
 # their own roles set with `cols()`.
-arm_cols <- grep("^placebo$|^drug_|^Total$", names(saf_demo), value = TRUE)
+arm_cols <- grep("^placebo$|^drug_|^Total$", names(cdisc_saf_demo), value = TRUE)
 
 tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = c(
     "Table 14.1.1",
     "Demographics and Baseline Characteristics",
@@ -82,7 +108,7 @@ bor_levels <- c(
   "ORR (CR + PR)", "CBR (CR + PR + SD)",
   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95\% CI (Clopper-Pearson)"
 )
-eff <- eff_resp
+eff <- cdisc_eff_resp
 eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
 
 tabular(

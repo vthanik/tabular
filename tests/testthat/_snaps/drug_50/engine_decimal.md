@@ -1,4 +1,4 @@
-# snapshot: per-section all four arm columns (full saf_demo)
+# snapshot: per-section all four arm columns (full cdisc_saf_demo)
 
     Code
       cat(sprintf("=== %s ===\n", arm), out, sep = "\n")

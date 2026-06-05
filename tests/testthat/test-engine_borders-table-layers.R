@@ -111,7 +111,7 @@ test_that("rules='frame' draws L/R structurally via the manifest, not per-cell (
   # backend from the manifest (so they span the synthesised spanner /
   # blank / group-header rows), NOT as per-cell stamps that would only
   # reach data rows. So no per-cell L/R stamp lands at all.
-  spec <- tabular(saf_demo, titles = "t", footnotes = "f") |>
+  spec <- tabular(cdisc_saf_demo, titles = "t", footnotes = "f") |>
     cols(
       variable = col_spec(usage = "group", group_display = "header_row"),
       stat_label = col_spec(align = "left"),

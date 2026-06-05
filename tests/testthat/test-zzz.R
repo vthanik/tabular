@@ -34,7 +34,7 @@ test_that("print(tabular_spec) renders the HTML preview, not the S7 fallback", {
   # Contract test for the user-facing preview. (Green under load_all
   # whether or not the install-only bug above is fixed; documents the
   # behaviour the fix protects when installed.)
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group"),
       stat_label = col_spec(label = "Statistic"),

@@ -223,7 +223,7 @@ test_that("col_spec label is interpolated at call time", {
 
 test_that("col_spec resolves caller variables through cols() nesting", {
   n <- stats::setNames(c(86L), "placebo")
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(placebo = col_spec(label = "Placebo (N={n['placebo']})"))
   ph <- Filter(function(c) identical(c@name, "placebo"), spec@cols)[[1L]]
   expect_identical(ph@label, "Placebo (N=86)")
@@ -237,7 +237,7 @@ test_that("col_spec label keeps md() class (not interpolated)", {
 test_that("tabular titles and footnotes are interpolated elementwise", {
   n <- 3L
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "N={n}"),
     footnotes = "Total = {n * 2}"
   )
@@ -247,16 +247,16 @@ test_that("tabular titles and footnotes are interpolated elementwise", {
 
 test_that("footnote() text is interpolated, md() untouched", {
   ref <- "RECIST 1.1"
-  spec <- tabular(saf_demo) |> footnote("Per {ref}.")
+  spec <- tabular(cdisc_saf_demo) |> footnote("Per {ref}.")
   expect_identical(spec@footnote_refs[[1L]]$text, "Per RECIST 1.1.")
 
-  spec2 <- tabular(saf_demo) |> footnote(md("Per {ref}."))
+  spec2 <- tabular(cdisc_saf_demo) |> footnote(md("Per {ref}."))
   expect_s3_class(spec2@footnote_refs[[1L]]$text, "from_markdown")
 })
 
 test_that("headers band labels interpolate while error path stays raw", {
   grp <- "Treatment"
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     headers("{grp} Group" = c("placebo", "drug_50", "drug_100", "Total"))
   expect_identical(spec@headers[[1L]]@label, "Treatment Group")
 })
@@ -271,11 +271,12 @@ test_that("preset page chrome tokens are NOT caller-env interpolated", {
   # Wrong wiring would eval `page` as a caller variable and abort
   # (unbound symbol). Clean construction proves the token stays literal.
   expect_no_error(
-    tabular(saf_demo) |> preset(pagehead = list(right = "{page}"))
+    tabular(cdisc_saf_demo) |> preset(pagehead = list(right = "{page}"))
   )
 })
 
 test_that("subgroup label keeps its {col} data-frame template", {
-  spec <- tabular(saf_subgroup) |> subgroup(by = "sex", label = "Sex: {sex}")
+  spec <- tabular(cdisc_saf_subgroup) |>
+    subgroup(by = "sex", label = "Sex: {sex}")
   expect_identical(spec@subgroup@label, "Sex: {sex}")
 })

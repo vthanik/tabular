@@ -96,10 +96,10 @@
 #'
 #' @examples
 #' # ---- AE table by SOC and PT with per-row indent + styled hierarchy ----
-#' # `saf_aesocpt` ships with `indent_level` (0 on overall/SOC rows,
+#' # `cdisc_saf_aesocpt` ships with `indent_level` (0 on overall/SOC rows,
 #' # 1 on PT rows); `col_spec(indent_by = "indent_level")` drives the
 #' # PT indent on the `label` column.
-#' tabular(saf_aesocpt, titles = "Adverse Events by SOC / PT",
+#' tabular(cdisc_saf_aesocpt, titles = "Adverse Events by SOC / PT",
 #'         footnotes = "") |>
 #'   cols(
 #'     label    = col_spec(label = "Category", align = "left",
@@ -124,7 +124,7 @@
 #' # Each layer changes the surface VISIBLY from its default: a coloured
 #' # rule under the header band, a dark-blue header text, a left-aligned
 #' # title (default is centred), and a blank line above + below the title.
-#' tabular(saf_demo) |>
+#' tabular(cdisc_saf_demo) |>
 #'   style(color = "#1a5276", .at = cells_headers()) |>
 #'   style(border_bottom = brdr("thick", "double", "#1a5276"),
 #'         .at = cells_headers()) |>
@@ -133,7 +133,7 @@
 #'         .at = cells_title())
 #'
 #' # ---- Table-wide borders ----
-#' tabular(saf_demo) |>
+#' tabular(cdisc_saf_demo) |>
 #'   style(border = brdr("medium"),
 #'         .at = cells_table(side = "outer")) |>
 #'   style(border_top = brdr("hairline", "dotted"),

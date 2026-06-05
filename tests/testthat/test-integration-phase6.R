@@ -128,7 +128,7 @@ test_that("integration spec composes through all Phase 6 surfaces (Markdown)", {
 
 test_that("demographics frame + stripe + group + page-band styling renders on all backends", {
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics"),
     footnotes = md("Source: **ADSL**.")
   ) |>

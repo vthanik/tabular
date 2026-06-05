@@ -1,7 +1,7 @@
 # subgroup() unknown-var error message names the bad column
 
     Code
-      subgroup(tabular(saf_demo), "not_a_column")
+      subgroup(tabular(cdisc_saf_demo), "not_a_column")
     Condition
       Error:
       ! `by` references column not present in .spec@data: "not_a_column".
@@ -10,7 +10,7 @@
 # subgroup() template-unknown-col error message names the bad ref
 
     Code
-      subgroup(tabular(saf_demo), "variable", label = "Cohort: {nonexistent}")
+      subgroup(tabular(cdisc_saf_demo), "variable", label = "Cohort: {nonexistent}")
     Condition
       Error:
       ! `label` references column not in .spec@data: "nonexistent".

@@ -1,7 +1,7 @@
 # style() error snapshots
 
     Code
-      style(tabular(saf_demo), .at = cells_body(where = TRUE))
+      style(tabular(cdisc_saf_demo), .at = cells_body(where = TRUE))
     Condition
       Error:
       ! Specify at least one style attribute.
@@ -10,7 +10,7 @@
 ---
 
     Code
-      style(tabular(saf_demo), bold = TRUE, .at = "not a location")
+      style(tabular(cdisc_saf_demo), bold = TRUE, .at = "not a location")
     Condition
       Error:
       ! `.at` must be a <tabular_location>.

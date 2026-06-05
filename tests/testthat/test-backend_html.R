@@ -52,9 +52,9 @@ test_that("emit(.htm) alias resolves to the html backend", {
   )))
 })
 
-test_that("emit(.html) renders saf_demo golden pipeline end to end", {
+test_that("emit(.html) renders cdisc_saf_demo golden pipeline end to end", {
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
@@ -493,7 +493,7 @@ test_that("default preset emits a width-less content-fitted <table> end-to-end",
   # centred by the wrapper, regardless of preset @width_mode or any
   # per-column widths. width_mode drives paper backends only.
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = "Demographics",
     footnotes = "Source: ADSL."
   ) |>
@@ -737,7 +737,7 @@ test_that("LaTeX / RTF / DOCX widths agree byte-for-byte; HTML is responsive (no
   # asserted separately by `'HTML <table> is always width:100%'`
   # and `'HTML colgroup omits widths when user wrote none'`.
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
@@ -1224,9 +1224,9 @@ test_that("backend_html() is callable directly with a grid + file", {
 # Snapshot pin on the golden pipeline
 # ---------------------------------------------------------------------
 
-test_that("saf_demo golden pipeline matches the pinned .html snapshot", {
+test_that("cdisc_saf_demo golden pipeline matches the pinned .html snapshot", {
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
@@ -2359,7 +2359,7 @@ test_that("HTML structural rules are SSOT-driven: overrides and the 'none' clear
   # bottomrule were hardcoded `1px solid` CSS, so `preset(rules = ...)`
   # overrides were silently ignored on HTML. They now generate from the
   # resolved chrome_style + body bottomrule manifest.
-  base <- tabular(saf_demo, footnotes = "Source: ADSL.") |>
+  base <- tabular(cdisc_saf_demo, footnotes = "Source: ADSL.") |>
     cols(
       variable = col_spec(usage = "group", label = "Char"),
       stat_label = col_spec(label = "Stat"),
@@ -2412,7 +2412,7 @@ test_that("HTML folds footnoterule into the bottomrule (continuous format, no fo
   # off and footnoterule on, footnoterule supplies the bottom rule --
   # both the CSS rule and the per-cell inline border must agree (else
   # an inline `border-bottom: none` defeats the folded CSS rule).
-  base <- tabular(saf_demo, footnotes = "Source: ADSL.") |>
+  base <- tabular(cdisc_saf_demo, footnotes = "Source: ADSL.") |>
     cols(
       variable = col_spec(usage = "group", label = "Char"),
       stat_label = col_spec(label = "Stat"),
@@ -2448,7 +2448,7 @@ test_that("HTML bold follows the user option: bold = FALSE renders normal, not t
   # `font-weight: 600` default. A user `style(bold = FALSE, ...)` must
   # win -- the surface emits an inline `font-weight: normal` that
   # overrides the class. (Unset bold inherits the 600 class default.)
-  base <- tabular(saf_demo, titles = "My Title") |>
+  base <- tabular(cdisc_saf_demo, titles = "My Title") |>
     cols(
       variable = col_spec(usage = "group", label = "Char"),
       stat_label = col_spec(label = "Stat"),
@@ -2487,7 +2487,7 @@ test_that("HTML bold follows the user option: bold = FALSE renders normal, not t
 # ---------------------------------------------------------------------
 
 test_that("rules='frame' draws L/R as table-level CSS borders spanning all rows in HTML (#frame-left)", {
-  spec <- tabular(saf_demo, titles = "t", footnotes = "f") |>
+  spec <- tabular(cdisc_saf_demo, titles = "t", footnotes = "f") |>
     cols(
       variable = col_spec(usage = "group", group_display = "header_row"),
       stat_label = col_spec(align = "left"),
@@ -2516,9 +2516,9 @@ test_that("rules='frame' draws L/R as table-level CSS borders spanning all rows 
 })
 
 test_that("page chrome font is max(fs-1,6)pt and borderless (#chrome-style)", {
-  spec <- tabular(saf_demo, titles = "t", footnotes = "f")
+  spec <- tabular(cdisc_saf_demo, titles = "t", footnotes = "f")
   out <- withr::local_tempfile(fileext = ".html")
-  # saf_demo auto-sizes wider than the default page; the overflow warning
+  # cdisc_saf_demo auto-sizes wider than the default page; the overflow warning
   # is irrelevant to the chrome CSS this test pins.
   suppressWarnings(emit(spec, out))
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -2548,7 +2548,7 @@ test_that("preset(padding=list(header=...)) emits header-surface padding (#threa
 })
 
 test_that("stripe + header background reach special rows in HTML (#thread-B)", {
-  spec <- tabular(saf_demo, titles = "T", footnotes = "F") |>
+  spec <- tabular(cdisc_saf_demo, titles = "T", footnotes = "F") |>
     cols(
       variable = col_spec(usage = "group", group_display = "header_row"),
       stat_label = col_spec(align = "left"),
@@ -2603,7 +2603,7 @@ test_that(".html_render_slot_ast_with_tokens renders rich markup + tokens (#thre
 })
 
 test_that("md()/html() markup survives in the HTML DOM page band (#thread-F)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     preset(
       pagehead = list(
         left = md("**Protocol** ABC"),
@@ -2630,7 +2630,7 @@ test_that("md()/html() markup survives in the HTML DOM page band (#thread-F)", {
 test_that("HTML page band emits only populated slots (#thread-E)", {
   # A pagefoot with only left + right set must NOT reserve a blank centre
   # third (which would squeeze + wrap the left content).
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     preset(
       pagefoot = list(
         left = "Program: t_dm.R",
@@ -2649,7 +2649,7 @@ test_that("HTML page band emits only populated slots (#thread-E)", {
     fixed = TRUE
   )
   # A centre-only band still emits exactly its one slot.
-  spec2 <- tabular(saf_demo) |>
+  spec2 <- tabular(cdisc_saf_demo) |>
     preset(pagehead = list(center = "Draft"))
   out2 <- withr::local_tempfile(fileext = ".html")
   suppressWarnings(emit(spec2, out2))
@@ -2672,7 +2672,7 @@ test_that("HTML page band emits only populated slots (#thread-E)", {
 })
 
 test_that("cells_pagehead(slot=) styles one slot + band border in HTML (#thread-G)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     preset(pagehead = list(left = "L", center = "C", right = "R")) |>
     style(
       bold = TRUE,

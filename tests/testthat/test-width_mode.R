@@ -25,7 +25,7 @@ test_that("preset_spec rejects an unknown width_mode", {
 })
 
 test_that("preset() user verb accepts width_mode and passes it through", {
-  spec <- tabular(saf_demo) |> preset(width_mode = "window")
+  spec <- tabular(cdisc_saf_demo) |> preset(width_mode = "window")
   eff <- tabular:::.effective_preset(spec)
   expect_equal(eff@width_mode, "window")
 })
@@ -145,7 +145,7 @@ test_that(".distribute_widths() warns when pinned widths overflow regardless of 
 # ---------------------------------------------------------------------
 
 test_that("as_grid() under preset(width_mode='window') expands auto columns to fill the page", {
-  spec <- tabular(saf_demo) |> preset(width_mode = "window")
+  spec <- tabular(cdisc_saf_demo) |> preset(width_mode = "window")
   grid <- as_grid(spec)
   cols_resolved <- grid@metadata$cols
   total <- sum(vapply(cols_resolved, function(cs) cs@width, numeric(1L)))
@@ -160,7 +160,7 @@ test_that("as_grid() under preset(width_mode='fixed') collapses auto cols to the
   # Use group_display='column' so the variable column stays visible;
   # otherwise header_row mode hides it and the test's expectation
   # about variable@width going to .min_auto_width_in is moot.
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
         usage = "group",
@@ -186,7 +186,7 @@ test_that("as_grid() under preset(width_mode='fixed') collapses auto cols to the
 })
 
 test_that("as_grid() under default preset(width_mode='content') matches today's behavior", {
-  spec_default <- tabular(saf_demo) |>
+  spec_default <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
         usage = "group",
@@ -196,7 +196,7 @@ test_that("as_grid() under default preset(width_mode='content') matches today's 
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     )
-  spec_explicit <- tabular(saf_demo) |>
+  spec_explicit <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
         usage = "group",

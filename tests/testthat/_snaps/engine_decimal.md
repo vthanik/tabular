@@ -22,7 +22,7 @@
       38 ( 52.8)
       26 ( 36.1)
 
-# snapshot: saf_demo Age (years) Placebo column
+# snapshot: cdisc_saf_demo Age (years) Placebo column
 
     Code
       cat(out, sep = "\n")
@@ -34,7 +34,7 @@
       61         
       88         
 
-# snapshot: full saf_demo Placebo column end-to-end
+# snapshot: full cdisc_saf_demo Placebo column end-to-end
 
     Code
       cat(out, sep = "\n")
@@ -75,7 +75,7 @@
        20   (23.3 )
         6   ( 7.0 )
 
-# snapshot: per-section saf_demo Placebo column (Demographics image)
+# snapshot: per-section cdisc_saf_demo Placebo column (Demographics image)
 
     Code
       cat(out, sep = "\n")
@@ -330,7 +330,7 @@
       
       === summary: 36 / 57 match galley (63.2%) ===
 
-# snapshot: per-section + zero-suppress + edge-trim on saf_demo Total
+# snapshot: per-section + zero-suppress + edge-trim on cdisc_saf_demo Total
 
     Code
       cat(out, sep = "\n")

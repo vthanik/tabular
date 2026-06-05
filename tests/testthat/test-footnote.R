@@ -1,7 +1,7 @@
 # Tests for the footnote() verb (R/footnote.R).
 
 mk_fn_spec <- function() {
-  tabular(saf_aesocpt) |>
+  tabular(cdisc_saf_aesocpt) |>
     cols(
       soc = col_spec(usage = "group"),
       label = col_spec(label = "PT"),

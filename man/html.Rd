@@ -51,10 +51,10 @@ cannot express portably.
 # Demographics table title with the population subset shaded
 # red. The HTML wrapper carries an inline CSS style; backends
 # translate (RTF: \cf, LaTeX: \textcolor, HTML: inline style).
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = c(
     "Table 14.1.1",
     "Demographics",
@@ -69,7 +69,7 @@ tabular(
 # would be awkward (e.g. attributes that Markdown does not
 # surface).
 tabular(
-  saf_aeoverall,
+  cdisc_saf_ae,
   titles = c("Table 14.3.0", "Overall Adverse Event Summary"),
   footnotes = c(
     html('See <a href="https://www.meddra.org/">MedDRA</a> coding<sup>1</sup>.')

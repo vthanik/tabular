@@ -210,10 +210,10 @@
 #' # then the registered md backend writes a GFM pipe table you can
 #' # preview in any Markdown renderer. tempfile() keeps the example
 #' # clean for `R CMD check`.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' demo <- tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c(
 #'     "Table 14.1.1",
 #'     "Demographics and Baseline Characteristics",
@@ -242,7 +242,7 @@
 #' # for submission packaging. The lambda derives the QC path from
 #' # the render path so the sponsor's naming convention lives in one
 #' # place.
-#' ae <- saf_aesocpt
+#' ae <- cdisc_saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 #'
@@ -283,7 +283,7 @@
 #' # across formats during development and for shipping a build
 #' # artefact set (RTF for submission, HTML for review, PDF for the
 #' # CSR appendix).
-#' eff_spec <- tabular(eff_resp, titles = "Best Overall Response") |>
+#' eff_spec <- tabular(cdisc_eff_resp, titles = "Best Overall Response") |>
 #'   cols(
 #'     stat_label  = col_spec(usage = "group", label = "Response"),
 #'     row_type    = col_spec(visible = FALSE),
@@ -359,7 +359,7 @@ emit <- function(
   # once per `emit()`, but a second render in the same session warns
   # again.
   .fidelity_warn_reset()
-  backend(grid, file)
+  backend(grid, .emit_absolute_path(file))
 
   data_file_path <- NULL
   if (!is.null(data_file)) {
@@ -452,6 +452,20 @@ emit <- function(
     }
   }
   file
+}
+
+# Absolutise a validated output path for the backend handoff. The DOCX
+# backend setwd()s into a temp staging dir before utils::zip, so a
+# relative path would resolve against that stage and fail (the B-DOCX
+# bug); direct writers (RTF / HTML / LaTeX) are unaffected but an
+# absolute path is harmless for them. normalizePath() on a
+# not-yet-existing relative leaf is a no-op on macOS, so normalise the
+# parent (guaranteed to exist by `.check_emit_file`) and rejoin the
+# basename. Handles "~" expansion and is idempotent on absolute paths.
+# Kept off the user-facing return value and the data_file / manifest
+# sibling paths, which stay relative-to-cwd as the caller wrote them.
+.emit_absolute_path <- function(file) {
+  file.path(normalizePath(dirname(file), mustWork = FALSE), basename(file))
 }
 
 # Resolve the effective format. When the user passed an explicit

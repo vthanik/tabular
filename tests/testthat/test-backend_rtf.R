@@ -2,7 +2,7 @@
 # document shell, font table, section definition, page-band
 # emission with growth-direction semantics, header bands, body
 # cells with inline AST, escaping, multi-page pagination, and a
-# golden snapshot pinned on the canonical saf_demo pipeline.
+# golden snapshot pinned on the canonical cdisc_saf_demo pipeline.
 
 # Convenience helper: emit a spec to a tempfile and read the RTF
 # back as one long string for substring assertions. Keeps the
@@ -360,7 +360,7 @@ test_that("RTF blank spacer rows re-stamp preset font size, not RTF 12pt default
   # row resets with \plain; if it omits \fsN it reverts to the RTF 12pt
   # default and the spacer line prints taller than the 8pt body (Word shows
   # 12 in the size box on the blank line). It must carry the body \fsN.
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group"),
       stat_label = col_spec(),
@@ -383,7 +383,7 @@ test_that("RTF footnote + non-repeating-title spacers re-stamp font size", {
   # they revert to the RTF 12pt default and print taller than the 8pt
   # body. Both must carry the body \fsN, like the in-table blank rows.
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 1", "A subtitle"),
     footnotes = "Note: a footnote."
   ) |>
@@ -699,9 +699,9 @@ test_that("RTF merged-row helpers guard empty cellx / zero count", {
 # Snapshot pin on the golden pipeline
 # ---------------------------------------------------------------------
 
-test_that("saf_demo golden pipeline matches the pinned .rtf snapshot", {
+test_that("cdisc_saf_demo golden pipeline matches the pinned .rtf snapshot", {
   spec <- tabular(
-    saf_demo,
+    cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
     footnotes = "Source: ADSL."
   ) |>
@@ -1286,7 +1286,7 @@ test_that("preset(padding=list(header=...)) emits header cell padding (#thread-C
 })
 
 test_that("rules='frame' draws \\trbrdrl/r on every table-proper row, not titles (#thread-D)", {
-  spec <- tabular(saf_demo, titles = "T", footnotes = "F") |>
+  spec <- tabular(cdisc_saf_demo, titles = "T", footnotes = "F") |>
     cols(
       variable = col_spec(usage = "group", group_display = "header_row"),
       stat_label = col_spec(align = "left"),
@@ -1316,14 +1316,14 @@ test_that("rules='frame' draws \\trbrdrl/r on every table-proper row, not titles
   # Non-frame preset emits no row-border edges (no regression).
   out2 <- withr::local_tempfile(fileext = ".rtf")
   suppressWarnings(
-    emit(tabular(saf_demo) |> preset(rules = "booktabs"), out2)
+    emit(tabular(cdisc_saf_demo) |> preset(rules = "booktabs"), out2)
   )
   rtf2 <- paste(readLines(out2, warn = FALSE), collapse = "\n")
   expect_no_match(rtf2, "\\trbrdrl", fixed = TRUE)
 })
 
 test_that("stripe fills merged blank / group rows in RTF (#thread-B)", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", group_display = "header_row"),
       stat_label = col_spec(align = "left"),
@@ -1342,7 +1342,7 @@ test_that("stripe fills merged blank / group rows in RTF (#thread-B)", {
   expect_match(rtf, "clcbpat[0-9]+\\\\clmgf")
   # Striping off -> no cell shading at all (no regression).
   out2 <- withr::local_tempfile(fileext = ".rtf")
-  suppressWarnings(emit(tabular(saf_demo), out2))
+  suppressWarnings(emit(tabular(cdisc_saf_demo), out2))
   rtf2 <- paste(readLines(out2, warn = FALSE), collapse = "\n")
   expect_no_match(rtf2, "\\clcbpat", fixed = TRUE)
 })
@@ -1351,7 +1351,7 @@ test_that("cells_pagehead band border adds \\clbrdrb on the RTF header band (#th
   nb <- function(rtf) {
     length(gregexpr("clbrdrb\\\\brdrs", rtf, perl = TRUE)[[1]])
   }
-  base <- tabular(saf_demo) |>
+  base <- tabular(cdisc_saf_demo) |>
     preset(pagehead = list(left = "L", center = "C", right = "R"))
   out0 <- withr::local_tempfile(fileext = ".rtf")
   suppressWarnings(emit(base, out0))

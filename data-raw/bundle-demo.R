@@ -8,20 +8,20 @@
 # table from the SAP / shell renderable with one tabular() pipeline.
 #
 # Five pre-summarised wide tables (the tabular() input shape):
-#   saf_demo           — demographics (continuous + categorical), 8 panels
-#   saf_aeoverall      — high-level AE flag counts, 10 rows
-#   saf_aesocpt        — AEs by SOC (top 10) and PT (top 5 per SOC)
-#   saf_vital          — vital-signs summary, 4 visits × 4 parameters
-#   eff_resp           — best overall response + ORR / DCR / CBR + 95% CI
+#   cdisc_saf_demo           — demographics (continuous + categorical), 8 panels
+#   cdisc_saf_ae      — high-level AE flag counts, 10 rows
+#   cdisc_saf_aesocpt        — AEs by SOC (top 10) and PT (top 5 per SOC)
+#   cdisc_saf_vital          — vital-signs summary, 4 visits × 4 parameters
+#   cdisc_eff_resp           — best overall response + ORR / DCR / CBR + 95% CI
 #
 # Two long Analysis Results Data (ARD) companions for pivot_across() —
 # one flat (continuous + categorical mix), one hierarchical (SOC / PT):
-#   saf_demo_card      — flat ARD: continuous + categorical mix
-#   saf_aesocpt_card   — hierarchical ARD: SOC / PT nested
+#   cdisc_saf_demo_ard      — flat ARD: continuous + categorical mix
+#   cdisc_saf_aesocpt_ard   — hierarchical ARD: SOC / PT nested
 #
 # Two BigN denominator tables (one per analysis population):
-#   saf_n              — safety-population BigN per arm
-#   eff_n              — efficacy-population BigN per arm
+#   cdisc_saf_n              — safety-population BigN per arm
+#   cdisc_eff_n              — efficacy-population BigN per arm
 #
 # Run from package root:
 #   Rscript data-raw/bundle-demo.R
@@ -77,7 +77,7 @@ arm_n_int <- arm_n_int[arm_levels]
 N_total <- as.integer(sum(arm_n_int))
 
 # ────────────────────────────────────────────────────────────────────────
-# saf_demo — demographics: continuous (Age, Weight, Height, BMI) +
+# cdisc_saf_demo — demographics: continuous (Age, Weight, Height, BMI) +
 # categorical (Age Group, Sex, Race, Ethnicity, BMI Category).
 # ────────────────────────────────────────────────────────────────────────
 demog_data <- adsl_saf |>
@@ -204,7 +204,7 @@ cat_summary <- function(data, var, var_label) {
     mutate(variable = var_label, .before = 1)
 }
 
-saf_demo <- bind_rows(
+cdisc_saf_demo <- bind_rows(
   cont_summary(demog_data, "AGE", "Age (years)"),
   cat_summary(demog_data, "AGEGR1", "Age Group, n (%)"),
   cat_summary(demog_data, "SEX", "Sex, n (%)"),
@@ -220,11 +220,11 @@ saf_demo <- bind_rows(
 
 # Drop the NA factor level rows that cat_summary emits with .drop = FALSE
 # when a category is unused (e.g. BMI < 18.5 may be empty in this slice).
-saf_demo <- saf_demo[!is.na(saf_demo$stat_label), , drop = FALSE]
-rownames(saf_demo) <- NULL
+cdisc_saf_demo <- cdisc_saf_demo[!is.na(cdisc_saf_demo$stat_label), , drop = FALSE]
+rownames(cdisc_saf_demo) <- NULL
 
 # ────────────────────────────────────────────────────────────────────────
-# saf_aeoverall — high-level AE flag counts + per-severity rows.
+# cdisc_saf_ae — high-level AE flag counts + per-severity rows.
 # Adds AE-leading-to-death and AE-resolved rows on top of the v0 set.
 # ────────────────────────────────────────────────────────────────────────
 adae <- pharmaverseadam::adae |>
@@ -298,7 +298,7 @@ severity_rows <- function(ae_data, adsl_data, arm_levels, N_total) {
   )
 }
 
-saf_aeoverall <- bind_rows(
+cdisc_saf_ae <- bind_rows(
   ae_flag_row(adae, adsl_saf, TRUE, "Any TEAE", arm_levels, N_total),
   ae_flag_row(
     adae,
@@ -342,7 +342,7 @@ saf_aeoverall <- bind_rows(
   as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
-# saf_aesocpt — AEs by SOC (top 10) and PT (top 5 per SOC).
+# cdisc_saf_aesocpt — AEs by SOC (top 10) and PT (top 5 per SOC).
 # Richer than the v0 top-5-SOC × top-3-PT trim; demonstrates a realistic
 # AE-by-SOC/PT submission shell that exercises paginate() and engine_panel.
 # ────────────────────────────────────────────────────────────────────────
@@ -453,15 +453,15 @@ pt_wide <- pt_arm |>
 body_sorted <- bind_rows(soc_wide, pt_wide) |>
   arrange(desc(soc_n), soc, desc(n_total))
 
-saf_aesocpt <- bind_rows(any_row, body_sorted) |>
+cdisc_saf_aesocpt <- bind_rows(any_row, body_sorted) |>
   rename_arms() |>
   as.data.frame()
 
 # Ship the canonical depth column so users do not reconstruct it in
-# every saf_aesocpt example. Integer values: 0 on overall and SOC
+# every cdisc_saf_aesocpt example. Integer values: 0 on overall and SOC
 # rows, 1 on PT rows. Use as `col_spec(label, indent_by = "indent_level")`.
-saf_aesocpt$indent_level <- as.integer(saf_aesocpt$row_type == "pt")
-saf_aesocpt <- saf_aesocpt[, c(
+cdisc_saf_aesocpt$indent_level <- as.integer(cdisc_saf_aesocpt$row_type == "pt")
+cdisc_saf_aesocpt <- cdisc_saf_aesocpt[, c(
   "soc",
   "label",
   "row_type",
@@ -475,7 +475,7 @@ saf_aesocpt <- saf_aesocpt[, c(
 )]
 
 # ────────────────────────────────────────────────────────────────────────
-# saf_vital — vital-signs continuous summary at 4 visits × 4 parameters.
+# cdisc_saf_vital — vital-signs continuous summary at 4 visits × 4 parameters.
 # Richer than the v0 2-visit × 4-param shape; supports paginate() and
 # pivot_across() examples that need a multi-panel structure.
 # ────────────────────────────────────────────────────────────────────────
@@ -522,7 +522,7 @@ vs_summary <- advs_saf |>
   pivot_wider(names_from = TRT01A, values_from = value) |>
   arrange(PARAMCD, AVISIT)
 
-saf_vital <- vs_summary |>
+cdisc_saf_vital <- vs_summary |>
   mutate(
     across(all_of(arm_levels), ~ tidyr::replace_na(.x, "")),
     PARAM = as.character(PARAM),
@@ -533,7 +533,7 @@ saf_vital <- vs_summary |>
   as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
-# eff_resp — best overall response + ORR / DCR / CBR + 95% CI rows.
+# cdisc_eff_resp — best overall response + ORR / DCR / CBR + 95% CI rows.
 # Exact binomial 95% CI on each derived rate. CBR (Clinical Benefit Rate)
 # is CR + PR + SD (broader than ORR, narrower than DCR's full-set inclusion
 # of NON-CR/NON-PD).
@@ -638,7 +638,7 @@ dcr <- derive_rate(
 # Adopt arms set actually present in adrs_onco (subset of full arm_levels)
 bor_arms_present <- intersect(arm_levels, names(bor_wide))
 
-eff_resp <- bind_rows(bor_wide, orr, cbr, dcr) |>
+cdisc_eff_resp <- bind_rows(bor_wide, orr, cbr, dcr) |>
   rename(stat_label = AVALC) |>
   mutate(stat_label = as.character(stat_label)) |>
   select(
@@ -651,19 +651,19 @@ eff_resp <- bind_rows(bor_wide, orr, cbr, dcr) |>
 
 # Add any missing arm columns as "" so all 5 datasets share placebo/drug_*/...
 for (a in setdiff(arm_levels, bor_arms_present)) {
-  eff_resp[[a]] <- ""
+  cdisc_eff_resp[[a]] <- ""
 }
-eff_resp <- eff_resp[, c(
+cdisc_eff_resp <- cdisc_eff_resp[, c(
   "stat_label",
   "row_type",
   arm_levels,
   "groupid",
   "group_label"
 )]
-eff_resp <- rename_arms(eff_resp) |> as.data.frame()
+cdisc_eff_resp <- rename_arms(cdisc_eff_resp) |> as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
-# saf_subgroup — vital-signs summary partitioned by sex × age group.
+# cdisc_saf_subgroup — vital-signs summary partitioned by sex × age group.
 # Designed for subgroup() / as_grid() examples: ships partition-constant
 # BigN columns (sex_n, agegr_n) so banners can inline the denominator
 # via `subgroup(label = "Sex: {sex} (N = {sex_n})")`. Two parameters
@@ -751,7 +751,7 @@ vs_subgroup_total <- advs_subgroup |>
     values_to = "Total"
   )
 
-saf_subgroup <- left_join(
+cdisc_saf_subgroup <- left_join(
   vs_subgroup_arm,
   vs_subgroup_total,
   by = c("sex", "agegr", "PARAMCD", "stat_label")
@@ -786,12 +786,12 @@ saf_subgroup <- left_join(
   as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
-# eff_estimates — model-based treatment-effect estimates. Lifted from
+# cdisc_eff_estimates — model-based treatment-effect estimates. Lifted from
 # the arframe-examples tte-summary / efficacy-bor pattern: four
 # competing models, point estimate, 95% CI bounds, nominal p. One row
 # carries NA CI bounds to exercise col_spec(na_text = ...) in examples.
 # ────────────────────────────────────────────────────────────────────────
-eff_estimates <- data.frame(
+cdisc_eff_estimates <- data.frame(
   model = c("ANCOVA", "MMRM", "Cox PH", "Bootstrap (1000 reps)"),
   estimate = c(-2.31, -2.45, 0.81, -2.29),
   lower_ci = c(-3.42, NA_real_, 0.68, -3.50),
@@ -804,8 +804,8 @@ eff_estimates <- data.frame(
 # Cards Analysis Results Data (ARD) companions
 #
 # Two long-format datasets covering the two distinct ARD shapes that
-# pivot_across() must handle: a flat ARD (saf_demo_card) and a
-# hierarchical ARD (saf_aesocpt_card). Other clinical patterns
+# pivot_across() must handle: a flat ARD (cdisc_saf_demo_ard) and a
+# hierarchical ARD (cdisc_saf_aesocpt_ard). Other clinical patterns
 # (overall AE flags, vital signs, BOR) reduce to one of these two
 # shapes once pivoted, so we don't ship redundant per-domain ARDs.
 # ────────────────────────────────────────────────────────────────────────
@@ -816,7 +816,7 @@ strip_card_cols <- function(ard) {
   ard
 }
 
-# saf_demo_card — flat ARD with continuous + categorical mix.
+# cdisc_saf_demo_ard — flat ARD with continuous + categorical mix.
 # Covers the canonical demographics pivot: AGE / WEIGHT / HEIGHT / BMI
 # as continuous summaries plus AGEGR1 / SEX / RACE / ETHNIC / BMI_CAT
 # as categorical counts, all grouped by treatment arm with .overall.
@@ -833,7 +833,7 @@ demog_data_ard <- demog_data |>
     )
   )
 
-saf_demo_card <- ard_stack(
+cdisc_saf_demo_ard <- ard_stack(
   data = demog_data_ard,
   .by = "TRT01A",
   ard_continuous(variables = c("AGE", "WEIGHT", "HEIGHT", "BMI")),
@@ -844,11 +844,11 @@ saf_demo_card <- ard_stack(
 ) |>
   strip_card_cols()
 
-# saf_aesocpt_card — hierarchical ARD (SOC / PT) matching the
-# top-10 SOC × top-5 PT slice in saf_aesocpt. Covers the harder
+# cdisc_saf_aesocpt_ard — hierarchical ARD (SOC / PT) matching the
+# top-10 SOC × top-5 PT slice in cdisc_saf_aesocpt. Covers the harder
 # pivot case where pivot_across() must emit soc / label / row_type
 # columns and preserve the SOC -> PT nesting under sort.
-saf_aesocpt_card <- ard_stack_hierarchical(
+cdisc_saf_aesocpt_ard <- ard_stack_hierarchical(
   data = adae_trim,
   variables = c(AEBODSYS, AEDECOD),
   by = TRT01A,
@@ -861,11 +861,11 @@ saf_aesocpt_card <- ard_stack_hierarchical(
 
 # ────────────────────────────────────────────────────────────────────────
 # BigN per analysis population.
-# saf_n is built from the safety population (preserved at the same
+# cdisc_saf_n is built from the safety population (preserved at the same
 # 86 / 96 / 72 / 254 split that the test suite depends on).
-# eff_n reflects the adrs_onco BOR population.
+# cdisc_eff_n reflects the adrs_onco BOR population.
 # ────────────────────────────────────────────────────────────────────────
-saf_n <- data.frame(
+cdisc_saf_n <- data.frame(
   arm = c(arm_levels, "Total"),
   arm_short = c(unname(arm_rename[arm_levels]), "Total"),
   n = c(as.integer(arm_n_int[arm_levels]), N_total),
@@ -876,7 +876,7 @@ eff_arm_n_int <- bor_counts |>
   distinct(ARM, N) |>
   arrange(match(as.character(ARM), arm_levels))
 eff_arms <- as.character(eff_arm_n_int$ARM)
-eff_n <- data.frame(
+cdisc_eff_n <- data.frame(
   arm = c(eff_arms, "Total"),
   arm_short = c(unname(arm_rename[eff_arms]), "Total"),
   n = c(as.integer(eff_arm_n_int$N), as.integer(sum(eff_arm_n_int$N))),
@@ -888,17 +888,17 @@ eff_n <- data.frame(
 # richer than v0 and the ~50 KB ceiling was retired with this rebuild.
 # ────────────────────────────────────────────────────────────────────────
 usethis::use_data(
-  saf_demo,
-  saf_aeoverall,
-  saf_aesocpt,
-  saf_vital,
-  saf_subgroup,
-  eff_resp,
-  eff_estimates,
-  saf_demo_card,
-  saf_aesocpt_card,
-  saf_n,
-  eff_n,
+  cdisc_saf_demo,
+  cdisc_saf_ae,
+  cdisc_saf_aesocpt,
+  cdisc_saf_vital,
+  cdisc_saf_subgroup,
+  cdisc_eff_resp,
+  cdisc_eff_estimates,
+  cdisc_saf_demo_ard,
+  cdisc_saf_aesocpt_ard,
+  cdisc_saf_n,
+  cdisc_eff_n,
   overwrite = TRUE,
   compress = "xz"
 )
@@ -906,17 +906,17 @@ usethis::use_data(
 files <- file.path(
   "data",
   c(
-    "saf_demo.rda",
-    "saf_aeoverall.rda",
-    "saf_aesocpt.rda",
-    "saf_vital.rda",
-    "saf_subgroup.rda",
-    "eff_resp.rda",
-    "eff_estimates.rda",
-    "saf_demo_card.rda",
-    "saf_aesocpt_card.rda",
-    "saf_n.rda",
-    "eff_n.rda"
+    "cdisc_saf_demo.rda",
+    "cdisc_saf_ae.rda",
+    "cdisc_saf_aesocpt.rda",
+    "cdisc_saf_vital.rda",
+    "cdisc_saf_subgroup.rda",
+    "cdisc_eff_resp.rda",
+    "cdisc_eff_estimates.rda",
+    "cdisc_saf_demo_ard.rda",
+    "cdisc_saf_aesocpt_ard.rda",
+    "cdisc_saf_n.rda",
+    "cdisc_eff_n.rda"
   )
 )
 sizes <- vapply(files, function(f) file.info(f)$size, numeric(1))

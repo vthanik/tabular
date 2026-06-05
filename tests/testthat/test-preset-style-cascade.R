@@ -12,24 +12,24 @@ test_that("preset(.style = template) writes layers to preset@style", {
   tmpl <- style_template() |>
     style(bold = TRUE, .at = cells_body()) |>
     style(italic = TRUE, .at = cells_headers())
-  spec <- tabular(saf_demo) |> preset(.style = tmpl, font_size = 10)
+  spec <- tabular(cdisc_saf_demo) |> preset(.style = tmpl, font_size = 10)
   expect_length(spec@preset@style, 2L)
   expect_identical(spec@preset@font_size, 10)
 })
 
 test_that("preset(.style = ...) rejects non-template input", {
   expect_error(
-    tabular(saf_demo) |> preset(.style = list(layers = list())),
+    tabular(cdisc_saf_demo) |> preset(.style = list(layers = list())),
     class = "tabular_error_input"
   )
   expect_error(
-    tabular(saf_demo) |> preset(.style = "bold"),
+    tabular(cdisc_saf_demo) |> preset(.style = "bold"),
     class = "tabular_error_input"
   )
 })
 
 test_that("preset(.style = NULL) is a no-op", {
-  spec <- tabular(saf_demo) |> preset(.style = NULL, font_size = 11)
+  spec <- tabular(cdisc_saf_demo) |> preset(.style = NULL, font_size = 11)
   expect_length(spec@preset@style, 0L)
   expect_identical(spec@preset@font_size, 11)
 })
@@ -120,7 +120,7 @@ test_that("set_preset(.reset = TRUE) clears @style", {
 test_that("multiple preset(.style = ...) calls accumulate", {
   tmpl1 <- style_template() |> style(bold = TRUE, .at = cells_body())
   tmpl2 <- style_template() |> style(italic = TRUE, .at = cells_headers())
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     preset(.style = tmpl1) |>
     preset(.style = tmpl2)
   expect_length(spec@preset@style, 2L)

@@ -455,9 +455,9 @@
 #'   "ORR (CR + PR)", "CBR (CR + PR + SD)",
 #'   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95% CI (Clopper-Pearson)"
 #' )
-#' eff <- eff_resp
+#' eff <- cdisc_eff_resp
 #' eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
-#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+#' ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 #'
 #' tabular(
 #'   eff,
@@ -497,10 +497,10 @@
 #' # `{program}` and `{datetime}` tokens.
 #' set_preset(font_size = 9, paper_size = "letter")
 #'
-#' ae <- saf_aesocpt
+#' ae <- cdisc_saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
 #'   ae,
@@ -728,9 +728,9 @@ preset <- function(
 #' )
 #'
 #' # Subsequent tabular() chains pick up the session preset at render.
-#' demo_n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' demo_n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' tabular(
-#'   saf_aeoverall,
+#'   cdisc_saf_ae,
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Overall Summary of Adverse Events",
@@ -950,7 +950,7 @@ set_preset <- function(
 #'
 #' # Read-tweak-attach without mutating the session default.
 #' base_knobs <- get_preset()
-#' tabular(saf_n) |>
+#' tabular(cdisc_saf_n) |>
 #'   preset(
 #'     font_size   = base_knobs@font_size,
 #'     paper_size  = base_knobs@paper_size,

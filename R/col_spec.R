@@ -82,12 +82,12 @@
 #'
 #'   ```r
 #'   # End-to-end ARD → wide → tabular pipeline. The cards ARD
-#'   # `saf_demo_card` is the long upstream input; `pivot_across()`
+#'   # `cdisc_saf_demo_ard` is the long upstream input; `pivot_across()`
 #'   # widens to one column per arm and stamps an internal marker
 #'   # so [`sort_rows()`] can reject sort keys on those arm columns.
 #'   # `cols()` then attaches per-column display rules.
 #'   wide <- pivot_across(
-#'     saf_demo_card,
+#'     cdisc_saf_demo_ard,
 #'     statistic = list(
 #'       continuous  = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})"),
 #'       categorical = "{n} ({p}%)"
@@ -128,9 +128,15 @@
 #'   Double a brace (`{{` or `}}`) for a literal one. An `md()` /
 #'   `html()` label is passed through without interpolation.
 #'
+#'   **Per-column token.** `{.name}` (alias `{.col}`) inside a `{expr}`
+#'   is *deferred* and resolved to the matched column's name when the
+#'   spec is stamped by [`cols()`] / [`cols_apply()`], so one spec can
+#'   carry a variable-N arm header. See [`cols_apply()`] for the
+#'   loop-free idiom.
+#'
 #'   ```r
-#'   # Two-line header with arm name and BigN from saf_n.
-#'   n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#'   # Two-line header with arm name and BigN from cdisc_saf_n.
+#'   n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'   col_spec(
 #'     label = "Placebo\nN={n['placebo']}",
 #'     align = "decimal"
@@ -224,6 +230,11 @@
 #'   inconsistent across backends and is replaced by the `"auto"`
 #'   default, which produces identical widths across RTF / LaTeX
 #'   / HTML.
+#'
+#'   **Merge sentinel.** For the field-merge across repeated [`cols()`]
+#'   / [`cols_apply()`] calls, `"auto"` is treated as the default: a
+#'   later call carrying `width = "auto"` leaves a previously pinned
+#'   width intact, and only an explicit non-`"auto"` width overrides.
 #'
 #' @param group_display *How `usage = "group"` values render in the body.*
 #'   `<character(1)>: default "header_row"`. Active only when
@@ -362,7 +373,7 @@
 #'   The referenced depth column is auto-hidden — no need to set
 #'   `visible = FALSE` on it.
 #'
-#'   Typical SOC / PT pattern (the bundled `saf_aesocpt` ships with
+#'   Typical SOC / PT pattern (the bundled `cdisc_saf_aesocpt` ships with
 #'   the canonical depth column already attached, so no upstream
 #'   construction is needed):
 #'
@@ -396,10 +407,10 @@
 #' # the row-label columns are pinned to a fixed width and aligned
 #' # left, the four arm columns embed BigN inline in the header,
 #' # decimal-align numeric content, and render `NA` cells as "-".
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c(
 #'     "Table 14.1.1",
 #'     "Demographics and Baseline Characteristics",
@@ -440,7 +451,7 @@
 #' # rendered page. Demonstrates `indent_by` plus `visible = FALSE`
 #' # for sort-only columns, fixed width on the wide label column, and
 #' # decimal alignment on all four arm columns.
-#' ae <- saf_aesocpt
+#' ae <- cdisc_saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 #'
@@ -468,13 +479,13 @@
 #'
 #' # ---- Example 3: Format string + na_text for clean numeric display ----
 #' #
-#' # `eff_estimates` ships four competing efficacy models with
+#' # `cdisc_eff_estimates` ships four competing efficacy models with
 #' # pre-computed numeric estimates, 95% CI bounds (NA on the MMRM
 #' # row), and a nominal p-value. `format =` pins the printed
 #' # precision; `na_text` renders the missing CI bounds as a dash
 #' # rather than a literal "NA". `valign = "top"` keeps the multi-
 #' # line cell text aligned to the top.
-#' tabular(eff_estimates, titles = "Treatment-effect estimates by model") |>
+#' tabular(cdisc_eff_estimates, titles = "Treatment-effect estimates by model") |>
 #'   cols(
 #'     model    = col_spec(usage = "group",  label = "Model",   valign = "top"),
 #'     estimate = col_spec(label = "Estimate", align = "decimal", format = "%.2f"),
@@ -504,9 +515,9 @@
 #' # group-column setup demonstrates the alignment cascade —
 #' # col_spec@align beats the engine default but yields to a more
 #' # specific style() rule downstream.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' tabular(
-#'   saf_vital,
+#'   cdisc_saf_vital,
 #'   titles = "Vital Signs at Baseline and End of Treatment"
 #' ) |>
 #'   cols(
@@ -539,9 +550,9 @@
 #' # panels collapse into one scrollable table with a "Panel 1 / Panel
 #' # 2" header note; on RTF / Word each panel is its own page with the
 #' # `variable` + `stat_label` stub repeated.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c("Table 14.1.1", "Demographics", "Safety Population")
 #' ) |>
 #'   cols(
@@ -587,7 +598,15 @@ col_spec <- function(
   align_val <- .check_col_align(align, call = call)
   valign_val <- .check_col_valign(valign, call = call)
   .check_col_label(label, call = call)
-  label <- .interp_one(label, env = call, call = call)
+  # A label whose `{expr}` references the column-stamp tokens `.name` /
+  # `.col` cannot interpolate here (the column name is bound later, at
+  # the cols() / cols_apply() stamp). Defer it: keep the raw template
+  # and let `.resolve_deferred_label()` fill it per column. Every other
+  # label interpolates eagerly in the caller env, as before.
+  label_deferred <- .label_defers_to_column(label)
+  if (!label_deferred) {
+    label <- .interp_one(label, env = call, call = call)
+  }
   .check_col_visible(visible, call = call)
   .check_col_width(width, call = call)
   group_display_val <- .check_col_group_display(group_display, call = call)
@@ -599,6 +618,7 @@ col_spec <- function(
   .col_spec_class(
     name = NA_character_,
     label = label,
+    label_deferred = label_deferred,
     usage = usage_val,
     format = format,
     visible = visible,
@@ -616,6 +636,42 @@ col_spec <- function(
     na_text = na_text,
     indent_by = indent_by_val
   )
+}
+
+# TRUE when `label` is a plain string carrying a `{expr}` chunk that
+# references the per-column stamp tokens `.name` or `.col`. Such a label
+# cannot interpolate at `col_spec()` time (those names are unbound until
+# `cols()` / `cols_apply()` stamps the spec onto a column), so it is
+# deferred. md() / html() labels and labels with no brace never defer; a
+# malformed brace string returns FALSE so the eager `.interp_one()` path
+# raises the real (column-context) parse error with the caller's `call`.
+.label_defers_to_column <- function(x) {
+  if (inherits(x, "from_markdown") || inherits(x, "from_html")) {
+    return(FALSE)
+  }
+  if (!is.character(x) || length(x) != 1L || is.na(x)) {
+    return(FALSE)
+  }
+  if (!grepl("{", x, fixed = TRUE)) {
+    return(FALSE)
+  }
+  chunks <- tryCatch(.interp_scan(x, call = NULL), error = function(e) NULL)
+  if (is.null(chunks)) {
+    return(FALSE)
+  }
+  for (ch in chunks) {
+    if (!identical(ch$type, "expr")) {
+      next
+    }
+    vars <- tryCatch(
+      all.vars(parse(text = ch$value)),
+      error = function(e) character()
+    )
+    if (any(c(".name", ".col") %in% vars)) {
+      return(TRUE)
+    }
+  }
+  FALSE
 }
 
 # Validate the `indent_by` argument. Accepts a single character

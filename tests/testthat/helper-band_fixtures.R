@@ -12,7 +12,7 @@ band_fixture <- function(
 ) {
   scenario <- match.arg(scenario)
   base <- tabular(
-    saf_aesocpt,
+    cdisc_saf_aesocpt,
     titles = "Band rule scope test",
     footnotes = "Fixture for header-band cmidrule(lr) coverage."
   ) |>

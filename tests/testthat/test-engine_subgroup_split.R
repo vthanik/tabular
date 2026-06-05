@@ -7,7 +7,7 @@
 # ---- no subgroup: single-entry passthrough ---------------------------
 
 test_that("engine_subgroup_split() with no subgroup returns one entry", {
-  spec <- tabular(saf_demo)
+  spec <- tabular(cdisc_saf_demo)
   out <- tabular:::engine_subgroup_split(spec)
   expect_length(out, 1L)
   expect_null(out[[1L]]$runtime)
@@ -173,7 +173,7 @@ test_that("as_grid() with subgroup concatenates per-group pages", {
 })
 
 test_that("as_grid() with no subgroup returns single un-annotated grid", {
-  spec <- tabular(saf_demo)
+  spec <- tabular(cdisc_saf_demo)
   grid <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   expect_length(grid@pages, 1L)
   expect_null(grid@pages[[1L]]$subgroup_line_ast)

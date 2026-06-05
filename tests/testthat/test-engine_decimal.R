@@ -221,7 +221,7 @@ test_that("integer N row aligns with n column of n (pct) rows (Duration Categori
   expect_true(all(offset == offset[[1L]]))
 })
 
-test_that("saf_demo Age (years) column mixes 4 shapes and aligns on primary", {
+test_that("cdisc_saf_demo Age (years) column mixes 4 shapes and aligns on primary", {
   # n (integer), Mean (SD) (est_spread), Median (float), Q1, Q3
   # (range_pair), Min (integer), Max (integer). Dominant signature
   # = est_spread (first 2-float row encountered).
@@ -510,7 +510,7 @@ test_that("snapshot: Duration Categories / Xanomeline High Dose", {
   expect_snapshot(cat(out, sep = "\n"))
 })
 
-test_that("snapshot: saf_demo Age (years) Placebo column", {
+test_that("snapshot: cdisc_saf_demo Age (years) Placebo column", {
   v <- c(
     "86",
     "75.2 (8.59)",
@@ -523,11 +523,11 @@ test_that("snapshot: saf_demo Age (years) Placebo column", {
   expect_snapshot(cat(out, sep = "\n"))
 })
 
-test_that("snapshot: full saf_demo Placebo column end-to-end", {
+test_that("snapshot: full cdisc_saf_demo Placebo column end-to-end", {
   # Real bundled-data integration: the entire Placebo column of
-  # saf_demo, which contains the canonical multi-shape mix that
+  # cdisc_saf_demo, which contains the canonical multi-shape mix that
   # broke galley.
-  v <- saf_demo$placebo
+  v <- cdisc_saf_demo$placebo
   out <- align(v)
   expect_snapshot(cat(out, sep = "\n"))
 })
@@ -608,25 +608,25 @@ test_that("engine_decimal() forwards sections to the per-column workhorse", {
 # Layer 7 — snapshot pinning the user's "DM expectation" image
 # ---------------------------------------------------------------------
 
-test_that("snapshot: per-section saf_demo Placebo column (Demographics image)", {
+test_that("snapshot: per-section cdisc_saf_demo Placebo column (Demographics image)", {
   # The user-reported expectation for "Summary of Demographic and
   # Baseline Characteristics" Placebo column. Sections derive from
   # the `variable` row-label column: Age (years), Age Group n (%),
   # Sex n (%), Race n (%), Ethnicity n (%). Each section aligns
   # independently; the column-wide right-pad makes the final block
   # uniform.
-  v <- saf_demo$placebo
-  sec <- saf_demo$variable
+  v <- cdisc_saf_demo$placebo
+  sec <- cdisc_saf_demo$variable
   out <- align(v, sections = sec)
   expect_snapshot(cat(out, sep = "\n"))
 })
 
-test_that("snapshot: per-section all four arm columns (full saf_demo)", {
+test_that("snapshot: per-section all four arm columns (full cdisc_saf_demo)", {
   # Same Demographics scenario for every arm column. Confirms cross-
   # arm consistency.
-  sec <- saf_demo$variable
+  sec <- cdisc_saf_demo$variable
   for (arm in c("placebo", "drug_100", "drug_50", "Total")) {
-    out <- align(saf_demo[[arm]], sections = sec)
+    out <- align(cdisc_saf_demo[[arm]], sections = sec)
     expect_snapshot(
       cat(sprintf("=== %s ===\n", arm), out, sep = "\n"),
       variant = arm
@@ -1105,14 +1105,14 @@ test_that("engine_decimal() threads zero_suppress + edge_trim", {
 
 # ---------------------------------------------------------------------
 # Layer 11 — combined: sections + opaque + zero-suppress on the
-# saf_demo Total column. The Total column has "0 (0.0)" rows in
+# cdisc_saf_demo Total column. The Total column has "0 (0.0)" rows in
 # Race / Ethnicity that should now zero-suppress, and "NR" — though
 # absent here — could be opaque in a future fixture.
 # ---------------------------------------------------------------------
 
-test_that("snapshot: per-section + zero-suppress + edge-trim on saf_demo Total", {
-  v <- saf_demo$Total
-  sec <- saf_demo$variable
+test_that("snapshot: per-section + zero-suppress + edge-trim on cdisc_saf_demo Total", {
+  v <- cdisc_saf_demo$Total
+  sec <- cdisc_saf_demo$variable
   out <- align(
     v,
     sections = sec,
@@ -1163,7 +1163,7 @@ test_that("engine_decimal in afm mode keeps uniform column widths in proportiona
 })
 
 test_that("as_grid threads preset@decimal_metrics='chars' end-to-end", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),

@@ -10,11 +10,11 @@
 library(tabular)
 
 # Same pipeline as the README "A table in one pipeline" chunk.
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
-# Compact slice for the hero: Age, Sex, Race (the full saf_demo is 36 rows).
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+# Compact slice for the hero: Age, Sex, Race (the full cdisc_saf_demo is 36 rows).
 keep <- c("Age (years)", "Sex, n (%)", "Race, n (%)")
-demo <- saf_demo[
-  saf_demo$variable %in% keep,
+demo <- cdisc_saf_demo[
+  cdisc_saf_demo$variable %in% keep,
   c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")
 ]
 

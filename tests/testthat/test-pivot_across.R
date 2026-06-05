@@ -7,7 +7,7 @@
 
 test_that("pivot_across() returns a data.frame", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(
       continuous = "{mean} ({sd})",
       categorical = "{n} ({p}%)"
@@ -18,7 +18,7 @@ test_that("pivot_across() returns a data.frame", {
 })
 
 test_that("pivot_across() produces one column per group1_level + overall", {
-  out <- pivot_across(saf_demo_card)
+  out <- pivot_across(cdisc_saf_demo_ard)
   arm_cols <- setdiff(names(out), c("variable", "stat_label"))
   expect_true("Total" %in% arm_cols)
   expect_true("Placebo" %in% arm_cols)
@@ -27,7 +27,7 @@ test_that("pivot_across() produces one column per group1_level + overall", {
 })
 
 test_that("pivot_across() chains into tabular()", {
-  spec <- pivot_across(saf_demo_card) |>
+  spec <- pivot_across(cdisc_saf_demo_ard) |>
     tabular(titles = c("Table 14.1.1", "Demographics"))
   expect_true(is_tabular_spec(spec))
   expect_identical(spec@titles, c("Table 14.1.1", "Demographics"))
@@ -38,11 +38,11 @@ test_that("pivot_across() chains into tabular()", {
 # ---------------------------------------------------------------------
 
 test_that("Shape A: raw ard_stack with group1/group1_level is auto-detected", {
-  expect_no_error(pivot_across(saf_demo_card))
+  expect_no_error(pivot_across(cdisc_saf_demo_ard))
 })
 
 test_that("Shape A normalises list-stat columns", {
-  ard <- saf_demo_card
+  ard <- cdisc_saf_demo_ard
   out <- pivot_across(
     ard,
     statistic = list(
@@ -58,7 +58,7 @@ test_that("Shape A normalises list-stat columns", {
 # ---------------------------------------------------------------------
 
 test_that("Shape B: renamed arm column is detected automatically", {
-  ard <- saf_demo_card
+  ard <- cdisc_saf_demo_ard
   arm_col <- ard$group1_level
   ard$ARM <- arm_col
   ard$group1 <- NULL
@@ -117,7 +117,7 @@ test_that("Shape D: fully-renamed ARD without `column` errors helpfully", {
 # ---------------------------------------------------------------------
 
 test_that("list-column stat normalises to numeric", {
-  ard <- saf_demo_card
+  ard <- cdisc_saf_demo_ard
   ard$stat <- as.list(ard$stat)
   out <- pivot_across(
     ard,
@@ -130,18 +130,18 @@ test_that("list-column stat normalises to numeric", {
 })
 
 # ---------------------------------------------------------------------
-# Edge case 7-8: hierarchical (SOC / PT) — saf_aesocpt_card
+# Edge case 7-8: hierarchical (SOC / PT) — cdisc_saf_aesocpt_ard
 # ---------------------------------------------------------------------
 
 test_that("Hierarchical ARD: SOC and PT columns appear in output", {
-  out <- pivot_across(saf_aesocpt_card, statistic = "{n} ({p}%)")
+  out <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
   expect_true("soc" %in% names(out))
   expect_true("label" %in% names(out))
   expect_true("row_type" %in% names(out))
 })
 
 test_that("Hierarchical ARD keeps the ..ard_hierarchical_overall.. sentinel as a row", {
-  out <- pivot_across(saf_aesocpt_card, statistic = "{n} ({p}%)")
+  out <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
   expect_true(any(out$row_type == "overall"))
 })
 
@@ -150,7 +150,7 @@ test_that("Hierarchical ARD keeps the ..ard_hierarchical_overall.. sentinel as a
 # ---------------------------------------------------------------------
 
 test_that("Other ^\\.\\. internal rows are filtered", {
-  ard <- saf_demo_card
+  ard <- cdisc_saf_demo_ard
   extra <- ard[1L, , drop = FALSE]
   extra$variable <- "..internal_sentinel.."
   extra$stat_name <- "n"
@@ -172,7 +172,11 @@ test_that("Other ^\\.\\. internal rows are filtered", {
 
 test_that("Single-string statistic applies to all variables", {
   # Use ard that only has categorical rows so n/p are available
-  ard <- saf_demo_card[saf_demo_card$context == "categorical", , drop = FALSE]
+  ard <- cdisc_saf_demo_ard[
+    cdisc_saf_demo_ard$context == "categorical",
+    ,
+    drop = FALSE
+  ]
   out <- pivot_across(ard, statistic = "{n} ({p}%)")
   expect_s3_class(out, "data.frame")
   expect_true(nrow(out) >= 1L)
@@ -184,7 +188,7 @@ test_that("Single-string statistic applies to all variables", {
 
 test_that("Named-list-by-context dispatches per context", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(
       continuous = "{mean} ({sd})",
       categorical = "{n} ({p}%)"
@@ -201,10 +205,11 @@ test_that("Named-list-by-context dispatches per context", {
 
 test_that("Named-list-by-variable: per-variable spec wins, default falls through", {
   # Filter to AGE + categoricals so the categorical fallback handles
-  # everything; WEIGHT/HEIGHT/BMI now also live in saf_demo_card and need
+  # everything; WEIGHT/HEIGHT/BMI now also live in cdisc_saf_demo_ard and need
   # their own continuous rule which is not the scenario under test here.
-  ard <- saf_demo_card[
-    saf_demo_card$variable %in% c("AGE", "AGEGR1", "SEX", "RACE", "ETHNIC"),
+  ard <- cdisc_saf_demo_ard[
+    cdisc_saf_demo_ard$variable %in%
+      c("AGE", "AGEGR1", "SEX", "RACE", "ETHNIC"),
     ,
     drop = FALSE
   ]
@@ -226,7 +231,7 @@ test_that("Named-list-by-variable: per-variable spec wins, default falls through
 
 test_that("Multi-row continuous spec produces one display row per entry", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(
       continuous = c(
         N = "{N}",
@@ -249,7 +254,7 @@ test_that("Multi-row continuous spec produces one display row per entry", {
 test_that("Format string referencing unknown stat raises tabular_error_input", {
   expect_error(
     pivot_across(
-      saf_demo_card,
+      cdisc_saf_demo_ard,
       statistic = list(
         continuous = "{not_a_stat}",
         categorical = "{n} ({p}%)"
@@ -259,7 +264,7 @@ test_that("Format string referencing unknown stat raises tabular_error_input", {
   )
   expect_error(
     pivot_across(
-      saf_demo_card,
+      cdisc_saf_demo_ard,
       statistic = list(
         continuous = "{mean} ({sd})",
         categorical = "{n} ({p}%)"
@@ -275,7 +280,7 @@ test_that("Format string referencing unknown stat raises tabular_error_input", {
 
 test_that("Global decimals override built-in defaults", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(
       continuous = "{mean}",
       categorical = "{n} ({p}%)"
@@ -293,7 +298,7 @@ test_that("Global decimals override built-in defaults", {
 
 test_that("Per-variable decimals + .default fallback", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(
       continuous = "{mean}",
       categorical = "{n} ({p}%)"
@@ -310,7 +315,7 @@ test_that("Per-variable decimals + .default fallback", {
 
 test_that("Custom fmt function overrides built-in", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(continuous = "{mean}", categorical = "{n} ({p}%)"),
     fmt = list(mean = function(x) paste0("M=", round(x, 0)))
   )
@@ -324,7 +329,7 @@ test_that("Custom fmt function overrides built-in", {
 
 test_that("Zero suppression: n=0 renders as bare '0'", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(
       continuous = "{mean} ({sd})",
       categorical = "{n} ({p}%)"
@@ -387,7 +392,7 @@ test_that("Custom fmt$p overrides the threshold default", {
 
 test_that("@details example: custom fmt$n re-enables full n=0 formatting", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(
       continuous = "{mean} ({sd})",
       categorical = "{n} ({p}%)"
@@ -478,7 +483,7 @@ test_that("NA stat renders as empty string", {
 
 test_that("overall = NULL drops rows with NA arm", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(
       continuous = "{mean} ({sd})",
       categorical = "{n} ({p}%)"
@@ -494,7 +499,7 @@ test_that("overall = NULL drops rows with NA arm", {
 
 test_that("label remaps variable values", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(
       continuous = "{mean} ({sd})",
       categorical = "{n} ({p}%)"
@@ -532,7 +537,7 @@ test_that("Empty result after filtering raises tabular_error_input", {
 
 test_that("stat_label is indented when it differs from variable", {
   out <- pivot_across(
-    saf_demo_card,
+    cdisc_saf_demo_ard,
     statistic = list(
       continuous = c("Mean (SD)" = "{mean} ({sd})"),
       categorical = "{n} ({p}%)"
@@ -558,7 +563,7 @@ test_that("pivot_across() rejects ARD without stat_name / stat", {
 
 test_that("pivot_across() rejects non-string non-list statistic", {
   expect_error(
-    pivot_across(saf_demo_card, statistic = 42L),
+    pivot_across(cdisc_saf_demo_ard, statistic = 42L),
     class = "tabular_error_input"
   )
 })
@@ -566,7 +571,7 @@ test_that("pivot_across() rejects non-string non-list statistic", {
 test_that("pivot_across() rejects fmt with non-function entries", {
   expect_error(
     pivot_across(
-      saf_demo_card,
+      cdisc_saf_demo_ard,
       statistic = "{n} ({p}%)",
       fmt = list(p = "not a function")
     ),
@@ -742,7 +747,7 @@ test_that("Per-variable decimals fall through to built-in default for unrelated 
 # ---------------------------------------------------------------------
 
 test_that("Shape A and Shape B produce identical wide output on the same data", {
-  ard_a <- saf_demo_card
+  ard_a <- cdisc_saf_demo_ard
   ard_b <- ard_a
   ard_b$ARM <- ard_b$group1_level
   ard_b$group1 <- NULL
@@ -766,7 +771,7 @@ test_that("Shape A and Shape B produce identical wide output on the same data", 
 # ---------------------------------------------------------------------
 
 test_that("Hierarchical ARD: each SOC has a row + its PTs underneath", {
-  out <- pivot_across(saf_aesocpt_card, statistic = "{n} ({p}%)")
+  out <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
   expect_true(any(out$row_type == "soc"))
   expect_true(any(out$row_type == "pt"))
   # Within a single SOC the soc value repeats across the PT rows
@@ -777,7 +782,7 @@ test_that("Hierarchical ARD: each SOC has a row + its PTs underneath", {
 
 test_that("Hierarchical ARD respects label remap on soc / pt cols", {
   out <- pivot_across(
-    saf_aesocpt_card,
+    cdisc_saf_aesocpt_ard,
     statistic = "{n} ({p}%)",
     label = c("SKIN AND SUBCUTANEOUS TISSUE DISORDERS" = "Skin / SC tissue")
   )
@@ -925,11 +930,11 @@ test_that("Multi-group .by preserves extra group columns in output", {
 # ---------------------------------------------------------------------
 
 test_that("Hierarchical ARD with overall rows handles group-shift", {
-  # saf_aesocpt_card was built with .overall = FALSE via the
+  # cdisc_saf_aesocpt_ard was built with .overall = FALSE via the
   # cards::ard_stack_hierarchical(over_variables = TRUE) path, which
   # uses ..ard_hierarchical_overall.. instead of the group-shift quirk;
   # verifying it renders cleanly is enough to exercise the bypass.
-  out <- pivot_across(saf_aesocpt_card, statistic = "{n} ({p}%)")
+  out <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
   expect_true(any(out$row_type == "overall"))
   expect_true(any(out$row_type == "soc"))
   expect_true(any(out$row_type == "pt"))
@@ -1056,7 +1061,7 @@ test_that("Custom fmt + per-variable decimals interact (fmt wins)", {
 test_that(".check_fmt_arg rejects unnamed list", {
   expect_error(
     pivot_across(
-      saf_demo_card,
+      cdisc_saf_demo_ard,
       statistic = "{n} ({p}%)",
       fmt = list(identity)
     ),
@@ -1125,16 +1130,16 @@ test_that("pivot_across raises when column filter removes all rows", {
 # ---------------------------------------------------------------------
 
 test_that("pivot_across() works on all bundled _card datasets", {
-  # Two ARD shapes are shipped: flat (saf_demo_card, mixed continuous +
-  # categorical) and hierarchical (saf_aesocpt_card, SOC / PT nested).
+  # Two ARD shapes are shipped: flat (cdisc_saf_demo_ard, mixed continuous +
+  # categorical) and hierarchical (cdisc_saf_aesocpt_ard, SOC / PT nested).
   stat <- list(
     continuous = "{mean} ({sd})",
     categorical = "{n} ({p}%)"
   )
-  out <- pivot_across(saf_demo_card, statistic = stat)
+  out <- pivot_across(cdisc_saf_demo_ard, statistic = stat)
   expect_s3_class(out, "data.frame")
 
-  out_h <- pivot_across(saf_aesocpt_card, statistic = stat)
+  out_h <- pivot_across(cdisc_saf_aesocpt_ard, statistic = stat)
   expect_s3_class(out_h, "data.frame")
   expect_true("soc" %in% names(out_h))
 })
@@ -1181,7 +1186,7 @@ test_that("pivot_across keeps tabulate-context categorical rows (B1)", {
   # Relabel the bundled cards-like ARD so its data variables carry the
   # "summary" / "tabulate" contexts that ard_summary() / ard_tabulate()
   # emit, reproducing the B1 shape without a `cards` dependency.
-  card_st <- saf_demo_card
+  card_st <- cdisc_saf_demo_ard
   card_st$context[card_st$context == "continuous"] <- "summary"
   card_st$context[card_st$context == "categorical"] <- "tabulate"
 
@@ -1213,7 +1218,7 @@ test_that("pivot_across keeps the Total column for tabulate categoricals (B1)", 
   # `ctx == "tabulate" & is.na(arm)` dropped it, blanking the Total column
   # for every categorical variable. The by-variable self-row is removed by
   # NAME (variable == column) instead, leaving genuine Total rows intact.
-  card_st <- saf_demo_card
+  card_st <- cdisc_saf_demo_ard
   card_st$context[card_st$context == "continuous"] <- "summary"
   card_st$context[card_st$context == "categorical"] <- "tabulate"
 
@@ -1239,8 +1244,8 @@ test_that("pivot_across renders an arm-less tabulate ARD without aborting (B1)",
   # ARD (no treatment split, every arm NA) had ALL rows match the mask and
   # errored with "No displayable rows remain". With no grouping column
   # (Shape C) the rows must be kept and pooled under `overall`.
-  card <- saf_demo_card[
-    saf_demo_card$context == "categorical",
+  card <- cdisc_saf_demo_ard[
+    cdisc_saf_demo_ard$context == "categorical",
     ,
     drop = FALSE
   ]
@@ -1276,4 +1281,253 @@ test_that(".normalise_shape_d normalises a list-column arm to NA, not 'NULL' (B1
   )
   expect_identical(res$df$arm, c("Placebo", "Placebo", NA))
   expect_false(any(res$df$arm %in% "NULL"))
+})
+
+# B2: row_group — second non-column grouping dimension ---------------
+
+# Mimics ard_stack(.by = c(ARM, SEX)): RACE counts crossed by ARM and
+# SEX, plus the by-marginal SEX tabulate rows ard_stack injects (the
+# rows that mis-trip hierarchy detection on the column-only path).
+mk_2by_ard <- function() {
+  arms <- c("Placebo", "Drug")
+  sexes <- c("F", "M")
+  races <- c("WHITE", "BLACK")
+  rows <- list()
+  for (a in arms) {
+    for (s in sexes) {
+      for (r in races) {
+        rows[[length(rows) + 1L]] <- data.frame(
+          group1 = "ARM",
+          group1_level = a,
+          group2 = "SEX",
+          group2_level = s,
+          variable = "RACE",
+          variable_level = r,
+          context = "categorical",
+          stat_name = c("n", "p"),
+          stat = I(list(10, 0.25)),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+  }
+  for (a in arms) {
+    for (s in sexes) {
+      rows[[length(rows) + 1L]] <- data.frame(
+        group1 = "ARM",
+        group1_level = a,
+        group2 = NA,
+        group2_level = NA,
+        variable = "SEX",
+        variable_level = s,
+        context = "tabulate",
+        stat_name = c("n", "p"),
+        stat = I(list(20, 0.5)),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  do.call(rbind, rows)
+}
+
+test_that("row_group widens a 2-variable .by cleanly with no phantom Total (#B2)", {
+  out <- pivot_across(
+    mk_2by_ard(),
+    column = "ARM",
+    row_group = "SEX",
+    statistic = list(categorical = "{n} ({p}%)")
+  )
+  # SEX is a leading row-group column, not a hierarchy and not a column.
+  expect_true("SEX" %in% names(out))
+  expect_false("Total" %in% names(out))
+  expect_false("soc" %in% names(out)) # not mis-read as a hierarchy
+  expect_setequal(out$SEX, c("F", "M"))
+  # Only the RACE content survives; the by-marginal SEX rows are dropped.
+  expect_setequal(unique(out$variable), "RACE")
+  expect_true(all(c("Placebo", "Drug") %in% names(out)))
+})
+
+test_that("row_group factor level order is preserved (#B2)", {
+  ard <- mk_2by_ard()
+  out <- pivot_across(
+    ard,
+    column = "ARM",
+    row_group = "SEX",
+    statistic = list(categorical = "{n}")
+  )
+  expect_identical(unique(out$SEX), c("F", "M"))
+})
+
+test_that("row_group output composes with subgroup() (#B2)", {
+  out <- pivot_across(
+    mk_2by_ard(),
+    column = "ARM",
+    row_group = "SEX",
+    statistic = list(categorical = "{n} ({p}%)")
+  )
+  # The SEX column is an ordinary column the downstream verb can page on.
+  spec <- tabular(out) |> subgroup(by = "SEX")
+  expect_s3_class(spec, "tabular::tabular_spec")
+})
+
+test_that("row_group errors when not a second grouping variable (#B2)", {
+  expect_error(
+    pivot_across(
+      mk_2by_ard(),
+      column = "ARM",
+      row_group = "NOPE",
+      statistic = list(categorical = "{n}")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("row_group errors when equal to column (#B2)", {
+  expect_error(
+    pivot_across(
+      mk_2by_ard(),
+      column = "ARM",
+      row_group = "ARM",
+      statistic = list(categorical = "{n}")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("row_group errors on a non-character value (#B2)", {
+  expect_error(
+    pivot_across(
+      mk_2by_ard(),
+      column = "ARM",
+      row_group = 1L,
+      statistic = list(categorical = "{n}")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("row_group errors when the ARD has no second grouping variable (#B2)", {
+  # A single-.by ARD has no extra_groups; the error names that case.
+  single_by <- data.frame(
+    group1 = "ARM",
+    group1_level = c("Placebo", "Drug"),
+    variable = "SEX",
+    variable_level = "F",
+    context = "categorical",
+    stat_name = "n",
+    stat = I(list(40, 38)),
+    stringsAsFactors = FALSE
+  )
+  expect_error(
+    pivot_across(
+      single_by,
+      column = "ARM",
+      row_group = "SEX",
+      statistic = list(categorical = "{n}")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("a real SOC/PT hierarchy is still detected with no row_group (#B2 no-regress)", {
+  out <- pivot_across(
+    cdisc_saf_aesocpt_ard,
+    statistic = list(continuous = "{mean} ({sd})", categorical = "{n} ({p}%)")
+  )
+  expect_true("soc" %in% names(out)) # hierarchy path intact (compat row F)
+})
+
+test_that("row_group on a genuine hierarchy errors instead of corrupting (#B2)", {
+  # AEBODSYS is in extra_groups, so .check_row_group passes; the hierarchy
+  # guard must catch the misuse before the flat path flattens the SOC/PT
+  # nesting and leaks the ..ard_hierarchical_overall.. sentinel row.
+  expect_error(
+    pivot_across(
+      cdisc_saf_aesocpt_ard,
+      row_group = "AEBODSYS",
+      statistic = "{n}"
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+# B1: warn on a totally mis-keyed statistic ---------------------------
+
+mk_cat_ard <- function() {
+  rows <- list()
+  for (a in c("Placebo", "Drug")) {
+    rows[[length(rows) + 1L]] <- data.frame(
+      group1 = "ARM",
+      group1_level = a,
+      variable = "SEX",
+      variable_level = "F",
+      context = "categorical",
+      stat_name = c("n", "p"),
+      stat = I(list(40, 0.5)),
+      stringsAsFactors = FALSE
+    )
+  }
+  do.call(rbind, rows)
+}
+
+test_that("an explicit statistic matching no context warns (#B1)", {
+  expect_warning(
+    pivot_across(
+      mk_cat_ard(),
+      column = "ARM",
+      statistic = list(continuous = "{mean}")
+    ),
+    class = "tabular_warning_unmatched_context"
+  )
+})
+
+test_that("the unmatched-context warning names the keys and contexts (#B1)", {
+  w <- tryCatch(
+    pivot_across(
+      mk_cat_ard(),
+      column = "ARM",
+      statistic = list(summary = "{mean}")
+    ),
+    warning = function(w) conditionMessage(w)
+  )
+  expect_match(w, "summary")
+  expect_match(w, "categorical")
+})
+
+test_that("a default (un-supplied) statistic never warns (#B1)", {
+  # The {n} fallback is the correct output for a plain count ARD; a
+  # default call must stay silent.
+  expect_no_warning(
+    pivot_across(mk_cat_ard(), column = "ARM")
+  )
+})
+
+test_that("a partially-matching statistic does not warn (#B1)", {
+  # categorical matches; the user is trusted for any other contexts.
+  expect_no_warning(
+    pivot_across(
+      mk_cat_ard(),
+      column = "ARM",
+      statistic = list(categorical = "{n}")
+    )
+  )
+})
+
+test_that("a default = key suppresses the unmatched-context warning (#B1)", {
+  expect_no_warning(
+    pivot_across(
+      mk_cat_ard(),
+      column = "ARM",
+      statistic = list(continuous = "{mean}", default = "{n}")
+    )
+  )
+})
+
+test_that("a hierarchical ARD never warns even when keys do not match (#B1)", {
+  expect_no_warning(
+    pivot_across(
+      cdisc_saf_aesocpt_ard,
+      statistic = list(continuous = "{mean}")
+    )
+  )
 })

@@ -201,7 +201,7 @@ test_that("engine_group_display 'column' mode actually suppresses when values re
 # ---------------------------------------------------------------------
 
 test_that("as_grid() with default usage='group' promotes the variable column to header rows", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(usage = "group", label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
@@ -221,7 +221,7 @@ test_that("as_grid() with default usage='group' promotes the variable column to 
 })
 
 test_that("as_grid() with explicit group_display='column_repeat' keeps the variable column visible", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
         usage = "group",
@@ -242,7 +242,7 @@ test_that("as_grid() with explicit group_display='column_repeat' keeps the varia
 })
 
 test_that("as_grid() with explicit group_display='column' keeps column + suppresses repeats", {
-  spec <- tabular(saf_demo) |>
+  spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
         usage = "group",
@@ -1340,7 +1340,7 @@ test_that(".indent_usage_columns picks every usage='indent' column in declaratio
 # Change D: multi-level `usage = "group" + group_display = "header_row"`
 # auto-indent. Outer band at depth 0, inner band at depth 1, etc. Body
 # rows under N bands get N levels added to cells_indent[, host_col]
-# UNLESS the host column declares `indent_by` (saf_aesocpt regression).
+# UNLESS the host column declares `indent_by` (cdisc_saf_aesocpt regression).
 # ---------------------------------------------------------------------
 
 mk_nested_band_spec <- function(host_indent_by = FALSE) {
@@ -1428,7 +1428,7 @@ test_that("nested bands: body rows get cells_indent = N when host has no indent_
   expect_true(all(body_depths == 2L))
 })
 
-test_that("nested bands: indent_by on host SUPPRESSES data_depth (saf_aesocpt invariant)", {
+test_that("nested bands: indent_by on host SUPPRESSES data_depth (cdisc_saf_aesocpt invariant)", {
   g <- as_grid(mk_nested_band_spec(host_indent_by = TRUE))
   p1 <- g@pages[[1L]]
   host_idx <- match("label", p1$col_names)
@@ -1440,7 +1440,7 @@ test_that("nested bands: indent_by on host SUPPRESSES data_depth (saf_aesocpt in
   )
   # indent_lv is 0L on every body row, so cells_indent is 0L on every
   # body row -- data_depth (2) suppressed because host declares
-  # indent_by. saf_aesocpt's depth-0 SOC + depth-1 PT pattern works
+  # indent_by. cdisc_saf_aesocpt's depth-0 SOC + depth-1 PT pattern works
   # the same way: indent_by wins.
   expect_true(all(body_depths == 0L))
 })

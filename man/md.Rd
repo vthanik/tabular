@@ -60,10 +60,10 @@ the marker before rendering; users never see it.
 # line italicises "Safety Population" via `md("*...*")` for a visible
 # contrast; the first footnote carries a Pandoc-style superscript
 # marker `^a^` that the backends render as a true superscript.
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
-  saf_aesocpt,
+  cdisc_saf_aesocpt,
   titles = c(
     "Table 14.3.1",
     "Adverse Events by System Organ Class and Preferred Term",
@@ -91,10 +91,10 @@ tabular(
 # a Markdown link. HTML / PDF / DOCX render as clickable; RTF /
 # LaTeX render the link text with the URL inline (backend
 # decides).
-ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 
 tabular(
-  eff_resp,
+  cdisc_eff_resp,
   titles = c(
     "Table 14.2.1",
     "Best Overall Response",

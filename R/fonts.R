@@ -283,7 +283,7 @@
 #' # locally. Useful before sharing a render with downstream
 #' # reviewers who may be on a different OS.
 #' spec <- tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = "Demographics"
 #' )
 #' if (requireNamespace("systemfonts", quietly = TRUE)) {
@@ -297,7 +297,7 @@
 #' # `check_fonts()` flags this so the user knows to switch to
 #' # the "mono" generic for portable output.
 #' spec_mono <- tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = "Mono request"
 #' ) |>
 #'   preset(font_family = "Courier New")
@@ -311,7 +311,7 @@
 #' # emitted verbatim — no alias lookup, no fabrication. Use this
 #' # when the first choice is a sponsor / brand face that needs an
 #' # honest fallback for reviewers who don't have it installed.
-#' spec_brand <- tabular(saf_demo) |>
+#' spec_brand <- tabular(cdisc_saf_demo) |>
 #'   preset(font_family = c("Inter", "Liberation Sans", "Arial", "sans"))
 #' if (requireNamespace("systemfonts", quietly = TRUE)) {
 #'   check_fonts(spec_brand)
@@ -325,11 +325,11 @@
 #' # with Liberation Sans. Both close with the backend's native
 #' # fallback layer (CSS generic on HTML, Latin Modern on LaTeX).
 #' if (requireNamespace("systemfonts", quietly = TRUE)) {
-#'   tabular(saf_demo) |>
+#'   tabular(cdisc_saf_demo) |>
 #'     preset(font_family = "serif") |>
 #'     check_fonts()
 #'
-#'   tabular(saf_demo) |>
+#'   tabular(cdisc_saf_demo) |>
 #'     preset(font_family = "sans") |>
 #'     check_fonts()
 #' }

@@ -77,8 +77,8 @@ so do not mix a hand-typed marker with an engine one for the same note.
 # AE-by-SOC/PT table whose Total column header carries the analysis-
 # population note. The engine drops a superscript "a" on the header
 # and prints "a <text>" beneath the table.
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
-tabular(saf_aesocpt) |>
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+tabular(cdisc_saf_aesocpt) |>
   cols(
     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
     soc      = col_spec(visible = FALSE),
@@ -99,7 +99,7 @@ tabular(saf_aesocpt) |>
 # A single note marks every high-frequency preferred term (n >= 50 in
 # the Total column) in the SOC/PT stub. Sharing one `id` keeps it to
 # one marker and one line; the marker lands on each matching cell.
-tabular(saf_aesocpt) |>
+tabular(cdisc_saf_aesocpt) |>
   cols(
     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
     soc      = col_spec(visible = FALSE),

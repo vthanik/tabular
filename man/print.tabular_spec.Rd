@@ -88,7 +88,7 @@ on Linux distros where browsers don't have read access to
 # Quarto / Rmd chunk it inlines under the chunk; at a plain
 # console the HTML source is `cat()`-ed.
 tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = c("Table 14.1.1", "Demographics"),
   footnotes = "Safety Population."
 )
@@ -98,7 +98,7 @@ tabular(
 # The cli-tree summary shows props at a glance. Useful for
 # debugging spec composition without paying the HTML render
 # cost.
-spec <- tabular(saf_demo, titles = "Demographics") |>
+spec <- tabular(cdisc_saf_demo, titles = "Demographics") |>
   cols(variable = col_spec(usage = "group", label = "Characteristic"))
 
 print(spec, output = "cli")

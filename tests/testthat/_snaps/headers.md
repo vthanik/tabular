@@ -1,7 +1,7 @@
 # headers() error snapshots
 
     Code
-      headers(tabular(saf_demo), Arms = c("placebo", "phantom_arm"))
+      headers(tabular(cdisc_saf_demo), Arms = c("placebo", "phantom_arm"))
     Condition
       Error:
       ! `headers()` references 1 column not in `data`.
@@ -11,7 +11,7 @@
 ---
 
     Code
-      headers(tabular(saf_demo), `Arms 1` = c("placebo", "drug_50"), `Arms 2` = c(
+      headers(tabular(cdisc_saf_demo), `Arms 1` = c("placebo", "drug_50"), `Arms 2` = c(
         "drug_50", "drug_100"))
     Condition
       Error:

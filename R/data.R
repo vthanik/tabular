@@ -1,8 +1,8 @@
-# Per-dataset roxygen blocks for the 9 demo tables:
-# - 5 pre-summarised wide tables tabular() consumes directly
+# Per-dataset roxygen blocks for the 11 demo tables (cdisc_ namespace):
+# - 7 pre-summarised wide tables tabular() consumes directly
 # - 2 cards ARD companions covering the flat + hierarchical shapes
 # - 2 BigN denominator tables (safety / efficacy populations)
-# Source: data-raw/bundle-demo.R derives all 9 from `pharmaverseadam`.
+# Source: data-raw/bundle-demo.R derives all 11 from `pharmaverseadam`.
 
 #' Demographics summary, Safety Population
 #'
@@ -38,15 +38,15 @@
 #'   CDISCPILOT01 treatment arms. Baseline Weight / Height / BMI are
 #'   joined in from `pharmaverseadam::advs`.
 #'
-#' @seealso [saf_demo_card] for the long-format ARD companion;
-#'   [saf_n] for the matching BigN denominators.
+#' @seealso [cdisc_saf_demo_ard] for the long-format ARD companion;
+#'   [cdisc_saf_n] for the matching BigN denominators.
 #'
 #' @examples
 #' # 95% safety pattern: demographics table with BigN-embedded
 #' # column labels and CDISC-canonical statistic order.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' tabular(
-#'   saf_demo,
+#'   cdisc_saf_demo,
 #'   titles = c(
 #'     "Table 14.1.1",
 #'     "Demographics and Baseline Characteristics",
@@ -73,7 +73,7 @@
 #'       align = "decimal"
 #'     )
 #'   )
-"saf_demo"
+"cdisc_saf_demo"
 
 #' Overall adverse-event summary, Safety Population
 #'
@@ -104,13 +104,13 @@
 #'   `pharmaverseadam::adae` filtered to `SAFFL == "Y"` and
 #'   `TRTEMFL == "Y"`.
 #'
-#' @seealso [saf_n] for BigN denominators; [saf_aesocpt] for the
+#' @seealso [cdisc_saf_n] for BigN denominators; [cdisc_saf_aesocpt] for the
 #'   SOC / PT detail companion.
 #'
 #' @examples
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' tabular(
-#'   saf_aeoverall,
+#'   cdisc_saf_ae,
 #'   titles = c(
 #'     "Table 14.3.0",
 #'     "Adverse Event Overview",
@@ -136,7 +136,7 @@
 #'       align = "decimal"
 #'     )
 #'   )
-"saf_aeoverall"
+"cdisc_saf_ae"
 
 #' Adverse events by System Organ Class and Preferred Term
 #'
@@ -189,8 +189,8 @@
 #'   `sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))`
 #'   reproduces it via stable sort.
 #'
-#' @seealso [saf_aesocpt_card] for the hierarchical long ARD;
-#'   [saf_n] for BigN denominators.
+#' @seealso [cdisc_saf_aesocpt_ard] for the hierarchical long ARD;
+#'   [cdisc_saf_n] for BigN denominators.
 #'
 #' @examples
 #' # 95% safety pattern: SOC/PT table where `label` carries SOC text
@@ -198,10 +198,10 @@
 #' # `soc` / `row_type` / `n_total` / `soc_n` ride along as hidden
 #' # partition + sort keys. `sort_rows(soc_n, n_total)` clusters PTs
 #' # under their parent SOC and orders both levels by descending count.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
-#'   saf_aesocpt,
+#'   cdisc_saf_aesocpt,
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by SOC and Preferred Term",
@@ -239,7 +239,7 @@
 #'     by = c("soc_n", "n_total"),
 #'     descending = c(TRUE, TRUE)
 #'   )
-"saf_aesocpt"
+"cdisc_saf_aesocpt"
 
 #' Vital-signs summary
 #'
@@ -265,12 +265,12 @@
 #' @source Derived in `data-raw/bundle-demo.R` from
 #'   `pharmaverseadam::advs`.
 #'
-#' @seealso [saf_n] for BigN denominators.
+#' @seealso [cdisc_saf_n] for BigN denominators.
 #'
 #' @examples
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' tabular(
-#'   saf_vital,
+#'   cdisc_saf_vital,
 #'   titles = c(
 #'     "Table 14.4.1",
 #'     "Vital Signs Summary at Baseline and End of Treatment",
@@ -295,7 +295,7 @@
 #'       align = "decimal"
 #'     )
 #'   )
-"saf_vital"
+"cdisc_saf_vital"
 
 #' Vital-signs subgroup summary by Sex and Age Group
 #'
@@ -335,7 +335,7 @@
 #'   CDISCPILOT01 arms, the `SYSBP` / `DIABP` parameters, and the
 #'   End-of-Treatment visit.
 #'
-#' @seealso [saf_n] for BigN denominators; [subgroup()] for the verb
+#' @seealso [cdisc_saf_n] for BigN denominators; [subgroup()] for the verb
 #'   this dataset is designed for.
 #'
 #' @examples
@@ -343,7 +343,7 @@
 #' # `sex` and `sex_n` auto-hide from the body: `sex` because it is
 #' # the partition `by` column; `sex_n` because the banner template
 #' # references it. No explicit `col_spec(visible = FALSE)` needed.
-#' tabular(saf_subgroup, titles = "Vital Signs at End of Treatment") |>
+#' tabular(cdisc_saf_subgroup, titles = "Vital Signs at End of Treatment") |>
 #'   cols(
 #'     agegr      = col_spec(usage = "group", label = "Age Group"),
 #'     agegr_n    = col_spec(visible = FALSE),
@@ -356,7 +356,7 @@
 #'     Total      = col_spec(label = "Total",    align = "decimal")
 #'   ) |>
 #'   subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
-"saf_subgroup"
+"cdisc_saf_subgroup"
 
 #' Best Overall Response and Response Rates
 #'
@@ -398,7 +398,7 @@
 #' @source Derived in `data-raw/bundle-demo.R` from
 #'   `pharmaverseadam::adrs_onco` filtered to `PARAMCD == "BOR"`.
 #'
-#' @seealso [eff_n] for BigN denominators.
+#' @seealso [cdisc_eff_n] for BigN denominators.
 #'
 #' @examples
 #' # 95% efficacy pattern: four bold section bands (Best Overall
@@ -408,9 +408,9 @@
 #' # is needed; `group_label` repeats across every row of its section
 #' # so the engine's `header_row` mode emits exactly one band per
 #' # section.
-#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+#' ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 #' tabular(
-#'   eff_resp,
+#'   cdisc_eff_resp,
 #'   titles = c(
 #'     "Table 14.2.1",
 #'     "Best Overall Response and Response Rates",
@@ -435,7 +435,7 @@
 #'       align = "decimal"
 #'     )
 #'   )
-"eff_resp"
+"cdisc_eff_resp"
 
 #' Treatment-effect estimates by model
 #'
@@ -467,7 +467,7 @@
 #' @examples
 #' # Numeric-cell efficacy table — format = "%.2f" pins precision,
 #' # na_text = "--" renders the MMRM row's NA bounds as dashes.
-#' tabular(eff_estimates, titles = "Treatment-effect estimates by model") |>
+#' tabular(cdisc_eff_estimates, titles = "Treatment-effect estimates by model") |>
 #'   cols(
 #'     model    = col_spec(usage = "group",  label = "Model", valign = "top"),
 #'     estimate = col_spec(label = "Estimate", align = "decimal",
@@ -479,11 +479,11 @@
 #'     p_value  = col_spec(label = "p-value",  align = "decimal",
 #'                         format = "%.4f")
 #'   )
-"eff_estimates"
+"cdisc_eff_estimates"
 
 #' Cards ARD for demographics (flat ARD companion)
 #'
-#' The same demographics summary as `saf_demo`, but in the long
+#' The same demographics summary as `cdisc_saf_demo`, but in the long
 #' Analysis Results Data (ARD) format produced by
 #' `cards::ard_stack()`. One row per (treatment arm, variable,
 #' statistic). Shipped as a teaching dataset that shows the upstream
@@ -498,7 +498,7 @@
 #' `BMI_CAT` (each emitting `n`, `N`, `p`).
 #'
 #' This is the package's canonical **flat ARD** demo. Its hierarchical
-#' counterpart is [saf_aesocpt_card]; together they cover both shapes
+#' counterpart is [cdisc_saf_aesocpt_ard]; together they cover both shapes
 #' [pivot_across()] must handle.
 #'
 #' @format A `card`-classed tibble with columns `group1`,
@@ -515,12 +515,12 @@
 #'   `pharmaverseadam::adsl`.
 #'
 #' @seealso [pivot_across()] for the long-to-wide bridge;
-#'   [saf_demo] for the wide companion.
+#'   [cdisc_saf_demo] for the wide companion.
 #'
 #' @examples
 #' # 95% demographics pattern: cards ARD -> wide -> rendered table.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
-#' saf_demo_card |>
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+#' cdisc_saf_demo_ard |>
 #'   pivot_across(
 #'     statistic = list(
 #'       continuous  = "{mean} ({sd})",
@@ -535,20 +535,20 @@
 #'       "Safety Population"
 #'     )
 #'   )
-"saf_demo_card"
+"cdisc_saf_demo_ard"
 
 #' Cards hierarchical ARD for AEs by SOC and PT
 #'
-#' Long-format companion to `saf_aesocpt`. Produced by
+#' Long-format companion to `cdisc_saf_aesocpt`. Produced by
 #' `cards::ard_stack_hierarchical()` over `(AEBODSYS, AEDECOD)` with
 #' adsl-level denominators, sorted by descending overall incidence
 #' via `cards::sort_ard_hierarchical()`. Limited to the same top-10
-#' SOC, top-5 PT subset as `saf_aesocpt` so the two datasets describe
+#' SOC, top-5 PT subset as `cdisc_saf_aesocpt` so the two datasets describe
 #' the same slice of the data.
 #'
 #' This is the package's canonical **hierarchical ARD** demo
 #' (two grouping variables nested SOC -> PT). Its flat counterpart is
-#' [saf_demo_card]; together they cover both shapes [pivot_across()]
+#' [cdisc_saf_demo_ard]; together they cover both shapes [pivot_across()]
 #' must handle.
 #'
 #' @format A `card`-classed tibble. Carries an
@@ -560,13 +560,13 @@
 #'   `pharmaverseadam::adae` filtered to the top SOC / PT subset.
 #'
 #' @seealso [pivot_across()] for the long-to-wide bridge;
-#'   [saf_aesocpt] for the wide companion.
+#'   [cdisc_saf_aesocpt] for the wide companion.
 #'
 #' @examples
 #' # Hierarchical ARD pivot. pivot_across() recognises the
 #' # ard_stack_hierarchical shape and emits soc / label / row_type.
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
-#' saf_aesocpt_card |>
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+#' cdisc_saf_aesocpt_ard |>
 #'   pivot_across(statistic = "{n} ({p}%)") |>
 #'   tabular(
 #'     titles = c(
@@ -583,7 +583,7 @@
 #'     `Xanomeline Low Dose`  = col_spec(align = "decimal"),
 #'     `Xanomeline High Dose` = col_spec(align = "decimal")
 #'   )
-"saf_aesocpt_card"
+"cdisc_saf_aesocpt_ard"
 
 #' Safety-population BigN per arm
 #'
@@ -604,11 +604,11 @@
 #'     (`"Placebo"`, `"Xanomeline Low Dose"`,
 #'     `"Xanomeline High Dose"`, `"Total"`). Matches `group1_level`
 #'     in the `_card` ARDs (so the pivot output's column names
-#'     match a `setNames(saf_n$n, saf_n$arm)` lookup).}
+#'     match a `setNames(cdisc_saf_n$n, cdisc_saf_n$arm)` lookup).}
 #'   \item{`arm_short`}{Renamed label
 #'     (`"placebo"`, `"drug_50"`, `"drug_100"`, `"Total"`). Matches
-#'     the column names of `saf_demo`, `saf_aeoverall`,
-#'     `saf_aesocpt`, and `saf_vital`.}
+#'     the column names of `cdisc_saf_demo`, `cdisc_saf_ae`,
+#'     `cdisc_saf_aesocpt`, and `cdisc_saf_vital`.}
 #'   \item{`n`}{Integer subject count.}
 #' }
 #'
@@ -616,38 +616,38 @@
 #'   `pharmaverseadam::adsl` filtered to `SAFFL == "Y"` and the three
 #'   CDISCPILOT01 arms.
 #'
-#' @seealso [eff_n] for the efficacy-population counterpart.
+#' @seealso [cdisc_eff_n] for the efficacy-population counterpart.
 #'
 #' @examples
-#' # Use saf_n$arm_short when joining into the wide datasets
-#' # (saf_demo, saf_aeoverall, saf_aesocpt, saf_vital).
-#' n <- stats::setNames(saf_n$n, saf_n$arm_short)
+#' # Use cdisc_saf_n$arm_short when joining into the wide datasets
+#' # (cdisc_saf_demo, cdisc_saf_ae, cdisc_saf_aesocpt, cdisc_saf_vital).
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' col_spec(label = "Placebo\nN={n['placebo']}")@label
 #'
-#' # Use saf_n$arm when joining into pivot_across() output
+#' # Use cdisc_saf_n$arm when joining into pivot_across() output
 #' # (column names match the raw pharmaverseadam arm labels).
-#' n_arm <- stats::setNames(saf_n$n, saf_n$arm)
+#' n_arm <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm)
 #' col_spec(label = "Placebo\nN={n_arm['Placebo']}")@label
-"saf_n"
+"cdisc_saf_n"
 
 #' Efficacy-population BigN per arm
 #'
 #' Per-arm subject counts (BigN) for the efficacy population used by
-#' `eff_resp` / `eff_resp_card` — subjects with a `BOR` record in
+#' `cdisc_eff_resp` / `eff_resp_card` — subjects with a `BOR` record in
 #' `pharmaverseadam::adrs_onco`. Same two-column naming convention
-#' as `saf_n`; the totals differ from `saf_n` because not every
+#' as `cdisc_saf_n`; the totals differ from `cdisc_saf_n` because not every
 #' safety-pop subject contributes a best-overall-response record.
 #'
 #' @format A data frame with 4 rows and 3 columns; same schema as
-#'   [saf_n] (`arm`, `arm_short`, `n`).
+#'   [cdisc_saf_n] (`arm`, `arm_short`, `n`).
 #'
 #' @source Derived in `data-raw/bundle-demo.R` from the per-arm BOR
-#'   denominator computed inside the `eff_resp` pipeline.
+#'   denominator computed inside the `cdisc_eff_resp` pipeline.
 #'
-#' @seealso [saf_n] for the safety-population counterpart.
+#' @seealso [cdisc_saf_n] for the safety-population counterpart.
 #'
 #' @examples
 #' # Efficacy BigN joined into column headers.
-#' ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+#' ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 #' col_spec(label = "Placebo\nN={ne['placebo']}")@label
-"eff_n"
+"cdisc_eff_n"
