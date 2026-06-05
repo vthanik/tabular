@@ -98,10 +98,12 @@ test_that("no @examples auto-launches a browser non-interactively (#cran-detritu
   # detritus ("calibre-*"): the as.tags() example ended on
   # htmltools::browsable(...), whose autoprint calls html_print() ->
   # browseURL() even when !interactive(), leaving a browser temp dir.
-  # Every example that builds a browsable object must guard its autoprint
-  # behind if (interactive()). Eval each browsable-bearing example exactly
-  # as R CMD check does (non-interactive, with autoprint) under browser /
-  # viewer traps; any launch trips the trap and names the offender.
+  # This is the permanent, in-suite analog of that CRAN failure mode: eval
+  # EVERY example exactly as R CMD check does (non-interactive, with
+  # autoprint) under browser / viewer traps; any launch -- via browsable(),
+  # print(spec, view = TRUE), or any other construct -- trips a trap and
+  # names the offender. Not filtered to browsable()-bearing examples, so a
+  # future leak through a different call is caught too.
   r_dir <- test_path("..", "..", "R")
   skip_if(!dir.exists(r_dir), "R/ source not present (installed pkg)")
   skip_if_not_installed("htmltools")
@@ -120,7 +122,7 @@ test_that("no @examples auto-launches a browser non-interactively (#cran-detritu
   files <- list.files(r_dir, pattern = "\\.R$", full.names = TRUE)
   for (f in files) {
     code <- .extract_examples(f)
-    if (length(code) == 0L || !any(grepl("browsable\\(", code))) {
+    if (length(code) == 0L) {
       next
     }
     exprs <- tryCatch(

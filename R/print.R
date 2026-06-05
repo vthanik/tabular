@@ -301,25 +301,28 @@ NULL
 #'   to render it.
 #'
 #' @examples
-#' # ---- Example 1: Embed two tables in a custom htmltools page ----
-#' #
-#' # Compose two tabular tables in one parent container. `as.tags(spec)`
-#' # is the entry point `print()` and `knit_print()` use under the hood.
+#' # `as.tags()` converts a spec into an htmltools tagList you can drop into
+#' # a custom HTML page, a Shiny UI, or a Quarto / Rmd chunk. `print()` and
+#' # `knit_print()` call it under the hood, so you seldom call it directly --
+#' # but it is the seam for composing several tables into one container.
 #' s1 <- tabular(cdisc_saf_demo, titles = "Demographics")
 #' s2 <- tabular(cdisc_saf_ae, titles = "AE overall")
 #'
+#' # Compose two tables into one parent tagList. Autoprinting `tables` in a
+#' # Quarto / Rmd chunk renders both inline (via knit_print); embed it with
+#' # htmltools::save_html() or a Shiny renderUI().
 #' tables <- htmltools::tagList(
 #'   htmltools::as.tags(s1),
 #'   htmltools::as.tags(s2)
 #' )
 #'
-#' # `browsable()` makes the tagList render as live HTML in a viewer /
-#' # Quarto chunk instead of printing its source, the convention `gt` and
-#' # `flextable` follow. Guard with `interactive()` so a non-interactive
-#' # session (`R CMD check`, CI) never launches a browser.
-#' if (interactive()) {
-#'   htmltools::browsable(tables)
-#' }
+#' # The common path is autoprinting a spec: the viewer at an interactive
+#' # prompt, an inline live table under pkgdown / knitr, and HTML source
+#' # under R CMD check. This is the gt / flextable / tinytable convention --
+#' # end on a bare table object and let the registered print method choose,
+#' # with no browsable() / if (interactive()) wrapper, so R CMD check never
+#' # launches a browser.
+#' s1
 #'
 #' @seealso
 #' **Renders via:** [`print.tabular_spec`], `knit_print()`.
