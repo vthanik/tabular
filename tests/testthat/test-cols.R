@@ -76,6 +76,16 @@ test_that("cols() merges across two calls (non-default wins)", {
   expect_identical(s@cols$param@width, 1.5)
 })
 
+test_that("a later default width = \"auto\" leaves a pinned width intact (#width-sentinel)", {
+  # "auto" is the merge sentinel: a later cols()/cols_apply() carrying the
+  # default width must not reset a previously pinned width.
+  s <- mk_spec() |>
+    cols(param = col_spec(width = 2.0)) |>
+    cols(param = col_spec(align = "left")) # width defaults to "auto"
+  expect_identical(s@cols$param@width, 2.0)
+  expect_identical(s@cols$param@width_user, 2.0)
+})
+
 test_that("cols() second-call default does not erase first-call non-default", {
   s <- mk_spec() |>
     cols(param = col_spec(label = "Parameter")) |>

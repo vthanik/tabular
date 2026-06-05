@@ -631,9 +631,12 @@ cols_apply <- function(.spec, .cols, .col_spec) {
   if (!isTRUE(new@visible)) {
     out <- S7::set_props(out, visible = new@visible)
   }
-  if (!is.na(new@width)) {
-    # `width_user` is the immutable snapshot of the user width; keep it in
-    # lockstep with `width` so the HTML percent-width path stays correct.
+  # `"auto"` (the col_spec() default) is the merge sentinel: a later call
+  # carrying the default width leaves a previously pinned width intact, and
+  # only an explicit non-`"auto"` width overrides. `width_user` is the
+  # immutable snapshot of the user width; keep it in lockstep with `width`
+  # so the HTML percent-width path stays correct.
+  if (!is.na(new@width) && !identical(new@width, "auto")) {
     out <- S7::set_props(out, width = new@width, width_user = new@width_user)
   }
   if (!is.na(new@align)) {

@@ -510,13 +510,36 @@ pivot_across <- function(
 
   # A user-declared second grouping dimension (`row_group`, e.g. SEX in
   # `ard_stack(.by = c(ARM, SEX))`) carries by-marginal rows whose
-  # `variable` IS the group var name. Those marginals (a) make the group
-  # var name appear in `variable`, which mis-trips hierarchy detection,
-  # and (b) would leak into a phantom Total. Drop them: the dimension
-  # already rides the `extra_groups` column, and the table composes with
-  # `subgroup(by = row_group)` downstream.
+  # `variable` IS the group var name AND whose `row_group` value is absent
+  # (the ungrouped tabulation of the group var itself). Those marginals
+  # (a) make the group var name appear in `variable`, which mis-trips
+  # hierarchy detection, and (b) would leak into a phantom Total. Drop
+  # only those marginals -- a genuine analysis variable that happens to
+  # share the group name keeps its rows (it has a populated `row_group`
+  # value). The dimension already rides the `row_group` column, and the
+  # table composes with `subgroup(by = row_group)` downstream.
   if (!is.null(row_group)) {
-    df <- df[is.na(df$variable) | df$variable != row_group, , drop = FALSE]
+    # A genuine SOC/PT hierarchy carries `hierarchical`-context rows and
+    # the hierarchical-overall sentinel; `row_group` is for a crossing
+    # factor, not a hierarchy level. Refuse rather than silently flatten.
+    if (
+      any(df$ctx == "hierarchical", na.rm = TRUE) ||
+        any(df$variable %in% .tabular_ard_const$keep_sentinels)
+    ) {
+      cli::cli_abort(
+        c(
+          "{.arg row_group} cannot be used with a hierarchical ARD.",
+          "x" = "{.val {row_group}} reads as a SOC/PT hierarchy level, not a crossing factor.",
+          "i" = "Drop {.arg row_group} to render the hierarchy with its nested layout."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    is_marginal <- !is.na(df$variable) &
+      df$variable == row_group &
+      is.na(df[[row_group]])
+    df <- df[!is_marginal, , drop = FALSE]
   }
 
   # Hierarchy detection runs AFTER internal-row filtering so that
@@ -1313,7 +1336,7 @@ pivot_across <- function(
         "i" = if (length(extra_groups) > 0L) {
           "Available second-dimension group{?s}: {.val {extra_groups}}."
         } else {
-          "The ARD has no second grouping variable; it was built with a single {.code .by}."
+          "No second grouping dimension was detected; {.arg row_group} is supported for a cards {.fn ard_stack} 2-variable {.code .by}."
         },
         "i" = "For a 2-variable {.code .by}, pass the non-arm group var as {.arg row_group}, or page it with {.fn subgroup} instead."
       ),

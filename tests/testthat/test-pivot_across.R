@@ -1437,6 +1437,20 @@ test_that("a real SOC/PT hierarchy is still detected with no row_group (#B2 no-r
   expect_true("soc" %in% names(out)) # hierarchy path intact (compat row F)
 })
 
+test_that("row_group on a genuine hierarchy errors instead of corrupting (#B2)", {
+  # AEBODSYS is in extra_groups, so .check_row_group passes; the hierarchy
+  # guard must catch the misuse before the flat path flattens the SOC/PT
+  # nesting and leaks the ..ard_hierarchical_overall.. sentinel row.
+  expect_error(
+    pivot_across(
+      cdisc_saf_aesocpt_ard,
+      row_group = "AEBODSYS",
+      statistic = "{n}"
+    ),
+    class = "tabular_error_input"
+  )
+})
+
 # B1: warn on a totally mis-keyed statistic ---------------------------
 
 mk_cat_ard <- function() {
