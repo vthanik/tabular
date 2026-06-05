@@ -143,13 +143,7 @@ The matrix reflects each package’s documented export surface (verified against
 Two notes on the marks:
 
 - **Live HTML preview** means the table renders as HTML *inline* when you print it in a Quarto / R Markdown chunk or the RStudio viewer (a `knit_print` method). `rtables` prints a monospace ASCII table by default and ships no `knit_print` method, so it is `—` here; it can still emit HTML through an explicit `as_html()` call.
-
-- **PDF** is compiled through LaTeX, so it needs a TeX installation. `tabular` uses [`tinytex`](https://yihui.org/tinytex/) — install it once per machine and PDF `emit()` works thereafter:
-
-  ``` r
-  install.packages("tinytex")
-  tinytex::install_tinytex()   # one-time TeX setup
-  ```
+- **PDF** is compiled through LaTeX, so it needs a TeX installation — see [Installation](#installation) above. Every other backend is pure R.
 
 ## Documentation
 
