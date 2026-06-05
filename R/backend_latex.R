@@ -1172,29 +1172,34 @@ backend_latex <- function(grid, file) {
     band <- .runs_to_band_row(runs, surface_node)
     rows[[k]] <- band$row
     if (length(band$ranges) > 0L && nzchar(band_spec)) {
-      cols_spec <- paste(
-        vapply(
-          band$ranges,
-          function(r) sprintf("%d-%d", r[[1L]], r[[2L]]),
-          character(1L)
-        ),
-        collapse = ","
-      )
-      # `leftpos=-1, rightpos=-1` trims by colsep; `endpos` restricts the
-      # trim to each range's OUTERMOST columns only, so the underline runs
-      # continuously under all of a spanner's columns and is trimmed only
-      # at the spanner's two ends (tabularray's equivalent of booktabs
-      # `\cmidrule(lr)`). Without `endpos`, leftpos/rightpos trim at every
-      # interior vline crossing too, breaking the rule into one segment
-      # per column. Each comma-joined range trims its own ends, so
-      # adjacent spanners are separated by a visible gap.
+      # One hline directive PER spanner range (not comma-joined). The
+      # trim keys `leftpos=-1, rightpos=-1` trim by colsep; `endpos`
+      # restricts the trim to the range's OUTERMOST columns only, so the
+      # underline runs continuously under all of a spanner's columns and
+      # is trimmed only at that spanner's two ends -- tabularray's
+      # equivalent of booktabs `\cmidrule(lr)`. Two reasons it must be
+      # one directive per range, not a comma-joined `{2-7,8-13}`:
+      #   * without `endpos`, leftpos/rightpos trim at EVERY interior
+      #     vline crossing, breaking the rule into one segment per column;
+      #   * with a comma-joined range, `endpos` trims only the overall
+      #     outermost columns (2 and 13), so adjacent spanners MERGE into
+      #     one line with no gap between them.
+      # Per-range directives trim each spanner's own ends, leaving the
+      # gap between adjacent spanners.
       band_hlines <- c(
         band_hlines,
-        sprintf(
-          "hline{%d}={%s}{%s, leftpos=-1, rightpos=-1, endpos}",
-          k + 1L + offset,
-          cols_spec,
-          band_spec
+        vapply(
+          band$ranges,
+          function(r) {
+            sprintf(
+              "hline{%d}={%d-%d}{%s, leftpos=-1, rightpos=-1, endpos}",
+              k + 1L + offset,
+              r[[1L]],
+              r[[2L]],
+              band_spec
+            )
+          },
+          character(1L)
         )
       )
     }

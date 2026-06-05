@@ -1040,17 +1040,20 @@ test_that("LaTeX band underline rides an outer multi-range hline (no inline cmid
   emit(mk_multipage_band_spec(), out)
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_no_match(tex, "\\cmidrule", fixed = TRUE)
-  # Cols: param=1, a=2, b=3, c=4, d=5 -> Group A {2-3}, Group B {4-5}
-  # collapse to one multi-range hline below the single band row.
-  expect_match(tex, "hline\\{2\\}=\\{2-3,4-5\\}", perl = TRUE)
-  # The band underline is the SSOT muted `spanrule` (0.5pt, #adb5bd),
-  # matching HTML's muted band -- not the legacy hardcoded `0.4pt`
-  # black rule. `leftpos=-1, rightpos=-1` trims each spanner segment by
-  # colsep at both ends (tabularray's booktabs cmidrule(lr) equivalent),
-  # so adjacent spanners' underlines are separated by a gap.
+  # Cols: param=1, a=2, b=3, c=4, d=5 -> Group A {2-3}, Group B {4-5}.
+  # One hline directive PER spanner range (not comma-joined), each with
+  # `leftpos=-1, rightpos=-1, endpos` so the rule is continuous within a
+  # spanner but trimmed at that spanner's own ends -- booktabs
+  # cmidrule(lr) parity, leaving a gap between adjacent spanners. The
+  # band underline is the SSOT muted `spanrule` (0.5pt, #adb5bd).
   expect_match(
     tex,
-    "hline{2}={2-3,4-5}{0.5pt, solid, fg=tabularruleADB5BD, leftpos=-1, rightpos=-1, endpos}",
+    "hline{2}={2-3}{0.5pt, solid, fg=tabularruleADB5BD, leftpos=-1, rightpos=-1, endpos}",
+    fixed = TRUE
+  )
+  expect_match(
+    tex,
+    "hline{2}={4-5}{0.5pt, solid, fg=tabularruleADB5BD, leftpos=-1, rightpos=-1, endpos}",
     fixed = TRUE
   )
 })
@@ -1131,8 +1134,11 @@ test_that("LaTeX header rules ride outer hlines, no inline header rule (#parity-
   # Full-width bottom rule under the column-labels row.
   # rowhead = nbands(1) + 1 = 2, so the bottom rule sits at hline{3}.
   expect_match(tex, "hline\\{3\\}=\\{1-5\\}", perl = TRUE)
-  # Each spanner keeps its scoped, inset cmidrule(lr) at hline{2}.
-  expect_match(tex, "hline\\{2\\}=\\{2-3,4-5\\}", perl = TRUE)
+  # Each spanner keeps its own scoped, inset cmidrule(lr) at hline{2} --
+  # one directive per range (not comma-joined) so adjacent spanners stay
+  # separated by a gap.
+  expect_match(tex, "hline\\{2\\}=\\{2-3\\}", perl = TRUE)
+  expect_match(tex, "hline\\{2\\}=\\{4-5\\}", perl = TRUE)
   # The only inline `\hline` left is the body-bottom (footer) rule;
   # the header top/bottom are no longer inline (single-page spec).
   n_inline <- length(gregexpr("\\hline", tex, fixed = TRUE)[[1L]])
