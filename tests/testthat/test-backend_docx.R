@@ -2217,3 +2217,44 @@ test_that("DOCX group-header rows honor the halign cascade (#PAR2)", {
     fixed = TRUE
   )
 })
+
+# B-DOCX: relative output paths must resolve against the caller's cwd,
+# not the backend's temp staging dir. The DOCX backend setwd()s into a
+# temp stage before utils::zip; a relative `file` previously resolved
+# against that stage and failed with a zip I/O error. emit() now
+# absolutises the path at the .check_emit_file chokepoint.
+
+test_that("emit(.docx) accepts a relative output path from any cwd (#B-DOCX)", {
+  spec <- tabular(
+    data.frame(a = "1", b = "2", stringsAsFactors = FALSE),
+    titles = "T"
+  )
+  wd <- withr::local_tempdir()
+  withr::local_dir(wd)
+  dir.create("out")
+  rel <- file.path("out", "rel.docx")
+
+  expect_no_error(emit(spec, rel))
+  expect_true(file.exists(rel))
+
+  # Valid PK zip with the mandatory document part.
+  con <- file(rel, "rb")
+  magic <- readBin(con, "raw", 2L)
+  close(con)
+  expect_identical(magic, as.raw(c(0x50, 0x4b))) # "PK"
+  entries <- utils::unzip(rel, list = TRUE)$Name
+  expect_true("word/document.xml" %in% entries)
+})
+
+test_that("emit() relative paths still work for RTF and HTML (#B-DOCX no-regress)", {
+  spec <- tabular(
+    data.frame(a = "1", b = "2", stringsAsFactors = FALSE),
+    titles = "T"
+  )
+  wd <- withr::local_tempdir()
+  withr::local_dir(wd)
+  expect_no_error(emit(spec, "x.rtf"))
+  expect_true(file.exists("x.rtf"))
+  expect_no_error(emit(spec, "x.html"))
+  expect_true(file.exists("x.html"))
+})
