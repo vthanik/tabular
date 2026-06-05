@@ -57,7 +57,7 @@
 #' column-width metrics; until those metrics land in a future
 #' release the engine treats `"auto"` as `1`.
 #'
-#' @param spec *The `tabular_spec` to attach pagination to.*
+#' @param .spec *The `tabular_spec` to attach pagination to.*
 #'   `<tabular_spec>: required`.
 #'
 #' @param keep_together *Group columns whose runs of identical values
@@ -295,7 +295,7 @@
 #'
 #' @export
 paginate <- function(
-  spec,
+  .spec,
   keep_together = character(),
   panels = 1,
   orphan_floor = 3,
@@ -304,7 +304,7 @@ paginate <- function(
   continuation = NULL
 ) {
   call <- rlang::caller_env()
-  check_tabular_spec(spec, call = call)
+  check_tabular_spec(.spec, call = call)
 
   check_chr(keep_together, arg = "keep_together", call = call)
   panels_val <- .check_panels(panels, call = call)
@@ -314,7 +314,7 @@ paginate <- function(
   cont <- .check_continuation(continuation, call = call)
 
   if (length(keep_together) > 0L) {
-    data_cols <- names(spec@data)
+    data_cols <- names(.spec@data)
     missing <- setdiff(keep_together, data_cols)
     if (length(missing) > 0L) {
       cli::cli_abort(
@@ -327,7 +327,7 @@ paginate <- function(
         call = call
       )
     }
-    group_cols <- .group_col_names(spec@cols)
+    group_cols <- .group_col_names(.spec@cols)
     not_group <- setdiff(keep_together, group_cols)
     if (length(not_group) > 0L) {
       cli::cli_abort(
@@ -350,7 +350,7 @@ paginate <- function(
     repeat_content = rc,
     continuation = cont
   )
-  S7::set_props(spec, pagination = new_pag)
+  S7::set_props(.spec, pagination = new_pag)
 }
 
 # ---------------------------------------------------------------------

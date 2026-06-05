@@ -5,7 +5,7 @@
 \title{Configure pagination}
 \usage{
 paginate(
-  spec,
+  .spec,
   keep_together = character(),
   panels = 1,
   orphan_floor = 3,
@@ -15,7 +15,7 @@ paginate(
 )
 }
 \arguments{
-\item{spec}{\emph{The \code{tabular_spec} to attach pagination to.}
+\item{.spec}{\emph{The \code{tabular_spec} to attach pagination to.}
 \verb{<tabular_spec>: required}.}
 
 \item{keep_together}{\emph{Group columns whose runs of identical values

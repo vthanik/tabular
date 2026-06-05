@@ -129,6 +129,7 @@ test_that(".fn_surface_rank orders surfaces top-to-bottom", {
   expect_equal(tabular:::.fn_surface_rank("pagehead"), 2L)
   expect_equal(tabular:::.fn_surface_rank("subgroup"), 4L)
   expect_equal(tabular:::.fn_surface_rank("group_headers"), 5L)
+  expect_equal(tabular:::.fn_surface_rank("footnotes"), 7L)
   expect_equal(tabular:::.fn_surface_rank("pagefoot"), 8L)
   expect_equal(tabular:::.fn_surface_rank("nonsense"), 9L)
 })
@@ -460,4 +461,88 @@ test_that("a body footnote whose j names no column is dropped, not orphaned (#cr
     "matched no cells"
   )
   expect_null(reg)
+})
+
+test_that("two footnotes pinning the same symbol warn that they share a marker", {
+  spec <- mk_fn_spec() |>
+    footnote(
+      "Header note.",
+      .at = cells_headers(j = "Total"),
+      symbol = "*",
+      id = "x"
+    ) |>
+    footnote(
+      "Body note.",
+      .at = cells_body(where = n_total >= 50, j = "label"),
+      symbol = "*",
+      id = "y"
+    )
+  groups <- tabular:::engine_subgroup_split(spec)
+  expect_warning(
+    reg <- tabular:::engine_footnotes_assign(spec, groups),
+    "share one marker"
+  )
+  # Both ids resolve to the pinned glyph, exactly as the warning describes.
+  expect_equal(reg$markers[["x"]], "*")
+  expect_equal(reg$markers[["y"]], "*")
+})
+
+test_that("a footnote anchored to an unsupported surface warns and is dropped", {
+  # `footnote()` rejects unsupported surfaces at call time, so reach the
+  # engine's defensive branch by injecting a ref with an unsupported
+  # location surface directly.
+  spec <- mk_fn_spec() |>
+    footnote("Good body note.", .at = cells_body(j = "label"))
+  bad_loc <- structure(
+    list(
+      surface = "subgroup",
+      i = NULL,
+      j = NULL,
+      where = NULL,
+      labels = NULL,
+      level = NULL,
+      slot = NULL,
+      side = NULL,
+      chrome_region = NULL
+    ),
+    class = c("tabular_location", "list")
+  )
+  bad_ref <- list(text = "bad", id = NULL, symbol = NULL, location = bad_loc)
+  spec <- S7::set_props(
+    spec,
+    footnote_refs = c(spec@footnote_refs, list(bad_ref))
+  )
+  groups <- tabular:::engine_subgroup_split(spec)
+  expect_warning(
+    reg <- tabular:::engine_footnotes_assign(spec, groups),
+    "unsupported location"
+  )
+  # The valid body note survives; the unsupported anchor is dropped.
+  expect_equal(length(reg$refs), 1L)
+  expect_equal(reg$refs[[1L]]$text, "Good body note.")
+})
+
+test_that("engine_footnotes_mark_body fills an NA target cell before stamping", {
+  spec <- mk_fn_spec() |>
+    footnote("Body note.", .at = cells_body(j = "label"))
+  groups <- tabular:::engine_subgroup_split(spec)
+  reg <- tabular:::engine_footnotes_assign(spec, groups)
+
+  # An all-NA cells_text matrix: the marked label cells must become a bare
+  # sentinel (empty base + marker), never the string "NA".
+  cells <- matrix(
+    NA_character_,
+    nrow = nrow(spec@data),
+    ncol = length(names(spec@data))
+  )
+  out <- tabular:::engine_footnotes_mark_body(
+    cells,
+    reg,
+    spec@data,
+    names(spec@data)
+  )
+  label_col <- match("label", names(spec@data))
+  stamped <- out[, label_col]
+  expect_true(all(nzchar(stamped)))
+  expect_false(any(grepl("NA", stamped, fixed = TRUE)))
 })

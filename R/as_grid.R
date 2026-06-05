@@ -79,7 +79,7 @@
 #' exploration; cost is roughly that of one [`emit()`] without the
 #' backend write step.
 #'
-#' @param spec *The `tabular_spec` to resolve.*
+#' @param .spec *The `tabular_spec` to resolve.*
 #'   `<tabular_spec>: required`. Built by the verb chain ([`tabular()`]
 #'   -> [`cols()`] -> [`headers()`] -> [`sort_rows()`] -> [`style()`]
 #'   -> [`paginate()`] -> [`preset()`]).
@@ -251,10 +251,10 @@
 #' **Inline formatting helpers:** [`md()`], [`html()`].
 #'
 #' @export
-as_grid <- function(spec) {
+as_grid <- function(.spec) {
   call <- rlang::caller_env()
-  check_tabular_spec(spec, call = call)
-  .resolve_spec_to_grid(spec, format = NA_character_, call = call)
+  check_tabular_spec(.spec, call = call)
+  .resolve_spec_to_grid(.spec, format = NA_character_, call = call)
 }
 
 # ---------------------------------------------------------------------

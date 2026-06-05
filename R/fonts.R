@@ -267,7 +267,7 @@
 #' Requires the `systemfonts` package (in `Suggests`); call
 #' `install.packages("systemfonts")` first if it isn't installed.
 #'
-#' @param spec *A `tabular_spec` or `preset_spec`.*
+#' @param .spec *A `tabular_spec` or `preset_spec`.*
 #'   `<tabular_spec | preset_spec>: required`. The spec whose
 #'   effective preset determines which font chain to walk.
 #'
@@ -340,12 +340,12 @@
 #' **Resolves the spec:** [`as_grid()`], [`emit()`].
 #'
 #' @export
-check_fonts <- function(spec) {
+check_fonts <- function(.spec) {
   rlang::check_installed(
     "systemfonts",
     reason = "to inspect local font availability"
   )
-  preset <- .check_fonts_preset(spec)
+  preset <- .check_fonts_preset(.spec)
   fam <- preset@font_family
 
   cli::cli_h3("Font resolution for {.code font_family = {format(fam)}}")

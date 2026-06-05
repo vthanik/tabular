@@ -24,7 +24,7 @@
 #' the auto-numbered block follows. The two systems do not cross-dedup,
 #' so do not mix a hand-typed marker with an engine one for the same note.
 #'
-#' @param spec *The `tabular_spec` to annotate.* `<tabular_spec>: required`.
+#' @param .spec *The `tabular_spec` to annotate.* `<tabular_spec>: required`.
 #'
 #' @param text *The footnote text.* `<character(1)> | md() | html()`.
 #'   Wrap in [`md()`] / [`html()`] for inline markup; plain strings are
@@ -119,14 +119,14 @@
 #'
 #' @export
 footnote <- function(
-  spec,
+  .spec,
   text,
   .at = cells_body(),
   id = NULL,
   symbol = NULL
 ) {
   call <- rlang::caller_env()
-  check_tabular_spec(spec, call = call)
+  check_tabular_spec(.spec, call = call)
   .check_inline_input(text, arg = "text", call = call)
   text <- .interp_one(text, env = call, call = call)
   if (!is_tabular_location(.at)) {
@@ -143,7 +143,7 @@ footnote <- function(
   .check_fn_opt(id, arg = "id", call = call)
   .check_fn_opt(symbol, arg = "symbol", call = call)
   rec <- list(text = text, id = id, symbol = symbol, location = .at)
-  S7::set_props(spec, footnote_refs = c(spec@footnote_refs, list(rec)))
+  S7::set_props(.spec, footnote_refs = c(.spec@footnote_refs, list(rec)))
 }
 
 # Validate the anchor location. A footnote marker can only be injected

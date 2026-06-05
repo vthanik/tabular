@@ -4,10 +4,10 @@
 \alias{as_grid}
 \title{Resolve a \code{tabular_spec} into a \code{tabular_grid}}
 \usage{
-as_grid(spec)
+as_grid(.spec)
 }
 \arguments{
-\item{spec}{\emph{The \code{tabular_spec} to resolve.}
+\item{.spec}{\emph{The \code{tabular_spec} to resolve.}
 \verb{<tabular_spec>: required}. Built by the verb chain (\code{\link[=tabular]{tabular()}}
 -> \code{\link[=cols]{cols()}} -> \code{\link[=headers]{headers()}} -> \code{\link[=sort_rows]{sort_rows()}} -> \code{\link[=style]{style()}}
 -> \code{\link[=paginate]{paginate()}} -> \code{\link[=preset]{preset()}}).}
