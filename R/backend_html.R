@@ -2106,7 +2106,13 @@ backend_html <- function(grid, file) {
     # padding above so each band reads as a unit. Blank-gap rows: a
     # thin spacer (no borders) between consecutive sections.
     ".tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }",
-    ".tabular-blank-row td { padding: .25rem .6rem; border: none; }",
+    # Blank-gap row: exactly one tight blank line, sized in `em` so it
+    # tracks the table font size (preset@font_size) rather than the root
+    # font. `line-height: 1em` (vs the inherited 1.5) and zero padding
+    # keep it to a single line height; the previous full 1.5-line `&nbsp;`
+    # plus the following group-header `padding-top` stacked into an
+    # oversized gap.
+    ".tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }",
     ".text-left { text-align: left; }",
     ".text-center { text-align: center; }",
     ".text-right { text-align: right; }",
