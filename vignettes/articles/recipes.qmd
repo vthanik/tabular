@@ -171,7 +171,7 @@ resp_tbl <- tabular(
 ) |>
   cols(
     group_label = col_spec(usage = "group", group_display = "header_row"),
-    stat_label = col_spec(usage = "indent", label = "Response"),
+    stat_label = col_spec(label = "Response"),
     groupid = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     placebo = col_spec(

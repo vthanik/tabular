@@ -16,7 +16,7 @@ base <- tabular(cdisc_saf_demo) |>
       group_display = "header_row",
       label = ""
     ),
-    stat_label = col_spec(usage = "indent", label = "")
+    stat_label = col_spec(label = "")
   ) |>
   cols_apply(arms, col_spec(align = "decimal"))
 ```
@@ -49,7 +49,7 @@ tabular(
       group_display = "header_row",
       label = ""
     ),
-    stat_label = col_spec(usage = "indent", label = "")
+    stat_label = col_spec(label = "")
   ) |>
   cols_apply(arms, col_spec(align = "decimal"))
 ```
