@@ -1,0 +1,116 @@
+---
+title: "Presentation: titles, footnotes, page chrome, and styling"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(tabular)
+data(cdisc_saf_demo, package = "tabular")
+data(cdisc_saf_n, package = "tabular")
+N <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+arms <- c("placebo", "drug_50", "drug_100", "Total")
+base <- tabular(cdisc_saf_demo) |>
+  cols(variable = col_spec(usage = "group", group_display = "header_row", label = ""),
+       stat_label = col_spec(usage = "indent", label = "")) |>
+  cols_apply(arms, col_spec(align = "decimal"))
+```
+
+This article is about the *look* — titles, footnotes, the running page header /
+footer, and cell styling. It assumes the table's shape is already built (see
+[Structure](structure.html)) and never explains data prep or pagination for its
+own sake.
+
+## Titles and footnotes
+
+Multi-line titles and static footnotes are arguments to `tabular()`:
+
+```{r}
+tabular(
+  cdisc_saf_demo,
+  titles    = c("Table 14-2.01",
+                "Demographic and Baseline Characteristics", "ITT Population"),
+  footnotes = c("Percentages are based on the number of ITT subjects per arm.",
+                "BMI = body mass index.")
+) |>
+  cols(variable = col_spec(usage = "group", group_display = "header_row", label = ""),
+       stat_label = col_spec(usage = "indent", label = "")) |>
+  cols_apply(arms, col_spec(align = "decimal")) |>
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+For an **anchored** footnote (an auto-numbered superscript on a specific cell or
+header) use `footnote()` with a `cells_*()` location:
+
+```{r}
+base |>
+  footnote("Excludes one subject withdrawn before dosing.",
+           .at = cells_headers(j = "Total")) |>
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+## The running page header / footer
+
+Regulatory TFLs carry a header on every page (protocol, page X of Y, data-cut).
+That is preset page chrome, not a title. `pagehead` / `pagefoot` each take
+`left` / `right` (and `center`) vectors; the tokens `{page}`, `{npages}`,
+`{program}`, `{datetime}` resolve at render time:
+
+```{r}
+base |>
+  preset(
+    pagehead = list(
+      left  = c("Analysis Set: Safety", "Protocol: XYZ-123"),
+      right = c("Data cut: 2026-01-15", "Page {page} of {npages}")
+    )
+  ) |>
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+> **Stacking direction.** Each vector stacks **outward from the table**: index 1
+> is the line nearest the table body, later elements move toward the page edge.
+> For a header that reads "Analysis Set" on top and "Protocol" just above the
+> table, put `"Protocol…"` first. (Easy to invert — check the rendered page.)
+
+## Cell styling
+
+`style()` appends one location + attribute layer. Target a region with a
+`cells_*()` constructor; attributes include `bold`, `italic`, `underline`,
+`color`, `background`, and borders via `brdr()`:
+
+```{r}
+base |>
+  style(bold = TRUE, .at = cells_headers()) |>                 # bold the header band
+  style(italic = TRUE, .at = cells_group_headers()) |>         # italic section rows
+  style(background = "#F2F2F2", .at = cells_body(j = "Total")) |>  # shade the Total column
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+Body filters live on `cells_body()`: `i =` (row index), `j =` (column name),
+`where =` (an expression over the data).
+
+## Presets: cosmetics and fit
+
+`preset()` carries the cosmetic defaults — fonts, rules, padding, `na_text`,
+paper/orientation/margins — and the **`width_mode`** that decides how the table
+fills the page:
+
+| `width_mode` | Effect |
+|---|---|
+| `"content"` *(default)* | columns sized to their content |
+| `"window"` | `"auto"` columns **stretch to fill** the printable width (Word "Auto-fit Window") |
+| `"fixed"` | only the widths you pin are used |
+
+```{r}
+base |>
+  preset(font_size = 9, orientation = "landscape", paper_size = "letter",
+         margins = c(1, 0.75, 1, 0.75), width_mode = "window", na_text = "-") |>
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+Use `set_preset()` once at the top of a study to make these defaults apply to
+every table without restating them.
+
+> **Decimal alignment** (`col_spec(align = "decimal")`) pads numeric cells with
+> non-breaking spaces so the decimal points line up. Alignment is exact in a
+> monospaced font; in proportional fonts it is visually close (em-aware padding
+> is future work). For submission TFLs in Courier this is exact.

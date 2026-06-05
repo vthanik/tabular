@@ -1,0 +1,162 @@
+---
+title: "Data in: the cards → tabular pipeline"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(tabular)
+```
+
+tabular displays a **wide** frame; clinical aggregation produces a **long**
+Analysis Results Dataset (ARD). `pivot_across()` is the bridge — it widens an ARD
+into the frame `tabular()` consumes.
+
+```
+cards / cardx  ──►  pivot_across()  ──►  tabular() |> …
+  (long ARD)         (long → wide)        (display)
+```
+
+The ARDs used below ship with the package, so these examples run without
+cards/cardx installed; each is shown next to the code that produced it.
+
+## The one rule: key `statistic` by the ARD's `context`
+
+`pivot_across(statistic = list(...))` matches its list names against the ARD's
+`context` column **verbatim**. That value depends on which function built the
+ARD — use the wrong key and those rows are dropped **silently**. Always check
+`unique(ard$context)` first.
+
+| Generating function | `context` |
+|---|---|
+| `cards::ard_summary()` | `summary` |
+| `cards::ard_tabulate()` | `tabulate` |
+| `cards::ard_continuous()` | `continuous` |
+| `cards::ard_categorical()` | `categorical` |
+| `cards::ard_stack_hierarchical()` | `tabulate` + `hierarchical` |
+| `cardx::ard_categorical_ci()` | `proportion_ci` |
+| `cardx::ard_continuous_ci()` | `continuous_ci` |
+
+A single string, or `statistic = list(default = ...)`, applies one format to
+every context.
+
+## Mixed continuous + categorical
+
+`cdisc_saf_demo_ard` was stacked from a continuous and a categorical block, so it
+carries the `continuous` and `categorical` contexts:
+
+```{r eval = FALSE}
+# how it was built (data-raw):
+cdisc_saf_demo_ard <- cards::ard_stack(
+  adsl, .by = TRT01A,
+  cards::ard_continuous(variables = c(AGE, BMI),
+    statistic = ~ cards::continuous_summary_fns(c("N","mean","sd","median","min","max"))),
+  cards::ard_categorical(variables = c(AGEGR1, SEX, RACE)))
+```
+
+```{r}
+data(cdisc_saf_demo_ard, package = "tabular")
+unique(cdisc_saf_demo_ard$context)
+
+wide <- pivot_across(
+  cdisc_saf_demo_ard,
+  statistic = list(
+    continuous  = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})",
+                    Median = "{median}", "Min, Max" = "{min}, {max}"),
+    categorical = "{n} ({p}%)"),
+  decimals = c(mean = 1, sd = 1, median = 1, min = 0, max = 0, p = 0)
+)
+head(wide, 8)
+```
+
+`decimals = c(p = 0)` gives integer percent with the pharma `<1` / `>99`
+thresholds; `n = 0` cells collapse to a bare `"0"` automatically. The widened
+frame is now ready for `tabular()` — see [Structure](structure.html).
+
+## Confidence-interval cells (and hand-built ARDs)
+
+cardx CI functions emit their own contexts (`proportion_ci`, `continuous_ci`)
+with `estimate` / `conf.low` / `conf.high` stats. `pivot_across()` consumes **any
+frame that follows the cards long-format**, so you can feed it a cardx ARD *or*
+build the few rows by hand — useful when a statistic is computed outside cards:
+
+```{r eval = FALSE}
+# from cardx:
+orr_ard <- cardx::ard_categorical_ci(resp, by = "TRT01A", variables = "RESP",
+             method = "clopper-pearson", conf.level = 0.95)
+```
+
+```{r}
+# equivalent hand-built ARD (one row group, proportion_ci context)
+arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
+orr_ard <- expand.grid(group1_level = arms,
+                       stat_name = c("estimate", "conf.low", "conf.high"),
+                       stringsAsFactors = FALSE)
+orr_ard$group1   <- "TRT01A"
+orr_ard$variable <- "RESP"; orr_ard$variable_level <- "Responders"
+orr_ard$context  <- "proportion_ci"
+orr_ard$stat <- c(0.62, 0.55, 0.48,  0.50, 0.42, 0.36,  0.73, 0.67, 0.60)
+
+pivot_across(
+  orr_ard,
+  statistic = list(proportion_ci = "{estimate} ({conf.low}, {conf.high})"),
+  decimals  = c(estimate = 3, conf.low = 3, conf.high = 3)
+)
+```
+
+## Hierarchical SOC / PT
+
+A hierarchical ARD widens to a `soc` / `label` / `row_type` triple (not a single
+`variable`), ready for an indented SOC ▸ PT layout:
+
+```{r}
+data(cdisc_saf_aesocpt_ard, package = "tabular")
+ae <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
+ae$indent <- as.integer(ae$row_type == "pt")   # depth for col_spec(indent_by=)
+head(ae, 6)
+```
+
+(Turning `soc`/`label`/`indent` into the indented stub is in
+[Structure](structure.html).)
+
+## A two-variable `.by`
+
+`ard_stack(.by = c(ARM, SEX))` carries a second grouping variable. Name it with
+`row_group =` and `pivot_across()` widens it into a **leading row column**
+(rather than mis-reading it as a SOC/PT hierarchy). Here is the cards long shape
+such a stack produces (RACE by ARM within SEX), built by hand so the example runs
+without cards:
+
+```{r}
+two_by_ard <- expand.grid(
+  group1_level = c("Placebo", "Drug"),
+  group2_level = c("F", "M"),
+  variable_level = c("WHITE", "BLACK"),
+  stat_name = c("n", "p"),
+  stringsAsFactors = FALSE
+)
+two_by_ard$group1   <- "ARM"
+two_by_ard$group2   <- "SEX"
+two_by_ard$variable <- "RACE"
+two_by_ard$context  <- "categorical"
+two_by_ard$stat <- ifelse(two_by_ard$stat_name == "n", 10, 0.25)
+
+pivot_across(
+  two_by_ard,
+  column    = "ARM",
+  row_group = "SEX",
+  statistic = list(categorical = "{n} ({p}%)")
+)
+```
+
+When a 2-variable `.by` is present you must say which variable is the arm column
+(`column =`) and which is the row dimension (`row_group =`); the `SEX` column
+then composes with `subgroup()` or `col_spec(usage = "group")` downstream. cards
+encodes a crossing factor and a real hierarchy identically, so the declaration is
+what disambiguates them — leave `row_group` unset for a genuine SOC/PT hierarchy.
+
+## Key `statistic` by the context
+
+The one thing to get right: key `statistic` by the ARD's `context`. Inspect
+`unique(ard$context)` and key the list to match (or pass a single string /
+`default =`). If an explicitly-supplied `statistic` matches **no** context,
+`pivot_across()` warns rather than silently falling back to `{n}`.

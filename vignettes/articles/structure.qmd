@@ -1,0 +1,210 @@
+---
+title: "Structure: columns, headers, and pagination"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(tabular)
+```
+
+This article is about *shape*: which column does what, multi-level headers, and
+how a table that is too long or too wide is split across pages. It assumes you
+already have a wide frame (see [Data in](data-in.html)) and does not cover
+cosmetics (see [Presentation](presentation.html)).
+
+## The column model: `usage`
+
+Every column gets a role via `col_spec(usage = …)`. Picking the right one is the
+single most important structural decision:
+
+| `usage` | Use it for | Behaviour |
+|---|---|---|
+| `"display"` *(default)* | data cells (the arm columns) | one value per row |
+| `"group"` | section variable (e.g. parameter) | each value becomes a **section-header row**; the column is hidden |
+| `"indent"` | nested row labels under a section | prefixes one indent level; pairs with a `group` column |
+| `"id"` | the row label that must stay visible | like `display`, but **joins the stub and repeats on every horizontal panel** |
+
+```{r}
+data(cdisc_saf_demo, package = "tabular")
+arms <- c("placebo", "drug_50", "drug_100", "Total")
+
+tabular(cdisc_saf_demo, titles = "Demographics") |>
+  cols(
+    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    stat_label = col_spec(usage = "indent", label = "")
+  ) |>
+  cols_apply(arms, col_spec(align = "decimal")) |>
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+`cols_apply()` attaches one shared `col_spec` to **all** the arm columns at once —
+use it instead of repeating `cols(placebo = …, drug_50 = …)` for a variable
+number of arms.
+
+> **`pivot_across()` already indents nested levels.** Categorical level labels
+> come out of `pivot_across()` with a leading indent baked into the string. If
+> you *also* set `usage = "indent"` you get a double indent — either keep the
+> labels as-is (`usage = "display"`/`"id"`) or `trimws()` them first and let the
+> engine indent. Don't do both.
+
+## BigN in the column headers
+
+The `(N=…)` denominator goes in each arm's header label. Build it from a BigN
+table and interpolate with glue:
+
+```{r}
+data(cdisc_saf_n, package = "tabular")
+N <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+
+tabular(cdisc_saf_demo, titles = "Demographics") |>
+  cols(
+    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    stat_label = col_spec(usage = "indent", label = ""),
+    placebo    = col_spec(label = "Placebo\n(N={N['placebo']})",   align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50\n(N={N['drug_50']})",   align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100\n(N={N['drug_100']})", align = "decimal"),
+    Total      = col_spec(label = "Total\n(N={N['Total']})",       align = "decimal")
+  ) |>
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+> **Clinical convention:** BigN is the population denominator (from ADSL), **not**
+> the number of rows in the domain dataset — compute it from the population, not
+> from the summarised data.
+
+For a **variable** number of arms, the per-arm label is one `cols_apply()` call
+instead of a hand-written line each: the `{.name}` token resolves to each matched
+column's name, and the rest of the `{…}` evaluates in the calling environment, so
+the BigN looks itself up:
+
+```{r}
+arm_cols <- c("placebo", "drug_50", "drug_100", "Total")
+
+tabular(cdisc_saf_demo, titles = "Demographics") |>
+  cols(
+    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    stat_label = col_spec(usage = "indent", label = "")
+  ) |>
+  cols_apply(
+    arm_cols,
+    col_spec(label = "{.name}\n(N={N[.name]})", align = "decimal")
+  ) |>
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+## Multi-level headers and widths
+
+`headers()` builds spanning bands over groups of columns:
+
+```{r}
+tabular(cdisc_saf_demo, titles = "Demographics") |>
+  cols(
+    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    stat_label = col_spec(usage = "indent", label = "", width = "2.2in")
+  ) |>
+  cols_apply(arms, col_spec(align = "decimal", width = "1in")) |>
+  headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+Widths: `"auto"` (default) sizes to content; a pinned value (`"1in"`, `1.0`,
+`"20%"`) wraps within that width. **Set the shared arm width via `cols_apply()`
+last** — its non-default `width` then wins the field-merge; a later `cols()` call
+carrying the default `width = "auto"` would otherwise be ambiguous.
+
+## Pagination — long tables
+
+`paginate()` derives the rows-per-page budget from the preset (paper, font,
+margins) and the title/footnote/header line counts — you never set rows-per-page
+by hand. `keep_together` stops a page break landing inside a section's run:
+
+```{r}
+data(cdisc_saf_aesocpt, package = "tabular")
+tabular(cdisc_saf_aesocpt, titles = "AEs by SOC and PT") |>
+  cols(
+    label    = col_spec(label = "SOC / Preferred Term", indent_by = "indent_level"),
+    soc      = col_spec(usage = "group", visible = FALSE, group_display = "column_repeat"),
+    row_type = col_spec(visible = FALSE), n_total = col_spec(visible = FALSE),
+    soc_n    = col_spec(visible = FALSE)
+  ) |>
+  cols_apply(c("placebo", "drug_50", "drug_100", "Total"), col_spec(align = "decimal")) |>
+  paginate(keep_together = "soc", orphan_floor = 4, widow_floor = 2,
+           continuation = "(continued)") |>
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+## Panels — wide tables
+
+When the columns don't fit one page, `paginate(panels = N)` splits the
+**non-group** columns into `N` chunks and repeats every `group`/`id` column on
+each panel (so the row labels reappear). Make the row label `usage = "id"` so it
+rides every panel:
+
+```{r}
+tabular(cdisc_saf_demo, titles = "Demographics (wide split)") |>
+  cols(
+    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    stat_label = col_spec(usage = "id", label = "")          # repeats on every panel
+  ) |>
+  cols_apply(arms, col_spec(align = "decimal")) |>
+  paginate(panels = 2, continuation = "(continued)") |>
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+Two things to know:
+
+- **`panels = N` splits into `N` *equal* chunks** — there is no explicit split
+  position (no "first 5, then the rest"). Equal split is fine for page-fit; if
+  you need a specific boundary, that is a known limitation.
+- **`panels = "auto"` is currently a no-op** (treated as `1`): it does *not*
+  auto-fit, it just leaves every column on one page (and the table may overflow
+  with a warning). Always pass an explicit integer.
+
+## Subgroups and per-page BigN
+
+`subgroup()` partitions the table — one page block per value, with a banner and a
+hard page break. A partition-constant column can ride into the banner:
+
+```{r}
+data(cdisc_saf_subgroup, package = "tabular")
+tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>
+  cols(
+    sex        = col_spec(visible = FALSE), sex_n = col_spec(visible = FALSE),
+    agegr      = col_spec(visible = FALSE), agegr_n = col_spec(visible = FALSE),
+    paramcd    = col_spec(visible = FALSE),
+    param      = col_spec(usage = "group", label = "Parameter"),
+    stat_label = col_spec(usage = "id", label = "Statistic")
+  ) |>
+  cols_apply(c("placebo", "drug_50", "drug_100", "Total"), col_spec(align = "decimal")) |>
+  subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})") |>   # page total in banner
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+For a **different `(N=)` per arm on each page** (the column headers re-resolving
+per subgroup), pass `big_n` — a small table of N per page × arm. No bundled
+dataset carries per-arm-per-page counts, so build it inline (this is also the
+shape `big_n` expects):
+
+```{r}
+big_n <- data.frame(
+  sex      = c("F", "M"),
+  placebo  = c(53L, 33L),
+  drug_50  = c(50L, 46L),
+  drug_100 = c(40L, 32L),
+  Total    = c(143L, 111L)
+)
+
+tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>
+  cols(
+    sex_n = col_spec(visible = FALSE), agegr = col_spec(visible = FALSE),
+    agegr_n = col_spec(visible = FALSE), paramcd = col_spec(visible = FALSE),
+    param      = col_spec(usage = "group", label = "Parameter"),
+    stat_label = col_spec(usage = "id", label = "Statistic")
+  ) |>
+  cols_apply(c("placebo", "drug_50", "drug_100", "Total"), col_spec(align = "decimal")) |>
+  subgroup(by = "sex", label = "Sex: {sex}", big_n = big_n) |>   # per-page (N=) per arm
+  emit(tempfile(fileext = ".html")) |> invisible()
+```
+
+`big_n` accepts this wide shape (page column + one column per arm) or a long
+`count()`-style table (page, arm, n).

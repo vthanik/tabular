@@ -117,24 +117,10 @@ reference:
   - has_keyword("datasets")
 
 articles:
-- title: Get started
+- title: Articles
   navbar: ~
   contents:
-  - tabular
-  - core-concepts
-
-- title: Recipes
-  navbar: Recipes
-  contents:
-  - columns-and-headers
-  - rows-grouping-pagination
-  - styling
-  - articles/clinical-cookbook
-  - articles/clinical-recipe
-
-- title: Advanced
-  navbar: Advanced
-  contents:
-  - articles/from-ard
-  - articles/fonts-and-fidelity
-  - articles/architecture
+  - articles/data-in
+  - articles/structure
+  - articles/presentation
+  - articles/output

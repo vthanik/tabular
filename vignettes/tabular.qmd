@@ -1,195 +1,81 @@
 ---
 title: "Get started with tabular"
-description: >
-  Your first submission-grade clinical table in ten minutes: from a
-  pre-summarised data frame to a live preview and five output formats.
 vignette: >
   %\VignetteIndexEntry{Get started with tabular}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r}
-#| include: false
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
-```
-
-`tabular` turns a **pre-summarised data frame** into a regulatory
-**table or listing** and renders it natively to RTF, PDF, HTML, LaTeX,
-and DOCX. This article gets you from raw numbers to a finished table in
-about ten minutes.
-
-::: callout-note
-Figure (graph) output is **not yet supported** in this release. `tabular`
-covers tables and listings today; figure rendering is the focus of the
-next release.
-:::
-
-::: {.callout-note}
-## New to clinical tables?
-
-A *TFL* is the formatted output that goes into a clinical study report or
-a regulatory submission — for example, a demographics summary or an
-adverse-event table. The numbers are computed upstream (by `cards`,
-`gtsummary`, `dplyr`, or SAS); `tabular`'s job is to *present* them to
-the exacting layout standards reviewers expect.
-:::
-
-## The one rule: bring summarised data
-
-`tabular` does **no** statistics. You hand it a wide data frame where
-**one row is one display row** and the columns are already the values you
-want to show. The bundled `saf_demo` dataset is exactly this shape:
-
-```{r}
-#| label: setup
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(tabular)
-
-head(saf_demo, 8)
 ```
 
-Each row is a statistic for one characteristic (`variable`), with one
-column per treatment arm. That is all `tabular` needs.
+`tabular` turns one **pre-summarised, wide data frame** into a publication-ready
+table and renders it natively to **RTF, HTML, DOCX, PDF/LaTeX and Markdown** —
+from a single spec, with no Java or Office dependency.
+
+Two things to internalise up front:
+
+1. **tabular is display-only.** It never aggregates, filters, or computes
+   statistics. You bring a summarised data frame (one input row = one display
+   row); tabular lays it out and renders it. (Producing that frame from a cards
+   ARD is the [*Data in*](data-in.html) article.)
+2. **One immutable spec, built with verbs.** You pipe a `tabular()` object
+   through verbs (`cols()`, `headers()`, `paginate()`, `preset()`, …) and finish
+   with `emit()`. Each verb returns a new spec; nothing renders until `emit()`.
 
 ## Your first table
 
-Wrap the data in `tabular()`, then describe each column with `cols()` and
-`col_spec()`. End the chain with the spec itself to see a live preview:
+Start from a wide frame — here the bundled demographics summary, one row per
+statistic, one column per treatment arm:
 
 ```{r}
-#| label: first-table
-tabular(saf_demo) |>
-  cols(
-    variable   = col_spec(usage = "group", label = "Characteristic"),
-    stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = "Placebo"),
-    drug_50    = col_spec(label = "Drug 50"),
-    drug_100   = col_spec(label = "Drug 100"),
-    Total      = col_spec(label = "Total")
-  )
+data(cdisc_saf_demo, package = "tabular")
+head(cdisc_saf_demo)
 ```
 
-Two things already happened for free: `usage = "group"` turned the
-`variable` column into **bold section headers** (Age, Sex, Race, …)
-instead of a repeated column, and the table rendered as live HTML right
-here in the page.
-
-::: {.callout-tip}
-## What is that object?
-
-Every verb returns a `tabular_spec` — an immutable description of the
-table, not the table itself. Nothing is rendered until you print it (as
-above) or call `emit()`. You can inspect a spec at any point in the pipe
-with `print()`; piping further never mutates the previous spec.
-:::
-
-## Align the numbers
-
-Clinical tables align numbers on the decimal point. Set
-`align = "decimal"` on the value columns and `tabular` pads with real
-font metrics so the columns stay aligned in print, not just on screen:
+Describe the columns and emit:
 
 ```{r}
-#| label: aligned
-tabular(saf_demo) |>
-  cols(
-    variable   = col_spec(usage = "group", label = "Characteristic"),
-    stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = "Placebo",  align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
-    Total      = col_spec(label = "Total",    align = "decimal")
-  )
-```
-
-## Add the submission chrome
-
-Real tables carry a title block, BigN denominators in the column
-headers, a spanning header over the treatment arms, and footnotes. Add
-titles and footnotes in `tabular()`, a spanner with `headers()`, and pull
-the per-arm denominators from the bundled `saf_n`:
-
-```{r}
-#| label: full-table
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
-
-tab <- tabular(
-  saf_demo,
-  titles = c(
-    "Table 14.1.1",
-    "Demographic and Baseline Characteristics",
-    "Safety Population"
-  ),
-  footnotes = c(
-    "Percentages are based on the number of subjects per treatment group.",
-    "BMI = body mass index."
-  )
+spec <- tabular(
+  cdisc_saf_demo,
+  titles = c("Table 14-2.01",
+             "Demographic and Baseline Characteristics", "ITT Population")
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Characteristic"),
-    stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = "Placebo\n(N={n['placebo']})",  align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50\n(N={n['drug_50']})",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100\n(N={n['drug_100']})", align = "decimal"),
-    Total      = col_spec(label = "Total\n(N={n['Total']})",    align = "decimal")
-  ) |>
-  headers(
-    "Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")
+    variable   = col_spec(usage = "group", group_display = "header_row", label = ""),
+    stat_label = col_spec(usage = "indent", label = "")
   )
 
-tab
+out <- tempfile(fileext = ".html")
+emit(spec, out)         # dispatches on the file extension
+file.exists(out)
 ```
 
-That is a submission-shaped demographics table, built from one pipe.
+That is the whole loop: **wide frame → `tabular()` → `cols()` → `emit()`**.
+Swap the extension to `.rtf`, `.docx`, `.pdf`, or `.md` and the same spec renders
+to that backend.
 
-## Render to five formats
+## The pipeline at a glance
 
-The same `tab` emits to any backend. `emit()` dispatches on the file
-extension (or pass `format =` explicitly):
-
-```{r}
-#| label: emit
-out <- file.path(tempdir(), "t_14_1_1")
-
-emit(tab, paste0(out, ".rtf"))    # RTF 1.9.1
-emit(tab, paste0(out, ".docx"))   # native OOXML
-emit(tab, paste0(out, ".html"))   # self-contained HTML
-emit(tab, paste0(out, ".tex"))    # tabularray LaTeX
 ```
-
-```{r}
-#| label: emit-check
-#| echo: false
-files <- list.files(tempdir(), pattern = "^t_14_1_1", full.names = TRUE)
-data.frame(
-  file  = basename(files),
-  bytes = file.size(files)
-)
+            cards / cardx                     tabular
+  data ───► aggregate ──► pivot_across() ──► tabular() |> cols() |> … |> emit() ──► file
+            (ARD, long)    (long → wide)        (one spec, any backend)
 ```
-
-::: {.callout-note}
-## The preview is not the deliverable
-
-The live HTML above is a faithful *preview*. The artefact you ship is the
-paginated RTF, PDF, or DOCX — same spec, same numbers, but laid out for
-the page with repeated headers, footnotes, and the four-section
-submission layout. See
-[Fonts & fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.html) for why the print backends
-are the source of truth.
-:::
 
 ## Where to next
 
-- **[Core concepts](core-concepts.html)** — the mental model the rest of
-  the guide assumes (the wide-data contract, the page anatomy, the
-  three-phase pipeline).
-- **[Columns & headers](columns-and-headers.html)** — every `col_spec()`
-  option and multi-level header bands.
-- **[Rows, grouping & pagination](rows-grouping-pagination.html)** — sort
-  order, section groups, subgroups, and page splits.
-- **[Styling](styling.html)** — `style()`, presets, and house styles.
-- **[Clinical cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)** — six complete
-  production tables end to end.
+The rest of the docs are task-oriented — read the one that matches what you are
+doing:
+
+- **[Data in](data-in.html)** — turn a cards/cardx ARD (or any long ARD) into
+  the wide frame, with `pivot_across()`.
+- **[Structure](structure.html)** — columns, headers, BigN, and splitting wide
+  or long tables across pages (`cols()`, `headers()`, `paginate()`,
+  `subgroup()`).
+- **[Presentation](presentation.html)** — titles, footnotes, running headers,
+  and cell styling (`footnote()`, `preset()`, `style()`).
+- **[Output & qualification](output.html)** — the backends, their system
+  requirements, and the CDISC-pilot cross-backend validation.
