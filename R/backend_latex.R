@@ -1180,15 +1180,18 @@ backend_latex <- function(grid, file) {
         ),
         collapse = ","
       )
-      # `leftpos=-1, rightpos=-1` trims each spanner segment by colsep at
-      # both ends (tabularray's equivalent of booktabs `\cmidrule(lr)`),
-      # so adjacent spanners' underlines are separated by a visible gap
-      # and inset from the outer column edges. Trimming is per segment,
-      # so the comma-joined ranges each get their own trimmed rule.
+      # `leftpos=-1, rightpos=-1` trims by colsep; `endpos` restricts the
+      # trim to each range's OUTERMOST columns only, so the underline runs
+      # continuously under all of a spanner's columns and is trimmed only
+      # at the spanner's two ends (tabularray's equivalent of booktabs
+      # `\cmidrule(lr)`). Without `endpos`, leftpos/rightpos trim at every
+      # interior vline crossing too, breaking the rule into one segment
+      # per column. Each comma-joined range trims its own ends, so
+      # adjacent spanners are separated by a visible gap.
       band_hlines <- c(
         band_hlines,
         sprintf(
-          "hline{%d}={%s}{%s, leftpos=-1, rightpos=-1}",
+          "hline{%d}={%s}{%s, leftpos=-1, rightpos=-1, endpos}",
           k + 1L + offset,
           cols_spec,
           band_spec

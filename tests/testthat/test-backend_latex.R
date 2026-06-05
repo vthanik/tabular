@@ -1050,7 +1050,7 @@ test_that("LaTeX band underline rides an outer multi-range hline (no inline cmid
   # so adjacent spanners' underlines are separated by a gap.
   expect_match(
     tex,
-    "hline{2}={2-3,4-5}{0.5pt, solid, fg=tabularruleADB5BD, leftpos=-1, rightpos=-1}",
+    "hline{2}={2-3,4-5}{0.5pt, solid, fg=tabularruleADB5BD, leftpos=-1, rightpos=-1, endpos}",
     fixed = TRUE
   )
 })
