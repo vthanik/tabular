@@ -304,13 +304,10 @@
 </table>
 <p>Two notes on the marks:</p>
 <ul>
-<li><p><strong>Live HTML preview</strong> means the table renders as HTML <em>inline</em> when you print it in a Quarto / R Markdown chunk or the RStudio viewer (a <code>knit_print</code> method). <code>rtables</code> prints a monospace ASCII table by default and ships no <code>knit_print</code> method, so it is <code>—</code> here; it can still emit HTML through an explicit <code>as_html()</code> call.</p></li>
 <li>
-<p><strong>PDF</strong> is compiled through LaTeX, so it needs a TeX installation. <code>tabular</code> uses <a href="https://yihui.org/tinytex/" class="external-link"><code>tinytex</code></a> — install it once per machine and PDF <code><a href="reference/emit.html">emit()</a></code> works thereafter:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"tinytex"</span><span class="op">)</span></span>
-<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">install_tinytex</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># one-time TeX setup</span></span></code></pre></div>
-</li>
+<strong>Live HTML preview</strong> means the table renders as HTML <em>inline</em> when you print it in a Quarto / R Markdown chunk or the RStudio viewer (a <code>knit_print</code> method). <code>rtables</code> prints a monospace ASCII table by default and ships no <code>knit_print</code> method, so it is <code>—</code> here; it can still emit HTML through an explicit <code>as_html()</code> call.</li>
+<li>
+<strong>PDF</strong> is compiled through LaTeX, so it needs a TeX installation — see <a href="#installation">Installation</a> above. Every other backend is pure R.</li>
 </ul>
 </div>
 <div class="section level2">
