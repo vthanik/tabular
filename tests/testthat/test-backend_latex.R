@@ -1084,6 +1084,11 @@ test_that("banded .tex output matches snapshot (band SetCell + outer hline)", {
 })
 
 test_that("LaTeX multi-page banded table compiles cleanly (regression: cmidrule replay)", {
+  # skip_on_cran: win-builder / CRAN Windows ship tinytex, so without this
+  # the xelatex compile below runs on CRAN -- slow (font loading) and the
+  # dominant contributor to the >10 min checktime. Compilation is verified
+  # locally and on CI.
+  skip_on_cran()
   skip_if_not(tinytex::is_tinytex())
   out <- withr::local_tempfile(fileext = ".tex")
   emit(mk_multipage_band_spec(), out)
