@@ -322,7 +322,7 @@ cols <- function(.spec, ..., .default = NULL) {
   for (i in seq_along(args)) {
     nm <- arg_names[[i]]
     incoming <- S7::set_props(args[[i]], name = nm)
-    new_cols <- .set_col_spec(new_cols, nm, incoming)
+    new_cols <- .set_col_spec(new_cols, nm, incoming, call)
   }
 
   # `.default` fills every data column not named in `...` and not
@@ -331,7 +331,11 @@ cols <- function(.spec, ..., .default = NULL) {
     specified <- names(new_cols)
     unmentioned <- setdiff(names(.spec@data), specified)
     for (nm in unmentioned) {
-      new_cols[[nm]] <- S7::set_props(default_spec, name = nm)
+      ds <- S7::set_props(default_spec, name = nm)
+      if (isTRUE(ds@label_deferred)) {
+        ds <- .resolve_deferred_label(ds, nm, call)
+      }
+      new_cols[[nm]] <- ds
     }
   }
 
@@ -355,6 +359,33 @@ cols <- function(.spec, ..., .default = NULL) {
 #' prior attribute on the matched column intact. Set the shared rule
 #' across arms first, then refine an individual arm with a later
 #' [`cols()`] call (or the reverse).
+#'
+#' **Per-column label token.** A `label` that references `{.name}` (or
+#' its alias `{.col}`) inside a `{expr}` is resolved *per matched
+#' column*, with `.name` and `.col` both bound to that column's name.
+#' This makes a variable-N arm header a single declarative call instead
+#' of a hand-written loop. The rest of the `{expr}` evaluates in the
+#' calling environment, so a per-arm BigN looked up from a named vector
+#' works directly:
+#'
+#' ```r
+#' n <- c(placebo = 86, drug_50 = 84, drug_100 = 84)
+#' cols_apply(
+#'   spec, c("placebo", "drug_50", "drug_100"),
+#'   col_spec(label = "{.name}\n(N={n[.name]})", align = "decimal")
+#' )
+#' # placebo  -> "placebo\n(N=86)" ; drug_50 -> "drug_50\n(N=84)" ; ...
+#' ```
+#'
+#' The token is a plain-string feature; a label wrapped in [`md()`] /
+#' [`html()`] is parsed eagerly and does not interpolate. A failing
+#' token expression aborts naming the offending column.
+#'
+#' **`width` merge.** `width`'s default sentinel for the merge is
+#' `"auto"`: a later `cols()` / `cols_apply()` call carrying the default
+#' `width = "auto"` leaves a previously pinned width intact (only an
+#' explicit non-`"auto"` width overrides). Apply a shared width last to
+#' broadcast it across arms.
 #'
 #' @param .spec *The `tabular_spec` to extend.*
 #'   `<tabular_spec>: required`. Dot-prefixed so partial matching
@@ -478,7 +509,7 @@ cols_apply <- function(.spec, .cols, .col_spec) {
   new_cols <- .spec@cols
   for (nm in matched) {
     incoming <- S7::set_props(col_spec_arg, name = nm)
-    new_cols <- .set_col_spec(new_cols, nm, incoming)
+    new_cols <- .set_col_spec(new_cols, nm, incoming, call)
   }
 
   S7::set_props(.spec, cols = new_cols)
@@ -538,14 +569,42 @@ cols_apply <- function(.spec, .cols, .col_spec) {
 
 # Field-merge `incoming` onto the spec already stored under `nm`, or
 # assign it fresh when `nm` has none. Shared by `cols()` and
-# `cols_apply()` so the merge / assign rule lives in one place.
-.set_col_spec <- function(new_cols, nm, incoming) {
+# `cols_apply()` so the merge / assign rule lives in one place. `env` is
+# the verb's caller environment, used to resolve a deferred `{.name}` /
+# `{.col}` label against the column name `nm` before merge / assign.
+.set_col_spec <- function(new_cols, nm, incoming, env) {
+  if (isTRUE(incoming@label_deferred)) {
+    incoming <- .resolve_deferred_label(incoming, nm, env)
+  }
   if (nm %in% names(new_cols)) {
     new_cols[[nm]] <- .merge_col_spec(new_cols[[nm]], incoming)
   } else {
     new_cols[[nm]] <- incoming
   }
   new_cols
+}
+
+# Resolve a deferred `{.name}` / `{.col}` label for the matched column
+# `nm`. Interpolates the raw template in a child of the verb's caller
+# `env` with `.name` and `.col` both bound to `nm`, so a token like
+# `{N[.name]}` looks the column name up in the caller's data. Clears the
+# deferral flag. A failing expression re-raises with the column named.
+.resolve_deferred_label <- function(incoming, nm, env) {
+  child <- new.env(parent = env)
+  child$.name <- nm
+  child$.col <- nm
+  resolved <- tryCatch(
+    .interpolate(incoming@label, env = child, call = env),
+    tabular_error_input = function(e) {
+      cli::cli_abort(
+        "Could not resolve the {.arg label} token for column {.val {nm}}.",
+        parent = e,
+        class = "tabular_error_input",
+        call = env
+      )
+    }
+  )
+  S7::set_props(incoming, label = resolved, label_deferred = FALSE)
 }
 
 # Merge `new` into `existing` field-by-field. A non-default value in
@@ -560,7 +619,11 @@ cols_apply <- function(.spec, .cols, .col_spec) {
     out <- S7::set_props(out, usage = new@usage)
   }
   if (!is.na(new@label)) {
-    out <- S7::set_props(out, label = new@label)
+    out <- S7::set_props(
+      out,
+      label = new@label,
+      label_deferred = new@label_deferred
+    )
   }
   if (!is.null(new@format)) {
     out <- S7::set_props(out, format = new@format)

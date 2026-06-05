@@ -113,6 +113,12 @@ value folds inline, \code{label = "Placebo (N={n['placebo']})"}.
 Double a brace (\verb{\{\{} or \verb{\}\}}) for a literal one. An \code{md()} /
 \code{html()} label is passed through without interpolation.
 
+\strong{Per-column token.} \code{{.name}} (alias \code{{.col}}) inside a \code{{expr}}
+is \emph{deferred} and resolved to the matched column's name when the
+spec is stamped by \code{\link[=cols]{cols()}} / \code{\link[=cols_apply]{cols_apply()}}, so one spec can
+carry a variable-N arm header. See \code{\link[=cols_apply]{cols_apply()}} for the
+loop-free idiom.
+
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two-line header with arm name and BigN from saf_n.
 n <- stats::setNames(saf_n$n, saf_n$arm_short)
 col_spec(
@@ -207,7 +213,12 @@ narrows.
 tabular \code{NA} deferred to backend auto-fit; that path was
 inconsistent across backends and is replaced by the \code{"auto"}
 default, which produces identical widths across RTF / LaTeX
-/ HTML.}
+/ HTML.
+
+\strong{Merge sentinel.} For the field-merge across repeated \code{\link[=cols]{cols()}}
+/ \code{\link[=cols_apply]{cols_apply()}} calls, \code{"auto"} is treated as the default: a
+later call carrying \code{width = "auto"} leaves a previously pinned
+width intact, and only an explicit non-\code{"auto"} width overrides.}
 
 \item{group_display}{\emph{How \code{usage = "group"} values render in the body.}
 \verb{<character(1)>: default "header_row"}. Active only when

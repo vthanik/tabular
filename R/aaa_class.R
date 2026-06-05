@@ -259,6 +259,16 @@ NULL
       S7::class_character,
       default = NA_character_
     ),
+    # @label_deferred — internal flag. TRUE when `label` carries a
+    # `{.name}` / `{.col}` token whose interpolation was deferred at
+    # `col_spec()` construction (the column name is not yet bound).
+    # `cols()` / `cols_apply()` resolve it per column at stamp time
+    # (`.resolve_deferred_label()`), then clear the flag. Never TRUE on
+    # a spec the user can observe after stamping.
+    label_deferred = S7::new_property(
+      S7::class_logical,
+      default = FALSE
+    ),
     usage = S7::new_property(
       S7::class_character,
       default = NA_character_

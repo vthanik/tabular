@@ -348,3 +348,120 @@ test_that("cols(.default = NULL) is the current behaviour (#E2)", {
     cols(param = col_spec(usage = "group"), .default = NULL)
   expect_named(s@cols, "param")
 })
+
+# Per-column {.name} / {.col} label token (cols_apply + cols) ---------
+
+test_that("cols_apply() resolves {.name} to each matched column (#token)", {
+  n <- c(ARM_A = 30L, ARM_B = 28L, ARM_C = 31L)
+  s <- mk_arms_spec() |>
+    cols_apply(
+      c("ARM_A", "ARM_B", "ARM_C"),
+      col_spec(label = "{.name}\n(N={n[.name]})", align = "decimal")
+    )
+  expect_identical(s@cols$ARM_A@label, "ARM_A\n(N=30)")
+  expect_identical(s@cols$ARM_B@label, "ARM_B\n(N=28)")
+  expect_identical(s@cols$ARM_C@label, "ARM_C\n(N=31)")
+  # The deferral flag is always cleared once stamped.
+  expect_false(s@cols$ARM_A@label_deferred)
+  # The shared non-default field still merges as before.
+  expect_identical(s@cols$ARM_A@align, "decimal")
+})
+
+test_that("{.col} is an alias for {.name} (#token)", {
+  s <- mk_arms_spec() |>
+    cols_apply(c("ARM_A", "ARM_B"), col_spec(label = "Arm {.col}"))
+  expect_identical(s@cols$ARM_A@label, "Arm ARM_A")
+  expect_identical(s@cols$ARM_B@label, "Arm ARM_B")
+})
+
+test_that("the token resolves through a plain cols() named arg too (#token)", {
+  s <- mk_arms_spec() |>
+    cols(ARM_A = col_spec(label = "{.name} group"))
+  expect_identical(s@cols$ARM_A@label, "ARM_A group")
+  expect_false(s@cols$ARM_A@label_deferred)
+})
+
+test_that("the token resolves through cols(.default=) (#token)", {
+  s <- mk_arms_spec() |>
+    cols(
+      param = col_spec(usage = "group"),
+      .default = col_spec(label = "col:{.name}")
+    )
+  expect_identical(s@cols$ARM_A@label, "col:ARM_A")
+  expect_identical(s@cols$ARM_C@label, "col:ARM_C")
+})
+
+test_that("a label with no brace is byte-identical and never deferred (#token)", {
+  s <- mk_arms_spec() |>
+    cols_apply(c("ARM_A"), col_spec(label = "Plain Label"))
+  expect_identical(s@cols$ARM_A@label, "Plain Label")
+  expect_false(s@cols$ARM_A@label_deferred)
+})
+
+test_that("an eager (non-.name) token still interpolates at col_spec() (#token)", {
+  total <- 91L
+  s <- mk_arms_spec() |>
+    cols(ARM_A = col_spec(label = "Total (N={total})"))
+  expect_identical(s@cols$ARM_A@label, "Total (N=91)")
+  expect_false(s@cols$ARM_A@label_deferred)
+})
+
+test_that("doubled braces stay literal and do not defer (#token)", {
+  s <- mk_arms_spec() |>
+    cols(ARM_A = col_spec(label = "{{.name}}"))
+  expect_identical(s@cols$ARM_A@label, "{.name}")
+  expect_false(s@cols$ARM_A@label_deferred)
+})
+
+test_that("a failing token expression names the column and is tabular_error_input (#token)", {
+  expect_error(
+    mk_arms_spec() |>
+      cols_apply(c("ARM_A"), col_spec(label = "{NOPE[.name]}")),
+    class = "tabular_error_input"
+  )
+  err <- tryCatch(
+    mk_arms_spec() |>
+      cols_apply(c("ARM_A"), col_spec(label = "{NOPE[.name]}")),
+    tabular_error_input = function(e) conditionMessage(e)
+  )
+  expect_match(err, "ARM_A")
+})
+
+test_that("a malformed brace label still raises the eager parse error (#token)", {
+  # The deferral scan fails on the unterminated brace and falls back to
+  # the eager interpolation path, which raises the real parse error.
+  expect_error(
+    col_spec(label = "{.name"),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("an unmatched cols_apply() selection still warns with a deferred label (#token)", {
+  expect_warning(
+    s <- mk_arms_spec() |>
+      cols_apply(\(nm) startsWith(nm, "ZZZ"), col_spec(label = "{.name}")),
+    "matched no columns"
+  )
+  expect_length(s@cols, 0L)
+})
+
+test_that("a resolved {.name} label reaches every backend (HTML and RTF) (#token)", {
+  n <- c(ARM_A = 30L, ARM_B = 28L, ARM_C = 31L)
+  spec <- mk_arms_spec() |>
+    cols(param = col_spec(usage = "group", label = "Parameter")) |>
+    cols_apply(
+      c("ARM_A", "ARM_B", "ARM_C"),
+      col_spec(label = "{.name} (N={n[.name]})", align = "decimal")
+    )
+
+  html <- emit(spec, tempfile(fileext = ".html"))
+  html_txt <- paste(readLines(html, warn = FALSE), collapse = "\n")
+  expect_match(html_txt, "ARM_A (N=30)", fixed = TRUE)
+  expect_match(html_txt, "ARM_C (N=31)", fixed = TRUE)
+
+  rtf <- emit(spec, tempfile(fileext = ".rtf"))
+  rtf_txt <- paste(readLines(rtf, warn = FALSE), collapse = "\n")
+  # RTF escapes the parens as literal text; the N value is what matters.
+  expect_match(rtf_txt, "ARM_A", fixed = TRUE)
+  expect_match(rtf_txt, "N=30", fixed = TRUE)
+})

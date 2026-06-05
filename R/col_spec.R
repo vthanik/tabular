@@ -128,6 +128,12 @@
 #'   Double a brace (`{{` or `}}`) for a literal one. An `md()` /
 #'   `html()` label is passed through without interpolation.
 #'
+#'   **Per-column token.** `{.name}` (alias `{.col}`) inside a `{expr}`
+#'   is *deferred* and resolved to the matched column's name when the
+#'   spec is stamped by [`cols()`] / [`cols_apply()`], so one spec can
+#'   carry a variable-N arm header. See [`cols_apply()`] for the
+#'   loop-free idiom.
+#'
 #'   ```r
 #'   # Two-line header with arm name and BigN from saf_n.
 #'   n <- stats::setNames(saf_n$n, saf_n$arm_short)
@@ -224,6 +230,11 @@
 #'   inconsistent across backends and is replaced by the `"auto"`
 #'   default, which produces identical widths across RTF / LaTeX
 #'   / HTML.
+#'
+#'   **Merge sentinel.** For the field-merge across repeated [`cols()`]
+#'   / [`cols_apply()`] calls, `"auto"` is treated as the default: a
+#'   later call carrying `width = "auto"` leaves a previously pinned
+#'   width intact, and only an explicit non-`"auto"` width overrides.
 #'
 #' @param group_display *How `usage = "group"` values render in the body.*
 #'   `<character(1)>: default "header_row"`. Active only when
@@ -587,7 +598,15 @@ col_spec <- function(
   align_val <- .check_col_align(align, call = call)
   valign_val <- .check_col_valign(valign, call = call)
   .check_col_label(label, call = call)
-  label <- .interp_one(label, env = call, call = call)
+  # A label whose `{expr}` references the column-stamp tokens `.name` /
+  # `.col` cannot interpolate here (the column name is bound later, at
+  # the cols() / cols_apply() stamp). Defer it: keep the raw template
+  # and let `.resolve_deferred_label()` fill it per column. Every other
+  # label interpolates eagerly in the caller env, as before.
+  label_deferred <- .label_defers_to_column(label)
+  if (!label_deferred) {
+    label <- .interp_one(label, env = call, call = call)
+  }
   .check_col_visible(visible, call = call)
   .check_col_width(width, call = call)
   group_display_val <- .check_col_group_display(group_display, call = call)
@@ -599,6 +618,7 @@ col_spec <- function(
   .col_spec_class(
     name = NA_character_,
     label = label,
+    label_deferred = label_deferred,
     usage = usage_val,
     format = format,
     visible = visible,
@@ -616,6 +636,42 @@ col_spec <- function(
     na_text = na_text,
     indent_by = indent_by_val
   )
+}
+
+# TRUE when `label` is a plain string carrying a `{expr}` chunk that
+# references the per-column stamp tokens `.name` or `.col`. Such a label
+# cannot interpolate at `col_spec()` time (those names are unbound until
+# `cols()` / `cols_apply()` stamps the spec onto a column), so it is
+# deferred. md() / html() labels and labels with no brace never defer; a
+# malformed brace string returns FALSE so the eager `.interp_one()` path
+# raises the real (column-context) parse error with the caller's `call`.
+.label_defers_to_column <- function(x) {
+  if (inherits(x, "from_markdown") || inherits(x, "from_html")) {
+    return(FALSE)
+  }
+  if (!is.character(x) || length(x) != 1L || is.na(x)) {
+    return(FALSE)
+  }
+  if (!grepl("{", x, fixed = TRUE)) {
+    return(FALSE)
+  }
+  chunks <- tryCatch(.interp_scan(x, call = NULL), error = function(e) NULL)
+  if (is.null(chunks)) {
+    return(FALSE)
+  }
+  for (ch in chunks) {
+    if (!identical(ch$type, "expr")) {
+      next
+    }
+    vars <- tryCatch(
+      all.vars(parse(text = ch$value)),
+      error = function(e) character()
+    )
+    if (any(c(".name", ".col") %in% vars)) {
+      return(TRUE)
+    }
+  }
+  FALSE
 }
 
 # Validate the `indent_by` argument. Accepts a single character
