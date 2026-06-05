@@ -1,0 +1,267 @@
+# Recipes: the CDISC-pilot tables, end to end
+
+These are the canonical safety and efficacy tables a programmer builds
+from the shell — each one rendered **live** below from the bundled demo
+data, so what you see is exactly what the code produces. They mirror the
+package’s cross-backend qualification (`inst/qualification/`), which
+rebuilds the same displays from the real PHUSE Test Data Factory ADaM
+and checks them across every backend.
+
+Each recipe ends on the spec (the live HTML you see); the closing line
+shows how to **ship the same spec** to a submission backend — just
+change the extension.
+
+## Demographics and baseline characteristics
+
+The reference safety table: a `usage = "group"` parameter stub, indented
+statistic rows, decimal-aligned arm columns, and the population BigN
+folded into each header from `cdisc_saf_n`.
+
+``` r
+
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+
+demo_tbl <- tabular(
+  cdisc_saf_demo,
+  titles = c(
+    "Table 14.1.1",
+    "Demographic and Baseline Characteristics",
+    "Safety Population"
+  ),
+  footnotes = "Percentages are based on the number of subjects per treatment group."
+) |>
+  cols(
+    variable = col_spec(usage = "group", label = "Parameter"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo = col_spec(
+      label = "Placebo\nN={n['placebo']}",
+      align = "decimal"
+    ),
+    drug_50 = col_spec(
+      label = "Drug 50\nN={n['drug_50']}",
+      align = "decimal"
+    ),
+    drug_100 = col_spec(
+      label = "Drug 100\nN={n['drug_100']}",
+      align = "decimal"
+    ),
+    Total = col_spec(label = "Total\nN={n['Total']}", align = "decimal")
+  )
+
+demo_tbl
+```
+
+[TABLE]
+
+Percentages are based on the number of subjects per treatment group.
+
+ 
+
+Table 14.1.1
+
+Demographic and Baseline Characteristics
+
+Safety Population
+
+ 
+
+``` r
+
+emit(demo_tbl, "t_14_1_1.rtf") # ship: or .pdf / .docx / .html / .md
+```
+
+## Adverse-event overview
+
+A flat overview where `stat_label` carries both the high-level flag rows
+and the two-space-indented maximum-severity detail rows; one
+`usage = "group"` on `stat_label` drives both levels.
+
+``` r
+
+ae_tbl <- tabular(
+  cdisc_saf_ae,
+  titles = c(
+    "Table 14.3.0",
+    "Overview of Treatment-Emergent Adverse Events",
+    "Safety Population"
+  )
+) |>
+  cols(
+    stat_label = col_spec(usage = "group", label = ""),
+    placebo = col_spec(
+      label = "Placebo\nN={n['placebo']}",
+      align = "decimal"
+    ),
+    drug_50 = col_spec(
+      label = "Drug 50\nN={n['drug_50']}",
+      align = "decimal"
+    ),
+    drug_100 = col_spec(
+      label = "Drug 100\nN={n['drug_100']}",
+      align = "decimal"
+    ),
+    Total = col_spec(label = "Total\nN={n['Total']}", align = "decimal")
+  )
+
+ae_tbl
+```
+
+[TABLE]
+
+ 
+
+Table 14.3.0
+
+Overview of Treatment-Emergent Adverse Events
+
+Safety Population
+
+ 
+
+``` r
+
+emit(ae_tbl, "t_14_3_0.rtf") # ship: or .pdf / .docx / .html / .md
+```
+
+## Adverse events by SOC and preferred term
+
+The two-level hierarchy: `label` holds SOC text on SOC rows and PT text
+on PT rows, indented by `indent_level`; the hidden `soc` / `row_type` /
+`n_total` / `soc_n` columns ride along as partition and sort keys.
+[`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md)
+clusters PTs under their parent SOC and orders both levels by descending
+frequency.
+
+``` r
+
+aesocpt_tbl <- tabular(
+  cdisc_saf_aesocpt,
+  titles = c(
+    "Table 14.3.1",
+    "Adverse Events by System Organ Class and Preferred Term",
+    "Safety Population"
+  )
+) |>
+  cols(
+    label = col_spec(
+      label = "SOC / Preferred Term",
+      indent_by = "indent_level"
+    ),
+    soc = col_spec(visible = FALSE),
+    row_type = col_spec(visible = FALSE),
+    n_total = col_spec(visible = FALSE),
+    soc_n = col_spec(visible = FALSE),
+    placebo = col_spec(
+      label = "Placebo\nN={n['placebo']}",
+      align = "decimal"
+    ),
+    drug_50 = col_spec(
+      label = "Drug 50\nN={n['drug_50']}",
+      align = "decimal"
+    ),
+    drug_100 = col_spec(
+      label = "Drug 100\nN={n['drug_100']}",
+      align = "decimal"
+    ),
+    Total = col_spec(label = "Total\nN={n['Total']}", align = "decimal")
+  ) |>
+  sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
+
+aesocpt_tbl
+```
+
+[TABLE]
+
+ 
+
+Table 14.3.1
+
+Adverse Events by System Organ Class and Preferred Term
+
+Safety Population
+
+ 
+
+This table is long, so a real deliverable paginates it — keeping each
+SOC and its preferred terms together. Pagination materialises in the
+paged backends (RTF, PDF, DOCX), so add
+[`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
+and emit to one of those:
+
+``` r
+
+aesocpt_tbl |>
+  paginate(keep_together = "soc", continuation = "(continued)") |>
+  emit("t_14_3_1.pdf")
+```
+
+## Best overall response and response rates
+
+The efficacy companion: `group_label` synthesises one bold section band
+per analysis block (best overall response, ORR, CBR, DCR) via
+`header_row`, with indented response rows beneath. Denominators come
+from `cdisc_eff_n`.
+
+``` r
+
+ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
+
+resp_tbl <- tabular(
+  cdisc_eff_resp,
+  titles = c(
+    "Table 14.2.1",
+    "Best Overall Response and Response Rates",
+    "Efficacy Evaluable Population"
+  )
+) |>
+  cols(
+    group_label = col_spec(usage = "group", group_display = "header_row"),
+    stat_label = col_spec(usage = "indent", label = "Response"),
+    groupid = col_spec(visible = FALSE),
+    row_type = col_spec(visible = FALSE),
+    placebo = col_spec(
+      label = "Placebo\nN={ne['placebo']}",
+      align = "decimal"
+    ),
+    drug_50 = col_spec(
+      label = "Drug 50\nN={ne['drug_50']}",
+      align = "decimal"
+    ),
+    drug_100 = col_spec(
+      label = "Drug 100\nN={ne['drug_100']}",
+      align = "decimal"
+    )
+  )
+
+resp_tbl
+```
+
+[TABLE]
+
+ 
+
+Table 14.2.1
+
+Best Overall Response and Response Rates
+
+Efficacy Evaluable Population
+
+ 
+
+``` r
+
+emit(resp_tbl, "t_14_2_1.rtf") # ship: or .pdf / .docx / .html / .md
+```
+
+## See also
+
+- [Data in](https://vthanik.github.io/tabular/articles/data-in.md) —
+  produce these wide frames from a cards/cardx ARD with
+  [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md).
+- [Structure](https://vthanik.github.io/tabular/articles/structure.md)
+  and
+  [Presentation](https://vthanik.github.io/tabular/articles/presentation.md)
+  — the column, pagination, and styling verbs each recipe draws on.
+- [Output &
+  qualification](https://vthanik.github.io/tabular/articles/output.md) —
+  the cross-backend validation these recipes mirror.

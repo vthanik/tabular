@@ -196,10 +196,10 @@ per-page row budget this verb depends on.
 # from the preset's orientation + font_size + paper size and from
 # the title / footnote / header line counts on the spec — no
 # manual rows-per-page knob to keep in sync.
-ae <- saf_aesocpt
+ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
   ae,

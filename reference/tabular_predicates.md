@@ -105,7 +105,7 @@ add_safety_footnote <- function(spec) {
   spec
 }
 
-demo <- tabular(saf_demo, titles = "Demographics")
+demo <- tabular(cdisc_saf_demo, titles = "Demographics")
 is_tabular_spec(demo)         # TRUE
 #> [1] TRUE
 is_tabular_spec("not a spec") # FALSE — does not raise

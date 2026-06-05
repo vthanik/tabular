@@ -144,10 +144,10 @@ property.
 
 ``` r
 # ---- AE table by SOC and PT with per-row indent + styled hierarchy ----
-# `saf_aesocpt` ships with `indent_level` (0 on overall/SOC rows,
+# `cdisc_saf_aesocpt` ships with `indent_level` (0 on overall/SOC rows,
 # 1 on PT rows); `col_spec(indent_by = "indent_level")` drives the
 # PT indent on the `label` column.
-tabular(saf_aesocpt, titles = "Adverse Events by SOC / PT",
+tabular(cdisc_saf_aesocpt, titles = "Adverse Events by SOC / PT",
         footnotes = "") |>
   cols(
     label    = col_spec(label = "Category", align = "left",

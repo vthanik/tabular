@@ -2,7 +2,8 @@
 
 ## Authors
 
-- **Vignesh Thanikachalam**. Author, maintainer, copyright holder.
+- **[Vignesh Thanikachalam](https://github.com/vthanik)**. Author,
+  maintainer, copyright holder.
 
 ## Citation
 

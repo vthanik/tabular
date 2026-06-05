@@ -5,7 +5,7 @@ cards::ard_stack() or cards::ard_stack_hierarchical()) and
 returns a wide display data.frame ready to pass to tabular()."><meta property="og:description" content="pivot_across() is tabular's input-side helper: it consumes a
 long Analysis Results Data (ARD) data frame (typically produced by
 cards::ard_stack() or cards::ard_stack_hierarchical()) and
-returns a wide display data.frame ready to pass to tabular()."><meta property="og:image" content="https://vthanik.github.io/tabular/logo.svg"><!-- dependencies from examples --></head><body>
+returns a wide display data.frame ready to pass to tabular()."><meta property="og:image" content="https://vthanik.github.io/tabular/reference/figures/README-hero.png"><meta property="og:image:alt" content="A demographic and baseline characteristics table rendered by tabular, with decimal-aligned arm columns."><!-- dependencies from examples --></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -13,7 +13,7 @@ returns a wide display data.frame ready to pass to tabular()."><meta property="o
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -25,19 +25,11 @@ returns a wide display data.frame ready to pass to tabular()."><meta property="o
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/core-concepts.html">Core concepts</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Recipes</h6></li>
-    <li><a class="dropdown-item" href="../articles/columns-and-headers.html">Columns &amp; headers</a></li>
-    <li><a class="dropdown-item" href="../articles/rows-grouping-pagination.html">Rows, grouping &amp; pagination</a></li>
-    <li><a class="dropdown-item" href="../articles/styling.html">Styling</a></li>
-    <li><a class="dropdown-item" href="../articles/clinical-cookbook.html">Clinical cookbook</a></li>
-    <li><a class="dropdown-item" href="../articles/clinical-recipe.html">A submission table, end to end</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
-    <li><a class="dropdown-item" href="../articles/from-ard.html">From a cards ARD</a></li>
-    <li><a class="dropdown-item" href="../articles/fonts-and-fidelity.html">Fonts &amp; fidelity</a></li>
-    <li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/data-in.html">Data in: the cards → tabular pipeline</a></li>
+    <li><a class="dropdown-item" href="../articles/structure.html">Structure: columns, headers, and pagination</a></li>
+    <li><a class="dropdown-item" href="../articles/presentation.html">Presentation: titles, footnotes, page chrome, and styling</a></li>
+    <li><a class="dropdown-item" href="../articles/recipes.html">Recipes: the CDISC-pilot tables, end to end</a></li>
+    <li><a class="dropdown-item" href="../articles/output.html">Output &amp; qualification: backends, requirements, and the CDISC pilot</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -68,6 +60,7 @@ returns a wide display data.frame ready to pass to <code><a href="tabular.html">
 <span>  <span class="va">data</span>,</span>
 <span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>continuous <span class="op">=</span> <span class="st">"{mean} ({sd})"</span>, categorical <span class="op">=</span> <span class="st">"{n} ({p}%)"</span><span class="op">)</span>,</span>
 <span>  column <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  row_group <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  label <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  overall <span class="op">=</span> <span class="st">"Total"</span>,</span>
 <span>  decimals <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -105,7 +98,7 @@ for a variable is: per-variable -&gt; per-context -&gt; <code>default</code>
 context. Use when your ARD is homogeneous (e.g. all
 categorical).</p>
 <p></p><div class="sourceCode r"><pre><code><span><span class="co"># Every variable rendered as "n (p%)" — categorical-only slice.</span></span>
-<span><span class="va">cat_only</span> <span class="op">&lt;-</span> <span class="va">saf_demo_card</span><span class="op">[</span><span class="va">saf_demo_card</span><span class="op">$</span><span class="va">context</span> <span class="op">==</span> <span class="st">"categorical"</span>, <span class="op">]</span></span>
+<span><span class="va">cat_only</span> <span class="op">&lt;-</span> <span class="va">cdisc_saf_demo_ard</span><span class="op">[</span><span class="va">cdisc_saf_demo_ard</span><span class="op">$</span><span class="va">context</span> <span class="op">==</span> <span class="st">"categorical"</span>, <span class="op">]</span></span>
 <span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
 <span>  <span class="va">cat_only</span>,</span>
 <span>  statistic <span class="op">=</span> <span class="st">"{n} ({p}%)"</span></span>
@@ -130,7 +123,7 @@ ARD was built:</p><ul><li><p><code>cards::ard_continuous()</code> / <code>ard_ca
 unsure.</p>
 <p></p><div class="sourceCode r"><pre><code><span><span class="co"># AGE (continuous) -&gt; "75.2 (8.59)"; SEX (categorical) -&gt; "53 (62%)"</span></span>
 <span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
-<span>  <span class="va">saf_demo_card</span>,</span>
+<span>  <span class="va">cdisc_saf_demo_ard</span>,</span>
 <span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    continuous  <span class="op">=</span> <span class="st">"{mean} ({sd})"</span>,</span>
 <span>    categorical <span class="op">=</span> <span class="st">"{n} ({p}%)"</span></span>
@@ -146,7 +139,7 @@ unsure.</p>
 context. Use when one variable needs a custom format.</p>
 <p></p><div class="sourceCode r"><pre><code><span><span class="co"># AGE shows just the mean; SEX / RACE keep the categorical default.</span></span>
 <span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
-<span>  <span class="va">saf_demo_card</span>,</span>
+<span>  <span class="va">cdisc_saf_demo_ard</span>,</span>
 <span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    AGE         <span class="op">=</span> <span class="st">"{mean}"</span>,</span>
 <span>    categorical <span class="op">=</span> <span class="st">"{n} ({p}%)"</span>,</span>
@@ -163,7 +156,7 @@ context. Use when one variable needs a custom format.</p>
 each element becomes one display row, with the name as the row
 label. Use for <code>N / Mean (SD) / Median / Min, Max</code>-style blocks.</p>
 <p></p><div class="sourceCode r"><pre><code><span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
-<span>  <span class="va">saf_demo_card</span>,</span>
+<span>  <span class="va">cdisc_saf_demo_ard</span>,</span>
 <span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    continuous <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>      N           <span class="op">=</span> <span class="st">"{N}"</span>,</span>
@@ -183,6 +176,24 @@ label. Use for <code>N / Mean (SD) / Median / Min, Max</code>-style blocks.</p>
 from the ARD's <code>group1</code> value or — for renamed input — picks
 the single non-standard column. Pass a string when multiple
 group columns exist.</p></dd>
+
+
+<dt id="arg-row-group">row_group<a class="anchor" aria-label="anchor" href="#arg-row-group"></a></dt>
+<dd><p><em>Second, non-column grouping dimension.</em>
+<code>&lt;character(1) | NULL&gt;: default NULL</code>. Names the non-arm group
+variable of a two-variable <code>.by</code> (e.g. <code>SEX</code> in
+<code>ard_stack(.by = c(ARM, SEX))</code>). It widens into a leading row
+column (not a pivoted arm column), so the result composes with
+<code><a href="subgroup.html">subgroup(by = ...)</a></code> or
+<code>col_spec(usage = "group")</code> downstream.</p>
+<p><strong>Why it is required.</strong> cards encodes a crossing factor and a
+SOC/PT hierarchy identically (the second group variable appears
+in <code>variable</code> on its by-marginal rows), so the two cannot be told
+apart automatically. Naming <code>row_group</code> declares "this is a
+crossing factor": the by-marginal rows are dropped and the flat
+path is used. Leave it <code>NULL</code> for a genuine hierarchy.</p>
+<p><strong>Restriction:</strong> Must name a second grouping variable present in
+the ARD and must differ from <code>column</code>.</p></dd>
 
 
 <dt id="arg-label">label<a class="anchor" aria-label="anchor" href="#arg-label"></a></dt>
@@ -231,6 +242,8 @@ p-value styling and other domain-specific formatting.</p>
 <li><p>One column per arm level (named after the <code>group1_level</code>
 values or the renamed arm column).</p></li>
 <li><p><code>Total</code> (or whatever <code>overall</code> is set to) when applicable.</p></li>
+<li><p>A leading column named after <code>row_group</code> when set (the second
+grouping dimension).</p></li>
 <li><p>Hierarchical ARD adds <code>soc</code>, <code>label</code>, <code>row_type</code> instead of
 <code>variable</code>.</p></li>
 </ul><p>Pass the result straight into <code><a href="tabular.html">tabular()</a></code> to start the
@@ -245,6 +258,28 @@ It does not aggregate — it pivots arms to columns, interpolates
 per-cell display strings from the stat values, and applies
 decimal precision. Filtering, weighting, and aggregation happen
 upstream in cards or your own data-prep step.</p><div class="section">
+<h3 id="key-statistic-by-the-ard-context">Key <code>statistic</code> by the ARD <code>context</code><a class="anchor" aria-label="anchor" href="#key-statistic-by-the-ard-context"></a></h3>
+
+
+<p><code>statistic</code> (and <code>fmt</code>) are matched against the ARD's <code>context</code>
+column verbatim, and that value differs per generating function.
+Keying by the wrong name silently drops the format. Inspect
+<code>unique(ard$context)</code> first and key to match (or pass a single
+format string / <code>default =</code> to cover everything). When an
+explicitly-supplied <code>statistic</code> matches no context at all,
+<code>pivot_across()</code> warns rather than silently emitting <code>{n}</code>.</p><table class="table table"><tr><td>Generating function</td><td><code>context</code> to key on</td></tr><tr><td><code>cards::ard_summary()</code></td><td><code>summary</code></td></tr><tr><td><code>cards::ard_tabulate()</code></td><td><code>tabulate</code></td></tr><tr><td><code>cards::ard_continuous()</code></td><td><code>continuous</code></td></tr><tr><td><code>cards::ard_categorical()</code></td><td><code>categorical</code></td></tr><tr><td><code>cards::ard_stack_hierarchical()</code></td><td><code>tabulate</code> + <code>hierarchical</code></td></tr><tr><td><code>cardx::ard_categorical_ci()</code></td><td><code>proportion_ci</code></td></tr><tr><td><code>cardx::ard_continuous_ci()</code></td><td><code>continuous_ci</code></td></tr></table></div>
+
+<div class="section">
+<h3 id="indentation-of-stat-label">Indentation of <code>stat_label</code><a class="anchor" aria-label="anchor" href="#indentation-of-stat-label"></a></h3>
+
+
+<p>Categorical levels and the multi-row continuous stat labels come
+back already indented with two leading spaces, ready to render as a
+plain display column. Do <strong>not</strong> also set <code>col_spec(usage = "indent")</code> on <code>stat_label</code> — that stacks the engine indent on top of
+the string indent (a double indent). Use one or the other.</p>
+</div>
+
+<div class="section">
 <h3 id="zero-suppression-always-on-default-">Zero-suppression (always-on default)<a class="anchor" aria-label="anchor" href="#zero-suppression-always-on-default-"></a></h3>
 
 
@@ -268,7 +303,7 @@ For <code>n = 0</code>, that's <code>"0 (0.0%)"</code>.</p>
 <span><span class="co"># The body of fmt$n can be the default integer rendering — its</span></span>
 <span><span class="co"># presence alone is what disables the zero-suppression branch.</span></span>
 <span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
-<span>  <span class="va">saf_demo_card</span>,</span>
+<span>  <span class="va">cdisc_saf_demo_ard</span>,</span>
 <span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    continuous  <span class="op">=</span> <span class="st">"{mean} ({sd})"</span>,</span>
 <span>    categorical <span class="op">=</span> <span class="st">"{n} ({p}%)"</span></span>
@@ -322,9 +357,9 @@ frame this helper returns.</p>
 <span class="r-in"><span><span class="co"># Mean (SD) / Median / Min, Max) sits above each categorical</span></span></span>
 <span class="r-in"><span><span class="co"># block; decimals are set per-stat (mean 1, sd 2, p 1) to match</span></span></span>
 <span class="r-in"><span><span class="co"># the CDISC convention.</span></span></span>
-<span class="r-in"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">saf_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">saf_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">cdisc_saf_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">cdisc_saf_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="va">saf_demo_card</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span><span class="va">cdisc_saf_demo_ard</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">pivot_across</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>      continuous <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span></span>
@@ -430,7 +465,7 @@ frame this helper returns.</p>
 <span class="r-in"><span><span class="co"># the hierarchy markers. Derive `indent_level` from `row_type` so</span></span></span>
 <span class="r-in"><span><span class="co"># `col_spec(indent_by = "indent_level")` drives the SOC -&gt; PT</span></span></span>
 <span class="r-in"><span><span class="co"># indent on the `label` column.</span></span></span>
-<span class="r-in"><span><span class="va">wide</span> <span class="op">&lt;-</span> <span class="va">saf_aesocpt_card</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span><span class="va">wide</span> <span class="op">&lt;-</span> <span class="va">cdisc_saf_aesocpt_ard</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">pivot_across</span><span class="op">(</span>statistic <span class="op">=</span> <span class="st">"{n} ({p}%)"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">wide</span><span class="op">$</span><span class="va">indent_level</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">wide</span><span class="op">$</span><span class="va">row_type</span> <span class="op">==</span> <span class="st">"pt"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
@@ -521,12 +556,12 @@ frame this helper returns.</p>
 </figure></div><span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 3: Hierarchical ARD (SOC / PT) ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
-<span class="r-in"><span><span class="co"># `saf_aesocpt_card` carries an `ard_stack_hierarchical` shape with</span></span></span>
+<span class="r-in"><span><span class="co"># `cdisc_saf_aesocpt_ard` carries an `ard_stack_hierarchical` shape with</span></span></span>
 <span class="r-in"><span><span class="co"># two grouping variables (AEBODSYS / AEDECOD). `pivot_across()`</span></span></span>
 <span class="r-in"><span><span class="co"># recognises the hierarchical structure and emits dedicated `soc`,</span></span></span>
 <span class="r-in"><span><span class="co"># `label`, and `row_type` columns so the SOC -&gt; PT nesting survives</span></span></span>
 <span class="r-in"><span><span class="co"># the pivot. The result is ready for `tabular()` plus `sort_rows()`.</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">saf_aesocpt_card</span>, <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt_ard</span>, <span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 3 × 10</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   group1 group1_level group2 group2_level variable variable_level</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>        </span>
@@ -536,7 +571,7 @@ frame this helper returns.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 4 more variables: context &lt;chr&gt;, stat_name &lt;chr&gt;,</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   stat_label &lt;chr&gt;, stat &lt;list&gt;</span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="va">wide</span> <span class="op">&lt;-</span> <span class="va">saf_aesocpt_card</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span><span class="va">wide</span> <span class="op">&lt;-</span> <span class="va">cdisc_saf_aesocpt_ard</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">pivot_across</span><span class="op">(</span>statistic <span class="op">=</span> <span class="st">"{n} ({p}%)"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">wide</span>, <span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                                      soc</span>
@@ -558,7 +593,7 @@ frame this helper returns.</p>
 <span class="r-in"><span><span class="co"># row per named entry — the canonical "N / Mean (SD) / Median /</span></span></span>
 <span class="r-in"><span><span class="co"># Min, Max" block for continuous variables. `label = c(...)`</span></span></span>
 <span class="r-in"><span><span class="co"># renames the variable headings emitted into the wide output.</span></span></span>
-<span class="r-in"><span><span class="va">saf_demo_card</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span><span class="va">cdisc_saf_demo_ard</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">pivot_across</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>      continuous <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span></span>
@@ -657,11 +692,11 @@ frame this helper returns.</p>
 <span class="r-in"><span><span class="co"># `"tabulate"` (not the `"continuous"` / `"categorical"` of</span></span></span>
 <span class="r-in"><span><span class="co"># `ard_continuous()` / `ard_categorical()`), so a list keyed</span></span></span>
 <span class="r-in"><span><span class="co"># `continuous`/`categorical` would silently match nothing. Always check</span></span></span>
-<span class="r-in"><span><span class="co"># `unique(ard$context)` first. Here the bundled `saf_demo_card` is</span></span></span>
+<span class="r-in"><span><span class="co"># `unique(ard$context)` first. Here the bundled `cdisc_saf_demo_ard` is</span></span></span>
 <span class="r-in"><span><span class="co"># relabelled to mimic `ard_summary()` + `ard_tabulate()` output; the</span></span></span>
 <span class="r-in"><span><span class="co"># by-variable's own row drops automatically and both the summary and</span></span></span>
 <span class="r-in"><span><span class="co"># the tabulate variables survive.</span></span></span>
-<span class="r-in"><span><span class="va">card_st</span> <span class="op">&lt;-</span> <span class="va">saf_demo_card</span></span></span>
+<span class="r-in"><span><span class="va">card_st</span> <span class="op">&lt;-</span> <span class="va">cdisc_saf_demo_ard</span></span></span>
 <span class="r-in"><span><span class="va">card_st</span><span class="op">$</span><span class="va">context</span><span class="op">[</span><span class="va">card_st</span><span class="op">$</span><span class="va">context</span> <span class="op">==</span> <span class="st">"continuous"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"summary"</span></span></span>
 <span class="r-in"><span><span class="va">card_st</span><span class="op">$</span><span class="va">context</span><span class="op">[</span><span class="va">card_st</span><span class="op">$</span><span class="va">context</span> <span class="op">==</span> <span class="st">"categorical"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"tabulate"</span></span></span>
 <span class="r-in"><span><span class="fu">pivot_across</span><span class="op">(</span></span></span>
@@ -719,7 +754,7 @@ frame this helper returns.</p>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Vignesh Thanikachalam.</p>
+  <p>Developed by <a href="https://github.com/vthanik" class="external-link">Vignesh Thanikachalam</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

@@ -451,9 +451,9 @@ bor_levels <- c(
   "ORR (CR + PR)", "CBR (CR + PR + SD)",
   "DCR (CR + PR + SD + NON-CR/NON-PD)", "95% CI (Clopper-Pearson)"
 )
-eff <- eff_resp
+eff <- cdisc_eff_resp
 eff$stat_label <- factor(eff$stat_label, levels = bor_levels)
-ne <- stats::setNames(eff_n$n, eff_n$arm_short)
+ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 
 tabular(
   eff,

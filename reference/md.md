@@ -92,10 +92,10 @@ formatting.
 # line italicises "Safety Population" via `md("*...*")` for a visible
 # contrast; the first footnote carries a Pandoc-style superscript
 # marker `^a^` that the backends render as a true superscript.
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
-  saf_aesocpt,
+  cdisc_saf_aesocpt,
   titles = c(
     "Table 14.3.1",
     "Adverse Events by System Organ Class and Preferred Term",

@@ -115,9 +115,9 @@ without going through `brdr()`.
 # thick column-label divider (midrule), a hairline dotted rule
 # between body rows (rowrule), and the muted spanner rule dropped.
 # Unlisted rules keep their booktabs defaults.
-demo_n <- stats::setNames(saf_n$n, saf_n$arm_short)
+demo_n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 tabular(
-  saf_aeoverall,
+  cdisc_saf_ae,
   titles = c(
     "Table 14.3.1",
     "Overall Summary of Adverse Events",

@@ -96,14 +96,14 @@ factor with the levels in clinical order upstream, then
 #
 # AE-by-SOC/PT table where the SOCs and PTs appear in descending
 # order of subject count within the row-type hierarchy (overall
-# first, then SOCs, then PTs). `saf_aesocpt$Total` cells are
+# first, then SOCs, then PTs). `cdisc_saf_aesocpt$Total` cells are
 # formatted text ("171 (67.3)"), so a lexical sort on `Total`
 # would be wrong ("14" < "171" < "29") — attach a numeric rank
 # column upstream and sort on (row_type, n_total).
-ae <- saf_aesocpt
+ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
   ae,

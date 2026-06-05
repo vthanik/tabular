@@ -145,9 +145,9 @@ set_preset(
 )
 
 # Subsequent tabular() chains pick up the session preset at render.
-demo_n <- stats::setNames(saf_n$n, saf_n$arm_short)
+demo_n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 tabular(
-  saf_aeoverall,
+  cdisc_saf_ae,
   titles = c(
     "Table 14.3.1",
     "Overall Summary of Adverse Events",

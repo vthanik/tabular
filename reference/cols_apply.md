@@ -61,6 +61,33 @@ rule across arms first, then refine an individual arm with a later
 [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) call (or
 the reverse).
 
+**Per-column label token.** A `label` that references `{.name}` (or its
+alias `{.col}`) inside a `{expr}` is resolved *per matched column*, with
+`.name` and `.col` both bound to that column's name. This makes a
+variable-N arm header a single declarative call instead of a
+hand-written loop. The rest of the `{expr}` evaluates in the calling
+environment, so a per-arm BigN looked up from a named vector works
+directly:
+
+    n <- c(placebo = 86, drug_50 = 84, drug_100 = 84)
+    cols_apply(
+      spec, c("placebo", "drug_50", "drug_100"),
+      col_spec(label = "{.name}\n(N={n[.name]})", align = "decimal")
+    )
+    # placebo  -> "placebo\n(N=86)" ; drug_50 -> "drug_50\n(N=84)" ; ...
+
+The token is a plain-string feature; a label wrapped in
+[`md()`](https://vthanik.github.io/tabular/reference/md.md) /
+[`html()`](https://vthanik.github.io/tabular/reference/html.md) is
+parsed eagerly and does not interpolate. A failing token expression
+aborts naming the offending column.
+
+**`width` merge.** `width`'s default sentinel for the merge is `"auto"`:
+a later [`cols()`](https://vthanik.github.io/tabular/reference/cols.md)
+/ `cols_apply()` call carrying the default `width = "auto"` leaves a
+previously pinned width intact (only an explicit non-`"auto"` width
+overrides). Apply a shared width last to broadcast it across arms.
+
 ## See also
 
 **Companion verbs:**
@@ -85,10 +112,10 @@ builds the spec.
 # name vector (`grep()` against the data) and given one shared
 # decimal-alignment spec, while the two row-label columns keep
 # their own roles set with `cols()`.
-arm_cols <- grep("^placebo$|^drug_|^Total$", names(saf_demo), value = TRUE)
+arm_cols <- grep("^placebo$|^drug_|^Total$", names(cdisc_saf_demo), value = TRUE)
 
 tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = c(
     "Table 14.1.1",
     "Demographics and Baseline Characteristics",

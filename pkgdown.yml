@@ -2,17 +2,13 @@ pandoc: 3.8.3
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
-  articles/architecture: architecture.html
-  articles/clinical-cookbook: clinical-cookbook.html
-  articles/clinical-recipe: clinical-recipe.html
-  columns-and-headers: columns-and-headers.html
-  core-concepts: core-concepts.html
-  articles/fonts-and-fidelity: fonts-and-fidelity.html
-  articles/from-ard: from-ard.html
-  rows-grouping-pagination: rows-grouping-pagination.html
-  styling: styling.html
+  articles/data-in: data-in.html
+  articles/output: output.html
+  articles/presentation: presentation.html
+  articles/recipes: recipes.html
+  articles/structure: structure.html
   tabular: tabular.html
-last_built: 2026-06-05T07:53Z
+last_built: 2026-06-05T09:30Z
 urls:
   reference: https://vthanik.github.io/tabular/reference
   article: https://vthanik.github.io/tabular/articles

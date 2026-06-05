@@ -13,6 +13,7 @@ pivot_across(
   data,
   statistic = list(continuous = "{mean} ({sd})", categorical = "{n} ({p}%)"),
   column = NULL,
+  row_group = NULL,
   label = NULL,
   overall = "Total",
   decimals = NULL,
@@ -47,7 +48,7 @@ pivot_across(
   when your ARD is homogeneous (e.g. all categorical).
 
       # Every variable rendered as "n (p%)" — categorical-only slice.
-      cat_only <- saf_demo_card[saf_demo_card$context == "categorical", ]
+      cat_only <- cdisc_saf_demo_ard[cdisc_saf_demo_ard$context == "categorical", ]
       pivot_across(
         cat_only,
         statistic = "{n} ({p}%)"
@@ -75,7 +76,7 @@ pivot_across(
 
       # AGE (continuous) -> "75.2 (8.59)"; SEX (categorical) -> "53 (62%)"
       pivot_across(
-        saf_demo_card,
+        cdisc_saf_demo_ard,
         statistic = list(
           continuous  = "{mean} ({sd})",
           categorical = "{n} ({p}%)"
@@ -89,7 +90,7 @@ pivot_across(
 
       # AGE shows just the mean; SEX / RACE keep the categorical default.
       pivot_across(
-        saf_demo_card,
+        cdisc_saf_demo_ard,
         statistic = list(
           AGE         = "{mean}",
           categorical = "{n} ({p}%)",
@@ -104,7 +105,7 @@ pivot_across(
   for `N / Mean (SD) / Median / Min, Max`-style blocks.
 
       pivot_across(
-        saf_demo_card,
+        cdisc_saf_demo_ard,
         statistic = list(
           continuous = c(
             N           = "{N}",
@@ -122,6 +123,26 @@ pivot_across(
   `<character(1) | NULL>: default NULL`. `NULL` auto-detects from the
   ARD's `group1` value or — for renamed input — picks the single
   non-standard column. Pass a string when multiple group columns exist.
+
+- row_group:
+
+  *Second, non-column grouping dimension.*
+  `<character(1) | NULL>: default NULL`. Names the non-arm group
+  variable of a two-variable `.by` (e.g. `SEX` in
+  `ard_stack(.by = c(ARM, SEX))`). It widens into a leading row column
+  (not a pivoted arm column), so the result composes with
+  [`subgroup(by = ...)`](https://vthanik.github.io/tabular/reference/subgroup.md)
+  or `col_spec(usage = "group")` downstream.
+
+  **Why it is required.** cards encodes a crossing factor and a SOC/PT
+  hierarchy identically (the second group variable appears in `variable`
+  on its by-marginal rows), so the two cannot be told apart
+  automatically. Naming `row_group` declares "this is a crossing
+  factor": the by-marginal rows are dropped and the flat path is used.
+  Leave it `NULL` for a genuine hierarchy.
+
+  **Restriction:** Must name a second grouping variable present in the
+  ARD and must differ from `column`.
 
 - label:
 
@@ -181,6 +202,9 @@ Schema:
 
 - `Total` (or whatever `overall` is set to) when applicable.
 
+- A leading column named after `row_group` when set (the second grouping
+  dimension).
+
 - Hierarchical ARD adds `soc`, `label`, `row_type` instead of
   `variable`.
 
@@ -196,6 +220,35 @@ cards aggregation backend and that boundary. It does not aggregate — it
 pivots arms to columns, interpolates per-cell display strings from the
 stat values, and applies decimal precision. Filtering, weighting, and
 aggregation happen upstream in cards or your own data-prep step.
+
+### Key `statistic` by the ARD `context`
+
+`statistic` (and `fmt`) are matched against the ARD's `context` column
+verbatim, and that value differs per generating function. Keying by the
+wrong name silently drops the format. Inspect `unique(ard$context)`
+first and key to match (or pass a single format string / `default =` to
+cover everything). When an explicitly-supplied `statistic` matches no
+context at all, `pivot_across()` warns rather than silently emitting
+`{n}`.
+
+|                                   |                             |
+|-----------------------------------|-----------------------------|
+| Generating function               | `context` to key on         |
+| `cards::ard_summary()`            | `summary`                   |
+| `cards::ard_tabulate()`           | `tabulate`                  |
+| `cards::ard_continuous()`         | `continuous`                |
+| `cards::ard_categorical()`        | `categorical`               |
+| `cards::ard_stack_hierarchical()` | `tabulate` + `hierarchical` |
+| `cardx::ard_categorical_ci()`     | `proportion_ci`             |
+| `cardx::ard_continuous_ci()`      | `continuous_ci`             |
+
+### Indentation of `stat_label`
+
+Categorical levels and the multi-row continuous stat labels come back
+already indented with two leading spaces, ready to render as a plain
+display column. Do **not** also set `col_spec(usage = "indent")` on
+`stat_label` — that stacks the engine indent on top of the string indent
+(a double indent). Use one or the other.
 
 ### Zero-suppression (always-on default)
 
@@ -221,7 +274,7 @@ format string interpolates, so `{n}` becomes your formatter's output and
     # The body of fmt$n can be the default integer rendering — its
     # presence alone is what disables the zero-suppression branch.
     pivot_across(
-      saf_demo_card,
+      cdisc_saf_demo_ard,
       statistic = list(
         continuous  = "{mean} ({sd})",
         categorical = "{n} ({p}%)"
@@ -282,9 +335,9 @@ wraps the wide data frame this helper returns.
 # Mean (SD) / Median / Min, Max) sits above each categorical
 # block; decimals are set per-stat (mean 1, sd 2, p 1) to match
 # the CDISC convention.
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
-saf_demo_card |>
+cdisc_saf_demo_ard |>
   pivot_across(
     statistic = list(
       continuous = c(

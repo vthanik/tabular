@@ -123,7 +123,7 @@ resolves the engine pipeline to a `tabular_grid` without I/O.
 # Quarto / Rmd chunk it inlines under the chunk; at a plain
 # console the HTML source is `cat()`-ed.
 tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = c("Table 14.1.1", "Demographics"),
   footnotes = "Safety Population."
 )

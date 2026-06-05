@@ -33,8 +33,9 @@ tabular(data, titles = NULL, footnotes = NULL)
 
   **Restriction:** At least one column; column names must be unique.
   Zero rows is accepted (engine renders a "No data" stub).
-  **Interaction:** The `cards`-format counterparts (`saf_demo_card`,
-  `saf_aesocpt_card`) are NOT accepted directly; pipe through
+  **Interaction:** The `cards`-format counterparts
+  (`cdisc_saf_demo_ard`, `cdisc_saf_aesocpt_ard`) are NOT accepted
+  directly; pipe through
   [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
   first.
 
@@ -56,7 +57,7 @@ tabular(data, titles = NULL, footnotes = NULL)
   element is passed through without interpolation.
 
       # Canonical 3-line title block with BigN-qualified population.
-      n <- stats::setNames(saf_n$n, saf_n$arm_short)
+      n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
       titles = c(
         "Table 14.3.1",
         "Adverse Events by System Organ Class and Preferred Term",
@@ -132,7 +133,8 @@ flush against the lowest used title.
 [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
 (cards ARD -\> wide).
 
-**Demo data:** `saf_demo`, `saf_aesocpt`, `eff_resp`, `saf_n`, `eff_n`.
+**Demo data:** `cdisc_saf_demo`, `cdisc_saf_aesocpt`, `cdisc_eff_resp`,
+`cdisc_saf_n`, `cdisc_eff_n`.
 
 ## Examples
 
@@ -141,7 +143,7 @@ flush against the lowest used title.
 #
 # The regulatory work-horse layout: AE-by-SOC/PT with the
 # canonical 3-line title block (table number, description,
-# population qualifier with BigN drawn inline from `saf_n`) and a
+# population qualifier with BigN drawn inline from `cdisc_saf_n`) and a
 # two-line footnote block explaining the denominator. The
 # downstream pipeline hides the hierarchy markers (`row_type`,
 # `soc_n`, `n_total`) but keeps them in the data so `sort_rows()`
@@ -149,11 +151,11 @@ flush against the lowest used title.
 # The dataset already ships `n_total` and `soc_n`; here we slice to
 # the overall row plus the two highest-incidence SOCs to keep the
 # preview compact.
-ae <- saf_aesocpt
+ae <- cdisc_saf_aesocpt
 keep_soc <- head(unique(ae$soc[ae$row_type == "soc"]), 2L)
 ae <- ae[ae$row_type == "overall" | ae$soc %in% keep_soc, ]
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
   ae,

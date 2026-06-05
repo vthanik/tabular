@@ -50,8 +50,8 @@ compiles with `xelatex` thereafter:
 ``` r
 
 install.packages("tinytex")
-tinytex::install_tinytex()                                  # one-time TeX setup
-tinytex::tlmgr_install(c("tabularray", "ninecolors"))       # the table engine
+tinytex::install_tinytex() # one-time TeX setup
+tinytex::tlmgr_install(c("tabularray", "ninecolors", "siunitx", "tex-gyre"))
 ```
 
 [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
@@ -82,12 +82,15 @@ engine resolves it at render time.
 library(tabular)
 
 # BigN denominators, keyed by arm
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 # columns render in data-frame order, so put them in dose order first;
 # subset to Age / Sex / Race for a compact display
 keep <- c("Age (years)", "Sex, n (%)", "Race, n (%)")
-demo <- saf_demo[saf_demo$variable %in% keep, c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")]
+demo <- cdisc_saf_demo[
+  cdisc_saf_demo$variable %in% keep,
+  c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")
+]
 
 tab <- tabular(
   demo,
@@ -99,16 +102,25 @@ tab <- tabular(
   footnotes = "Percentages are based on the number of subjects per treatment group."
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Characteristic"),
+    variable = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = "Placebo (N={n['placebo']})",  align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50 (N={n['drug_50']})",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100 (N={n['drug_100']})", align = "decimal"),
-    Total      = col_spec(label = "Total (N={n['Total']})",    align = "decimal")
+    placebo = col_spec(
+      label = "Placebo (N={n['placebo']})",
+      align = "decimal"
+    ),
+    drug_50 = col_spec(
+      label = "Drug 50 (N={n['drug_50']})",
+      align = "decimal"
+    ),
+    drug_100 = col_spec(
+      label = "Drug 100 (N={n['drug_100']})",
+      align = "decimal"
+    ),
+    Total = col_spec(label = "Total (N={n['Total']})", align = "decimal")
   )
 
 # render to any backend by file extension (or format = "...")
-path <- emit(tab, tempfile(fileext = ".rtf"))   # submission deliverable
+path <- emit(tab, tempfile(fileext = ".rtf")) # submission deliverable
 ```
 
 The same `tab` emits to every backend from the one spec. The table below
@@ -196,13 +208,17 @@ Two notes on the marks:
 ## Documentation
 
 - [Get started](https://vthanik.github.io/tabular/articles/tabular.html)
-  — your first table in ten minutes
-- [Core
-  concepts](https://vthanik.github.io/tabular/articles/core-concepts.html)
-  — the mental model
-- [Clinical
-  cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)
-  — six complete production tables
+  — the mental model and your first table
+- [Data in](https://vthanik.github.io/tabular/articles/data-in.html) —
+  turn a cards/cardx ARD into the wide frame with
+  [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
+- [Structure](https://vthanik.github.io/tabular/articles/structure.html)
+  — columns, headers, BigN, and pagination
+- [Presentation](https://vthanik.github.io/tabular/articles/presentation.html)
+  — titles, footnotes, page chrome, and styling
+- [Output &
+  qualification](https://vthanik.github.io/tabular/articles/output.html)
+  — backends, requirements, and the CDISC-pilot validation
 - [Reference](https://vthanik.github.io/tabular/reference/index.html) —
   every verb, grouped by role
 

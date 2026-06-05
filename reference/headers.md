@@ -113,10 +113,10 @@ band rows this verb builds.
 # spanning the four arm columns and the Total column. The
 # row-label column (`soc`) sits to the left of the band with no
 # header covering it — the canonical clinical layout.
-ae <- saf_aesocpt
+ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
   ae,

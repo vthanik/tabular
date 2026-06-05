@@ -78,12 +78,12 @@ col_spec(
       )
 
       # End-to-end ARD → wide → tabular pipeline. The cards ARD
-      # `saf_demo_card` is the long upstream input; `pivot_across()`
+      # `cdisc_saf_demo_ard` is the long upstream input; `pivot_across()`
       # widens to one column per arm and stamps an internal marker
       # so [`sort_rows()`] can reject sort keys on those arm columns.
       # `cols()` then attaches per-column display rules.
       wide <- pivot_across(
-        saf_demo_card,
+        cdisc_saf_demo_ard,
         statistic = list(
           continuous  = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})"),
           categorical = "{n} ({p}%)"
@@ -127,8 +127,17 @@ col_spec(
   [`html()`](https://vthanik.github.io/tabular/reference/html.md) label
   is passed through without interpolation.
 
-      # Two-line header with arm name and BigN from saf_n.
-      n <- stats::setNames(saf_n$n, saf_n$arm_short)
+  **Per-column token.** `{.name}` (alias `{.col}`) inside a `{expr}` is
+  *deferred* and resolved to the matched column's name when the spec is
+  stamped by
+  [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) /
+  [`cols_apply()`](https://vthanik.github.io/tabular/reference/cols_apply.md),
+  so one spec can carry a variable-N arm header. See
+  [`cols_apply()`](https://vthanik.github.io/tabular/reference/cols_apply.md)
+  for the loop-free idiom.
+
+      # Two-line header with arm name and BigN from cdisc_saf_n.
+      n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
       col_spec(
         label = "Placebo\nN={n['placebo']}",
         align = "decimal"
@@ -223,6 +232,13 @@ col_spec(
   deferred to backend auto-fit; that path was inconsistent across
   backends and is replaced by the `"auto"` default, which produces
   identical widths across RTF / LaTeX / HTML.
+
+  **Merge sentinel.** For the field-merge across repeated
+  [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) /
+  [`cols_apply()`](https://vthanik.github.io/tabular/reference/cols_apply.md)
+  calls, `"auto"` is treated as the default: a later call carrying
+  `width = "auto"` leaves a previously pinned width intact, and only an
+  explicit non-`"auto"` width overrides.
 
 - group_display:
 
@@ -377,9 +393,9 @@ col_spec(
     referenced depth column is auto-hidden — no need to set
     `visible = FALSE` on it.
 
-  Typical SOC / PT pattern (the bundled `saf_aesocpt` ships with the
-  canonical depth column already attached, so no upstream construction
-  is needed):
+  Typical SOC / PT pattern (the bundled `cdisc_saf_aesocpt` ships with
+  the canonical depth column already attached, so no upstream
+  construction is needed):
 
       cols(
         label    = col_spec(label = "Category", indent_by = "indent_level"),
@@ -455,10 +471,10 @@ malformed `sprintf` template is probed at construction
 # the row-label columns are pinned to a fixed width and aligned
 # left, the four arm columns embed BigN inline in the header,
 # decimal-align numeric content, and render `NA` cells as "-".
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = c(
     "Table 14.1.1",
     "Demographics and Baseline Characteristics",

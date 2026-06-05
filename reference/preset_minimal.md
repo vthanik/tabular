@@ -99,10 +99,10 @@ as `rules` string sugar),
 # The overall adverse-event summary with a single rule under the
 # column labels and no bold anywhere. `preset_minimal()` is the theme
 # baseline; the page stays at the session default geometry.
-demo_n <- stats::setNames(saf_n$n, saf_n$arm_short)
+demo_n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
-  saf_aeoverall,
+  cdisc_saf_ae,
   titles = c(
     "Table 14.3.1",
     "Overall Summary of Adverse Events",

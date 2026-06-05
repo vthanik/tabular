@@ -54,7 +54,7 @@ cols(.spec, ..., .default = NULL)
   treated as already specified and is left untouched.
 
       # Decimal-align every arm column without listing each by name.
-      tabular(saf_demo) |>
+      tabular(cdisc_saf_demo) |>
         cols(
           variable   = col_spec(usage = "group", label = "Parameter"),
           stat_label = col_spec(label = "Statistic"),
@@ -105,7 +105,7 @@ Default values that do NOT override the existing field:
 
     # Three-stage build: label/usage first, alignment second, width
     # third. Each stage leaves earlier fields intact.
-    tabular(saf_demo) |>
+    tabular(cdisc_saf_demo) |>
       cols(variable = col_spec(usage = "group", label = "Parameter")) |>
       cols(variable = col_spec(align = "left")) |>
       cols(variable = col_spec(width = 2.0))
@@ -137,13 +137,13 @@ builds the per-column DSL object that `cols()` attaches.
 #
 # Demographics table where the row-label columns sit on the left
 # and the four treatment-arm columns embed BigN in the header
-# label (drawn inline from the bundled `saf_n` data frame). Every
+# label (drawn inline from the bundled `cdisc_saf_n` data frame). Every
 # arm column is decimal-aligned so mixed-format cells like
 # "5 (3.2%)" line up on the decimal mark.
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = c(
     "Table 14.1.1",
     "Demographics and Baseline Characteristics",

@@ -2,6 +2,13 @@
 
 ## tabular (development version)
 
+### Breaking changes
+
+- The bundled demo datasets were renamed to the `cdisc_` namespace and
+  the `_card` ARD companions to `_ard` (for example `saf_demo` is now
+  `cdisc_saf_demo` and `saf_demo_card` is now `cdisc_saf_demo_ard`);
+  update any references.
+
 ### New features
 
 - [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
@@ -15,8 +22,17 @@
   applies one
   [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
   to many columns selected by name or by predicate.
+- [`cols_apply()`](https://vthanik.github.io/tabular/reference/cols_apply.md)
+  and [`cols()`](https://vthanik.github.io/tabular/reference/cols.md)
+  resolve a `{.name}` token (alias `{.col}`) in a `col_spec(label = )`
+  to each matched column name, so a variable-N arm header is a single
+  declarative call instead of a per-arm loop.
 - [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) gains
   `create_dir` to create missing parent directories instead of erroring.
+- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
+  gains `row_group` to widen the second variable of a two-variable `.by`
+  (such as `ard_stack(.by = c(ARM, SEX))`) into a leading row column
+  instead of mis-reading it as a SOC/PT hierarchy.
 - [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
   gains `big_n` and `big_n_fmt` for per-page BigN, so each subgroup
   page’s column headers can carry that page’s own `(N=)` denominators,
@@ -50,6 +66,13 @@
   footnote and non-repeating-title spacer paragraphs, at the preset
   `font_size` instead of the RTF default 12pt, so every spacer line
   matches the body height.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) now
+  accepts a relative output path for DOCX output; the path is
+  absolutised before the OOXML zip is staged, where previously a
+  relative path failed with a `zip` I/O error.
+- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
+  now warns when an explicitly-supplied `statistic` matches no context
+  or variable in the ARD, instead of silently falling back to `{n}`.
 - [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
   no longer silently drops `ard_tabulate()` categorical rows, nor blanks
   their pooled `overall` column, from a mixed `ard_stack()` ARD.

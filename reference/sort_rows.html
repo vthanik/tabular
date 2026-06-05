@@ -3,7 +3,7 @@
 sort before pagination, so by may reference any column in
 spec@data whether or not the column is declared in cols()."><meta property="og:description" content="Attach a sort_spec to a tabular_spec. The engine applies the
 sort before pagination, so by may reference any column in
-spec@data whether or not the column is declared in cols()."><meta property="og:image" content="https://vthanik.github.io/tabular/logo.svg"><!-- dependencies from examples --></head><body>
+spec@data whether or not the column is declared in cols()."><meta property="og:image" content="https://vthanik.github.io/tabular/reference/figures/README-hero.png"><meta property="og:image:alt" content="A demographic and baseline characteristics table rendered by tabular, with decimal-aligned arm columns."><!-- dependencies from examples --></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -11,7 +11,7 @@ spec@data whether or not the column is declared in cols()."><meta property="og:i
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -23,19 +23,11 @@ spec@data whether or not the column is declared in cols()."><meta property="og:i
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/core-concepts.html">Core concepts</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Recipes</h6></li>
-    <li><a class="dropdown-item" href="../articles/columns-and-headers.html">Columns &amp; headers</a></li>
-    <li><a class="dropdown-item" href="../articles/rows-grouping-pagination.html">Rows, grouping &amp; pagination</a></li>
-    <li><a class="dropdown-item" href="../articles/styling.html">Styling</a></li>
-    <li><a class="dropdown-item" href="../articles/clinical-cookbook.html">Clinical cookbook</a></li>
-    <li><a class="dropdown-item" href="../articles/clinical-recipe.html">A submission table, end to end</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
-    <li><a class="dropdown-item" href="../articles/from-ard.html">From a cards ARD</a></li>
-    <li><a class="dropdown-item" href="../articles/fonts-and-fidelity.html">Fonts &amp; fidelity</a></li>
-    <li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/data-in.html">Data in: the cards → tabular pipeline</a></li>
+    <li><a class="dropdown-item" href="../articles/structure.html">Structure: columns, headers, and pagination</a></li>
+    <li><a class="dropdown-item" href="../articles/presentation.html">Presentation: titles, footnotes, page chrome, and styling</a></li>
+    <li><a class="dropdown-item" href="../articles/recipes.html">Recipes: the CDISC-pilot tables, end to end</a></li>
+    <li><a class="dropdown-item" href="../articles/output.html">Output &amp; qualification: backends, requirements, and the CDISC pilot</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -133,14 +125,14 @@ upstream, then <code>sort_rows(by = "stat_label")</code> does the rest.</p>
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># AE-by-SOC/PT table where the SOCs and PTs appear in descending</span></span></span>
 <span class="r-in"><span><span class="co"># order of subject count within the row-type hierarchy (overall</span></span></span>
-<span class="r-in"><span><span class="co"># first, then SOCs, then PTs). `saf_aesocpt$Total` cells are</span></span></span>
+<span class="r-in"><span><span class="co"># first, then SOCs, then PTs). `cdisc_saf_aesocpt$Total` cells are</span></span></span>
 <span class="r-in"><span><span class="co"># formatted text ("171 (67.3)"), so a lexical sort on `Total`</span></span></span>
 <span class="r-in"><span><span class="co"># would be wrong ("14" &lt; "171" &lt; "29") — attach a numeric rank</span></span></span>
 <span class="r-in"><span><span class="co"># column upstream and sort on (row_type, n_total).</span></span></span>
-<span class="r-in"><span><span class="va">ae</span> <span class="op">&lt;-</span> <span class="va">saf_aesocpt</span></span></span>
+<span class="r-in"><span><span class="va">ae</span> <span class="op">&lt;-</span> <span class="va">cdisc_saf_aesocpt</span></span></span>
 <span class="r-in"><span><span class="va">ae</span><span class="op">$</span><span class="va">row_type</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">ae</span><span class="op">$</span><span class="va">row_type</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"overall"</span>, <span class="st">"soc"</span>, <span class="st">"pt"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">ae</span><span class="op">$</span><span class="va">n_total</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">" .*"</span>, <span class="st">""</span>, <span class="va">ae</span><span class="op">$</span><span class="va">Total</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">saf_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">saf_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">cdisc_saf_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">cdisc_saf_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="tabular.html">tabular</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">ae</span>,</span></span>
@@ -223,7 +215,7 @@ upstream, then <code>sort_rows(by = "stat_label")</code> does the rest.</p>
 <span class="r-in"><span><span class="co"># Efficacy BOR table that must appear in CDISC clinical order</span></span></span>
 <span class="r-in"><span><span class="co"># (CR &lt; PR &lt; SD &lt; NON-CR/NON-PD &lt; PD &lt; NE &lt; MISSING), then the</span></span></span>
 <span class="r-in"><span><span class="co"># derived ORR / CBR / DCR rate rows ordered by `groupid`,</span></span></span>
-<span class="r-in"><span><span class="co"># not alphabetical. `eff_resp$stat_label` arrives as character, so</span></span></span>
+<span class="r-in"><span><span class="co"># not alphabetical. `cdisc_eff_resp$stat_label` arrives as character, so</span></span></span>
 <span class="r-in"><span><span class="co"># coerce to a factor with the canonical levels upstream and</span></span></span>
 <span class="r-in"><span><span class="co"># `sort_rows()` uses those levels directly.</span></span></span>
 <span class="r-in"><span><span class="va">bor_levels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span></span>
@@ -231,9 +223,9 @@ upstream, then <code>sort_rows(by = "stat_label")</code> does the rest.</p>
 <span class="r-in"><span>  <span class="st">"ORR (CR + PR)"</span>, <span class="st">"CBR (CR + PR + SD)"</span>,</span></span>
 <span class="r-in"><span>  <span class="st">"DCR (CR + PR + SD + NON-CR/NON-PD)"</span>, <span class="st">"95% CI (Clopper-Pearson)"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">eff</span> <span class="op">&lt;-</span> <span class="va">eff_resp</span></span></span>
+<span class="r-in"><span><span class="va">eff</span> <span class="op">&lt;-</span> <span class="va">cdisc_eff_resp</span></span></span>
 <span class="r-in"><span><span class="va">eff</span><span class="op">$</span><span class="va">stat_label</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">eff</span><span class="op">$</span><span class="va">stat_label</span>, levels <span class="op">=</span> <span class="va">bor_levels</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">ne</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">eff_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">eff_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">ne</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">cdisc_eff_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">cdisc_eff_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="tabular.html">tabular</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">eff</span>,</span></span>
@@ -316,7 +308,7 @@ upstream, then <code>sort_rows(by = "stat_label")</code> does the rest.</p>
 <span class="r-in"><span><span class="co"># one value per `by` entry so each key can flip direction</span></span></span>
 <span class="r-in"><span><span class="co"># independently. The helper column rides in `spec@data` for the</span></span></span>
 <span class="r-in"><span><span class="co"># sort but never renders (visible = FALSE on its col_spec).</span></span></span>
-<span class="r-in"><span><span class="va">demo</span> <span class="op">&lt;-</span> <span class="va">saf_demo</span></span></span>
+<span class="r-in"><span><span class="va">demo</span> <span class="op">&lt;-</span> <span class="va">cdisc_saf_demo</span></span></span>
 <span class="r-in"><span><span class="va">demo</span><span class="op">$</span><span class="va">display_order</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/match.html" class="external-link">match</a></span><span class="op">(</span><span class="va">demo</span><span class="op">$</span><span class="va">variable</span>, <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">demo</span><span class="op">$</span><span class="va">variable</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="tabular.html">tabular</a></span><span class="op">(</span><span class="va">demo</span>, titles <span class="op">=</span> <span class="st">"Demographics, ranked within section"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
@@ -392,7 +384,7 @@ upstream, then <code>sort_rows(by = "stat_label")</code> does the rest.</p>
 <span class="r-in"><span><span class="co"># `pt` detail rows inside each SOC) regardless of input order. The</span></span></span>
 <span class="r-in"><span><span class="co"># numeric inner key sorts PTs within each SOC by descending total</span></span></span>
 <span class="r-in"><span><span class="co"># subject count.</span></span></span>
-<span class="r-in"><span><span class="va">ae</span> <span class="op">&lt;-</span> <span class="va">saf_aesocpt</span></span></span>
+<span class="r-in"><span><span class="va">ae</span> <span class="op">&lt;-</span> <span class="va">cdisc_saf_aesocpt</span></span></span>
 <span class="r-in"><span><span class="va">ae</span><span class="op">$</span><span class="va">row_type</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">ae</span><span class="op">$</span><span class="va">row_type</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"overall"</span>, <span class="st">"soc"</span>, <span class="st">"pt"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">ae</span><span class="op">$</span><span class="va">n_total</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">" .*"</span>, <span class="st">""</span>, <span class="va">ae</span><span class="op">$</span><span class="va">Total</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="tabular.html">tabular</a></span><span class="op">(</span><span class="va">ae</span>, titles <span class="op">=</span> <span class="st">"AE by SOC and PT, ranked within SOC"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
@@ -470,7 +462,7 @@ upstream, then <code>sort_rows(by = "stat_label")</code> does the rest.</p>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Vignesh Thanikachalam.</p>
+  <p>Developed by <a href="https://github.com/vthanik" class="external-link">Vignesh Thanikachalam</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

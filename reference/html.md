@@ -78,10 +78,10 @@ wrapper for the common case.
 # Demographics table title with the population subset shaded
 # red. The HTML wrapper carries an inline CSS style; backends
 # translate (RTF: \cf, LaTeX: \textcolor, HTML: inline style).
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
-  saf_demo,
+  cdisc_saf_demo,
   titles = c(
     "Table 14.1.1",
     "Demographics",

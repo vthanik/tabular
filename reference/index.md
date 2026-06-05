@@ -191,25 +191,25 @@ Pre-summarised wide-format tables and their upstream `cards`-format
 counterparts. Power every `@examples` block, every vignette, and every
 smoke test.
 
-- [`eff_estimates`](https://vthanik.github.io/tabular/reference/eff_estimates.md)
+- [`cdisc_eff_estimates`](https://vthanik.github.io/tabular/reference/cdisc_eff_estimates.md)
   : Treatment-effect estimates by model
-- [`eff_n`](https://vthanik.github.io/tabular/reference/eff_n.md) :
-  Efficacy-population BigN per arm
-- [`eff_resp`](https://vthanik.github.io/tabular/reference/eff_resp.md)
+- [`cdisc_eff_n`](https://vthanik.github.io/tabular/reference/cdisc_eff_n.md)
+  : Efficacy-population BigN per arm
+- [`cdisc_eff_resp`](https://vthanik.github.io/tabular/reference/cdisc_eff_resp.md)
   : Best Overall Response and Response Rates
-- [`saf_aeoverall`](https://vthanik.github.io/tabular/reference/saf_aeoverall.md)
+- [`cdisc_saf_ae`](https://vthanik.github.io/tabular/reference/cdisc_saf_ae.md)
   : Overall adverse-event summary, Safety Population
-- [`saf_aesocpt`](https://vthanik.github.io/tabular/reference/saf_aesocpt.md)
+- [`cdisc_saf_aesocpt`](https://vthanik.github.io/tabular/reference/cdisc_saf_aesocpt.md)
   : Adverse events by System Organ Class and Preferred Term
-- [`saf_aesocpt_card`](https://vthanik.github.io/tabular/reference/saf_aesocpt_card.md)
+- [`cdisc_saf_aesocpt_ard`](https://vthanik.github.io/tabular/reference/cdisc_saf_aesocpt_ard.md)
   : Cards hierarchical ARD for AEs by SOC and PT
-- [`saf_demo`](https://vthanik.github.io/tabular/reference/saf_demo.md)
+- [`cdisc_saf_demo`](https://vthanik.github.io/tabular/reference/cdisc_saf_demo.md)
   : Demographics summary, Safety Population
-- [`saf_demo_card`](https://vthanik.github.io/tabular/reference/saf_demo_card.md)
+- [`cdisc_saf_demo_ard`](https://vthanik.github.io/tabular/reference/cdisc_saf_demo_ard.md)
   : Cards ARD for demographics (flat ARD companion)
-- [`saf_n`](https://vthanik.github.io/tabular/reference/saf_n.md) :
-  Safety-population BigN per arm
-- [`saf_subgroup`](https://vthanik.github.io/tabular/reference/saf_subgroup.md)
+- [`cdisc_saf_n`](https://vthanik.github.io/tabular/reference/cdisc_saf_n.md)
+  : Safety-population BigN per arm
+- [`cdisc_saf_subgroup`](https://vthanik.github.io/tabular/reference/cdisc_saf_subgroup.md)
   : Vital-signs subgroup summary by Sex and Age Group
-- [`saf_vital`](https://vthanik.github.io/tabular/reference/saf_vital.md)
+- [`cdisc_saf_vital`](https://vthanik.github.io/tabular/reference/cdisc_saf_vital.md)
   : Vital-signs summary

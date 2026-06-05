@@ -20,7 +20,8 @@
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="tabular_files/libs/quarto-html/popper.min.js"></script><script src="tabular_files/libs/quarto-html/tippy.umd.min.js"></script><link href="tabular_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="tabular_files/libs/quarto-html/light-border.css" rel="stylesheet">
 <!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Get started with tabular">
-<meta property="og:image" content="https://vthanik.github.io/tabular/logo.svg">
+<meta property="og:image" content="https://vthanik.github.io/tabular/reference/figures/README-hero.png">
+<meta property="og:image:alt" content="A demographic and baseline characteristics table rendered by tabular, with decimal-aligned arm columns.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -30,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,19 +45,11 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/core-concepts.html">Core concepts</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Recipes</h6></li>
-    <li><a class="dropdown-item" href="../articles/columns-and-headers.html">Columns &amp; headers</a></li>
-    <li><a class="dropdown-item" href="../articles/rows-grouping-pagination.html">Rows, grouping &amp; pagination</a></li>
-    <li><a class="dropdown-item" href="../articles/styling.html">Styling</a></li>
-    <li><a class="dropdown-item" href="../articles/clinical-cookbook.html">Clinical cookbook</a></li>
-    <li><a class="dropdown-item" href="../articles/clinical-recipe.html">A submission table, end to end</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
-    <li><a class="dropdown-item" href="../articles/from-ard.html">From a cards ARD</a></li>
-    <li><a class="dropdown-item" href="../articles/fonts-and-fidelity.html">Fonts &amp; fidelity</a></li>
-    <li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
+<li><a class="dropdown-item" href="../articles/data-in.html">Data in: the cards → tabular pipeline</a></li>
+    <li><a class="dropdown-item" href="../articles/structure.html">Structure: columns, headers, and pagination</a></li>
+    <li><a class="dropdown-item" href="../articles/presentation.html">Presentation: titles, footnotes, page chrome, and styling</a></li>
+    <li><a class="dropdown-item" href="../articles/recipes.html">Recipes: the CDISC-pilot tables, end to end</a></li>
+    <li><a class="dropdown-item" href="../articles/output.html">Output &amp; qualification: backends, requirements, and the CDISC pilot</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -88,108 +81,111 @@
 
 
 
-    <p><code>tabular</code> turns a <strong>pre-summarised data frame</strong> into a regulatory <strong>table or listing</strong> and renders it natively to RTF, PDF, HTML, LaTeX, and DOCX. This article gets you from raw numbers to a finished table in about ten minutes.</p>
-<div>
-<blockquote>
-<p><strong>Note</strong></p>
-<p>Figure (graph) output is <strong>not yet supported</strong> in this release. <code>tabular</code> covers tables and listings today; figure rendering is the focus of the next release.</p>
-</blockquote>
-</div>
-<div>
-<blockquote>
-<p><strong>New to clinical tables?</strong></p>
-<p>A <em>TFL</em> is the formatted output that goes into a clinical study report or a regulatory submission — for example, a demographics summary or an adverse-event table. The numbers are computed upstream (by <code>cards</code>, <code>gtsummary</code>, <code>dplyr</code>, or SAS); <code>tabular</code>’s job is to <em>present</em> them to the exacting layout standards reviewers expect.</p>
-</blockquote>
-</div>
-<section class="level2"><h2 id="the-one-rule-bring-summarised-data">The one rule: bring summarised data<a class="anchor" aria-label="anchor" href="#the-one-rule-bring-summarised-data"></a>
+    <p><code>tabular</code> turns one <strong>pre-summarised, wide data frame</strong> into a publication-ready table and renders it natively to <strong>RTF, HTML, DOCX, PDF/LaTeX and Markdown</strong> — from a single spec, with no Java or Office dependency.</p>
+<p>Two things to internalise up front:</p>
+<ol type="1">
+<li>
+<strong>tabular is display-only.</strong> It never aggregates, filters, or computes statistics. You bring a summarised data frame (one input row = one display row); tabular lays it out and renders it. (Producing that frame from a cards ARD is the <a href="data-in.html"><em>Data in</em></a> article.)</li>
+<li>
+<strong>One immutable spec, built with verbs.</strong> You pipe a <code><a href="../reference/tabular.html">tabular()</a></code> object through verbs (<code><a href="../reference/cols.html">cols()</a></code>, <code><a href="../reference/headers.html">headers()</a></code>, <code><a href="../reference/paginate.html">paginate()</a></code>, <code><a href="../reference/preset.html">preset()</a></code>, …) and finish with <code><a href="../reference/emit.html">emit()</a></code>. Each verb returns a new spec; nothing renders until <code><a href="../reference/emit.html">emit()</a></code>.</li>
+</ol>
+<section class="level2"><h2 id="your-first-table">Your first table<a class="anchor" aria-label="anchor" href="#your-first-table"></a>
 </h2>
-<p><code>tabular</code> does <strong>no</strong> statistics. You hand it a wide data frame where <strong>one row is one display row</strong> and the columns are already the values you want to show. The bundled <code>saf_demo</code> dataset is exactly this shape:</p>
+<p>Start from a wide frame — here the bundled demographics summary, one row per statistic, one column per treatment arm:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://vthanik.github.io/tabular/">tabular</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">saf_demo</span>, <span class="fl">8</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span><span class="op">)</span></span>
 <span><span class="co">#&gt;           variable stat_label     placebo    drug_100     drug_50       Total</span></span>
 <span><span class="co">#&gt; 1      Age (years)          n          86          72          96         254</span></span>
 <span><span class="co">#&gt; 2      Age (years)  Mean (SD) 75.2 (8.59) 73.8 (7.94) 76.0 (8.11) 75.1 (8.25)</span></span>
 <span><span class="co">#&gt; 3      Age (years)     Median        76.0        75.5        78.0        77.0</span></span>
 <span><span class="co">#&gt; 4      Age (years)     Q1, Q3  69.2, 81.8  70.5, 79.0  71.0, 82.0  70.0, 81.0</span></span>
 <span><span class="co">#&gt; 5      Age (years)   Min, Max      52, 89      56, 88      51, 88      51, 89</span></span>
-<span><span class="co">#&gt; 6 Age Group, n (%)      18-64   14 (16.3)   11 (15.3)     8 (8.3)   33 (13.0)</span></span>
-<span><span class="co">#&gt; 7 Age Group, n (%)        &gt;64   72 (83.7)   61 (84.7)   88 (91.7)  221 (87.0)</span></span>
-<span><span class="co">#&gt; 8       Sex, n (%)          F   53 (61.6)   35 (48.6)   55 (57.3)  143 (56.3)</span></span></code></pre></div>
+<span><span class="co">#&gt; 6 Age Group, n (%)      18-64   14 (16.3)   11 (15.3)     8 (8.3)   33 (13.0)</span></span></code></pre></div>
 </div>
-<p>Each row is a statistic for one characteristic (<code>variable</code>), with one column per treatment arm. That is all <code>tabular</code> needs.</p>
-</section><section class="level2"><h2 id="your-first-table">Your first table<a class="anchor" aria-label="anchor" href="#your-first-table"></a>
-</h2>
-<p>Wrap the data in <code><a href="../reference/tabular.html">tabular()</a></code>, then describe each column with <code><a href="../reference/cols.html">cols()</a></code> and <code><a href="../reference/col_spec.html">col_spec()</a></code>. End the chain with the spec itself to see a live preview:</p>
+<p>Describe the columns. The spec prints as a live HTML table — this is the same render <code><a href="../reference/emit.html">emit()</a></code> produces, shown inline:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">saf_demo</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span></span>
+<span>  <span class="va">cdisc_saf_demo</span>,</span>
+<span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Table 14-2.01"</span>,</span>
+<span>    <span class="st">"Demographic and Baseline Characteristics"</span>,</span>
+<span>    <span class="st">"ITT Population"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable   <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span>
-<span>    placebo    <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo"</span><span class="op">)</span>,</span>
-<span>    drug_50    <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50"</span><span class="op">)</span>,</span>
-<span>    drug_100   <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 100"</span><span class="op">)</span>,</span>
-<span>    Total      <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Total"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
+<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
+<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
+<span>      group_display <span class="op">=</span> <span class="st">"header_row"</span>,</span>
+<span>      label <span class="op">=</span> <span class="st">""</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"indent"</span>, label <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="va">spec</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-9ff110929f { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-9ff110929f .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-9ff110929f p { line-height: inherit; }
-#tabular-9ff110929f .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-9ff110929f .tabular-caption { margin: 0; padding: 0; }
-#tabular-9ff110929f .tabular-pad { margin: 0; line-height: 1; }
-#tabular-9ff110929f .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-9ff110929f .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-9ff110929f .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-9ff110929f .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-9ff110929f .tabular-table th, #tabular-9ff110929f .tabular-table td { padding: .18rem .6rem; }
-#tabular-9ff110929f .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-9ff110929f .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-9ff110929f .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-9ff110929f .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-9ff110929f .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-9ff110929f .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-9ff110929f .tabular-table tbody tr td { border-top: none; }
-#tabular-9ff110929f .tabular-band { text-align: center; }
-#tabular-9ff110929f .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-9ff110929f .tabular-subgroup-label { font-weight: 600; }
-#tabular-9ff110929f .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-9ff110929f .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-9ff110929f .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-9ff110929f .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-9ff110929f .text-left { text-align: left; }
-#tabular-9ff110929f .text-center { text-align: center; }
-#tabular-9ff110929f .text-right { text-align: right; }
-#tabular-9ff110929f .tabular-table thead th.text-left { text-align: left; }
-#tabular-9ff110929f .tabular-table thead th.text-center { text-align: center; }
-#tabular-9ff110929f .tabular-table thead th.text-right { text-align: right; }
-#tabular-9ff110929f .valign-top { vertical-align: top; }
-#tabular-9ff110929f .valign-middle { vertical-align: middle; }
-#tabular-9ff110929f .valign-bottom { vertical-align: bottom; }
-#tabular-9ff110929f .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-9ff110929f .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-9ff110929f .tabular-page-break-row { display: none; }
-#tabular-9ff110929f { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-9ff110929f .tabular-page-header, #tabular-9ff110929f .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-9ff110929f .tabular-page-header { margin-bottom: 1rem; }
-#tabular-9ff110929f .tabular-page-footer { margin-top: 1rem; }
-#tabular-9ff110929f .tabular-page-header-left, #tabular-9ff110929f .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-9ff110929f .tabular-page-header-center, #tabular-9ff110929f .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-9ff110929f .tabular-page-header-right, #tabular-9ff110929f .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-9ff110929f .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-9ff110929f .tabular-table tr { page-break-inside: avoid; } #tabular-9ff110929f .tabular-page-header, #tabular-9ff110929f .tabular-page-footer { display: none; } #tabular-9ff110929f .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-9ff110929f .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-9ff110929f .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-56a7545430 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-56a7545430 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-56a7545430 p { line-height: inherit; }
+#tabular-56a7545430 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-56a7545430 .tabular-caption { margin: 0; padding: 0; }
+#tabular-56a7545430 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-56a7545430 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-56a7545430 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-56a7545430 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-56a7545430 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-56a7545430 .tabular-table th, #tabular-56a7545430 .tabular-table td { padding: .18rem .6rem; }
+#tabular-56a7545430 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-56a7545430 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-56a7545430 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-56a7545430 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-56a7545430 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
+#tabular-56a7545430 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-56a7545430 .tabular-table tbody tr td { border-top: none; }
+#tabular-56a7545430 .tabular-band { text-align: center; }
+#tabular-56a7545430 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-56a7545430 .tabular-subgroup-label { font-weight: 600; }
+#tabular-56a7545430 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-56a7545430 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-56a7545430 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-56a7545430 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
+#tabular-56a7545430 .text-left { text-align: left; }
+#tabular-56a7545430 .text-center { text-align: center; }
+#tabular-56a7545430 .text-right { text-align: right; }
+#tabular-56a7545430 .tabular-table thead th.text-left { text-align: left; }
+#tabular-56a7545430 .tabular-table thead th.text-center { text-align: center; }
+#tabular-56a7545430 .tabular-table thead th.text-right { text-align: right; }
+#tabular-56a7545430 .valign-top { vertical-align: top; }
+#tabular-56a7545430 .valign-middle { vertical-align: middle; }
+#tabular-56a7545430 .valign-bottom { vertical-align: bottom; }
+#tabular-56a7545430 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-56a7545430 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-56a7545430 .tabular-page-break-row { display: none; }
+#tabular-56a7545430 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-56a7545430 .tabular-page-header, #tabular-56a7545430 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-56a7545430 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-56a7545430 .tabular-page-footer { margin-top: 1rem; }
+#tabular-56a7545430 .tabular-page-header-left, #tabular-56a7545430 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-56a7545430 .tabular-page-header-center, #tabular-56a7545430 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-56a7545430 .tabular-page-header-right, #tabular-56a7545430 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-56a7545430 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-56a7545430 .tabular-table tr { page-break-inside: avoid; } #tabular-56a7545430 .tabular-page-header, #tabular-56a7545430 .tabular-page-footer { display: none; } #tabular-56a7545430 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-56a7545430 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-56a7545430 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-9ff110929f" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><div class="tabular-table-wrap">
+<div id="tabular-56a7545430" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<p class="tabular-title">Table 14-2.01</p>
+<p class="tabular-title">Demographic and Baseline Characteristics</p>
+<p class="tabular-title">ITT Population</p>
+<p class="tabular-pad"> </p>
+</figcaption><div class="tabular-table-wrap">
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
-<th data-quarto-table-cell-role="th">Statistic</th>
-<th data-quarto-table-cell-role="th">Placebo</th>
-<th data-quarto-table-cell-role="th">Drug 100</th>
-<th data-quarto-table-cell-role="th">Drug 50</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">placebo</th>
+<th data-quarto-table-cell-role="th">drug_100</th>
+<th data-quarto-table-cell-role="th">drug_50</th>
 <th data-quarto-table-cell-role="th">Total</th>
 </tr></thead>
 <tbody>
@@ -197,35 +193,35 @@
 <td colspan="5"><strong>Age (years)</strong></td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
 <td>86</td>
 <td>72</td>
 <td>96</td>
 <td>254</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
 <td>75.2 (8.59)</td>
 <td>73.8 (7.94)</td>
 <td>76.0 (8.11)</td>
 <td>75.1 (8.25)</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
 <td>76.0</td>
 <td>75.5</td>
 <td>78.0</td>
 <td>77.0</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Q1, Q3</td>
 <td>69.2, 81.8</td>
 <td>70.5, 79.0</td>
 <td>71.0, 82.0</td>
 <td>70.0, 81.0</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
 <td>52, 89</td>
 <td>56, 88</td>
 <td>51, 88</td>
@@ -238,14 +234,14 @@
 <td colspan="5"><strong>Age Group, n (%)</strong></td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">18-64</td>
+<td style="padding-left: calc(.6rem + 2.4em)">18-64</td>
 <td>14 (16.3)</td>
 <td>11 (15.3)</td>
 <td>8 (8.3)</td>
 <td>33 (13.0)</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">&gt;64</td>
+<td style="padding-left: calc(.6rem + 2.4em)">&gt;64</td>
 <td>72 (83.7)</td>
 <td>61 (84.7)</td>
 <td>88 (91.7)</td>
@@ -258,14 +254,14 @@
 <td colspan="5"><strong>Sex, n (%)</strong></td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">F</td>
+<td style="padding-left: calc(.6rem + 2.4em)">F</td>
 <td>53 (61.6)</td>
 <td>35 (48.6)</td>
 <td>55 (57.3)</td>
 <td>143 (56.3)</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">M</td>
+<td style="padding-left: calc(.6rem + 2.4em)">M</td>
 <td>33 (38.4)</td>
 <td>37 (51.4)</td>
 <td>41 (42.7)</td>
@@ -278,28 +274,28 @@
 <td colspan="5"><strong>Race, n (%)</strong></td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">WHITE</td>
+<td style="padding-left: calc(.6rem + 2.4em)">WHITE</td>
 <td>78 (90.7)</td>
 <td>62 (86.1)</td>
 <td>90 (93.8)</td>
 <td>230 (90.6)</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">BLACK OR AFRICAN AMERICAN</td>
+<td style="padding-left: calc(.6rem + 2.4em)">BLACK OR AFRICAN AMERICAN</td>
 <td>8 (9.3)</td>
 <td>9 (12.5)</td>
 <td>6 (6.2)</td>
 <td>23 (9.1)</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">ASIAN</td>
+<td style="padding-left: calc(.6rem + 2.4em)">ASIAN</td>
 <td>0 (0.0)</td>
 <td>0 (0.0)</td>
 <td>0 (0.0)</td>
 <td>0 (0.0)</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">AMERICAN INDIAN OR ALASKA NATIVE</td>
+<td style="padding-left: calc(.6rem + 2.4em)">AMERICAN INDIAN OR ALASKA NATIVE</td>
 <td>0 (0.0)</td>
 <td>1 (1.4)</td>
 <td>0 (0.0)</td>
@@ -312,21 +308,21 @@
 <td colspan="5"><strong>Ethnicity, n (%)</strong></td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">HISPANIC OR LATINO</td>
+<td style="padding-left: calc(.6rem + 2.4em)">HISPANIC OR LATINO</td>
 <td>3 (3.5)</td>
 <td>3 (4.2)</td>
 <td>6 (6.2)</td>
 <td>12 (4.7)</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">NOT HISPANIC OR LATINO</td>
+<td style="padding-left: calc(.6rem + 2.4em)">NOT HISPANIC OR LATINO</td>
 <td>83 (96.5)</td>
 <td>69 (95.8)</td>
 <td>90 (93.8)</td>
 <td>242 (95.3)</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">NOT REPORTED</td>
+<td style="padding-left: calc(.6rem + 2.4em)">NOT REPORTED</td>
 <td>0 (0.0)</td>
 <td>0 (0.0)</td>
 <td>0 (0.0)</td>
@@ -339,35 +335,35 @@
 <td colspan="5"><strong>Weight (kg)</strong></td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
 <td>86</td>
 <td>72</td>
 <td>95</td>
 <td>253</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
 <td>62.8 (12.77)</td>
 <td>69.5 (14.35)</td>
 <td>68.0 (14.50)</td>
 <td>66.6 (14.13)</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
 <td>60.6</td>
 <td>69.0</td>
 <td>66.7</td>
 <td>66.7</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Q1, Q3</td>
 <td>53.6, 74.2</td>
 <td>56.9, 80.3</td>
 <td>56.0, 78.2</td>
 <td>55.3, 77.1</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
 <td>34, 86</td>
 <td>44, 108</td>
 <td>42, 106</td>
@@ -380,35 +376,35 @@
 <td colspan="5"><strong>Height (cm)</strong></td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
 <td>86</td>
 <td>72</td>
 <td>96</td>
 <td>254</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
 <td>162.6 (11.52)</td>
 <td>165.9 (10.28)</td>
 <td>163.7 (10.30)</td>
 <td>163.9 (10.76)</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
 <td>162.6</td>
 <td>165.1</td>
 <td>162.6</td>
 <td>162.8</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Q1, Q3</td>
 <td>154.0, 171.1</td>
 <td>157.5, 172.8</td>
 <td>157.5, 170.2</td>
 <td>156.2, 171.4</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
 <td>137, 185</td>
 <td>146, 190</td>
 <td>136, 196</td>
@@ -421,69 +417,69 @@
 <td colspan="5"><strong>BMI (kg/m^2)</strong></td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
 <td>86</td>
 <td>72</td>
 <td>95</td>
 <td>253</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
 <td>23.6 (3.67)</td>
 <td>25.2 (3.97)</td>
 <td>25.2 (4.40)</td>
 <td>24.7 (4.09)</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
 <td>23.4</td>
 <td>24.8</td>
 <td>24.8</td>
 <td>24.2</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Q1, Q3</td>
 <td>21.2, 25.6</td>
 <td>22.7, 27.6</td>
 <td>22.3, 28.2</td>
 <td>21.9, 27.3</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
 <td>15, 33</td>
 <td>14, 35</td>
 <td>15, 40</td>
 <td>14, 40</td>
 </tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
+<tr class="tabular-page-break-row odd" aria-hidden="true">
+<td colspan="5"></td>
 </tr>
 <tr class="tabular-group-header even">
 <td colspan="5"><strong>BMI Category, n (%)</strong></td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Underweight (&lt;18.5)</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Underweight (&lt;18.5)</td>
 <td>3 (3.5)</td>
 <td>1 (1.4)</td>
 <td>4 (4.2)</td>
 <td>8 (3.1)</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Normal (18.5-24.9)</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Normal (18.5-24.9)</td>
 <td>57 (66.3)</td>
 <td>39 (54.2)</td>
 <td>46 (47.9)</td>
 <td>142 (55.9)</td>
 </tr>
 <tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Overweight (25-29.9)</td>
+<td style="padding-left: calc(.6rem + 2.4em)">Overweight (25-29.9)</td>
 <td>20 (23.3)</td>
 <td>23 (31.9)</td>
 <td>32 (33.3)</td>
 <td>75 (29.5)</td>
 </tr>
 <tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529">Obese (&gt;=30)</td>
+<td style="padding-left: calc(.6rem + 2.4em); border-bottom: 0.5pt solid #212529">Obese (&gt;=30)</td>
 <td style="border-bottom: 0.5pt solid #212529">6 (7.0)</td>
 <td style="border-bottom: 0.5pt solid #212529">9 (12.5)</td>
 <td style="border-bottom: 0.5pt solid #212529">13 (13.5)</td>
@@ -495,844 +491,54 @@
 </figure></div>
 </div>
 </div>
-<p>Two things already happened for free: <code>usage = "group"</code> turned the <code>variable</code> column into <strong>bold section headers</strong> (Age, Sex, Race, …) instead of a repeated column, and the table rendered as live HTML right here in the page.</p>
-<div>
-<blockquote>
-<p><strong>What is that object?</strong></p>
-<p>Every verb returns a <code>tabular_spec</code> — an immutable description of the table, not the table itself. Nothing is rendered until you print it (as above) or call <code><a href="../reference/emit.html">emit()</a></code>. You can inspect a spec at any point in the pipe with <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>; piping further never mutates the previous spec.</p>
-</blockquote>
-</div>
-</section><section class="level2"><h2 id="align-the-numbers">Align the numbers<a class="anchor" aria-label="anchor" href="#align-the-numbers"></a>
-</h2>
-<p>Clinical tables align numbers on the decimal point. Set <code>align = "decimal"</code> on the value columns and <code>tabular</code> pads with real font metrics so the columns stay aligned in print, not just on screen:</p>
+<p>To write a file, hand the spec to <code><a href="../reference/emit.html">emit()</a></code>; the backend is chosen by the file extension (or an explicit <code>format =</code>):</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">saf_demo</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable   <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span>
-<span>    placebo    <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
-<span>    drug_50    <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
-<span>    drug_100   <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 100"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
-<span>    Total      <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Total"</span>,    align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
-<div class="cell-output-display">
-<style>
-#tabular-aac3145f60 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-aac3145f60 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-aac3145f60 p { line-height: inherit; }
-#tabular-aac3145f60 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-aac3145f60 .tabular-caption { margin: 0; padding: 0; }
-#tabular-aac3145f60 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-aac3145f60 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-aac3145f60 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-aac3145f60 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-aac3145f60 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-aac3145f60 .tabular-table th, #tabular-aac3145f60 .tabular-table td { padding: .18rem .6rem; }
-#tabular-aac3145f60 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-aac3145f60 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-aac3145f60 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-aac3145f60 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-aac3145f60 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-aac3145f60 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-aac3145f60 .tabular-table tbody tr td { border-top: none; }
-#tabular-aac3145f60 .tabular-band { text-align: center; }
-#tabular-aac3145f60 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-aac3145f60 .tabular-subgroup-label { font-weight: 600; }
-#tabular-aac3145f60 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-aac3145f60 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-aac3145f60 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-aac3145f60 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-aac3145f60 .text-left { text-align: left; }
-#tabular-aac3145f60 .text-center { text-align: center; }
-#tabular-aac3145f60 .text-right { text-align: right; }
-#tabular-aac3145f60 .tabular-table thead th.text-left { text-align: left; }
-#tabular-aac3145f60 .tabular-table thead th.text-center { text-align: center; }
-#tabular-aac3145f60 .tabular-table thead th.text-right { text-align: right; }
-#tabular-aac3145f60 .valign-top { vertical-align: top; }
-#tabular-aac3145f60 .valign-middle { vertical-align: middle; }
-#tabular-aac3145f60 .valign-bottom { vertical-align: bottom; }
-#tabular-aac3145f60 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-aac3145f60 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-aac3145f60 .tabular-page-break-row { display: none; }
-#tabular-aac3145f60 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-aac3145f60 .tabular-page-header, #tabular-aac3145f60 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-aac3145f60 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-aac3145f60 .tabular-page-footer { margin-top: 1rem; }
-#tabular-aac3145f60 .tabular-page-header-left, #tabular-aac3145f60 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-aac3145f60 .tabular-page-header-center, #tabular-aac3145f60 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-aac3145f60 .tabular-page-header-right, #tabular-aac3145f60 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-aac3145f60 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-aac3145f60 .tabular-table tr { page-break-inside: avoid; } #tabular-aac3145f60 .tabular-page-header, #tabular-aac3145f60 .tabular-page-footer { display: none; } #tabular-aac3145f60 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-aac3145f60 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-aac3145f60 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
-</style>
-<div id="tabular-aac3145f60" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><div class="tabular-table-wrap">
-
-<table class="table tabular-table caption-top">
-<thead><tr class="header">
-<th data-quarto-table-cell-role="th">Statistic</th>
-<th class="text-center" data-quarto-table-cell-role="th">Placebo</th>
-<th class="text-center" data-quarto-table-cell-role="th">Drug 100</th>
-<th class="text-center" data-quarto-table-cell-role="th">Drug 50</th>
-<th class="text-center" data-quarto-table-cell-role="th">Total</th>
-</tr></thead>
-<tbody>
-<tr class="tabular-group-header odd">
-<td colspan="5"><strong>Age (years)</strong></td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
-<td class="text-right"> 86          </td>
-<td class="text-right"> 72          </td>
-<td class="text-right"> 96          </td>
-<td class="text-right">254          </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
-<td class="text-right"> 75.2 (8.59) </td>
-<td class="text-right"> 73.8 (7.94) </td>
-<td class="text-right"> 76.0 (8.11) </td>
-<td class="text-right"> 75.1 (8.25) </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
-<td class="text-right"> 76.0        </td>
-<td class="text-right"> 75.5        </td>
-<td class="text-right"> 78.0        </td>
-<td class="text-right"> 77.0        </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
-<td class="text-right"> 69.2, 81.8  </td>
-<td class="text-right"> 70.5, 79.0  </td>
-<td class="text-right"> 71.0, 82.0  </td>
-<td class="text-right"> 70.0, 81.0  </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
-<td class="text-right"> 52  , 89    </td>
-<td class="text-right"> 56  , 88    </td>
-<td class="text-right"> 51  , 88    </td>
-<td class="text-right"> 51  , 89    </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>Age Group, n (%)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">18-64</td>
-<td class="text-right"> 14 (16.3)   </td>
-<td class="text-right"> 11 (15.3)   </td>
-<td class="text-right">  8 ( 8.3)   </td>
-<td class="text-right"> 33 (13.0)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">&gt;64</td>
-<td class="text-right"> 72 (83.7)   </td>
-<td class="text-right"> 61 (84.7)   </td>
-<td class="text-right"> 88 (91.7)   </td>
-<td class="text-right">221 (87.0)   </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>Sex, n (%)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">F</td>
-<td class="text-right"> 53 (61.6)   </td>
-<td class="text-right"> 35 (48.6)   </td>
-<td class="text-right"> 55 (57.3)   </td>
-<td class="text-right">143 (56.3)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">M</td>
-<td class="text-right"> 33 (38.4)   </td>
-<td class="text-right"> 37 (51.4)   </td>
-<td class="text-right"> 41 (42.7)   </td>
-<td class="text-right">111 (43.7)   </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>Race, n (%)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">WHITE</td>
-<td class="text-right"> 78 (90.7)   </td>
-<td class="text-right"> 62 (86.1)   </td>
-<td class="text-right"> 90 (93.8)   </td>
-<td class="text-right">230 (90.6)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">BLACK OR AFRICAN AMERICAN</td>
-<td class="text-right">  8 ( 9.3)   </td>
-<td class="text-right">  9 (12.5)   </td>
-<td class="text-right">  6 ( 6.2)   </td>
-<td class="text-right"> 23 ( 9.1)   </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">ASIAN</td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">AMERICAN INDIAN OR ALASKA NATIVE</td>
-<td class="text-right">  0          </td>
-<td class="text-right">  1 ( 1.4)   </td>
-<td class="text-right">  0          </td>
-<td class="text-right">  1 ( 0.4)   </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>Ethnicity, n (%)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">HISPANIC OR LATINO</td>
-<td class="text-right">  3 ( 3.5)   </td>
-<td class="text-right">  3 ( 4.2)   </td>
-<td class="text-right">  6 ( 6.2)   </td>
-<td class="text-right"> 12 ( 4.7)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">NOT HISPANIC OR LATINO</td>
-<td class="text-right"> 83 (96.5)   </td>
-<td class="text-right"> 69 (95.8)   </td>
-<td class="text-right"> 90 (93.8)   </td>
-<td class="text-right">242 (95.3)   </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">NOT REPORTED</td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-</tr>
-<tr class="tabular-blank-row even">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header odd">
-<td colspan="5"><strong>Weight (kg)</strong></td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
-<td class="text-right"> 86          </td>
-<td class="text-right"> 72          </td>
-<td class="text-right"> 95          </td>
-<td class="text-right">253          </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
-<td class="text-right"> 62.8 (12.77)</td>
-<td class="text-right"> 69.5 (14.35)</td>
-<td class="text-right"> 68.0 (14.50)</td>
-<td class="text-right"> 66.6 (14.13)</td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
-<td class="text-right"> 60.6        </td>
-<td class="text-right"> 69.0        </td>
-<td class="text-right"> 66.7        </td>
-<td class="text-right"> 66.7        </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
-<td class="text-right"> 53.6, 74.2  </td>
-<td class="text-right"> 56.9,  80.3 </td>
-<td class="text-right"> 56.0,  78.2 </td>
-<td class="text-right"> 55.3,  77.1 </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
-<td class="text-right"> 34  , 86    </td>
-<td class="text-right"> 44  , 108   </td>
-<td class="text-right"> 42  , 106   </td>
-<td class="text-right"> 34  , 108   </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>Height (cm)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
-<td class="text-right"> 86          </td>
-<td class="text-right"> 72          </td>
-<td class="text-right"> 96          </td>
-<td class="text-right">254          </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
-<td class="text-right">162.6 (11.52)</td>
-<td class="text-right">165.9 (10.28)</td>
-<td class="text-right">163.7 (10.30)</td>
-<td class="text-right">163.9 (10.76)</td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
-<td class="text-right">162.6        </td>
-<td class="text-right">165.1        </td>
-<td class="text-right">162.6        </td>
-<td class="text-right">162.8        </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
-<td class="text-right">154.0, 171.1 </td>
-<td class="text-right">157.5, 172.8 </td>
-<td class="text-right">157.5, 170.2 </td>
-<td class="text-right">156.2, 171.4 </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
-<td class="text-right">137  , 185   </td>
-<td class="text-right">146  , 190   </td>
-<td class="text-right">136  , 196   </td>
-<td class="text-right">136  , 196   </td>
-</tr>
-<tr class="tabular-blank-row even">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header odd">
-<td colspan="5"><strong>BMI (kg/m^2)</strong></td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
-<td class="text-right"> 86          </td>
-<td class="text-right"> 72          </td>
-<td class="text-right"> 95          </td>
-<td class="text-right">253          </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
-<td class="text-right"> 23.6 (3.67) </td>
-<td class="text-right"> 25.2 (3.97) </td>
-<td class="text-right"> 25.2 (4.40) </td>
-<td class="text-right"> 24.7 (4.09) </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
-<td class="text-right"> 23.4        </td>
-<td class="text-right"> 24.8        </td>
-<td class="text-right"> 24.8        </td>
-<td class="text-right"> 24.2        </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
-<td class="text-right"> 21.2, 25.6  </td>
-<td class="text-right"> 22.7, 27.6  </td>
-<td class="text-right"> 22.3, 28.2  </td>
-<td class="text-right"> 21.9, 27.3  </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
-<td class="text-right"> 15  , 33    </td>
-<td class="text-right"> 14  , 35    </td>
-<td class="text-right"> 15  , 40    </td>
-<td class="text-right"> 14  , 40    </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>BMI Category, n (%)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Underweight (&lt;18.5)</td>
-<td class="text-right">  3 ( 3.5)   </td>
-<td class="text-right">  1 ( 1.4)   </td>
-<td class="text-right">  4 ( 4.2)   </td>
-<td class="text-right">  8 ( 3.1)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Normal (18.5-24.9)</td>
-<td class="text-right"> 57 (66.3)   </td>
-<td class="text-right"> 39 (54.2)   </td>
-<td class="text-right"> 46 (47.9)   </td>
-<td class="text-right">142 (55.9)   </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Overweight (25-29.9)</td>
-<td class="text-right"> 20 (23.3)   </td>
-<td class="text-right"> 23 (31.9)   </td>
-<td class="text-right"> 32 (33.3)   </td>
-<td class="text-right"> 75 (29.5)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529">Obese (&gt;=30)</td>
-<td class="text-right" style="border-bottom: 0.5pt solid #212529">  6 ( 7.0)   </td>
-<td class="text-right" style="border-bottom: 0.5pt solid #212529">  9 (12.5)   </td>
-<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 13 (13.5)   </td>
-<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 28 (11.0)   </td>
-</tr>
-</tbody>
-</table>
+<code class="sourceCode R"><span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rtf"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="va">out</span><span class="op">)</span> <span class="co"># RTF here; swap to .docx / .pdf / .html / .md</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
-</figure></div>
-</div>
-</div>
-</section><section class="level2"><h2 id="add-the-submission-chrome">Add the submission chrome<a class="anchor" aria-label="anchor" href="#add-the-submission-chrome"></a>
+<p>That is the whole loop: <strong>wide frame → <code><a href="../reference/tabular.html">tabular()</a></code> → <code><a href="../reference/cols.html">cols()</a></code> → <code><a href="../reference/emit.html">emit()</a></code></strong> — one spec, any backend.</p>
+</section><section class="level2"><h2 id="the-pipeline-at-a-glance">The pipeline at a glance<a class="anchor" aria-label="anchor" href="#the-pipeline-at-a-glance"></a>
 </h2>
-<p>Real tables carry a title block, BigN denominators in the column headers, a spanning header over the treatment arms, and footnotes. Add titles and footnotes in <code><a href="../reference/tabular.html">tabular()</a></code>, a spanner with <code><a href="../reference/headers.html">headers()</a></code>, and pull the per-arm denominators from the bundled <code>saf_n</code>:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">saf_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">saf_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">tab</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span></span>
-<span>  <span class="va">saf_demo</span>,</span>
-<span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Table 14.1.1"</span>,</span>
-<span>    <span class="st">"Demographic and Baseline Characteristics"</span>,</span>
-<span>    <span class="st">"Safety Population"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  footnotes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Percentages are based on the number of subjects per treatment group."</span>,</span>
-<span>    <span class="st">"BMI = body mass index."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable   <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span>
-<span>    placebo    <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo\n(N={n['placebo']})"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
-<span>    drug_50    <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50\n(N={n['drug_50']})"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
-<span>    drug_100   <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 100\n(N={n['drug_100']})"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
-<span>    Total      <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Total\n(N={n['Total']})"</span>,    align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/headers.html">headers</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Treatment Group"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span><span class="va">tab</span></span></code></pre></div>
-<div class="cell-output-display">
-<style>
-#tabular-a624bfb495 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-a624bfb495 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-a624bfb495 p { line-height: inherit; }
-#tabular-a624bfb495 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-a624bfb495 .tabular-caption { margin: 0; padding: 0; }
-#tabular-a624bfb495 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-a624bfb495 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-a624bfb495 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-a624bfb495 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-a624bfb495 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-a624bfb495 .tabular-table th, #tabular-a624bfb495 .tabular-table td { padding: .18rem .6rem; }
-#tabular-a624bfb495 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-a624bfb495 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-a624bfb495 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-a624bfb495 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-a624bfb495 .tabular-table thead .tabular-band { border-bottom: 0.5pt solid #adb5bd; }
-#tabular-a624bfb495 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-a624bfb495 .tabular-table tbody tr td { border-top: none; }
-#tabular-a624bfb495 .tabular-band { text-align: center; }
-#tabular-a624bfb495 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-a624bfb495 .tabular-subgroup-label { font-weight: 600; }
-#tabular-a624bfb495 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-a624bfb495 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-a624bfb495 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-a624bfb495 .tabular-blank-row td { padding: .25rem .6rem; border: none; }
-#tabular-a624bfb495 .text-left { text-align: left; }
-#tabular-a624bfb495 .text-center { text-align: center; }
-#tabular-a624bfb495 .text-right { text-align: right; }
-#tabular-a624bfb495 .tabular-table thead th.text-left { text-align: left; }
-#tabular-a624bfb495 .tabular-table thead th.text-center { text-align: center; }
-#tabular-a624bfb495 .tabular-table thead th.text-right { text-align: right; }
-#tabular-a624bfb495 .valign-top { vertical-align: top; }
-#tabular-a624bfb495 .valign-middle { vertical-align: middle; }
-#tabular-a624bfb495 .valign-bottom { vertical-align: bottom; }
-#tabular-a624bfb495 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-a624bfb495 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-a624bfb495 .tabular-page-break-row { display: none; }
-#tabular-a624bfb495 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-a624bfb495 .tabular-page-header, #tabular-a624bfb495 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-a624bfb495 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-a624bfb495 .tabular-page-footer { margin-top: 1rem; }
-#tabular-a624bfb495 .tabular-page-header-left, #tabular-a624bfb495 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-a624bfb495 .tabular-page-header-center, #tabular-a624bfb495 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-a624bfb495 .tabular-page-header-right, #tabular-a624bfb495 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-a624bfb495 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-a624bfb495 .tabular-table tr { page-break-inside: avoid; } #tabular-a624bfb495 .tabular-page-header, #tabular-a624bfb495 .tabular-page-footer { display: none; } #tabular-a624bfb495 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-a624bfb495 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-a624bfb495 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
-</style>
-<div id="tabular-a624bfb495" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
-<p class="tabular-title">Table 14.1.1</p>
-<p class="tabular-title">Demographic and Baseline Characteristics</p>
-<p class="tabular-title">Safety Population</p>
-<p class="tabular-pad"> </p>
-</figcaption><div class="tabular-table-wrap">
-
-<table class="table tabular-table caption-top">
-<colgroup>
-<col style="width: 20%">
-<col style="width: 20%">
-<col style="width: 20%">
-<col style="width: 20%">
-<col style="width: 20%">
-</colgroup>
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th"></th>
-<th colspan="4" class="tabular-band" data-quarto-table-cell-role="th">Treatment Group</th>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">Statistic</th>
-<th class="text-center" data-quarto-table-cell-role="th">Placebo<br>
-(N=86)</th>
-<th class="text-center" data-quarto-table-cell-role="th">Drug 100<br>
-(N=72)</th>
-<th class="text-center" data-quarto-table-cell-role="th">Drug 50<br>
-(N=96)</th>
-<th class="text-center" data-quarto-table-cell-role="th">Total<br>
-(N=254)</th>
-</tr>
-</thead>
-<tbody>
-<tr class="tabular-group-header odd">
-<td colspan="5"><strong>Age (years)</strong></td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
-<td class="text-right"> 86          </td>
-<td class="text-right"> 72          </td>
-<td class="text-right"> 96          </td>
-<td class="text-right">254          </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
-<td class="text-right"> 75.2 (8.59) </td>
-<td class="text-right"> 73.8 (7.94) </td>
-<td class="text-right"> 76.0 (8.11) </td>
-<td class="text-right"> 75.1 (8.25) </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
-<td class="text-right"> 76.0        </td>
-<td class="text-right"> 75.5        </td>
-<td class="text-right"> 78.0        </td>
-<td class="text-right"> 77.0        </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
-<td class="text-right"> 69.2, 81.8  </td>
-<td class="text-right"> 70.5, 79.0  </td>
-<td class="text-right"> 71.0, 82.0  </td>
-<td class="text-right"> 70.0, 81.0  </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
-<td class="text-right"> 52  , 89    </td>
-<td class="text-right"> 56  , 88    </td>
-<td class="text-right"> 51  , 88    </td>
-<td class="text-right"> 51  , 89    </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>Age Group, n (%)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">18-64</td>
-<td class="text-right"> 14 (16.3)   </td>
-<td class="text-right"> 11 (15.3)   </td>
-<td class="text-right">  8 ( 8.3)   </td>
-<td class="text-right"> 33 (13.0)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">&gt;64</td>
-<td class="text-right"> 72 (83.7)   </td>
-<td class="text-right"> 61 (84.7)   </td>
-<td class="text-right"> 88 (91.7)   </td>
-<td class="text-right">221 (87.0)   </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>Sex, n (%)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">F</td>
-<td class="text-right"> 53 (61.6)   </td>
-<td class="text-right"> 35 (48.6)   </td>
-<td class="text-right"> 55 (57.3)   </td>
-<td class="text-right">143 (56.3)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">M</td>
-<td class="text-right"> 33 (38.4)   </td>
-<td class="text-right"> 37 (51.4)   </td>
-<td class="text-right"> 41 (42.7)   </td>
-<td class="text-right">111 (43.7)   </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>Race, n (%)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">WHITE</td>
-<td class="text-right"> 78 (90.7)   </td>
-<td class="text-right"> 62 (86.1)   </td>
-<td class="text-right"> 90 (93.8)   </td>
-<td class="text-right">230 (90.6)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">BLACK OR AFRICAN AMERICAN</td>
-<td class="text-right">  8 ( 9.3)   </td>
-<td class="text-right">  9 (12.5)   </td>
-<td class="text-right">  6 ( 6.2)   </td>
-<td class="text-right"> 23 ( 9.1)   </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">ASIAN</td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">AMERICAN INDIAN OR ALASKA NATIVE</td>
-<td class="text-right">  0          </td>
-<td class="text-right">  1 ( 1.4)   </td>
-<td class="text-right">  0          </td>
-<td class="text-right">  1 ( 0.4)   </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>Ethnicity, n (%)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">HISPANIC OR LATINO</td>
-<td class="text-right">  3 ( 3.5)   </td>
-<td class="text-right">  3 ( 4.2)   </td>
-<td class="text-right">  6 ( 6.2)   </td>
-<td class="text-right"> 12 ( 4.7)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">NOT HISPANIC OR LATINO</td>
-<td class="text-right"> 83 (96.5)   </td>
-<td class="text-right"> 69 (95.8)   </td>
-<td class="text-right"> 90 (93.8)   </td>
-<td class="text-right">242 (95.3)   </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">NOT REPORTED</td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-<td class="text-right">  0          </td>
-</tr>
-<tr class="tabular-blank-row even">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header odd">
-<td colspan="5"><strong>Weight (kg)</strong></td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
-<td class="text-right"> 86          </td>
-<td class="text-right"> 72          </td>
-<td class="text-right"> 95          </td>
-<td class="text-right">253          </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
-<td class="text-right"> 62.8 (12.77)</td>
-<td class="text-right"> 69.5 (14.35)</td>
-<td class="text-right"> 68.0 (14.50)</td>
-<td class="text-right"> 66.6 (14.13)</td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
-<td class="text-right"> 60.6        </td>
-<td class="text-right"> 69.0        </td>
-<td class="text-right"> 66.7        </td>
-<td class="text-right"> 66.7        </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
-<td class="text-right"> 53.6, 74.2  </td>
-<td class="text-right"> 56.9,  80.3 </td>
-<td class="text-right"> 56.0,  78.2 </td>
-<td class="text-right"> 55.3,  77.1 </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
-<td class="text-right"> 34  , 86    </td>
-<td class="text-right"> 44  , 108   </td>
-<td class="text-right"> 42  , 106   </td>
-<td class="text-right"> 34  , 108   </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>Height (cm)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
-<td class="text-right"> 86          </td>
-<td class="text-right"> 72          </td>
-<td class="text-right"> 96          </td>
-<td class="text-right">254          </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
-<td class="text-right">162.6 (11.52)</td>
-<td class="text-right">165.9 (10.28)</td>
-<td class="text-right">163.7 (10.30)</td>
-<td class="text-right">163.9 (10.76)</td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
-<td class="text-right">162.6        </td>
-<td class="text-right">165.1        </td>
-<td class="text-right">162.6        </td>
-<td class="text-right">162.8        </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
-<td class="text-right">154.0, 171.1 </td>
-<td class="text-right">157.5, 172.8 </td>
-<td class="text-right">157.5, 170.2 </td>
-<td class="text-right">156.2, 171.4 </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
-<td class="text-right">137  , 185   </td>
-<td class="text-right">146  , 190   </td>
-<td class="text-right">136  , 196   </td>
-<td class="text-right">136  , 196   </td>
-</tr>
-<tr class="tabular-page-break-row even" aria-hidden="true">
-<td colspan="5"></td>
-</tr>
-<tr class="tabular-group-header odd">
-<td colspan="5"><strong>BMI (kg/m^2)</strong></td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">n</td>
-<td class="text-right"> 86          </td>
-<td class="text-right"> 72          </td>
-<td class="text-right"> 95          </td>
-<td class="text-right">253          </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Mean (SD)</td>
-<td class="text-right"> 23.6 (3.67) </td>
-<td class="text-right"> 25.2 (3.97) </td>
-<td class="text-right"> 25.2 (4.40) </td>
-<td class="text-right"> 24.7 (4.09) </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Median</td>
-<td class="text-right"> 23.4        </td>
-<td class="text-right"> 24.8        </td>
-<td class="text-right"> 24.8        </td>
-<td class="text-right"> 24.2        </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Q1, Q3</td>
-<td class="text-right"> 21.2, 25.6  </td>
-<td class="text-right"> 22.7, 27.6  </td>
-<td class="text-right"> 22.3, 28.2  </td>
-<td class="text-right"> 21.9, 27.3  </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Min, Max</td>
-<td class="text-right"> 15  , 33    </td>
-<td class="text-right"> 14  , 35    </td>
-<td class="text-right"> 15  , 40    </td>
-<td class="text-right"> 14  , 40    </td>
-</tr>
-<tr class="tabular-blank-row odd">
-<td colspan="5"> </td>
-</tr>
-<tr class="tabular-group-header even">
-<td colspan="5"><strong>BMI Category, n (%)</strong></td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Underweight (&lt;18.5)</td>
-<td class="text-right">  3 ( 3.5)   </td>
-<td class="text-right">  1 ( 1.4)   </td>
-<td class="text-right">  4 ( 4.2)   </td>
-<td class="text-right">  8 ( 3.1)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em)">Normal (18.5-24.9)</td>
-<td class="text-right"> 57 (66.3)   </td>
-<td class="text-right"> 39 (54.2)   </td>
-<td class="text-right"> 46 (47.9)   </td>
-<td class="text-right">142 (55.9)   </td>
-</tr>
-<tr class="odd">
-<td style="padding-left: calc(.6rem + 1.2em)">Overweight (25-29.9)</td>
-<td class="text-right"> 20 (23.3)   </td>
-<td class="text-right"> 23 (31.9)   </td>
-<td class="text-right"> 32 (33.3)   </td>
-<td class="text-right"> 75 (29.5)   </td>
-</tr>
-<tr class="even">
-<td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529">Obese (&gt;=30)</td>
-<td class="text-right" style="border-bottom: 0.5pt solid #212529">  6 ( 7.0)   </td>
-<td class="text-right" style="border-bottom: 0.5pt solid #212529">  9 (12.5)   </td>
-<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 13 (13.5)   </td>
-<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 28 (11.0)   </td>
-</tr>
-</tbody>
-</table>
+<p>Read it left to right. You <strong>summarise upstream</strong> — with cards/cardx, dplyr, or SAS — into a long ARD, widen that to a display-ready frame with <code><a href="../reference/pivot_across.html">pivot_across()</a></code>, then hand it to tabular. Inside the package the work happens in three phases (<strong>Build → Resolve → Emit</strong>), and the <em>same</em> resolved spec emits to every backend, so the HTML you preview and the RTF you ship can never disagree.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="../reference/figures/workflow.svg" style="width:100.0%" alt="An ADaM dataset is aggregated into a long ARD, widened by pivot_across into a wide data frame, then Build, Resolve, and Emit render that one spec to RTF, PDF, HTML, LaTeX, and DOCX."></p>
+<figcaption>tabular’s pipeline: summarise upstream into a long ARD, widen it with <code><a href="../reference/pivot_across.html">pivot_across()</a></code>, then build, resolve, and emit one immutable spec to every backend.</figcaption></figure>
 </div>
-<p class="tabular-footnote">Percentages are based on the number of subjects per treatment group.</p>
-<p class="tabular-footnote">BMI = body mass index.</p>
-</figure></div>
-</div>
-</div>
-<p>That is a submission-shaped demographics table, built from one pipe.</p>
-</section><section class="level2"><h2 id="render-to-five-formats">Render to five formats<a class="anchor" aria-label="anchor" href="#render-to-five-formats"></a>
+</section><section class="level2"><h2 id="anatomy-of-a-clinical-table-page">Anatomy of a clinical table page<a class="anchor" aria-label="anchor" href="#anatomy-of-a-clinical-table-page"></a>
 </h2>
-<p>The same <code>tab</code> emits to any backend. <code><a href="../reference/emit.html">emit()</a></code> dispatches on the file extension (or pass <code>format =</code> explicitly):</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"t_14_1_1"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">tab</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">out</span>, <span class="st">".rtf"</span><span class="op">)</span><span class="op">)</span>    <span class="co"># RTF 1.9.1</span></span>
-<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">tab</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">out</span>, <span class="st">".docx"</span><span class="op">)</span><span class="op">)</span>   <span class="co"># native OOXML</span></span>
-<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">tab</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">out</span>, <span class="st">".html"</span><span class="op">)</span><span class="op">)</span>   <span class="co"># self-contained HTML</span></span>
-<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">tab</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">out</span>, <span class="st">".tex"</span><span class="op">)</span><span class="op">)</span>    <span class="co"># tabularray LaTeX</span></span></code></pre></div>
+<p>A submission table is not just a grid of numbers — it is a page with four stacked sections, and a reviewer expects each one in its place. Every tabular verb maps onto a piece of this picture:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="../reference/figures/anatomy.svg" alt="A clinical table page split into header section, title lines, data section, and footnote lines, each annotated with the tabular verb that produces it."></p>
+<figcaption>The four-section clinical page and the verb that fills each section.</figcaption></figure>
 </div>
-<div class="cell">
-<pre><code><span><span class="co">#&gt;            file bytes</span></span>
-<span><span class="co">#&gt; 1 t_14_1_1.docx  8644</span></span>
-<span><span class="co">#&gt; 2 t_14_1_1.html 16292</span></span>
-<span><span class="co">#&gt; 3  t_14_1_1.rtf 42991</span></span>
-<span><span class="co">#&gt; 4  t_14_1_1.tex  7321</span></span></code></pre>
-</div>
-<div>
-<blockquote>
-<p><strong>The preview is not the deliverable</strong></p>
-<p>The live HTML above is a faithful <em>preview</em>. The artefact you ship is the paginated RTF, PDF, or DOCX — same spec, same numbers, but laid out for the page with repeated headers, footnotes, and the four-section submission layout. See <a href="https://vthanik.github.io/tabular/articles/fonts-and-fidelity.html">Fonts &amp; fidelity</a> for why the print backends are the source of truth.</p>
-</blockquote>
-</div>
-</section><section class="level2"><h2 id="where-to-next">Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
-</h2>
 <ul>
 <li>
-<strong><a href="core-concepts.html">Core concepts</a></strong> — the mental model the rest of the guide assumes (the wide-data contract, the page anatomy, the three-phase pipeline).</li>
+<strong>Header section</strong> — the running protocol, optional status, and <em>page x of y</em>, set as page chrome with <code>preset(pagehead =, pagefoot =)</code>.</li>
 <li>
-<strong><a href="columns-and-headers.html">Columns &amp; headers</a></strong> — every <code><a href="../reference/col_spec.html">col_spec()</a></code> option and multi-level header bands.</li>
+<strong>Title lines</strong> — the table number and up to four centred titles, passed to <code>tabular(titles =)</code>.</li>
 <li>
-<strong><a href="rows-grouping-pagination.html">Rows, grouping &amp; pagination</a></strong> — sort order, section groups, subgroups, and page splits.</li>
+<strong>Data section</strong> — an optional <code><a href="../reference/subgroup.html">subgroup()</a></code> banner, the column-header band built by <code><a href="../reference/cols.html">cols()</a></code> and <code><a href="../reference/headers.html">headers()</a></code>, then the decimal-aligned data.</li>
 <li>
-<strong><a href="styling.html">Styling</a></strong> — <code><a href="../reference/style.html">style()</a></code>, presets, and house styles.</li>
+<strong>Footnote lines</strong> — your static <code>footnotes =</code> plus any auto-numbered <code><a href="../reference/footnote.html">footnote()</a></code> markers, then the program path, name, and timestamp.</li>
+</ul>
+<p><code><a href="../reference/preset.html">preset()</a></code> frames all four by controlling the page geometry (paper, orientation, margins, fonts).</p>
+</section><section class="level2"><h2 id="where-to-next">Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
+</h2>
+<p>The rest of the docs are task-oriented — read the one that matches what you are doing:</p>
+<ul>
 <li>
-<strong><a href="https://vthanik.github.io/tabular/articles/clinical-cookbook.html">Clinical cookbook</a></strong> — six complete production tables end to end.</li>
+<strong><a href="data-in.html">Data in</a></strong> — turn a cards/cardx ARD (or any long ARD) into the wide frame, with <code><a href="../reference/pivot_across.html">pivot_across()</a></code>.</li>
+<li>
+<strong><a href="structure.html">Structure</a></strong> — columns, headers, BigN, and splitting wide or long tables across pages (<code><a href="../reference/cols.html">cols()</a></code>, <code><a href="../reference/headers.html">headers()</a></code>, <code><a href="../reference/paginate.html">paginate()</a></code>, <code><a href="../reference/subgroup.html">subgroup()</a></code>).</li>
+<li>
+<strong><a href="presentation.html">Presentation</a></strong> — titles, footnotes, running headers, and cell styling (<code><a href="../reference/footnote.html">footnote()</a></code>, <code><a href="../reference/preset.html">preset()</a></code>, <code><a href="../reference/style.html">style()</a></code>).</li>
+<li>
+<strong><a href="recipes.html">Recipes</a></strong> — the canonical CDISC-pilot safety and efficacy tables built end to end, each rendered live.</li>
+<li>
+<strong><a href="output.html">Output &amp; qualification</a></strong> — the backends, their system requirements, and the CDISC-pilot cross-backend validation.</li>
 </ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
@@ -1422,7 +628,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Vignesh Thanikachalam.</p>
+  <p>Developed by <a href="https://github.com/vthanik" class="external-link">Vignesh Thanikachalam</a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

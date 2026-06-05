@@ -164,8 +164,8 @@ auto-hide ergonomic.
 # banner above the column-header rule on every page, separated by
 # hard page breaks. The default label uses the variable's `label`
 # attribute when present, falling back to the column name.
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
-ae <- saf_aesocpt
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total  <- as.integer(sub(" .*", "", ae$Total))
 attr(ae$row_type, "label") <- "Row Type"

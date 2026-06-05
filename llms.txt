@@ -50,8 +50,8 @@ compiles with `xelatex` thereafter:
 ``` r
 
 install.packages("tinytex")
-tinytex::install_tinytex()                                  # one-time TeX setup
-tinytex::tlmgr_install(c("tabularray", "ninecolors"))       # the table engine
+tinytex::install_tinytex() # one-time TeX setup
+tinytex::tlmgr_install(c("tabularray", "ninecolors", "siunitx", "tex-gyre"))
 ```
 
 [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
@@ -82,12 +82,15 @@ engine resolves it at render time.
 library(tabular)
 
 # BigN denominators, keyed by arm
-n <- stats::setNames(saf_n$n, saf_n$arm_short)
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 # columns render in data-frame order, so put them in dose order first;
 # subset to Age / Sex / Race for a compact display
 keep <- c("Age (years)", "Sex, n (%)", "Race, n (%)")
-demo <- saf_demo[saf_demo$variable %in% keep, c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")]
+demo <- cdisc_saf_demo[
+  cdisc_saf_demo$variable %in% keep,
+  c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")
+]
 
 tab <- tabular(
   demo,
@@ -99,16 +102,25 @@ tab <- tabular(
   footnotes = "Percentages are based on the number of subjects per treatment group."
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Characteristic"),
+    variable = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
-    placebo    = col_spec(label = "Placebo (N={n['placebo']})",  align = "decimal"),
-    drug_50    = col_spec(label = "Drug 50 (N={n['drug_50']})",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100 (N={n['drug_100']})", align = "decimal"),
-    Total      = col_spec(label = "Total (N={n['Total']})",    align = "decimal")
+    placebo = col_spec(
+      label = "Placebo (N={n['placebo']})",
+      align = "decimal"
+    ),
+    drug_50 = col_spec(
+      label = "Drug 50 (N={n['drug_50']})",
+      align = "decimal"
+    ),
+    drug_100 = col_spec(
+      label = "Drug 100 (N={n['drug_100']})",
+      align = "decimal"
+    ),
+    Total = col_spec(label = "Total (N={n['Total']})", align = "decimal")
   )
 
 # render to any backend by file extension (or format = "...")
-path <- emit(tab, tempfile(fileext = ".rtf"))   # submission deliverable
+path <- emit(tab, tempfile(fileext = ".rtf")) # submission deliverable
 ```
 
 The same `tab` emits to every backend from the one spec. The table below
@@ -196,13 +208,17 @@ Two notes on the marks:
 ## Documentation
 
 - [Get started](https://vthanik.github.io/tabular/articles/tabular.html)
-  — your first table in ten minutes
-- [Core
-  concepts](https://vthanik.github.io/tabular/articles/core-concepts.html)
-  — the mental model
-- [Clinical
-  cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.html)
-  — six complete production tables
+  — the mental model and your first table
+- [Data in](https://vthanik.github.io/tabular/articles/data-in.html) —
+  turn a cards/cardx ARD into the wide frame with
+  [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
+- [Structure](https://vthanik.github.io/tabular/articles/structure.html)
+  — columns, headers, BigN, and pagination
+- [Presentation](https://vthanik.github.io/tabular/articles/presentation.html)
+  — titles, footnotes, page chrome, and styling
+- [Output &
+  qualification](https://vthanik.github.io/tabular/articles/output.html)
+  — backends, requirements, and the CDISC-pilot validation
 - [Reference](https://vthanik.github.io/tabular/reference/index.html) —
   every verb, grouped by role
 
@@ -403,97 +419,40 @@ Pre-summarised wide-format tables and their upstream `cards`-format
 counterparts. Power every `@examples` block, every vignette, and every
 smoke test.
 
-- [`eff_estimates`](https://vthanik.github.io/tabular/reference/eff_estimates.md)
+- [`cdisc_eff_estimates`](https://vthanik.github.io/tabular/reference/cdisc_eff_estimates.md)
   : Treatment-effect estimates by model
-- [`eff_n`](https://vthanik.github.io/tabular/reference/eff_n.md) :
-  Efficacy-population BigN per arm
-- [`eff_resp`](https://vthanik.github.io/tabular/reference/eff_resp.md)
+- [`cdisc_eff_n`](https://vthanik.github.io/tabular/reference/cdisc_eff_n.md)
+  : Efficacy-population BigN per arm
+- [`cdisc_eff_resp`](https://vthanik.github.io/tabular/reference/cdisc_eff_resp.md)
   : Best Overall Response and Response Rates
-- [`saf_aeoverall`](https://vthanik.github.io/tabular/reference/saf_aeoverall.md)
+- [`cdisc_saf_ae`](https://vthanik.github.io/tabular/reference/cdisc_saf_ae.md)
   : Overall adverse-event summary, Safety Population
-- [`saf_aesocpt`](https://vthanik.github.io/tabular/reference/saf_aesocpt.md)
+- [`cdisc_saf_aesocpt`](https://vthanik.github.io/tabular/reference/cdisc_saf_aesocpt.md)
   : Adverse events by System Organ Class and Preferred Term
-- [`saf_aesocpt_card`](https://vthanik.github.io/tabular/reference/saf_aesocpt_card.md)
+- [`cdisc_saf_aesocpt_ard`](https://vthanik.github.io/tabular/reference/cdisc_saf_aesocpt_ard.md)
   : Cards hierarchical ARD for AEs by SOC and PT
-- [`saf_demo`](https://vthanik.github.io/tabular/reference/saf_demo.md)
+- [`cdisc_saf_demo`](https://vthanik.github.io/tabular/reference/cdisc_saf_demo.md)
   : Demographics summary, Safety Population
-- [`saf_demo_card`](https://vthanik.github.io/tabular/reference/saf_demo_card.md)
+- [`cdisc_saf_demo_ard`](https://vthanik.github.io/tabular/reference/cdisc_saf_demo_ard.md)
   : Cards ARD for demographics (flat ARD companion)
-- [`saf_n`](https://vthanik.github.io/tabular/reference/saf_n.md) :
-  Safety-population BigN per arm
-- [`saf_subgroup`](https://vthanik.github.io/tabular/reference/saf_subgroup.md)
+- [`cdisc_saf_n`](https://vthanik.github.io/tabular/reference/cdisc_saf_n.md)
+  : Safety-population BigN per arm
+- [`cdisc_saf_subgroup`](https://vthanik.github.io/tabular/reference/cdisc_saf_subgroup.md)
   : Vital-signs subgroup summary by Sex and Age Group
-- [`saf_vital`](https://vthanik.github.io/tabular/reference/saf_vital.md)
+- [`cdisc_saf_vital`](https://vthanik.github.io/tabular/reference/cdisc_saf_vital.md)
   : Vital-signs summary
 
 # Articles
 
-### Get started
+### Articles
 
-- [Get started with
-  tabular](https://vthanik.github.io/tabular/articles/tabular.md):
-
-  Your first submission-grade clinical table in ten minutes: from a
-  pre-summarised data frame to a live preview and five output formats.
-
-- [Core
-  concepts](https://vthanik.github.io/tabular/articles/core-concepts.md):
-
-  The mental model the rest of the guide assumes: the wide-data
-  contract, the anatomy of a clinical table page, the immutable verb
-  pipeline, and why decimal alignment matters.
-
-### Recipes
-
-- [Columns &
-  headers](https://vthanik.github.io/tabular/articles/columns-and-headers.md):
-
-  The column surface: name and configure every column with cols() and
-  col_spec(), then build multi-level header bands with headers().
-
-- [Rows, grouping &
-  pagination](https://vthanik.github.io/tabular/articles/rows-grouping-pagination.md):
-
-  Control the order of display rows, partition a table into labelled
-  subgroups, and govern how it splits across printed pages.
-
-- [Styling](https://vthanik.github.io/tabular/articles/styling.md):
-
-  One style() verb plus a cells\_\*() location drives every visual rule;
-  presets carry the cosmetic defaults, and style templates package a
-  reusable house style.
-
-- [Clinical
-  cookbook](https://vthanik.github.io/tabular/articles/clinical-cookbook.md):
-
-  Six complete, submission-shaped tables built end to end: demographics,
-  adverse events, vital signs, best overall response, and a subgrouped
-  analysis. Copy a recipe and swap in your own summarised data.
-
-- [A submission table, end to
-  end](https://vthanik.github.io/tabular/articles/clinical-recipe.md):
-
-  One recipe from a pre-summarised frame to a shippable RTF: nested
-  section groups, per-page BigN under each subgroup banner, a running
-  page header, group-aware pagination, and a QC sidecar.
-
-### Advanced
-
-- [From a cards
-  ARD](https://vthanik.github.io/tabular/articles/from-ard.md):
-
-  Bridge long-format Analysis Results Data (the cards ARD) into the wide
-  frame tabular renders, with pivot_across() – demographics and a
-  hierarchical adverse-event table, end to end.
-
-- [Fonts &
-  fidelity](https://vthanik.github.io/tabular/articles/fonts-and-fidelity.md):
-
-  Why clinical tables are monospace, how decimal alignment depends on
-  font metrics, auditing fonts with check_fonts(), and why the print
-  backends, not the HTML preview, are the artefact of record.
-
-- [Architecture](https://vthanik.github.io/tabular/articles/architecture.md):
-
-  How tabular works under the hood: the immutable spec, the six-phase
-  resolve engine, backend dispatch, and the QC and audit artefacts.
+- [Data in: the cards → tabular
+  pipeline](https://vthanik.github.io/tabular/articles/data-in.md):
+- [Structure: columns, headers, and
+  pagination](https://vthanik.github.io/tabular/articles/structure.md):
+- [Presentation: titles, footnotes, page chrome, and
+  styling](https://vthanik.github.io/tabular/articles/presentation.md):
+- [Recipes: the CDISC-pilot tables, end to
+  end](https://vthanik.github.io/tabular/articles/recipes.md):
+- [Output & qualification: backends, requirements, and the CDISC
+  pilot](https://vthanik.github.io/tabular/articles/output.md):

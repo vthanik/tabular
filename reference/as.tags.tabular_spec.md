@@ -74,8 +74,8 @@ container.
 # Wrap the `tagList` in `htmltools::browsable()` so it renders as live
 # HTML in a viewer / Quarto chunk / pkgdown page instead of printing
 # its source, the same convention `gt` and `flextable` follow.
-s1 <- tabular(saf_demo, titles = "Demographics")
-s2 <- tabular(saf_aeoverall, titles = "AE overall")
+s1 <- tabular(cdisc_saf_demo, titles = "Demographics")
+s2 <- tabular(cdisc_saf_ae, titles = "AE overall")
 
 if (requireNamespace("htmltools", quietly = TRUE)) {
   htmltools::browsable(
