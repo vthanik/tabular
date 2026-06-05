@@ -4,10 +4,10 @@
 \alias{footnote}
 \title{Attach an auto-numbered footnote to a table location}
 \usage{
-footnote(spec, text, .at = cells_body(), id = NULL, symbol = NULL)
+footnote(.spec, text, .at = cells_body(), id = NULL, symbol = NULL)
 }
 \arguments{
-\item{spec}{\emph{The \code{tabular_spec} to annotate.} \verb{<tabular_spec>: required}.}
+\item{.spec}{\emph{The \code{tabular_spec} to annotate.} \verb{<tabular_spec>: required}.}
 
 \item{text}{\emph{The footnote text.} \verb{<character(1)> | md() | html()}.
 Wrap in \code{\link[=md]{md()}} / \code{\link[=html]{html()}} for inline markup; plain strings are

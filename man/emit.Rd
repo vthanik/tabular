@@ -5,7 +5,7 @@
 \title{Render a \code{tabular_spec} to a file}
 \usage{
 emit(
-  spec,
+  .spec,
   file,
   format = NULL,
   data_file = NULL,
@@ -14,7 +14,7 @@ emit(
 )
 }
 \arguments{
-\item{spec}{\emph{The \code{tabular_spec} to render.}
+\item{.spec}{\emph{The \code{tabular_spec} to render.}
 \verb{<tabular_spec>: required}. The full verb chain (\code{\link[=tabular]{tabular()}}
 -> \code{\link[=cols]{cols()}} -> \code{\link[=headers]{headers()}} -> \code{\link[=sort_rows]{sort_rows()}} -> \code{\link[=style]{style()}}
 -> \code{\link[=paginate]{paginate()}} -> \code{\link[=preset]{preset()}}) feeds into \code{emit()}'s first

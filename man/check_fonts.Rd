@@ -4,10 +4,10 @@
 \alias{check_fonts}
 \title{Check font availability across backends}
 \usage{
-check_fonts(spec)
+check_fonts(.spec)
 }
 \arguments{
-\item{spec}{\emph{A \code{tabular_spec} or \code{preset_spec}.}
+\item{.spec}{\emph{A \code{tabular_spec} or \code{preset_spec}.}
 \verb{<tabular_spec | preset_spec>: required}. The spec whose
 effective preset determines which font chain to walk.}
 }

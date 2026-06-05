@@ -135,7 +135,7 @@
 #' resolved grid without writing a file (during development, or to
 #' build a custom downstream consumer), call [`as_grid()`] directly.
 #'
-#' @param spec *The `tabular_spec` to render.*
+#' @param .spec *The `tabular_spec` to render.*
 #'   `<tabular_spec>: required`. The full verb chain ([`tabular()`]
 #'   -> [`cols()`] -> [`headers()`] -> [`sort_rows()`] -> [`style()`]
 #'   -> [`paginate()`] -> [`preset()`]) feeds into `emit()`'s first
@@ -336,7 +336,7 @@
 #'
 #' @export
 emit <- function(
-  spec,
+  .spec,
   file,
   format = NULL,
   data_file = NULL,
@@ -345,14 +345,14 @@ emit <- function(
 ) {
   call <- rlang::caller_env()
 
-  check_tabular_spec(spec, call = call)
+  check_tabular_spec(.spec, call = call)
   file <- .check_emit_file(file, call = call, create_dir = create_dir)
   format <- .resolve_format(file, format, call = call)
   .check_emit_manifest_flag(manifest, call = call)
 
   backend <- .resolve_backend(format, call = call)
 
-  grid <- .resolve_spec_to_grid(spec, format = format, call = call)
+  grid <- .resolve_spec_to_grid(.spec, format = format, call = call)
 
   # Clear the per-render fidelity-warning dedup set so each backend
   # emulation drop (e.g. a colour on a Markdown surface) warns at most
@@ -364,7 +364,7 @@ emit <- function(
   data_file_path <- NULL
   if (!is.null(data_file)) {
     data_file_path <- .write_data_file(
-      spec = spec,
+      spec = .spec,
       grid = grid,
       data_file = data_file,
       render_path = file,
@@ -374,7 +374,7 @@ emit <- function(
 
   if (isTRUE(manifest)) {
     .write_manifest(
-      spec = spec,
+      spec = .spec,
       grid = grid,
       file = file,
       format = format,
