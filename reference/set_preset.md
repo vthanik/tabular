@@ -156,61 +156,61 @@ tabular(
   footnotes = "Subjects counted once per category."
 ) |>
   cols(
-    stat_label = col_spec(usage = "group", label = "Category"),
+    stat_label = col_spec(label = "Category"),
     placebo    = col_spec(label = "Placebo\nN={demo_n['placebo']}"),
     drug_50    = col_spec(label = "Drug 50\nN={demo_n['drug_50']}"),
     drug_100   = col_spec(label = "Drug 100\nN={demo_n['drug_100']}"),
     Total      = col_spec(label = "Total\nN={demo_n['Total']}")
   )
 
-#tabular-0377592e06 { font-family: "Liberation Serif", "Times New Roman", Times, serif; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
-#tabular-0377592e06 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-0377592e06 p { line-height: inherit; }
-#tabular-0377592e06 .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-0377592e06 .tabular-caption { margin: 0; padding: 0; }
-#tabular-0377592e06 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-0377592e06 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-0377592e06 .tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }
-#tabular-0377592e06 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-0377592e06 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-0377592e06 .tabular-table th, #tabular-0377592e06 .tabular-table td { padding: .18rem .6rem; }
-#tabular-0377592e06 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-0377592e06 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-0377592e06 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-0377592e06 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-0377592e06 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-0377592e06 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-0377592e06 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-0377592e06 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-0377592e06 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-0377592e06 .tabular-table tbody tr td { border-top: none; }
-#tabular-0377592e06 .tabular-band { text-align: center; }
-#tabular-0377592e06 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-0377592e06 .tabular-subgroup-label { font-weight: 600; }
-#tabular-0377592e06 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-0377592e06 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-0377592e06 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-0377592e06 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-0377592e06 .text-left { text-align: left; }
-#tabular-0377592e06 .text-center { text-align: center; }
-#tabular-0377592e06 .text-right { text-align: right; }
-#tabular-0377592e06 .tabular-table thead th.text-left { text-align: left; }
-#tabular-0377592e06 .tabular-table thead th.text-center { text-align: center; }
-#tabular-0377592e06 .tabular-table thead th.text-right { text-align: right; }
-#tabular-0377592e06 .valign-top { vertical-align: top; }
-#tabular-0377592e06 .valign-middle { vertical-align: middle; }
-#tabular-0377592e06 .valign-bottom { vertical-align: bottom; }
-#tabular-0377592e06 .tabular-footnote { font-size: 9pt; color: #495057; margin: .25rem 0; }
-#tabular-0377592e06 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-0377592e06 .tabular-page-break-row { display: none; }
-#tabular-0377592e06 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-0377592e06 .tabular-page-header, #tabular-0377592e06 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 8pt; color: var(--tabular-chrome-color); }
-#tabular-0377592e06 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-0377592e06 .tabular-page-footer { margin-top: 1rem; }
-#tabular-0377592e06 .tabular-page-header-left, #tabular-0377592e06 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-0377592e06 .tabular-page-header-center, #tabular-0377592e06 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-0377592e06 .tabular-page-header-right, #tabular-0377592e06 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-0377592e06 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-0377592e06 .tabular-table tr { page-break-inside: avoid; } #tabular-0377592e06 .tabular-page-header, #tabular-0377592e06 .tabular-page-footer { display: none; } #tabular-0377592e06 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-0377592e06 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-0377592e06 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-1193ade44c { font-family: "Liberation Serif", "Times New Roman", Times, serif; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
+#tabular-1193ade44c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-1193ade44c p { line-height: inherit; }
+#tabular-1193ade44c .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-1193ade44c .tabular-caption { margin: 0; padding: 0; }
+#tabular-1193ade44c .tabular-pad { margin: 0; line-height: 1; }
+#tabular-1193ade44c .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-1193ade44c .tabular-table { border-collapse: collapse; font-size: 9pt; margin: 0 auto; }
+#tabular-1193ade44c .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-1193ade44c .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-1193ade44c .tabular-table th, #tabular-1193ade44c .tabular-table td { padding: .18rem .6rem; }
+#tabular-1193ade44c .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-1193ade44c .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-1193ade44c .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-1193ade44c .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-1193ade44c .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-1193ade44c .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-1193ade44c .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-1193ade44c .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-1193ade44c .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-1193ade44c .tabular-table tbody tr td { border-top: none; }
+#tabular-1193ade44c .tabular-band { text-align: center; }
+#tabular-1193ade44c .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-1193ade44c .tabular-subgroup-label { font-weight: 600; }
+#tabular-1193ade44c .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-1193ade44c .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-1193ade44c .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-1193ade44c .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-1193ade44c .text-left { text-align: left; }
+#tabular-1193ade44c .text-center { text-align: center; }
+#tabular-1193ade44c .text-right { text-align: right; }
+#tabular-1193ade44c .tabular-table thead th.text-left { text-align: left; }
+#tabular-1193ade44c .tabular-table thead th.text-center { text-align: center; }
+#tabular-1193ade44c .tabular-table thead th.text-right { text-align: right; }
+#tabular-1193ade44c .valign-top { vertical-align: top; }
+#tabular-1193ade44c .valign-middle { vertical-align: middle; }
+#tabular-1193ade44c .valign-bottom { vertical-align: bottom; }
+#tabular-1193ade44c .tabular-footnote { font-size: 9pt; color: #495057; margin: .25rem 0; }
+#tabular-1193ade44c .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-1193ade44c .tabular-page-break-row { display: none; }
+#tabular-1193ade44c { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-1193ade44c .tabular-page-header, #tabular-1193ade44c .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 8pt; color: var(--tabular-chrome-color); }
+#tabular-1193ade44c .tabular-page-header { margin-bottom: 1rem; }
+#tabular-1193ade44c .tabular-page-footer { margin-top: 1rem; }
+#tabular-1193ade44c .tabular-page-header-left, #tabular-1193ade44c .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-1193ade44c .tabular-page-header-center, #tabular-1193ade44c .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-1193ade44c .tabular-page-header-right, #tabular-1193ade44c .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-1193ade44c .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-1193ade44c .tabular-table tr { page-break-inside: avoid; } #tabular-1193ade44c .tabular-page-header, #tabular-1193ade44c .tabular-page-footer { display: none; } #tabular-1193ade44c .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-1193ade44c .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-1193ade44c .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.3.1
@@ -220,6 +220,5 @@ Safety Population
 
 
 
-Total
-N=254
+Category
 ```

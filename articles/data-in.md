@@ -176,7 +176,7 @@ ae <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
 ae$indent <- as.integer(ae$row_type == "pt") # depth for col_spec(indent_by=)
 head(ae, 6)
 #>                                      soc                                  label
-#> 1           ..ard_hierarchical_overall..           ..ard_hierarchical_overall..
+#> 1                                Overall                                Overall
 #> 2 SKIN AND SUBCUTANEOUS TISSUE DISORDERS SKIN AND SUBCUTANEOUS TISSUE DISORDERS
 #> 3 SKIN AND SUBCUTANEOUS TISSUE DISORDERS                               PRURITUS
 #> 4 SKIN AND SUBCUTANEOUS TISSUE DISORDERS                               ERYTHEMA

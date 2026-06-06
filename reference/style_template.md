@@ -76,8 +76,8 @@ locations that name the *where* half of every layer.
 # The result becomes the default look for every table rendered
 # against this preset. No per-table style() boilerplate.
 house <- style_template() |>
-  style(bold = TRUE, .at = cells_headers(level = -1)) |>
-  style(bold = TRUE, .at = cells_group_headers()) |>
+  style(background = "#DBE4F0", .at = cells_headers(level = -1)) |>
+  style(color = "#1F3B5C", .at = cells_group_headers()) |>
   style(
     border_top    = brdr("thick", "double"),
     border_bottom = brdr("thick", "double"),

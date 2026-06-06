@@ -193,10 +193,10 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
 
   - **`spacing`** — region-keyed blank-line control. A named list keyed
     by `title` / `body` / `subgroup` / `footnote`, each a named numeric
-    `c(above = , below = )` (footnote: `above` only). Default is the
-    Appendix-I one blank line above and below the title block. Two
-    adjoining region-sides that target the same physical gap resolve to
-    the MAX (never the sum), so a gap is never accidentally doubled.
+    `c(above = , below = )` (footnote: `above` only). Default is the one
+    blank line above and below the title block. Two adjoining
+    region-sides that target the same physical gap resolve to the MAX
+    (never the sum), so a gap is never accidentally doubled.
 
   - **`stripe`** — zebra body-row fills. A single colour (applied to
     even rows) or a named `c(odd = , even = )`; `NULL` (default) is off.

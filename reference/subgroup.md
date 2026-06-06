@@ -66,15 +66,20 @@ subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\n(N={n})")
     directly with no reshaping.
 
       # Wide: one column per arm.
-      wide <- data.frame(
-        sex     = factor(c("F", "M")),
-        placebo = c(24L, 18L), drug_50 = c(9L, 15L), Total = c(42L, 47L)
+      wide <- tibble::tribble(
+        ~sex, ~placebo, ~drug_50, ~Total,
+        "F",       24L,       9L,    42L,
+        "M",       18L,      15L,    47L
       )
       # Long: count()-style, pivoted internally. Equivalent to `wide`.
-      long <- data.frame(
-        sex  = factor(rep(c("F", "M"), each = 3)),
-        arm  = rep(c("placebo", "drug_50", "Total"), 2),
-        n    = c(24L, 9L, 42L, 18L, 15L, 47L)
+      long <- tibble::tribble(
+        ~sex, ~arm,      ~n,
+        "F",  "placebo", 24L,
+        "F",  "drug_50",  9L,
+        "F",  "Total",   42L,
+        "M",  "placebo", 18L,
+        "M",  "drug_50", 15L,
+        "M",  "Total",   47L
       )
       spec |> subgroup(by = "sex", big_n = long)
 

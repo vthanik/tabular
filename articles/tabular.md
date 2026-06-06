@@ -64,7 +64,7 @@ spec <- tabular(
       group_display = "header_row",
       label = ""
     ),
-    stat_label = col_spec(usage = "indent", label = "")
+    stat_label = col_spec(label = "")
   )
 
 spec

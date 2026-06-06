@@ -90,7 +90,12 @@ emit this as cell padding so wrapped continuation lines align
 with the indented baseline; Markdown carries the literal
 space-prefix. Synthesised group-header rows (under
 <code>group_display = "header_row"</code>) are NEVER indented — they're
-the parent at depth 0.</p></li>
+the parent at depth 0. <strong>Note:</strong> a <code>"header_row"</code> section
+already indents its child rows one level, so do not add
+<code>usage = "indent"</code> to a stub that sits under one — the two
+stack into a double indent. Reach for <code>"indent"</code> only when
+there is no <code>"header_row"</code> section providing the indent, or
+to add a deliberate extra level.</p></li>
 <li><p><strong><code>"id"</code></strong> — a row-identifier column. Renders like <code>"display"</code>
 (one value per row, never collapses) but joins the <em>stub</em>: it
 repeats on every horizontal panel (<code>paginate(panels = N)</code>) and
@@ -111,8 +116,8 @@ panel of a wide demographics or efficacy table.</p></li>
 <span><span class="co"># headers; `stat_label` body rows auto-indent under each header</span></span>
 <span><span class="co"># without an explicit depth column.</span></span>
 <span><span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>  group_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>,  group_display <span class="op">=</span> <span class="st">"header_row"</span><span class="op">)</span>,</span>
-<span>  stat_label  <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"indent"</span>, label <span class="op">=</span> <span class="st">"Response"</span><span class="op">)</span>,</span>
+<span>  group_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, group_display <span class="op">=</span> <span class="st">"header_row"</span><span class="op">)</span>,</span>
+<span>  stat_label  <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Response"</span><span class="op">)</span>,</span>
 <span>  placebo     <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre><p></p></div>
 <p></p><div class="sourceCode r"><pre><code><span><span class="co"># End-to-end ARD → wide → tabular pipeline. The cards ARD</span></span>
@@ -262,11 +267,16 @@ width intact, and only an explicit non-<code>"auto"</code> width overrides.</p><
 <dd><p><em>How <code>usage = "group"</code> values render in the body.</em>
 <code>&lt;character(1)&gt;: default "header_row"</code>. Active only when
 <code>usage = "group"</code>; ignored otherwise.</p><ul><li><p><strong><code>"header_row"</code></strong> <em>(default)</em> — each unique value emits as
-a section header row above its block of data rows. The
-source column is hidden from the visible body. Matches the
-canonical submission Appendix I shape used by clinical TFL
-house templates (Disposition, Demographics, Statistical
-Report sections).</p></li>
+a section header row above its block of data rows, and <strong>the
+body rows beneath are automatically indented one level</strong>. The
+section header itself sits flush left at depth 0; its child
+rows render one indent level in. Because the section already
+supplies that indent, the stub column needs <strong>no</strong>
+<code>usage = "indent"</code> — adding it stacks a second level and
+produces a double indent. The source column is hidden from
+the visible body. Matches the canonical submission
+shape used by clinical TFL house templates (Disposition,
+Demographics, Statistical Report sections).</p></li>
 <li><p><strong><code>"column"</code></strong> — column stays visible; repeated values are
 suppressed (only the first row of each value shows the
 label). PROC REPORT's default for grouping variables.</p></li>
@@ -298,7 +308,7 @@ Never trails the final group.</p></li>
 <li><p><strong><code>FALSE</code></strong> — never insert a blank row for this column.</p></li>
 <li><p><strong><code>NA</code></strong> <em>(default)</em> — follow <code>group_display</code>: <code>TRUE</code> when
 <code>group_display = "header_row"</code>, <code>FALSE</code> when <code>"column"</code> or
-<code>"column_repeat"</code>. Picks the canonical Appendix-I shape
+<code>"column_repeat"</code>. Picks the canonical shape
 without an extra knob to set.</p></li>
 </ul><p><strong>Interaction:</strong> When two or more columns have an effective
 <code>group_skip = TRUE</code> and their value transitions coincide on the

@@ -153,6 +153,14 @@ pivot_across(
   and `label` columns of the output. `NULL` leaves the upstream variable
   names verbatim.
 
+  **Renaming the hierarchical "overall" row.** A
+  `cards::ard_stack_hierarchical(overall = TRUE)` ARD carries an
+  internal `..ard_hierarchical_overall..` sentinel for the grand-total
+  ("any event") row. It is relabelled to `"Overall"` by default; map the
+  sentinel key to override, e.g.
+  `label = c("..ard_hierarchical_overall.." = "TOTAL SUBJECTS WITH AN EVENT")`.
+  The raw sentinel never reaches the output at any hierarchy depth.
+
 - overall:
 
   *Column name for `NA`-arm (overall / total) rows.*
