@@ -5,7 +5,7 @@
     Condition
       Error:
       ! `by` references column not present in .spec@data: "not_a_column".
-      i Available columns: "variable", "stat_label", "placebo", "drug_100", "drug_50", and "Total".
+      i Available columns: "variable", "stat_label", "placebo", "drug_50", "drug_100", and "Total".
 
 # subgroup() template-unknown-col error message names the bad ref
 
@@ -14,5 +14,5 @@
     Condition
       Error:
       ! `label` references column not in .spec@data: "nonexistent".
-      i Available columns: "variable", "stat_label", "placebo", "drug_100", "drug_50", and "Total".
+      i Available columns: "variable", "stat_label", "placebo", "drug_50", "drug_100", and "Total".
 

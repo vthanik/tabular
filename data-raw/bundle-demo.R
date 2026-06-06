@@ -223,6 +223,18 @@ cdisc_saf_demo <- bind_rows(
 cdisc_saf_demo <- cdisc_saf_demo[!is.na(cdisc_saf_demo$stat_label), , drop = FALSE]
 rownames(cdisc_saf_demo) <- NULL
 
+# Canonical arm order: placebo, dose-ascending, then Total (the pivot
+# above leaves them in factor/appearance order). Mirrors the explicit
+# reorder that cdisc_saf_aesocpt / cdisc_saf_vital / cdisc_eff_resp apply.
+cdisc_saf_demo <- cdisc_saf_demo[, c(
+  "variable",
+  "stat_label",
+  "placebo",
+  "drug_50",
+  "drug_100",
+  "Total"
+)]
+
 # ────────────────────────────────────────────────────────────────────────
 # cdisc_saf_ae — high-level AE flag counts + per-severity rows.
 # Adds AE-leading-to-death and AE-resolved rows on top of the v0 set.
@@ -340,6 +352,17 @@ cdisc_saf_ae <- bind_rows(
   )) |>
   rename_arms() |>
   as.data.frame()
+
+# Canonical arm order: placebo, dose-ascending, then Total (the pivot
+# above leaves Total first and the doses in factor order). Mirrors the
+# explicit reorder that cdisc_saf_aesocpt / cdisc_saf_vital / cdisc_eff_resp apply.
+cdisc_saf_ae <- cdisc_saf_ae[, c(
+  "stat_label",
+  "placebo",
+  "drug_50",
+  "drug_100",
+  "Total"
+)]
 
 # ────────────────────────────────────────────────────────────────────────
 # cdisc_saf_aesocpt — AEs by SOC (top 10) and PT (top 5 per SOC).
