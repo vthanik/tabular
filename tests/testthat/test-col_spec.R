@@ -199,8 +199,11 @@ test_that("col_spec(label = 1) raises tabular_error_input", {
   expect_error(col_spec(label = 1), class = "tabular_error_input")
 })
 
-test_that("col_spec(visible = NA) raises tabular_error_input", {
-  expect_error(col_spec(visible = NA), class = "tabular_error_input")
+test_that("col_spec(visible = NA) is the unset sentinel (accepted)", {
+  # NA = unset (mergeable); resolved to TRUE at engine finalize.
+  cs <- col_spec(visible = NA)
+  expect_true(is.na(cs@visible))
+  expect_true(tabular:::.finalize_col_spec(cs)@visible)
 })
 
 test_that("col_spec(visible = c(TRUE, FALSE)) raises tabular_error_input", {

@@ -278,9 +278,13 @@ NULL
       default = NA_character_
     ),
     format = S7::class_any,
+    # @visible — NA (default) is the merge "unset" sentinel; the engine
+    # finalize pass (.finalize_cols / .finalize_one) resolves it to TRUE
+    # before any reader runs. TRUE / FALSE are explicit and mergeable, so
+    # a later cols() call can re-show a hidden column with visible = TRUE.
     visible = S7::new_property(
       S7::class_logical,
-      default = TRUE
+      default = NA
     ),
     width = S7::new_property(
       S7::class_any,
@@ -296,9 +300,12 @@ NULL
       S7::class_any,
       default = "auto"
     ),
+    # @group_display — NA (default) is the merge "unset" sentinel; the
+    # finalize pass resolves it to "header_row" before any reader runs.
+    # An explicit value is mergeable, so a later cols() call can reset it.
     group_display = S7::new_property(
       S7::class_character,
-      default = "header_row"
+      default = NA_character_
     ),
     group_skip = S7::new_property(
       S7::class_logical,
@@ -396,8 +403,10 @@ NULL
     }
     if (
       length(self@group_display) != 1L ||
-        is.na(self@group_display) ||
-        !(self@group_display %in% .col_group_display_values)
+        # NA is the "unset" sentinel (resolved to "header_row" at engine
+        # finalize); only a non-NA value off the allowed set is invalid.
+        (!is.na(self@group_display) &&
+          !(self@group_display %in% .col_group_display_values))
     ) {
       return(paste0(
         "@group_display must be one of ",

@@ -111,6 +111,14 @@ engine_format <- function(spec) {
 # column. Columns the user did not declare via `cols()` get a default
 # `col_spec()`. The internal `name` field of each spec is stamped
 # with the column name so error messages can reference it.
+#
+# Finalize boundary (B): the synthesized default `col_spec()` for an
+# unlisted column carries the NA "unset" sentinels (visible /
+# group_display / usage), which never pass through `as_grid()`'s
+# spec@cols finalize (boundary A). Resolve every returned entry to
+# concrete defaults here so downstream readers (engine_format /
+# engine_group_display / col_width) never see NA. Idempotent on the
+# already-finalized user specs.
 .cols_by_name <- function(cols, col_names) {
   out <- vector("list", length(col_names))
   names(out) <- col_names
@@ -124,6 +132,7 @@ engine_format <- function(spec) {
     if (is.na(out[[nm]]@name)) {
       out[[nm]] <- S7::set_props(out[[nm]], name = nm)
     }
+    out[[nm]] <- .finalize_col_spec(out[[nm]])
   }
   out
 }

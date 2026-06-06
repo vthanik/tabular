@@ -291,6 +291,15 @@ as_grid <- function(.spec) {
 # group; a hard page break between groups falls out naturally from
 # the per-spec pagination plans.
 .resolve_spec_to_grid <- function(spec, format, call) {
+  # Finalize boundary (A): resolve the NA "unset" col_spec sentinels
+  # (visible / group_display / usage) to concrete defaults on spec@cols
+  # before any engine phase or backend reads it. engine_borders and
+  # engine_paginate read spec@cols directly (with isTRUE / identical),
+  # and engine_borders runs before the visibility merge-back, so a raw
+  # default col_spec (visible = NA) must already read as TRUE here.
+  # Boundary (B) is inside `.cols_by_name()` for the synthesized defaults
+  # of unlisted columns, which never appear in spec@cols.
+  spec <- S7::set_props(spec, cols = .finalize_col_specs(spec@cols))
   groups <- engine_subgroup_split(spec)
   # Assign footnote markers ONCE, at the spec level, in reading order
   # across the full data (subgroup-major), so the marker at every anchor

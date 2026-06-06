@@ -8,9 +8,9 @@ col_spec(
   usage = NULL,
   label = NA_character_,
   format = NULL,
-  visible = TRUE,
+  visible = NA,
   width = "auto",
-  group_display = "header_row",
+  group_display = NA,
   group_skip = NA,
   align = NULL,
   valign = NULL,
@@ -35,7 +35,9 @@ Markdown) collapses the panels into one table. The PROC REPORT
 \code{ID} role, orthogonal to grouping. Use for a per-row statistic
 label (\code{"n"}, \code{"Mean"}, \code{"SD"}) that must stay legible on every
 panel of a wide demographics or efficacy table.
-\item \strong{\code{NULL}} — inferred as \code{"display"} in \code{\link[=cols]{cols()}}.
+\item \strong{\code{NULL} / \code{NA}} — the unset sentinel; resolves to \code{"display"}
+at render. \code{NA} is mergeable, so an explicit \code{"display"} on a
+later \code{\link[=cols]{cols()}} call can override a prior \code{"group"} / \code{"id"}.
 }
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two row-label columns and four arm columns.
@@ -135,9 +137,12 @@ col_spec(format = function(x) formatC(x, format = "f", digits = 1, big.mark = ",
 }\if{html}{\out{</div>}}}
 
 \item{visible}{\emph{Whether the column renders.}
-\verb{<logical(1)>: default TRUE}. \code{FALSE} hides the column from
-output but keeps it in \code{spec@data} so \code{\link[=sort_rows]{sort_rows()}} and
-\code{\link[=style]{style()}} predicates can still reference it.
+\verb{<logical(1)>: default NA}. \code{FALSE} hides the column from output
+but keeps it in \code{spec@data} so \code{\link[=sort_rows]{sort_rows()}} and \code{\link[=style]{style()}}
+predicates can still reference it. \code{NA} (default) is the merge
+"unset" sentinel — it resolves to visible at render and, crucially,
+is mergeable: a later \code{\link[=cols]{cols()}} call with \code{visible = TRUE} can
+\strong{re-show} a column an earlier call hid.
 
 \strong{Interaction:} Hidden columns are the standard pattern for
 sort-key helpers (\code{row_type}, \code{n_total}) and for the numeric
@@ -212,8 +217,10 @@ later call carrying \code{width = "auto"} leaves a previously pinned
 width intact, and only an explicit non-\code{"auto"} width overrides.}
 
 \item{group_display}{\emph{How \code{usage = "group"} values render in the body.}
-\verb{<character(1)>: default "header_row"}. Active only when
-\code{usage = "group"}; ignored otherwise.
+\verb{<character(1)>: default NA}. Active only when \code{usage = "group"}.
+\code{NA} (default) is the merge "unset" sentinel and resolves to
+\code{"header_row"} at render; an explicit value is mergeable, so a later
+\code{\link[=cols]{cols()}} call can reset it back to \code{"header_row"}.
 \itemize{
 \item \strong{\code{"header_row"}} \emph{(default)} — each unique value emits as
 a section header row above its block of data rows, and \strong{the
@@ -406,10 +413,13 @@ multiple inputs without restating the name.
 
 \strong{Merge semantics across repeated \code{cols()} calls.} When
 \code{\link[=cols]{cols()}} is called twice for the same column, the engine merges
-field-by-field: a non-default value on the new spec overrides;
-a default-valued field (NA / NULL / "" / \code{TRUE}) leaves the
-existing field intact. Build a column's spec in stages without
-re-stating earlier attributes.
+field-by-field: any field set to a non-default value on the new spec
+overrides; a field left at its "unset" sentinel (\code{NA} / \code{NULL} /
+\code{"auto"}) leaves the existing value intact. Because every mergeable
+field has a genuine unset sentinel, a later call can also \emph{restore} a
+default — e.g. \code{visible = TRUE} re-shows a column an earlier call
+hid. Build a column's spec in stages without re-stating earlier
+attributes.
 
 \strong{Validation timing.} Argument shapes are validated eagerly —
 a malformed \code{sprintf} template is probed at construction

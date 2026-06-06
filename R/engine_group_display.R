@@ -59,6 +59,12 @@ engine_group_display <- function(
   indent_size = 0L,
   subgroup_hide_cols = character(0L)
 ) {
+  # Finalize NA "unset" sentinels (visible / group_display / usage) so
+  # every read below is concrete, even when this phase is exercised
+  # directly on a raw col_spec map (production feeds finalized cols via
+  # .cols_by_name; idempotent here). Single resolver, no duplicated
+  # defaults.
+  cols <- .finalize_col_specs(cols)
   indent_unit <- .indent_text_unit(indent_size)
   nrow_data <- nrow(cells_text)
   ncol_data <- ncol(cells_text)

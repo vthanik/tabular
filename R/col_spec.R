@@ -22,10 +22,13 @@
 #'
 #' **Merge semantics across repeated `cols()` calls.** When
 #' [`cols()`] is called twice for the same column, the engine merges
-#' field-by-field: a non-default value on the new spec overrides;
-#' a default-valued field (NA / NULL / "" / `TRUE`) leaves the
-#' existing field intact. Build a column's spec in stages without
-#' re-stating earlier attributes.
+#' field-by-field: any field set to a non-default value on the new spec
+#' overrides; a field left at its "unset" sentinel (`NA` / `NULL` /
+#' `"auto"`) leaves the existing value intact. Because every mergeable
+#' field has a genuine unset sentinel, a later call can also *restore* a
+#' default — e.g. `visible = TRUE` re-shows a column an earlier call
+#' hid. Build a column's spec in stages without re-stating earlier
+#' attributes.
 #'
 #' **Validation timing.** Argument shapes are validated eagerly —
 #' a malformed `sprintf` template is probed at construction
@@ -48,7 +51,9 @@
 #'       `ID` role, orthogonal to grouping. Use for a per-row statistic
 #'       label (`"n"`, `"Mean"`, `"SD"`) that must stay legible on every
 #'       panel of a wide demographics or efficacy table.
-#'   *   **`NULL`** — inferred as `"display"` in [`cols()`].
+#'   *   **`NULL` / `NA`** — the unset sentinel; resolves to `"display"`
+#'       at render. `NA` is mergeable, so an explicit `"display"` on a
+#'       later [`cols()`] call can override a prior `"group"` / `"id"`.
 #'
 #'   ```r
 #'   # Two row-label columns and four arm columns.
@@ -152,9 +157,12 @@
 #'   ```
 #'
 #' @param visible *Whether the column renders.*
-#'   `<logical(1)>: default TRUE`. `FALSE` hides the column from
-#'   output but keeps it in `spec@data` so [`sort_rows()`] and
-#'   [`style()`] predicates can still reference it.
+#'   `<logical(1)>: default NA`. `FALSE` hides the column from output
+#'   but keeps it in `spec@data` so [`sort_rows()`] and [`style()`]
+#'   predicates can still reference it. `NA` (default) is the merge
+#'   "unset" sentinel — it resolves to visible at render and, crucially,
+#'   is mergeable: a later [`cols()`] call with `visible = TRUE` can
+#'   **re-show** a column an earlier call hid.
 #'
 #'   **Interaction:** Hidden columns are the standard pattern for
 #'   sort-key helpers (`row_type`, `n_total`) and for the numeric
@@ -228,8 +236,10 @@
 #'   width intact, and only an explicit non-`"auto"` width overrides.
 #'
 #' @param group_display *How `usage = "group"` values render in the body.*
-#'   `<character(1)>: default "header_row"`. Active only when
-#'   `usage = "group"`; ignored otherwise.
+#'   `<character(1)>: default NA`. Active only when `usage = "group"`.
+#'   `NA` (default) is the merge "unset" sentinel and resolves to
+#'   `"header_row"` at render; an explicit value is mergeable, so a later
+#'   [`cols()`] call can reset it back to `"header_row"`.
 #'
 #'   *   **`"header_row"`** *(default)* — each unique value emits as
 #'       a section header row above its block of data rows, and **the
@@ -590,9 +600,9 @@ col_spec <- function(
   usage = NULL,
   label = NA_character_,
   format = NULL,
-  visible = TRUE,
+  visible = NA,
   width = "auto",
-  group_display = "header_row",
+  group_display = NA,
   group_skip = NA,
   align = NULL,
   valign = NULL,
@@ -614,7 +624,7 @@ col_spec <- function(
   if (!label_deferred) {
     label <- .interp_one(label, env = call, call = call)
   }
-  .check_col_visible(visible, call = call)
+  visible_val <- .check_col_visible(visible, call = call)
   .check_col_width(width, call = call)
   group_display_val <- .check_col_group_display(group_display, call = call)
   group_skip_val <- .check_col_group_skip(group_skip, call = call)
@@ -628,7 +638,7 @@ col_spec <- function(
     label_deferred = label_deferred,
     usage = usage_val,
     format = format,
-    visible = visible,
+    visible = visible_val,
     width = width,
     # Immutable mirror of the user's width spec. Resolution in
     # `.resolve_col_widths()` (R/col_width.R) overwrites `width`
@@ -772,10 +782,14 @@ col_spec <- function(
 }
 
 .check_col_group_display <- function(x, call) {
+  # NA / NULL is the "unset" merge sentinel (resolved to "header_row" at
+  # engine finalize). A length-1 character in the allowed set is explicit.
+  if (is.null(x) || (length(x) == 1L && is.na(x))) {
+    return(NA_character_)
+  }
   if (
     is.character(x) &&
       length(x) == 1L &&
-      !is.na(x) &&
       x %in% .col_group_display_values
   ) {
     return(x)
@@ -877,12 +891,14 @@ col_spec <- function(
 }
 
 .check_col_visible <- function(x, call) {
-  if (is.logical(x) && length(x) == 1L && !is.na(x)) {
-    return(invisible(x))
+  # NA / NULL is the "unset" merge sentinel (resolved to TRUE at engine
+  # finalize). TRUE / FALSE are explicit and mergeable.
+  if (is.null(x) || (is.logical(x) && length(x) == 1L)) {
+    return(if (is.null(x)) NA else x)
   }
   cli::cli_abort(
     c(
-      "{.arg visible} must be a single non-NA logical.",
+      "{.arg visible} must be a single logical (TRUE / FALSE / NA).",
       "x" = "You supplied {.obj_type_friendly {x}} of length {length(x)}."
     ),
     class = "tabular_error_input",

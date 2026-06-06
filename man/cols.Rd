@@ -72,23 +72,32 @@ let the merge rule below apply.
 
 When \code{cols()} is called more than once for the same column, the
 engine merges the new \code{col_spec} into the existing one field-by-
-field. A non-default value on the new spec overrides; a default-
-valued field leaves the existing field intact. This lets you
-build a column's spec in stages — declare the label-and-alignment
-block up front, add the width once you know it fits, then attach
-a sort key, all without re-stating earlier attributes. Essential
-when generating specs programmatically (looping over arms,
-layering a house-style helper).
+field. A field set to a non-default value on the new spec overrides;
+a field left at its "unset" sentinel leaves the existing value
+intact. Every mergeable field has a genuine unset sentinel, so a
+later call can also \emph{restore} a default (e.g. \code{visible = TRUE}
+re-shows a hidden column, \code{group_display = "header_row"} resets a
+prior \code{"column"}). This lets you build a column's spec in stages —
+declare the label-and-alignment block up front, add the width once
+you know it fits, then attach a sort key, all without re-stating
+earlier attributes. Essential when generating specs programmatically
+(looping over arms, layering a house-style helper).
 
-Default values that do NOT override the existing field:\tabular{ll}{
-   field \tab default that does not override \cr
-   \code{usage} \tab \code{NA_character_} \cr
+Unset sentinels — a field left at this value does NOT override the
+existing field (every other value, including a default like
+\code{visible = TRUE}, overrides):\tabular{ll}{
+   field \tab unset sentinel \cr
+   \code{usage} \tab \code{NA} \cr
    \code{label} \tab \code{NA_character_} \cr
    \code{format} \tab \code{NULL} \cr
-   \code{visible} \tab \code{TRUE} \cr
-   \code{width} \tab \code{NA_real_} \cr
+   \code{visible} \tab \code{NA} \cr
+   \code{width} \tab \code{"auto"} \cr
+   \code{group_display} \tab \code{NA} \cr
+   \code{group_skip} \tab \code{NA} \cr
    \code{align} \tab \code{NA_character_} \cr
+   \code{valign} \tab \code{NA_character_} \cr
    \code{na_text} \tab \code{NA_character_} (inherit preset) \cr
+   \code{indent} \tab \code{NA} \cr
 }
 
 

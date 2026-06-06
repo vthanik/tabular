@@ -534,7 +534,9 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
 # the slice phase; this is the single point that enforces
 # `col_spec(visible = FALSE)` across every backend.
 .visible_col_names <- function(spec, col_names) {
-  cols <- spec@cols
+  # Finalize NA "unset" sentinels so this phase is self-sufficient on a
+  # raw spec (production finalizes upstream; idempotent here).
+  cols <- .finalize_col_specs(spec@cols)
   keep <- vapply(
     col_names,
     function(nm) {

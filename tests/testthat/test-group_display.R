@@ -9,9 +9,11 @@
 # col_spec() constructor
 # ---------------------------------------------------------------------
 
-test_that("col_spec() default group_display is 'header_row'", {
+test_that("col_spec() default group_display is the NA unset sentinel", {
+  # NA = unset (mergeable); resolved to "header_row" at engine finalize.
   cs <- col_spec()
-  expect_equal(cs@group_display, "header_row")
+  expect_true(is.na(cs@group_display))
+  expect_equal(tabular:::.finalize_col_spec(cs)@group_display, "header_row")
 })
 
 test_that("col_spec() accepts every value in the enum", {
@@ -33,10 +35,11 @@ test_that("col_spec() rejects a non-character group_display", {
     col_spec(group_display = 1L),
     class = "tabular_error_input"
   )
-  expect_error(
-    col_spec(group_display = NA),
-    class = "tabular_error_input"
-  )
+})
+
+test_that("col_spec(group_display = NA) is the unset sentinel (accepted)", {
+  cs <- col_spec(group_display = NA)
+  expect_true(is.na(cs@group_display))
 })
 
 # ---------------------------------------------------------------------

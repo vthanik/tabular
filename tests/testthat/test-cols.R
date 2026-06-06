@@ -181,6 +181,75 @@ test_that("cols() merges na_text (non-empty second call overrides)", {
   expect_identical(s@cols$drug_a@na_text, "-")
 })
 
+# F2 — lossless merge: a meaningful default can now be merged back -----
+
+test_that("cols() can RE-SHOW a hidden column on a later call (#F2)", {
+  # visible = FALSE then visible = TRUE was impossible before NA-unset.
+  s <- mk_spec() |>
+    cols(drug_a = col_spec(visible = FALSE)) |>
+    cols(drug_a = col_spec(visible = TRUE))
+  expect_true(s@cols$drug_a@visible)
+})
+
+test_that("cols() can RESET group_display to header_row on a later call (#F2)", {
+  s <- mk_spec() |>
+    cols(drug_a = col_spec(usage = "group", group_display = "column")) |>
+    cols(drug_a = col_spec(group_display = "header_row"))
+  expect_identical(s@cols$drug_a@group_display, "header_row")
+})
+
+test_that("cols() default visible/group_display do NOT clobber prior values (#F2)", {
+  # A later call carrying the unset (NA) defaults leaves prior explicit
+  # values intact.
+  s <- mk_spec() |>
+    cols(
+      drug_a = col_spec(
+        visible = FALSE,
+        group_display = "column",
+        usage = "group"
+      )
+    ) |>
+    cols(drug_a = col_spec(label = "Drug A"))
+  expect_false(s@cols$drug_a@visible)
+  expect_identical(s@cols$drug_a@group_display, "column")
+})
+
+# F4 — one encoding of "display" --------------------------------------
+
+test_that("a bare col_spec() finalizes to display / visible / header_row (#F4)", {
+  fin <- tabular:::.finalize_col_spec(col_spec())
+  expect_identical(fin@usage, "display")
+  expect_true(fin@visible)
+  expect_identical(fin@group_display, "header_row")
+})
+
+test_that("explicit usage = 'display' overrides a prior usage = 'group' on merge (#F4)", {
+  s <- mk_spec() |>
+    cols(drug_a = col_spec(usage = "group")) |>
+    cols(drug_a = col_spec(usage = "display"))
+  expect_identical(s@cols$drug_a@usage, "display")
+})
+
+test_that("a default col_spec() and the explicit concrete spec render identically (#F2)", {
+  # Finalize parity: NA-unset resolves to exactly the old concrete
+  # defaults, so the two specs produce byte-identical output.
+  bare <- mk_spec() |> cols(drug_a = col_spec(label = "Drug A"))
+  explicit <- mk_spec() |>
+    cols(
+      drug_a = col_spec(
+        label = "Drug A",
+        visible = TRUE,
+        group_display = "header_row",
+        usage = "display"
+      )
+    )
+  f1 <- withr::local_tempfile(fileext = ".md")
+  f2 <- withr::local_tempfile(fileext = ".md")
+  emit(bare, f1)
+  emit(explicit, f2)
+  expect_identical(readLines(f1, warn = FALSE), readLines(f2, warn = FALSE))
+})
+
 # Dynamic names: rlang `:=` and `!!!` splice --------------------------
 # Programmatic column names (built from a variable, looped, or spliced
 # from a list) must work the way they do in dplyr. Regression for the
