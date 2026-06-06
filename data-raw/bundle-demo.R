@@ -204,16 +204,15 @@ cat_summary <- function(data, var, var_label) {
     mutate(variable = var_label, .before = 1)
 }
 
+# Bare-minimum demographics: one continuous variable (Age) and two
+# categorical variables (Sex, Race). This is the most-used demo dataset;
+# keeping it to three blocks demonstrates both summary shapes (n / Mean
+# (SD) / Median / Q1, Q3 / Min, Max and per-level n (%)) without the
+# noise of a full nine-block table.
 cdisc_saf_demo <- bind_rows(
   cont_summary(demog_data, "AGE", "Age (years)"),
-  cat_summary(demog_data, "AGEGR1", "Age Group, n (%)"),
   cat_summary(demog_data, "SEX", "Sex, n (%)"),
-  cat_summary(demog_data, "RACE", "Race, n (%)"),
-  cat_summary(demog_data, "ETHNIC", "Ethnicity, n (%)"),
-  cont_summary(demog_data, "WEIGHT", "Weight (kg)"),
-  cont_summary(demog_data, "HEIGHT", "Height (cm)"),
-  cont_summary(demog_data, "BMI", "BMI (kg/m^2)"),
-  cat_summary(demog_data, "BMI_CAT", "BMI Category, n (%)")
+  cat_summary(demog_data, "RACE", "Race, n (%)")
 ) |>
   rename_arms() |>
   as.data.frame()

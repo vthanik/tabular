@@ -7,24 +7,22 @@
 #' Demographics summary, Safety Population
 #'
 #' Pre-summarised wide-format demographics suitable for direct
-#' passing into [tabular()]. One row per displayed statistic. Eight
-#' parameter blocks:
+#' passing into [tabular()]. One row per displayed statistic. Three
+#' parameter blocks — a deliberately minimal set covering both summary
+#' shapes:
 #'
-#' - continuous: `Age (years)`, `Weight (kg)`, `Height (cm)`,
-#'   `BMI (kg/m^2)` — each emitted as `n`, `Mean (SD)`, `Median`,
-#'   `Q1, Q3`, `Min, Max`
-#' - categorical: `Age Group`, `Sex`, `Race`, `Ethnicity`,
-#'   `BMI Category` — each level rendered as `n (%)`
+#' - continuous: `Age (years)` — emitted as `n`, `Mean (SD)`,
+#'   `Median`, `Q1, Q3`, `Min, Max`
+#' - categorical: `Sex`, `Race` — each level rendered as `n (%)`
 #'
 #' Shaped for the display-only contract: every cell is the final
 #' string that will appear in the rendered table.
 #'
-#' @format A data frame with 35 rows and 6 columns:
+#' @format A data frame with 11 rows and 6 columns:
 #' \describe{
 #'   \item{`variable`}{Display-block label (`"Age (years)"`,
-#'     `"Age Group, n (%)"`, `"Sex, n (%)"`, `"Race, n (%)"`,
-#'     `"Ethnicity, n (%)"`). Driven by `cols(usage = "group")` to
-#'     collapse repeat values at render.}
+#'     `"Sex, n (%)"`, `"Race, n (%)"`). Driven by
+#'     `cols(usage = "group")` to collapse repeat values at render.}
 #'   \item{`stat_label`}{Statistic or level label
 #'     (`"n"`, `"Mean (SD)"`, `"Median"`, `"M"`, `"WHITE"`, ...).}
 #'   \item{`placebo`}{Placebo arm cell text.}
@@ -35,8 +33,7 @@
 #'
 #' @source Derived in `data-raw/bundle-demo.R` from
 #'   `pharmaverseadam::adsl` filtered to `SAFFL == "Y"` and the three
-#'   CDISCPILOT01 treatment arms. Baseline Weight / Height / BMI are
-#'   joined in from `pharmaverseadam::advs`.
+#'   CDISCPILOT01 treatment arms.
 #'
 #' @seealso [cdisc_saf_demo_ard] for the long-format ARD companion;
 #'   [cdisc_saf_n] for the matching BigN denominators.
