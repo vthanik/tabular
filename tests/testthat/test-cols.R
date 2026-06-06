@@ -250,6 +250,47 @@ test_that("a default col_spec() and the explicit concrete spec render identicall
   expect_identical(readLines(f1, warn = FALSE), readLines(f2, warn = FALSE))
 })
 
+# F8 — generic, field-complete merge: every mergeable property survives
+# a second cols() call. This guard iterates the class's OWN property set,
+# so a future col_spec property that the merge forgot would fail here
+# (the historical "9-of-N fields dropped" class of bug).
+
+test_that("every mergeable col_spec property round-trips through merge (#F8)", {
+  # One non-default value per mergeable property.
+  non_default <- list(
+    usage = "group",
+    label = "X",
+    format = function(x) x,
+    visible = FALSE,
+    width = 2.0,
+    group_display = "column",
+    group_skip = TRUE,
+    align = "decimal",
+    valign = "top",
+    na_text = "-",
+    indent = 2L
+  )
+  mergeable <- setdiff(
+    S7::prop_names(col_spec()),
+    c("name", "label_deferred", "width_user")
+  )
+  # The test's value table must cover exactly the mergeable properties —
+  # if a property is added to the class, this fails until it's listed,
+  # forcing a conscious decision.
+  expect_setequal(names(non_default), mergeable)
+
+  for (p in mergeable) {
+    base <- col_spec()
+    incoming <- do.call(col_spec, stats::setNames(list(non_default[[p]]), p))
+    merged <- tabular:::.merge_col_spec(base, incoming)
+    expect_identical(
+      S7::prop(merged, p),
+      S7::prop(incoming, p),
+      info = p
+    )
+  }
+})
+
 # Dynamic names: rlang `:=` and `!!!` splice --------------------------
 # Programmatic column names (built from a variable, looped, or spliced
 # from a list) must work the way they do in dplyr. Regression for the

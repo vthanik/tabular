@@ -616,55 +616,50 @@ cols_apply <- function(.spec, .cols, .col_spec) {
   S7::set_props(incoming, label = resolved, label_deferred = FALSE)
 }
 
-# Merge `new` into `existing` field-by-field. A non-default value in
-# `new` overrides the corresponding field in `existing`; a default
-# (NA / NULL / "") leaves the existing field unchanged. Defaults map
-# to the constructor defaults of col_spec(). `name` always takes the
-# new value (cols() just stamped it).
+# TRUE when a col_spec property value on the INCOMING spec is "set"
+# (i.e. not its unset merge sentinel) and should override the existing
+# value. Single source of truth for the merge — `.merge_col_spec()`
+# consults this for every property, so adding a col_spec property is
+# merged automatically with no second hand-maintained list to drift.
+#
+#   width  — sentinel is the literal "auto" (the constructor default).
+#   format — sentinel is NULL (and a function is never NA-testable).
+#   others — sentinel is NA (length-1 scalars: usage, label, visible,
+#            group_display, group_skip, align, valign, na_text, indent).
+.prop_is_set <- function(p, v) {
+  if (p == "width") {
+    return(!identical(v, "auto"))
+  }
+  if (p == "format") {
+    return(!is.null(v))
+  }
+  length(v) == 1L && !is.na(v)
+}
+
+# Merge `new` into `existing` field-by-field, generated from the class's
+# own property set so it is field-complete by construction (no parallel
+# hand-maintained list to drift out of sync). `name` always takes the
+# new value (cols() just stamped it). Every other property overrides
+# only when `.prop_is_set()` says the incoming value is non-sentinel.
+# The two paired snapshot fields ride with their primary: `label_deferred`
+# with `label`, `width_user` with `width`.
 .merge_col_spec <- function(existing, new) {
-  out <- existing
-  out <- S7::set_props(out, name = new@name)
-  if (!is.na(new@usage)) {
-    out <- S7::set_props(out, usage = new@usage)
-  }
-  if (!is.na(new@label)) {
-    out <- S7::set_props(
-      out,
-      label = new@label,
-      label_deferred = new@label_deferred
-    )
-  }
-  if (!is.null(new@format)) {
-    out <- S7::set_props(out, format = new@format)
-  }
-  if (length(new@visible) == 1L && !is.na(new@visible)) {
-    out <- S7::set_props(out, visible = new@visible)
-  }
-  # `"auto"` (the col_spec() default) is the merge sentinel: a later call
-  # carrying the default width leaves a previously pinned width intact, and
-  # only an explicit non-`"auto"` width overrides. `width_user` is the
-  # immutable snapshot of the user width; keep it in lockstep with `width`
-  # so the HTML percent-width path stays correct.
-  if (!is.na(new@width) && !identical(new@width, "auto")) {
-    out <- S7::set_props(out, width = new@width, width_user = new@width_user)
-  }
-  if (!is.na(new@align)) {
-    out <- S7::set_props(out, align = new@align)
-  }
-  if (!is.na(new@valign)) {
-    out <- S7::set_props(out, valign = new@valign)
-  }
-  if (length(new@group_display) == 1L && !is.na(new@group_display)) {
-    out <- S7::set_props(out, group_display = new@group_display)
-  }
-  if (!is.na(new@group_skip)) {
-    out <- S7::set_props(out, group_skip = new@group_skip)
-  }
-  if (!is.na(new@na_text)) {
-    out <- S7::set_props(out, na_text = new@na_text)
-  }
-  if (length(new@indent) == 1L && !is.na(new@indent)) {
-    out <- S7::set_props(out, indent = new@indent)
+  out <- S7::set_props(existing, name = new@name)
+  props <- setdiff(
+    S7::prop_names(new),
+    c("name", "label_deferred", "width_user")
+  )
+  for (p in props) {
+    v <- S7::prop(new, p)
+    if (!.prop_is_set(p, v)) {
+      next
+    }
+    S7::prop(out, p) <- v
+    if (p == "label") {
+      out <- S7::set_props(out, label_deferred = new@label_deferred)
+    } else if (p == "width") {
+      out <- S7::set_props(out, width_user = new@width_user)
+    }
   }
   out
 }
