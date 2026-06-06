@@ -7,7 +7,10 @@
 #
 #   Rscript data-raw/readme-hero.R
 
-library(tabular)
+# Load the SOURCE tree, not the installed package: the hero must always
+# reflect the current data/ and R/, never a stale install (an installed
+# cdisc_saf_demo once leaked old demographic blocks into the rendered hero).
+pkgload::load_all(".", quiet = TRUE)
 
 # Same pipeline as the README "A table in one pipeline" chunk.
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
