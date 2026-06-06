@@ -249,12 +249,10 @@ dataset carries per-arm-per-page counts, so build it inline (this is also the
 shape `big_n` expects):
 
 ```{r}
-big_n <- data.frame(
-  sex = c("F", "M"),
-  placebo = c(53L, 33L),
-  drug_50 = c(50L, 46L),
-  drug_100 = c(40L, 32L),
-  Total = c(143L, 111L)
+big_n <- tibble::tribble(
+  ~sex, ~placebo, ~drug_50, ~drug_100, ~Total,
+  "F",       53L,      50L,       40L,    143L,
+  "M",       33L,      46L,       32L,    111L
 )
 
 tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>
