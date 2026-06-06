@@ -299,6 +299,11 @@ as_grid <- function(.spec) {
   # default col_spec (visible = NA) must already read as TRUE here.
   # Boundary (B) is inside `.cols_by_name()` for the synthesized defaults
   # of unlisted columns, which never appear in spec@cols.
+  #
+  # F3: warn (once per render) about inert group_display / group_skip on
+  # non-group columns BEFORE finalize, while the "was it set" signal
+  # (group_display NA = unset) still survives.
+  .warn_inert_group_knobs(spec@cols, call)
   spec <- S7::set_props(spec, cols = .finalize_col_specs(spec@cols))
   groups <- engine_subgroup_split(spec)
   # Assign footnote markers ONCE, at the spec level, in reading order

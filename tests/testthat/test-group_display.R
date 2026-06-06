@@ -42,6 +42,54 @@ test_that("col_spec(group_display = NA) is the unset sentinel (accepted)", {
   expect_true(is.na(cs@group_display))
 })
 
+# F3 — warn (at render) when group_display / group_skip is set off a
+# non-group column. Render-time, not construction-time, so the staged
+# build pattern (a later cols() call setting group_display after an
+# earlier usage = "group") never spuriously warns.
+
+mk_inert_spec <- function(...) {
+  tabular(data.frame(
+    g = c("a", "b"),
+    x = c("1", "2"),
+    stringsAsFactors = FALSE
+  )) |>
+    cols(g = col_spec(...))
+}
+
+test_that("group_display off a non-group column warns at render (#F3)", {
+  spec <- mk_inert_spec(group_display = "column")
+  out <- withr::local_tempfile(fileext = ".md")
+  expect_warning(emit(spec, out), class = "tabular_warning_input")
+})
+
+test_that("group_skip off a non-group column warns at render (#F3)", {
+  spec <- mk_inert_spec(group_skip = TRUE)
+  out <- withr::local_tempfile(fileext = ".md")
+  expect_warning(emit(spec, out), class = "tabular_warning_input")
+})
+
+test_that("group_display on a group column does NOT warn at render (#F3)", {
+  spec <- mk_inert_spec(usage = "group", group_display = "column")
+  out <- withr::local_tempfile(fileext = ".md")
+  expect_no_warning(emit(spec, out))
+})
+
+test_that("the staged build (group_display set after usage='group') does NOT warn (#F3)", {
+  spec <- tabular(
+    data.frame(g = c("a", "b"), x = c("1", "2"), stringsAsFactors = FALSE)
+  ) |>
+    cols(g = col_spec(usage = "group")) |>
+    cols(g = col_spec(group_display = "column"))
+  out <- withr::local_tempfile(fileext = ".md")
+  expect_no_warning(emit(spec, out))
+})
+
+test_that("constructing col_spec(group_display=...) alone does NOT warn (#F3)", {
+  # Warning is deferred to render so isolated construction is quiet.
+  expect_no_warning(col_spec(group_display = "column"))
+  expect_no_warning(col_spec(group_skip = TRUE))
+})
+
 # ---------------------------------------------------------------------
 # engine_group_display() — three modes
 # ---------------------------------------------------------------------

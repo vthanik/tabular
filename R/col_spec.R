@@ -236,7 +236,8 @@
 #'   width intact, and only an explicit non-`"auto"` width overrides.
 #'
 #' @param group_display *How `usage = "group"` values render in the body.*
-#'   `<character(1)>: default NA`. Active only when `usage = "group"`.
+#'   `<character(1)>: default NA`. Active only when `usage = "group"` —
+#'   setting it on a non-group column is ignored and warns.
 #'   `NA` (default) is the merge "unset" sentinel and resolves to
 #'   `"header_row"` at render; an explicit value is mergeable, so a later
 #'   [`cols()`] call can reset it back to `"header_row"`.
@@ -278,8 +279,8 @@
 #'   ```
 #'
 #' @param group_skip *Insert a blank row between consecutive groups.*
-#'   `<logical(1)>: default NA`. Active only when `usage = "group"`;
-#'   ignored otherwise. Three values:
+#'   `<logical(1)>: default NA`. Active only when `usage = "group"` —
+#'   setting it on a non-group column is ignored and warns. Three values:
 #'
 #'   *   **`TRUE`** — engine injects one blank row immediately before
 #'       each value transition on this column (PROC REPORT's `BREAK

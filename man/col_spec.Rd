@@ -217,7 +217,8 @@ later call carrying \code{width = "auto"} leaves a previously pinned
 width intact, and only an explicit non-\code{"auto"} width overrides.}
 
 \item{group_display}{\emph{How \code{usage = "group"} values render in the body.}
-\verb{<character(1)>: default NA}. Active only when \code{usage = "group"}.
+\verb{<character(1)>: default NA}. Active only when \code{usage = "group"} —
+setting it on a non-group column is ignored and warns.
 \code{NA} (default) is the merge "unset" sentinel and resolves to
 \code{"header_row"} at render; an explicit value is mergeable, so a later
 \code{\link[=cols]{cols()}} call can reset it back to \code{"header_row"}.
@@ -259,8 +260,8 @@ cols(
 }\if{html}{\out{</div>}}}
 
 \item{group_skip}{\emph{Insert a blank row between consecutive groups.}
-\verb{<logical(1)>: default NA}. Active only when \code{usage = "group"};
-ignored otherwise. Three values:
+\verb{<logical(1)>: default NA}. Active only when \code{usage = "group"} —
+setting it on a non-group column is ignored and warns. Three values:
 \itemize{
 \item \strong{\code{TRUE}} — engine injects one blank row immediately before
 each value transition on this column (PROC REPORT's \verb{BREAK AFTER var / SKIP} semantics, lifted to per-column control).

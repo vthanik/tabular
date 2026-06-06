@@ -697,3 +697,38 @@ cols_apply <- function(.spec, .cols, .col_spec) {
   names(out) <- names(cols)
   out
 }
+
+# F3: warn once per render when a non-group column carries an explicit
+# `group_display` / `group_skip`. Those knobs are inert unless
+# `usage = "group"`, so a forgotten `usage = "group"` would silently
+# no-op. Checked on the MERGED spec@cols BEFORE the finalize pass (which
+# resolves `group_display` NA -> "header_row" and would erase the
+# "was it set" signal). Render-time, not construction-time, so the
+# staged-build pattern -- `cols(x = col_spec(group_display = ...))` after
+# an earlier `usage = "group"` -- merges to the right role and never
+# spuriously warns.
+.warn_inert_group_knobs <- function(cols, call) {
+  for (nm in names(cols)) {
+    cs <- cols[[nm]]
+    if (!is_col_spec(cs) || identical(cs@usage, "group")) {
+      next
+    }
+    set_gd <- length(cs@group_display) == 1L && !is.na(cs@group_display)
+    set_gs <- length(cs@group_skip) == 1L && !is.na(cs@group_skip)
+    if (set_gd || set_gs) {
+      ignored <- c(
+        if (set_gd) "group_display",
+        if (set_gs) "group_skip"
+      )
+      cli::cli_warn(
+        c(
+          "{.arg {ignored}} on column {.val {nm}} {?is/are} ignored when {.arg usage} is not {.val group}.",
+          "i" = "Set {.code usage = \"group\"} on {.val {nm}} to use {?it/them}."
+        ),
+        class = "tabular_warning_input",
+        call = call
+      )
+    }
+  }
+  invisible(NULL)
+}
