@@ -1,3 +1,25 @@
+# tabular 0.1.1
+
+## Breaking changes
+
+* `col_spec()` gained a single `indent` argument (an integer for a fixed
+  level on every body row, or a column name for per-row depth); the previous
+  `indent_by` argument and the `usage = "indent"` value were removed in favour
+  of it. An explicit `indent` on a `group_display = "header_row"` host now
+  suppresses the section auto-indent, yielding a single rather than double
+  indent.
+* `paginate()` removed the no-op `panels = "auto"`; `panels` is now a positive
+  integer.
+
+## Minor improvements and bug fixes
+
+* `col_spec()` now warns when `group_display` or `group_skip` is set on a
+  non-group column (the knobs are inert unless `usage = "group"`).
+* `cols()` / `cols_apply()` now restore a column's visibility and reset
+  `group_display` on a later call, and merge every column attribute
+  field-completely (previously a default value could not be merged back and
+  some fields could be dropped).
+
 # tabular 0.1.0
 
 First release. `tabular` renders pre-summarised clinical tables and listings to
