@@ -123,6 +123,7 @@ demo_grid@pages[[1]]$cells_text[1:3, c("stat_label", "placebo")]
 # the full data, and every page carries the full header band grid
 # at `grid@metadata$headers` so backends can re-render the header
 # on every continuation page.
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))

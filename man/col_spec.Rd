@@ -478,6 +478,7 @@ tabular(
 # rendered page. Demonstrates `indent` plus `visible = FALSE`
 # for sort-only columns, fixed width on the wide label column, and
 # decimal alignment on all four arm columns.
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
