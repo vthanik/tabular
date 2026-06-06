@@ -92,19 +92,28 @@ if (requireNamespace("tinytex", quietly = TRUE)) {
 }
 #> 
 #> ── LaTeX packages for PDF output 
-#> v tabularray
-#> v ninecolors
-#> v xcolor
-#> v graphics
-#> v siunitx
-#> v geometry
-#> v hyperref
-#> v iftex
+#> x tabularray
+#> x ninecolors
+#> x xcolor
+#> x graphics
+#> x siunitx
+#> x geometry
+#> x hyperref
+#> x iftex
 #> v base
-#> v fancyhdr
-#> v lastpage
-#> v fontspec
-#> v tex-gyre
-#> v psnfss
-#> ✔ All required LaTeX packages are installed.
+#> x fancyhdr
+#> x lastpage
+#> x fontspec
+#> x tex-gyre
+#> x psnfss
+#> ! Missing 13 LaTeX packages: "tabularray", "ninecolors", "xcolor", "graphics", "siunitx", "geometry", "hyperref", "iftex", "fancyhdr", "lastpage", "fontspec", "tex-gyre", and "psnfss".
+#> Install with `tinytex::tlmgr_install(c('tabularray', 'ninecolors',
+#> 'xcolor', 'graphics', 'siunitx', 'geometry', 'hyperref', 'iftex',
+#> 'fancyhdr', 'lastpage', 'fontspec', 'tex-gyre', 'psnfss'))`.
+#> If the install stalls (commonly on Windows, where the default CTAN
+#> mirror redirects on every call), pin a concrete mirror once with
+#> `tinytex::tlmgr_repo("auto")` then retry.
+#> On an OS-managed TeX Live (RHEL/dnf, Debian/apt) tlmgr is locked:
+#> install a user-space TinyTeX with `tinytex::install_tinytex()`
+#> instead. Never force a locked tlmgr with `--ignore-warning`.
 ```
