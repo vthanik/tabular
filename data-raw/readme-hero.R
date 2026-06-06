@@ -11,10 +11,11 @@ library(tabular)
 
 # Same pipeline as the README "A table in one pipeline" chunk.
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
-# Compact slice for the hero: Age, Sex, Race (the full cdisc_saf_demo is 36 rows).
-keep <- c("Age (years)", "Sex, n (%)", "Race, n (%)")
+# cdisc_saf_demo is already the Age / Sex / Race bare-minimum set; take
+# all of it (the explicit column order keeps placebo, drug_50, drug_100,
+# Total dose-ascending).
 demo <- cdisc_saf_demo[
-  cdisc_saf_demo$variable %in% keep,
+  ,
   c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")
 ]
 
