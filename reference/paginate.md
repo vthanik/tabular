@@ -46,14 +46,9 @@ paginate(
 - panels:
 
   *Number of horizontal panels for wide tables.*
-  `<integer(1) | "auto">: default 1`. With `1`, every column is on every
-  page (single vertical scroll). With `N > 1`, the engine splits
-  non-group columns into `N` chunks and repeats every group column on
-  every panel.
-
-  **Note:** `"auto"` is accepted but treated as `1` until preset-aware
-  column-width metrics land; once they do, `"auto"` will split when the
-  total table width exceeds the printable area.
+  `<integer(1)>: default 1`. With `1`, every column is on every page
+  (single vertical scroll). With `N > 1`, the engine splits non-group
+  columns into `N` chunks and repeats every group column on every panel.
 
 - orphan_floor:
 
@@ -161,9 +156,6 @@ together).
 **`panels` and group stickiness.** With `panels > 1`, the engine splits
 the NON-group columns into approximately equal slices and repeats every
 `usage = "group"` column on every panel for row context.
-`panels = "auto"` defers the decision to preset-aware column-width
-metrics; until those metrics land in a future release the engine treats
-`"auto"` as `1`.
 
 ## See also
 
@@ -211,7 +203,7 @@ tabular(
   footnotes = "Subjects are counted once per SOC and once per PT."
 ) |>
   cols(
-    label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+    label    = col_spec(label = "SOC / PT", indent = "indent_level"),
     soc      = col_spec(usage = "group", visible = FALSE,
                         group_display = "column_repeat"),
     row_type = col_spec(visible = FALSE),

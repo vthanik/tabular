@@ -8,8 +8,8 @@ Disease Control Rate) are encoded via the `groupid` + `group_label` pair
 so a single `usage = "group"` / `group_display = "header_row"` on
 `group_label` synthesises one bold section band per groupid block; the
 body rows render below each band, auto-indented one level by the
-`"header_row"` section itself (no `usage = "indent"` on `stat_label` —
-that would double the indent).
+`"header_row"` section itself (the stub needs no `indent` — the section
+supplies it).
 
 ## Usage
 
@@ -54,7 +54,8 @@ A data frame with 13 rows and 7 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::adrs_onco`
+Derived in `data-raw/bundle-demo.R` from
+[`pharmaverseadam::adrs_onco`](https://pharmaverse.github.io/pharmaverseadam/reference/adrs_onco.html)
 filtered to `PARAMCD == "BOR"`.
 
 ## See also

@@ -50,7 +50,7 @@ into validation helpers.
 
 ## Details
 
-Eleven predicates cover the full S7 surface:
+Twelve predicates cover the full S7 surface:
 
 |  |  |  |
 |----|----|----|
@@ -61,7 +61,6 @@ Eleven predicates cover the full S7 surface:
 | `is_header_node()` | `header_node` | [`headers()`](https://vthanik.github.io/tabular/reference/headers.md) (internal nodes) |
 | `is_sort_spec()` | `sort_spec` | [`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md) |
 | `is_style_node()` | `style_node` | [`style()`](https://vthanik.github.io/tabular/reference/style.md) (per-cell style) |
-| `is_style_predicate()` | `style_predicate` | (legacy) [`style()`](https://vthanik.github.io/tabular/reference/style.md) predicate path |
 | `is_style_layer()` | `style_layer` | [`style()`](https://vthanik.github.io/tabular/reference/style.md) (one per call) |
 | `is_style_spec()` | `style_spec` | [`style()`](https://vthanik.github.io/tabular/reference/style.md) (the cascade root) |
 | `is_pagination_spec()` | `pagination_spec` | [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md) |

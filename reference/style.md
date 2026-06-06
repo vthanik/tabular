@@ -145,13 +145,13 @@ property.
 ``` r
 # ---- AE table by SOC and PT with per-row indent + styled hierarchy ----
 # `cdisc_saf_aesocpt` ships with `indent_level` (0 on overall/SOC rows,
-# 1 on PT rows); `col_spec(indent_by = "indent_level")` drives the
+# 1 on PT rows); `col_spec(indent = "indent_level")` drives the
 # PT indent on the `label` column.
 tabular(cdisc_saf_aesocpt, titles = "Adverse Events by SOC / PT",
         footnotes = "") |>
   cols(
     label    = col_spec(label = "Category", align = "left",
-                        indent_by = "indent_level"),
+                        indent = "indent_level"),
     soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     soc_n    = col_spec(visible = FALSE),

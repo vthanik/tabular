@@ -13,14 +13,14 @@ col_spec(
   usage = NULL,
   label = NA_character_,
   format = NULL,
-  visible = TRUE,
+  visible = NA,
   width = "auto",
-  group_display = "header_row",
+  group_display = NA,
   group_skip = NA,
   align = NULL,
   valign = NULL,
   na_text = NA_character_,
-  indent_by = NA_character_
+  indent = NA
 )
 ```
 
@@ -36,22 +36,8 @@ col_spec(
 
   - **`"group"`** — row-label with repeat-suppression and
     continuation-page repeat keys. Use for `variable`, `soc`,
-    `stat_label`.
-
-  - **`"indent"`** — prefix every body cell of this column with one
-    indent level (`preset@indent_size` space-widths). Composes
-    additively with `indent_by` (a column with both gets `depth_by + 1`
-    indent levels per row). Backends with native padding-left semantics
-    (HTML / LaTeX / RTF / DOCX / PDF) emit this as cell padding so
-    wrapped continuation lines align with the indented baseline;
-    Markdown carries the literal space-prefix. Synthesised group-header
-    rows (under `group_display = "header_row"`) are NEVER indented —
-    they're the parent at depth 0. **Note:** a `"header_row"` section
-    already indents its child rows one level, so do not add
-    `usage = "indent"` to a stub that sits under one — the two stack
-    into a double indent. Reach for `"indent"` only when there is no
-    `"header_row"` section providing the indent, or to add a deliberate
-    extra level.
+    `stat_label`. (Cosmetic indent depth is the separate `indent`
+    argument, not a usage role.)
 
   - **`"id"`** — a row-identifier column. Renders like `"display"` (one
     value per row, never collapses) but joins the *stub*: it repeats on
@@ -62,8 +48,10 @@ col_spec(
     `"SD"`) that must stay legible on every panel of a wide demographics
     or efficacy table.
 
-  - **`NULL`** — inferred as `"display"` in
-    [`cols()`](https://vthanik.github.io/tabular/reference/cols.md).
+  - **`NULL` / `NA`** — the unset sentinel; resolves to `"display"` at
+    render. `NA` is mergeable, so an explicit `"display"` on a later
+    [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) call
+    can override a prior `"group"` / `"id"`.
 
       # Two row-label columns and four arm columns.
       cols(
@@ -166,18 +154,22 @@ col_spec(
 
 - visible:
 
-  *Whether the column renders.* `<logical(1)>: default TRUE`. `FALSE`
+  *Whether the column renders.* `<logical(1)>: default NA`. `FALSE`
   hides the column from output but keeps it in `spec@data` so
   [`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md)
   and [`style()`](https://vthanik.github.io/tabular/reference/style.md)
-  predicates can still reference it.
+  predicates can still reference it. `NA` (default) is the merge "unset"
+  sentinel — it resolves to visible at render and, crucially, is
+  mergeable: a later
+  [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) call
+  with `visible = TRUE` can **re-show** a column an earlier call hid.
 
   **Interaction:** Hidden columns are the standard pattern for sort-key
   helpers (`row_type`, `n_total`) and for the numeric counts behind
   formatted-text percentage cells.
 
-  **Auto-hide.** The depth column named by `indent_by` and every column
-  named by
+  **Auto-hide.** The depth column named by a character `indent` and
+  every column named by
   [`subgroup(by = ...)`](https://vthanik.github.io/tabular/reference/subgroup.md)
   or referenced via a `{col}` placeholder in the subgroup banner
   template are flipped to `visible = FALSE` automatically at engine time
@@ -248,19 +240,23 @@ col_spec(
 - group_display:
 
   *How `usage = "group"` values render in the body.*
-  `<character(1)>: default "header_row"`. Active only when
-  `usage = "group"`; ignored otherwise.
+  `<character(1)>: default NA`. Active only when `usage = "group"` —
+  setting it on a non-group column is ignored and warns. `NA` (default)
+  is the merge "unset" sentinel and resolves to `"header_row"` at
+  render; an explicit value is mergeable, so a later
+  [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) call
+  can reset it back to `"header_row"`.
 
   - **`"header_row"`** *(default)* — each unique value emits as a
     section header row above its block of data rows, and **the body rows
     beneath are automatically indented one level**. The section header
     itself sits flush left at depth 0; its child rows render one indent
     level in. Because the section already supplies that indent, the stub
-    column needs **no** `usage = "indent"` — adding it stacks a second
-    level and produces a double indent. The source column is hidden from
-    the visible body. Matches the canonical submission shape used by
-    clinical TFL house templates (Disposition, Demographics, Statistical
-    Report sections).
+    column needs **no** `indent` — adding `indent = 1` there overrides
+    (does not stack) the auto-indent, leaving a single level. The source
+    column is hidden from the visible body. Matches the canonical
+    submission shape used by clinical TFL house templates (Disposition,
+    Demographics, Statistical Report sections).
 
   - **`"column"`** — column stays visible; repeated values are
     suppressed (only the first row of each value shows the label). PROC
@@ -289,8 +285,8 @@ col_spec(
 - group_skip:
 
   *Insert a blank row between consecutive groups.*
-  `<logical(1)>: default NA`. Active only when `usage = "group"`;
-  ignored otherwise. Three values:
+  `<logical(1)>: default NA`. Active only when `usage = "group"` —
+  setting it on a non-group column is ignored and warns. Three values:
 
   - **`TRUE`** — engine injects one blank row immediately before each
     value transition on this column (PROC REPORT's
@@ -392,36 +388,48 @@ col_spec(
   be ambiguous, e.g. when "not applicable" and "not reported" both
   render blank.
 
-- indent_by:
+- indent:
 
-  *Name of a column in `spec@data` whose per-row integer / logical
-  values drive indent depth on this column.*
-  `<character(1)>: default NA_character_`. When set, the engine reads
-  `spec@data[[indent_by]]` and prefixes this column's text
+  *Cosmetic indent depth on this column.*
+  `<numeric(1) | character(1) | NA>: default NA`. Two modes by type:
 
-  - AST in each row with `strrep(" ", preset@indent_size * depth)`. The
-    referenced depth column is auto-hidden — no need to set
-    `visible = FALSE` on it.
+  - **A non-negative whole number** — every body row of this column is
+    indented that many levels (each level is `preset@indent_size`
+    space-widths). `indent = 1` is the common "nudge this stub in one
+    level" case; `indent = 0` is a real value that flattens children
+    under a `"header_row"` section.
 
-  Typical SOC / PT pattern (the bundled `cdisc_saf_aesocpt` ships with
-  the canonical depth column already attached, so no upstream
-  construction is needed):
+  - **A column name (character)** — per-row depth: the engine reads
+    `spec@data[[indent]]`, coerces each row to a non-negative integer,
+    and prefixes that row's text + AST with
+    `strrep(" ", preset@indent_size * depth)`. The referenced depth
+    column is auto-hidden — no need to set `visible = FALSE` on it.
+
+  `NA` (default) means no indent. Backends with native padding-left
+  (HTML / LaTeX / RTF / DOCX / PDF) emit the depth as cell padding so
+  wrapped continuation lines align with the indented baseline; Markdown
+  carries the literal space-prefix. Synthesised group-header rows are
+  never indented — they are the parent at depth 0.
+
+  **Interaction:** an explicit `indent` on a
+  `group_display = "header_row"` host **suppresses** that section's
+  automatic one-level child indent (you take control of the depth) — so
+  a stub under a section needs no `indent` at all, and adding
+  `indent = 1` there yields a single, not double, indent.
+
+  Per-row SOC / PT pattern (the bundled `cdisc_saf_aesocpt` ships the
+  canonical depth column, so no upstream construction is needed):
 
       cols(
-        label    = col_spec(label = "Category", indent_by = "indent_level"),
+        label    = col_spec(label = "Category", indent = "indent_level"),
         soc      = col_spec(visible = FALSE),
         row_type = col_spec(visible = FALSE)
       )
 
-  Multi-depth nesting works the same way — values `c(0L, 1L, 2L, …)`
-  produce `0`, `1`, `2`, … indent levels of `preset@indent_size`
-  space-widths each. Negative values clamp to 0 (warn); fractional
-  numerics floor (warn); NA → 0 (silent).
-
-  Composes orthogonally with `group_display = "header_row"`: synthetic
-  group headers (depth 0) stay flush as parents; data rows under them
-  carry their column's declared depth. Works in flat listings too —
-  `indent_by` does not require any `usage = "group"` columns.
+  Depth-column values `c(0L, 1L, 2L, …)` produce `0`, `1`, `2`, …
+  levels. Negative values clamp to 0 (warn); fractional numerics floor
+  (warn); NA → 0 (silent). Works in flat listings too — a character
+  `indent` does not require any `usage = "group"` columns.
 
 ## Value
 
@@ -441,9 +449,12 @@ inputs without restating the name.
 **Merge semantics across repeated
 [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) calls.**
 When [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) is
-called twice for the same column, the engine merges field-by-field: a
-non-default value on the new spec overrides; a default-valued field (NA
-/ NULL / "" / `TRUE`) leaves the existing field intact. Build a column's
+called twice for the same column, the engine merges field-by-field: any
+field set to a non-default value on the new spec overrides; a field left
+at its "unset" sentinel (`NA` / `NULL` / `"auto"`) leaves the existing
+value intact. Because every mergeable field has a genuine unset
+sentinel, a later call can also *restore* a default — e.g.
+`visible = TRUE` re-shows a column an earlier call hid. Build a column's
 spec in stages without re-stating earlier attributes.
 
 **Validation timing.** Argument shapes are validated eagerly — a

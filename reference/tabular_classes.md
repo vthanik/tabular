@@ -30,7 +30,6 @@ one mental model:
 | `header_node` | one node in the multi-level header tree | internal — built by [`headers()`](https://vthanik.github.io/tabular/reference/headers.md) |
 | `sort_spec` | sort keys + per-key direction | internal — built by [`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md) |
 | `style_node` | one resolved style attribute set (per-cell) | internal — built by [`style()`](https://vthanik.github.io/tabular/reference/style.md) |
-| `style_predicate` | (legacy) one `where` quosure + scope + style_node | internal — built by [`style()`](https://vthanik.github.io/tabular/reference/style.md) |
 | `style_layer` | one `tabular_location` + style_node | internal — built by [`style()`](https://vthanik.github.io/tabular/reference/style.md) |
 | `style_spec` | the cascade root (defaults + cols + headers + layers) | internal — built by [`style()`](https://vthanik.github.io/tabular/reference/style.md) |
 | `pagination_spec` | page-split policy (keep_together, panels, floors) | internal — built by [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md) |

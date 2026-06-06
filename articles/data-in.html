@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/DM_Mono-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,7 +72,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/main/vignettes/articles/data-in.qmd" class="external-link"><code>vignettes/articles/data-in.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/HEAD/vignettes/articles/data-in.qmd" class="external-link"><code>vignettes/articles/data-in.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -98,33 +98,33 @@
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code>cards::ard_summary()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/ard_summary.html" class="external-link">cards::ard_summary()</a></code></td>
 <td><code>summary</code></td>
 </tr>
 <tr class="even">
-<td><code>cards::ard_tabulate()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/ard_tabulate.html" class="external-link">cards::ard_tabulate()</a></code></td>
 <td><code>tabulate</code></td>
 </tr>
 <tr class="odd">
-<td><code>cards::ard_continuous()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html" class="external-link">cards::ard_continuous()</a></code></td>
 <td><code>continuous</code></td>
 </tr>
 <tr class="even">
-<td><code>cards::ard_categorical()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html" class="external-link">cards::ard_categorical()</a></code></td>
 <td><code>categorical</code></td>
 </tr>
 <tr class="odd">
-<td><code>cards::ard_stack_hierarchical()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack_hierarchical.html" class="external-link">cards::ard_stack_hierarchical()</a></code></td>
 <td>
 <code>tabulate</code> + <code>hierarchical</code>
 </td>
 </tr>
 <tr class="even">
-<td><code>cardx::ard_categorical_ci()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cardx/latest-tag/reference/ard_categorical_ci.html" class="external-link">cardx::ard_categorical_ci()</a></code></td>
 <td><code>proportion_ci</code></td>
 </tr>
 <tr class="odd">
-<td><code>cardx::ard_continuous_ci()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cardx/latest-tag/reference/ard_continuous_ci.html" class="external-link">cardx::ard_continuous_ci()</a></code></td>
 <td><code>continuous_ci</code></td>
 </tr>
 </tbody>
@@ -136,12 +136,12 @@
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># how it was built (data-raw):</span></span>
-<span><span class="va">cdisc_saf_demo_ard</span> <span class="op">&lt;-</span> <span class="fu">cards</span><span class="fu">::</span><span class="fu">ard_stack</span><span class="op">(</span></span>
+<span><span class="va">cdisc_saf_demo_ard</span> <span class="op">&lt;-</span> <span class="fu">cards</span><span class="fu">::</span><span class="fu"><a href="https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html" class="external-link">ard_stack</a></span><span class="op">(</span></span>
 <span>  <span class="va">adsl</span>,</span>
 <span>  .by <span class="op">=</span> <span class="va">TRT01A</span>,</span>
-<span>  <span class="fu">cards</span><span class="fu">::</span><span class="fu">ard_continuous</span><span class="op">(</span></span>
+<span>  <span class="fu">cards</span><span class="fu">::</span><span class="fu"><a href="https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html" class="external-link">ard_continuous</a></span><span class="op">(</span></span>
 <span>    variables <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">AGE</span>, <span class="va">BMI</span><span class="op">)</span>,</span>
-<span>    statistic <span class="op">=</span> <span class="op">~</span> <span class="fu">cards</span><span class="fu">::</span><span class="fu">continuous_summary_fns</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    statistic <span class="op">=</span> <span class="op">~</span> <span class="fu">cards</span><span class="fu">::</span><span class="fu"><a href="https://insightsengineering.github.io/cards/latest-tag/reference/summary_functions.html" class="external-link">continuous_summary_fns</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>      <span class="st">"N"</span>,</span>
 <span>      <span class="st">"mean"</span>,</span>
 <span>      <span class="st">"sd"</span>,</span>
@@ -150,7 +150,7 @@
 <span>      <span class="st">"max"</span></span>
 <span>    <span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  <span class="fu">cards</span><span class="fu">::</span><span class="fu">ard_categorical</span><span class="op">(</span>variables <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">AGEGR1</span>, <span class="va">SEX</span>, <span class="va">RACE</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu">cards</span><span class="fu">::</span><span class="fu"><a href="https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html" class="external-link">ard_categorical</a></span><span class="op">(</span>variables <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">AGEGR1</span>, <span class="va">SEX</span>, <span class="va">RACE</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="cell">
@@ -202,7 +202,7 @@
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># from cardx:</span></span>
-<span><span class="va">orr_ard</span> <span class="op">&lt;-</span> <span class="fu">cardx</span><span class="fu">::</span><span class="fu">ard_categorical_ci</span><span class="op">(</span></span>
+<span><span class="va">orr_ard</span> <span class="op">&lt;-</span> <span class="fu">cardx</span><span class="fu">::</span><span class="fu"><a href="https://insightsengineering.github.io/cardx/latest-tag/reference/ard_categorical_ci.html" class="external-link">ard_categorical_ci</a></span><span class="op">(</span></span>
 <span>  <span class="va">resp</span>,</span>
 <span>  by <span class="op">=</span> <span class="st">"TRT01A"</span>,</span>
 <span>  variables <span class="op">=</span> <span class="st">"RESP"</span>,</span>
@@ -245,7 +245,7 @@
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt_ard</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span><span class="va">ae</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt_ard</span>, statistic <span class="op">=</span> <span class="st">"{n} ({p}%)"</span><span class="op">)</span></span>
-<span><span class="va">ae</span><span class="op">$</span><span class="va">indent</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">ae</span><span class="op">$</span><span class="va">row_type</span> <span class="op">==</span> <span class="st">"pt"</span><span class="op">)</span> <span class="co"># depth for col_spec(indent_by=)</span></span>
+<span><span class="va">ae</span><span class="op">$</span><span class="va">indent_level</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">ae</span><span class="op">$</span><span class="va">row_type</span> <span class="op">==</span> <span class="st">"pt"</span><span class="op">)</span> <span class="co"># depth for col_spec(indent = "indent_level")</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">ae</span>, <span class="fl">6</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                                      soc                                  label</span></span>
 <span><span class="co">#&gt; 1                                Overall                                Overall</span></span>
@@ -254,15 +254,15 @@
 <span><span class="co">#&gt; 4 SKIN AND SUBCUTANEOUS TISSUE DISORDERS                               ERYTHEMA</span></span>
 <span><span class="co">#&gt; 5 SKIN AND SUBCUTANEOUS TISSUE DISORDERS                                   RASH</span></span>
 <span><span class="co">#&gt; 6 SKIN AND SUBCUTANEOUS TISSUE DISORDERS                          HYPERHIDROSIS</span></span>
-<span><span class="co">#&gt;   row_type  Placebo Xanomeline High Dose Xanomeline Low Dose indent</span></span>
-<span><span class="co">#&gt; 1  overall 52 (60%)             66 (92%)            81 (84%)      0</span></span>
-<span><span class="co">#&gt; 2      soc 19 (22%)             35 (49%)            36 (38%)      0</span></span>
-<span><span class="co">#&gt; 3       pt   8 (9%)             25 (35%)            21 (22%)      1</span></span>
-<span><span class="co">#&gt; 4       pt   8 (9%)             14 (19%)            14 (15%)      1</span></span>
-<span><span class="co">#&gt; 5       pt   5 (6%)              8 (11%)            13 (14%)      1</span></span>
-<span><span class="co">#&gt; 6       pt   2 (2%)              8 (11%)              4 (4%)      1</span></span></code></pre></div>
+<span><span class="co">#&gt;   row_type  Placebo Xanomeline High Dose Xanomeline Low Dose indent_level</span></span>
+<span><span class="co">#&gt; 1  overall 52 (60%)             66 (92%)            81 (84%)            0</span></span>
+<span><span class="co">#&gt; 2      soc 19 (22%)             35 (49%)            36 (38%)            0</span></span>
+<span><span class="co">#&gt; 3       pt   8 (9%)             25 (35%)            21 (22%)            1</span></span>
+<span><span class="co">#&gt; 4       pt   8 (9%)             14 (19%)            14 (15%)            1</span></span>
+<span><span class="co">#&gt; 5       pt   5 (6%)              8 (11%)            13 (14%)            1</span></span>
+<span><span class="co">#&gt; 6       pt   2 (2%)              8 (11%)              4 (4%)            1</span></span></code></pre></div>
 </div>
-<p>(Turning <code>soc</code>/<code>label</code>/<code>indent</code> into the indented stub is in <a href="structure.html">Structure</a>.)</p>
+<p>(Turning <code>soc</code>/<code>label</code>/<code>indent_level</code> into the indented stub is in <a href="structure.html">Structure</a>.)</p>
 </section><section class="level2"><h2 id="a-two-variable--by">A two-variable <code>.by</code>
 <a class="anchor" aria-label="anchor" href="#a-two-variable--by"></a>
 </h2>

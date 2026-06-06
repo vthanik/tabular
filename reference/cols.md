@@ -30,8 +30,9 @@ cols(.spec, ..., .default = NULL)
 
   *Named `col_spec` objects, one per column.* Each name is the input
   column name in `.spec@data`. Names must match an existing column —
-  pre-compute derived columns upstream with `dplyr::mutate()` (or
-  equivalent) before
+  pre-compute derived columns upstream with
+  [`dplyr::mutate()`](https://dplyr.tidyverse.org/reference/mutate.html)
+  (or equivalent) before
   [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md).
 
   **Restriction:** Names must be unique within a single `cols()` call
@@ -82,26 +83,36 @@ below apply.
 ## Repeat-call merge semantics
 
 When `cols()` is called more than once for the same column, the engine
-merges the new `col_spec` into the existing one field-by- field. A
-non-default value on the new spec overrides; a default- valued field
-leaves the existing field intact. This lets you build a column's spec in
-stages — declare the label-and-alignment block up front, add the width
-once you know it fits, then attach a sort key, all without re-stating
-earlier attributes. Essential when generating specs programmatically
-(looping over arms, layering a house-style helper).
+merges the new `col_spec` into the existing one field-by- field. A field
+set to a non-default value on the new spec overrides; a field left at
+its "unset" sentinel leaves the existing value intact. Every mergeable
+field has a genuine unset sentinel, so a later call can also *restore* a
+default (e.g. `visible = TRUE` re-shows a hidden column,
+`group_display = "header_row"` resets a prior `"column"`). This lets you
+build a column's spec in stages — declare the label-and-alignment block
+up front, add the width once you know it fits, then attach a sort key,
+all without re-stating earlier attributes. Essential when generating
+specs programmatically (looping over arms, layering a house-style
+helper).
 
-Default values that do NOT override the existing field:
+Unset sentinels — a field left at this value does NOT override the
+existing field (every other value, including a default like
+`visible = TRUE`, overrides):
 
-|           |                                  |
-|-----------|----------------------------------|
-| field     | default that does not override   |
-| `usage`   | `NA_character_`                  |
-| `label`   | `NA_character_`                  |
-| `format`  | `NULL`                           |
-| `visible` | `TRUE`                           |
-| `width`   | `NA_real_`                       |
-| `align`   | `NA_character_`                  |
-| `na_text` | `NA_character_` (inherit preset) |
+|                 |                                  |
+|-----------------|----------------------------------|
+| field           | unset sentinel                   |
+| `usage`         | `NA`                             |
+| `label`         | `NA_character_`                  |
+| `format`        | `NULL`                           |
+| `visible`       | `NA`                             |
+| `width`         | `"auto"`                         |
+| `group_display` | `NA`                             |
+| `group_skip`    | `NA`                             |
+| `align`         | `NA_character_`                  |
+| `valign`        | `NA_character_`                  |
+| `na_text`       | `NA_character_` (inherit preset) |
+| `indent`        | `NA`                             |
 
     # Three-stage build: label/usage first, alignment second, width
     # third. Each stage leaves earlier fields intact.

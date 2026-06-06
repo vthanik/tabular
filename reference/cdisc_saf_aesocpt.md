@@ -6,8 +6,8 @@ its preferred-term detail rows. Top 10 SOCs and top 5 PTs per SOC are
 kept; `row_type` marks the role of each row and `indent_level` carries
 the canonical depth (0 for overall and SOC, 1 for PT) so the downstream
 pipeline drives the SOC -\> PT indent via
-`col_spec(indent_by = "indent_level")` without reconstructing it in
-every script. The richer SOC × PT slice exercises
+`col_spec(indent = "indent_level")` without reconstructing it in every
+script. The richer SOC × PT slice exercises
 [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
 and the engine's horizontal-panel splitter end-to-end on a realistic
 submission shell.
@@ -32,7 +32,7 @@ A data frame with 61 rows and 10 columns:
 
   The row's display label. Equal to `soc` on the overall and SOC-summary
   rows; equal to the preferred-term name on PT detail rows. Promoted to
-  the primary display column — pair with `indent_by = "indent_level"` to
+  the primary display column — pair with `indent = "indent_level"` to
   drive the SOC -\> PT indent.
 
 - `row_type`:
@@ -43,8 +43,8 @@ A data frame with 61 rows and 10 columns:
 - `indent_level`:
 
   Integer depth (0 on overall and SOC rows, 1 on PT rows). Consumed by
-  `col_spec(indent_by = "indent_level")` on the `label` column; the
-  engine auto-hides this column at resolve time.
+  `col_spec(indent = "indent_level")` on the `label` column; the engine
+  auto-hides this column at resolve time.
 
 - `n_total`:
 
@@ -73,7 +73,8 @@ A data frame with 61 rows and 10 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::adae`.
+Derived in `data-raw/bundle-demo.R` from
+[`pharmaverseadam::adae`](https://pharmaverse.github.io/pharmaverseadam/reference/adae.html).
 Filtered to the top 10 SOCs by total incidence and the top 5 PTs per
 SOC. Body rows are pre-sorted with the cards-style two-level rule
 (`arrange(desc(soc_n), soc, desc(n_total))`) so the canonical render
@@ -109,7 +110,7 @@ tabular(
   cols(
     label    = col_spec(
       label = "SOC / PT",
-      indent_by = "indent_level",
+      indent = "indent_level",
       align = "left"
     ),
     soc      = col_spec(visible = FALSE),

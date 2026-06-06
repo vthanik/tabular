@@ -28,15 +28,15 @@ ARD’s `context` column **verbatim**. That value depends on which
 function built the ARD — use the wrong key and those rows are dropped
 **silently**. Always check `unique(ard$context)` first.
 
-| Generating function               | `context`                   |
-|-----------------------------------|-----------------------------|
-| `cards::ard_summary()`            | `summary`                   |
-| `cards::ard_tabulate()`           | `tabulate`                  |
-| `cards::ard_continuous()`         | `continuous`                |
-| `cards::ard_categorical()`        | `categorical`               |
-| `cards::ard_stack_hierarchical()` | `tabulate` + `hierarchical` |
-| `cardx::ard_categorical_ci()`     | `proportion_ci`             |
-| `cardx::ard_continuous_ci()`      | `continuous_ci`             |
+| Generating function | `context` |
+|----|----|
+| [`cards::ard_summary()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_summary.html) | `summary` |
+| [`cards::ard_tabulate()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_tabulate.html) | `tabulate` |
+| [`cards::ard_continuous()`](https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html) | `continuous` |
+| [`cards::ard_categorical()`](https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html) | `categorical` |
+| [`cards::ard_stack_hierarchical()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack_hierarchical.html) | `tabulate` + `hierarchical` |
+| [`cardx::ard_categorical_ci()`](https://insightsengineering.github.io/cardx/latest-tag/reference/ard_categorical_ci.html) | `proportion_ci` |
+| [`cardx::ard_continuous_ci()`](https://insightsengineering.github.io/cardx/latest-tag/reference/ard_continuous_ci.html) | `continuous_ci` |
 
 A single string, or `statistic = list(default = ...)`, applies one
 format to every context.
@@ -176,7 +176,7 @@ a single `variable`), ready for an indented SOC ▸ PT layout:
 
 data(cdisc_saf_aesocpt_ard, package = "tabular")
 ae <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
-ae$indent <- as.integer(ae$row_type == "pt") # depth for col_spec(indent_by=)
+ae$indent_level <- as.integer(ae$row_type == "pt") # depth for col_spec(indent = "indent_level")
 head(ae, 6)
 #>                                      soc                                  label
 #> 1                                Overall                                Overall
@@ -185,16 +185,16 @@ head(ae, 6)
 #> 4 SKIN AND SUBCUTANEOUS TISSUE DISORDERS                               ERYTHEMA
 #> 5 SKIN AND SUBCUTANEOUS TISSUE DISORDERS                                   RASH
 #> 6 SKIN AND SUBCUTANEOUS TISSUE DISORDERS                          HYPERHIDROSIS
-#>   row_type  Placebo Xanomeline High Dose Xanomeline Low Dose indent
-#> 1  overall 52 (60%)             66 (92%)            81 (84%)      0
-#> 2      soc 19 (22%)             35 (49%)            36 (38%)      0
-#> 3       pt   8 (9%)             25 (35%)            21 (22%)      1
-#> 4       pt   8 (9%)             14 (19%)            14 (15%)      1
-#> 5       pt   5 (6%)              8 (11%)            13 (14%)      1
-#> 6       pt   2 (2%)              8 (11%)              4 (4%)      1
+#>   row_type  Placebo Xanomeline High Dose Xanomeline Low Dose indent_level
+#> 1  overall 52 (60%)             66 (92%)            81 (84%)            0
+#> 2      soc 19 (22%)             35 (49%)            36 (38%)            0
+#> 3       pt   8 (9%)             25 (35%)            21 (22%)            1
+#> 4       pt   8 (9%)             14 (19%)            14 (15%)            1
+#> 5       pt   5 (6%)              8 (11%)            13 (14%)            1
+#> 6       pt   2 (2%)              8 (11%)              4 (4%)            1
 ```
 
-(Turning `soc`/`label`/`indent` into the indented stub is in
+(Turning `soc`/`label`/`indent_level` into the indented stub is in
 [Structure](https://vthanik.github.io/tabular/articles/structure.md).)
 
 ## A two-variable `.by`

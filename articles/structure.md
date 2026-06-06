@@ -68,13 +68,14 @@ number of arms.
 
 > **Indent from exactly one source.** `group_display = "header_row"`
 > already indents its child rows one level, so the stub column (here
-> `stat_label`) needs **no** `usage = "indent"` — adding it stacks a
-> second level (a double indent). The same trap applies to labels from
+> `stat_label`) needs **no** `indent` — the section supplies it. (An
+> explicit `indent` on the host *overrides* that auto-indent rather than
+> stacking, so `indent = 1` there still yields a single level.) The same
+> care applies to labels from
 > [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md),
 > which come out with a leading indent baked into the string: keep them
-> as-is (`usage = "display"`/`"id"`) or
-> [`trimws()`](https://rdrr.io/r/base/trimws.html) them and let the
-> engine indent. Never combine two indent sources on the same column.
+> as-is or [`trimws()`](https://rdrr.io/r/base/trimws.html) them and set
+> `indent` yourself — don’t double up.
 
 ## BigN in the column headers
 
@@ -223,7 +224,7 @@ ae_pages <- tabular(cdisc_saf_aesocpt, titles = "AEs by SOC and PT") |>
   cols(
     label = col_spec(
       label = "SOC / Preferred Term",
-      indent_by = "indent_level"
+      indent = "indent_level"
     ),
     soc = col_spec(
       usage = "group",
@@ -392,9 +393,9 @@ Two things to know:
 - **`panels = N` splits into `N` *equal* chunks** — there is no explicit
   split position (no “first 5, then the rest”). Equal split is fine for
   page-fit; if you need a specific boundary, that is a known limitation.
-- **`panels = "auto"` is currently a no-op** (treated as `1`): it does
-  *not* auto-fit, it just leaves every column on one page (and the table
-  may overflow with a warning). Always pass an explicit integer.
+- **`panels` is a positive integer** (default `1` = no split).
+  Width-aware automatic splitting is a planned future feature, not a
+  current option.
 
 ## Subgroups and per-page BigN
 

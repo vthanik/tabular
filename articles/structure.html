@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/DM_Mono-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,7 +72,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/main/vignettes/articles/structure.qmd" class="external-link"><code>vignettes/articles/structure.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/HEAD/vignettes/articles/structure.qmd" class="external-link"><code>vignettes/articles/structure.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -303,7 +303,7 @@
 </div>
 <p><code><a href="../reference/cols_apply.html">cols_apply()</a></code> attaches one shared <code>col_spec</code> to <strong>all</strong> the arm columns at once — use it instead of repeating <code>cols(placebo = …, drug_50 = …)</code> for a variable number of arms.</p>
 <blockquote>
-<p><strong>Indent from exactly one source.</strong> <code>group_display = "header_row"</code> already indents its child rows one level, so the stub column (here <code>stat_label</code>) needs <strong>no</strong> <code>usage = "indent"</code> — adding it stacks a second level (a double indent). The same trap applies to labels from <code><a href="../reference/pivot_across.html">pivot_across()</a></code>, which come out with a leading indent baked into the string: keep them as-is (<code>usage = "display"</code>/<code>"id"</code>) or <code><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws()</a></code> them and let the engine indent. Never combine two indent sources on the same column.</p>
+<p><strong>Indent from exactly one source.</strong> <code>group_display = "header_row"</code> already indents its child rows one level, so the stub column (here <code>stat_label</code>) needs <strong>no</strong> <code>indent</code> — the section supplies it. (An explicit <code>indent</code> on the host <em>overrides</em> that auto-indent rather than stacking, so <code>indent = 1</code> there still yields a single level.) The same care applies to labels from <code><a href="../reference/pivot_across.html">pivot_across()</a></code>, which come out with a leading indent baked into the string: keep them as-is or <code><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws()</a></code> them and set <code>indent</code> yourself — don’t double up.</p>
 </blockquote>
 </section><section class="level2"><h2 id="bign-in-the-column-headers">BigN in the column headers<a class="anchor" aria-label="anchor" href="#bign-in-the-column-headers"></a>
 </h2>
@@ -900,7 +900,7 @@
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
 <span>    label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
 <span>      label <span class="op">=</span> <span class="st">"SOC / Preferred Term"</span>,</span>
-<span>      indent_by <span class="op">=</span> <span class="st">"indent_level"</span></span>
+<span>      indent <span class="op">=</span> <span class="st">"indent_level"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    soc <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
 <span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
@@ -1625,7 +1625,7 @@
 <li>
 <strong><code>panels = N</code> splits into <code>N</code> <em>equal</em> chunks</strong> — there is no explicit split position (no “first 5, then the rest”). Equal split is fine for page-fit; if you need a specific boundary, that is a known limitation.</li>
 <li>
-<strong><code>panels = "auto"</code> is currently a no-op</strong> (treated as <code>1</code>): it does <em>not</em> auto-fit, it just leaves every column on one page (and the table may overflow with a warning). Always pass an explicit integer.</li>
+<strong><code>panels</code> is a positive integer</strong> (default <code>1</code> = no split). Width-aware automatic splitting is a planned future feature, not a current option.</li>
 </ul></section><section class="level2"><h2 id="subgroups-and-per-page-bign">Subgroups and per-page BigN<a class="anchor" aria-label="anchor" href="#subgroups-and-per-page-bign"></a>
 </h2>
 <p><code><a href="../reference/subgroup.html">subgroup()</a></code> partitions the table — one page block per value, with a banner and a hard page break. A partition-constant column can ride into the banner:</p>
