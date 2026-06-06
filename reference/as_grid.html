@@ -177,12 +177,12 @@ the same pipeline.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">demo_grid</span> <span class="op">&lt;-</span> <span class="fu">as_grid</span><span class="op">(</span><span class="va">demo</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">demo_grid</span><span class="op">@</span><span class="va">metadata</span><span class="op">$</span><span class="va">total_pages</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
 <span class="r-in"><span><span class="va">demo_grid</span><span class="op">@</span><span class="va">pages</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">cells_text</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"stat_label"</span>, <span class="st">"placebo"</span><span class="op">)</span><span class="op">]</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      stat_label    placebo        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] "Age (years)" ""             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] "  Mean (SD)" " 75.2 (8.59) "</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] "  Median"    " 76.0        "</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      stat_label    placebo      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] "Age (years)" ""           </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] "  Mean (SD)" "75.2 (8.59)"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] "  Median"    "76.0       "</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 2: AE-by-SOC/PT paginated grid — verify the split ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
@@ -235,11 +235,10 @@ the same pipeline.</p>
 <span class="r-in"><span><span class="co"># `col_spec(visible = FALSE)` needed.</span></span></span>
 <span class="r-in"><span><span class="va">sg_spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_subgroup</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="cols.html">cols</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    agegr      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Age Group"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    sex_n      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    agegr_n    <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    paramcd    <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    param      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Parameter"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    visit      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Visit"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    stat_label <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="subgroup.html">subgroup</a></span><span class="op">(</span><span class="st">"sex"</span><span class="op">)</span></span></span>
@@ -283,9 +282,9 @@ the same pipeline.</p>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu">as_grid</span><span class="op">(</span><span class="va">demog_spec</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">grid</span><span class="op">@</span><span class="va">pages</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">grid</span><span class="op">@</span><span class="va">pages</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">cells_text</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 49  5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 16  5</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

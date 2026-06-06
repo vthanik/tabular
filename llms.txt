@@ -429,7 +429,7 @@ smoke test.
 - [`cdisc_saf_n`](https://vthanik.github.io/tabular/reference/cdisc_saf_n.md)
   : Safety-population BigN per arm
 - [`cdisc_saf_subgroup`](https://vthanik.github.io/tabular/reference/cdisc_saf_subgroup.md)
-  : Vital-signs subgroup summary by Sex and Age Group
+  : Vital-signs subgroup summary by Sex, by Visit
 - [`cdisc_saf_vital`](https://vthanik.github.io/tabular/reference/cdisc_saf_vital.md)
   : Vital-signs summary
 

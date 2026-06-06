@@ -162,98 +162,96 @@ auto-hide ergonomic.
 ## Examples
 
 ``` r
-# ---- Example 1: TEAEs by treatment arm — one set of pages per arm ----
+# ---- Example 1: Vital signs split into one page set per sex ----
 #
-# Partition the AE-by-SOC/PT pipeline by treatment arm. Each arm
-# value gets its own page set with a centred `Treatment Arm: <value>`
-# banner above the column-header rule on every page, separated by
-# hard page breaks. The default label uses the variable's `label`
-# attribute when present, falling back to the column name.
-n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
-ae <- cdisc_saf_aesocpt
-ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-ae$n_total  <- as.integer(sub(" .*", "", ae$Total))
-attr(ae$row_type, "label") <- "Row Type"
+# The simplest partition: a single clinical variable. Each `sex`
+# value gets its own page set with a centred `Sex: <value>` banner
+# above the column-header rule on every page, separated by hard page
+# breaks. With no `label` template the banner uses the variable's
+# `label` attribute when present (set here), falling back to the
+# column name. Within each page, parameter nests visit nests the
+# statistic rows.
+vs <- cdisc_saf_subgroup
+attr(vs$sex, "label") <- "Sex"
 
 tabular(
-  ae,
+  vs,
   titles = c(
-    "Table 14.3.1",
-    "Adverse Events by SOC and Preferred Term",
+    "Table 14.2.1",
+    "Vital Signs by Visit",
     "Safety Population"
   ),
-  footnotes = "Subjects counted once per SOC and once per PT."
+  footnotes = "Descriptive statistics by treatment arm."
 ) |>
   cols(
-    label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
-    soc      = col_spec(visible = FALSE),
-    row_type = col_spec(visible = FALSE),
-    soc_n    = col_spec(visible = FALSE),
-    n_total  = col_spec(visible = FALSE),
-    placebo  = col_spec(label = "Placebo",  align = "decimal"),
-    drug_50  = col_spec(label = "Drug 50",  align = "decimal"),
-    drug_100 = col_spec(label = "Drug 100", align = "decimal"),
-    Total    = col_spec(label = "Total",    align = "decimal")
+    sex_n      = col_spec(visible = FALSE),
+    paramcd    = col_spec(visible = FALSE),
+    param      = col_spec(usage = "group", label = "Parameter"),
+    visit      = col_spec(usage = "group", label = "Visit"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo",  align = "decimal"),
+    drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    Total      = col_spec(label = "Total",    align = "decimal")
   ) |>
-  sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
-  subgroup(by = "row_type")
+  subgroup(by = "sex")
 
-#tabular-3431c78506 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-3431c78506 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-3431c78506 p { line-height: inherit; }
-#tabular-3431c78506 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-3431c78506 .tabular-caption { margin: 0; padding: 0; }
-#tabular-3431c78506 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-3431c78506 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-3431c78506 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-3431c78506 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-3431c78506 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-3431c78506 .tabular-table th, #tabular-3431c78506 .tabular-table td { padding: .18rem .6rem; }
-#tabular-3431c78506 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-3431c78506 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-3431c78506 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-3431c78506 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-3431c78506 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-3431c78506 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-3431c78506 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-3431c78506 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-3431c78506 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-3431c78506 .tabular-table tbody tr td { border-top: none; }
-#tabular-3431c78506 .tabular-band { text-align: center; }
-#tabular-3431c78506 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-3431c78506 .tabular-subgroup-label { font-weight: 600; }
-#tabular-3431c78506 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-3431c78506 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-3431c78506 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-3431c78506 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-3431c78506 .text-left { text-align: left; }
-#tabular-3431c78506 .text-center { text-align: center; }
-#tabular-3431c78506 .text-right { text-align: right; }
-#tabular-3431c78506 .tabular-table thead th.text-left { text-align: left; }
-#tabular-3431c78506 .tabular-table thead th.text-center { text-align: center; }
-#tabular-3431c78506 .tabular-table thead th.text-right { text-align: right; }
-#tabular-3431c78506 .valign-top { vertical-align: top; }
-#tabular-3431c78506 .valign-middle { vertical-align: middle; }
-#tabular-3431c78506 .valign-bottom { vertical-align: bottom; }
-#tabular-3431c78506 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-3431c78506 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-3431c78506 .tabular-page-break-row { display: none; }
-#tabular-3431c78506 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-3431c78506 .tabular-page-header, #tabular-3431c78506 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-3431c78506 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-3431c78506 .tabular-page-footer { margin-top: 1rem; }
-#tabular-3431c78506 .tabular-page-header-left, #tabular-3431c78506 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-3431c78506 .tabular-page-header-center, #tabular-3431c78506 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-3431c78506 .tabular-page-header-right, #tabular-3431c78506 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-3431c78506 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-3431c78506 .tabular-table tr { page-break-inside: avoid; } #tabular-3431c78506 .tabular-page-header, #tabular-3431c78506 .tabular-page-footer { display: none; } #tabular-3431c78506 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-3431c78506 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-3431c78506 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-92cc3908bb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-92cc3908bb .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-92cc3908bb p { line-height: inherit; }
+#tabular-92cc3908bb .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-92cc3908bb .tabular-caption { margin: 0; padding: 0; }
+#tabular-92cc3908bb .tabular-pad { margin: 0; line-height: 1; }
+#tabular-92cc3908bb .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-92cc3908bb .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-92cc3908bb .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-92cc3908bb .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-92cc3908bb .tabular-table th, #tabular-92cc3908bb .tabular-table td { padding: .18rem .6rem; }
+#tabular-92cc3908bb .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-92cc3908bb .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-92cc3908bb .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-92cc3908bb .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-92cc3908bb .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-92cc3908bb .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-92cc3908bb .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-92cc3908bb .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-92cc3908bb .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-92cc3908bb .tabular-table tbody tr td { border-top: none; }
+#tabular-92cc3908bb .tabular-band { text-align: center; }
+#tabular-92cc3908bb .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-92cc3908bb .tabular-subgroup-label { font-weight: 600; }
+#tabular-92cc3908bb .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-92cc3908bb .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-92cc3908bb .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-92cc3908bb .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-92cc3908bb .text-left { text-align: left; }
+#tabular-92cc3908bb .text-center { text-align: center; }
+#tabular-92cc3908bb .text-right { text-align: right; }
+#tabular-92cc3908bb .tabular-table thead th.text-left { text-align: left; }
+#tabular-92cc3908bb .tabular-table thead th.text-center { text-align: center; }
+#tabular-92cc3908bb .tabular-table thead th.text-right { text-align: right; }
+#tabular-92cc3908bb .valign-top { vertical-align: top; }
+#tabular-92cc3908bb .valign-middle { vertical-align: middle; }
+#tabular-92cc3908bb .valign-bottom { vertical-align: bottom; }
+#tabular-92cc3908bb .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-92cc3908bb .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-92cc3908bb .tabular-page-break-row { display: none; }
+#tabular-92cc3908bb { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-92cc3908bb .tabular-page-header, #tabular-92cc3908bb .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-92cc3908bb .tabular-page-header { margin-bottom: 1rem; }
+#tabular-92cc3908bb .tabular-page-footer { margin-top: 1rem; }
+#tabular-92cc3908bb .tabular-page-header-left, #tabular-92cc3908bb .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-92cc3908bb .tabular-page-header-center, #tabular-92cc3908bb .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-92cc3908bb .tabular-page-header-right, #tabular-92cc3908bb .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-92cc3908bb .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-92cc3908bb .tabular-table tr { page-break-inside: avoid; } #tabular-92cc3908bb .tabular-page-header, #tabular-92cc3908bb .tabular-page-footer { display: none; } #tabular-92cc3908bb .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-92cc3908bb .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-92cc3908bb .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
-Table 14.3.1
-Adverse Events by SOC and Preferred Term
+Table 14.2.1
+Vital Signs by Visit
 Safety Population
  
 
 
 
-SOC / PT
+Statistic
 ```

@@ -155,12 +155,12 @@ demo <- tabular(
 
 demo_grid <- as_grid(demo)
 demo_grid@metadata$total_pages
-#> [1] 2
+#> [1] 1
 demo_grid@pages[[1]]$cells_text[1:3, c("stat_label", "placebo")]
-#>      stat_label    placebo        
-#> [1,] "Age (years)" ""             
-#> [2,] "  Mean (SD)" " 75.2 (8.59) "
-#> [3,] "  Median"    " 76.0        "
+#>      stat_label    placebo      
+#> [1,] "Age (years)" ""           
+#> [2,] "  Mean (SD)" "75.2 (8.59)"
+#> [3,] "  Median"    "76.0       "
 
 # ---- Example 2: AE-by-SOC/PT paginated grid — verify the split ----
 #
@@ -213,11 +213,10 @@ length(ae_grid@pages)
 # `col_spec(visible = FALSE)` needed.
 sg_spec <- tabular(cdisc_saf_subgroup) |>
   cols(
-    agegr      = col_spec(usage = "group", label = "Age Group"),
     sex_n      = col_spec(visible = FALSE),
-    agegr_n    = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
     param      = col_spec(usage = "group", label = "Parameter"),
+    visit      = col_spec(usage = "group", label = "Visit"),
     stat_label = col_spec(label = "Statistic")
   ) |>
   subgroup("sex")
@@ -261,7 +260,7 @@ demog_spec <- tabular(
   )
 grid <- as_grid(demog_spec)
 length(grid@pages)
-#> [1] 2
+#> [1] 1
 dim(grid@pages[[1]]$cells_text)
-#> [1] 49  5
+#> [1] 16  5
 ```
