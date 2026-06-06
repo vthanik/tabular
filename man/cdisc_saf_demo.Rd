@@ -5,12 +5,11 @@
 \alias{cdisc_saf_demo}
 \title{Demographics summary, Safety Population}
 \format{
-A data frame with 35 rows and 6 columns:
+A data frame with 11 rows and 6 columns:
 \describe{
 \item{\code{variable}}{Display-block label (\code{"Age (years)"},
-\code{"Age Group, n (\%)"}, \code{"Sex, n (\%)"}, \code{"Race, n (\%)"},
-\code{"Ethnicity, n (\%)"}). Driven by \code{cols(usage = "group")} to
-collapse repeat values at render.}
+\code{"Sex, n (\%)"}, \code{"Race, n (\%)"}). Driven by
+\code{cols(usage = "group")} to collapse repeat values at render.}
 \item{\code{stat_label}}{Statistic or level label
 (\code{"n"}, \code{"Mean (SD)"}, \code{"Median"}, \code{"M"}, \code{"WHITE"}, ...).}
 \item{\code{placebo}}{Placebo arm cell text.}
@@ -22,24 +21,22 @@ collapse repeat values at render.}
 \source{
 Derived in \code{data-raw/bundle-demo.R} from
 \code{pharmaverseadam::adsl} filtered to \code{SAFFL == "Y"} and the three
-CDISCPILOT01 treatment arms. Baseline Weight / Height / BMI are
-joined in from \code{pharmaverseadam::advs}.
+CDISCPILOT01 treatment arms.
 }
 \usage{
 cdisc_saf_demo
 }
 \description{
 Pre-summarised wide-format demographics suitable for direct
-passing into \code{\link[=tabular]{tabular()}}. One row per displayed statistic. Eight
-parameter blocks:
+passing into \code{\link[=tabular]{tabular()}}. One row per displayed statistic. Three
+parameter blocks — a deliberately minimal set covering both summary
+shapes:
 }
 \details{
 \itemize{
-\item continuous: \code{Age (years)}, \code{Weight (kg)}, \code{Height (cm)},
-\code{BMI (kg/m^2)} — each emitted as \code{n}, \code{Mean (SD)}, \code{Median},
-\verb{Q1, Q3}, \verb{Min, Max}
-\item categorical: \verb{Age Group}, \code{Sex}, \code{Race}, \code{Ethnicity},
-\verb{BMI Category} — each level rendered as \verb{n (\%)}
+\item continuous: \code{Age (years)} — emitted as \code{n}, \code{Mean (SD)},
+\code{Median}, \verb{Q1, Q3}, \verb{Min, Max}
+\item categorical: \code{Sex}, \code{Race} — each level rendered as \verb{n (\%)}
 }
 
 Shaped for the display-only contract: every cell is the final

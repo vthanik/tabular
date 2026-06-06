@@ -84,12 +84,15 @@ tabular(
   ) |>
   preset_minimal()
 
-# ---- Example 2: Section headers normal, then re-bold the title ----
+# ---- Example 2: Flat AE table under the minimal theme, then tint ----
 #
-# AE by SOC / PT with the SOC as a section-header row. Under
-# `preset_minimal()` the SOC section labels render in normal weight
-# (not the default bold); a trailing `style()` re-bolds only the
-# title (last verb wins), and `font_size` forwards through `...`.
+# AE by SOC / PT rendered flat: the SOC subtotal row and its PT rows
+# share the `label` stub, indented by `indent_level` (SOC at depth 0,
+# PT at depth 1), so each SOC name appears once. `preset_minimal()`
+# strips the outer frame and leaves the column-header band plain; a
+# trailing `style()` tints just that band, showing a per-table
+# override composing on top of the theme, and `font_size` forwards
+# through `...`.
 ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 
@@ -100,7 +103,7 @@ tabular(
 ) |>
   cols(
     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
-    soc      = col_spec(usage = "group", group_display = "header_row"),
+    soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     soc_n    = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),
@@ -110,7 +113,7 @@ tabular(
     Total    = col_spec(label = "Total\nN={demo_n['Total']}")
   ) |>
   preset_minimal(font_size = 8) |>
-  style(bold = TRUE, .at = cells_title())
+  style(background = "#DBE4F0", .at = cells_headers())
 
 }
 \seealso{

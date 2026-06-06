@@ -611,10 +611,9 @@ test_that("engine_decimal() forwards sections to the per-column workhorse", {
 test_that("snapshot: per-section cdisc_saf_demo Placebo column (Demographics image)", {
   # The user-reported expectation for "Summary of Demographic and
   # Baseline Characteristics" Placebo column. Sections derive from
-  # the `variable` row-label column: Age (years), Age Group n (%),
-  # Sex n (%), Race n (%), Ethnicity n (%). Each section aligns
-  # independently; the column-wide right-pad makes the final block
-  # uniform.
+  # the `variable` row-label column: Age (years), Sex n (%), Race
+  # n (%). Each section aligns independently; the column-wide
+  # right-pad makes the final block uniform.
   v <- cdisc_saf_demo$placebo
   sec <- cdisc_saf_demo$variable
   out <- align(v, sections = sec)

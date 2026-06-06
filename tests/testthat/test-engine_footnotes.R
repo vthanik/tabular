@@ -357,13 +357,17 @@ test_that("unsupported footnote anchors are rejected at call time (#cr2, #cr3)",
 })
 
 test_that("the marker is identical across subgroups and the block emits once", {
-  spec <- tabular(cdisc_saf_demo) |>
+  # Partition the by-visit vitals table by parameter so the `n` row
+  # recurs inside every subgroup page; one shared id must collapse to a
+  # single block line however many cells carry the marker.
+  spec <- tabular(cdisc_saf_vital) |>
     cols(
-      variable = col_spec(usage = "group"),
+      paramcd = col_spec(visible = FALSE),
+      visit = col_spec(usage = "group"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
-    subgroup("variable") |>
+    subgroup("param") |>
     footnote(
       "Across groups.",
       .at = cells_body(where = stat_label == "n", j = "placebo"),

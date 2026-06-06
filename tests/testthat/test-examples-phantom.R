@@ -15,8 +15,7 @@ HELPER_COLS <- c(
   "soc",
   "indent_level",
   "display_order",
-  "sex_n",
-  "agegr_n"
+  "sex_n"
 )
 
 # Extract @examples code (the `#' ` prefix stripped) from a roxygen file.

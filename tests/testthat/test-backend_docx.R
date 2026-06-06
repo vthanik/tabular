@@ -819,8 +819,8 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
     doc,
     gregexpr("(?<=<w:gridCol w:w=\")[0-9]+(?=\"/>)", doc, perl = TRUE)
   )[[1L]])
-  expect_identical(widths_twips, c(1927L, 4026L, 1299L, 1300L, 1299L, 1299L))
-  expect_identical(sum(widths_twips), 11150L)
+  expect_identical(widths_twips, c(1438L, 4026L, 1149L, 1150L, 1149L, 1199L))
+  expect_identical(sum(widths_twips), 10111L)
 })
 
 test_that("col_spec@align surfaces as <w:jc> on data cells", {

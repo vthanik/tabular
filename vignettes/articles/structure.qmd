@@ -230,10 +230,9 @@ tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>
   cols(
     sex = col_spec(visible = FALSE),
     sex_n = col_spec(visible = FALSE),
-    agegr = col_spec(visible = FALSE),
-    agegr_n = col_spec(visible = FALSE),
     paramcd = col_spec(visible = FALSE),
     param = col_spec(usage = "group", label = "Parameter"),
+    visit = col_spec(usage = "group", label = "Visit"),
     stat_label = col_spec(usage = "id", label = "Statistic")
   ) |>
   cols_apply(
@@ -251,17 +250,16 @@ shape `big_n` expects):
 ```{r}
 big_n <- tibble::tribble(
   ~sex, ~placebo, ~drug_50, ~drug_100, ~Total,
-  "F",       53L,      50L,       40L,    143L,
-  "M",       33L,      46L,       32L,    111L
+  "F",       53L,      55L,       35L,    143L,
+  "M",       33L,      41L,       37L,    111L
 )
 
 tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>
   cols(
     sex_n = col_spec(visible = FALSE),
-    agegr = col_spec(visible = FALSE),
-    agegr_n = col_spec(visible = FALSE),
     paramcd = col_spec(visible = FALSE),
     param = col_spec(usage = "group", label = "Parameter"),
+    visit = col_spec(usage = "group", label = "Visit"),
     stat_label = col_spec(usage = "id", label = "Statistic")
   ) |>
   cols_apply(

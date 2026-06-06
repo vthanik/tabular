@@ -129,12 +129,12 @@ test_that("engine_headers() preserves the spanned column names", {
 # ---- passthrough leaves in the flattened output --------------------
 
 test_that("engine_headers() emits NA label for a passthrough leaf", {
-  # cdisc_saf_demo column order: variable, stat_label, placebo, drug_100, drug_50, Total
+  # cdisc_saf_demo column order: variable, stat_label, placebo, drug_50, drug_100, Total
   spec <- tabular(cdisc_saf_demo) |>
     headers(
       "Top" = list(
-        "Inner" = c("placebo", "drug_100"),
-        "drug_50"
+        "Inner" = c("placebo", "drug_50"),
+        "drug_100"
       )
     )
   out <- tabular:::engine_headers(spec)
@@ -142,7 +142,7 @@ test_that("engine_headers() emits NA label for a passthrough leaf", {
   expect_equal(nrow(out), 3L)
   expect_equal(out$depth, c(1L, 2L, 2L))
   expect_identical(out$label, c("Top", "Inner", NA_character_))
-  # Passthrough leaf at "drug_50" position 5
+  # Passthrough leaf at "drug_100" position 5
   passthrough <- out[is.na(out$label), ]
   expect_equal(passthrough$col_start, 5L)
   expect_equal(passthrough$col_end, 5L)

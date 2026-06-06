@@ -270,20 +270,19 @@ test_that(".subgroup_auto_hide_cols unions `by` with template-ref columns", {
 test_that(".subgroup_auto_hide_cols covers multi-var partition + multi-ref label", {
   spec <- tabular(cdisc_saf_subgroup) |>
     subgroup(
-      by = c("sex", "agegr"),
-      label = "Sex: {sex} / Age: {agegr} (N total {sex_n})"
+      by = c("sex", "visit"),
+      label = "Sex: {sex} / Visit: {visit} (N total {sex_n})"
     )
   expect_identical(
     sort(tabular:::.subgroup_auto_hide_cols(spec)),
-    sort(c("sex", "agegr", "sex_n"))
+    sort(c("sex", "visit", "sex_n"))
   )
 })
 
 test_that("subgroup auto-hide flips partition + template-ref cols from the body", {
   spec <- tabular(cdisc_saf_subgroup) |>
     cols(
-      agegr = col_spec(usage = "group", label = "Age Group"),
-      agegr_n = col_spec(visible = FALSE),
+      visit = col_spec(usage = "group", label = "Visit"),
       paramcd = col_spec(visible = FALSE),
       param = col_spec(usage = "group", label = "Parameter"),
       stat_label = col_spec(label = "Statistic"),
@@ -309,8 +308,7 @@ test_that("subgroup auto-hide is a no-op when no subgroup is attached", {
   # be auto-hidden (the user might want them visible in that case).
   spec <- tabular(cdisc_saf_subgroup) |>
     cols(
-      agegr = col_spec(usage = "group", label = "Age Group"),
-      agegr_n = col_spec(visible = FALSE),
+      visit = col_spec(usage = "group", label = "Visit"),
       paramcd = col_spec(visible = FALSE),
       param = col_spec(usage = "group", label = "Parameter")
     )
@@ -336,8 +334,7 @@ test_that("subgroup auto-hide is a no-op when no subgroup is attached", {
 .bign_base <- function(data = cdisc_saf_subgroup) {
   tabular(data, titles = "Vital Signs") |>
     cols(
-      agegr = col_spec(usage = "group", label = "Age Group"),
-      agegr_n = col_spec(visible = FALSE),
+      visit = col_spec(usage = "group", label = "Visit"),
       paramcd = col_spec(visible = FALSE),
       param = col_spec(usage = "group", label = "Parameter"),
       stat_label = col_spec(label = "Statistic"),
@@ -404,8 +401,7 @@ test_that("big_n keyed by a spanner band label suffixes the band", {
   d$placebo_pct <- d$placebo
   spec <- tabular(d, titles = "t") |>
     cols(
-      agegr = col_spec(usage = "group", label = "Age"),
-      agegr_n = col_spec(visible = FALSE),
+      visit = col_spec(usage = "group", label = "Visit"),
       paramcd = col_spec(visible = FALSE),
       param = col_spec(usage = "group", label = "Param"),
       stat_label = col_spec(label = "Stat"),
@@ -713,8 +709,7 @@ test_that("big_n applies to a leaf with no explicit col_spec", {
   # `Total` has no col_spec here; big_n still suffixes its default label.
   spec <- tabular(cdisc_saf_subgroup, titles = "t") |>
     cols(
-      agegr = col_spec(usage = "group", label = "Age"),
-      agegr_n = col_spec(visible = FALSE),
+      visit = col_spec(usage = "group", label = "Visit"),
       paramcd = col_spec(visible = FALSE),
       param = col_spec(usage = "group", label = "Param"),
       stat_label = col_spec(label = "Stat"),
@@ -852,7 +847,7 @@ test_that("big_n validation rejects every malformed input", {
         "sex",
         big_n = data.frame(
           sex = factor(c("F", "M"), levels = c("F", "M")),
-          agegr_n = c(1L, 2L)
+          paramcd = c(1L, 2L)
         )
       ),
     class = "tabular_error_input"
@@ -875,8 +870,7 @@ test_that("big_n ambiguous target (data col and band label collide) errors", {
   d$placebo_pct <- d$placebo
   spec <- tabular(d, titles = "t") |>
     cols(
-      agegr = col_spec(usage = "group", label = "Age"),
-      agegr_n = col_spec(visible = FALSE),
+      visit = col_spec(usage = "group", label = "Visit"),
       paramcd = col_spec(visible = FALSE),
       param = col_spec(usage = "group", label = "Param"),
       stat_label = col_spec(label = "Stat"),
@@ -1022,8 +1016,6 @@ test_that("big_n long rejects an arm name that clashes with a by column", {
     cols(
       sex = col_spec(visible = FALSE),
       sex_n = col_spec(visible = FALSE),
-      agegr = col_spec(visible = FALSE),
-      agegr_n = col_spec(visible = FALSE),
       paramcd = col_spec(visible = FALSE),
       param = col_spec(label = "P"),
       stat_label = col_spec(label = "S"),
@@ -1052,8 +1044,6 @@ test_that("non-contiguous band + big_n names the ORIGINAL band label", {
   d <- d[, c(
     "sex",
     "sex_n",
-    "agegr",
-    "agegr_n",
     "paramcd",
     "param",
     "stat_label",
@@ -1065,8 +1055,6 @@ test_that("non-contiguous band + big_n names the ORIGINAL band label", {
     cols(
       sex = col_spec(visible = FALSE),
       sex_n = col_spec(visible = FALSE),
-      agegr = col_spec(visible = FALSE),
-      agegr_n = col_spec(visible = FALSE),
       paramcd = col_spec(visible = FALSE),
       param = col_spec(usage = "group", label = "P"),
       stat_label = col_spec(label = "S"),

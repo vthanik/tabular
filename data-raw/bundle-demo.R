@@ -204,16 +204,15 @@ cat_summary <- function(data, var, var_label) {
     mutate(variable = var_label, .before = 1)
 }
 
+# Bare-minimum demographics: one continuous variable (Age) and two
+# categorical variables (Sex, Race). This is the most-used demo dataset;
+# keeping it to three blocks demonstrates both summary shapes (n / Mean
+# (SD) / Median / Q1, Q3 / Min, Max and per-level n (%)) without the
+# noise of a full nine-block table.
 cdisc_saf_demo <- bind_rows(
   cont_summary(demog_data, "AGE", "Age (years)"),
-  cat_summary(demog_data, "AGEGR1", "Age Group, n (%)"),
   cat_summary(demog_data, "SEX", "Sex, n (%)"),
-  cat_summary(demog_data, "RACE", "Race, n (%)"),
-  cat_summary(demog_data, "ETHNIC", "Ethnicity, n (%)"),
-  cont_summary(demog_data, "WEIGHT", "Weight (kg)"),
-  cont_summary(demog_data, "HEIGHT", "Height (cm)"),
-  cont_summary(demog_data, "BMI", "BMI (kg/m^2)"),
-  cat_summary(demog_data, "BMI_CAT", "BMI Category, n (%)")
+  cat_summary(demog_data, "RACE", "Race, n (%)")
 ) |>
   rename_arms() |>
   as.data.frame()
@@ -222,6 +221,18 @@ cdisc_saf_demo <- bind_rows(
 # when a category is unused (e.g. BMI < 18.5 may be empty in this slice).
 cdisc_saf_demo <- cdisc_saf_demo[!is.na(cdisc_saf_demo$stat_label), , drop = FALSE]
 rownames(cdisc_saf_demo) <- NULL
+
+# Canonical arm order: placebo, dose-ascending, then Total (the pivot
+# above leaves them in factor/appearance order). Mirrors the explicit
+# reorder that cdisc_saf_aesocpt / cdisc_saf_vital / cdisc_eff_resp apply.
+cdisc_saf_demo <- cdisc_saf_demo[, c(
+  "variable",
+  "stat_label",
+  "placebo",
+  "drug_50",
+  "drug_100",
+  "Total"
+)]
 
 # ────────────────────────────────────────────────────────────────────────
 # cdisc_saf_ae — high-level AE flag counts + per-severity rows.
@@ -340,6 +351,17 @@ cdisc_saf_ae <- bind_rows(
   )) |>
   rename_arms() |>
   as.data.frame()
+
+# Canonical arm order: placebo, dose-ascending, then Total (the pivot
+# above leaves Total first and the doses in factor order). Mirrors the
+# explicit reorder that cdisc_saf_aesocpt / cdisc_saf_vital / cdisc_eff_resp apply.
+cdisc_saf_ae <- cdisc_saf_ae[, c(
+  "stat_label",
+  "placebo",
+  "drug_50",
+  "drug_100",
+  "Total"
+)]
 
 # ────────────────────────────────────────────────────────────────────────
 # cdisc_saf_aesocpt — AEs by SOC (top 10) and PT (top 5 per SOC).
@@ -663,17 +685,19 @@ cdisc_eff_resp <- cdisc_eff_resp[, c(
 cdisc_eff_resp <- rename_arms(cdisc_eff_resp) |> as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
-# cdisc_saf_subgroup — vital-signs summary partitioned by sex × age group.
-# Designed for subgroup() / as_grid() examples: ships partition-constant
-# BigN columns (sex_n, agegr_n) so banners can inline the denominator
-# via `subgroup(label = "Sex: {sex} (N = {sex_n})")`. Two parameters
-# (Systolic BP, Diastolic BP) at End of Treatment keep the dataset
-# small while exercising the multi-variable partition cross.
+# cdisc_saf_subgroup — vital-signs summary partitioned by sex, by visit.
+# Designed for subgroup() / as_grid() examples: ships a partition-constant
+# BigN column (sex_n) so banners can inline the denominator via
+# `subgroup(label = "Sex: {sex} (N = {sex_n})")`. Two parameters (Systolic
+# BP, Diastolic BP) across four visits keep the dataset small while giving
+# every subgroup example a meaningful by-visit CSR shape (partition by sex,
+# nest parameter then visit).
 # ────────────────────────────────────────────────────────────────────────
 subgroup_params <- c(
   SYSBP = "Systolic BP (mmHg)",
   DIABP = "Diastolic BP (mmHg)"
 )
+subgroup_visits <- c("Baseline", "Week 8", "Week 16", "End of Treatment")
 
 advs_subgroup <- pharmaverseadam::advs |>
   blank_to_na() |>
@@ -681,16 +705,12 @@ advs_subgroup <- pharmaverseadam::advs |>
     SAFFL == "Y",
     TRT01A %in% arm_levels,
     PARAMCD %in% names(subgroup_params),
-    AVISIT == "End of Treatment",
-    SEX %in% c("F", "M"),
-    !is.na(AGEGR1)
+    AVISIT %in% subgroup_visits,
+    SEX %in% c("F", "M")
   ) |>
   mutate(
     sex = factor(SEX, levels = c("F", "M")),
-    agegr = factor(
-      ifelse(AGEGR1 == "18-64", "<65", ">=65"),
-      levels = c("<65", ">=65")
-    ),
+    visit = factor(AVISIT, levels = subgroup_visits),
     TRT01A = factor(TRT01A, levels = arm_levels)
   )
 
@@ -699,13 +719,8 @@ sex_n_int <- advs_subgroup |>
   count(sex) |>
   pull(n, name = sex)
 
-agegr_n_int <- advs_subgroup |>
-  distinct(USUBJID, agegr) |>
-  count(agegr) |>
-  pull(n, name = agegr)
-
 vs_subgroup_arm <- advs_subgroup |>
-  group_by(sex, agegr, PARAMCD, TRT01A) |>
+  group_by(sex, PARAMCD, visit, TRT01A) |>
   summarise(
     n = as.character(sum(!is.na(AVAL))),
     `Mean (SD)` = sprintf(
@@ -729,7 +744,7 @@ vs_subgroup_arm <- advs_subgroup |>
   pivot_wider(names_from = TRT01A, values_from = value)
 
 vs_subgroup_total <- advs_subgroup |>
-  group_by(sex, agegr, PARAMCD) |>
+  group_by(sex, PARAMCD, visit) |>
   summarise(
     n = as.character(sum(!is.na(AVAL))),
     `Mean (SD)` = sprintf(
@@ -754,13 +769,13 @@ vs_subgroup_total <- advs_subgroup |>
 cdisc_saf_subgroup <- left_join(
   vs_subgroup_arm,
   vs_subgroup_total,
-  by = c("sex", "agegr", "PARAMCD", "stat_label")
+  by = c("sex", "PARAMCD", "visit", "stat_label")
 ) |>
   mutate(
     sex_n = as.integer(sex_n_int[as.character(sex)]),
-    agegr_n = as.integer(agegr_n_int[as.character(agegr)]),
     paramcd = as.character(PARAMCD),
     param = unname(subgroup_params[paramcd]),
+    visit = as.character(visit),
     .before = "stat_label"
   ) |>
   select(-PARAMCD) |>
@@ -771,18 +786,17 @@ cdisc_saf_subgroup <- left_join(
   )) |>
   select(
     sex,
-    agegr,
     sex_n,
-    agegr_n,
     paramcd,
     param,
+    visit,
     stat_label,
     placebo,
     drug_50,
     drug_100,
     Total
   ) |>
-  arrange(sex, agegr, paramcd) |>
+  arrange(sex, paramcd, factor(visit, levels = subgroup_visits)) |>
   as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────

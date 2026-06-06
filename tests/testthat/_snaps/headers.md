@@ -6,7 +6,7 @@
       Error:
       ! `headers()` references 1 column not in `data`.
       x Missing: "phantom_arm".
-      i Available: "variable", "stat_label", "placebo", "drug_100", "drug_50", and "Total".
+      i Available: "variable", "stat_label", "placebo", "drug_50", "drug_100", and "Total".
 
 ---
 
