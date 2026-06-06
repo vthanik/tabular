@@ -145,41 +145,39 @@
 #'   resolve via [`as_grid()`] / [`emit()`].
 #'
 #' @examples
-#' # ---- Example 1: TEAEs by treatment arm — one set of pages per arm ----
+#' # ---- Example 1: Vital signs split into one page set per age group ----
 #' #
-#' # Partition the AE-by-SOC/PT pipeline by treatment arm. Each arm
-#' # value gets its own page set with a centred `Treatment Arm: <value>`
+#' # The simplest partition: a single clinical variable. Each `agegr`
+#' # value gets its own page set with a centred `Age Group: <value>`
 #' # banner above the column-header rule on every page, separated by
-#' # hard page breaks. The default label uses the variable's `label`
-#' # attribute when present, falling back to the column name.
-#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
-#' ae <- cdisc_saf_aesocpt
-#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-#' ae$n_total  <- as.integer(sub(" .*", "", ae$Total))
-#' attr(ae$row_type, "label") <- "Row Type"
+#' # hard page breaks. With no `label` template the banner uses the
+#' # variable's `label` attribute when present (set here), falling back
+#' # to the column name. `sex` rides along as an in-page row group.
+#' vs <- cdisc_saf_subgroup
+#' attr(vs$agegr, "label") <- "Age Group"
 #'
 #' tabular(
-#'   ae,
+#'   vs,
 #'   titles = c(
-#'     "Table 14.3.1",
-#'     "Adverse Events by SOC and Preferred Term",
+#'     "Table 14.2.1",
+#'     "Vital Signs at End of Treatment by Age Group",
 #'     "Safety Population"
 #'   ),
-#'   footnotes = "Subjects counted once per SOC and once per PT."
+#'   footnotes = "Descriptive statistics by treatment arm."
 #' ) |>
 #'   cols(
-#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
-#'     soc      = col_spec(visible = FALSE),
-#'     row_type = col_spec(visible = FALSE),
-#'     soc_n    = col_spec(visible = FALSE),
-#'     n_total  = col_spec(visible = FALSE),
-#'     placebo  = col_spec(label = "Placebo",  align = "decimal"),
-#'     drug_50  = col_spec(label = "Drug 50",  align = "decimal"),
-#'     drug_100 = col_spec(label = "Drug 100", align = "decimal"),
-#'     Total    = col_spec(label = "Total",    align = "decimal")
+#'     sex        = col_spec(usage = "group", label = "Sex"),
+#'     sex_n      = col_spec(visible = FALSE),
+#'     agegr_n    = col_spec(visible = FALSE),
+#'     paramcd    = col_spec(visible = FALSE),
+#'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
+#'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
+#'     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+#'     Total      = col_spec(label = "Total",    align = "decimal")
 #'   ) |>
-#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
-#'   subgroup(by = "row_type")
+#'   subgroup(by = "agegr")
 #'
 #' # ---- Example 2: Partition by Sex with inline BigN via template ----
 #' #

@@ -181,16 +181,18 @@ tabular(
 # surface noise.
 tabular(cdisc_saf_n, titles = "Safety-population BigN per arm")
 
-# ---- Example 4: Vital-signs panel with hidden code column ----
+# ---- Example 4: Nested vital-signs panel — two group levels ----
 #
-# Show the canonical vitals shape: one parameter across four visits
-# x four statistics. The CDISC `paramcd` is kept in the data frame
-# as the natural sort key but hidden at render via
-# `col_spec(visible = FALSE)`, while `param` (the display label)
-# drives the group block. Slice to a single `paramcd` for a compact
-# preview; the full 4-parameter frame renders identically.
+# The canonical by-visit vitals shape: each `param` nests its
+# `visit` blocks, and each visit nests the statistic rows. Two
+# columns carry `usage = "group"` (`param` then `visit`), so the
+# engine renders two levels of nested section headers above the
+# `stat_label` stub. The CDISC `paramcd` rides along as the natural
+# sort key but hides at render via `col_spec(visible = FALSE)`.
+# Sliced to the two blood-pressure parameters for a compact preview;
+# the full 4-parameter frame nests the same way.
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
-vs <- cdisc_saf_vital[cdisc_saf_vital$paramcd == cdisc_saf_vital$paramcd[1L], ]
+vs <- cdisc_saf_vital[cdisc_saf_vital$paramcd \%in\% c("DIABP", "SYSBP"), ]
 tabular(
   vs,
   titles = c(
