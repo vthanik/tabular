@@ -3,19 +3,19 @@
 \docType{data}
 \name{cdisc_saf_subgroup}
 \alias{cdisc_saf_subgroup}
-\title{Vital-signs subgroup summary by Sex and Age Group}
+\title{Vital-signs subgroup summary by Sex, by Visit}
 \format{
-A data frame with 32 rows and 11 columns:
+A data frame with 64 rows and 10 columns:
 \describe{
 \item{\code{sex}}{Factor (\code{F} / \code{M}).}
-\item{\code{agegr}}{Factor (\verb{<65} / \verb{>=65}).}
 \item{\code{sex_n}}{Integer BigN — number of subjects in the partition
 row's sex (partition-constant; rides into the banner via
 \code{{sex_n}} template tokens).}
-\item{\code{agegr_n}}{Integer BigN per age group.}
 \item{\code{paramcd}}{CDISC parameter code (\code{SYSBP} / \code{DIABP}).}
 \item{\code{param}}{Decoded parameter name (\code{"Systolic BP (mmHg)"},
 \code{"Diastolic BP (mmHg)"}).}
+\item{\code{visit}}{Analysis visit (\code{Baseline}, \verb{Week 8}, \verb{Week 16},
+\verb{End of Treatment}).}
 \item{\code{stat_label}}{Statistic label
 (\code{n}, \code{Mean (SD)}, \code{Median}, \verb{Min, Max}).}
 \item{\code{placebo}, \code{drug_50}, \code{drug_100}, \code{Total}}{Per-arm cell
@@ -25,39 +25,39 @@ text.}
 \source{
 Derived in \code{data-raw/bundle-demo.R} from
 \code{pharmaverseadam::advs} filtered to \code{SAFFL == "Y"}, the three
-CDISCPILOT01 arms, the \code{SYSBP} / \code{DIABP} parameters, and the
-End-of-Treatment visit.
+CDISCPILOT01 arms, the \code{SYSBP} / \code{DIABP} parameters, and the four
+scheduled visits.
 }
 \usage{
 cdisc_saf_subgroup
 }
 \description{
 Pre-summarised vital-signs stats partitioned by sex (\code{F} / \code{M})
-and age group (\verb{<65} / \verb{>=65}) at the End-of-Treatment visit. Two
-parameters (Systolic BP, Diastolic BP) emit four statistic rows
-each (\code{n}, \code{Mean (SD)}, \code{Median}, \verb{Min, Max}). Partition-constant
-BigN columns (\code{sex_n}, \code{agegr_n}) ride alongside so banners can
-inline the denominator via
+across four visits (\code{Baseline}, \verb{Week 8}, \verb{Week 16},
+\verb{End of Treatment}). Two parameters (Systolic BP, Diastolic BP)
+emit four statistic rows each (\code{n}, \code{Mean (SD)}, \code{Median},
+\verb{Min, Max}). A partition-constant \code{sex_n} BigN column rides
+alongside so banners can inline the denominator via
 \code{subgroup(label = "Sex: {sex} (N = {sex_n})")} without reaching for
 a separate lookup.
 }
 \details{
-Designed for \code{\link[=subgroup]{subgroup()}} and \code{\link[=as_grid]{as_grid()}} examples: the two
-partition axes plus the partition-constant BigN columns cover both
-single-variable cohort-style partitions and the multi-variable
-(sex × agegr) crossing.
+Designed for \code{\link[=subgroup]{subgroup()}} and \code{\link[=as_grid]{as_grid()}} examples: partition by
+sex (one page set per sex) and nest parameter then visit inside each
+page for the canonical by-visit CSR shape, or cross sex with visit
+for a multi-variable partition.
 }
 \examples{
-# 95\% pattern: subgroup partition by sex with inline BigN.
-# `sex` and `sex_n` auto-hide from the body: `sex` because it is
-# the partition `by` column; `sex_n` because the banner template
-# references it. No explicit `col_spec(visible = FALSE)` needed.
-tabular(cdisc_saf_subgroup, titles = "Vital Signs at End of Treatment") |>
+# 95\% pattern: subgroup partition by sex with inline BigN, parameter
+# nesting visit inside each sex page. `sex` and `sex_n` auto-hide
+# from the body: `sex` because it is the partition `by` column;
+# `sex_n` because the banner template references it. No explicit
+# `col_spec(visible = FALSE)` needed.
+tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
   cols(
-    agegr      = col_spec(usage = "group", label = "Age Group"),
-    agegr_n    = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
     param      = col_spec(usage = "group", label = "Parameter"),
+    visit      = col_spec(usage = "group", label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),

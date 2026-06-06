@@ -294,33 +294,33 @@
 #'   )
 "cdisc_saf_vital"
 
-#' Vital-signs subgroup summary by Sex and Age Group
+#' Vital-signs subgroup summary by Sex, by Visit
 #'
 #' Pre-summarised vital-signs stats partitioned by sex (`F` / `M`)
-#' and age group (`<65` / `>=65`) at the End-of-Treatment visit. Two
-#' parameters (Systolic BP, Diastolic BP) emit four statistic rows
-#' each (`n`, `Mean (SD)`, `Median`, `Min, Max`). Partition-constant
-#' BigN columns (`sex_n`, `agegr_n`) ride alongside so banners can
-#' inline the denominator via
+#' across four visits (`Baseline`, `Week 8`, `Week 16`,
+#' `End of Treatment`). Two parameters (Systolic BP, Diastolic BP)
+#' emit four statistic rows each (`n`, `Mean (SD)`, `Median`,
+#' `Min, Max`). A partition-constant `sex_n` BigN column rides
+#' alongside so banners can inline the denominator via
 #' `subgroup(label = "Sex: {sex} (N = {sex_n})")` without reaching for
 #' a separate lookup.
 #'
-#' Designed for [subgroup()] and [as_grid()] examples: the two
-#' partition axes plus the partition-constant BigN columns cover both
-#' single-variable cohort-style partitions and the multi-variable
-#' (sex × agegr) crossing.
+#' Designed for [subgroup()] and [as_grid()] examples: partition by
+#' sex (one page set per sex) and nest parameter then visit inside each
+#' page for the canonical by-visit CSR shape, or cross sex with visit
+#' for a multi-variable partition.
 #'
-#' @format A data frame with 32 rows and 11 columns:
+#' @format A data frame with 64 rows and 10 columns:
 #' \describe{
 #'   \item{`sex`}{Factor (`F` / `M`).}
-#'   \item{`agegr`}{Factor (`<65` / `>=65`).}
 #'   \item{`sex_n`}{Integer BigN — number of subjects in the partition
 #'     row's sex (partition-constant; rides into the banner via
 #'     `{sex_n}` template tokens).}
-#'   \item{`agegr_n`}{Integer BigN per age group.}
 #'   \item{`paramcd`}{CDISC parameter code (`SYSBP` / `DIABP`).}
 #'   \item{`param`}{Decoded parameter name (`"Systolic BP (mmHg)"`,
 #'     `"Diastolic BP (mmHg)"`).}
+#'   \item{`visit`}{Analysis visit (`Baseline`, `Week 8`, `Week 16`,
+#'     `End of Treatment`).}
 #'   \item{`stat_label`}{Statistic label
 #'     (`n`, `Mean (SD)`, `Median`, `Min, Max`).}
 #'   \item{`placebo`, `drug_50`, `drug_100`, `Total`}{Per-arm cell
@@ -329,23 +329,23 @@
 #'
 #' @source Derived in `data-raw/bundle-demo.R` from
 #'   `pharmaverseadam::advs` filtered to `SAFFL == "Y"`, the three
-#'   CDISCPILOT01 arms, the `SYSBP` / `DIABP` parameters, and the
-#'   End-of-Treatment visit.
+#'   CDISCPILOT01 arms, the `SYSBP` / `DIABP` parameters, and the four
+#'   scheduled visits.
 #'
 #' @seealso [cdisc_saf_n] for BigN denominators; [subgroup()] for the verb
 #'   this dataset is designed for.
 #'
 #' @examples
-#' # 95% pattern: subgroup partition by sex with inline BigN.
-#' # `sex` and `sex_n` auto-hide from the body: `sex` because it is
-#' # the partition `by` column; `sex_n` because the banner template
-#' # references it. No explicit `col_spec(visible = FALSE)` needed.
-#' tabular(cdisc_saf_subgroup, titles = "Vital Signs at End of Treatment") |>
+#' # 95% pattern: subgroup partition by sex with inline BigN, parameter
+#' # nesting visit inside each sex page. `sex` and `sex_n` auto-hide
+#' # from the body: `sex` because it is the partition `by` column;
+#' # `sex_n` because the banner template references it. No explicit
+#' # `col_spec(visible = FALSE)` needed.
+#' tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
 #'   cols(
-#'     agegr      = col_spec(usage = "group", label = "Age Group"),
-#'     agegr_n    = col_spec(visible = FALSE),
 #'     paramcd    = col_spec(visible = FALSE),
 #'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     visit      = col_spec(usage = "group", label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),

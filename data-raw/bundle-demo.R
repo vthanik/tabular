@@ -685,17 +685,19 @@ cdisc_eff_resp <- cdisc_eff_resp[, c(
 cdisc_eff_resp <- rename_arms(cdisc_eff_resp) |> as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────
-# cdisc_saf_subgroup — vital-signs summary partitioned by sex × age group.
-# Designed for subgroup() / as_grid() examples: ships partition-constant
-# BigN columns (sex_n, agegr_n) so banners can inline the denominator
-# via `subgroup(label = "Sex: {sex} (N = {sex_n})")`. Two parameters
-# (Systolic BP, Diastolic BP) at End of Treatment keep the dataset
-# small while exercising the multi-variable partition cross.
+# cdisc_saf_subgroup — vital-signs summary partitioned by sex, by visit.
+# Designed for subgroup() / as_grid() examples: ships a partition-constant
+# BigN column (sex_n) so banners can inline the denominator via
+# `subgroup(label = "Sex: {sex} (N = {sex_n})")`. Two parameters (Systolic
+# BP, Diastolic BP) across four visits keep the dataset small while giving
+# every subgroup example a meaningful by-visit CSR shape (partition by sex,
+# nest parameter then visit).
 # ────────────────────────────────────────────────────────────────────────
 subgroup_params <- c(
   SYSBP = "Systolic BP (mmHg)",
   DIABP = "Diastolic BP (mmHg)"
 )
+subgroup_visits <- c("Baseline", "Week 8", "Week 16", "End of Treatment")
 
 advs_subgroup <- pharmaverseadam::advs |>
   blank_to_na() |>
@@ -703,16 +705,12 @@ advs_subgroup <- pharmaverseadam::advs |>
     SAFFL == "Y",
     TRT01A %in% arm_levels,
     PARAMCD %in% names(subgroup_params),
-    AVISIT == "End of Treatment",
-    SEX %in% c("F", "M"),
-    !is.na(AGEGR1)
+    AVISIT %in% subgroup_visits,
+    SEX %in% c("F", "M")
   ) |>
   mutate(
     sex = factor(SEX, levels = c("F", "M")),
-    agegr = factor(
-      ifelse(AGEGR1 == "18-64", "<65", ">=65"),
-      levels = c("<65", ">=65")
-    ),
+    visit = factor(AVISIT, levels = subgroup_visits),
     TRT01A = factor(TRT01A, levels = arm_levels)
   )
 
@@ -721,13 +719,8 @@ sex_n_int <- advs_subgroup |>
   count(sex) |>
   pull(n, name = sex)
 
-agegr_n_int <- advs_subgroup |>
-  distinct(USUBJID, agegr) |>
-  count(agegr) |>
-  pull(n, name = agegr)
-
 vs_subgroup_arm <- advs_subgroup |>
-  group_by(sex, agegr, PARAMCD, TRT01A) |>
+  group_by(sex, PARAMCD, visit, TRT01A) |>
   summarise(
     n = as.character(sum(!is.na(AVAL))),
     `Mean (SD)` = sprintf(
@@ -751,7 +744,7 @@ vs_subgroup_arm <- advs_subgroup |>
   pivot_wider(names_from = TRT01A, values_from = value)
 
 vs_subgroup_total <- advs_subgroup |>
-  group_by(sex, agegr, PARAMCD) |>
+  group_by(sex, PARAMCD, visit) |>
   summarise(
     n = as.character(sum(!is.na(AVAL))),
     `Mean (SD)` = sprintf(
@@ -776,13 +769,13 @@ vs_subgroup_total <- advs_subgroup |>
 cdisc_saf_subgroup <- left_join(
   vs_subgroup_arm,
   vs_subgroup_total,
-  by = c("sex", "agegr", "PARAMCD", "stat_label")
+  by = c("sex", "PARAMCD", "visit", "stat_label")
 ) |>
   mutate(
     sex_n = as.integer(sex_n_int[as.character(sex)]),
-    agegr_n = as.integer(agegr_n_int[as.character(agegr)]),
     paramcd = as.character(PARAMCD),
     param = unname(subgroup_params[paramcd]),
+    visit = as.character(visit),
     .before = "stat_label"
   ) |>
   select(-PARAMCD) |>
@@ -793,18 +786,17 @@ cdisc_saf_subgroup <- left_join(
   )) |>
   select(
     sex,
-    agegr,
     sex_n,
-    agegr_n,
     paramcd,
     param,
+    visit,
     stat_label,
     placebo,
     drug_50,
     drug_100,
     Total
   ) |>
-  arrange(sex, agegr, paramcd) |>
+  arrange(sex, paramcd, factor(visit, levels = subgroup_visits)) |>
   as.data.frame()
 
 # ────────────────────────────────────────────────────────────────────────

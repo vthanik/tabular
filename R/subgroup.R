@@ -145,54 +145,53 @@
 #'   resolve via [`as_grid()`] / [`emit()`].
 #'
 #' @examples
-#' # ---- Example 1: Vital signs split into one page set per age group ----
+#' # ---- Example 1: Vital signs split into one page set per sex ----
 #' #
-#' # The simplest partition: a single clinical variable. Each `agegr`
-#' # value gets its own page set with a centred `Age Group: <value>`
-#' # banner above the column-header rule on every page, separated by
-#' # hard page breaks. With no `label` template the banner uses the
-#' # variable's `label` attribute when present (set here), falling back
-#' # to the column name. `sex` rides along as an in-page row group.
+#' # The simplest partition: a single clinical variable. Each `sex`
+#' # value gets its own page set with a centred `Sex: <value>` banner
+#' # above the column-header rule on every page, separated by hard page
+#' # breaks. With no `label` template the banner uses the variable's
+#' # `label` attribute when present (set here), falling back to the
+#' # column name. Within each page, parameter nests visit nests the
+#' # statistic rows.
 #' vs <- cdisc_saf_subgroup
-#' attr(vs$agegr, "label") <- "Age Group"
+#' attr(vs$sex, "label") <- "Sex"
 #'
 #' tabular(
 #'   vs,
 #'   titles = c(
 #'     "Table 14.2.1",
-#'     "Vital Signs at End of Treatment by Age Group",
+#'     "Vital Signs by Visit",
 #'     "Safety Population"
 #'   ),
 #'   footnotes = "Descriptive statistics by treatment arm."
 #' ) |>
 #'   cols(
-#'     sex        = col_spec(usage = "group", label = "Sex"),
 #'     sex_n      = col_spec(visible = FALSE),
-#'     agegr_n    = col_spec(visible = FALSE),
 #'     paramcd    = col_spec(visible = FALSE),
 #'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     visit      = col_spec(usage = "group", label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
 #'     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
 #'     Total      = col_spec(label = "Total",    align = "decimal")
 #'   ) |>
-#'   subgroup(by = "agegr")
+#'   subgroup(by = "sex")
 #'
 #' # ---- Example 2: Partition by Sex with inline BigN via template ----
 #' #
 #' # `label` is a glue-style template; any column whose value is
 #' # constant within group can ride into the banner. `cdisc_saf_subgroup`
-#' # ships partition-constant `sex_n` / `agegr_n` BigN columns
-#' # alongside the value cells, so each banner reads
-#' # `"Sex: F (N = 106)"`, etc. `sex` and `sex_n` auto-hide from the
-#' # body (partition `by` and template-referenced columns).
-#' tabular(cdisc_saf_subgroup, titles = "Vital Signs at End of Treatment") |>
+#' # ships a partition-constant `sex_n` BigN column alongside the value
+#' # cells, so each banner reads `"Sex: F (N = 143)"`, etc. `sex` and
+#' # `sex_n` auto-hide from the body (partition `by` and template-
+#' # referenced columns).
+#' tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
 #'   cols(
-#'     agegr      = col_spec(usage = "group", label = "Age Group"),
-#'     agegr_n    = col_spec(visible = FALSE),
 #'     paramcd    = col_spec(visible = FALSE),
 #'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     visit      = col_spec(usage = "group", label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
@@ -201,18 +200,17 @@
 #'   ) |>
 #'   subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
 #'
-#' # ---- Example 3: Multi-variable crossing (Sex x Age group) ----
+#' # ---- Example 3: Multi-variable crossing (Sex x Visit) ----
 #' #
-#' # Pass two columns to partition on every combination present in
-#' # the data. The label template MUST reference each variable
-#' # explicitly because the single-var auto-default does not
-#' # generalise. expand.grid order: first var (sex) varies slowest,
-#' # second (agegr) fastest, giving banner sequence F/<65, F/>=65,
-#' # M/<65, M/>=65.
-#' tabular(cdisc_saf_subgroup, titles = "Vital Signs by Sex and Age Group") |>
+#' # Pass two columns to partition on every combination present in the
+#' # data. The label template MUST reference each variable explicitly
+#' # because the single-var auto-default does not generalise. The cross
+#' # varies the first column (sex) slowest and the second (visit)
+#' # fastest, giving page sequence F/Baseline, F/Week 8, ..., M/Baseline,
+#' # ... Parameter nests the statistic rows within each page.
+#' tabular(cdisc_saf_subgroup, titles = "Vital Signs by Sex and Visit") |>
 #'   cols(
 #'     sex_n      = col_spec(visible = FALSE),
-#'     agegr_n    = col_spec(visible = FALSE),
 #'     paramcd    = col_spec(visible = FALSE),
 #'     param      = col_spec(usage = "group", label = "Parameter"),
 #'     stat_label = col_spec(label = "Statistic"),
@@ -222,8 +220,8 @@
 #'     Total      = col_spec(label = "Total",    align = "decimal")
 #'   ) |>
 #'   subgroup(
-#'     by    = c("sex", "agegr"),
-#'     label = "Sex: {sex} / Age: {agegr}"
+#'     by    = c("sex", "visit"),
+#'     label = "Sex: {sex} / Visit: {visit}"
 #'   )
 #'
 #' # ---- Example 4: Per-page BigN — different (N=) per sex page ----
@@ -232,22 +230,21 @@
 #' # in the arm headers must vary by page. `big_n` is a wide table:
 #' # the `by` column plus one column per arm (named as the data
 #' # column), cells are the page-specific Ns. Each arm header then
-#' # reads e.g. `Placebo` over `(N=24)` on the Female page and
-#' # `(N=18)` on the Male page. RTF / PDF / DOCX carry the N on the
+#' # reads e.g. `Placebo` over `(N=53)` on the Female page and
+#' # `(N=33)` on the Male page. RTF / PDF / DOCX carry the N on the
 #' # repeating header; HTML and Markdown add a per-arm N row under each
 #' # banner.
 #' big_n <- tibble::tribble(
 #'   ~sex, ~placebo, ~drug_50, ~drug_100, ~Total,
-#'   "F",       24L,       9L,        9L,     42L,
-#'   "M",       18L,      15L,       14L,     47L
+#'   "F",       53L,      55L,       35L,    143L,
+#'   "M",       33L,      41L,       37L,    111L
 #' )
-#' tabular(cdisc_saf_subgroup, titles = "Vital Signs by Sex") |>
+#' tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
 #'   cols(
 #'     sex_n      = col_spec(visible = FALSE),
-#'     agegr      = col_spec(usage = "group", label = "Age Group"),
-#'     agegr_n    = col_spec(visible = FALSE),
 #'     paramcd    = col_spec(visible = FALSE),
 #'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     visit      = col_spec(usage = "group", label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
@@ -261,19 +258,18 @@
 #' # `subgroup(by = character())` (or `subgroup(by = NULL)`) explicitly
 #' # clears any prior partition — useful in programmatically-built
 #' # pipelines where a downstream branch decides not to paginate by
-#' # group after all. Give `sex` and `agegr` a `usage = "group"` role up
-#' # front: while the sex partition is active it overrides that role (sex
+#' # group after all. Give `sex` a `usage = "group"` role up front:
+#' # while the sex partition is active it overrides that role (sex
 #' # becomes the per-page banner); once cleared, sex falls back to a
-#' # group level, so the pooled single-page render nests sex, age group,
-#' # and parameter rather than leaving a stray partition column behind.
+#' # group level, so the pooled single-page render nests sex, parameter,
+#' # and visit rather than leaving a stray partition column behind.
 #' tabular(cdisc_saf_subgroup, titles = "Pooled (no sex partition)") |>
 #'   cols(
 #'     sex_n      = col_spec(visible = FALSE),
-#'     agegr_n    = col_spec(visible = FALSE),
 #'     paramcd    = col_spec(visible = FALSE),
 #'     sex        = col_spec(usage = "group", label = "Sex"),
-#'     agegr      = col_spec(usage = "group", label = "Age Group"),
 #'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     visit      = col_spec(usage = "group", label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),

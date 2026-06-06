@@ -165,11 +165,10 @@ length(ae_grid@pages)
 # `col_spec(visible = FALSE)` needed.
 sg_spec <- tabular(cdisc_saf_subgroup) |>
   cols(
-    agegr      = col_spec(usage = "group", label = "Age Group"),
     sex_n      = col_spec(visible = FALSE),
-    agegr_n    = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
     param      = col_spec(usage = "group", label = "Parameter"),
+    visit      = col_spec(usage = "group", label = "Visit"),
     stat_label = col_spec(label = "Statistic")
   ) |>
   subgroup("sex")
