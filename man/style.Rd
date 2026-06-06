@@ -110,7 +110,7 @@ tabular(cdisc_saf_aesocpt, titles = "Adverse Events by SOC / PT",
 # Each layer changes the surface VISIBLY from its default: a coloured
 # rule under the header band, a dark-blue header text, a left-aligned
 # title (default is centred), and a blank line above + below the title.
-tabular(cdisc_saf_demo) |>
+tabular(cdisc_saf_demo, titles = "Demographic Characteristics") |>
   style(color = "#1a5276", .at = cells_headers()) |>
   style(border_bottom = brdr("thick", "double", "#1a5276"),
         .at = cells_headers()) |>
@@ -127,7 +127,7 @@ tabular(cdisc_saf_demo) |>
 
 # ---- House style via style_template() ----
 house <- style_template() |>
-  style(bold = TRUE, .at = cells_headers()) |>
+  style(color = "#1F3B5C", background = "#DBE4F0", .at = cells_headers()) |>
   style(border_top = brdr("thick"), .at = cells_headers()) |>
   style(border_bottom = brdr("thick"), .at = cells_headers()) |>
   style(border_bottom = brdr("medium"),

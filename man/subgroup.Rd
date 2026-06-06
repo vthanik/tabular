@@ -51,15 +51,20 @@ used directly with no reshaping.
 }
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Wide: one column per arm.
-wide <- data.frame(
-  sex     = factor(c("F", "M")),
-  placebo = c(24L, 18L), drug_50 = c(9L, 15L), Total = c(42L, 47L)
+wide <- tibble::tribble(
+  ~sex, ~placebo, ~drug_50, ~Total,
+  "F",       24L,       9L,    42L,
+  "M",       18L,      15L,    47L
 )
 # Long: count()-style, pivoted internally. Equivalent to `wide`.
-long <- data.frame(
-  sex  = factor(rep(c("F", "M"), each = 3)),
-  arm  = rep(c("placebo", "drug_50", "Total"), 2),
-  n    = c(24L, 9L, 42L, 18L, 15L, 47L)
+long <- tibble::tribble(
+  ~sex, ~arm,      ~n,
+  "F",  "placebo", 24L,
+  "F",  "drug_50",  9L,
+  "F",  "Total",   42L,
+  "M",  "placebo", 18L,
+  "M",  "drug_50", 15L,
+  "M",  "Total",   47L
 )
 spec |> subgroup(by = "sex", big_n = long)
 }\if{html}{\out{</div>}}
@@ -229,12 +234,10 @@ tabular(cdisc_saf_subgroup, titles = "Vital Signs by Sex and Age Group") |>
 # `(N=18)` on the Male page. RTF / PDF / DOCX carry the N on the
 # repeating header; HTML and Markdown add a per-arm N row under each
 # banner.
-big_n <- data.frame(
-  sex      = factor(c("F", "M"), levels = c("F", "M")),
-  placebo  = c(24L, 18L),
-  drug_50  = c(9L, 15L),
-  drug_100 = c(9L, 14L),
-  Total    = c(42L, 47L)
+big_n <- tibble::tribble(
+  ~sex, ~placebo, ~drug_50, ~drug_100, ~Total,
+  "F",       24L,       9L,        9L,     42L,
+  "M",       18L,      15L,       14L,     47L
 )
 tabular(cdisc_saf_subgroup, titles = "Vital Signs by Sex") |>
   cols(
