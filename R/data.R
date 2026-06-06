@@ -553,9 +553,11 @@
 #' [cdisc_saf_demo_ard]; together they cover both shapes [pivot_across()]
 #' must handle.
 #'
-#' @format A `card`-classed tibble. Carries an
-#'   `..ard_hierarchical_overall..` sentinel row that
-#'   [pivot_across()] passes through as the table's "overall" row.
+#' @format A `card`-classed tibble. Carries a hierarchical "overall"
+#'   row (cards' internal `..ard_hierarchical_overall..` marker) that
+#'   [pivot_across()] relabels to `"Overall"` (overridable via its
+#'   `label` argument) and emits as the table's top
+#'   `row_type = "overall"` row.
 #'
 #' @source Derived in `data-raw/bundle-demo.R` via
 #'   `cards::ard_stack_hierarchical()` over

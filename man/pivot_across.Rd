@@ -145,7 +145,15 @@ the ARD and must differ from \code{column}.}
 mapping variable names to display labels (e.g.
 \code{c(AGE = "Age (years)", SEX = "Sex")}). Applies to
 \code{variable}, \code{soc}, and \code{label} columns of the output. \code{NULL}
-leaves the upstream variable names verbatim.}
+leaves the upstream variable names verbatim.
+
+\strong{Renaming the hierarchical "overall" row.} A
+\code{cards::ard_stack_hierarchical(overall = TRUE)} ARD carries an
+internal \code{..ard_hierarchical_overall..} sentinel for the
+grand-total ("any event") row. It is relabelled to \code{"Overall"}
+by default; map the sentinel key to override, e.g.
+\code{label = c("..ard_hierarchical_overall.." = "TOTAL SUBJECTS WITH AN EVENT")}.
+The raw sentinel never reaches the output at any hierarchy depth.}
 
 \item{overall}{\emph{Column name for \code{NA}-arm (overall / total) rows.}
 \verb{<character(1) | NULL>: default "Total"}. Pass \code{NULL} to drop

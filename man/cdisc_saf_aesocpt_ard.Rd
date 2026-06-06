@@ -5,9 +5,11 @@
 \alias{cdisc_saf_aesocpt_ard}
 \title{Cards hierarchical ARD for AEs by SOC and PT}
 \format{
-A \code{card}-classed tibble. Carries an
-\code{..ard_hierarchical_overall..} sentinel row that
-\code{\link[=pivot_across]{pivot_across()}} passes through as the table's "overall" row.
+A \code{card}-classed tibble. Carries a hierarchical "overall"
+row (cards' internal \code{..ard_hierarchical_overall..} marker) that
+\code{\link[=pivot_across]{pivot_across()}} relabels to \code{"Overall"} (overridable via its
+\code{label} argument) and emits as the table's top
+\code{row_type = "overall"} row.
 }
 \source{
 Derived in \code{data-raw/bundle-demo.R} via
