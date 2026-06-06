@@ -2,8 +2,10 @@
 
 `pivot_across()` is tabular's input-side helper: it consumes a long
 Analysis Results Data (ARD) data frame (typically produced by
-`cards::ard_stack()` or `cards::ard_stack_hierarchical()`) and returns a
-wide display data.frame ready to pass to
+[`cards::ard_stack()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html)
+or
+[`cards::ard_stack_hierarchical()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack_hierarchical.html))
+and returns a wide display data.frame ready to pass to
 [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md).
 
 ## Usage
@@ -63,11 +65,11 @@ pivot_across(
   verbatim.** Which strings appear there depends on how the ARD was
   built:
 
-  - `cards::ard_continuous()` / `ard_categorical()` emit `"continuous"`
-    / `"categorical"`.
+  - [`cards::ard_continuous()`](https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html)
+    / `ard_categorical()` emit `"continuous"` / `"categorical"`.
 
-  - `cards::ard_summary()` / `ard_tabulate()` emit `"summary"` /
-    `"tabulate"`.
+  - [`cards::ard_summary()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_summary.html)
+    / `ard_tabulate()` emit `"summary"` / `"tabulate"`.
 
   So an ARD assembled with
   `ard_stack(ard_summary(...), ard_tabulate(...))` is keyed `summary` /
@@ -239,16 +241,16 @@ cover everything). When an explicitly-supplied `statistic` matches no
 context at all, `pivot_across()` warns rather than silently emitting
 `{n}`.
 
-|                                   |                             |
-|-----------------------------------|-----------------------------|
-| Generating function               | `context` to key on         |
-| `cards::ard_summary()`            | `summary`                   |
-| `cards::ard_tabulate()`           | `tabulate`                  |
-| `cards::ard_continuous()`         | `continuous`                |
-| `cards::ard_categorical()`        | `categorical`               |
-| `cards::ard_stack_hierarchical()` | `tabulate` + `hierarchical` |
-| `cardx::ard_categorical_ci()`     | `proportion_ci`             |
-| `cardx::ard_continuous_ci()`      | `continuous_ci`             |
+|  |  |
+|----|----|
+| Generating function | `context` to key on |
+| [`cards::ard_summary()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_summary.html) | `summary` |
+| [`cards::ard_tabulate()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_tabulate.html) | `tabulate` |
+| [`cards::ard_continuous()`](https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html) | `continuous` |
+| [`cards::ard_categorical()`](https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html) | `categorical` |
+| [`cards::ard_stack_hierarchical()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack_hierarchical.html) | `tabulate` + `hierarchical` |
+| [`cardx::ard_categorical_ci()`](https://insightsengineering.github.io/cardx/latest-tag/reference/ard_categorical_ci.html) | `proportion_ci` |
+| [`cardx::ard_continuous_ci()`](https://insightsengineering.github.io/cardx/latest-tag/reference/ard_continuous_ci.html) | `continuous_ci` |
 
 ### Indentation of `stat_label`
 

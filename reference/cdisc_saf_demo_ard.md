@@ -1,8 +1,9 @@
 # Cards ARD for demographics (flat ARD companion)
 
 The same demographics summary as `cdisc_saf_demo`, but in the long
-Analysis Results Data (ARD) format produced by `cards::ard_stack()`. One
-row per (treatment arm, variable, statistic). Shipped as a teaching
+Analysis Results Data (ARD) format produced by
+[`cards::ard_stack()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html).
+One row per (treatment arm, variable, statistic). Shipped as a teaching
 dataset that shows the upstream shape users typically have when they
 start from `cards`. Convert it to the wide form
 [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md)
@@ -32,7 +33,7 @@ renders those into a `Total` column.
 
 Derived in `data-raw/bundle-demo.R` via
 `cards::ard_stack(.by = "TRT01A", .overall = TRUE)` over
-`pharmaverseadam::adsl`.
+[`pharmaverseadam::adsl`](https://pharmaverse.github.io/pharmaverseadam/reference/adsl.html).
 
 ## Details
 
