@@ -11,7 +11,7 @@
 # consumes; backends never see the S3 wrapper directly.
 #
 # Defaults — width = "thin" (0.5pt), style = "solid", color =
-# "currentColor". These match the canonical submission Appendix I clinical baseline
+# "currentColor". These match the canonical submission clinical baseline
 # (thin solid black for header / footer / closing rules) without
 # over-committing to a colour, which the consumer's CSS / Word
 # theme resolves at render time.
@@ -161,7 +161,7 @@
 #'   footnotes = "Subjects counted once per category."
 #' ) |>
 #'   cols(
-#'     stat_label = col_spec(usage = "group", label = "Category"),
+#'     stat_label = col_spec(label = "Category"),
 #'     placebo    = col_spec(label = "Placebo\nN={demo_n['placebo']}"),
 #'     drug_50    = col_spec(label = "Drug 50\nN={demo_n['drug_50']}"),
 #'     drug_100   = col_spec(label = "Drug 100\nN={demo_n['drug_100']}"),

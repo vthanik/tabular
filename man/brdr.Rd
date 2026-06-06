@@ -88,7 +88,7 @@ tabular(
   footnotes = "Subjects counted once per category."
 ) |>
   cols(
-    stat_label = col_spec(usage = "group", label = "Category"),
+    stat_label = col_spec(label = "Category"),
     placebo    = col_spec(label = "Placebo\nN={demo_n['placebo']}"),
     drug_50    = col_spec(label = "Drug 50\nN={demo_n['drug_50']}"),
     drug_100   = col_spec(label = "Drug 100\nN={demo_n['drug_100']}"),

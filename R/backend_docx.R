@@ -2,7 +2,7 @@
 # Consumes a resolved `tabular_grid` and writes a regulatory-grade
 # `.docx` ZIP package whose page chrome, header bands, decimal
 # alignment, multi-page pagination, inline formatting, and per-cell
-# styling all honour the canonical submission Appendix I layout contract. Output
+# styling all honour the canonical submission layout contract. Output
 # renders identically in Microsoft Word and LibreOffice Writer;
 # no JVM, no `pandoc`, no `officer`.
 #
@@ -1601,7 +1601,7 @@ backend_docx <- function(grid, file) {
 # `<w:tblHeader/>` so Word repeats the banner if the table spills
 # inside the group, and `<w:pageBreakBefore/>` on the paragraph
 # when transitioning into a non-initial group so each subgroup
-# value starts on a fresh page (the canonical submission Appendix I contract). Returns
+# value starts on a fresh page (the canonical submission contract). Returns
 # character(0) when the page has no subgroup runtime.
 .render_docx_subgroup_banner_row <- function(
   subgroup_line_ast,

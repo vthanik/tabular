@@ -294,7 +294,7 @@
 #'   *   **`spacing`** — region-keyed blank-line control. A named list
 #'       keyed by `title` / `body` / `subgroup` / `footnote`, each a
 #'       named numeric `c(above = , below = )` (footnote: `above`
-#'       only). Default is the Appendix-I one blank line above and
+#'       only). Default is the one blank line above and
 #'       below the title block. Two adjoining region-sides that target
 #'       the same physical gap resolve to the MAX (never the sum), so a
 #'       gap is never accidentally doubled.
@@ -739,7 +739,7 @@ preset <- function(
 #'   footnotes = "Subjects counted once per category."
 #' ) |>
 #'   cols(
-#'     stat_label = col_spec(usage = "group", label = "Category"),
+#'     stat_label = col_spec(label = "Category"),
 #'     placebo    = col_spec(label = "Placebo\nN={demo_n['placebo']}"),
 #'     drug_50    = col_spec(label = "Drug 50\nN={demo_n['drug_50']}"),
 #'     drug_100   = col_spec(label = "Drug 100\nN={demo_n['drug_100']}"),

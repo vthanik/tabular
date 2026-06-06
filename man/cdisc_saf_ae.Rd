@@ -33,9 +33,9 @@ Pre-summarised wide-format AE overview. Two clinical blocks:
 high-level flag rows (any TEAE, any SAE, any treatment-related,
 any AE leading to death, any AE recovered / resolved) and
 maximum-severity rows (mild / moderate / severe). Severity rows
-are indented with two leading spaces so a single
-\code{cols(stat_label = col_spec(usage = "group"))} declaration drives
-both the block-header rows and the indented detail rows.
+are indented with two leading spaces in the data, so a plain
+\code{cols(stat_label = col_spec())} renders a flat overview with the
+severity rows nested under the flags, one row per category.
 }
 \examples{
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
@@ -48,7 +48,7 @@ tabular(
   )
 ) |>
   cols(
-    stat_label = col_spec(usage = "group", label = ""),
+    stat_label = col_spec(label = ""),
     placebo    = col_spec(
       label = "Placebo\nN={n['placebo']}",
       align = "decimal"

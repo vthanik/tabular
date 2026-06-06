@@ -192,7 +192,7 @@
 #'   )
 #' ) |>
 #'   cols(
-#'     stat_label  = col_spec(usage = "group", label = "Response"),
+#'     stat_label  = col_spec(usage = "id", label = "Response"),
 #'     row_type    = col_spec(visible = FALSE),
 #'     groupid     = col_spec(visible = FALSE),
 #'     group_label = col_spec(visible = FALSE),
@@ -289,7 +289,7 @@ md <- function(text) {
 #'     html('See <a href="https://www.meddra.org/">MedDRA</a> coding<sup>1</sup>.')
 #'   )
 #' ) |>
-#'   cols(stat_label = col_spec(usage = "group", label = "Category"))
+#'   cols(stat_label = col_spec(label = "Category"))
 #'
 #' @seealso
 #' **Sibling helper:** [`md()`] — Markdown wrapper for the common

@@ -46,7 +46,9 @@ Clinical Benefit Rate, Disease Control Rate) are encoded via the
 \code{groupid} + \code{group_label} pair so a single \code{usage = "group"} /
 \code{group_display = "header_row"} on \code{group_label} synthesises one
 bold section band per groupid block; the body rows render below
-each band via \code{usage = "indent"} on \code{stat_label}.
+each band, auto-indented one level by the \code{"header_row"} section
+itself (no \code{usage = "indent"} on \code{stat_label} — that would double
+the indent).
 }
 \examples{
 # 95\% efficacy pattern: four bold section bands (Best Overall
@@ -67,7 +69,7 @@ tabular(
 ) |>
   cols(
     group_label = col_spec(usage = "group", group_display = "header_row"),
-    stat_label  = col_spec(usage = "indent", label = "Response"),
+    stat_label  = col_spec(label = "Response"),
     groupid     = col_spec(visible = FALSE),
     row_type    = col_spec(visible = FALSE),
     placebo     = col_spec(

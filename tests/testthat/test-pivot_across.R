@@ -1531,3 +1531,80 @@ test_that("a hierarchical ARD never warns even when keys do not match (#B1)", {
     )
   )
 })
+
+test_that("hierarchical overall row is relabelled, not the raw sentinel (#ard-overall)", {
+  # Regression: pivot_across() on a cards ard_stack_hierarchical ARD leaked the
+  # internal `..ard_hierarchical_overall..` sentinel into the overall row's
+  # soc / label columns instead of giving it a readable label.
+  wide <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
+  stub <- unlist(wide[intersect(c("variable", "soc", "label"), names(wide))])
+  expect_false(any(grepl("..", stub, fixed = TRUE)))
+  ov <- wide[wide$row_type == "overall", , drop = FALSE]
+  expect_equal(nrow(ov), 1L)
+  expect_equal(ov$label, "Overall")
+})
+
+test_that("the `label` map overrides the overall sentinel default (#ard-overall)", {
+  # The user can rename the sentinel via the same `label` map; the registry
+  # default ("Overall") is only the fallback.
+  wide <- pivot_across(
+    cdisc_saf_aesocpt_ard,
+    statistic = "{n} ({p}%)",
+    label = c("..ard_hierarchical_overall.." = "TOTAL SUBJECTS WITH AN EVENT")
+  )
+  ov <- wide[wide$row_type == "overall", , drop = FALSE]
+  expect_equal(ov$label, "TOTAL SUBJECTS WITH AN EVENT")
+  expect_false(any(grepl("..", wide$label, fixed = TRUE)))
+})
+
+test_that("overall append leaves intermediate nesting columns NA at depth 3 (#ard-overall)", {
+  # Pins the length-1 append contract: at >= 3 levels the leaf (label) and soc
+  # carry the sentinel while the intermediate `l2` stays NA, so relabelling
+  # soc/label alone cannot leave a sentinel behind in `l2`.
+  state <- new.env(parent = emptyenv())
+  state$chunks <- list()
+  state$chunk_idx <- 0L
+  tabular:::.hier_append_chunk(
+    state,
+    "..ard_hierarchical_overall..",
+    "overall",
+    stats::setNames(c("1", "2"), c("A", "B")),
+    out_cols = c("soc", "l2", "label"),
+    n_levels = 3L
+  )
+  chunk <- state$chunks[[1L]]
+  expect_true(all(chunk$soc == "..ard_hierarchical_overall.."))
+  expect_true(all(is.na(chunk$l2)))
+  expect_true(all(chunk$label == "..ard_hierarchical_overall.."))
+})
+
+test_that("flat ARD path is unaffected by the always-run label map (#ard-overall)", {
+  # Dropping the `if (!is.null(label))` guard must not perturb the flat path:
+  # variable names stay verbatim and nothing leaks. (Default statistic: the
+  # demo ARD mixes continuous + categorical variables.)
+  wide <- pivot_across(cdisc_saf_demo_ard)
+  expect_true("AGE" %in% wide$variable)
+  expect_false(any(grepl("..", unlist(wide), fixed = TRUE)))
+})
+
+test_that("overall = NULL still relabels the hierarchical overall row (#ard-overall)", {
+  # `overall` is the NA-arm COLUMN control, independent of the hierarchical
+  # overall ROW; the sentinel relabel must not depend on it.
+  wide <- pivot_across(
+    cdisc_saf_aesocpt_ard,
+    statistic = "{n} ({p}%)",
+    overall = NULL
+  )
+  ov <- wide[wide$row_type == "overall", , drop = FALSE]
+  expect_equal(ov$label, "Overall")
+  expect_false(any(grepl("..", wide$label, fixed = TRUE)))
+})
+
+test_that("every kept sentinel has a default label (registry drift guard) (#ard-overall)", {
+  # If a future kept sentinel is added without a default label it would leak;
+  # this pins names(sentinel_labels) == keep_sentinels.
+  expect_setequal(
+    names(tabular:::.tabular_ard_const$sentinel_labels),
+    tabular:::.tabular_ard_const$keep_sentinels
+  )
+})

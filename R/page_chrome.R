@@ -1,6 +1,6 @@
 # page_chrome.R — machinery for preset@pagehead / @pagefoot, the
 # per-page header / footer bands every paginated backend (RTF, LaTeX,
-# PDF, HTML, DOCX) honours. Backed by the canonical submission Appendix I 4-section
+# PDF, HTML, DOCX) honours. Backed by the canonical submission 4-section
 # page layout contract, with the same three-slot (`left` / `center`
 # / `right`) convention shared by galley, arframe, r2rtf, fancyhdr,
 # and Word's UI.
@@ -26,7 +26,7 @@
 # RStudio API -> source() frame walk -> Rscript / R CMD BATCH
 # (`--file=` long form + `-f` short form, which covers Domino and
 # Linux batch jobs) -> knitr current_input -> fallback. This
-# matches the canonical submission Appendix I "Program Path / Program Name" two-
+# matches the canonical submission "Program Path / Program Name" two-
 # line convention.
 #
 # Multi-row contract — index 1 = "body edge", index N = "far from

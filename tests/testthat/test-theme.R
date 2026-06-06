@@ -123,7 +123,7 @@ test_that("resolve_rules rejects a non-rule input", {
 
 # ---- resolve_spacing ------------------------------------------------
 
-test_that("resolve_spacing returns the Appendix-I title defaults", {
+test_that("resolve_spacing returns the title defaults", {
   sp <- tabular:::resolve_spacing(NULL)
   expect_identical(sp$title[["above"]], 1L)
   expect_identical(sp$title[["below"]], 1L)

@@ -81,9 +81,9 @@
 #' high-level flag rows (any TEAE, any SAE, any treatment-related,
 #' any AE leading to death, any AE recovered / resolved) and
 #' maximum-severity rows (mild / moderate / severe). Severity rows
-#' are indented with two leading spaces so a single
-#' `cols(stat_label = col_spec(usage = "group"))` declaration drives
-#' both the block-header rows and the indented detail rows.
+#' are indented with two leading spaces in the data, so a plain
+#' `cols(stat_label = col_spec())` renders a flat overview with the
+#' severity rows nested under the flags, one row per category.
 #'
 #' @format A data frame with 8 rows and 5 columns:
 #' \describe{
@@ -118,7 +118,7 @@
 #'   )
 #' ) |>
 #'   cols(
-#'     stat_label = col_spec(usage = "group", label = ""),
+#'     stat_label = col_spec(label = ""),
 #'     placebo    = col_spec(
 #'       label = "Placebo\nN={n['placebo']}",
 #'       align = "decimal"
@@ -368,7 +368,9 @@
 #' `groupid` + `group_label` pair so a single `usage = "group"` /
 #' `group_display = "header_row"` on `group_label` synthesises one
 #' bold section band per groupid block; the body rows render below
-#' each band via `usage = "indent"` on `stat_label`.
+#' each band, auto-indented one level by the `"header_row"` section
+#' itself (no `usage = "indent"` on `stat_label` — that would double
+#' the indent).
 #'
 #' @format A data frame with 13 rows and 7 columns:
 #' \describe{
@@ -419,7 +421,7 @@
 #' ) |>
 #'   cols(
 #'     group_label = col_spec(usage = "group", group_display = "header_row"),
-#'     stat_label  = col_spec(usage = "indent", label = "Response"),
+#'     stat_label  = col_spec(label = "Response"),
 #'     groupid     = col_spec(visible = FALSE),
 #'     row_type    = col_spec(visible = FALSE),
 #'     placebo     = col_spec(
@@ -551,9 +553,11 @@
 #' [cdisc_saf_demo_ard]; together they cover both shapes [pivot_across()]
 #' must handle.
 #'
-#' @format A `card`-classed tibble. Carries an
-#'   `..ard_hierarchical_overall..` sentinel row that
-#'   [pivot_across()] passes through as the table's "overall" row.
+#' @format A `card`-classed tibble. Carries a hierarchical "overall"
+#'   row (cards' internal `..ard_hierarchical_overall..` marker) that
+#'   [pivot_across()] relabels to `"Overall"` (overridable via its
+#'   `label` argument) and emits as the table's top
+#'   `row_type = "overall"` row.
 #'
 #' @source Derived in `data-raw/bundle-demo.R` via
 #'   `cards::ard_stack_hierarchical()` over

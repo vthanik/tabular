@@ -1,7 +1,7 @@
 # backend_rtf.R — RTF 1.9.1 backend. Consumes a resolved
 # `tabular_grid` and writes a regulatory-grade UTF-8 `.rtf` file
 # whose page chrome, header bands, decimal alignment, multi-page
-# pagination, and inline formatting all honour the canonical submission Appendix I
+# pagination, and inline formatting all honour the canonical submission
 # layout contract. Output renders identically in Microsoft Word
 # and LibreOffice; no JVM, no shell-out, no `pandoc`.
 #
@@ -1885,7 +1885,7 @@ backend_rtf <- function(grid, file) {
       valign_tok <- .rtf_valign_token(valign)
       # Backend default per-side borders for a body cell: top and left
       # and right are clear; bottom carries the closing solid rule only
-      # on the table's final rendered row (the canonical Appendix I
+      # on the table's final rendered row (the canonical
       # closing rule). The cascade resolver overrides these defaults
       # when the user has set explicit border_<side>_style / etc.
       bottom_default <- if (is_last_row && isTRUE(close_bottom_rule)) {

@@ -220,7 +220,7 @@
 #'   footnotes = "Active = pooled Drug 50 + Drug 100 columns."
 #' ) |>
 #'   cols(
-#'     stat_label = col_spec(usage = "group", label = ""),
+#'     stat_label = col_spec(label = ""),
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
 #'     active     = col_spec(label = "Active arms"),
 #'     drug_50    = col_spec(visible = FALSE),

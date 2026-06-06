@@ -165,6 +165,14 @@
 #'   `variable`, `soc`, and `label` columns of the output. `NULL`
 #'   leaves the upstream variable names verbatim.
 #'
+#'   **Renaming the hierarchical "overall" row.** A
+#'   `cards::ard_stack_hierarchical(overall = TRUE)` ARD carries an
+#'   internal `..ard_hierarchical_overall..` sentinel for the
+#'   grand-total ("any event") row. It is relabelled to `"Overall"`
+#'   by default; map the sentinel key to override, e.g.
+#'   `label = c("..ard_hierarchical_overall.." = "TOTAL SUBJECTS WITH AN EVENT")`.
+#'   The raw sentinel never reaches the output at any hierarchy depth.
+#'
 #' @param overall *Column name for `NA`-arm (overall / total) rows.*
 #'   `<character(1) | NULL>: default "Total"`. Pass `NULL` to drop
 #'   overall rows entirely (per-arm only output).
@@ -644,9 +652,11 @@ pivot_across <- function(
     )
   }
 
-  if (!is.null(label)) {
-    wide <- .apply_label_map(wide, label = label)
-  }
+  # Always run: even with no user `label`, the map applies the registry
+  # default for kept sentinels so a raw `..` name never reaches output. The
+  # default keys only the sentinel string, so non-sentinel rows (and the flat
+  # path, which has no soc/label columns) are untouched.
+  wide <- .apply_label_map(wide, label = label)
 
   rownames(wide) <- NULL
   # Stamp the arm column names so downstream verbs (e.g. sort_rows())
@@ -1849,7 +1859,15 @@ pivot_across <- function(
       "..ard_hierarchical_overall..",
       call
     )
-    sentinel <- "..ard_hierarchical_overall.."
+    # The cards overall row carries the internal
+    # `..ard_hierarchical_overall..` sentinel as its variable name with no
+    # human label (variable_level is just TRUE). Append it as a LENGTH-1
+    # level: `.hier_append_chunk()` then fills the leaf (`label`) and `soc`
+    # with the sentinel and leaves the intermediate nesting-key columns
+    # (`l2`, `l3`, ...) NA -- the grand total has no SOC/PT ancestor.
+    # `.apply_label_map()` resolves the sentinel to the registry default
+    # ("Overall") or the user's `label` override, at every hierarchy depth.
+    overall_sentinel <- "..ard_hierarchical_overall.."
     cells <- .interpolate_cells_all_arms(
       overall_df,
       arm_levels,
@@ -1858,7 +1876,7 @@ pivot_across <- function(
     )
     .hier_append_chunk(
       state,
-      rep(sentinel, n_levels),
+      overall_sentinel,
       "overall",
       cells,
       out_cols,
@@ -2038,6 +2056,12 @@ pivot_across <- function(
 # ---------------------------------------------------------------------
 
 .apply_label_map <- function(wide, label) {
+  # Seed registry defaults for kept sentinels (e.g.
+  # `..ard_hierarchical_overall..` -> "Overall"); a user `label` for the same
+  # key wins. `c(NULL, defaults) == defaults`, so this also supplies the
+  # default when the caller passed no `label` at all.
+  defaults <- .tabular_ard_const$sentinel_labels
+  label <- c(label, defaults[setdiff(names(defaults), names(label))])
   label_from <- names(label)
   label_to <- unname(unlist(label))
   for (col in intersect(c("variable", "soc", "label"), names(wide))) {
@@ -2058,6 +2082,12 @@ pivot_across <- function(
 .tabular_ard_const <- list(
   # Sentinels that represent real display rows; never filter.
   keep_sentinels = c("..ard_hierarchical_overall.."),
+
+  # Default display label for each kept sentinel, applied by
+  # `.apply_label_map()` unless the user's `label` overrides the same key.
+  # INVARIANT: names(sentinel_labels) == keep_sentinels (pinned by a test) so
+  # no kept sentinel can ever reach output carrying its raw `..` name.
+  sentinel_labels = c("..ard_hierarchical_overall.." = "Overall"),
 
   # Internal contexts to filter out. `tabulate` is NOT here: it is a
   # genuine categorical context from `cards::ard_tabulate()`. The
