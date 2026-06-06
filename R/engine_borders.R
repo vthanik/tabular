@@ -610,7 +610,10 @@ engine_chrome_borders <- function(spec) {
 # `body_cols` doesn't stamp a vertical separator on, e.g., a
 # `visible = FALSE` sort-key helper.
 .visible_col_indices <- function(spec, col_names) {
-  cols <- spec@cols
+  # Finalize the NA "unset" sentinels so visibility / header_row reads are
+  # correct even when this phase is exercised on a raw spec (the production
+  # path finalizes upstream; this keeps the read self-sufficient). Idempotent.
+  cols <- .finalize_col_specs(spec@cols)
   # header_row group columns are pulled OUT of the body into synthesised
   # section-header rows by engine_group_display(); since engine_borders
   # runs BEFORE that drop, their per-cell border stamps would land on a

@@ -32,7 +32,6 @@ fits in one mental model:\tabular{lll}{
    \code{header_node} \tab one node in the multi-level header tree \tab internal — built by \code{\link[=headers]{headers()}} \cr
    \code{sort_spec} \tab sort keys + per-key direction \tab internal — built by \code{\link[=sort_rows]{sort_rows()}} \cr
    \code{style_node} \tab one resolved style attribute set (per-cell) \tab internal — built by \code{\link[=style]{style()}} \cr
-   \code{style_predicate} \tab (legacy) one \code{where} quosure + scope + style_node \tab internal — built by \code{\link[=style]{style()}} \cr
    \code{style_layer} \tab one \code{tabular_location} + style_node \tab internal — built by \code{\link[=style]{style()}} \cr
    \code{style_spec} \tab the cascade root (defaults + cols + headers + layers) \tab internal — built by \code{\link[=style]{style()}} \cr
    \code{pagination_spec} \tab page-split policy (keep_together, panels, floors) \tab internal — built by \code{\link[=paginate]{paginate()}} \cr

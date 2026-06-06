@@ -83,7 +83,7 @@
 #'   footnotes = "Subjects are counted once per SOC and once per PT."
 #' ) |>
 #'   cols(
-#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
 #'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     soc_n    = col_spec(visible = FALSE),
@@ -169,7 +169,7 @@
 #' ae$n_total  <- as.integer(sub(" .*", "", ae$Total))
 #' tabular(ae, titles = "AE by SOC and PT, ranked within SOC") |>
 #'   cols(
-#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
 #'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     soc_n    = col_spec(visible = FALSE),

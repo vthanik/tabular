@@ -65,10 +65,12 @@ test_that("paginate() accepts keep_together referencing a group column", {
   expect_identical(out@pagination@keep_together, "soc")
 })
 
-test_that('paginate() accepts panels = "auto"', {
+test_that('paginate() rejects panels = "auto" (removed no-op)', {
   spec <- make_spec(10L)
-  out <- paginate(spec, panels = "auto")
-  expect_identical(out@pagination@panels, "auto")
+  expect_error(
+    paginate(spec, panels = "auto"),
+    class = "tabular_error_input"
+  )
 })
 
 test_that("paginate() accepts panels as a positive integer", {

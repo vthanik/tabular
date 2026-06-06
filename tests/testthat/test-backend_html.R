@@ -1525,7 +1525,7 @@ test_that(".tabular-pad has margin: 0 so title spacer is one line tall", {
 })
 
 # ---------------------------------------------------------------------
-# Regression: visible indent on `indent_by` columns in HTML
+# Regression: visible indent on `indent` columns in HTML
 #
 # Bug: the engine prepends `preset@indent_size` spaces per depth level
 # to cell text, but browsers collapse runs of leading whitespace inside
@@ -1533,7 +1533,7 @@ test_that(".tabular-pad has margin: 0 so title spacer is one line tall", {
 # engine prefix and re-expresses the indent as CSS `padding-left`.
 # ---------------------------------------------------------------------
 
-test_that("HTML indent_by cells emit padding-left and strip engine prefix", {
+test_that("HTML indent cells emit padding-left and strip engine prefix", {
   df <- data.frame(
     soc = c("CARDIAC", "CARDIAC", "GI", "GI"),
     label = c("CARDIAC", "Atrial fib", "GI", "Nausea"),
@@ -1545,7 +1545,7 @@ test_that("HTML indent_by cells emit padding-left and strip engine prefix", {
   spec <- tabular(df, titles = "AE") |>
     cols(
       soc = col_spec(usage = "group", group_display = "header_row"),
-      label = col_spec(label = "Category", indent_by = "indent_level"),
+      label = col_spec(label = "Category", indent = "indent_level"),
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
@@ -1649,7 +1649,7 @@ test_that("indent padding-left is AFM-derived per preset font", {
       preset(font_family = font_family) |>
       cols(
         soc = col_spec(usage = "group", group_display = "header_row"),
-        label = col_spec(label = "Category", indent_by = "indent_level"),
+        label = col_spec(label = "Category", indent = "indent_level"),
         indent_level = col_spec(visible = FALSE),
         row_type = col_spec(visible = FALSE),
         n = col_spec(label = "N")
@@ -1776,7 +1776,7 @@ test_that("indent padding-left is additive via calc + uses %g format", {
     preset(font_family = "Courier") |>
     cols(
       soc = col_spec(usage = "group", group_display = "header_row"),
-      label = col_spec(label = "Category", indent_by = "indent_level"),
+      label = col_spec(label = "Category", indent = "indent_level"),
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
@@ -1821,7 +1821,7 @@ test_that("indent calc trims trailing zeros for proportional fonts too", {
     preset(font_family = "Helvetica") |>
     cols(
       soc = col_spec(usage = "group", group_display = "header_row"),
-      label = col_spec(label = "Category", indent_by = "indent_level"),
+      label = col_spec(label = "Category", indent = "indent_level"),
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
@@ -2193,7 +2193,7 @@ mk_wrap_indent_spec <- function() {
       soc = col_spec(usage = "group", group_display = "header_row"),
       label = col_spec(
         label = "Category",
-        indent_by = "indent_level",
+        indent = "indent_level",
         width = "1in"
       ),
       indent_level = col_spec(visible = FALSE),
@@ -2238,7 +2238,7 @@ test_that("HTML emits <tr class='tabular-group-header'> with bold spanning cell 
   spec <- tabular(df, titles = "Eff") |>
     cols(
       group_label = col_spec(usage = "group", group_display = "header_row"),
-      stat_label = col_spec(usage = "indent", label = "Response"),
+      stat_label = col_spec(indent = 1, label = "Response"),
       placebo = col_spec(label = "Placebo", align = "decimal"),
       drug_50 = col_spec(label = "Drug 50", align = "decimal")
     )

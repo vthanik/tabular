@@ -59,6 +59,12 @@ engine_group_display <- function(
   indent_size = 0L,
   subgroup_hide_cols = character(0L)
 ) {
+  # Finalize NA "unset" sentinels (visible / group_display / usage) so
+  # every read below is concrete, even when this phase is exercised
+  # directly on a raw col_spec map (production feeds finalized cols via
+  # .cols_by_name; idempotent here). Single resolver, no duplicated
+  # defaults.
+  cols <- .finalize_col_specs(cols)
   indent_unit <- .indent_text_unit(indent_size)
   nrow_data <- nrow(cells_text)
   ncol_data <- ncol(cells_text)
@@ -83,8 +89,8 @@ engine_group_display <- function(
   )
 
   # Sidecar matrix carrying per-cell indent depth in integer levels.
-  # Both `indent_by` (per-row variable depth) and `usage = "indent"`
-  # (fixed +1 per row) write to it additively. Header / blank rows
+  # `col_spec@indent` (a fixed count or a per-row column) and the
+  # `header_row` auto-indent write to it additively. Header / blank rows
   # injected later by `.inject_header_rows_for_page()` carry depth 0L
   # on every column (the parent at depth 0 — never indented). Each
   # backend reads this matrix and emits native padding-left in its
@@ -109,17 +115,20 @@ engine_group_display <- function(
     ))
   }
 
-  # Resolve `col_spec@indent_by` references BEFORE any group/column-
-  # mode processing. Each target column with `indent_by = "<name>"`
-  # set picks up per-row depths from `data[[<name>]]`; the target
-  # column's text + AST is prefixed in-place with
+  # Resolve `col_spec@indent` BEFORE any group/column-mode processing.
+  # Two modes per target column:
+  #   * numeric scalar N — every body row indented N levels;
+  #   * character "<name>" — per-row depths from `data[[<name>]]`, and
+  #     the referenced depth column gets its `visible` auto-flipped to
+  #     FALSE (unless the user set it) so depth values don't render.
+  # Either way the target column's text + AST is prefixed in-place with
   # `strrep(indent_unit, depth)` where `indent_unit` is
-  # `strrep(" ", indent_size)`. The referenced depth column gets its
-  # `visible` auto-flipped to FALSE (unless the user set it
-  # explicitly) so depth values don't render.
+  # `strrep(" ", indent_size)`.
   #
   # Independent of `group_display = "header_row"` — works in plain
-  # listings (no group cols) just as well as in SOC/PT tables.
+  # listings (no group cols) just as well as in SOC/PT tables. An
+  # explicit `indent` on a header_row host suppresses the section
+  # auto-indent below (the host carries the depth itself).
   indent_apply <- .resolve_indent_targets(
     cols = cols,
     col_names = col_names,
@@ -140,25 +149,6 @@ engine_group_display <- function(
       )
       cells_indent[, target$col] <- cells_indent[, target$col] +
         as.integer(target$depths)
-    }
-  }
-
-  # Phase: `usage = "indent"` columns — every body cell in the column
-  # gets prefixed with one indent level (`preset@indent_size`
-  # space-widths). Composes additively with `indent_by` above (which
-  # ran first); a column with both gets `depth_by + 1` indent levels
-  # per row. Synthesised header rows skip the prefix because they are
-  # injected post-prefix by `.inject_header_rows_for_page()`.
-  indent_usage_cols <- .indent_usage_columns(cols, col_names)
-  if (length(indent_usage_cols) > 0L && nzchar(indent_unit)) {
-    prefix_one_level <- rep(indent_unit, nrow_data)
-    for (nm in indent_usage_cols) {
-      cells_text[, nm] <- paste0(indent_unit, cells_text[, nm])
-      cells_ast[, nm] <- .indent_host_asts_per_row(
-        cells_ast[, nm],
-        prefix_one_level
-      )
-      cells_indent[, nm] <- cells_indent[, nm] + 1L
     }
   }
 
@@ -260,8 +250,8 @@ engine_group_display <- function(
   # when section changes" semantic).
   #
   # `data_depth = length(bands)` is added to `cells_indent[, host_col]`
-  # for every body row -- UNLESS the host column itself declares
-  # `indent_by`, in which case the user's per-row depth wins and the
+  # for every body row -- UNLESS the host column itself declares an
+  # explicit `indent`, in which case the user's depth wins and the
   # auto-contribution is suppressed (preserves cdisc_saf_aesocpt's SOC/PT
   # rendering exactly).
   #
@@ -306,10 +296,10 @@ engine_group_display <- function(
     )
 
     # Conditional auto-indent on the host column's body cells:
-    # suppressed when the host already carries `indent_by` (user's
-    # per-row depth metadata wins). Composes additively with the
-    # `indent_by` / `usage = "indent"` contributions that the engine
-    # has already written into `cells_indent` above.
+    # suppressed when the host already carries an explicit `indent`
+    # (the user controls the depth). Composes additively with the
+    # `indent` contribution the engine has already written into
+    # `cells_indent` above.
     #
     # **Invariant**: the leading-space count in `cells_text[, col]`
     # must equal `indent_unit * cells_indent[i, col]`. We bump BOTH
@@ -324,11 +314,10 @@ engine_group_display <- function(
         data_depth > 0L
     ) {
       host_col_spec <- cols[[host_col]]
-      host_has_indent_by <- is_col_spec(host_col_spec) &&
-        length(host_col_spec@indent_by) == 1L &&
-        !is.na(host_col_spec@indent_by) &&
-        nzchar(host_col_spec@indent_by)
-      if (!host_has_indent_by) {
+      host_has_indent <- is_col_spec(host_col_spec) &&
+        length(host_col_spec@indent) == 1L &&
+        !is.na(host_col_spec@indent)
+      if (!host_has_indent) {
         cells_indent[, host_col] <- cells_indent[, host_col] + data_depth
         if (nzchar(indent_unit)) {
           data_prefix <- strrep(indent_unit, data_depth)
@@ -368,21 +357,6 @@ engine_group_display <- function(
     function(nm) {
       cs <- cols[[nm]]
       is_col_spec(cs) && !is.na(cs@usage) && cs@usage == "group"
-    },
-    logical(1L)
-  )
-  col_names[keep]
-}
-
-# `usage = "indent"` columns in declaration order. Used by the
-# engine indent phase to apply a fixed depth-1 indent to every body
-# cell in each such column. Mirrors `.group_display_columns()`.
-.indent_usage_columns <- function(cols, col_names) {
-  keep <- vapply(
-    col_names,
-    function(nm) {
-      cs <- cols[[nm]]
-      is_col_spec(cs) && !is.na(cs@usage) && cs@usage == "indent"
     },
     logical(1L)
   )
@@ -555,21 +529,23 @@ engine_group_display <- function(
   asts
 }
 
-# Walk `cols` for every entry with `@indent_by` set and resolve
-# each into a per-row prefix vector against the named depth column
-# in `data`. Returns a list with two slots:
+# Walk `cols` for every entry with `@indent` set and resolve each into
+# a per-row prefix vector. Two modes by type:
+#   * numeric scalar N — every body row gets depth N (no `data` needed);
+#   * character "<name>" — per-row depths from `data[[<name>]]`, and the
+#     named depth column is flagged for auto-hide.
+# Returns a list with two slots:
 #
 #   $targets  — list of records, one per resolved indent target:
-#                 list(col = <target>, depth_col = <depth>,
-#                      prefixes = character(nrow_data))
-#   $hide_cols — character vector of depth-column names whose
-#                visibility should be auto-flipped to FALSE.
+#                 list(col = <target>, depth_col = <depth | NA>,
+#                      prefixes = character(nrow_data), depths = integer)
+#   $hide_cols — character vector of depth-column names (character mode
+#                only) whose visibility should be auto-flipped to FALSE.
 #
-# Hard errors (class = "tabular_error_input") on:
+# Hard errors (class = "tabular_error_input") on a character target:
 #   - referenced depth column not present in `data`
 #   - depth column wrong length
 #   - depth column not numeric / logical
-#   - target column declares indent_by but isn't in cells_text
 #
 # Soft handling (clamp + continue) on:
 #   - NA depth values  -> 0
@@ -584,16 +560,13 @@ engine_group_display <- function(
   call
 ) {
   out <- list(targets = list(), hide_cols = character(0L))
-  if (is.null(data)) {
-    return(out)
-  }
   for (nm in names(cols)) {
     cs <- cols[[nm]]
     if (!is_col_spec(cs)) {
       next
     }
-    by <- cs@indent_by
-    if (length(by) != 1L || is.na(by) || !nzchar(by)) {
+    ind <- cs@indent
+    if (length(ind) != 1L || is.na(ind)) {
       next
     }
     if (!(nm %in% col_names)) {
@@ -603,11 +576,30 @@ engine_group_display <- function(
       # ride through every phase.
       next
     }
+    if (is.numeric(ind)) {
+      # Fixed depth on every body row — independent of `data`.
+      depths <- rep(as.integer(ind), nrow_data)
+      prefixes <- .build_indent_prefixes(depths, indent_size)
+      out$targets[[length(out$targets) + 1L]] <- list(
+        col = nm,
+        depth_col = NA_character_,
+        prefixes = prefixes,
+        depths = depths
+      )
+      next
+    }
+    # Character: per-row depth from a data column.
+    by <- ind
+    if (is.null(data)) {
+      # No data to read the depth column from (e.g. a header-only
+      # engine call). Skip silently rather than erroring.
+      next
+    }
     if (!(by %in% names(data))) {
       cli::cli_abort(
         c(
-          "{.code col_spec(indent_by = ...)} references missing column.",
-          "x" = "Column {.val {nm}} declares {.code indent_by = {.val {by}}}, but {.val {by}} is not in {.code spec@data}."
+          "{.code col_spec(indent = ...)} references missing column.",
+          "x" = "Column {.val {nm}} declares {.code indent = {.val {by}}}, but {.val {by}} is not in {.code spec@data}."
         ),
         class = "tabular_error_input",
         call = call

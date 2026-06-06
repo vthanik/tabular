@@ -80,7 +80,7 @@ so do not mix a hand-typed marker with an engine one for the same note.
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 tabular(cdisc_saf_aesocpt) |>
   cols(
-    label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+    label    = col_spec(label = "SOC / PT", indent = "indent_level"),
     soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     soc_n    = col_spec(visible = FALSE),
@@ -102,7 +102,7 @@ tabular(cdisc_saf_aesocpt) |>
 # one marker and one line; the marker lands on each matching cell.
 tabular(cdisc_saf_aesocpt) |>
   cols(
-    label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+    label    = col_spec(label = "SOC / PT", indent = "indent_level"),
     soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     soc_n    = col_spec(visible = FALSE),

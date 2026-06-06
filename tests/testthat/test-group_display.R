@@ -9,9 +9,11 @@
 # col_spec() constructor
 # ---------------------------------------------------------------------
 
-test_that("col_spec() default group_display is 'header_row'", {
+test_that("col_spec() default group_display is the NA unset sentinel", {
+  # NA = unset (mergeable); resolved to "header_row" at engine finalize.
   cs <- col_spec()
-  expect_equal(cs@group_display, "header_row")
+  expect_true(is.na(cs@group_display))
+  expect_equal(tabular:::.finalize_col_spec(cs)@group_display, "header_row")
 })
 
 test_that("col_spec() accepts every value in the enum", {
@@ -33,10 +35,59 @@ test_that("col_spec() rejects a non-character group_display", {
     col_spec(group_display = 1L),
     class = "tabular_error_input"
   )
-  expect_error(
-    col_spec(group_display = NA),
-    class = "tabular_error_input"
-  )
+})
+
+test_that("col_spec(group_display = NA) is the unset sentinel (accepted)", {
+  cs <- col_spec(group_display = NA)
+  expect_true(is.na(cs@group_display))
+})
+
+# F3 — warn (at render) when group_display / group_skip is set off a
+# non-group column. Render-time, not construction-time, so the staged
+# build pattern (a later cols() call setting group_display after an
+# earlier usage = "group") never spuriously warns.
+
+mk_inert_spec <- function(...) {
+  tabular(data.frame(
+    g = c("a", "b"),
+    x = c("1", "2"),
+    stringsAsFactors = FALSE
+  )) |>
+    cols(g = col_spec(...))
+}
+
+test_that("group_display off a non-group column warns at render (#F3)", {
+  spec <- mk_inert_spec(group_display = "column")
+  out <- withr::local_tempfile(fileext = ".md")
+  expect_warning(emit(spec, out), class = "tabular_warning_input")
+})
+
+test_that("group_skip off a non-group column warns at render (#F3)", {
+  spec <- mk_inert_spec(group_skip = TRUE)
+  out <- withr::local_tempfile(fileext = ".md")
+  expect_warning(emit(spec, out), class = "tabular_warning_input")
+})
+
+test_that("group_display on a group column does NOT warn at render (#F3)", {
+  spec <- mk_inert_spec(usage = "group", group_display = "column")
+  out <- withr::local_tempfile(fileext = ".md")
+  expect_no_warning(emit(spec, out))
+})
+
+test_that("the staged build (group_display set after usage='group') does NOT warn (#F3)", {
+  spec <- tabular(
+    data.frame(g = c("a", "b"), x = c("1", "2"), stringsAsFactors = FALSE)
+  ) |>
+    cols(g = col_spec(usage = "group")) |>
+    cols(g = col_spec(group_display = "column"))
+  out <- withr::local_tempfile(fileext = ".md")
+  expect_no_warning(emit(spec, out))
+})
+
+test_that("constructing col_spec(group_display=...) alone does NOT warn (#F3)", {
+  # Warning is deferred to render so isolated construction is quiet.
+  expect_no_warning(col_spec(group_display = "column"))
+  expect_no_warning(col_spec(group_skip = TRUE))
 })
 
 # ---------------------------------------------------------------------
@@ -263,10 +314,10 @@ test_that("as_grid() with explicit group_display='column' keeps column + suppres
 })
 
 # ---------------------------------------------------------------------
-# Per-row indent via `col_spec(indent_by = "<depth_col>")`
+# Per-row indent via `col_spec(indent = "<depth_col>")`
 # ---------------------------------------------------------------------
 #
-# A target column declares `indent_by = "<column_name>"` to point at
+# A target column declares `indent = "<column_name>"` to point at
 # a hidden depth column carrying per-row integer values. The engine
 # prefixes the target column's text + AST with
 # `strrep(" ", preset@indent_size * depth)`. Depth 0 rows stay flush;
@@ -286,7 +337,7 @@ mk_soc_pt_spec <- function(indent = NULL) {
   spec <- tabular(df, titles = "AE", footnotes = "") |>
     cols(
       soc = col_spec(usage = "group", group_display = "header_row"),
-      label = col_spec(label = "Category", indent_by = "indent_level"),
+      label = col_spec(label = "Category", indent = "indent_level"),
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
@@ -297,7 +348,7 @@ mk_soc_pt_spec <- function(indent = NULL) {
   spec
 }
 
-test_that("indent_by depth 0 rows stay flush; depth 1 rows carry '  '", {
+test_that("indent depth 0 rows stay flush; depth 1 rows carry '  '", {
   g <- as_grid(mk_soc_pt_spec())
   page1 <- g@pages[[1L]]
   # SOC summary rows have indent_level = 0L -> flush.
@@ -318,7 +369,7 @@ test_that("indent_by depth 0 rows stay flush; depth 1 rows carry '  '", {
   expect_true(all(startsWith(pt_rows, "  ")))
 })
 
-test_that("indent_by prefix lands on cells_ast as a leading plain run", {
+test_that("indent prefix lands on cells_ast as a leading plain run", {
   g <- as_grid(mk_soc_pt_spec())
   page1 <- g@pages[[1L]]
   # First PT row (depth 1) — find it by matching one of the PT labels.
@@ -345,7 +396,7 @@ test_that("synthetic header rows do NOT carry the indent prefix", {
   expect_false(startsWith(first$text %||% "", "  "))
 })
 
-test_that("indent_by depth-0 cells_ast carries NO leading prefix run", {
+test_that("indent depth-0 cells_ast carries NO leading prefix run", {
   g <- as_grid(mk_soc_pt_spec())
   page1 <- g@pages[[1L]]
   # SOC summary row (depth 0) — first run should be the SOC label,
@@ -585,41 +636,46 @@ test_that(".indent_host_asts skips entries that are not inline_ast", {
 })
 
 # ---------------------------------------------------------------------
-# col_spec(indent_by = ...) — argument validation
+# col_spec(indent = ...) — argument validation
 # ---------------------------------------------------------------------
 
-test_that("col_spec(indent_by = '<col>') accepts a single character", {
-  cs <- col_spec(indent_by = "depth")
-  expect_equal(cs@indent_by, "depth")
+test_that("col_spec(indent = '<col>') accepts a single character", {
+  cs <- col_spec(indent = "depth")
+  expect_equal(cs@indent, "depth")
 })
 
-test_that("col_spec(indent_by = NA) is the no-op default", {
-  cs <- col_spec(indent_by = NA_character_)
-  expect_true(is.na(cs@indent_by))
+test_that("col_spec(indent = NA) is the no-op default", {
+  cs <- col_spec(indent = NA_character_)
+  expect_true(is.na(cs@indent))
 })
 
-test_that("col_spec(indent_by = NULL) coerces to NA", {
-  cs <- col_spec(indent_by = NULL)
-  expect_true(is.na(cs@indent_by))
+test_that("col_spec(indent = NULL) coerces to NA", {
+  cs <- col_spec(indent = NULL)
+  expect_true(is.na(cs@indent))
 })
 
-test_that("col_spec(indent_by = '') is rejected (use NA to clear)", {
+test_that("col_spec(indent = '') is rejected (use NA to clear)", {
   expect_error(
-    col_spec(indent_by = ""),
+    col_spec(indent = ""),
     class = "tabular_error_input"
   )
 })
 
-test_that("col_spec(indent_by = c('a','b')) is rejected (length must be 1)", {
+test_that("col_spec(indent = c('a','b')) is rejected (length must be 1)", {
   expect_error(
-    col_spec(indent_by = c("a", "b")),
+    col_spec(indent = c("a", "b")),
     class = "tabular_error_input"
   )
 })
 
-test_that("col_spec(indent_by = 1L) is rejected (must be character)", {
+test_that("col_spec(indent = 1L) is accepted as a fixed count", {
+  cs <- col_spec(indent = 1L)
+  expect_identical(cs@indent, 1L)
+})
+
+test_that("col_spec(indent = -1) is rejected (count must be non-negative)", {
   expect_error(
-    col_spec(indent_by = 1L),
+    col_spec(indent = -1),
     class = "tabular_error_input"
   )
 })
@@ -636,7 +692,7 @@ mk_indent_call_args <- function(
 ) {
   cols <- stats::setNames(
     list(
-      col_spec(label = "X", indent_by = by),
+      col_spec(label = "X", indent = by),
       col_spec(visible = FALSE)
     ),
     c(target_col, by)
@@ -710,7 +766,7 @@ test_that(".resolve_indent_targets multi-depth produces N copies of the space un
   expect_equal(out$targets[[1L]]$prefixes, c("", " ", "   "))
 })
 
-test_that(".resolve_indent_targets errors when indent_by points at a missing column", {
+test_that(".resolve_indent_targets errors when indent points at a missing column", {
   d <- data.frame(x = c("a", "b"), real_depth = c(0L, 1L))
   args <- mk_indent_call_args(d, "x", "depth") # `depth` not in data
   expect_error(
@@ -766,7 +822,7 @@ test_that(".resolve_indent_targets auto-hides the depth column", {
   d <- data.frame(x = c("a", "b"), depth = c(0L, 1L))
   spec <- tabular(d) |>
     cols(
-      x = col_spec(label = "X", indent_by = "depth"),
+      x = col_spec(label = "X", indent = "depth"),
       depth = col_spec(visible = TRUE) # user explicitly set TRUE
     )
   g <- as_grid(spec)
@@ -774,7 +830,7 @@ test_that(".resolve_indent_targets auto-hides the depth column", {
   # Even though the user said `visible = TRUE` on the depth col,
   # the engine auto-hides it. Justification: the depth col is
   # semantically a controller, not a render target. If a user
-  # genuinely wants to debug-render it, they remove the indent_by
+  # genuinely wants to debug-render it, they remove the indent
   # reference instead.
   expect_false("depth" %in% page1$col_names)
 })
@@ -827,10 +883,10 @@ test_that(".indent_host_asts_per_row is a no-op on empty input", {
 })
 
 # ---------------------------------------------------------------------
-# Composability — indent_by + group_display = "header_row" + sort_rows
+# Composability — indent + group_display = "header_row" + sort_rows
 # ---------------------------------------------------------------------
 
-test_that("indent_by composes with sort_rows() — depths follow their rows", {
+test_that("indent composes with sort_rows() — depths follow their rows", {
   df <- data.frame(
     label = c("CARDIAC", "Atrial fib", "GI", "Nausea"),
     depth = c(0L, 1L, 0L, 1L),
@@ -842,7 +898,7 @@ test_that("indent_by composes with sort_rows() — depths follow their rows", {
   #   Atrial fib (depth 1), Nausea (depth 1), CARDIAC (depth 0), GI (depth 0)
   spec <- tabular(df) |>
     cols(
-      label = col_spec(label = "C", indent_by = "depth"),
+      label = col_spec(label = "C", indent = "depth"),
       depth = col_spec(visible = FALSE),
       sort_key = col_spec(visible = FALSE)
     ) |>
@@ -855,7 +911,7 @@ test_that("indent_by composes with sort_rows() — depths follow their rows", {
   expect_equal(unname(page1$cells_text[3L, "label"]), "CARDIAC")
 })
 
-test_that("indent_by composes with group_display='header_row'", {
+test_that("indent composes with group_display='header_row'", {
   spec <- mk_soc_pt_spec()
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
@@ -873,14 +929,14 @@ test_that("indent_by composes with group_display='header_row'", {
 # Error path coverage
 # ---------------------------------------------------------------------
 
-test_that("indent_by referencing a missing column raises a tabular_error_input", {
+test_that("indent referencing a missing column raises a tabular_error_input", {
   df <- data.frame(label = "A", x = 1L, stringsAsFactors = FALSE)
   spec <- tabular(df) |>
-    cols(label = col_spec(label = "L", indent_by = "nonexistent"))
+    cols(label = col_spec(label = "L", indent = "nonexistent"))
   expect_error(as_grid(spec), class = "tabular_error_input")
 })
 
-test_that("indent_by referencing a character column raises a tabular_error_input", {
+test_that("indent referencing a character column raises a tabular_error_input", {
   df <- data.frame(
     label = "A",
     bad_depth = "foo",
@@ -888,18 +944,18 @@ test_that("indent_by referencing a character column raises a tabular_error_input
   )
   spec <- tabular(df) |>
     cols(
-      label = col_spec(label = "L", indent_by = "bad_depth"),
+      label = col_spec(label = "L", indent = "bad_depth"),
       bad_depth = col_spec(visible = FALSE)
     )
   expect_error(as_grid(spec), class = "tabular_error_input")
 })
 
 # ---------------------------------------------------------------------
-# Listing without `group_display = "header_row"` — indent_by works
+# Listing without `group_display = "header_row"` — indent works
 # in a plain flat listing too.
 # ---------------------------------------------------------------------
 
-test_that("indent_by works without group_display='header_row' (flat listing)", {
+test_that("indent works without group_display='header_row' (flat listing)", {
   df <- data.frame(
     usubjid = c("01", "02", "03"),
     aedecod = c("Headache", "Dizziness", "Nausea"),
@@ -909,7 +965,7 @@ test_that("indent_by works without group_display='header_row' (flat listing)", {
   spec <- tabular(df) |>
     cols(
       usubjid = col_spec(label = "USUBJID"),
-      aedecod = col_spec(label = "AEDECOD", indent_by = "depth"),
+      aedecod = col_spec(label = "AEDECOD", indent = "depth"),
       depth = col_spec(visible = FALSE)
     )
   g <- as_grid(spec)
@@ -922,17 +978,17 @@ test_that("indent_by works without group_display='header_row' (flat listing)", {
 })
 
 # ---------------------------------------------------------------------
-# cols() merge propagation — indent_by survives second-call merge
+# cols() merge propagation — indent survives second-call merge
 # ---------------------------------------------------------------------
 
-test_that("cols() second-call merge propagates indent_by", {
+test_that("cols() second-call merge propagates indent", {
   df <- data.frame(label = "A", depth = 0L, stringsAsFactors = FALSE)
   spec <- tabular(df) |>
     cols(label = col_spec(label = "Cat")) |>
-    cols(label = col_spec(indent_by = "depth"))
+    cols(label = col_spec(indent = "depth"))
   cs <- spec@cols[["label"]]
   expect_equal(cs@label, "Cat")
-  expect_equal(cs@indent_by, "depth")
+  expect_equal(cs@indent, "depth")
 })
 
 test_that("engine_group_display() skips indent when indent_size is non-positive", {
@@ -1235,33 +1291,26 @@ test_that("engine_group_display() handles host_col == NA without indenting", {
 })
 
 # ---------------------------------------------------------------------
-# `usage = "indent"` engine phase — fixed depth-1 prefix
+# Fixed `indent = <n>` engine phase — uniform depth-n prefix
 # ---------------------------------------------------------------------
 
-mk_indent_usage_spec <- function(indent_size = 2L, with_indent_by = FALSE) {
+mk_indent_usage_spec <- function(indent_size = 2L, level = 1L) {
   df <- data.frame(
     group_label = c("A", "A", "B", "B"),
     stat_label = c("x1", "x2", "y1", "y2"),
-    depth = c(0L, 1L, 0L, 2L),
     placebo = c("1", "2", "3", "4"),
     stringsAsFactors = FALSE
   )
-  stat_spec <- if (with_indent_by) {
-    col_spec(usage = "indent", label = "Stat", indent_by = "depth")
-  } else {
-    col_spec(usage = "indent", label = "Stat")
-  }
   spec <- tabular(df, titles = "T", footnotes = "") |>
     cols(
       group_label = col_spec(usage = "group", group_display = "header_row"),
-      stat_label = stat_spec,
-      depth = col_spec(visible = FALSE),
+      stat_label = col_spec(indent = level, label = "Stat"),
       placebo = col_spec(label = "Placebo")
     )
   preset(spec, indent_size = indent_size)
 }
 
-test_that("usage='indent' prefixes every body cell of the column with one indent level", {
+test_that("indent = 1 prefixes every body cell of the column with one indent level", {
   g <- as_grid(mk_indent_usage_spec())
   page1 <- g@pages[[1L]]
   body <- page1$cells_text[
@@ -1272,18 +1321,27 @@ test_that("usage='indent' prefixes every body cell of the column with one indent
   expect_true(all(startsWith(body, "  ")))
 })
 
-test_that("usage='indent' is additive with indent_by (depth_by + 1 per row)", {
-  g <- as_grid(mk_indent_usage_spec(indent_size = 2L, with_indent_by = TRUE))
+test_that("indent = <n> applies n fixed levels to every body cell", {
+  g <- as_grid(mk_indent_usage_spec(indent_size = 2L, level = 2L))
   page1 <- g@pages[[1L]]
   body_rows <- which(!page1$is_header_row & !page1$is_blank_row)
   body <- page1$cells_text[body_rows, "stat_label"]
-  # depths c(0, 1, 0, 2) + 1 -> c(1, 2, 1, 3) levels of 2 spaces each.
-  expected_lead <- c(2L, 4L, 2L, 6L)
+  # 2 levels of 2 spaces each on every body row.
   observed_lead <- nchar(body) - nchar(sub("^ +", "", body))
-  expect_identical(observed_lead, expected_lead)
+  expect_identical(observed_lead, rep(4L, length(body)))
 })
 
-test_that("usage='indent' synthetic header rows are NOT indented", {
+test_that("indent = 0 leaves body cells flush", {
+  g <- as_grid(mk_indent_usage_spec(level = 0L))
+  page1 <- g@pages[[1L]]
+  body <- page1$cells_text[
+    !page1$is_header_row & !page1$is_blank_row,
+    "stat_label"
+  ]
+  expect_true(all(!startsWith(body, " ")))
+})
+
+test_that("indent = <n> synthetic header rows are NOT indented", {
   g <- as_grid(mk_indent_usage_spec())
   page1 <- g@pages[[1L]]
   header_rows <- which(page1$is_header_row)
@@ -1303,7 +1361,7 @@ test_that("usage='indent' synthetic header rows are NOT indented", {
   }
 })
 
-test_that("usage='indent' prefix lands on cells_ast as a leading plain run", {
+test_that("indent = 1 prefix lands on cells_ast as a leading plain run", {
   g <- as_grid(mk_indent_usage_spec())
   page1 <- g@pages[[1L]]
   body_idx <- which(!page1$is_header_row & !page1$is_blank_row)[[1L]]
@@ -1313,7 +1371,7 @@ test_that("usage='indent' prefix lands on cells_ast as a leading plain run", {
   expect_equal(ast@runs[[1L]]$text, "  ")
 })
 
-test_that("usage='indent' with indent_size = 0L is a no-op", {
+test_that("indent = 1 with indent_size = 0L is a no-op", {
   g <- as_grid(mk_indent_usage_spec(indent_size = 0L))
   page1 <- g@pages[[1L]]
   body <- page1$cells_text[
@@ -1323,27 +1381,30 @@ test_that("usage='indent' with indent_size = 0L is a no-op", {
   expect_true(all(!startsWith(body, " ")))
 })
 
-test_that(".indent_usage_columns picks every usage='indent' column in declaration order", {
-  cols <- list(
-    a = col_spec(usage = "display"),
-    b = col_spec(usage = "indent"),
-    c = col_spec(usage = "group"),
-    d = col_spec(usage = "indent")
+test_that("a fixed indent = <n> resolves with no data (engine called without `data`)", {
+  # The scalar branch must not depend on `data` (header-only engine call).
+  cols <- list(stat_label = col_spec(indent = 2L))
+  out <- tabular:::.resolve_indent_targets(
+    cols = cols,
+    col_names = "stat_label",
+    data = NULL,
+    nrow_data = 3L,
+    indent_size = 2L,
+    call = rlang::caller_env()
   )
-  expect_identical(
-    tabular:::.indent_usage_columns(cols, c("a", "b", "c", "d")),
-    c("b", "d")
-  )
+  expect_length(out$targets, 1L)
+  expect_identical(out$targets[[1L]]$depths, rep(2L, 3L))
+  expect_identical(out$hide_cols, character(0L))
 })
 
 # ---------------------------------------------------------------------
 # Change D: multi-level `usage = "group" + group_display = "header_row"`
 # auto-indent. Outer band at depth 0, inner band at depth 1, etc. Body
 # rows under N bands get N levels added to cells_indent[, host_col]
-# UNLESS the host column declares `indent_by` (cdisc_saf_aesocpt regression).
+# UNLESS the host column declares `indent` (cdisc_saf_aesocpt regression).
 # ---------------------------------------------------------------------
 
-mk_nested_band_spec <- function(host_indent_by = FALSE) {
+mk_nested_band_spec <- function(host_indent = FALSE) {
   df <- data.frame(
     section = c(
       "Safety",
@@ -1373,8 +1434,8 @@ mk_nested_band_spec <- function(host_indent_by = FALSE) {
     n = c("100", "10", "5", "8", "20", "15"),
     stringsAsFactors = FALSE
   )
-  label_spec <- if (host_indent_by) {
-    col_spec(label = "Item", indent_by = "indent_lv")
+  label_spec <- if (host_indent) {
+    col_spec(label = "Item", indent = "indent_lv")
   } else {
     col_spec(label = "Item")
   }
@@ -1413,8 +1474,8 @@ test_that("nested header_row bands: header_row_plan$bands has correct depth + tr
   expect_true(any(depths == 1L))
 })
 
-test_that("nested bands: body rows get cells_indent = N when host has no indent_by", {
-  g <- as_grid(mk_nested_band_spec(host_indent_by = FALSE))
+test_that("nested bands: body rows get cells_indent = N when host has no indent", {
+  g <- as_grid(mk_nested_band_spec(host_indent = FALSE))
   p1 <- g@pages[[1L]]
   host_idx <- match("label", p1$col_names)
   body_idx <- which(!p1$is_header_row & !p1$is_blank_row)
@@ -1423,13 +1484,13 @@ test_that("nested bands: body rows get cells_indent = N when host has no indent_
     function(i) p1$cells_indent[i, host_idx],
     integer(1L)
   )
-  # data_depth = length(bands) = 2; no indent_by on host -> body
+  # data_depth = length(bands) = 2; no indent on host -> body
   # rows carry exactly 2 levels of indent.
   expect_true(all(body_depths == 2L))
 })
 
-test_that("nested bands: indent_by on host SUPPRESSES data_depth (cdisc_saf_aesocpt invariant)", {
-  g <- as_grid(mk_nested_band_spec(host_indent_by = TRUE))
+test_that("nested bands: indent on host SUPPRESSES data_depth (cdisc_saf_aesocpt invariant)", {
+  g <- as_grid(mk_nested_band_spec(host_indent = TRUE))
   p1 <- g@pages[[1L]]
   host_idx <- match("label", p1$col_names)
   body_idx <- which(!p1$is_header_row & !p1$is_blank_row)
@@ -1440,9 +1501,36 @@ test_that("nested bands: indent_by on host SUPPRESSES data_depth (cdisc_saf_aeso
   )
   # indent_lv is 0L on every body row, so cells_indent is 0L on every
   # body row -- data_depth (2) suppressed because host declares
-  # indent_by. cdisc_saf_aesocpt's depth-0 SOC + depth-1 PT pattern works
-  # the same way: indent_by wins.
+  # indent. cdisc_saf_aesocpt's depth-0 SOC + depth-1 PT pattern works
+  # the same way: indent wins.
   expect_true(all(body_depths == 0L))
+})
+
+test_that("a fixed indent = 1 on a header_row host gives a SINGLE indent, not double", {
+  # Footgun-fixed-by-construction: a scalar indent on the section host
+  # suppresses the auto-indent, so the body lands at exactly the scalar
+  # depth (1), never scalar + data_depth (2).
+  df <- data.frame(
+    section = c("A", "A", "B", "B"),
+    label = c("x1", "x2", "y1", "y2"),
+    n = c("1", "2", "3", "4"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df, titles = "T") |>
+    cols(
+      section = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(label = "Item", indent = 1L),
+      n = col_spec(label = "N")
+    )
+  p1 <- as_grid(spec)@pages[[1L]]
+  host_idx <- match("label", p1$col_names)
+  body_idx <- which(!p1$is_header_row & !p1$is_blank_row)
+  body_depths <- vapply(
+    body_idx,
+    function(i) p1$cells_indent[i, host_idx],
+    integer(1L)
+  )
+  expect_true(all(body_depths == 1L))
 })
 
 test_that("nested bands inject in OUTER->INNER order at stacked transitions", {

@@ -58,7 +58,7 @@ returned, to write defensive helpers that wrap tabular pipelines,
 or to assert intermediate shapes during pipeline debugging.
 }
 \details{
-Eleven predicates cover the full S7 surface:\tabular{lll}{
+Twelve predicates cover the full S7 surface:\tabular{lll}{
    predicate \tab tests for \tab produced by \cr
    \code{is_tabular_spec()} \tab \code{tabular_spec} \tab \code{\link[=tabular]{tabular()}} and every build verb \cr
    \code{is_tabular_grid()} \tab \code{tabular_grid} \tab \code{\link[=as_grid]{as_grid()}} \cr
@@ -66,7 +66,6 @@ Eleven predicates cover the full S7 surface:\tabular{lll}{
    \code{is_header_node()} \tab \code{header_node} \tab \code{\link[=headers]{headers()}} (internal nodes) \cr
    \code{is_sort_spec()} \tab \code{sort_spec} \tab \code{\link[=sort_rows]{sort_rows()}} \cr
    \code{is_style_node()} \tab \code{style_node} \tab \code{\link[=style]{style()}} (per-cell style) \cr
-   \code{is_style_predicate()} \tab \code{style_predicate} \tab (legacy) \code{\link[=style]{style()}} predicate path \cr
    \code{is_style_layer()} \tab \code{style_layer} \tab \code{\link[=style]{style()}} (one per call) \cr
    \code{is_style_spec()} \tab \code{style_spec} \tab \code{\link[=style]{style()}} (the cascade root) \cr
    \code{is_pagination_spec()} \tab \code{pagination_spec} \tab \code{\link[=paginate]{paginate()}} \cr

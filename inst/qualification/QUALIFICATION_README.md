@@ -25,7 +25,7 @@ Tables:
 | 14-2.01 | Demographics & Baseline (ITT)             | `ard_stack` + `pivot_across` (continuous + categorical), group headers, indent, decimal align, BigN labels |
 | 14-1.01 | Analysis Populations                      | categorical n(%), `cols_apply` arm columns |
 | 14-3.01 | TEAE overview by maximum severity         | categorical n(%) |
-| 14-3.04 | TEAE by SOC & PT                           | 2-level hierarchy via `indent_by`, frequency sort, large table |
+| 14-3.04 | TEAE by SOC & PT                           | 2-level hierarchy via header_row sections, frequency sort, large table |
 
 ## How to run
 

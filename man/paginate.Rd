@@ -32,15 +32,10 @@ paginate(keep_together = "soc")
 }\if{html}{\out{</div>}}}
 
 \item{panels}{\emph{Number of horizontal panels for wide tables.}
-\verb{<integer(1) | "auto">: default 1}. With \code{1}, every column is on
-every page (single vertical scroll). With \code{N > 1}, the engine
-splits non-group columns into \code{N} chunks and repeats every group
-column on every panel.
-
-\strong{Note:} \code{"auto"} is accepted but treated as \code{1} until
-preset-aware column-width metrics land; once they do, \code{"auto"}
-will split when the total table width exceeds the printable
-area.}
+\verb{<integer(1)>: default 1}. With \code{1}, every column is on every page
+(single vertical scroll). With \code{N > 1}, the engine splits non-group
+columns into \code{N} chunks and repeats every group column on every
+panel.}
 
 \item{orphan_floor}{\emph{Minimum rows on a continued-from page.}
 \verb{<integer(1)>: default 3}. When \code{keep_together} would move a
@@ -144,9 +139,7 @@ too tall to fit on one page cannot be kept together).
 \strong{\code{panels} and group stickiness.} With \code{panels > 1}, the engine
 splits the NON-group columns into approximately equal slices and
 repeats every \code{usage = "group"} column on every panel for row
-context. \code{panels = "auto"} defers the decision to preset-aware
-column-width metrics; until those metrics land in a future
-release the engine treats \code{"auto"} as \code{1}.
+context.
 }
 \examples{
 # ---- Example 1: AE table paginated by SOC ----
@@ -172,7 +165,7 @@ tabular(
   footnotes = "Subjects are counted once per SOC and once per PT."
 ) |>
   cols(
-    label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+    label    = col_spec(label = "SOC / PT", indent = "indent_level"),
     soc      = col_spec(usage = "group", visible = FALSE,
                         group_display = "column_repeat"),
     row_type = col_spec(visible = FALSE),
@@ -267,7 +260,7 @@ tabular(
   titles = c("Table 14.3.1", "AEs by SOC and PT (wide-page split)")
 ) |>
   cols(
-    label    = col_spec(label = "SOC / PT", indent_by = "indent_level",
+    label    = col_spec(label = "SOC / PT", indent = "indent_level",
                         width = "2.5in"),
     soc      = col_spec(usage = "group", visible = FALSE,
                         group_display = "column_repeat"),

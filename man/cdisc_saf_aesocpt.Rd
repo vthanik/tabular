@@ -13,12 +13,12 @@ carries the same SOC text on SOC rows.}
 \item{\code{label}}{The row's display label. Equal to \code{soc} on the
 overall and SOC-summary rows; equal to the preferred-term name
 on PT detail rows. Promoted to the primary display column —
-pair with \code{indent_by = "indent_level"} to drive the SOC -> PT
+pair with \code{indent = "indent_level"} to drive the SOC -> PT
 indent.}
 \item{\code{row_type}}{One of \code{"overall"}, \code{"soc"}, \code{"pt"}. Partition
 marker; hide via \code{col_spec(visible = FALSE)}.}
 \item{\code{indent_level}}{Integer depth (0 on overall and SOC rows,
-1 on PT rows). Consumed by \code{col_spec(indent_by = "indent_level")}
+1 on PT rows). Consumed by \code{col_spec(indent = "indent_level")}
 on the \code{label} column; the engine auto-hides this column at
 resolve time.}
 \item{\code{n_total}}{Integer. The row's own subject count — overall
@@ -54,7 +54,7 @@ followed by its preferred-term detail rows. Top 10 SOCs and top
 5 PTs per SOC are kept; \code{row_type} marks the role of each row and
 \code{indent_level} carries the canonical depth (0 for overall and SOC,
 1 for PT) so the downstream pipeline drives the SOC -> PT indent
-via \code{col_spec(indent_by = "indent_level")} without reconstructing
+via \code{col_spec(indent = "indent_level")} without reconstructing
 it in every script. The richer SOC × PT slice exercises
 \code{\link[=paginate]{paginate()}} and the engine's horizontal-panel splitter end-to-end
 on a realistic submission shell.
@@ -78,7 +78,7 @@ tabular(
   cols(
     label    = col_spec(
       label = "SOC / PT",
-      indent_by = "indent_level",
+      indent = "indent_level",
       align = "left"
     ),
     soc      = col_spec(visible = FALSE),

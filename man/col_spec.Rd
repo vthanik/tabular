@@ -8,14 +8,14 @@ col_spec(
   usage = NULL,
   label = NA_character_,
   format = NULL,
-  visible = TRUE,
+  visible = NA,
   width = "auto",
-  group_display = "header_row",
+  group_display = NA,
   group_skip = NA,
   align = NULL,
   valign = NULL,
   na_text = NA_character_,
-  indent_by = NA_character_
+  indent = NA
 )
 }
 \arguments{
@@ -25,22 +25,8 @@ col_spec(
 \item \strong{\code{"display"}} (default in \code{\link[=cols]{cols()}}) — pass-through.
 \item \strong{\code{"group"}} — row-label with repeat-suppression and
 continuation-page repeat keys. Use for \code{variable}, \code{soc},
-\code{stat_label}.
-\item \strong{\code{"indent"}} — prefix every body cell of this column with
-one indent level (\code{preset@indent_size} space-widths). Composes
-additively with \code{indent_by} (a column with both gets
-\code{depth_by + 1} indent levels per row). Backends with native
-padding-left semantics (HTML / LaTeX / RTF / DOCX / PDF)
-emit this as cell padding so wrapped continuation lines align
-with the indented baseline; Markdown carries the literal
-space-prefix. Synthesised group-header rows (under
-\code{group_display = "header_row"}) are NEVER indented — they're
-the parent at depth 0. \strong{Note:} a \code{"header_row"} section
-already indents its child rows one level, so do not add
-\code{usage = "indent"} to a stub that sits under one — the two
-stack into a double indent. Reach for \code{"indent"} only when
-there is no \code{"header_row"} section providing the indent, or
-to add a deliberate extra level.
+\code{stat_label}. (Cosmetic indent depth is the separate \code{indent}
+argument, not a usage role.)
 \item \strong{\code{"id"}} — a row-identifier column. Renders like \code{"display"}
 (one value per row, never collapses) but joins the \emph{stub}: it
 repeats on every horizontal panel (\code{paginate(panels = N)}) and
@@ -49,7 +35,9 @@ Markdown) collapses the panels into one table. The PROC REPORT
 \code{ID} role, orthogonal to grouping. Use for a per-row statistic
 label (\code{"n"}, \code{"Mean"}, \code{"SD"}) that must stay legible on every
 panel of a wide demographics or efficacy table.
-\item \strong{\code{NULL}} — inferred as \code{"display"} in \code{\link[=cols]{cols()}}.
+\item \strong{\code{NULL} / \code{NA}} — the unset sentinel; resolves to \code{"display"}
+at render. \code{NA} is mergeable, so an explicit \code{"display"} on a
+later \code{\link[=cols]{cols()}} call can override a prior \code{"group"} / \code{"id"}.
 }
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two row-label columns and four arm columns.
@@ -149,16 +137,19 @@ col_spec(format = function(x) formatC(x, format = "f", digits = 1, big.mark = ",
 }\if{html}{\out{</div>}}}
 
 \item{visible}{\emph{Whether the column renders.}
-\verb{<logical(1)>: default TRUE}. \code{FALSE} hides the column from
-output but keeps it in \code{spec@data} so \code{\link[=sort_rows]{sort_rows()}} and
-\code{\link[=style]{style()}} predicates can still reference it.
+\verb{<logical(1)>: default NA}. \code{FALSE} hides the column from output
+but keeps it in \code{spec@data} so \code{\link[=sort_rows]{sort_rows()}} and \code{\link[=style]{style()}}
+predicates can still reference it. \code{NA} (default) is the merge
+"unset" sentinel — it resolves to visible at render and, crucially,
+is mergeable: a later \code{\link[=cols]{cols()}} call with \code{visible = TRUE} can
+\strong{re-show} a column an earlier call hid.
 
 \strong{Interaction:} Hidden columns are the standard pattern for
 sort-key helpers (\code{row_type}, \code{n_total}) and for the numeric
 counts behind formatted-text percentage cells.
 
-\strong{Auto-hide.} The depth column named by \code{indent_by} and every
-column named by \code{\link[=subgroup]{subgroup(by = ...)}} or referenced
+\strong{Auto-hide.} The depth column named by a character \code{indent} and
+every column named by \code{\link[=subgroup]{subgroup(by = ...)}} or referenced
 via a \code{{col}} placeholder in the subgroup banner template are
 flipped to \code{visible = FALSE} automatically at engine time —
 restating it here is redundant.
@@ -226,17 +217,20 @@ later call carrying \code{width = "auto"} leaves a previously pinned
 width intact, and only an explicit non-\code{"auto"} width overrides.}
 
 \item{group_display}{\emph{How \code{usage = "group"} values render in the body.}
-\verb{<character(1)>: default "header_row"}. Active only when
-\code{usage = "group"}; ignored otherwise.
+\verb{<character(1)>: default NA}. Active only when \code{usage = "group"} —
+setting it on a non-group column is ignored and warns.
+\code{NA} (default) is the merge "unset" sentinel and resolves to
+\code{"header_row"} at render; an explicit value is mergeable, so a later
+\code{\link[=cols]{cols()}} call can reset it back to \code{"header_row"}.
 \itemize{
 \item \strong{\code{"header_row"}} \emph{(default)} — each unique value emits as
 a section header row above its block of data rows, and \strong{the
 body rows beneath are automatically indented one level}. The
 section header itself sits flush left at depth 0; its child
 rows render one indent level in. Because the section already
-supplies that indent, the stub column needs \strong{no}
-\code{usage = "indent"} — adding it stacks a second level and
-produces a double indent. The source column is hidden from
+supplies that indent, the stub column needs \strong{no} \code{indent} —
+adding \code{indent = 1} there overrides (does not stack) the
+auto-indent, leaving a single level. The source column is hidden from
 the visible body. Matches the canonical submission
 shape used by clinical TFL house templates (Disposition,
 Demographics, Statistical Report sections).
@@ -266,8 +260,8 @@ cols(
 }\if{html}{\out{</div>}}}
 
 \item{group_skip}{\emph{Insert a blank row between consecutive groups.}
-\verb{<logical(1)>: default NA}. Active only when \code{usage = "group"};
-ignored otherwise. Three values:
+\verb{<logical(1)>: default NA}. Active only when \code{usage = "group"} —
+setting it on a non-group column is ignored and warns. Three values:
 \itemize{
 \item \strong{\code{TRUE}} — engine injects one blank row immediately before
 each value transition on this column (PROC REPORT's \verb{BREAK AFTER var / SKIP} semantics, lifted to per-column control).
@@ -358,37 +352,47 @@ preset uses a non-empty token.
 would be ambiguous, e.g. when "not applicable" and "not
 reported" both render blank.}
 
-\item{indent_by}{\emph{Name of a column in \code{spec@data} whose per-row
-integer / logical values drive indent depth on this column.}
-\verb{<character(1)>: default NA_character_}. When set, the engine
-reads \code{spec@data[[indent_by]]} and prefixes this column's text
+\item{indent}{\emph{Cosmetic indent depth on this column.}
+\verb{<numeric(1) | character(1) | NA>: default NA}. Two modes by type:
 \itemize{
-\item AST in each row with \code{strrep(" ", preset@indent_size * depth)}.
-The referenced depth column is auto-hidden — no need to set
-\code{visible = FALSE} on it.
+\item \strong{A non-negative whole number} — every body row of this column
+is indented that many levels (each level is
+\code{preset@indent_size} space-widths). \code{indent = 1} is the common
+"nudge this stub in one level" case; \code{indent = 0} is a real
+value that flattens children under a \code{"header_row"} section.
+\item \strong{A column name (character)} — per-row depth: the engine reads
+\code{spec@data[[indent]]}, coerces each row to a non-negative
+integer, and prefixes that row's text + AST with
+\code{strrep(" ", preset@indent_size * depth)}. The referenced depth
+column is auto-hidden — no need to set \code{visible = FALSE} on it.
 }
 
-Typical SOC / PT pattern (the bundled \code{cdisc_saf_aesocpt} ships with
-the canonical depth column already attached, so no upstream
-construction is needed):
+\code{NA} (default) means no indent. Backends with native padding-left
+(HTML / LaTeX / RTF / DOCX / PDF) emit the depth as cell padding so
+wrapped continuation lines align with the indented baseline;
+Markdown carries the literal space-prefix. Synthesised group-header
+rows are never indented — they are the parent at depth 0.
+
+\strong{Interaction:} an explicit \code{indent} on a
+\code{group_display = "header_row"} host \strong{suppresses} that section's
+automatic one-level child indent (you take control of the depth) —
+so a stub under a section needs no \code{indent} at all, and adding
+\code{indent = 1} there yields a single, not double, indent.
+
+Per-row SOC / PT pattern (the bundled \code{cdisc_saf_aesocpt} ships the
+canonical depth column, so no upstream construction is needed):
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{cols(
-  label    = col_spec(label = "Category", indent_by = "indent_level"),
+  label    = col_spec(label = "Category", indent = "indent_level"),
   soc      = col_spec(visible = FALSE),
   row_type = col_spec(visible = FALSE)
 )
 }\if{html}{\out{</div>}}
 
-Multi-depth nesting works the same way — values
-\verb{c(0L, 1L, 2L, …)} produce \code{0}, \code{1}, \code{2}, … indent levels of
-\code{preset@indent_size} space-widths each. Negative values clamp
-to 0 (warn); fractional numerics floor (warn); NA → 0 (silent).
-
-Composes orthogonally with \code{group_display = "header_row"}:
-synthetic group headers (depth 0) stay flush as parents; data
-rows under them carry their column's declared depth. Works in
-flat listings too — \code{indent_by} does not require any
-\code{usage = "group"} columns.}
+Depth-column values \verb{c(0L, 1L, 2L, …)} produce \code{0}, \code{1}, \code{2}, …
+levels. Negative values clamp to 0 (warn); fractional numerics
+floor (warn); NA → 0 (silent). Works in flat listings too — a
+character \code{indent} does not require any \code{usage = "group"} columns.}
 }
 \value{
 \emph{A \code{col_spec} S7 object.} Pass it to \code{\link[=cols]{cols()}} keyed by
@@ -410,10 +414,13 @@ multiple inputs without restating the name.
 
 \strong{Merge semantics across repeated \code{cols()} calls.} When
 \code{\link[=cols]{cols()}} is called twice for the same column, the engine merges
-field-by-field: a non-default value on the new spec overrides;
-a default-valued field (NA / NULL / "" / \code{TRUE}) leaves the
-existing field intact. Build a column's spec in stages without
-re-stating earlier attributes.
+field-by-field: any field set to a non-default value on the new spec
+overrides; a field left at its "unset" sentinel (\code{NA} / \code{NULL} /
+\code{"auto"}) leaves the existing value intact. Because every mergeable
+field has a genuine unset sentinel, a later call can also \emph{restore} a
+default — e.g. \code{visible = TRUE} re-shows a column an earlier call
+hid. Build a column's spec in stages without re-stating earlier
+attributes.
 
 \strong{Validation timing.} Argument shapes are validated eagerly —
 a malformed \code{sprintf} template is probed at construction
@@ -468,9 +475,10 @@ tabular(
 # AE-by-SOC/PT table where `label` carries SOC and PT text under
 # one column, indented by `indent_level`. Hidden helpers
 # (`row_type`, `n_total`) drive the sort while staying off the
-# rendered page. Demonstrates `indent_by` plus `visible = FALSE`
+# rendered page. Demonstrates `indent` plus `visible = FALSE`
 # for sort-only columns, fixed width on the wide label column, and
 # decimal alignment on all four arm columns.
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 ae <- cdisc_saf_aesocpt
 ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -485,7 +493,7 @@ tabular(
 ) |>
   cols(
     label    = col_spec(label = "SOC / Preferred Term",
-                        indent_by = "indent_level", width = 2.5),
+                        indent = "indent_level", width = 2.5),
     soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     soc_n    = col_spec(visible = FALSE),

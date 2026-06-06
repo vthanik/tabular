@@ -481,7 +481,7 @@ cdisc_saf_aesocpt <- bind_rows(any_row, body_sorted) |>
 
 # Ship the canonical depth column so users do not reconstruct it in
 # every cdisc_saf_aesocpt example. Integer values: 0 on overall and SOC
-# rows, 1 on PT rows. Use as `col_spec(label, indent_by = "indent_level")`.
+# rows, 1 on PT rows. Use as `col_spec(label, indent = "indent_level")`.
 cdisc_saf_aesocpt$indent_level <- as.integer(cdisc_saf_aesocpt$row_type == "pt")
 cdisc_saf_aesocpt <- cdisc_saf_aesocpt[, c(
   "soc",
@@ -598,8 +598,8 @@ ci95_chr <- function(x, n) {
 # both rows in the group so `usage = "group"` synthesises one section
 # header per groupid block. `stat_label` carries the short rate label on
 # the derived row and the full CI prose on the CI row -- no leading-
-# space indent, since `usage = "indent"` on stat_label at render time
-# adds the depth uniformly via native padding-left.
+# space indent, since the `"header_row"` section auto-indents its child
+# rows uniformly via native padding-left.
 derive_rate <- function(data, categories, label, groupid, group_label) {
   by_arm <- data |>
     filter(AVALC %in% categories) |>

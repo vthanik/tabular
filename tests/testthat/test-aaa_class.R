@@ -70,8 +70,6 @@ test_that("style_node(bold = TRUE) holds the value", {
   expect_true(s@bold)
 })
 
-# style_predicate -----------------------------------------------------
-
 # style_spec ----------------------------------------------------------
 
 test_that("style_spec() builds with empty containers", {
@@ -215,8 +213,8 @@ test_that(".col_spec_class validator rejects malformed scalar props", {
     "@group_skip must be length 1"
   )
   expect_error(
-    tabular:::.col_spec_class(indent_by = c("a", "b")),
-    "@indent_by must be length 1"
+    tabular:::.col_spec_class(indent = c("a", "b")),
+    "@indent must be length 1"
   )
 })
 

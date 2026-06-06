@@ -138,11 +138,11 @@ A hierarchical ARD widens to a `soc` / `label` / `row_type` triple (not a single
 ```{r}
 data(cdisc_saf_aesocpt_ard, package = "tabular")
 ae <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
-ae$indent <- as.integer(ae$row_type == "pt") # depth for col_spec(indent_by=)
+ae$indent_level <- as.integer(ae$row_type == "pt") # depth for col_spec(indent = "indent_level")
 head(ae, 6)
 ```
 
-(Turning `soc`/`label`/`indent` into the indented stub is in
+(Turning `soc`/`label`/`indent_level` into the indented stub is in
 [Structure](structure.html).)
 
 ## A two-variable `.by`

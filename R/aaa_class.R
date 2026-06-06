@@ -32,14 +32,17 @@
 #                         values (or emits section-header rows), drives
 #                         keep_together / group_skip, and repeats on
 #                         every panel as part of the stub.
-#   "indent"            — an indent-helper sub-label under a group.
 #   "id"                — a row-identifier column. Renders like
 #                         "display" (one value per row, never
 #                         collapses) but joins the stub: it repeats on
 #                         every horizontal panel and shows once on the
 #                         left. The PROC REPORT `ID` role, orthogonal
 #                         to grouping. See `.stub_col_names()`.
-.col_usage_values <- c("display", "group", "indent", "id")
+#
+# `usage` holds structural ROLES only. Cosmetic indent depth is the
+# separate `indent` property (a fixed level or a per-row column), not a
+# usage value.
+.col_usage_values <- c("display", "group", "id")
 
 # Recognised values for `col_spec@group_display`. Active only when
 # `col_spec@usage = "group"`; ignored otherwise. Controls how the
@@ -190,7 +193,8 @@
 )
 
 # ---------------------------------------------------------------------
-# col_spec — 7-field per-column DSL
+# col_spec — per-column display DSL (see properties below for the full
+# field set; the user-facing args are documented on col_spec())
 # ---------------------------------------------------------------------
 #
 # The S7 class binding is .col_spec_class (internal); the user-facing
@@ -218,7 +222,6 @@
 #' | `header_node`       | one node in the multi-level header tree               | internal — built by [`headers()`] |
 #' | `sort_spec`         | sort keys + per-key direction                         | internal — built by [`sort_rows()`]|
 #' | `style_node`        | one resolved style attribute set (per-cell)           | internal — built by [`style()`]   |
-#' | `style_predicate`   | (legacy) one `where` quosure + scope + style_node     | internal — built by [`style()`]   |
 #' | `style_layer`       | one `tabular_location` + style_node                   | internal — built by [`style()`]   |
 #' | `style_spec`        | the cascade root (defaults + cols + headers + layers) | internal — built by [`style()`]   |
 #' | `pagination_spec`   | page-split policy (keep_together, panels, floors)     | internal — built by [`paginate()`]|
@@ -274,9 +277,13 @@ NULL
       default = NA_character_
     ),
     format = S7::class_any,
+    # @visible — NA (default) is the merge "unset" sentinel; the engine
+    # finalize pass (.finalize_cols / .finalize_one) resolves it to TRUE
+    # before any reader runs. TRUE / FALSE are explicit and mergeable, so
+    # a later cols() call can re-show a hidden column with visible = TRUE.
     visible = S7::new_property(
       S7::class_logical,
-      default = TRUE
+      default = NA
     ),
     width = S7::new_property(
       S7::class_any,
@@ -292,9 +299,12 @@ NULL
       S7::class_any,
       default = "auto"
     ),
+    # @group_display — NA (default) is the merge "unset" sentinel; the
+    # finalize pass resolves it to "header_row" before any reader runs.
+    # An explicit value is mergeable, so a later cols() call can reset it.
     group_display = S7::new_property(
       S7::class_character,
-      default = "header_row"
+      default = NA_character_
     ),
     group_skip = S7::new_property(
       S7::class_logical,
@@ -315,18 +325,22 @@ NULL
       S7::class_character,
       default = NA_character_
     ),
-    # @indent_by — name of a column in `spec@data` whose per-row
-    # integer / logical values drive the indent depth on THIS
-    # column's cell text. `NA_character_` (the default) means no
-    # per-row indent. When set, the engine reads
-    # `spec@data[[indent_by]]` at resolve time, coerces each row's
-    # value to a non-negative integer N, and prefixes this column's
-    # text + AST in that row with `strrep(" ", preset@indent_size * N)`.
-    # The referenced column is auto-hidden unless the user explicitly
-    # set its `visible = TRUE`.
-    indent_by = S7::new_property(
-      S7::class_character,
-      default = NA_character_
+    # @indent — cosmetic indent depth on THIS column's cell text.
+    # Two modes by type:
+    #   * numeric scalar N >= 0 — every body row is indented N levels
+    #     (each level = `preset@indent_size` space-widths).
+    #   * character(1) — name of a column in `spec@data` whose per-row
+    #     integer / logical values drive the depth; the engine reads
+    #     `spec@data[[indent]]` at resolve time, coerces each row to a
+    #     non-negative integer, and prefixes that row's text + AST with
+    #     `strrep(" ", preset@indent_size * depth)`. The referenced
+    #     column is auto-hidden unless the user set `visible = TRUE`.
+    # `NA` (the default) means no indent. An explicit `indent` on a
+    # `group_display = "header_row"` host suppresses the section
+    # auto-indent (the user takes control of depth).
+    indent = S7::new_property(
+      S7::class_any,
+      default = NA
     )
   ),
   validator = function(self) {
@@ -388,8 +402,10 @@ NULL
     }
     if (
       length(self@group_display) != 1L ||
-        is.na(self@group_display) ||
-        !(self@group_display %in% .col_group_display_values)
+        # NA is the "unset" sentinel (resolved to "header_row" at engine
+        # finalize); only a non-NA value off the allowed set is invalid.
+        (!is.na(self@group_display) &&
+          !(self@group_display %in% .col_group_display_values))
     ) {
       return(paste0(
         "@group_display must be one of ",
@@ -401,8 +417,25 @@ NULL
     if (length(self@group_skip) != 1L) {
       return("@group_skip must be length 1 (TRUE / FALSE / NA)")
     }
-    if (length(self@indent_by) != 1L) {
-      return("@indent_by must be length 1 (column name or NA_character_)")
+    if (length(self@indent) != 1L) {
+      return("@indent must be length 1 (a count, a column name, or NA)")
+    }
+    if (!(length(self@indent) == 1L && is.na(self@indent))) {
+      if (is.numeric(self@indent)) {
+        if (
+          !is.finite(self@indent) ||
+            self@indent < 0 ||
+            self@indent != as.integer(self@indent)
+        ) {
+          return("@indent count must be a non-negative whole number")
+        }
+      } else if (is.character(self@indent)) {
+        if (!nzchar(self@indent)) {
+          return("@indent column name must be non-empty")
+        }
+      } else {
+        return("@indent must be a non-negative count, a column name, or NA")
+      }
     }
     NULL
   }
@@ -714,6 +747,8 @@ pagination_spec <- S7::new_class(
       S7::class_character,
       default = character()
     ),
+    # Number of horizontal panels; a positive integer (default 1 = no
+    # split). Validated by `.check_panels()` at `paginate()` call time.
     panels = S7::new_property(S7::class_any, default = 1L),
     orphan_floor = S7::new_property(S7::class_integer, default = 3L),
     widow_floor = S7::new_property(S7::class_integer, default = 2L),
@@ -1107,7 +1142,7 @@ tabular_grid <- S7::new_class(
 #'
 #' @details
 #'
-#' Eleven predicates cover the full S7 surface:
+#' Twelve predicates cover the full S7 surface:
 #'
 #' | predicate              | tests for          | produced by                       |
 #' |------------------------|--------------------|-----------------------------------|
@@ -1117,7 +1152,6 @@ tabular_grid <- S7::new_class(
 #' | `is_header_node()`     | `header_node`      | [`headers()`] (internal nodes)    |
 #' | `is_sort_spec()`       | `sort_spec`        | [`sort_rows()`]                   |
 #' | `is_style_node()`      | `style_node`       | [`style()`] (per-cell style)      |
-#' | `is_style_predicate()` | `style_predicate`  | (legacy) [`style()`] predicate path|
 #' | `is_style_layer()`     | `style_layer`      | [`style()`] (one per call)        |
 #' | `is_style_spec()`      | `style_spec`       | [`style()`] (the cascade root)    |
 #' | `is_pagination_spec()` | `pagination_spec`  | [`paginate()`]                    |

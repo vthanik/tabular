@@ -149,6 +149,7 @@
 #' # the full data, and every page carries the full header band grid
 #' # at `grid@metadata$headers` so backends can re-render the header
 #' # on every continuation page.
+#' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' ae <- cdisc_saf_aesocpt
 #' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -163,7 +164,7 @@
 #'   footnotes = "Subjects counted once per SOC and once per PT."
 #' ) |>
 #'   cols(
-#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
 #'     soc      = col_spec(usage = "group", visible = FALSE,
 #'                         group_display = "column_repeat"),
 #'     row_type = col_spec(visible = FALSE),
@@ -291,6 +292,20 @@ as_grid <- function(.spec) {
 # group; a hard page break between groups falls out naturally from
 # the per-spec pagination plans.
 .resolve_spec_to_grid <- function(spec, format, call) {
+  # Finalize boundary (A): resolve the NA "unset" col_spec sentinels
+  # (visible / group_display / usage) to concrete defaults on spec@cols
+  # before any engine phase or backend reads it. engine_borders and
+  # engine_paginate read spec@cols directly (with isTRUE / identical),
+  # and engine_borders runs before the visibility merge-back, so a raw
+  # default col_spec (visible = NA) must already read as TRUE here.
+  # Boundary (B) is inside `.cols_by_name()` for the synthesized defaults
+  # of unlisted columns, which never appear in spec@cols.
+  #
+  # F3: warn (once per render) about inert group_display / group_skip on
+  # non-group columns BEFORE finalize, while the "was it set" signal
+  # (group_display NA = unset) still survives.
+  .warn_inert_group_knobs(spec@cols, call)
+  spec <- S7::set_props(spec, cols = .finalize_col_specs(spec@cols))
   groups <- engine_subgroup_split(spec)
   # Assign footnote markers ONCE, at the spec level, in reading order
   # across the full data (subgroup-major), so the marker at every anchor

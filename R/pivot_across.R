@@ -228,9 +228,9 @@
 #'
 #' Categorical levels and the multi-row continuous stat labels come
 #' back already indented with two leading spaces, ready to render as a
-#' plain display column. Do **not** also set `col_spec(usage =
-#' "indent")` on `stat_label` — that stacks the engine indent on top of
-#' the string indent (a double indent). Use one or the other.
+#' plain display column. Do **not** also set `col_spec(indent = ...)` on
+#' `stat_label` — that stacks the engine indent on top of the string
+#' indent (a double indent). Use one or the other.
 #'
 #' ## Zero-suppression (always-on default)
 #'
@@ -368,7 +368,7 @@
 #' # (soc, label, row_type) triple plus one stat row per (arm, SOC, PT);
 #' # `pivot_across()` folds the arm dimension to columns and preserves
 #' # the hierarchy markers. Derive `indent_level` from `row_type` so
-#' # `col_spec(indent_by = "indent_level")` drives the SOC -> PT
+#' # `col_spec(indent = "indent_level")` drives the SOC -> PT
 #' # indent on the `label` column.
 #' wide <- cdisc_saf_aesocpt_ard |>
 #'   pivot_across(statistic = "{n} ({p}%)")
@@ -387,7 +387,7 @@
 #'   )
 #' ) |>
 #'   cols(
-#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
 #'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     Placebo  = col_spec(

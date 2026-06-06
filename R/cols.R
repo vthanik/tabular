@@ -27,25 +27,34 @@
 #'
 #' When `cols()` is called more than once for the same column, the
 #' engine merges the new `col_spec` into the existing one field-by-
-#' field. A non-default value on the new spec overrides; a default-
-#' valued field leaves the existing field intact. This lets you
-#' build a column's spec in stages — declare the label-and-alignment
-#' block up front, add the width once you know it fits, then attach
-#' a sort key, all without re-stating earlier attributes. Essential
-#' when generating specs programmatically (looping over arms,
-#' layering a house-style helper).
+#' field. A field set to a non-default value on the new spec overrides;
+#' a field left at its "unset" sentinel leaves the existing value
+#' intact. Every mergeable field has a genuine unset sentinel, so a
+#' later call can also *restore* a default (e.g. `visible = TRUE`
+#' re-shows a hidden column, `group_display = "header_row"` resets a
+#' prior `"column"`). This lets you build a column's spec in stages —
+#' declare the label-and-alignment block up front, add the width once
+#' you know it fits, then attach a sort key, all without re-stating
+#' earlier attributes. Essential when generating specs programmatically
+#' (looping over arms, layering a house-style helper).
 #'
-#' Default values that do NOT override the existing field:
+#' Unset sentinels — a field left at this value does NOT override the
+#' existing field (every other value, including a default like
+#' `visible = TRUE`, overrides):
 #'
-#' | field | default that does not override |
+#' | field | unset sentinel |
 #' |---|---|
-#' | `usage`   | `NA_character_` |
-#' | `label`   | `NA_character_` |
-#' | `format`  | `NULL` |
-#' | `visible` | `TRUE` |
-#' | `width`   | `NA_real_` |
-#' | `align`   | `NA_character_` |
-#' | `na_text` | `NA_character_` (inherit preset) |
+#' | `usage`         | `NA` |
+#' | `label`         | `NA_character_` |
+#' | `format`        | `NULL` |
+#' | `visible`       | `NA` |
+#' | `width`         | `"auto"` |
+#' | `group_display` | `NA` |
+#' | `group_skip`    | `NA` |
+#' | `align`         | `NA_character_` |
+#' | `valign`        | `NA_character_` |
+#' | `na_text`       | `NA_character_` (inherit preset) |
+#' | `indent`        | `NA` |
 #'
 #' ```r
 #' # Three-stage build: label/usage first, alignment second, width
@@ -167,11 +176,11 @@
 #' # ---- Example 3: AE-by-SOC/PT with indented label + repeat-call merge ----
 #' #
 #' # `label` carries SOC text on SOC rows and PT text on PT rows;
-#' # `indent_by = "indent_level"` indents the PT rows one level under
+#' # `indent = "indent_level"` indents the PT rows one level under
 #' # their SOC. `soc`, `row_type`, and `n_total` ride along as hidden
 #' # sort keys. A second `cols()` call later in the chain adds widths
 #' # once the user knows the page geometry; the repeat-call merge
-#' # preserves prior attributes (label, indent_by, align, visible)
+#' # preserves prior attributes (label, indent, align, visible)
 #' # without restating them.
 #' ae <- cdisc_saf_aesocpt
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -182,7 +191,7 @@
 #'   titles = c("Table 14.3.1", "Adverse Events by SOC and Preferred Term")
 #' ) |>
 #'   cols(
-#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
 #'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     soc_n    = col_spec(visible = FALSE),
@@ -607,55 +616,119 @@ cols_apply <- function(.spec, .cols, .col_spec) {
   S7::set_props(incoming, label = resolved, label_deferred = FALSE)
 }
 
-# Merge `new` into `existing` field-by-field. A non-default value in
-# `new` overrides the corresponding field in `existing`; a default
-# (NA / NULL / "") leaves the existing field unchanged. Defaults map
-# to the constructor defaults of col_spec(). `name` always takes the
-# new value (cols() just stamped it).
+# TRUE when a col_spec property value on the INCOMING spec is "set"
+# (i.e. not its unset merge sentinel) and should override the existing
+# value. Single source of truth for the merge — `.merge_col_spec()`
+# consults this for every property, so adding a col_spec property is
+# merged automatically with no second hand-maintained list to drift.
+#
+#   width  — sentinel is the literal "auto" (the constructor default).
+#   format — sentinel is NULL (and a function is never NA-testable).
+#   others — sentinel is NA (length-1 scalars: usage, label, visible,
+#            group_display, group_skip, align, valign, na_text, indent).
+.prop_is_set <- function(p, v) {
+  if (p == "width") {
+    return(!identical(v, "auto"))
+  }
+  if (p == "format") {
+    return(!is.null(v))
+  }
+  length(v) == 1L && !is.na(v)
+}
+
+# Merge `new` into `existing` field-by-field, generated from the class's
+# own property set so it is field-complete by construction (no parallel
+# hand-maintained list to drift out of sync). `name` always takes the
+# new value (cols() just stamped it). Every other property overrides
+# only when `.prop_is_set()` says the incoming value is non-sentinel.
+# The two paired snapshot fields ride with their primary: `label_deferred`
+# with `label`, `width_user` with `width`.
 .merge_col_spec <- function(existing, new) {
-  out <- existing
-  out <- S7::set_props(out, name = new@name)
-  if (!is.na(new@usage)) {
-    out <- S7::set_props(out, usage = new@usage)
-  }
-  if (!is.na(new@label)) {
-    out <- S7::set_props(
-      out,
-      label = new@label,
-      label_deferred = new@label_deferred
-    )
-  }
-  if (!is.null(new@format)) {
-    out <- S7::set_props(out, format = new@format)
-  }
-  if (!isTRUE(new@visible)) {
-    out <- S7::set_props(out, visible = new@visible)
-  }
-  # `"auto"` (the col_spec() default) is the merge sentinel: a later call
-  # carrying the default width leaves a previously pinned width intact, and
-  # only an explicit non-`"auto"` width overrides. `width_user` is the
-  # immutable snapshot of the user width; keep it in lockstep with `width`
-  # so the HTML percent-width path stays correct.
-  if (!is.na(new@width) && !identical(new@width, "auto")) {
-    out <- S7::set_props(out, width = new@width, width_user = new@width_user)
-  }
-  if (!is.na(new@align)) {
-    out <- S7::set_props(out, align = new@align)
-  }
-  if (!is.na(new@valign)) {
-    out <- S7::set_props(out, valign = new@valign)
-  }
-  if (!identical(new@group_display, "header_row")) {
-    out <- S7::set_props(out, group_display = new@group_display)
-  }
-  if (!is.na(new@group_skip)) {
-    out <- S7::set_props(out, group_skip = new@group_skip)
-  }
-  if (!is.na(new@na_text)) {
-    out <- S7::set_props(out, na_text = new@na_text)
-  }
-  if (!is.na(new@indent_by)) {
-    out <- S7::set_props(out, indent_by = new@indent_by)
+  out <- S7::set_props(existing, name = new@name)
+  props <- setdiff(
+    S7::prop_names(new),
+    c("name", "label_deferred", "width_user")
+  )
+  for (p in props) {
+    v <- S7::prop(new, p)
+    if (!.prop_is_set(p, v)) {
+      next
+    }
+    S7::prop(out, p) <- v
+    if (p == "label") {
+      out <- S7::set_props(out, label_deferred = new@label_deferred)
+    } else if (p == "width") {
+      out <- S7::set_props(out, width_user = new@width_user)
+    }
   }
   out
+}
+
+# Resolve the NA "unset" merge sentinels on a single col_spec to their
+# concrete engine defaults. Idempotent: re-running is a no-op. Called at
+# engine entry (`as_grid()` top, and inside `.cols_by_name()` for the
+# synthesized defaults of unlisted columns) so EVERY downstream reader
+# sees concrete `usage` / `visible` / `group_display` and never the NA
+# sentinel — keeping output identical to the pre-sentinel defaults while
+# making those fields mergeable. See aaa_class.R property comments.
+.finalize_col_spec <- function(cs) {
+  if (!is_col_spec(cs)) {
+    return(cs)
+  }
+  if (length(cs@usage) != 1L || is.na(cs@usage)) {
+    cs <- S7::set_props(cs, usage = "display")
+  }
+  if (length(cs@visible) != 1L || is.na(cs@visible)) {
+    cs <- S7::set_props(cs, visible = TRUE)
+  }
+  if (length(cs@group_display) != 1L || is.na(cs@group_display)) {
+    cs <- S7::set_props(cs, group_display = "header_row")
+  }
+  cs
+}
+
+# Map `.finalize_col_spec()` over a named list of col_specs, preserving
+# names. Non-col_spec entries pass through untouched.
+.finalize_col_specs <- function(cols) {
+  if (length(cols) == 0L) {
+    return(cols)
+  }
+  out <- lapply(cols, .finalize_col_spec)
+  names(out) <- names(cols)
+  out
+}
+
+# F3: warn once per render when a non-group column carries an explicit
+# `group_display` / `group_skip`. Those knobs are inert unless
+# `usage = "group"`, so a forgotten `usage = "group"` would silently
+# no-op. Checked on the MERGED spec@cols BEFORE the finalize pass (which
+# resolves `group_display` NA -> "header_row" and would erase the
+# "was it set" signal). Render-time, not construction-time, so the
+# staged-build pattern -- `cols(x = col_spec(group_display = ...))` after
+# an earlier `usage = "group"` -- merges to the right role and never
+# spuriously warns.
+.warn_inert_group_knobs <- function(cols, call) {
+  for (nm in names(cols)) {
+    cs <- cols[[nm]]
+    if (!is_col_spec(cs) || identical(cs@usage, "group")) {
+      next
+    }
+    set_gd <- length(cs@group_display) == 1L && !is.na(cs@group_display)
+    set_gs <- length(cs@group_skip) == 1L && !is.na(cs@group_skip)
+    if (set_gd || set_gs) {
+      ignored <- c(
+        if (set_gd) "group_display",
+        if (set_gs) "group_skip"
+      )
+      cli::cli_warn(
+        c(
+          "{.arg {ignored}} on column {.val {nm}} {?is/are} ignored when {.arg usage} is not {.val group}.",
+          "i" = "Set {.code usage = \"group\"} on {.val {nm}} to use {?it/them}."
+        ),
+        class = "tabular_warning_input",
+        call = call
+      )
+    }
+  }
+  invisible(NULL)
 }

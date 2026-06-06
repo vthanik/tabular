@@ -888,7 +888,7 @@ test_that("LaTeX emits leftsep+= on data rows but NOT on header rows (Change C)"
       soc = col_spec(usage = "group", group_display = "header_row"),
       label = col_spec(
         label = "Category",
-        indent_by = "indent_level",
+        indent = "indent_level",
         width = "1in"
       ),
       indent_level = col_spec(visible = FALSE),
@@ -934,7 +934,7 @@ test_that("LaTeX emits \\SetCell[c=N]{l} \\textbf{...} for synthesised header ro
   spec <- tabular(df, titles = "Eff") |>
     cols(
       group_label = col_spec(usage = "group", group_display = "header_row"),
-      stat_label = col_spec(usage = "indent", label = "Response"),
+      stat_label = col_spec(indent = 1, label = "Response"),
       placebo = col_spec(label = "Placebo"),
       drug_50 = col_spec(label = "Drug 50")
     )

@@ -14,7 +14,7 @@
       paginate(spec, panels = "weird")
     Condition
       Error:
-      ! `panels` must be a positive whole number or "auto".
+      ! `panels` must be a positive whole number.
       x You supplied a string.
 
 ---

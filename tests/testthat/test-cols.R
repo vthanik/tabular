@@ -181,6 +181,117 @@ test_that("cols() merges na_text (non-empty second call overrides)", {
   expect_identical(s@cols$drug_a@na_text, "-")
 })
 
+# F2 — lossless merge: a meaningful default can now be merged back -----
+
+test_that("cols() can RE-SHOW a hidden column on a later call (#F2)", {
+  # visible = FALSE then visible = TRUE was impossible before NA-unset.
+  s <- mk_spec() |>
+    cols(drug_a = col_spec(visible = FALSE)) |>
+    cols(drug_a = col_spec(visible = TRUE))
+  expect_true(s@cols$drug_a@visible)
+})
+
+test_that("cols() can RESET group_display to header_row on a later call (#F2)", {
+  s <- mk_spec() |>
+    cols(drug_a = col_spec(usage = "group", group_display = "column")) |>
+    cols(drug_a = col_spec(group_display = "header_row"))
+  expect_identical(s@cols$drug_a@group_display, "header_row")
+})
+
+test_that("cols() default visible/group_display do NOT clobber prior values (#F2)", {
+  # A later call carrying the unset (NA) defaults leaves prior explicit
+  # values intact.
+  s <- mk_spec() |>
+    cols(
+      drug_a = col_spec(
+        visible = FALSE,
+        group_display = "column",
+        usage = "group"
+      )
+    ) |>
+    cols(drug_a = col_spec(label = "Drug A"))
+  expect_false(s@cols$drug_a@visible)
+  expect_identical(s@cols$drug_a@group_display, "column")
+})
+
+# F4 — one encoding of "display" --------------------------------------
+
+test_that("a bare col_spec() finalizes to display / visible / header_row (#F4)", {
+  fin <- tabular:::.finalize_col_spec(col_spec())
+  expect_identical(fin@usage, "display")
+  expect_true(fin@visible)
+  expect_identical(fin@group_display, "header_row")
+})
+
+test_that("explicit usage = 'display' overrides a prior usage = 'group' on merge (#F4)", {
+  s <- mk_spec() |>
+    cols(drug_a = col_spec(usage = "group")) |>
+    cols(drug_a = col_spec(usage = "display"))
+  expect_identical(s@cols$drug_a@usage, "display")
+})
+
+test_that("a default col_spec() and the explicit concrete spec render identically (#F2)", {
+  # Finalize parity: NA-unset resolves to exactly the old concrete
+  # defaults, so the two specs produce byte-identical output.
+  bare <- mk_spec() |> cols(drug_a = col_spec(label = "Drug A"))
+  # group_display is inert on a display column, so the concrete spec only
+  # needs the visible / usage resolutions to match the finalized bare one.
+  explicit <- mk_spec() |>
+    cols(
+      drug_a = col_spec(
+        label = "Drug A",
+        visible = TRUE,
+        usage = "display"
+      )
+    )
+  f1 <- withr::local_tempfile(fileext = ".md")
+  f2 <- withr::local_tempfile(fileext = ".md")
+  emit(bare, f1)
+  emit(explicit, f2)
+  expect_identical(readLines(f1, warn = FALSE), readLines(f2, warn = FALSE))
+})
+
+# F8 — generic, field-complete merge: every mergeable property survives
+# a second cols() call. This guard iterates the class's OWN property set,
+# so a future col_spec property that the merge forgot would fail here
+# (the historical "9-of-N fields dropped" class of bug).
+
+test_that("every mergeable col_spec property round-trips through merge (#F8)", {
+  # One non-default value per mergeable property.
+  non_default <- list(
+    usage = "group",
+    label = "X",
+    format = function(x) x,
+    visible = FALSE,
+    width = 2.0,
+    group_display = "column",
+    group_skip = TRUE,
+    align = "decimal",
+    valign = "top",
+    na_text = "-",
+    indent = 2L
+  )
+  mergeable <- setdiff(
+    S7::prop_names(col_spec()),
+    c("name", "label_deferred", "width_user")
+  )
+  # The test's value table must cover exactly the mergeable properties —
+  # if a property is added to the class, this fails until it's listed,
+  # forcing a conscious decision.
+  expect_setequal(names(non_default), mergeable)
+
+  for (p in mergeable) {
+    base <- col_spec()
+    incoming <- do.call(col_spec, stats::setNames(list(non_default[[p]]), p))
+    merged <- tabular:::.merge_col_spec(base, incoming)
+    expect_identical(
+      S7::prop(merged, p),
+      S7::prop(incoming, p),
+      info = p
+    )
+  }
+})
+
 # Dynamic names: rlang `:=` and `!!!` splice --------------------------
 # Programmatic column names (built from a variable, looped, or spliced
 # from a list) must work the way they do in dplyr. Regression for the
