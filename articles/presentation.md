@@ -196,10 +196,10 @@ chrome <- base |>
 chrome
 ```
 
-Protocol: XYZ-123\
+Protocol: XYZ-123  
 Analysis Set: Safety
 
-Page 1 of 1\
+Page 1 of 1  
 Data cut: 2026-01-15
 
 |  | placebo | drug_100 | drug_50 | Total |

@@ -43,11 +43,10 @@ A data frame with 35 rows and 6 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from
-[`pharmaverseadam::adsl`](https://pharmaverse.github.io/pharmaverseadam/reference/adsl.html)
+Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::adsl`
 filtered to `SAFFL == "Y"` and the three CDISCPILOT01 treatment arms.
 Baseline Weight / Height / BMI are joined in from
-[`pharmaverseadam::advs`](https://pharmaverse.github.io/pharmaverseadam/reference/advs.html).
+`pharmaverseadam::advs`.
 
 ## Details
 
