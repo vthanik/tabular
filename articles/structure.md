@@ -16,7 +16,7 @@ one is the single most important structural decision:
 |----|----|----|
 | `"display"` *(default)* | data cells (the arm columns) | one value per row |
 | `"group"` | section variable (e.g. parameter) | each value becomes a **section-header row**; the column is hidden |
-| `"indent"` | nested row labels under a section | prefixes one indent level; pairs with a `group` column |
+| `"indent"` | manual extra nesting (rarely needed) | prefixes one indent level. **`group_display = "header_row"` already indents its child rows**, so don’t add this on top |
 | `"id"` | the row label that must stay visible | like `display`, but **joins the stub and repeats on every horizontal panel** |
 
 ``` r
@@ -31,7 +31,7 @@ tabular(cdisc_saf_demo, titles = "Demographics") |>
       group_display = "header_row",
       label = ""
     ),
-    stat_label = col_spec(usage = "indent", label = "")
+    stat_label = col_spec(label = "")
   ) |>
   cols_apply(arms, col_spec(align = "decimal"))
 ```
@@ -103,14 +103,15 @@ attaches one shared `col_spec` to **all** the arm columns at once — use
 it instead of repeating `cols(placebo = …, drug_50 = …)` for a variable
 number of arms.
 
-> **[`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
-> already indents nested levels.** Categorical level labels come out of
-> [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
-> with a leading indent baked into the string. If you *also* set
-> `usage = "indent"` you get a double indent — either keep the labels
+> **Indent from exactly one source.** `group_display = "header_row"`
+> already indents its child rows one level, so the stub column (here
+> `stat_label`) needs **no** `usage = "indent"` — adding it stacks a
+> second level (a double indent). The same trap applies to labels from
+> [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md),
+> which come out with a leading indent baked into the string: keep them
 > as-is (`usage = "display"`/`"id"`) or
-> [`trimws()`](https://rdrr.io/r/base/trimws.html) them first and let
-> the engine indent. Don’t do both.
+> [`trimws()`](https://rdrr.io/r/base/trimws.html) them and let the
+> engine indent. Never combine two indent sources on the same column.
 
 ## BigN in the column headers
 
@@ -129,7 +130,7 @@ tabular(cdisc_saf_demo, titles = "Demographics") |>
       group_display = "header_row",
       label = ""
     ),
-    stat_label = col_spec(usage = "indent", label = ""),
+    stat_label = col_spec(label = ""),
     placebo = col_spec(
       label = "Placebo\n(N={N['placebo']})",
       align = "decimal"
@@ -175,7 +176,7 @@ tabular(cdisc_saf_demo, titles = "Demographics") |>
       group_display = "header_row",
       label = ""
     ),
-    stat_label = col_spec(usage = "indent", label = "")
+    stat_label = col_spec(label = "")
   ) |>
   cols_apply(
     arm_cols,
@@ -205,7 +206,7 @@ tabular(cdisc_saf_demo, titles = "Demographics") |>
       group_display = "header_row",
       label = ""
     ),
-    stat_label = col_spec(usage = "indent", label = "", width = "2.2in")
+    stat_label = col_spec(label = "", width = "2.2in")
   ) |>
   cols_apply(arms, col_spec(align = "decimal", width = "1in")) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total"))
@@ -597,12 +598,10 @@ inline (this is also the shape `big_n` expects):
 
 ``` r
 
-big_n <- data.frame(
-  sex = c("F", "M"),
-  placebo = c(53L, 33L),
-  drug_50 = c(50L, 46L),
-  drug_100 = c(40L, 32L),
-  Total = c(143L, 111L)
+big_n <- tibble::tribble(
+  ~sex, ~placebo, ~drug_50, ~drug_100, ~Total,
+  "F",       53L,      50L,       40L,    143L,
+  "M",       33L,      46L,       32L,    111L
 )
 
 tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>

@@ -72,9 +72,10 @@ emit(demo_tbl, "t_14_1_1.rtf") # ship: or .pdf / .docx / .html / .md
 
 ## Adverse-event overview
 
-A flat overview where `stat_label` carries both the high-level flag rows
-and the two-space-indented maximum-severity detail rows; one
-`usage = "group"` on `stat_label` drives both levels.
+A flat overview: `stat_label` is a plain display column carrying both
+the high-level flag rows and the two-space-indented maximum-severity
+detail rows (the indent is baked into the label strings), so each
+category sits on one line with its counts.
 
 ``` r
 
@@ -87,7 +88,7 @@ ae_tbl <- tabular(
   )
 ) |>
   cols(
-    stat_label = col_spec(usage = "group", label = ""),
+    stat_label = col_spec(label = ""),
     placebo = col_spec(
       label = "Placebo\nN={n['placebo']}",
       align = "decimal"
@@ -216,7 +217,7 @@ resp_tbl <- tabular(
 ) |>
   cols(
     group_label = col_spec(usage = "group", group_display = "header_row"),
-    stat_label = col_spec(usage = "indent", label = "Response"),
+    stat_label = col_spec(label = "Response"),
     groupid = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     placebo = col_spec(

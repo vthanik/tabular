@@ -28,15 +28,15 @@ ARD’s `context` column **verbatim**. That value depends on which
 function built the ARD — use the wrong key and those rows are dropped
 **silently**. Always check `unique(ard$context)` first.
 
-| Generating function               | `context`                   |
-|-----------------------------------|-----------------------------|
-| `cards::ard_summary()`            | `summary`                   |
-| `cards::ard_tabulate()`           | `tabulate`                  |
-| `cards::ard_continuous()`         | `continuous`                |
-| `cards::ard_categorical()`        | `categorical`               |
-| `cards::ard_stack_hierarchical()` | `tabulate` + `hierarchical` |
-| `cardx::ard_categorical_ci()`     | `proportion_ci`             |
-| `cardx::ard_continuous_ci()`      | `continuous_ci`             |
+| Generating function | `context` |
+|----|----|
+| [`cards::ard_summary()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_summary.html) | `summary` |
+| [`cards::ard_tabulate()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_tabulate.html) | `tabulate` |
+| [`cards::ard_continuous()`](https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html) | `continuous` |
+| [`cards::ard_categorical()`](https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html) | `categorical` |
+| [`cards::ard_stack_hierarchical()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack_hierarchical.html) | `tabulate` + `hierarchical` |
+| [`cardx::ard_categorical_ci()`](https://insightsengineering.github.io/cardx/latest-tag/reference/ard_categorical_ci.html) | `proportion_ci` |
+| [`cardx::ard_continuous_ci()`](https://insightsengineering.github.io/cardx/latest-tag/reference/ard_continuous_ci.html) | `continuous_ci` |
 
 A single string, or `statistic = list(default = ...)`, applies one
 format to every context.
@@ -140,18 +140,21 @@ orr_ard <- cardx::ard_categorical_ci(
 
 ``` r
 
-# equivalent hand-built ARD (one row group, proportion_ci context)
-arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
-orr_ard <- expand.grid(
-  group1_level = arms,
-  stat_name = c("estimate", "conf.low", "conf.high"),
-  stringsAsFactors = FALSE
+# equivalent hand-built ARD (one row group, proportion_ci context).
+# tribble() lays the long ARD out as a literal table: one row per
+# (arm, stat), with the estimate and its CI bounds visible inline.
+orr_ard <- tibble::tribble(
+  ~group1,  ~group1_level,          ~variable, ~variable_level, ~context,        ~stat_name,  ~stat,
+  "TRT01A", "Placebo",              "RESP",    "Responders",    "proportion_ci", "estimate",  0.62,
+  "TRT01A", "Placebo",              "RESP",    "Responders",    "proportion_ci", "conf.low",  0.50,
+  "TRT01A", "Placebo",              "RESP",    "Responders",    "proportion_ci", "conf.high", 0.73,
+  "TRT01A", "Xanomeline Low Dose",  "RESP",    "Responders",    "proportion_ci", "estimate",  0.55,
+  "TRT01A", "Xanomeline Low Dose",  "RESP",    "Responders",    "proportion_ci", "conf.low",  0.42,
+  "TRT01A", "Xanomeline Low Dose",  "RESP",    "Responders",    "proportion_ci", "conf.high", 0.67,
+  "TRT01A", "Xanomeline High Dose", "RESP",    "Responders",    "proportion_ci", "estimate",  0.48,
+  "TRT01A", "Xanomeline High Dose", "RESP",    "Responders",    "proportion_ci", "conf.low",  0.36,
+  "TRT01A", "Xanomeline High Dose", "RESP",    "Responders",    "proportion_ci", "conf.high", 0.60,
 )
-orr_ard$group1 <- "TRT01A"
-orr_ard$variable <- "RESP"
-orr_ard$variable_level <- "Responders"
-orr_ard$context <- "proportion_ci"
-orr_ard$stat <- c(0.62, 0.55, 0.48, 0.50, 0.42, 0.36, 0.73, 0.67, 0.60)
 
 pivot_across(
   orr_ard,
@@ -206,18 +209,27 @@ cards:
 
 ``` r
 
-two_by_ard <- expand.grid(
-  group1_level = c("Placebo", "Drug"),
-  group2_level = c("F", "M"),
-  variable_level = c("WHITE", "BLACK"),
-  stat_name = c("n", "p"),
-  stringsAsFactors = FALSE
+# RACE by ARM within SEX, laid out as a literal tribble: one row per
+# (sex, race, arm, stat). Stats are placeholders (n = 10, p = 0.25).
+two_by_ard <- tibble::tribble(
+  ~group1, ~group1_level, ~group2, ~group2_level, ~variable, ~variable_level, ~context,      ~stat_name, ~stat,
+  "ARM",   "Placebo",     "SEX",   "F",           "RACE",    "WHITE",         "categorical", "n",        10,
+  "ARM",   "Placebo",     "SEX",   "F",           "RACE",    "WHITE",         "categorical", "p",        0.25,
+  "ARM",   "Drug",        "SEX",   "F",           "RACE",    "WHITE",         "categorical", "n",        10,
+  "ARM",   "Drug",        "SEX",   "F",           "RACE",    "WHITE",         "categorical", "p",        0.25,
+  "ARM",   "Placebo",     "SEX",   "F",           "RACE",    "BLACK",         "categorical", "n",        10,
+  "ARM",   "Placebo",     "SEX",   "F",           "RACE",    "BLACK",         "categorical", "p",        0.25,
+  "ARM",   "Drug",        "SEX",   "F",           "RACE",    "BLACK",         "categorical", "n",        10,
+  "ARM",   "Drug",        "SEX",   "F",           "RACE",    "BLACK",         "categorical", "p",        0.25,
+  "ARM",   "Placebo",     "SEX",   "M",           "RACE",    "WHITE",         "categorical", "n",        10,
+  "ARM",   "Placebo",     "SEX",   "M",           "RACE",    "WHITE",         "categorical", "p",        0.25,
+  "ARM",   "Drug",        "SEX",   "M",           "RACE",    "WHITE",         "categorical", "n",        10,
+  "ARM",   "Drug",        "SEX",   "M",           "RACE",    "WHITE",         "categorical", "p",        0.25,
+  "ARM",   "Placebo",     "SEX",   "M",           "RACE",    "BLACK",         "categorical", "n",        10,
+  "ARM",   "Placebo",     "SEX",   "M",           "RACE",    "BLACK",         "categorical", "p",        0.25,
+  "ARM",   "Drug",        "SEX",   "M",           "RACE",    "BLACK",         "categorical", "n",        10,
+  "ARM",   "Drug",        "SEX",   "M",           "RACE",    "BLACK",         "categorical", "p",        0.25,
 )
-two_by_ard$group1 <- "ARM"
-two_by_ard$group2 <- "SEX"
-two_by_ard$variable <- "RACE"
-two_by_ard$context <- "categorical"
-two_by_ard$stat <- ifelse(two_by_ard$stat_name == "n", 10, 0.25)
 
 pivot_across(
   two_by_ard,

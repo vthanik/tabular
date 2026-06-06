@@ -31,7 +31,7 @@ tabular(
       group_display = "header_row",
       label = ""
     ),
-    stat_label = col_spec(usage = "indent", label = "")
+    stat_label = col_spec(label = "")
   ) |>
   cols_apply(arms, col_spec(align = "decimal"))
 ```
@@ -196,10 +196,10 @@ chrome <- base |>
 chrome
 ```
 
-Protocol: XYZ-123  
+Protocol: XYZ-123\
 Analysis Set: Safety
 
-Page 1 of 1  
+Page 1 of 1\
 Data cut: 2026-01-15
 
 |  | placebo | drug_100 | drug_50 | Total |
@@ -283,7 +283,9 @@ appends one location + attribute layer. Target a region with a
 ``` r
 
 base |>
-  style(bold = TRUE, .at = cells_headers()) |> # bold the header band
+  # the column-header band is bold by default, so style it with colour /
+  # background for a visible change rather than re-applying bold
+  style(color = "#1F3B5C", background = "#DBE4F0", .at = cells_headers()) |>
   style(italic = TRUE, .at = cells_group_headers()) |> # italic section rows
   style(background = "#F2F2F2", .at = cells_body(j = "Total")) # shade the Total column
 ```

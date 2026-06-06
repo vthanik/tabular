@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/DM_Mono-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -72,7 +72,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/main/vignettes/articles/data-in.qmd" class="external-link"><code>vignettes/articles/data-in.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/HEAD/vignettes/articles/data-in.qmd" class="external-link"><code>vignettes/articles/data-in.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -98,33 +98,33 @@
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code>cards::ard_summary()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/ard_summary.html" class="external-link">cards::ard_summary()</a></code></td>
 <td><code>summary</code></td>
 </tr>
 <tr class="even">
-<td><code>cards::ard_tabulate()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/ard_tabulate.html" class="external-link">cards::ard_tabulate()</a></code></td>
 <td><code>tabulate</code></td>
 </tr>
 <tr class="odd">
-<td><code>cards::ard_continuous()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html" class="external-link">cards::ard_continuous()</a></code></td>
 <td><code>continuous</code></td>
 </tr>
 <tr class="even">
-<td><code>cards::ard_categorical()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html" class="external-link">cards::ard_categorical()</a></code></td>
 <td><code>categorical</code></td>
 </tr>
 <tr class="odd">
-<td><code>cards::ard_stack_hierarchical()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack_hierarchical.html" class="external-link">cards::ard_stack_hierarchical()</a></code></td>
 <td>
 <code>tabulate</code> + <code>hierarchical</code>
 </td>
 </tr>
 <tr class="even">
-<td><code>cardx::ard_categorical_ci()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cardx/latest-tag/reference/ard_categorical_ci.html" class="external-link">cardx::ard_categorical_ci()</a></code></td>
 <td><code>proportion_ci</code></td>
 </tr>
 <tr class="odd">
-<td><code>cardx::ard_continuous_ci()</code></td>
+<td><code><a href="https://insightsengineering.github.io/cardx/latest-tag/reference/ard_continuous_ci.html" class="external-link">cardx::ard_continuous_ci()</a></code></td>
 <td><code>continuous_ci</code></td>
 </tr>
 </tbody>
@@ -136,12 +136,12 @@
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># how it was built (data-raw):</span></span>
-<span><span class="va">cdisc_saf_demo_ard</span> <span class="op">&lt;-</span> <span class="fu">cards</span><span class="fu">::</span><span class="fu">ard_stack</span><span class="op">(</span></span>
+<span><span class="va">cdisc_saf_demo_ard</span> <span class="op">&lt;-</span> <span class="fu">cards</span><span class="fu">::</span><span class="fu"><a href="https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html" class="external-link">ard_stack</a></span><span class="op">(</span></span>
 <span>  <span class="va">adsl</span>,</span>
 <span>  .by <span class="op">=</span> <span class="va">TRT01A</span>,</span>
-<span>  <span class="fu">cards</span><span class="fu">::</span><span class="fu">ard_continuous</span><span class="op">(</span></span>
+<span>  <span class="fu">cards</span><span class="fu">::</span><span class="fu"><a href="https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html" class="external-link">ard_continuous</a></span><span class="op">(</span></span>
 <span>    variables <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">AGE</span>, <span class="va">BMI</span><span class="op">)</span>,</span>
-<span>    statistic <span class="op">=</span> <span class="op">~</span> <span class="fu">cards</span><span class="fu">::</span><span class="fu">continuous_summary_fns</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    statistic <span class="op">=</span> <span class="op">~</span> <span class="fu">cards</span><span class="fu">::</span><span class="fu"><a href="https://insightsengineering.github.io/cards/latest-tag/reference/summary_functions.html" class="external-link">continuous_summary_fns</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>      <span class="st">"N"</span>,</span>
 <span>      <span class="st">"mean"</span>,</span>
 <span>      <span class="st">"sd"</span>,</span>
@@ -150,7 +150,7 @@
 <span>      <span class="st">"max"</span></span>
 <span>    <span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  <span class="fu">cards</span><span class="fu">::</span><span class="fu">ard_categorical</span><span class="op">(</span>variables <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">AGEGR1</span>, <span class="va">SEX</span>, <span class="va">RACE</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu">cards</span><span class="fu">::</span><span class="fu"><a href="https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html" class="external-link">ard_categorical</a></span><span class="op">(</span>variables <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">AGEGR1</span>, <span class="va">SEX</span>, <span class="va">RACE</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="cell">
@@ -202,7 +202,7 @@
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># from cardx:</span></span>
-<span><span class="va">orr_ard</span> <span class="op">&lt;-</span> <span class="fu">cardx</span><span class="fu">::</span><span class="fu">ard_categorical_ci</span><span class="op">(</span></span>
+<span><span class="va">orr_ard</span> <span class="op">&lt;-</span> <span class="fu">cardx</span><span class="fu">::</span><span class="fu"><a href="https://insightsengineering.github.io/cardx/latest-tag/reference/ard_categorical_ci.html" class="external-link">ard_categorical_ci</a></span><span class="op">(</span></span>
 <span>  <span class="va">resp</span>,</span>
 <span>  by <span class="op">=</span> <span class="st">"TRT01A"</span>,</span>
 <span>  variables <span class="op">=</span> <span class="st">"RESP"</span>,</span>
@@ -212,18 +212,21 @@
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># equivalent hand-built ARD (one row group, proportion_ci context)</span></span>
-<span><span class="va">arms</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Placebo"</span>, <span class="st">"Xanomeline Low Dose"</span>, <span class="st">"Xanomeline High Dose"</span><span class="op">)</span></span>
-<span><span class="va">orr_ard</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span></span>
-<span>  group1_level <span class="op">=</span> <span class="va">arms</span>,</span>
-<span>  stat_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"estimate"</span>, <span class="st">"conf.low"</span>, <span class="st">"conf.high"</span><span class="op">)</span>,</span>
-<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<code class="sourceCode R"><span><span class="co"># equivalent hand-built ARD (one row group, proportion_ci context).</span></span>
+<span><span class="co"># tribble() lays the long ARD out as a literal table: one row per</span></span>
+<span><span class="co"># (arm, stat), with the estimate and its CI bounds visible inline.</span></span>
+<span><span class="va">orr_ard</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span><span class="va">group1</span>,  <span class="op">~</span><span class="va">group1_level</span>,          <span class="op">~</span><span class="va">variable</span>, <span class="op">~</span><span class="va">variable_level</span>, <span class="op">~</span><span class="va">context</span>,        <span class="op">~</span><span class="va">stat_name</span>,  <span class="op">~</span><span class="va">stat</span>,</span>
+<span>  <span class="st">"TRT01A"</span>, <span class="st">"Placebo"</span>,              <span class="st">"RESP"</span>,    <span class="st">"Responders"</span>,    <span class="st">"proportion_ci"</span>, <span class="st">"estimate"</span>,  <span class="fl">0.62</span>,</span>
+<span>  <span class="st">"TRT01A"</span>, <span class="st">"Placebo"</span>,              <span class="st">"RESP"</span>,    <span class="st">"Responders"</span>,    <span class="st">"proportion_ci"</span>, <span class="st">"conf.low"</span>,  <span class="fl">0.50</span>,</span>
+<span>  <span class="st">"TRT01A"</span>, <span class="st">"Placebo"</span>,              <span class="st">"RESP"</span>,    <span class="st">"Responders"</span>,    <span class="st">"proportion_ci"</span>, <span class="st">"conf.high"</span>, <span class="fl">0.73</span>,</span>
+<span>  <span class="st">"TRT01A"</span>, <span class="st">"Xanomeline Low Dose"</span>,  <span class="st">"RESP"</span>,    <span class="st">"Responders"</span>,    <span class="st">"proportion_ci"</span>, <span class="st">"estimate"</span>,  <span class="fl">0.55</span>,</span>
+<span>  <span class="st">"TRT01A"</span>, <span class="st">"Xanomeline Low Dose"</span>,  <span class="st">"RESP"</span>,    <span class="st">"Responders"</span>,    <span class="st">"proportion_ci"</span>, <span class="st">"conf.low"</span>,  <span class="fl">0.42</span>,</span>
+<span>  <span class="st">"TRT01A"</span>, <span class="st">"Xanomeline Low Dose"</span>,  <span class="st">"RESP"</span>,    <span class="st">"Responders"</span>,    <span class="st">"proportion_ci"</span>, <span class="st">"conf.high"</span>, <span class="fl">0.67</span>,</span>
+<span>  <span class="st">"TRT01A"</span>, <span class="st">"Xanomeline High Dose"</span>, <span class="st">"RESP"</span>,    <span class="st">"Responders"</span>,    <span class="st">"proportion_ci"</span>, <span class="st">"estimate"</span>,  <span class="fl">0.48</span>,</span>
+<span>  <span class="st">"TRT01A"</span>, <span class="st">"Xanomeline High Dose"</span>, <span class="st">"RESP"</span>,    <span class="st">"Responders"</span>,    <span class="st">"proportion_ci"</span>, <span class="st">"conf.low"</span>,  <span class="fl">0.36</span>,</span>
+<span>  <span class="st">"TRT01A"</span>, <span class="st">"Xanomeline High Dose"</span>, <span class="st">"RESP"</span>,    <span class="st">"Responders"</span>,    <span class="st">"proportion_ci"</span>, <span class="st">"conf.high"</span>, <span class="fl">0.60</span>,</span>
 <span><span class="op">)</span></span>
-<span><span class="va">orr_ard</span><span class="op">$</span><span class="va">group1</span> <span class="op">&lt;-</span> <span class="st">"TRT01A"</span></span>
-<span><span class="va">orr_ard</span><span class="op">$</span><span class="va">variable</span> <span class="op">&lt;-</span> <span class="st">"RESP"</span></span>
-<span><span class="va">orr_ard</span><span class="op">$</span><span class="va">variable_level</span> <span class="op">&lt;-</span> <span class="st">"Responders"</span></span>
-<span><span class="va">orr_ard</span><span class="op">$</span><span class="va">context</span> <span class="op">&lt;-</span> <span class="st">"proportion_ci"</span></span>
-<span><span class="va">orr_ard</span><span class="op">$</span><span class="va">stat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.62</span>, <span class="fl">0.55</span>, <span class="fl">0.48</span>, <span class="fl">0.50</span>, <span class="fl">0.42</span>, <span class="fl">0.36</span>, <span class="fl">0.73</span>, <span class="fl">0.67</span>, <span class="fl">0.60</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
 <span>  <span class="va">orr_ard</span>,</span>
@@ -266,18 +269,27 @@
 <p><code>ard_stack(.by = c(ARM, SEX))</code> carries a second grouping variable. Name it with <code>row_group =</code> and <code><a href="../reference/pivot_across.html">pivot_across()</a></code> widens it into a <strong>leading row column</strong> (rather than mis-reading it as a SOC/PT hierarchy). Here is the cards long shape such a stack produces (RACE by ARM within SEX), built by hand so the example runs without cards:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">two_by_ard</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span></span>
-<span>  group1_level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Placebo"</span>, <span class="st">"Drug"</span><span class="op">)</span>,</span>
-<span>  group2_level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"F"</span>, <span class="st">"M"</span><span class="op">)</span>,</span>
-<span>  variable_level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"WHITE"</span>, <span class="st">"BLACK"</span><span class="op">)</span>,</span>
-<span>  stat_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"n"</span>, <span class="st">"p"</span><span class="op">)</span>,</span>
-<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<code class="sourceCode R"><span><span class="co"># RACE by ARM within SEX, laid out as a literal tribble: one row per</span></span>
+<span><span class="co"># (sex, race, arm, stat). Stats are placeholders (n = 10, p = 0.25).</span></span>
+<span><span class="va">two_by_ard</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span><span class="va">group1</span>, <span class="op">~</span><span class="va">group1_level</span>, <span class="op">~</span><span class="va">group2</span>, <span class="op">~</span><span class="va">group2_level</span>, <span class="op">~</span><span class="va">variable</span>, <span class="op">~</span><span class="va">variable_level</span>, <span class="op">~</span><span class="va">context</span>,      <span class="op">~</span><span class="va">stat_name</span>, <span class="op">~</span><span class="va">stat</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Placebo"</span>,     <span class="st">"SEX"</span>,   <span class="st">"F"</span>,           <span class="st">"RACE"</span>,    <span class="st">"WHITE"</span>,         <span class="st">"categorical"</span>, <span class="st">"n"</span>,        <span class="fl">10</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Placebo"</span>,     <span class="st">"SEX"</span>,   <span class="st">"F"</span>,           <span class="st">"RACE"</span>,    <span class="st">"WHITE"</span>,         <span class="st">"categorical"</span>, <span class="st">"p"</span>,        <span class="fl">0.25</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Drug"</span>,        <span class="st">"SEX"</span>,   <span class="st">"F"</span>,           <span class="st">"RACE"</span>,    <span class="st">"WHITE"</span>,         <span class="st">"categorical"</span>, <span class="st">"n"</span>,        <span class="fl">10</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Drug"</span>,        <span class="st">"SEX"</span>,   <span class="st">"F"</span>,           <span class="st">"RACE"</span>,    <span class="st">"WHITE"</span>,         <span class="st">"categorical"</span>, <span class="st">"p"</span>,        <span class="fl">0.25</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Placebo"</span>,     <span class="st">"SEX"</span>,   <span class="st">"F"</span>,           <span class="st">"RACE"</span>,    <span class="st">"BLACK"</span>,         <span class="st">"categorical"</span>, <span class="st">"n"</span>,        <span class="fl">10</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Placebo"</span>,     <span class="st">"SEX"</span>,   <span class="st">"F"</span>,           <span class="st">"RACE"</span>,    <span class="st">"BLACK"</span>,         <span class="st">"categorical"</span>, <span class="st">"p"</span>,        <span class="fl">0.25</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Drug"</span>,        <span class="st">"SEX"</span>,   <span class="st">"F"</span>,           <span class="st">"RACE"</span>,    <span class="st">"BLACK"</span>,         <span class="st">"categorical"</span>, <span class="st">"n"</span>,        <span class="fl">10</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Drug"</span>,        <span class="st">"SEX"</span>,   <span class="st">"F"</span>,           <span class="st">"RACE"</span>,    <span class="st">"BLACK"</span>,         <span class="st">"categorical"</span>, <span class="st">"p"</span>,        <span class="fl">0.25</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Placebo"</span>,     <span class="st">"SEX"</span>,   <span class="st">"M"</span>,           <span class="st">"RACE"</span>,    <span class="st">"WHITE"</span>,         <span class="st">"categorical"</span>, <span class="st">"n"</span>,        <span class="fl">10</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Placebo"</span>,     <span class="st">"SEX"</span>,   <span class="st">"M"</span>,           <span class="st">"RACE"</span>,    <span class="st">"WHITE"</span>,         <span class="st">"categorical"</span>, <span class="st">"p"</span>,        <span class="fl">0.25</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Drug"</span>,        <span class="st">"SEX"</span>,   <span class="st">"M"</span>,           <span class="st">"RACE"</span>,    <span class="st">"WHITE"</span>,         <span class="st">"categorical"</span>, <span class="st">"n"</span>,        <span class="fl">10</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Drug"</span>,        <span class="st">"SEX"</span>,   <span class="st">"M"</span>,           <span class="st">"RACE"</span>,    <span class="st">"WHITE"</span>,         <span class="st">"categorical"</span>, <span class="st">"p"</span>,        <span class="fl">0.25</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Placebo"</span>,     <span class="st">"SEX"</span>,   <span class="st">"M"</span>,           <span class="st">"RACE"</span>,    <span class="st">"BLACK"</span>,         <span class="st">"categorical"</span>, <span class="st">"n"</span>,        <span class="fl">10</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Placebo"</span>,     <span class="st">"SEX"</span>,   <span class="st">"M"</span>,           <span class="st">"RACE"</span>,    <span class="st">"BLACK"</span>,         <span class="st">"categorical"</span>, <span class="st">"p"</span>,        <span class="fl">0.25</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Drug"</span>,        <span class="st">"SEX"</span>,   <span class="st">"M"</span>,           <span class="st">"RACE"</span>,    <span class="st">"BLACK"</span>,         <span class="st">"categorical"</span>, <span class="st">"n"</span>,        <span class="fl">10</span>,</span>
+<span>  <span class="st">"ARM"</span>,   <span class="st">"Drug"</span>,        <span class="st">"SEX"</span>,   <span class="st">"M"</span>,           <span class="st">"RACE"</span>,    <span class="st">"BLACK"</span>,         <span class="st">"categorical"</span>, <span class="st">"p"</span>,        <span class="fl">0.25</span>,</span>
 <span><span class="op">)</span></span>
-<span><span class="va">two_by_ard</span><span class="op">$</span><span class="va">group1</span> <span class="op">&lt;-</span> <span class="st">"ARM"</span></span>
-<span><span class="va">two_by_ard</span><span class="op">$</span><span class="va">group2</span> <span class="op">&lt;-</span> <span class="st">"SEX"</span></span>
-<span><span class="va">two_by_ard</span><span class="op">$</span><span class="va">variable</span> <span class="op">&lt;-</span> <span class="st">"RACE"</span></span>
-<span><span class="va">two_by_ard</span><span class="op">$</span><span class="va">context</span> <span class="op">&lt;-</span> <span class="st">"categorical"</span></span>
-<span><span class="va">two_by_ard</span><span class="op">$</span><span class="va">stat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">two_by_ard</span><span class="op">$</span><span class="va">stat_name</span> <span class="op">==</span> <span class="st">"n"</span>, <span class="fl">10</span>, <span class="fl">0.25</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
 <span>  <span class="va">two_by_ard</span>,</span>

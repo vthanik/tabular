@@ -62,8 +62,9 @@ subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\n(N={n})")
     are the Ns).
 
   - **Long** — the `by` column(s) plus one arm-name column and one
-    numeric N column, i.e. `dplyr::count()` / `summarise()` output used
-    directly with no reshaping.
+    numeric N column, i.e.
+    [`dplyr::count()`](https://dplyr.tidyverse.org/reference/count.html)
+    / `summarise()` output used directly with no reshaping.
 
       # Wide: one column per arm.
       wide <- tibble::tribble(
