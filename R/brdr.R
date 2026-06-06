@@ -11,7 +11,7 @@
 # consumes; backends never see the S3 wrapper directly.
 #
 # Defaults — width = "thin" (0.5pt), style = "solid", color =
-# "currentColor". These match the canonical submission Appendix I clinical baseline
+# "currentColor". These match the canonical submission clinical baseline
 # (thin solid black for header / footer / closing rules) without
 # over-committing to a colour, which the consumer's CSS / Word
 # theme resolves at render time.

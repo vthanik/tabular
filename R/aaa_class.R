@@ -49,7 +49,7 @@
 #                            header row spanning the visible
 #                            columns; the source column is hidden
 #                            from the body. Matches the canonical
-#                            submission Appendix I shape used by
+#                            submission shape used by
 #                            every clinical-TFL house template.
 #   "column"               — column stays visible; repeated values
 #                            are suppressed (only the first row of
@@ -783,7 +783,7 @@ preset_spec <- S7::new_class(
     na_text = S7::new_property(S7::class_character, default = ""),
     # spacing — region-keyed blank-line control, resolved into the
     # five physical inter-section gaps by `gap_counts()` at render.
-    # Default is the Appendix-I 1/1 blank line above and below the
+    # Default is the 1/1 blank line above and below the
     # title block, every other region 0. Set via the `spacing` knob.
     # Literal here (not `.tabular_spacing_default()`) because aaa_class.R
     # collates before theme.R.

@@ -48,7 +48,12 @@
 #'       with the indented baseline; Markdown carries the literal
 #'       space-prefix. Synthesised group-header rows (under
 #'       `group_display = "header_row"`) are NEVER indented — they're
-#'       the parent at depth 0.
+#'       the parent at depth 0. **Note:** a `"header_row"` section
+#'       already indents its child rows one level, so do not add
+#'       `usage = "indent"` to a stub that sits under one — the two
+#'       stack into a double indent. Reach for `"indent"` only when
+#'       there is no `"header_row"` section providing the indent, or
+#'       to add a deliberate extra level.
 #'   *   **`"id"`** — a row-identifier column. Renders like `"display"`
 #'       (one value per row, never collapses) but joins the *stub*: it
 #'       repeats on every horizontal panel (`paginate(panels = N)`) and
@@ -74,8 +79,8 @@
 #'   # headers; `stat_label` body rows auto-indent under each header
 #'   # without an explicit depth column.
 #'   cols(
-#'     group_label = col_spec(usage = "group",  group_display = "header_row"),
-#'     stat_label  = col_spec(usage = "indent", label = "Response"),
+#'     group_label = col_spec(usage = "group", group_display = "header_row"),
+#'     stat_label  = col_spec(label = "Response"),
 #'     placebo     = col_spec(align = "decimal")
 #'   )
 #'   ```
@@ -241,11 +246,16 @@
 #'   `usage = "group"`; ignored otherwise.
 #'
 #'   *   **`"header_row"`** *(default)* — each unique value emits as
-#'       a section header row above its block of data rows. The
-#'       source column is hidden from the visible body. Matches the
-#'       canonical submission Appendix I shape used by clinical TFL
-#'       house templates (Disposition, Demographics, Statistical
-#'       Report sections).
+#'       a section header row above its block of data rows, and **the
+#'       body rows beneath are automatically indented one level**. The
+#'       section header itself sits flush left at depth 0; its child
+#'       rows render one indent level in. Because the section already
+#'       supplies that indent, the stub column needs **no**
+#'       `usage = "indent"` — adding it stacks a second level and
+#'       produces a double indent. The source column is hidden from
+#'       the visible body. Matches the canonical submission
+#'       shape used by clinical TFL house templates (Disposition,
+#'       Demographics, Statistical Report sections).
 #'   *   **`"column"`** — column stays visible; repeated values are
 #'       suppressed (only the first row of each value shows the
 #'       label). PROC REPORT's default for grouping variables.
@@ -282,7 +292,7 @@
 #'   *   **`FALSE`** — never insert a blank row for this column.
 #'   *   **`NA`** *(default)* — follow `group_display`: `TRUE` when
 #'       `group_display = "header_row"`, `FALSE` when `"column"` or
-#'       `"column_repeat"`. Picks the canonical Appendix-I shape
+#'       `"column_repeat"`. Picks the canonical shape
 #'       without an extra knob to set.
 #'
 #'   **Interaction:** When two or more columns have an effective

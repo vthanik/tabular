@@ -185,7 +185,7 @@ rule on HTML — rendered as the \code{bottomrule}.
 \item \strong{\code{spacing}} — region-keyed blank-line control. A named list
 keyed by \code{title} / \code{body} / \code{subgroup} / \code{footnote}, each a
 named numeric \code{c(above = , below = )} (footnote: \code{above}
-only). Default is the Appendix-I one blank line above and
+only). Default is the one blank line above and
 below the title block. Two adjoining region-sides that target
 the same physical gap resolve to the MAX (never the sum), so a
 gap is never accidentally doubled.

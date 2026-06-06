@@ -25,7 +25,7 @@
 # Palette + canonical rule width
 # ---------------------------------------------------------------------
 
-# Primary ink — rules, body text, header text. The clinical Appendix-I
+# Primary ink — rules, body text, header text. The clinical
 # baseline draws thin solid ink rules around the header and footer
 # blocks. `#212529` is Bootstrap's default body colour (matches the
 # HTML backend's prior literal).
@@ -91,7 +91,7 @@
   list(style = "solid", width = .tabular_rule_width, color = "muted")
 }
 
-# Baseline rule set — the clinical Appendix-I default and the value of
+# Baseline rule set — the clinical default and the value of
 # `rules = "booktabs"`. NOTE this is the regulatory baseline, not the
 # bare three-rule LaTeX booktabs look: the column-spanner underline
 # (`spanrule`, muted) is ON because it is a load-bearing layout
@@ -324,7 +324,7 @@ resolve_rules <- function(rules = "booktabs", call = rlang::caller_env()) {
   footnote = "above"
 )
 
-# Region defaults. `title` 1/1 enforces the Appendix-I blank line above
+# Region defaults. `title` 1/1 enforces the blank line above
 # and below the title block; every other region defaults to 0.
 .tabular_spacing_default <- function() {
   list(

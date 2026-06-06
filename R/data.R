@@ -368,7 +368,9 @@
 #' `groupid` + `group_label` pair so a single `usage = "group"` /
 #' `group_display = "header_row"` on `group_label` synthesises one
 #' bold section band per groupid block; the body rows render below
-#' each band via `usage = "indent"` on `stat_label`.
+#' each band, auto-indented one level by the `"header_row"` section
+#' itself (no `usage = "indent"` on `stat_label` — that would double
+#' the indent).
 #'
 #' @format A data frame with 13 rows and 7 columns:
 #' \describe{
@@ -419,7 +421,7 @@
 #' ) |>
 #'   cols(
 #'     group_label = col_spec(usage = "group", group_display = "header_row"),
-#'     stat_label  = col_spec(usage = "indent", label = "Response"),
+#'     stat_label  = col_spec(label = "Response"),
 #'     groupid     = col_spec(visible = FALSE),
 #'     row_type    = col_spec(visible = FALSE),
 #'     placebo     = col_spec(

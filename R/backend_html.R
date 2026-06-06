@@ -106,7 +106,7 @@ backend_html <- function(grid, file) {
   # body and `<footer>` below. The CSS `@page` rules at
   # `.html_inline_style()` still drive print-time chrome (so
   # printed output continues to match the canonical submission
-  # Appendix I per-page). `chrome_onscreen = "off"` on the preset
+  # per-page). `chrome_onscreen = "off"` on the preset
   # suppresses the on-screen band (print-only behaviour, useful
   # when the HTML is consumed exclusively via print-to-PDF).
   preset <- meta$preset
