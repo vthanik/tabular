@@ -137,7 +137,7 @@ ae_spec <- tabular(
   footnotes = "Subjects counted once per SOC and once per PT."
 ) |>
   cols(
-    label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+    label    = col_spec(label = "SOC / PT", indent = "indent_level"),
     soc      = col_spec(usage = "group", visible = FALSE,
                         group_display = "column_repeat"),
     row_type = col_spec(visible = FALSE),

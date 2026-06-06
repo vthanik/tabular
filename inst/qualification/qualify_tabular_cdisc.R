@@ -119,7 +119,7 @@ local({
   spec <- tabular(wide, titles = c("Table 14-2.01",
       "Summary of Demographic and Baseline Characteristics", "ITT Population")) |>
     cols(group1 = col_spec(usage="group", label="", group_display="header_row"),
-         label  = col_spec(usage="indent", label="", width="2.7in")) |>
+         label  = col_spec(label="", width="2.7in")) |>
     arm_cols(bigN_itt) |> qual_preset() |> paginate(keep_together = "group1")
   # independent checks
   exp_age_mean_pbo <- sprintf("%.1f", mean(adsl_itt$AGE[adsl_itt$TRT01P=="Placebo"]))
@@ -148,7 +148,7 @@ local({
   spec <- tabular(wide, titles = c("Table 14-1.01",
       "Summary of Analysis Populations", "All Randomized Subjects")) |>
     cols(group1 = col_spec(usage="group", label="", group_display="header_row"),
-         label  = col_spec(usage="indent", label="", width="2.7in")) |>
+         label  = col_spec(label="", width="2.7in")) |>
     arm_cols(bigN_itt) |> qual_preset()
   exp_saf_pbo <- sum(adsl_itt$SAFFL=="Y" & adsl_itt$TRT01P=="Placebo")
   TABLES[["14-1.01"]] <<- list(id="14-1.01", spec=spec,
@@ -183,7 +183,7 @@ local({
       "Overview of Treatment-Emergent Adverse Events", "Safety Population"),
       footnotes = "A subject is counted once at the maximum severity reported.") |>
     cols(group1 = col_spec(usage="group", label="", group_display="header_row"),
-         label  = col_spec(usage="indent", label="", width="2.7in")) |>
+         label  = col_spec(label="", width="2.7in")) |>
     arm_cols(bigN_saf) |> qual_preset()
   exp_any_pbo <- ae2 |> filter(TRT01P=="Placebo") |> distinct(USUBJID) |> nrow()
   TABLES[["14-3.01"]] <<- list(id="14-3.01", spec=spec,
@@ -228,7 +228,7 @@ local({
       footnotes = c("A subject is counted once within each SOC and once within each PT.",
                     "SOCs and PTs sorted by decreasing frequency in the Total column.")) |>
     cols(stub  = col_spec(label = "System Organ Class / Preferred Term",
-                          indent_by = "depth", width = "3.2in"),
+                          indent = "depth", width = "3.2in"),
          depth = col_spec(visible = FALSE)) |>
     arm_cols(bigN_saf) |> qual_preset()
   exp_nrec <- nrow(wide)
@@ -331,7 +331,7 @@ md <- c(
   "- **14-2.01** Demographics & Baseline (ITT) - continuous + categorical via `ard_stack` + `pivot_across`.",
   "- **14-1.01** Analysis Populations - categorical n(%).",
   "- **14-3.01** TEAE overview - subjects with >=1 TEAE by maximum severity.",
-  "- **14-3.04** TEAE by SOC & PT - 2-level hierarchy via `indent_by`, sorted by Total frequency.",
+  "- **14-3.04** TEAE by SOC & PT - 2-level hierarchy via header_row sections, sorted by Total frequency.",
   "",
   "## Independent numeric checks (computed from ADaM, not from tabular)",
   paste0("- ", sapply(names(TABLES), function(id) {

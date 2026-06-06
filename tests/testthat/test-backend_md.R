@@ -590,7 +590,7 @@ test_that("Markdown preserves leading-space prefix on indented data rows (Change
   spec <- tabular(df, titles = "AE") |>
     cols(
       soc = col_spec(usage = "group", group_display = "header_row"),
-      label = col_spec(label = "Category", indent_by = "indent_level"),
+      label = col_spec(label = "Category", indent = "indent_level"),
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
@@ -628,7 +628,7 @@ test_that("Markdown emits bold cell-1 + &nbsp; trailing for header rows (Change 
   spec <- tabular(df, titles = "Eff") |>
     cols(
       group_label = col_spec(usage = "group", group_display = "header_row"),
-      stat_label = col_spec(usage = "indent", label = "Response"),
+      stat_label = col_spec(indent = 1, label = "Response"),
       placebo = col_spec(label = "Placebo"),
       drug_50 = col_spec(label = "Drug 50")
     )

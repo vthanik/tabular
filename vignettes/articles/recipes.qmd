@@ -118,7 +118,7 @@ aesocpt_tbl <- tabular(
   cols(
     label = col_spec(
       label = "SOC / Preferred Term",
-      indent_by = "indent_level"
+      indent = "indent_level"
     ),
     soc = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),

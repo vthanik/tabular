@@ -170,11 +170,11 @@ tabular(
 # ---- Example 3: AE-by-SOC/PT with indented label + repeat-call merge ----
 #
 # `label` carries SOC text on SOC rows and PT text on PT rows;
-# `indent_by = "indent_level"` indents the PT rows one level under
+# `indent = "indent_level"` indents the PT rows one level under
 # their SOC. `soc`, `row_type`, and `n_total` ride along as hidden
 # sort keys. A second `cols()` call later in the chain adds widths
 # once the user knows the page geometry; the repeat-call merge
-# preserves prior attributes (label, indent_by, align, visible)
+# preserves prior attributes (label, indent, align, visible)
 # without restating them.
 ae <- cdisc_saf_aesocpt
 ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -185,7 +185,7 @@ tabular(
   titles = c("Table 14.3.1", "Adverse Events by SOC and Preferred Term")
 ) |>
   cols(
-    label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+    label    = col_spec(label = "SOC / PT", indent = "indent_level"),
     soc      = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
     soc_n    = col_spec(visible = FALSE),

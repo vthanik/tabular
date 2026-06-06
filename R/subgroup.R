@@ -59,7 +59,7 @@
 #' in `label`, automatically flips to `visible = FALSE` at engine
 #' time. Users do not restate `col_spec(visible = FALSE)` inside
 #' [`cols()`] for these columns — mirroring the
-#' [`col_spec(indent_by = ...)`][col_spec()] auto-hide ergonomic.
+#' [`col_spec(indent = ...)`][col_spec()] auto-hide ergonomic.
 #'
 #' @param .spec *The `tabular_spec` to partition.*
 #'   `<tabular_spec>: required`.
@@ -802,7 +802,7 @@ subgroup <- function(
 }
 
 # Compute the union of partition columns and template-ref columns
-# that should auto-hide at engine time. Mirrors the indent_by
+# that should auto-hide at engine time. Mirrors the indent
 # auto-hide ergonomic — when a column is named in `spec@subgroup@by`
 # or referenced via `{col}` placeholder in `spec@subgroup@label`,
 # the engine flips its `visible` to FALSE so users don't restate

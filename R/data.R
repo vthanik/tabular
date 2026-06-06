@@ -143,7 +143,7 @@
 #' 5 PTs per SOC are kept; `row_type` marks the role of each row and
 #' `indent_level` carries the canonical depth (0 for overall and SOC,
 #' 1 for PT) so the downstream pipeline drives the SOC -> PT indent
-#' via `col_spec(indent_by = "indent_level")` without reconstructing
+#' via `col_spec(indent = "indent_level")` without reconstructing
 #' it in every script. The richer SOC × PT slice exercises
 #' [paginate()] and the engine's horizontal-panel splitter end-to-end
 #' on a realistic submission shell.
@@ -156,12 +156,12 @@
 #'   \item{`label`}{The row's display label. Equal to `soc` on the
 #'     overall and SOC-summary rows; equal to the preferred-term name
 #'     on PT detail rows. Promoted to the primary display column —
-#'     pair with `indent_by = "indent_level"` to drive the SOC -> PT
+#'     pair with `indent = "indent_level"` to drive the SOC -> PT
 #'     indent.}
 #'   \item{`row_type`}{One of `"overall"`, `"soc"`, `"pt"`. Partition
 #'     marker; hide via `col_spec(visible = FALSE)`.}
 #'   \item{`indent_level`}{Integer depth (0 on overall and SOC rows,
-#'     1 on PT rows). Consumed by `col_spec(indent_by = "indent_level")`
+#'     1 on PT rows). Consumed by `col_spec(indent = "indent_level")`
 #'     on the `label` column; the engine auto-hides this column at
 #'     resolve time.}
 #'   \item{`n_total`}{Integer. The row's own subject count — overall
@@ -208,7 +208,7 @@
 #'   cols(
 #'     label    = col_spec(
 #'       label = "SOC / PT",
-#'       indent_by = "indent_level",
+#'       indent = "indent_level",
 #'       align = "left"
 #'     ),
 #'     soc      = col_spec(visible = FALSE),
@@ -366,8 +366,7 @@
 #' `group_display = "header_row"` on `group_label` synthesises one
 #' bold section band per groupid block; the body rows render below
 #' each band, auto-indented one level by the `"header_row"` section
-#' itself (no `usage = "indent"` on `stat_label` — that would double
-#' the indent).
+#' itself (the stub needs no `indent` — the section supplies it).
 #'
 #' @format A data frame with 13 rows and 7 columns:
 #' \describe{

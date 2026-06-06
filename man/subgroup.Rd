@@ -138,7 +138,7 @@ in \code{by}, plus every column referenced via a \code{{col}} placeholder
 in \code{label}, automatically flips to \code{visible = FALSE} at engine
 time. Users do not restate \code{col_spec(visible = FALSE)} inside
 \code{\link[=cols]{cols()}} for these columns — mirroring the
-\code{\link[=col_spec]{col_spec(indent_by = ...)}} auto-hide ergonomic.
+\code{\link[=col_spec]{col_spec(indent = ...)}} auto-hide ergonomic.
 }
 \examples{
 # ---- Example 1: Vital signs split into one page set per sex ----

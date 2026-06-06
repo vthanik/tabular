@@ -167,11 +167,11 @@
 #' # ---- Example 3: AE-by-SOC/PT with indented label + repeat-call merge ----
 #' #
 #' # `label` carries SOC text on SOC rows and PT text on PT rows;
-#' # `indent_by = "indent_level"` indents the PT rows one level under
+#' # `indent = "indent_level"` indents the PT rows one level under
 #' # their SOC. `soc`, `row_type`, and `n_total` ride along as hidden
 #' # sort keys. A second `cols()` call later in the chain adds widths
 #' # once the user knows the page geometry; the repeat-call merge
-#' # preserves prior attributes (label, indent_by, align, visible)
+#' # preserves prior attributes (label, indent, align, visible)
 #' # without restating them.
 #' ae <- cdisc_saf_aesocpt
 #' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
@@ -182,7 +182,7 @@
 #'   titles = c("Table 14.3.1", "Adverse Events by SOC and Preferred Term")
 #' ) |>
 #'   cols(
-#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
 #'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     soc_n    = col_spec(visible = FALSE),
@@ -654,8 +654,8 @@ cols_apply <- function(.spec, .cols, .col_spec) {
   if (!is.na(new@na_text)) {
     out <- S7::set_props(out, na_text = new@na_text)
   }
-  if (!is.na(new@indent_by)) {
-    out <- S7::set_props(out, indent_by = new@indent_by)
+  if (length(new@indent) == 1L && !is.na(new@indent)) {
+    out <- S7::set_props(out, indent = new@indent)
   }
   out
 }

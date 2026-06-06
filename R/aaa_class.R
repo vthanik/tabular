@@ -32,14 +32,17 @@
 #                         values (or emits section-header rows), drives
 #                         keep_together / group_skip, and repeats on
 #                         every panel as part of the stub.
-#   "indent"            — an indent-helper sub-label under a group.
 #   "id"                — a row-identifier column. Renders like
 #                         "display" (one value per row, never
 #                         collapses) but joins the stub: it repeats on
 #                         every horizontal panel and shows once on the
 #                         left. The PROC REPORT `ID` role, orthogonal
 #                         to grouping. See `.stub_col_names()`.
-.col_usage_values <- c("display", "group", "indent", "id")
+#
+# `usage` holds structural ROLES only. Cosmetic indent depth is the
+# separate `indent` property (a fixed level or a per-row column), not a
+# usage value.
+.col_usage_values <- c("display", "group", "id")
 
 # Recognised values for `col_spec@group_display`. Active only when
 # `col_spec@usage = "group"`; ignored otherwise. Controls how the
@@ -190,7 +193,8 @@
 )
 
 # ---------------------------------------------------------------------
-# col_spec — 7-field per-column DSL
+# col_spec — per-column display DSL (see properties below for the full
+# field set; the user-facing args are documented on col_spec())
 # ---------------------------------------------------------------------
 #
 # The S7 class binding is .col_spec_class (internal); the user-facing
@@ -315,18 +319,22 @@ NULL
       S7::class_character,
       default = NA_character_
     ),
-    # @indent_by — name of a column in `spec@data` whose per-row
-    # integer / logical values drive the indent depth on THIS
-    # column's cell text. `NA_character_` (the default) means no
-    # per-row indent. When set, the engine reads
-    # `spec@data[[indent_by]]` at resolve time, coerces each row's
-    # value to a non-negative integer N, and prefixes this column's
-    # text + AST in that row with `strrep(" ", preset@indent_size * N)`.
-    # The referenced column is auto-hidden unless the user explicitly
-    # set its `visible = TRUE`.
-    indent_by = S7::new_property(
-      S7::class_character,
-      default = NA_character_
+    # @indent — cosmetic indent depth on THIS column's cell text.
+    # Two modes by type:
+    #   * numeric scalar N >= 0 — every body row is indented N levels
+    #     (each level = `preset@indent_size` space-widths).
+    #   * character(1) — name of a column in `spec@data` whose per-row
+    #     integer / logical values drive the depth; the engine reads
+    #     `spec@data[[indent]]` at resolve time, coerces each row to a
+    #     non-negative integer, and prefixes that row's text + AST with
+    #     `strrep(" ", preset@indent_size * depth)`. The referenced
+    #     column is auto-hidden unless the user set `visible = TRUE`.
+    # `NA` (the default) means no indent. An explicit `indent` on a
+    # `group_display = "header_row"` host suppresses the section
+    # auto-indent (the user takes control of depth).
+    indent = S7::new_property(
+      S7::class_any,
+      default = NA
     )
   ),
   validator = function(self) {
@@ -401,8 +409,25 @@ NULL
     if (length(self@group_skip) != 1L) {
       return("@group_skip must be length 1 (TRUE / FALSE / NA)")
     }
-    if (length(self@indent_by) != 1L) {
-      return("@indent_by must be length 1 (column name or NA_character_)")
+    if (length(self@indent) != 1L) {
+      return("@indent must be length 1 (a count, a column name, or NA)")
+    }
+    if (!(length(self@indent) == 1L && is.na(self@indent))) {
+      if (is.numeric(self@indent)) {
+        if (
+          !is.finite(self@indent) ||
+            self@indent < 0 ||
+            self@indent != as.integer(self@indent)
+        ) {
+          return("@indent count must be a non-negative whole number")
+        }
+      } else if (is.character(self@indent)) {
+        if (!nzchar(self@indent)) {
+          return("@indent column name must be non-empty")
+        }
+      } else {
+        return("@indent must be a non-negative count, a column name, or NA")
+      }
     }
     NULL
   }

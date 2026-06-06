@@ -169,7 +169,7 @@
 #'   footnotes = "Subjects are counted once per SOC and once per PT."
 #' ) |>
 #'   cols(
-#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level"),
+#'     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
 #'     soc      = col_spec(usage = "group", visible = FALSE,
 #'                         group_display = "column_repeat"),
 #'     row_type = col_spec(visible = FALSE),
@@ -264,7 +264,7 @@
 #'   titles = c("Table 14.3.1", "AEs by SOC and PT (wide-page split)")
 #' ) |>
 #'   cols(
-#'     label    = col_spec(label = "SOC / PT", indent_by = "indent_level",
+#'     label    = col_spec(label = "SOC / PT", indent = "indent_level",
 #'                         width = "2.5in"),
 #'     soc      = col_spec(usage = "group", visible = FALSE,
 #'                         group_display = "column_repeat"),

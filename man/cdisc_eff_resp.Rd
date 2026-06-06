@@ -47,8 +47,7 @@ Clinical Benefit Rate, Disease Control Rate) are encoded via the
 \code{group_display = "header_row"} on \code{group_label} synthesises one
 bold section band per groupid block; the body rows render below
 each band, auto-indented one level by the \code{"header_row"} section
-itself (no \code{usage = "indent"} on \code{stat_label} — that would double
-the indent).
+itself (the stub needs no \code{indent} — the section supplies it).
 }
 \examples{
 # 95\% efficacy pattern: four bold section bands (Best Overall

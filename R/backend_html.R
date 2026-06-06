@@ -701,10 +701,10 @@ backend_html <- function(grid, file) {
   if (nrow_data == 0L) {
     return(out)
   }
-  # Per-cell indent depth comes from the engine sidecar -- both
-  # `indent_by` and `usage = "indent"` contribute additively. Default
-  # to a zero matrix so fixtures that bypass the engine (older tests,
-  # ad-hoc page synthesis) still work.
+  # Per-cell indent depth comes from the engine sidecar (`col_spec@indent`
+  # plus any `group_display = "header_row"` auto-indent). Default to a
+  # zero matrix so fixtures that bypass the engine (older tests, ad-hoc
+  # page synthesis) still work.
   cells_indent <- page$cells_indent %||%
     matrix(
       0L,

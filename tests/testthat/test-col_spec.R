@@ -260,20 +260,32 @@ test_that("col_spec(group_skip = c(TRUE, FALSE)) is rejected (length 1)", {
 })
 
 # ---------------------------------------------------------------------
-# `usage = "indent"` — third enum value, fixed depth-1 prefix
+# `indent` — polymorphic depth (fixed count or per-row column)
 # ---------------------------------------------------------------------
 
-test_that("col_spec(usage = 'indent') stores the new enum value", {
-  cs <- col_spec(usage = "indent")
-  expect_identical(cs@usage, "indent")
+test_that("col_spec(indent = <n>) stores a non-negative integer count", {
+  expect_identical(col_spec(indent = 1)@indent, 1L)
+  expect_identical(col_spec(indent = 2L)@indent, 2L)
+  expect_identical(col_spec(indent = 0)@indent, 0L)
 })
 
-test_that("col_spec(usage = 'indent') is accepted alongside indent_by", {
-  # Composes orthogonally — the engine adds the depths (per-row from
-  # indent_by) and the fixed +1 (from usage = "indent").
-  cs <- col_spec(usage = "indent", indent_by = "depth")
-  expect_identical(cs@usage, "indent")
-  expect_identical(cs@indent_by, "depth")
+test_that("col_spec(indent = '<col>') stores a column name", {
+  expect_identical(col_spec(indent = "depth")@indent, "depth")
+})
+
+test_that("col_spec() defaults indent to NA", {
+  expect_true(is.na(col_spec()@indent))
+  expect_true(is.na(col_spec(indent = NA)@indent))
+  expect_true(is.na(col_spec(indent = NULL)@indent))
+})
+
+test_that("col_spec(indent = ...) rejects malformed values", {
+  expect_error(col_spec(indent = -1), class = "tabular_error_input")
+  expect_error(col_spec(indent = 1.5), class = "tabular_error_input")
+  expect_error(col_spec(indent = Inf), class = "tabular_error_input")
+  expect_error(col_spec(indent = ""), class = "tabular_error_input")
+  expect_error(col_spec(indent = c(1, 2)), class = "tabular_error_input")
+  expect_error(col_spec(indent = TRUE), class = "tabular_error_input")
 })
 
 # ---------------------------------------------------------------------

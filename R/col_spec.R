@@ -38,22 +38,8 @@
 #'   *   **`"display"`** (default in [`cols()`]) — pass-through.
 #'   *   **`"group"`** — row-label with repeat-suppression and
 #'       continuation-page repeat keys. Use for `variable`, `soc`,
-#'       `stat_label`.
-#'   *   **`"indent"`** — prefix every body cell of this column with
-#'       one indent level (`preset@indent_size` space-widths). Composes
-#'       additively with `indent_by` (a column with both gets
-#'       `depth_by + 1` indent levels per row). Backends with native
-#'       padding-left semantics (HTML / LaTeX / RTF / DOCX / PDF)
-#'       emit this as cell padding so wrapped continuation lines align
-#'       with the indented baseline; Markdown carries the literal
-#'       space-prefix. Synthesised group-header rows (under
-#'       `group_display = "header_row"`) are NEVER indented — they're
-#'       the parent at depth 0. **Note:** a `"header_row"` section
-#'       already indents its child rows one level, so do not add
-#'       `usage = "indent"` to a stub that sits under one — the two
-#'       stack into a double indent. Reach for `"indent"` only when
-#'       there is no `"header_row"` section providing the indent, or
-#'       to add a deliberate extra level.
+#'       `stat_label`. (Cosmetic indent depth is the separate `indent`
+#'       argument, not a usage role.)
 #'   *   **`"id"`** — a row-identifier column. Renders like `"display"`
 #'       (one value per row, never collapses) but joins the *stub*: it
 #'       repeats on every horizontal panel (`paginate(panels = N)`) and
@@ -174,8 +160,8 @@
 #'   sort-key helpers (`row_type`, `n_total`) and for the numeric
 #'   counts behind formatted-text percentage cells.
 #'
-#'   **Auto-hide.** The depth column named by `indent_by` and every
-#'   column named by [`subgroup(by = ...)`][subgroup()] or referenced
+#'   **Auto-hide.** The depth column named by a character `indent` and
+#'   every column named by [`subgroup(by = ...)`][subgroup()] or referenced
 #'   via a `{col}` placeholder in the subgroup banner template are
 #'   flipped to `visible = FALSE` automatically at engine time —
 #'   restating it here is redundant.
@@ -250,9 +236,9 @@
 #'       body rows beneath are automatically indented one level**. The
 #'       section header itself sits flush left at depth 0; its child
 #'       rows render one indent level in. Because the section already
-#'       supplies that indent, the stub column needs **no**
-#'       `usage = "indent"` — adding it stacks a second level and
-#'       produces a double indent. The source column is hidden from
+#'       supplies that indent, the stub column needs **no** `indent` —
+#'       adding `indent = 1` there overrides (does not stack) the
+#'       auto-indent, leaving a single level. The source column is hidden from
 #'       the visible body. Matches the canonical submission
 #'       shape used by clinical TFL house templates (Disposition,
 #'       Demographics, Statistical Report sections).
@@ -375,36 +361,47 @@
 #'   would be ambiguous, e.g. when "not applicable" and "not
 #'   reported" both render blank.
 #'
-#' @param indent_by *Name of a column in `spec@data` whose per-row
-#'   integer / logical values drive indent depth on this column.*
-#'   `<character(1)>: default NA_character_`. When set, the engine
-#'   reads `spec@data[[indent_by]]` and prefixes this column's text
-#'   + AST in each row with `strrep(" ", preset@indent_size * depth)`.
-#'   The referenced depth column is auto-hidden — no need to set
-#'   `visible = FALSE` on it.
+#' @param indent *Cosmetic indent depth on this column.*
+#'   `<numeric(1) | character(1) | NA>: default NA`. Two modes by type:
 #'
-#'   Typical SOC / PT pattern (the bundled `cdisc_saf_aesocpt` ships with
-#'   the canonical depth column already attached, so no upstream
-#'   construction is needed):
+#'   *   **A non-negative whole number** — every body row of this column
+#'       is indented that many levels (each level is
+#'       `preset@indent_size` space-widths). `indent = 1` is the common
+#'       "nudge this stub in one level" case; `indent = 0` is a real
+#'       value that flattens children under a `"header_row"` section.
+#'   *   **A column name (character)** — per-row depth: the engine reads
+#'       `spec@data[[indent]]`, coerces each row to a non-negative
+#'       integer, and prefixes that row's text + AST with
+#'       `strrep(" ", preset@indent_size * depth)`. The referenced depth
+#'       column is auto-hidden — no need to set `visible = FALSE` on it.
+#'
+#'   `NA` (default) means no indent. Backends with native padding-left
+#'   (HTML / LaTeX / RTF / DOCX / PDF) emit the depth as cell padding so
+#'   wrapped continuation lines align with the indented baseline;
+#'   Markdown carries the literal space-prefix. Synthesised group-header
+#'   rows are never indented — they are the parent at depth 0.
+#'
+#'   **Interaction:** an explicit `indent` on a
+#'   `group_display = "header_row"` host **suppresses** that section's
+#'   automatic one-level child indent (you take control of the depth) —
+#'   so a stub under a section needs no `indent` at all, and adding
+#'   `indent = 1` there yields a single, not double, indent.
+#'
+#'   Per-row SOC / PT pattern (the bundled `cdisc_saf_aesocpt` ships the
+#'   canonical depth column, so no upstream construction is needed):
 #'
 #'   ```r
 #'   cols(
-#'     label    = col_spec(label = "Category", indent_by = "indent_level"),
+#'     label    = col_spec(label = "Category", indent = "indent_level"),
 #'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE)
 #'   )
 #'   ```
 #'
-#'   Multi-depth nesting works the same way — values
-#'   `c(0L, 1L, 2L, …)` produce `0`, `1`, `2`, … indent levels of
-#'   `preset@indent_size` space-widths each. Negative values clamp
-#'   to 0 (warn); fractional numerics floor (warn); NA → 0 (silent).
-#'
-#'   Composes orthogonally with `group_display = "header_row"`:
-#'   synthetic group headers (depth 0) stay flush as parents; data
-#'   rows under them carry their column's declared depth. Works in
-#'   flat listings too — `indent_by` does not require any
-#'   `usage = "group"` columns.
+#'   Depth-column values `c(0L, 1L, 2L, …)` produce `0`, `1`, `2`, …
+#'   levels. Negative values clamp to 0 (warn); fractional numerics
+#'   floor (warn); NA → 0 (silent). Works in flat listings too — a
+#'   character `indent` does not require any `usage = "group"` columns.
 #'
 #' @return *A `col_spec` S7 object.* Pass it to [`cols()`] keyed by
 #'   the input column name; the constructor itself does not stamp
@@ -458,7 +455,7 @@
 #' # AE-by-SOC/PT table where `label` carries SOC and PT text under
 #' # one column, indented by `indent_level`. Hidden helpers
 #' # (`row_type`, `n_total`) drive the sort while staying off the
-#' # rendered page. Demonstrates `indent_by` plus `visible = FALSE`
+#' # rendered page. Demonstrates `indent` plus `visible = FALSE`
 #' # for sort-only columns, fixed width on the wide label column, and
 #' # decimal alignment on all four arm columns.
 #' ae <- cdisc_saf_aesocpt
@@ -475,7 +472,7 @@
 #' ) |>
 #'   cols(
 #'     label    = col_spec(label = "SOC / Preferred Term",
-#'                         indent_by = "indent_level", width = 2.5),
+#'                         indent = "indent_level", width = 2.5),
 #'     soc      = col_spec(visible = FALSE),
 #'     row_type = col_spec(visible = FALSE),
 #'     soc_n    = col_spec(visible = FALSE),
@@ -600,7 +597,7 @@ col_spec <- function(
   align = NULL,
   valign = NULL,
   na_text = NA_character_,
-  indent_by = NA_character_
+  indent = NA
 ) {
   call <- rlang::caller_env()
 
@@ -623,7 +620,7 @@ col_spec <- function(
   group_skip_val <- .check_col_group_skip(group_skip, call = call)
   .check_col_na_text(na_text, call = call)
   .check_col_format(format, call = call)
-  indent_by_val <- .check_col_indent_by(indent_by, call = call)
+  indent_val <- .check_col_indent(indent, call = call)
 
   .col_spec_class(
     name = NA_character_,
@@ -644,7 +641,7 @@ col_spec <- function(
     align = align_val,
     valign = valign_val,
     na_text = na_text,
-    indent_by = indent_by_val
+    indent = indent_val
   )
 }
 
@@ -684,37 +681,65 @@ col_spec <- function(
   FALSE
 }
 
-# Validate the `indent_by` argument. Accepts a single character
-# value (column name to look up in `spec@data` at resolve time) or
-# `NA_character_` for "no per-row indent on this column" (the
-# default). Empty strings and length != 1 are hard errors — both
-# would silently mis-route at resolve time.
-.check_col_indent_by <- function(x, call) {
+# Validate the `indent` argument. Two modes by type:
+#   * numeric scalar N >= 0 (whole number) — fixed depth on every row;
+#   * character(1) non-empty — column name to look up at resolve time.
+# `NA` / `NULL` (default) mean "no indent". Length != 1, fractional or
+# negative counts, non-finite, empty strings, and other types are hard
+# errors, since each would silently mis-route at resolve time.
+.check_col_indent <- function(x, call) {
   if (is.null(x)) {
-    return(NA_character_)
+    return(NA)
   }
-  if (length(x) != 1L || !is.character(x)) {
+  if (length(x) != 1L) {
     cli::cli_abort(
       c(
-        "Bad {.arg indent_by}.",
-        "x" = "Must be a single character (column name) or {.code NA}.",
+        "Bad {.arg indent}.",
+        "x" = "Must be length 1, a count or a column name.",
         "i" = "Got {.obj_type_friendly {x}} of length {length(x)}."
       ),
       class = "tabular_error_input",
       call = call
     )
   }
-  if (!is.na(x) && !nzchar(x)) {
-    cli::cli_abort(
-      c(
-        "Bad {.arg indent_by}.",
-        "x" = "Empty string is not a valid column name; use {.code NA} to clear."
-      ),
-      class = "tabular_error_input",
-      call = call
-    )
+  if (is.na(x)) {
+    return(NA)
   }
-  as.character(x)
+  if (is.numeric(x)) {
+    if (!is.finite(x) || x < 0 || x != as.integer(x)) {
+      cli::cli_abort(
+        c(
+          "Bad {.arg indent}.",
+          "x" = "A numeric {.arg indent} must be a non-negative whole number."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    return(as.integer(x))
+  }
+  if (is.character(x)) {
+    if (!nzchar(x)) {
+      cli::cli_abort(
+        c(
+          "Bad {.arg indent}.",
+          "x" = "Empty string is not a valid column name; use {.code NA} to clear."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    return(x)
+  }
+  cli::cli_abort(
+    c(
+      "Bad {.arg indent}.",
+      "x" = "Must be a non-negative count, a column name, or {.code NA}.",
+      "i" = "Got {.obj_type_friendly {x}}."
+    ),
+    class = "tabular_error_input",
+    call = call
+  )
 }
 
 .check_col_group_skip <- function(x, call) {
