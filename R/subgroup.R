@@ -258,17 +258,21 @@
 #'
 #' # ---- Example 5: Clear a partition with subgroup(character()) ----
 #' #
-#' # `subgroup(by = character())` (or `subgroup(by = NULL)`)
-#' # explicitly clears any prior partition. Useful in
-#' # programmatically-built pipelines where a downstream branch
-#' # decides not to paginate by group after all — the call resets
-#' # the spec back to a single-page-set render.
+#' # `subgroup(by = character())` (or `subgroup(by = NULL)`) explicitly
+#' # clears any prior partition — useful in programmatically-built
+#' # pipelines where a downstream branch decides not to paginate by
+#' # group after all. Give `sex` and `agegr` a `usage = "group"` role up
+#' # front: while the sex partition is active it overrides that role (sex
+#' # becomes the per-page banner); once cleared, sex falls back to a
+#' # group level, so the pooled single-page render nests sex, age group,
+#' # and parameter rather than leaving a stray partition column behind.
 #' tabular(cdisc_saf_subgroup, titles = "Pooled (no sex partition)") |>
 #'   cols(
 #'     sex_n      = col_spec(visible = FALSE),
-#'     agegr      = col_spec(visible = FALSE),
 #'     agegr_n    = col_spec(visible = FALSE),
 #'     paramcd    = col_spec(visible = FALSE),
+#'     sex        = col_spec(usage = "group", label = "Sex"),
+#'     agegr      = col_spec(usage = "group", label = "Age Group"),
 #'     param      = col_spec(usage = "group", label = "Parameter"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
