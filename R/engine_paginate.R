@@ -560,9 +560,6 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   if (ncol_data == 0L) {
     return(list(integer()))
   }
-  if (identical(panels, "auto")) {
-    return(list(seq_len(ncol_data)))
-  }
   panels_int <- as.integer(panels)
   if (panels_int <= 1L) {
     return(list(seq_len(ncol_data)))

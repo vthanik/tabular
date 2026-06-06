@@ -70,8 +70,6 @@ test_that("style_node(bold = TRUE) holds the value", {
   expect_true(s@bold)
 })
 
-# style_predicate -----------------------------------------------------
-
 # style_spec ----------------------------------------------------------
 
 test_that("style_spec() builds with empty containers", {

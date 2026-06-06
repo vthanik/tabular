@@ -222,7 +222,6 @@
 #' | `header_node`       | one node in the multi-level header tree               | internal — built by [`headers()`] |
 #' | `sort_spec`         | sort keys + per-key direction                         | internal — built by [`sort_rows()`]|
 #' | `style_node`        | one resolved style attribute set (per-cell)           | internal — built by [`style()`]   |
-#' | `style_predicate`   | (legacy) one `where` quosure + scope + style_node     | internal — built by [`style()`]   |
 #' | `style_layer`       | one `tabular_location` + style_node                   | internal — built by [`style()`]   |
 #' | `style_spec`        | the cascade root (defaults + cols + headers + layers) | internal — built by [`style()`]   |
 #' | `pagination_spec`   | page-split policy (keep_together, panels, floors)     | internal — built by [`paginate()`]|
@@ -748,6 +747,8 @@ pagination_spec <- S7::new_class(
       S7::class_character,
       default = character()
     ),
+    # Number of horizontal panels; a positive integer (default 1 = no
+    # split). Validated by `.check_panels()` at `paginate()` call time.
     panels = S7::new_property(S7::class_any, default = 1L),
     orphan_floor = S7::new_property(S7::class_integer, default = 3L),
     widow_floor = S7::new_property(S7::class_integer, default = 2L),
@@ -1141,7 +1142,7 @@ tabular_grid <- S7::new_class(
 #'
 #' @details
 #'
-#' Eleven predicates cover the full S7 surface:
+#' Twelve predicates cover the full S7 surface:
 #'
 #' | predicate              | tests for          | produced by                       |
 #' |------------------------|--------------------|-----------------------------------|
@@ -1151,7 +1152,6 @@ tabular_grid <- S7::new_class(
 #' | `is_header_node()`     | `header_node`      | [`headers()`] (internal nodes)    |
 #' | `is_sort_spec()`       | `sort_spec`        | [`sort_rows()`]                   |
 #' | `is_style_node()`      | `style_node`       | [`style()`] (per-cell style)      |
-#' | `is_style_predicate()` | `style_predicate`  | (legacy) [`style()`] predicate path|
 #' | `is_style_layer()`     | `style_layer`      | [`style()`] (one per call)        |
 #' | `is_style_spec()`      | `style_spec`       | [`style()`] (the cascade root)    |
 #' | `is_pagination_spec()` | `pagination_spec`  | [`paginate()`]                    |

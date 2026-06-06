@@ -53,9 +53,7 @@
 #' **`panels` and group stickiness.** With `panels > 1`, the engine
 #' splits the NON-group columns into approximately equal slices and
 #' repeats every `usage = "group"` column on every panel for row
-#' context. `panels = "auto"` defers the decision to preset-aware
-#' column-width metrics; until those metrics land in a future
-#' release the engine treats `"auto"` as `1`.
+#' context.
 #'
 #' @param .spec *The `tabular_spec` to attach pagination to.*
 #'   `<tabular_spec>: required`.
@@ -75,15 +73,10 @@
 #'   ```
 #'
 #' @param panels *Number of horizontal panels for wide tables.*
-#'   `<integer(1) | "auto">: default 1`. With `1`, every column is on
-#'   every page (single vertical scroll). With `N > 1`, the engine
-#'   splits non-group columns into `N` chunks and repeats every group
-#'   column on every panel.
-#'
-#'   **Note:** `"auto"` is accepted but treated as `1` until
-#'   preset-aware column-width metrics land; once they do, `"auto"`
-#'   will split when the total table width exceeds the printable
-#'   area.
+#'   `<integer(1)>: default 1`. With `1`, every column is on every page
+#'   (single vertical scroll). With `N > 1`, the engine splits non-group
+#'   columns into `N` chunks and repeats every group column on every
+#'   panel.
 #'
 #' @param orphan_floor *Minimum rows on a continued-from page.*
 #'   `<integer(1)>: default 3`. When `keep_together` would move a
@@ -357,12 +350,9 @@ paginate <- function(
 # Internal helpers
 # ---------------------------------------------------------------------
 
-# Validate `panels`. Accepts a positive whole number or the literal
-# string "auto". Returns the value coerced to integer or "auto".
+# Validate `panels`. Accepts a positive whole number. Returns it as an
+# integer.
 .check_panels <- function(x, call) {
-  if (is.character(x) && length(x) == 1L && !is.na(x) && x == "auto") {
-    return("auto")
-  }
   if (
     is.numeric(x) &&
       length(x) == 1L &&
@@ -375,7 +365,7 @@ paginate <- function(
   }
   cli::cli_abort(
     c(
-      "{.arg panels} must be a positive whole number or {.val auto}.",
+      "{.arg panels} must be a positive whole number.",
       "x" = "You supplied {.obj_type_friendly {x}}."
     ),
     class = "tabular_error_input",

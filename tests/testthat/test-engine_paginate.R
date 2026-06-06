@@ -209,11 +209,11 @@ test_that("engine_paginate() caps panels at non-group column count", {
   expect_identical(plan$total_panels, 1L)
 })
 
-test_that('engine_paginate() treats panels = "auto" as single panel for now', {
+test_that("engine_paginate() default (panels = 1) is a single panel", {
   df <- data.frame(g = 1:3, x = 4:6, y = 7:9)
   spec <- tabular(df) |>
     cols(g = col_spec(usage = "group", label = "G")) |>
-    paginate(panels = "auto")
+    paginate(panels = 1)
   plan <- tabular:::engine_paginate(spec)
   expect_identical(plan$total_panels, 1L)
 })

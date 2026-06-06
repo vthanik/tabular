@@ -215,9 +215,8 @@ Two things to know:
 - **`panels = N` splits into `N` *equal* chunks** — there is no explicit split
   position (no "first 5, then the rest"). Equal split is fine for page-fit; if
   you need a specific boundary, that is a known limitation.
-- **`panels = "auto"` is currently a no-op** (treated as `1`): it does *not*
-  auto-fit, it just leaves every column on one page (and the table may overflow
-  with a warning). Always pass an explicit integer.
+- **`panels` is a positive integer** (default `1` = no split). Width-aware
+  automatic splitting is a planned future feature, not a current option.
 
 ## Subgroups and per-page BigN
 
