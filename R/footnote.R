@@ -79,6 +79,7 @@
 #'     soc_n    = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = "Placebo\nN={n['placebo']}"),
+#'     drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}"),
 #'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}"),
 #'     Total    = col_spec(label = "Total\nN={n['Total']}")
 #'   ) |>
@@ -100,6 +101,7 @@
 #'     soc_n    = col_spec(visible = FALSE),
 #'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = "Placebo"),
+#'     drug_50  = col_spec(label = "Drug 50"),
 #'     drug_100 = col_spec(label = "Drug 100"),
 #'     Total    = col_spec(label = "Total")
 #'   ) |>
