@@ -104,7 +104,9 @@ emit(chrome, "demographics.pdf") # protocol + page x of y on every page
 
 ```{r}
 base |>
-  style(bold = TRUE, .at = cells_headers()) |> # bold the header band
+  # the column-header band is bold by default, so style it with colour /
+  # background for a visible change rather than re-applying bold
+  style(color = "#1F3B5C", background = "#DBE4F0", .at = cells_headers()) |>
   style(italic = TRUE, .at = cells_group_headers()) |> # italic section rows
   style(background = "#F2F2F2", .at = cells_body(j = "Total")) # shade the Total column
 ```
