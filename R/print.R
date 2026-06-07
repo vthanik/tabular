@@ -69,7 +69,7 @@
 #'
 #' @param output *Force a specific preview format.* `<character(1)
 #'   | NULL>: default `NULL` (auto)`. See the **`output`
-#'   argument** section above for the full list. The session
+#'   argument** section below for the full list. The session
 #'   default can be set via `options(tabular_print_output =
 #'   "cli")` for users who prefer the structural summary over
 #'   the HTML preview.

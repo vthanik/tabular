@@ -30,11 +30,10 @@
 #' merges them at render time so later layers win per attribute,
 #' NA-valued fields leave the prior layer intact.
 #'
-#' @details
+#' @section Locations:
 #'
-#' **Locations.** The `at` argument selects which surface the layer
-#' targets. Every region of the rendered page has a `cells_*()`
-#' constructor:
+#' The `.at` argument selects which surface the layer targets. Every
+#' region of the rendered page has a `cells_*()` constructor:
 #'
 #'   * `cells_body()`             — body cells (default)
 #'   * `cells_headers()`          — column header band
@@ -51,8 +50,10 @@
 #' rows, `j = "Total"` for column-name targeting, `where = <expr>`
 #' for a quosure-captured predicate evaluated against `spec@data`.
 #'
-#' **Attribute vocabulary.** Each layer carries a `style_node` built
-#' from `...`. Recognised attribute names:
+#' @section Style attributes:
+#'
+#' Each layer carries a `style_node` built from `...`. Recognised
+#' attribute names:
 #'
 #'   * Text — `bold`, `italic`, `underline`, `color`, `background`,
 #'     `font_family`, `font_size`
@@ -82,7 +83,7 @@
 #'   layers accumulate onto the template instead of a spec.
 #'
 #' @param ... *Named style attributes.* At least one required. See
-#'   the vocabulary list above for recognised names.
+#'   the *Style attributes* section for the recognised names.
 #'
 #' @param .at *Location object selecting which surface the layer
 #'   targets.* `<tabular_location>: default cells_body()`. Build with

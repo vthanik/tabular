@@ -243,8 +243,6 @@
 #' # the render path so the sponsor's naming convention lives in one
 #' # place.
 #' ae <- cdisc_saf_aesocpt
-#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-#' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 #'
 #' ae_spec <- tabular(
 #'   ae,
@@ -266,7 +264,7 @@
 #'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
 #'     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
 #'   ) |>
-#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+#'   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 #'
 #' ae_md <- tempfile(fileext = ".md")
 #' emit(

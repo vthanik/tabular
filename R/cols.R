@@ -183,8 +183,6 @@
 #' # preserves prior attributes (label, indent, align, visible)
 #' # without restating them.
 #' ae <- cdisc_saf_aesocpt
-#' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
-#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #'
 #' tabular(
 #'   ae,
@@ -201,7 +199,7 @@
 #'     drug_100 = col_spec(label = "Drug 100", align = "decimal"),
 #'     Total    = col_spec(label = "Total",    align = "decimal")
 #'   ) |>
-#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
+#'   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE)) |>
 #'   # Second `cols()` call: add widths after the rest of the spec
 #'   # is built. Repeat-call merge preserves prior attributes.
 #'   cols(

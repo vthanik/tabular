@@ -18,7 +18,7 @@ passes through to htmltools as `browse = view`. Set
 to capture the HTML string without launching a window).}
 
 \item{output}{\emph{Force a specific preview format.} \verb{<character(1) | NULL>: default }NULL\code{ (auto)}. See the \strong{\code{output}
-argument} section above for the full list. The session
+argument} section below for the full list. The session
 default can be set via \code{options(tabular_print_output = "cli")} for users who prefer the structural summary over
 the HTML preview.}
 }

@@ -95,7 +95,6 @@
 #' # override composing on top of the theme, and `font_size` forwards
 #' # through `...`.
 #' ae <- cdisc_saf_aesocpt
-#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #'
 #' tabular(
 #'   ae,
