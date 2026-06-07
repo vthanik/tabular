@@ -1,11 +1,12 @@
 # Cards hierarchical ARD for AEs by SOC and PT
 
 Long-format companion to `cdisc_saf_aesocpt`. Produced by
-`cards::ard_stack_hierarchical()` over `(AEBODSYS, AEDECOD)` with
-adsl-level denominators, sorted by descending overall incidence via
-`cards::sort_ard_hierarchical()`. Limited to the same top-10 SOC, top-5
-PT subset as `cdisc_saf_aesocpt` so the two datasets describe the same
-slice of the data.
+[`cards::ard_stack_hierarchical()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack_hierarchical.html)
+over `(AEBODSYS, AEDECOD)` with adsl-level denominators, sorted by
+descending overall incidence via
+[`cards::sort_ard_hierarchical()`](https://insightsengineering.github.io/cards/latest-tag/reference/sort_ard_hierarchical.html).
+Limited to the same top-10 SOC, top-5 PT subset as `cdisc_saf_aesocpt`
+so the two datasets describe the same slice of the data.
 
 ## Usage
 
@@ -24,8 +25,10 @@ as the table's top `row_type = "overall"` row.
 ## Source
 
 Derived in `data-raw/bundle-demo.R` via
-`cards::ard_stack_hierarchical()` over `pharmaverseadam::adae` filtered
-to the top SOC / PT subset.
+[`cards::ard_stack_hierarchical()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack_hierarchical.html)
+over
+[`pharmaverseadam::adae`](https://pharmaverse.github.io/pharmaverseadam/reference/adae.html)
+filtered to the top SOC / PT subset.
 
 ## Details
 
