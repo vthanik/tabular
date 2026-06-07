@@ -73,8 +73,7 @@ A data frame with 61 rows and 10 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from
-[`pharmaverseadam::adae`](https://pharmaverse.github.io/pharmaverseadam/reference/adae.html).
+Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::adae`.
 Filtered to the top 10 SOCs by total incidence and the top 5 PTs per
 SOC. Body rows are pre-sorted with the cards-style two-level rule
 (`arrange(desc(soc_n), soc, desc(n_total))`) so the canonical render
