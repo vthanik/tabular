@@ -15,7 +15,7 @@ slot. When piping through \code{style_template() |> style(...)}
 layers accumulate onto the template instead of a spec.}
 
 \item{...}{\emph{Named style attributes.} At least one required. See
-the vocabulary list above for recognised names.}
+the \emph{Style attributes} section for the recognised names.}
 
 \item{.at}{\emph{Location object selecting which surface the layer
 targets.} \verb{<tabular_location>: default cells_body()}. Build with
@@ -35,10 +35,11 @@ template. Layers accumulate in declaration order; the engine
 merges them at render time so later layers win per attribute,
 NA-valued fields leave the prior layer intact.
 }
-\details{
-\strong{Locations.} The \code{at} argument selects which surface the layer
-targets. Every region of the rendered page has a \verb{cells_*()}
-constructor:
+\section{Locations}{
+
+
+The \code{.at} argument selects which surface the layer targets. Every
+region of the rendered page has a \verb{cells_*()} constructor:
 \itemize{
 \item \code{cells_body()}             — body cells (default)
 \item \code{cells_headers()}          — column header band
@@ -55,9 +56,13 @@ borders, body-row separators)
 Body filters live on \code{cells_body()}: \code{i = 1:3} for integer-index
 rows, \code{j = "Total"} for column-name targeting, \verb{where = <expr>}
 for a quosure-captured predicate evaluated against \code{spec@data}.
+}
 
-\strong{Attribute vocabulary.} Each layer carries a \code{style_node} built
-from \code{...}. Recognised attribute names:
+\section{Style attributes}{
+
+
+Each layer carries a \code{style_node} built from \code{...}. Recognised
+attribute names:
 \itemize{
 \item Text — \code{bold}, \code{italic}, \code{underline}, \code{color}, \code{background},
 \code{font_family}, \code{font_size}
@@ -80,6 +85,7 @@ appended around the cell value)
 Unknown attribute names emit a \code{cli::cli_warn} and drop from
 the constructed node; the engine never sees a foreign property.
 }
+
 \examples{
 # ---- AE table by SOC and PT with per-row indent + styled hierarchy ----
 # `cdisc_saf_aesocpt` ships with `indent_level` (0 on overall/SOC rows,

@@ -104,7 +104,6 @@
 #' ae <- cdisc_saf_aesocpt
 #' keep_soc <- head(unique(ae$soc[ae$row_type == "soc"]), 2L)
 #' ae <- ae[ae$row_type == "overall" | ae$soc %in% keep_soc, ]
-#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
 #' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
@@ -130,7 +129,7 @@
 #'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}"),
 #'     Total    = col_spec(label = "Total\nN={n['Total']}")
 #'   ) |>
-#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+#'   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 #'
 #' # ---- Example 2: Best overall response with CDISC factor ordering ----
 #' #

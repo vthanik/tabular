@@ -463,19 +463,21 @@
 #'
 #' # ---- Example 2: AE table with indented label + hidden helpers ----
 #' #
-#' # AE-by-SOC/PT table where `label` carries SOC and PT text under
-#' # one column, indented by `indent_level`. Hidden helpers
-#' # (`row_type`, `n_total`) drive the sort while staying off the
-#' # rendered page. Demonstrates `indent` plus `visible = FALSE`
-#' # for sort-only columns, fixed width on the wide label column, and
-#' # decimal alignment on all four arm columns.
+#' # AE-by-SOC/PT table where `label` carries both the SOC and the PT
+#' # text in one column, each PT indented one level under its parent
+#' # SOC via `indent_level`. The hidden numeric helpers `soc_n` (the
+#' # parent SOC's count, broadcast across its PT children) and
+#' # `n_total` (each row's own count) drive the sort: ordering by
+#' # `soc_n` descending keeps every SOC cluster together, and the
+#' # `n_total` descending tiebreak floats the SOC summary row above
+#' # its PTs, so the table reads SOC then its PTs, next SOC then its
+#' # PTs. Demonstrates `indent` plus `visible = FALSE` for sort-only
+#' # columns, fixed width on the wide label column, and decimal
+#' # alignment on all four arm columns.
 #' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
-#' ae <- cdisc_saf_aesocpt
-#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-#' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 #'
 #' tabular(
-#'   ae,
+#'   cdisc_saf_aesocpt,
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by SOC and Preferred Term",
@@ -494,7 +496,7 @@
 #'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
 #'     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
 #'   ) |>
-#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+#'   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 #'
 #' # ---- Example 3: Format string + na_text for clean numeric display ----
 #' #

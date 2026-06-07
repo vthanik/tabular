@@ -125,8 +125,6 @@ demo_grid@pages[[1]]$cells_text[1:3, c("stat_label", "placebo")]
 # on every continuation page.
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 ae <- cdisc_saf_aesocpt
-ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 
 ae_spec <- tabular(
   ae,
@@ -149,7 +147,7 @@ ae_spec <- tabular(
     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
-  sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
+  sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE)) |>
   paginate(keep_together = "soc")
 
 ae_grid <- as_grid(ae_spec)

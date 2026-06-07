@@ -151,8 +151,6 @@ context.
 # the title / footnote / header line counts on the spec — no
 # manual rows-per-page knob to keep in sync.
 ae <- cdisc_saf_aesocpt
-ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
@@ -177,7 +175,7 @@ tabular(
     Total    = col_spec(label = "Total\nN={n['Total']}")
   ) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
-  sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE)) |>
+  sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE)) |>
   paginate(
     keep_together = "soc",
     repeat_content = c("titles", "headers", "footnotes"),

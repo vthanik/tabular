@@ -69,7 +69,7 @@
 #'       pattern — inner band.
 #'
 #'   Inside a nested-list value, an unnamed character-vector entry
-#'   declares a passthrough leaf (see the Passthrough section above).
+#'   declares a passthrough leaf (see the Passthrough section below).
 #'
 #'   **Restriction:** Every column referenced must exist in
 #'   `.spec@data`. A column may appear under at most one leaf.
@@ -92,8 +92,6 @@
 #' # row-label column (`soc`) sits to the left of the band with no
 #' # header covering it — the canonical clinical layout.
 #' ae <- cdisc_saf_aesocpt
-#' ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-#' ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 #' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
@@ -119,7 +117,7 @@
 #'   headers(
 #'     "Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")
 #'   ) |>
-#'   sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+#'   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 #'
 #' # ---- Example 2: Two-level nested band — Control vs Active arms ----
 #' #
