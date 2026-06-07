@@ -1,9 +1,10 @@
 # Print a `tabular_spec`
 
 Renders a `tabular_spec` interactively. The default behaviour mirrors
-`gt::gt()`: convert the spec to an `htmltools` tag list and let
-htmltools dispatch — RStudio + Positron viewer panes, Quarto / Rmd
-notebook inline, Databricks `displayHTML`, and plain-console
+[`gt::gt()`](https://gt.rstudio.com/reference/gt.html): convert the spec
+to an `htmltools` tag list and let htmltools dispatch — RStudio +
+Positron viewer panes, Quarto / Rmd notebook inline, Databricks
+`displayHTML`, and plain-console
 [`cat()`](https://rdrr.io/r/base/cat.html) are all handled without any
 IDE- specific branching.
 
@@ -23,15 +24,16 @@ IDE- specific branching.
 - view:
 
   *Open the viewer?* `<logical(1)>: default `interactive()“. Same role
-  as `gt::gt`'s \`view\` argument: passes through to htmltools as
-  \`browse = view\`. Set \`view = FALSE\` to suppress the viewer for one
-  call (e.g. to capture the HTML string without launching a window).
+  as [`gt::gt`](https://gt.rstudio.com/reference/gt.html)'s \`view\`
+  argument: passes through to htmltools as \`browse = view\`. Set \`view
+  = FALSE\` to suppress the viewer for one call (e.g. to capture the
+  HTML string without launching a window).
 
 - output:
 
   *Force a specific preview format.*
   `<character(1) | NULL>: default `NULL` (auto)`. See the **`output`
-  argument** section above for the full list. The session default can be
+  argument** section below for the full list. The session default can be
   set via `options(tabular_print_output = "cli")` for users who prefer
   the structural summary over the HTML preview.
 
@@ -56,10 +58,11 @@ heuristics — htmltools already knows.
 
 **`view` argument.** Defaults to
 [`interactive()`](https://rdrr.io/r/base/interactive.html), the same
-universal off-switch `gt::gt()` uses. Non-interactive contexts
-(`Rscript`, `R CMD check`, CI, devtools::test) bypass the viewer
-automatically. Pass `view = FALSE` explicitly at an interactive prompt
-to suppress the viewer for a single call.
+universal off-switch
+[`gt::gt()`](https://gt.rstudio.com/reference/gt.html) uses.
+Non-interactive contexts (`Rscript`, `R CMD check`, CI, devtools::test)
+bypass the viewer automatically. Pass `view = FALSE` explicitly at an
+interactive prompt to suppress the viewer for a single call.
 
 **`output` argument.** Forces a specific preview format instead of the
 default HTML-via-htmltools path. One of:

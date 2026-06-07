@@ -25,8 +25,8 @@ style(.spec, ..., .at = cells_body())
 
 - ...:
 
-  *Named style attributes.* At least one required. See the vocabulary
-  list above for recognised names.
+  *Named style attributes.* At least one required. See the *Style
+  attributes* section for the recognised names.
 
 - .at:
 
@@ -43,11 +43,10 @@ style(.spec, ..., .at = cells_body())
 The updated `tabular_spec` (or `tabular_style_template`, when called
 against one).
 
-## Details
+## Locations
 
-**Locations.** The `at` argument selects which surface the layer
-targets. Every region of the rendered page has a `cells_*()`
-constructor:
+The `.at` argument selects which surface the layer targets. Every region
+of the rendered page has a `cells_*()` constructor:
 
 - [`cells_body()`](https://vthanik.github.io/tabular/reference/cells.md)
   — body cells (default)
@@ -82,8 +81,10 @@ Body filters live on
 targeting, `where = <expr>` for a quosure-captured predicate evaluated
 against `spec@data`.
 
-**Attribute vocabulary.** Each layer carries a `style_node` built from
-`...`. Recognised attribute names:
+## Style attributes
+
+Each layer carries a `style_node` built from `...`. Recognised attribute
+names:
 
 - Text — `bold`, `italic`, `underline`, `color`, `background`,
   `font_family`, `font_size`

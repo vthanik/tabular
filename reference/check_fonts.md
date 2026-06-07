@@ -78,19 +78,19 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> 
 #> ── Font resolution for `font_family = mono` 
 #> backend: html
-#> v Liberation Mono
-#> x Courier New (not on this machine)
+#> x Liberation Mono (not on this machine)
+#> v Courier New
 #> x Courier (not on this machine)
 #> o monospace (generic, always available)
 #> backend: latex
-#> v Liberation Mono
-#> x Courier New (not on this machine)
+#> x Liberation Mono (not on this machine)
+#> v Courier New
 #> x Courier (not on this machine)
 #> x TeX Gyre Cursor (not on this machine)
 #> x Latin Modern Mono (not on this machine)
 #> backend: rtf
-#> v Liberation Mono
-#> x Courier New (not on this machine)
+#> x Liberation Mono (not on this machine)
+#> v Courier New
 #> x Courier (not on this machine)
 
 # ---- Example 2: Diagnose a Courier New request ----
@@ -110,19 +110,19 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> 
 #> ── Font resolution for `font_family = Courier New` 
 #> backend: html
-#> v Liberation Mono
-#> x Courier New (not on this machine)
+#> x Liberation Mono (not on this machine)
+#> v Courier New
 #> x Courier (not on this machine)
 #> o monospace (generic, always available)
 #> backend: latex
-#> v Liberation Mono
-#> x Courier New (not on this machine)
+#> x Liberation Mono (not on this machine)
+#> v Courier New
 #> x Courier (not on this machine)
 #> x TeX Gyre Cursor (not on this machine)
 #> x Latin Modern Mono (not on this machine)
 #> backend: rtf
-#> v Liberation Mono
-#> x Courier New (not on this machine)
+#> x Liberation Mono (not on this machine)
+#> v Courier New
 #> x Courier (not on this machine)
 
 # ---- Example 3: Explicit cross-platform stack ----
@@ -140,18 +140,18 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> ── Font resolution for `font_family = Inter          , Liberation Sans, Arial          , and sans           ` 
 #> backend: html
 #> x Inter (not on this machine)
-#> v Liberation Sans
-#> x Arial (not on this machine)
+#> x Liberation Sans (not on this machine)
+#> v Arial
 #> o sans (generic, always available)
 #> backend: latex
 #> x Inter (not on this machine)
-#> v Liberation Sans
-#> x Arial (not on this machine)
+#> x Liberation Sans (not on this machine)
+#> v Arial
 #> o sans (generic, always available)
 #> backend: rtf
 #> x Inter (not on this machine)
-#> v Liberation Sans
-#> x Arial (not on this machine)
+#> x Liberation Sans (not on this machine)
+#> v Arial
 #> o sans (generic, always available)
 
 # ---- Example 4: Compare serif vs sans fallback chains ----
@@ -173,35 +173,35 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> 
 #> ── Font resolution for `font_family = serif` 
 #> backend: html
-#> v Liberation Serif
-#> x Times New Roman (not on this machine)
+#> x Liberation Serif (not on this machine)
+#> v Times New Roman
 #> x Times (not on this machine)
 #> o serif (generic, always available)
 #> backend: latex
-#> v Liberation Serif
-#> x Times New Roman (not on this machine)
+#> x Liberation Serif (not on this machine)
+#> v Times New Roman
 #> x Times (not on this machine)
 #> x TeX Gyre Termes (not on this machine)
 #> x Latin Modern Roman (not on this machine)
 #> backend: rtf
-#> v Liberation Serif
-#> x Times New Roman (not on this machine)
+#> x Liberation Serif (not on this machine)
+#> v Times New Roman
 #> x Times (not on this machine)
 #> 
 #> ── Font resolution for `font_family = sans` 
 #> backend: html
-#> v Liberation Sans
-#> x Arial (not on this machine)
-#> x Helvetica (not on this machine)
+#> x Liberation Sans (not on this machine)
+#> v Arial
+#> v Helvetica
 #> o sans-serif (generic, always available)
 #> backend: latex
-#> v Liberation Sans
-#> x Arial (not on this machine)
-#> x Helvetica (not on this machine)
+#> x Liberation Sans (not on this machine)
+#> v Arial
+#> v Helvetica
 #> x TeX Gyre Heros (not on this machine)
 #> x Latin Modern Sans (not on this machine)
 #> backend: rtf
-#> v Liberation Sans
-#> x Arial (not on this machine)
-#> x Helvetica (not on this machine)
+#> x Liberation Sans (not on this machine)
+#> v Arial
+#> v Helvetica
 ```

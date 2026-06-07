@@ -32,8 +32,9 @@ sort_rows(.spec, by = character(), descending = FALSE)
   pivot upstream of the sort instead. Arm cells hold rendered stat
   strings (e.g. `"75.2 (8.3)"`) that do not order meaningfully.
 
-      # Two-key clinical sort: row_type ascending, n_total descending.
-      sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+      # Two-key hierarchical sort: SOC clusters by descending count,
+      # each PT nested under its SOC.
+      sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 
 - descending:
 
@@ -92,17 +93,19 @@ factor with the levels in clinical order upstream, then
 ## Examples
 
 ``` r
-# ---- Example 1: AE table sorted by SOC, then by descending subject count ----
+# ---- Example 1: AE table clustered by SOC, PTs nested by count ----
 #
-# AE-by-SOC/PT table where the SOCs and PTs appear in descending
-# order of subject count within the row-type hierarchy (overall
-# first, then SOCs, then PTs). `cdisc_saf_aesocpt$Total` cells are
-# formatted text ("171 (67.3)"), so a lexical sort on `Total`
-# would be wrong ("14" < "171" < "29") — attach a numeric rank
-# column upstream and sort on (row_type, n_total).
+# AE-by-SOC/PT table where each SOC is followed immediately by its
+# own preferred terms — SOC clusters ordered by descending subject
+# count, PTs ordered by descending count within their SOC. The
+# bundled helpers `soc_n` (the parent SOC count, broadcast across
+# its PT children) and `n_total` (each row's own count) drive the
+# sort: `soc_n` descending forms the clusters and floats the overall
+# row to the top, and the `n_total` descending tiebreak lifts each
+# SOC summary row above its PTs. Sorting on these numeric keys
+# sidesteps a lexical sort of the formatted `Total` cells
+# ("14" < "171" < "29"), which would order wrongly.
 ae <- cdisc_saf_aesocpt
-ae$row_type <- factor(ae$row_type, levels = c("overall", "soc", "pt"))
-ae$n_total <- as.integer(sub(" .*", "", ae$Total))
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
@@ -125,56 +128,56 @@ tabular(
     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}"),
     Total    = col_spec(label = "Total\nN={n['Total']}")
   ) |>
-  sort_rows(by = c("row_type", "n_total"), descending = c(FALSE, TRUE))
+  sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 
-#tabular-806c4a335f { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-806c4a335f .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-806c4a335f p { line-height: inherit; }
-#tabular-806c4a335f .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-806c4a335f .tabular-caption { margin: 0; padding: 0; }
-#tabular-806c4a335f .tabular-pad { margin: 0; line-height: 1; }
-#tabular-806c4a335f .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-806c4a335f .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-806c4a335f .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-806c4a335f .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-806c4a335f .tabular-table th, #tabular-806c4a335f .tabular-table td { padding: .18rem .6rem; }
-#tabular-806c4a335f .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-806c4a335f .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-806c4a335f .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-806c4a335f .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-806c4a335f .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-806c4a335f .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-806c4a335f .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-806c4a335f .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-806c4a335f .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-806c4a335f .tabular-table tbody tr td { border-top: none; }
-#tabular-806c4a335f .tabular-band { text-align: center; }
-#tabular-806c4a335f .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-806c4a335f .tabular-subgroup-label { font-weight: 600; }
-#tabular-806c4a335f .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-806c4a335f .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-806c4a335f .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-806c4a335f .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-806c4a335f .text-left { text-align: left; }
-#tabular-806c4a335f .text-center { text-align: center; }
-#tabular-806c4a335f .text-right { text-align: right; }
-#tabular-806c4a335f .tabular-table thead th.text-left { text-align: left; }
-#tabular-806c4a335f .tabular-table thead th.text-center { text-align: center; }
-#tabular-806c4a335f .tabular-table thead th.text-right { text-align: right; }
-#tabular-806c4a335f .valign-top { vertical-align: top; }
-#tabular-806c4a335f .valign-middle { vertical-align: middle; }
-#tabular-806c4a335f .valign-bottom { vertical-align: bottom; }
-#tabular-806c4a335f .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-806c4a335f .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-806c4a335f .tabular-page-break-row { display: none; }
-#tabular-806c4a335f { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-806c4a335f .tabular-page-header, #tabular-806c4a335f .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-806c4a335f .tabular-page-header { margin-bottom: 1rem; }
-#tabular-806c4a335f .tabular-page-footer { margin-top: 1rem; }
-#tabular-806c4a335f .tabular-page-header-left, #tabular-806c4a335f .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-806c4a335f .tabular-page-header-center, #tabular-806c4a335f .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-806c4a335f .tabular-page-header-right, #tabular-806c4a335f .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-806c4a335f .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-806c4a335f .tabular-table tr { page-break-inside: avoid; } #tabular-806c4a335f .tabular-page-header, #tabular-806c4a335f .tabular-page-footer { display: none; } #tabular-806c4a335f .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-806c4a335f .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-806c4a335f .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-a5be29b229 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-a5be29b229 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-a5be29b229 p { line-height: inherit; }
+#tabular-a5be29b229 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-a5be29b229 .tabular-caption { margin: 0; padding: 0; }
+#tabular-a5be29b229 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-a5be29b229 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-a5be29b229 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-a5be29b229 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-a5be29b229 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-a5be29b229 .tabular-table th, #tabular-a5be29b229 .tabular-table td { padding: .18rem .6rem; }
+#tabular-a5be29b229 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-a5be29b229 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-a5be29b229 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-a5be29b229 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-a5be29b229 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a5be29b229 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a5be29b229 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a5be29b229 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a5be29b229 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-a5be29b229 .tabular-table tbody tr td { border-top: none; }
+#tabular-a5be29b229 .tabular-band { text-align: center; }
+#tabular-a5be29b229 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-a5be29b229 .tabular-subgroup-label { font-weight: 600; }
+#tabular-a5be29b229 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-a5be29b229 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-a5be29b229 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-a5be29b229 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-a5be29b229 .text-left { text-align: left; }
+#tabular-a5be29b229 .text-center { text-align: center; }
+#tabular-a5be29b229 .text-right { text-align: right; }
+#tabular-a5be29b229 .tabular-table thead th.text-left { text-align: left; }
+#tabular-a5be29b229 .tabular-table thead th.text-center { text-align: center; }
+#tabular-a5be29b229 .tabular-table thead th.text-right { text-align: right; }
+#tabular-a5be29b229 .valign-top { vertical-align: top; }
+#tabular-a5be29b229 .valign-middle { vertical-align: middle; }
+#tabular-a5be29b229 .valign-bottom { vertical-align: bottom; }
+#tabular-a5be29b229 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-a5be29b229 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-a5be29b229 .tabular-page-break-row { display: none; }
+#tabular-a5be29b229 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-a5be29b229 .tabular-page-header, #tabular-a5be29b229 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-a5be29b229 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-a5be29b229 .tabular-page-footer { margin-top: 1rem; }
+#tabular-a5be29b229 .tabular-page-header-left, #tabular-a5be29b229 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-a5be29b229 .tabular-page-header-center, #tabular-a5be29b229 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-a5be29b229 .tabular-page-header-right, #tabular-a5be29b229 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-a5be29b229 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-a5be29b229 .tabular-table tr { page-break-inside: avoid; } #tabular-a5be29b229 .tabular-page-header, #tabular-a5be29b229 .tabular-page-footer { display: none; } #tabular-a5be29b229 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-a5be29b229 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-a5be29b229 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.3.1
