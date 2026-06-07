@@ -1294,7 +1294,7 @@ test_that("engine_group_display() handles host_col == NA without indenting", {
 # Fixed `indent = <n>` engine phase — uniform depth-n prefix
 # ---------------------------------------------------------------------
 
-mk_indent_usage_spec <- function(indent_size = 2L, level = 1L) {
+mk_indent_spec <- function(indent_size = 2L, level = 1L) {
   df <- data.frame(
     group_label = c("A", "A", "B", "B"),
     stat_label = c("x1", "x2", "y1", "y2"),
@@ -1311,7 +1311,7 @@ mk_indent_usage_spec <- function(indent_size = 2L, level = 1L) {
 }
 
 test_that("indent = 1 prefixes every body cell of the column with one indent level", {
-  g <- as_grid(mk_indent_usage_spec())
+  g <- as_grid(mk_indent_spec())
   page1 <- g@pages[[1L]]
   body <- page1$cells_text[
     !page1$is_header_row & !page1$is_blank_row,
@@ -1322,7 +1322,7 @@ test_that("indent = 1 prefixes every body cell of the column with one indent lev
 })
 
 test_that("indent = <n> applies n fixed levels to every body cell", {
-  g <- as_grid(mk_indent_usage_spec(indent_size = 2L, level = 2L))
+  g <- as_grid(mk_indent_spec(indent_size = 2L, level = 2L))
   page1 <- g@pages[[1L]]
   body_rows <- which(!page1$is_header_row & !page1$is_blank_row)
   body <- page1$cells_text[body_rows, "stat_label"]
@@ -1332,7 +1332,7 @@ test_that("indent = <n> applies n fixed levels to every body cell", {
 })
 
 test_that("indent = 0 leaves body cells flush", {
-  g <- as_grid(mk_indent_usage_spec(level = 0L))
+  g <- as_grid(mk_indent_spec(level = 0L))
   page1 <- g@pages[[1L]]
   body <- page1$cells_text[
     !page1$is_header_row & !page1$is_blank_row,
@@ -1342,7 +1342,7 @@ test_that("indent = 0 leaves body cells flush", {
 })
 
 test_that("indent = <n> synthetic header rows are NOT indented", {
-  g <- as_grid(mk_indent_usage_spec())
+  g <- as_grid(mk_indent_spec())
   page1 <- g@pages[[1L]]
   header_rows <- which(page1$is_header_row)
   expect_true(length(header_rows) >= 1L)
@@ -1362,7 +1362,7 @@ test_that("indent = <n> synthetic header rows are NOT indented", {
 })
 
 test_that("indent = 1 prefix lands on cells_ast as a leading plain run", {
-  g <- as_grid(mk_indent_usage_spec())
+  g <- as_grid(mk_indent_spec())
   page1 <- g@pages[[1L]]
   body_idx <- which(!page1$is_header_row & !page1$is_blank_row)[[1L]]
   ast <- page1$cells_ast[[body_idx, "stat_label"]]
@@ -1372,7 +1372,7 @@ test_that("indent = 1 prefix lands on cells_ast as a leading plain run", {
 })
 
 test_that("indent = 1 with indent_size = 0L is a no-op", {
-  g <- as_grid(mk_indent_usage_spec(indent_size = 0L))
+  g <- as_grid(mk_indent_spec(indent_size = 0L))
   page1 <- g@pages[[1L]]
   body <- page1$cells_text[
     !page1$is_header_row & !page1$is_blank_row,

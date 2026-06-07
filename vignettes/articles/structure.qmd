@@ -21,8 +21,9 @@ single most important structural decision:
 |---|---|---|
 | `"display"` *(default)* | data cells (the arm columns) | one value per row |
 | `"group"` | section variable (e.g. parameter) | each value becomes a **section-header row**; the column is hidden |
-| `"indent"` | manual extra nesting (rarely needed) | prefixes one indent level. **`group_display = "header_row"` already indents its child rows**, so don't add this on top |
 | `"id"` | the row label that must stay visible | like `display`, but **joins the stub and repeats on every horizontal panel** |
+
+Indentation is **not** a `usage` role — it is the separate `col_spec(indent = …)` argument (a fixed integer level, or a column name for per-row depth). See the note below before pairing it with `group_display = "header_row"`.
 
 ```{r}
 data(cdisc_saf_demo, package = "tabular")
