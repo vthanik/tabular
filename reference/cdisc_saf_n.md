@@ -35,7 +35,8 @@ A data frame with 4 rows and 3 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::adsl`
+Derived in `data-raw/bundle-demo.R` from
+[`pharmaverseadam::adsl`](https://pharmaverse.github.io/pharmaverseadam/reference/adsl.html)
 filtered to `SAFFL == "Y"` and the three CDISCPILOT01 arms.
 
 ## Details

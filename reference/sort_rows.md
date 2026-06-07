@@ -100,11 +100,10 @@ factor with the levels in clinical order upstream, then
 # order. The sort runs on the bundled numeric helpers `soc_n` and
 # `n_total`, not the formatted `Total` text, which would sort
 # lexically ("14" < "171" < "29").
-ae <- cdisc_saf_aesocpt
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
-  ae,
+  cdisc_saf_aesocpt,
   titles = c(
     "Table 14.3.1",
     "Adverse Events by System Organ Class and Preferred Term",
