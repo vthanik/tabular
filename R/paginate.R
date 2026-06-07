@@ -147,11 +147,10 @@
 #' # from the preset's orientation + font_size + paper size and from
 #' # the title / footnote / header line counts on the spec — no
 #' # manual rows-per-page knob to keep in sync.
-#' ae <- cdisc_saf_aesocpt
 #' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
-#'   ae,
+#'   cdisc_saf_aesocpt,
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by System Organ Class and Preferred Term",

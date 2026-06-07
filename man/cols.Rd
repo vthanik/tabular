@@ -185,10 +185,9 @@ tabular(
 # once the user knows the page geometry; the repeat-call merge
 # preserves prior attributes (label, indent, align, visible)
 # without restating them.
-ae <- cdisc_saf_aesocpt
 
 tabular(
-  ae,
+  cdisc_saf_aesocpt,
   titles = c("Table 14.3.1", "Adverse Events by SOC and Preferred Term")
 ) |>
   cols(

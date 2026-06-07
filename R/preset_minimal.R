@@ -94,10 +94,9 @@
 #' # trailing `style()` tints just that band, showing a per-table
 #' # override composing on top of the theme, and `font_size` forwards
 #' # through `...`.
-#' ae <- cdisc_saf_aesocpt
 #'
 #' tabular(
-#'   ae,
+#'   cdisc_saf_aesocpt,
 #'   titles = c("Table 14.3.2", "Adverse Events by SOC and Preferred Term"),
 #'   footnotes = "Subjects counted once per SOC and once per PT."
 #' ) |>

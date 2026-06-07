@@ -91,11 +91,10 @@
 #' # spanning the four arm columns and the Total column. The
 #' # row-label column (`soc`) sits to the left of the band with no
 #' # header covering it — the canonical clinical layout.
-#' ae <- cdisc_saf_aesocpt
 #' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
-#'   ae,
+#'   cdisc_saf_aesocpt,
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by System Organ Class and Preferred Term",

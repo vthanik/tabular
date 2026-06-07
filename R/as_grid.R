@@ -150,10 +150,9 @@
 #' # at `grid@metadata$headers` so backends can re-render the header
 #' # on every continuation page.
 #' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
-#' ae <- cdisc_saf_aesocpt
 #'
 #' ae_spec <- tabular(
-#'   ae,
+#'   cdisc_saf_aesocpt,
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by SOC and Preferred Term",

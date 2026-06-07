@@ -431,11 +431,10 @@ tabular(
 # `{program}` and `{datetime}` tokens.
 set_preset(font_size = 9, paper_size = "letter")
 
-ae <- cdisc_saf_aesocpt
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
-  ae,
+  cdisc_saf_aesocpt,
   titles = c(
     "Table 14.3.1",
     "Adverse Events by System Organ Class and Preferred Term",

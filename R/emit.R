@@ -242,10 +242,9 @@
 #' # for submission packaging. The lambda derives the QC path from
 #' # the render path so the sponsor's naming convention lives in one
 #' # place.
-#' ae <- cdisc_saf_aesocpt
 #'
 #' ae_spec <- tabular(
-#'   ae,
+#'   cdisc_saf_aesocpt,
 #'   titles = c(
 #'     "Table 14.3.1",
 #'     "Adverse Events by SOC and Preferred Term",
