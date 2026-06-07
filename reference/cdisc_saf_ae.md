@@ -43,8 +43,7 @@ A data frame with 8 rows and 5 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from
-[`pharmaverseadam::adae`](https://pharmaverse.github.io/pharmaverseadam/reference/adae.html)
+Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::adae`
 filtered to `SAFFL == "Y"` and `TRTEMFL == "Y"`.
 
 ## See also
