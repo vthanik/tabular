@@ -20,8 +20,7 @@ one is the single most important structural decision:
 
 Indentation is **not** a `usage` role — it is the separate
 `col_spec(indent = …)` argument (a fixed integer level, or a column name
-for per-row depth). See the note below before pairing it with
-`group_display = "header_row"`.
+for per-row depth).
 
 ``` r
 

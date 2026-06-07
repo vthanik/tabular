@@ -43,7 +43,8 @@ A data frame with 64 rows and 7 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::advs`.
+Derived in `data-raw/bundle-demo.R` from
+[`pharmaverseadam::advs`](https://pharmaverse.github.io/pharmaverseadam/reference/advs.html).
 
 ## See also
 
