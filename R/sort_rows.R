@@ -63,16 +63,11 @@
 #' @examples
 #' # ---- Example 1: AE table clustered by SOC, PTs nested by count ----
 #' #
-#' # AE-by-SOC/PT table where each SOC is followed immediately by its
-#' # own preferred terms — SOC clusters ordered by descending subject
-#' # count, PTs ordered by descending count within their SOC. The
-#' # bundled helpers `soc_n` (the parent SOC count, broadcast across
-#' # its PT children) and `n_total` (each row's own count) drive the
-#' # sort: `soc_n` descending forms the clusters and floats the overall
-#' # row to the top, and the `n_total` descending tiebreak lifts each
-#' # SOC summary row above its PTs. Sorting on these numeric keys
-#' # sidesteps a lexical sort of the formatted `Total` cells
-#' # ("14" < "171" < "29"), which would order wrongly.
+#' # AE-by-SOC/PT table sorted so each SOC is followed immediately by
+#' # its own preferred terms, SOC clusters in descending subject-count
+#' # order. The sort runs on the bundled numeric helpers `soc_n` and
+#' # `n_total`, not the formatted `Total` text, which would sort
+#' # lexically ("14" < "171" < "29").
 #' ae <- cdisc_saf_aesocpt
 #' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'

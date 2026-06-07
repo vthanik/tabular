@@ -23,7 +23,7 @@ single most important structural decision:
 | `"group"` | section variable (e.g. parameter) | each value becomes a **section-header row**; the column is hidden |
 | `"id"` | the row label that must stay visible | like `display`, but **joins the stub and repeats on every horizontal panel** |
 
-Indentation is **not** a `usage` role — it is the separate `col_spec(indent = …)` argument (a fixed integer level, or a column name for per-row depth). See the note below before pairing it with `group_display = "header_row"`.
+Indentation is **not** a `usage` role — it is the separate `col_spec(indent = …)` argument (a fixed integer level, or a column name for per-row depth).
 
 ```{r}
 data(cdisc_saf_demo, package = "tabular")
