@@ -62,6 +62,14 @@ at engine-validate time.
 differ from the default — a typical pipeline uses one \code{cols()}
 call with one entry per non-default column.
 
+\strong{Layout order follows the data frame, not \code{cols()}.} The
+left-to-right column order in the rendered table is the column
+order of \code{.spec@data}; the order of the named \code{...} arguments here
+is irrelevant (they are a lookup keyed by name). To move a column,
+reorder the data frame upstream — a column derived with
+\code{df$new <- ...} is appended last and will render last unless you
+reorder.
+
 \strong{Within-call duplicates warn.} A duplicate name inside one
 \code{cols()} call warns and "last value wins". To intentionally
 override an attribute, use a second \code{cols()} call downstream and
@@ -220,8 +228,14 @@ tabular(
 # declares each column's display role. The same pattern handles
 # any post-pivot derivation (`pivot_across() |> mutate(...) |>
 # tabular()`).
+#
+# Column LAYOUT order follows the data frame, not the `cols()`
+# argument order. A derived column appended with `ae$active <- ...`
+# would render last, so reorder the frame to place it where it
+# should display (here between Placebo and Total).
 ae <- cdisc_saf_ae
 ae$active <- paste0(ae$drug_50, " / ", ae$drug_100)
+ae <- ae[c("stat_label", "placebo", "active", "Total", "drug_50", "drug_100")]
 
 tabular(
   ae,
