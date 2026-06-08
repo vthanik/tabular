@@ -74,6 +74,13 @@ cols(.spec, ..., .default = NULL)
 from the default — a typical pipeline uses one `cols()` call with one
 entry per non-default column.
 
+**Layout order follows the data frame, not `cols()`.** The left-to-right
+column order in the rendered table is the column order of `.spec@data`;
+the order of the named `...` arguments here is irrelevant (they are a
+lookup keyed by name). To move a column, reorder the data frame upstream
+— a column derived with `df$new <- ...` is appended last and will render
+last unless you reorder.
+
 **Within-call duplicates warn.** A duplicate name inside one `cols()`
 call warns and "last value wins". To intentionally override an
 attribute, use a second `cols()` call downstream and let the merge rule
