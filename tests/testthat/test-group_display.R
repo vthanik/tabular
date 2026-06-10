@@ -122,13 +122,13 @@ mk_grid_input <- function(modes) {
     dimnames = list(NULL, c("var", "stat", "val"))
   )
   cells_ast <- matrix(
-    list(parse_inline("")),
+    list(.parse_inline("")),
     nrow = 6,
     ncol = 3
   )
   for (i in seq_len(6)) {
     for (j in seq_len(3)) {
-      cells_ast[[i, j]] <- parse_inline(cells_text[i, j])
+      cells_ast[[i, j]] <- .parse_inline(cells_text[i, j])
     }
   }
   colnames(cells_ast) <- colnames(cells_text)
@@ -224,10 +224,10 @@ test_that("engine_group_display 'column' mode actually suppresses when values re
     byrow = TRUE,
     dimnames = list(NULL, c("var", "stat"))
   )
-  ast <- matrix(list(parse_inline("")), nrow = 4, ncol = 2)
+  ast <- matrix(list(.parse_inline("")), nrow = 4, ncol = 2)
   for (i in seq_len(4L)) {
     for (j in seq_len(2L)) {
-      ast[[i, j]] <- parse_inline(text[i, j])
+      ast[[i, j]] <- .parse_inline(text[i, j])
     }
   }
   colnames(ast) <- colnames(text)
@@ -620,15 +620,15 @@ test_that(".indent_host_asts is a no-op on empty / zero-size input", {
   )
   expect_identical(
     tabular:::.indent_host_asts(
-      list(tabular:::parse_inline("foo")),
+      list(tabular:::.parse_inline("foo")),
       0L
     ),
-    list(tabular:::parse_inline("foo"))
+    list(tabular:::.parse_inline("foo"))
   )
 })
 
 test_that(".indent_host_asts skips entries that are not inline_ast", {
-  asts <- list("not an ast", tabular:::parse_inline("foo"))
+  asts <- list("not an ast", tabular:::.parse_inline("foo"))
   out <- tabular:::.indent_host_asts(asts, 2L)
   expect_identical(out[[1L]], "not an ast")
   expect_true(tabular::is_inline_ast(out[[2L]]))
@@ -735,7 +735,8 @@ test_that(".resolve_indent_targets clamps negative depths to 0 with a warn", {
       tabular:::.resolve_indent_targets,
       c(args, list(call = environment()))
     ),
-    "clamped"
+    "clamped",
+    class = "tabular_warning_input"
   )
   expect_equal(out$targets[[1L]]$prefixes, c("", "  "))
 })
@@ -748,7 +749,8 @@ test_that(".resolve_indent_targets floors fractional depths with a warn", {
       tabular:::.resolve_indent_targets,
       c(args, list(call = environment()))
     ),
-    "fractional"
+    "fractional",
+    class = "tabular_warning_input"
   )
   expect_equal(out$targets[[1L]]$prefixes, c("  ", "    ", ""))
 })
@@ -841,9 +843,9 @@ test_that(".resolve_indent_targets auto-hides the depth column", {
 
 test_that(".indent_host_asts_per_row applies different prefix per row", {
   asts <- list(
-    tabular:::parse_inline("foo"),
-    tabular:::parse_inline("bar"),
-    tabular:::parse_inline("baz")
+    tabular:::.parse_inline("foo"),
+    tabular:::.parse_inline("bar"),
+    tabular:::.parse_inline("baz")
   )
   prefixes <- c("", "  ", ">> ")
   out <- tabular:::.indent_host_asts_per_row(asts, prefixes)
@@ -857,15 +859,15 @@ test_that(".indent_host_asts_per_row applies different prefix per row", {
 })
 
 test_that(".indent_host_asts_per_row returns input on length mismatch", {
-  asts <- list(tabular:::parse_inline("foo"))
+  asts <- list(tabular:::.parse_inline("foo"))
   out <- tabular:::.indent_host_asts_per_row(asts, c("  ", "  "))
   expect_identical(out, asts)
 })
 
 test_that(".indent_host_asts_per_row passes through NA / non-character prefix slots", {
   asts <- list(
-    tabular:::parse_inline("a"),
-    tabular:::parse_inline("b")
+    tabular:::.parse_inline("a"),
+    tabular:::.parse_inline("b")
   )
   prefixes <- c(NA_character_, "  ")
   out <- tabular:::.indent_host_asts_per_row(asts, prefixes)
@@ -1005,10 +1007,10 @@ test_that("engine_group_display() skips indent when indent_size is non-positive"
   )
   cells_ast <- matrix(
     list(
-      tabular:::parse_inline("CARDIAC"),
-      tabular:::parse_inline("CARDIAC"),
-      tabular:::parse_inline("Atrial fib"),
-      tabular:::parse_inline("Tachycardia")
+      tabular:::.parse_inline("CARDIAC"),
+      tabular:::.parse_inline("CARDIAC"),
+      tabular:::.parse_inline("Atrial fib"),
+      tabular:::.parse_inline("Tachycardia")
     ),
     nrow = 2L,
     ncol = 2L,
@@ -1085,7 +1087,7 @@ test_that("engine_group_display() short-circuits when no group columns are decla
     dimnames = list(NULL, "x")
   )
   cells_ast <- matrix(
-    list(tabular:::parse_inline("a"), tabular:::parse_inline("b")),
+    list(tabular:::.parse_inline("a"), tabular:::.parse_inline("b")),
     nrow = 2L,
     ncol = 1L,
     dimnames = list(NULL, "x")
@@ -1119,12 +1121,12 @@ test_that("engine_group_display() with group_display='column' only takes the no-
   )
   cells_ast <- matrix(
     list(
-      tabular:::parse_inline("A"),
-      tabular:::parse_inline("A"),
-      tabular:::parse_inline("B"),
-      tabular:::parse_inline("x"),
-      tabular:::parse_inline("y"),
-      tabular:::parse_inline("z")
+      tabular:::.parse_inline("A"),
+      tabular:::.parse_inline("A"),
+      tabular:::.parse_inline("B"),
+      tabular:::.parse_inline("x"),
+      tabular:::.parse_inline("y"),
+      tabular:::.parse_inline("z")
     ),
     nrow = 3L,
     ncol = 2L,
@@ -1166,7 +1168,7 @@ test_that(".suppress_column_repeats() short-circuits on length-1 input", {
 })
 
 test_that(".suppress_column_repeats_ast() short-circuits on length-1 input", {
-  one <- list(tabular:::parse_inline("only"))
+  one <- list(tabular:::.parse_inline("only"))
   expect_identical(
     tabular:::.suppress_column_repeats_ast(one, 1L, call = environment()),
     one
@@ -1176,7 +1178,7 @@ test_that(".suppress_column_repeats_ast() short-circuits on length-1 input", {
 test_that(".inject_header_rows_for_page() falls through to identity when no plans active", {
   txt <- matrix("a", nrow = 1L, ncol = 1L, dimnames = list(NULL, "x"))
   ast <- matrix(
-    list(tabular:::parse_inline("a")),
+    list(tabular:::.parse_inline("a")),
     nrow = 1L,
     ncol = 1L,
     dimnames = list(NULL, "x")
@@ -1212,7 +1214,7 @@ test_that(".inject_header_rows_for_page() disables header plan when host_col mis
     dimnames = list(NULL, "v")
   )
   ast <- matrix(
-    list(tabular:::parse_inline("A"), tabular:::parse_inline("B")),
+    list(tabular:::.parse_inline("A"), tabular:::.parse_inline("B")),
     nrow = 2L,
     ncol = 1L,
     dimnames = list(NULL, "v")
@@ -1229,8 +1231,8 @@ test_that(".inject_header_rows_for_page() disables header plan when host_col mis
         group_col = "g",
         group_values = c("A", "B"),
         group_asts = list(
-          tabular:::parse_inline("A"),
-          tabular:::parse_inline("B")
+          tabular:::.parse_inline("A"),
+          tabular:::.parse_inline("B")
         ),
         transitions = c(1L, 2L),
         depth = 0L
@@ -1264,7 +1266,7 @@ test_that("engine_group_display() handles host_col == NA without indenting", {
     dimnames = list(NULL, "soc")
   )
   cells_ast <- matrix(
-    list(tabular:::parse_inline("A"), tabular:::parse_inline("B")),
+    list(tabular:::.parse_inline("A"), tabular:::.parse_inline("B")),
     nrow = 2L,
     ncol = 1L,
     dimnames = list(NULL, "soc")

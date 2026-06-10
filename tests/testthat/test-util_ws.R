@@ -167,7 +167,7 @@ test_that("RTF preserves a hand-built label indent as backslash-tilde", {
 test_that("inter-run boundary spaces stay breakable (not made non-breaking)", {
   # "Page **{page}** of {npages}" splits "Page " | bold | " of " | ... .
   # The single spaces at the run boundaries must NOT become &nbsp;.
-  ast <- parse_inline(md("a **b** c d"))
+  ast <- .parse_inline(md("a **b** c d"))
   expect_equal(tabular:::.render_html_inline(ast), "a <strong>b</strong> c d")
 })
 

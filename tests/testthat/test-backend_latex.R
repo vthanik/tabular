@@ -625,8 +625,8 @@ test_that("empty grid renders titles + (no rows) marker + footnotes", {
   fake <- tabular_grid(
     pages = list(),
     metadata = list(
-      titles_ast = list(parse_inline("Title")),
-      footnotes_ast = list(parse_inline("Foot"))
+      titles_ast = list(.parse_inline("Title")),
+      footnotes_ast = list(.parse_inline("Foot"))
     )
   )
   txt <- paste(tabular:::.render_latex_doc(fake), collapse = "\n")
@@ -665,7 +665,7 @@ test_that(".render_latex_run falls through to (escaped) text for unknown types",
 })
 
 test_that(".render_latex_run handles span (drops wrapper, keeps children)", {
-  ast <- parse_inline(html("<span style='color:red'>red</span>"))
+  ast <- .parse_inline(html("<span style='color:red'>red</span>"))
   expect_identical(tabular:::.render_latex_inline(ast), "red")
 })
 
@@ -1191,7 +1191,7 @@ test_that("cell_padding drives LaTeX per-side leftsep/rightsep (padding SSOT)", 
 # templates. Unit-tested on hand-built asts; wired into the panel
 # renderer in the native-pagination phase.
 
-mk_ast <- function(...) lapply(c(...), tabular:::parse_inline)
+mk_ast <- function(...) lapply(c(...), tabular:::.parse_inline)
 
 test_that(".latex_def_tblr_template: empty content clears the template", {
   expect_identical(

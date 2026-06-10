@@ -175,7 +175,8 @@ NULL
         c(
           "!" = "HTML preview failed; showing the structural summary instead.",
           "i" = conditionMessage(e)
-        )
+        ),
+        class = "tabular_warning_runtime"
       )
       .tabular_spec_print_cli(x)
     }
@@ -342,7 +343,7 @@ as.tags.tabular_spec <- function(x, ..., id = NULL) {
   # still surface it where page width genuinely constrains the layout.
   withCallingHandlers(
     emit(x, file, format = "html"),
-    tabular_warn_layout = function(w) invokeRestart("muffleWarning")
+    tabular_warning_layout = function(w) invokeRestart("muffleWarning")
   )
 
   payload <- paste(readLines(file, warn = FALSE), collapse = "\n")

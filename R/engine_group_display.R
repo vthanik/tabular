@@ -427,7 +427,7 @@ engine_group_display <- function(
   if (n <= 1L) {
     return(col)
   }
-  empty <- parse_inline("", call = call)
+  empty <- .parse_inline("", call = call)
   out <- col
   for (i in seq.int(2L, n)) {
     if (outer_run_ids[[i]] != outer_run_ids[[i - 1L]]) {
@@ -645,6 +645,7 @@ engine_group_display <- function(
     if (any(stats::na.omit(x) != floor(stats::na.omit(x)))) {
       cli::cli_warn(
         "Indent depth column {.val {depth_col}} has fractional values; floored.",
+        class = "tabular_warning_input",
         call = call
       )
     }
@@ -653,6 +654,7 @@ engine_group_display <- function(
     if (any(out < 0L)) {
       cli::cli_warn(
         "Indent depth column {.val {depth_col}} has negative values; clamped to 0.",
+        class = "tabular_warning_input",
         call = call
       )
       out[out < 0L] <- 0L
@@ -780,7 +782,7 @@ engine_group_display <- function(
   }
 
   ncol_visible <- length(visible_col_names)
-  blank_ast <- parse_inline("", call = call)
+  blank_ast <- .parse_inline("", call = call)
   default_node <- style_node()
 
   n_page <- length(row_indices)

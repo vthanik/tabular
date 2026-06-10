@@ -114,6 +114,59 @@ base |>
 Body filters live on `cells_body()`: `i =` (row index), `j =` (column name),
 `where =` (an expression over the data).
 
+A border attribute takes a `brdr()` value — width, line style, colour. Here a
+hairline rule separates the pooled Total column from the per-arm columns:
+
+```{r}
+base |>
+  style(
+    border_left = brdr("hairline", "solid", "#ADB5BD"),
+    .at = cells_body(j = "Total")
+  )
+```
+
+`border` styles all four sides at once; `border_top` / `border_bottom` /
+`border_left` / `border_right` target one. The table-wide rules (toprule,
+midrule, bottomrule) are preset territory — see the `rules` knob on
+`preset()`.
+
+## Inline markup
+
+Plain strings render as plain text — a stray `**` never silently bolds the
+surrounding span. Wrap a string in `md()` (CommonMark plus `^sup^` /
+`~sub~`) or `html()` (a constrained inline tag set) to opt in, the same
+convention gt uses. Every string slot accepts them: titles, footnotes,
+`col_spec()` labels, and `style()` pretext / posttext:
+
+```{r}
+tabular(
+  cdisc_saf_demo,
+  titles = c(
+    "Table 14-2.01",
+    "Demographic and Baseline Characteristics",
+    md("*ITT Population*")
+  ),
+  footnotes = c(
+    md("BMI = body mass index (kg/m^2^)."),
+    html("Source: <i>ADSL</i>, data cut 15JAN2026.")
+  )
+) |>
+  cols(
+    variable = col_spec(
+      usage = "group",
+      group_display = "header_row",
+      label = ""
+    ),
+    stat_label = col_spec(label = "")
+  ) |>
+  cols_apply(arms, col_spec(align = "decimal"))
+```
+
+The marked string survives `c()` concatenation, so plain and marked lines mix
+freely in one titles or footnotes vector. Raw HTML inside `md()` passes
+through the same tag whitelist as `html()`; tags outside it drop their
+wrapper and keep the text.
+
 ## Presets: cosmetics and fit
 
 `preset()` carries the cosmetic defaults — fonts, rules, padding, `na_text`,

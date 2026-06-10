@@ -431,8 +431,8 @@ test_that("empty grid renders titles + (no rows) marker + footnotes", {
   fake <- tabular_grid(
     pages = list(),
     metadata = list(
-      titles_ast = list(parse_inline("Title")),
-      footnotes_ast = list(parse_inline("Foot"))
+      titles_ast = list(.parse_inline("Title")),
+      footnotes_ast = list(.parse_inline("Foot"))
     )
   )
   lines <- tabular:::.render_md_grid(fake)
@@ -488,7 +488,7 @@ test_that("backend_md() is callable directly with a grid + file", {
 })
 
 test_that(".render_md_run handles span (drops wrapper, keeps children)", {
-  ast <- parse_inline(html("<span style='color:red'>red</span>"))
+  ast <- .parse_inline(html("<span style='color:red'>red</span>"))
   expect_identical(tabular:::.render_md_inline(ast), "red")
 })
 

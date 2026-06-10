@@ -1,4 +1,4 @@
-# parse_inline snapshot suite (25 strings)
+# .parse_inline snapshot suite (25 strings)
 
     Code
       summary_table
@@ -76,7 +76,7 @@
 ---
 
     Code
-      parse_inline(c("a", "b"))
+      .parse_inline(c("a", "b"))
     Condition
       Error:
       ! `x` must be a length-1 character or <inline_ast>.

@@ -215,7 +215,8 @@ test_that(".resolve_layer_rows warns on character i and applies to every row", {
     style(bold = TRUE, .at = cells_body(i = c("a", "b", "c")))
   expect_warning(
     tabular:::engine_style(spec),
-    "Character row indices"
+    "Character row indices",
+    class = "tabular_warning_input"
   )
 })
 

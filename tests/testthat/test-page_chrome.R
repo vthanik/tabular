@@ -123,7 +123,7 @@ test_that(".normalize_page_band pads shorter slots with '' at the FAR end", {
 })
 
 test_that(".normalize_page_band preserves inline_ast slots as length-1", {
-  ast <- parse_inline("explicit ast slot")
+  ast <- .parse_inline("explicit ast slot")
   out <- tabular:::.normalize_page_band(list(left = ast, right = "Page X"))
   expect_true(is_inline_ast(out$left[[1L]]))
   expect_equal(out$right, list("Page X"))
@@ -531,7 +531,7 @@ test_that(".resolve_source_path mode 4 reads knitr::current_input", {
 
 test_that(".resolve_page_band passes a pre-parsed inline_ast cell through", {
   band <- tabular:::.resolve_page_band(
-    list(left = parse_inline("hi")),
+    list(left = .parse_inline("hi")),
     program = "p",
     program_path = "pp",
     datetime = "dt"

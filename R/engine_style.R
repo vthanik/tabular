@@ -182,7 +182,9 @@ engine_style <- function(spec) {
   # Character — match against row names if any (uncommon for clinical
   # tables) or warn and fall back to every row. For now, every row.
   cli::cli_warn(
-    "Character row indices on {.fn cells_body} are not yet supported; applying to every row."
+    "Character row indices on {.fn cells_body} are not yet supported; applying to every row.",
+    class = "tabular_warning_input",
+    call = call
   )
   seq_len(nrow(data))
 }

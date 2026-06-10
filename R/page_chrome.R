@@ -40,7 +40,7 @@
 .page_band_slots <- c("left", "center", "right")
 
 # Engine-phase tokens — substituted inside character strings BEFORE
-# parse_inline runs. Stays out of inline_ast inputs (those are
+# .parse_inline runs. Stays out of inline_ast inputs (those are
 # already parsed).
 .page_band_engine_tokens <- c("program", "program_path", "datetime")
 
@@ -122,7 +122,7 @@
 # shape: NULL (no band) OR
 # `list(left = list-of-N, center = list-of-N, right = list-of-N)`
 # where each list entry is either a character scalar (will be
-# parse_inline'd downstream) or an inline_ast (already parsed).
+# .parse_inline'd downstream) or an inline_ast (already parsed).
 #
 # Padding semantics — shorter slots pad with "" AT THE END (high
 # index). Since index 1 = body edge, a scalar slot lands on the
@@ -304,7 +304,7 @@
 }
 
 # ---------------------------------------------------------------------
-# End-to-end: normalise + resolve engine tokens + parse_inline
+# End-to-end: normalise + resolve engine tokens + .parse_inline
 # ---------------------------------------------------------------------
 
 # Apply the full engine-phase pipeline to a pagehead / pagefoot
@@ -347,7 +347,7 @@
       return(cell)
     }
     text <- .substitute_engine_tokens(cell, program, program_path, datetime)
-    parse_inline(text, call = call)
+    .parse_inline(text, call = call)
   }
 
   list(

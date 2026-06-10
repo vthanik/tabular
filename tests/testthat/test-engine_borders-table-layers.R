@@ -18,7 +18,7 @@ test_that("cells_table(side = 'outer_top') is structural via the manifest, not p
   # the body), which a per-cell body stamp cannot reach, so no per-cell
   # top stamp lands; the manifest carries the resolved triple.
   expect_true(is.na(cs[[1L, 1L]]@border_top_style))
-  man <- tabular:::body_border_manifest(spec)
+  man <- tabular:::.body_border_manifest(spec)
   expect_identical(man$outer_top$style, "solid")
   expect_true(man$outer_top$width > 0)
 })
@@ -49,7 +49,7 @@ test_that("cells_table(side = 'outer') stamps bottom per-cell, top/L/R via manif
   expect_true(is.na(cs[[1L, 1L]]@border_top_style))
   expect_true(is.na(cs[[1L, 1L]]@border_left_style))
   expect_true(is.na(cs[[1L, 2L]]@border_right_style))
-  man <- tabular:::body_border_manifest(spec)
+  man <- tabular:::.body_border_manifest(spec)
   expect_identical(man$outer_top$style, "solid")
   expect_identical(man$outer_left$style, "solid")
   expect_identical(man$outer_right$style, "solid")
@@ -87,7 +87,7 @@ test_that("cells_table() layers compose in cascade order (last write wins)", {
       .at = cells_table(side = "outer_top")
     )
   # outer_top is manifest-routed; the later layer's "solid" wins.
-  man <- tabular:::body_border_manifest(spec)
+  man <- tabular:::.body_border_manifest(spec)
   expect_identical(man$outer_top$style, "solid")
 })
 
@@ -100,7 +100,7 @@ test_that("session preset(.style = template) flows through engine_borders", {
   cs <- tabular:::engine_borders(g$spec, tabular:::engine_style(g$spec))
   # Bottom stamps per-cell; top rides the manifest.
   expect_identical(cs[[2L, 1L]]@border_bottom_style, "solid")
-  man <- tabular:::body_border_manifest(g$spec)
+  man <- tabular:::.body_border_manifest(g$spec)
   expect_identical(man$outer_top$style, "solid")
 })
 
@@ -125,7 +125,7 @@ test_that("rules='frame' draws L/R structurally via the manifest, not per-cell (
   expect_true(is.na(cs[[1L, "stat_label"]]@border_left_style))
   expect_true(is.na(cs[[1L, "Total"]]@border_right_style))
   # The resolved L/R edges live in the manifest for the backends.
-  man <- tabular:::body_border_manifest(spec)
+  man <- tabular:::.body_border_manifest(spec)
   expect_false(is.null(man$outer_left))
   expect_false(is.null(man$outer_right))
 })

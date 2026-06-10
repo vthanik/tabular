@@ -146,8 +146,9 @@ test_that("a header anchor on an unknown column is dropped (assign returns NULL)
     footnote("X.", .at = cells_headers(j = "does_not_exist"))
   groups <- tabular:::engine_subgroup_split(spec)
   expect_warning(
-    reg <- tabular:::engine_footnotes_assign(spec, groups),
-    "matched no cells"
+    reg <- tabular:::.engine_footnotes_assign(spec, groups),
+    "matched no cells",
+    class = "tabular_warning_input"
   )
   expect_null(reg)
 })
@@ -174,8 +175,9 @@ test_that("a body footnote on a hidden column warns and is dropped (no orphan)",
     )
   groups <- tabular:::engine_subgroup_split(spec)
   expect_warning(
-    reg <- tabular:::engine_footnotes_assign(spec, groups),
-    "hidden column"
+    reg <- tabular:::.engine_footnotes_assign(spec, groups),
+    "hidden column",
+    class = "tabular_warning_input"
   )
   # the only ref was dropped -> no registry, hence no orphan block line
   expect_null(reg)
@@ -186,8 +188,9 @@ test_that("a header footnote on a hidden column warns and is dropped", {
     footnote("Hidden header.", .at = cells_headers(j = "n_total"))
   groups <- tabular:::engine_subgroup_split(spec)
   expect_warning(
-    reg <- tabular:::engine_footnotes_assign(spec, groups),
-    "hidden column"
+    reg <- tabular:::.engine_footnotes_assign(spec, groups),
+    "hidden column",
+    class = "tabular_warning_input"
   )
   expect_null(reg)
 })
@@ -196,7 +199,7 @@ test_that("a header footnote spanning hidden + visible columns keeps the visible
   spec <- mk_hidden_fn_spec() |>
     footnote("Both.", .at = cells_headers(j = c("n_total", "Total")))
   groups <- tabular:::engine_subgroup_split(spec)
-  reg <- expect_no_warning(tabular:::engine_footnotes_assign(spec, groups))
+  reg <- expect_no_warning(tabular:::.engine_footnotes_assign(spec, groups))
   expect_equal(reg$markers[[".auto1"]], "a")
   # the surviving marker lands on the visible Total header
   out <- withr::local_tempfile(fileext = ".html")
@@ -304,8 +307,9 @@ test_that("an anchor that matches nothing warns and is dropped", {
   # the assign step is where the warning fires
   groups <- tabular:::engine_subgroup_split(spec)
   expect_warning(
-    tabular:::engine_footnotes_assign(spec, groups),
-    "matched no cells"
+    tabular:::.engine_footnotes_assign(spec, groups),
+    "matched no cells",
+    class = "tabular_warning_input"
   )
 })
 
@@ -437,7 +441,7 @@ test_that("a pinned symbol is reserved against a lower-ranked auto marker (#cr4)
       symbol = "*"
     )
   groups <- tabular:::engine_subgroup_split(spec)
-  reg <- tabular:::engine_footnotes_assign(spec, groups)
+  reg <- tabular:::.engine_footnotes_assign(spec, groups)
   markers <- unlist(reg$markers)
   expect_equal(sum(markers == "*"), 1L)
   expect_equal(length(unique(markers)), length(markers))
@@ -453,8 +457,9 @@ test_that("reusing an id with different text warns (#cr6)", {
     )
   groups <- tabular:::engine_subgroup_split(spec)
   expect_warning(
-    tabular:::engine_footnotes_assign(spec, groups),
-    "different text"
+    tabular:::.engine_footnotes_assign(spec, groups),
+    "different text",
+    class = "tabular_warning_input"
   )
 })
 
@@ -466,8 +471,9 @@ test_that("a body footnote whose j names no column is dropped, not orphaned (#cr
     )
   groups <- tabular:::engine_subgroup_split(spec)
   expect_warning(
-    reg <- tabular:::engine_footnotes_assign(spec, groups),
-    "matched no cells"
+    reg <- tabular:::.engine_footnotes_assign(spec, groups),
+    "matched no cells",
+    class = "tabular_warning_input"
   )
   expect_null(reg)
 })
@@ -488,8 +494,9 @@ test_that("two footnotes pinning the same symbol warn that they share a marker",
     )
   groups <- tabular:::engine_subgroup_split(spec)
   expect_warning(
-    reg <- tabular:::engine_footnotes_assign(spec, groups),
-    "share one marker"
+    reg <- tabular:::.engine_footnotes_assign(spec, groups),
+    "share one marker",
+    class = "tabular_warning_input"
   )
   # Both ids resolve to the pinned glyph, exactly as the warning describes.
   expect_equal(reg$markers[["x"]], "*")
@@ -523,19 +530,20 @@ test_that("a footnote anchored to an unsupported surface warns and is dropped", 
   )
   groups <- tabular:::engine_subgroup_split(spec)
   expect_warning(
-    reg <- tabular:::engine_footnotes_assign(spec, groups),
-    "unsupported location"
+    reg <- tabular:::.engine_footnotes_assign(spec, groups),
+    "unsupported location",
+    class = "tabular_warning_input"
   )
   # The valid body note survives; the unsupported anchor is dropped.
   expect_equal(length(reg$refs), 1L)
   expect_equal(reg$refs[[1L]]$text, "Good body note.")
 })
 
-test_that("engine_footnotes_mark_body fills an NA target cell before stamping", {
+test_that(".engine_footnotes_mark_body fills an NA target cell before stamping", {
   spec <- mk_fn_spec() |>
     footnote("Body note.", .at = cells_body(j = "label"))
   groups <- tabular:::engine_subgroup_split(spec)
-  reg <- tabular:::engine_footnotes_assign(spec, groups)
+  reg <- tabular:::.engine_footnotes_assign(spec, groups)
 
   # An all-NA cells_text matrix: the marked label cells must become a bare
   # sentinel (empty base + marker), never the string "NA".
@@ -544,7 +552,7 @@ test_that("engine_footnotes_mark_body fills an NA target cell before stamping", 
     nrow = nrow(spec@data),
     ncol = length(names(spec@data))
   )
-  out <- tabular:::engine_footnotes_mark_body(
+  out <- tabular:::.engine_footnotes_mark_body(
     cells,
     reg,
     spec@data,

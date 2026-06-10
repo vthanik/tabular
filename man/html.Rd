@@ -15,7 +15,7 @@ Length-1 character vector. \code{NA} is rejected.}
 \code{c("from_html", "character")}.} Pass it directly into any
 string-bearing slot (\code{\link[=tabular]{tabular()}} titles / footnotes,
 \code{\link[=col_spec]{col_spec()}} label, \code{\link[=style]{style()}} pretext / posttext); the
-resolve engine calls \code{parse_inline()} internally and backends
+resolve engine calls \code{.parse_inline()} internally and backends
 walk the resulting \code{inline_ast}.
 }
 \description{
