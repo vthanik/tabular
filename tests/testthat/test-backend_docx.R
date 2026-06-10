@@ -790,6 +790,9 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
   # demographics table overflows the 9360-twip printable area on US
   # Letter portrait (the engine warns; landscape is the fix). The
   # widths therefore sum to the natural total, not the page width.
+  # The serif face puts the default decimal_metrics = "afm" on the
+  # Times tables (a digit is two NBSP units), so the four decimal
+  # columns carry more pads — and more twips — than chars mode did.
   spec <- tabular(
     cdisc_saf_demo,
     titles = c("Table 14.1.1", "Demographics", "Safety Population"),
@@ -819,8 +822,8 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
     doc,
     gregexpr("(?<=<w:gridCol w:w=\")[0-9]+(?=\"/>)", doc, perl = TRUE)
   )[[1L]])
-  expect_identical(widths_twips, c(1438L, 4026L, 1149L, 1150L, 1149L, 1199L))
-  expect_identical(sum(widths_twips), 10111L)
+  expect_identical(widths_twips, c(1438L, 4026L, 1216L, 1216L, 1216L, 1316L))
+  expect_identical(sum(widths_twips), 10428L)
 })
 
 test_that("col_spec@align surfaces as <w:jc> on data cells", {

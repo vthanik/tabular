@@ -100,7 +100,7 @@ test_that("preset_spec() defaults", {
   expect_true(is_preset_spec(p))
   expect_identical(p@orientation, "landscape")
   expect_identical(p@paper_size, "letter")
-  expect_identical(p@decimal_metrics, "chars")
+  expect_identical(p@decimal_metrics, "afm")
   expect_identical(as.numeric(p@cell_padding), c(0, 5.4))
   expect_identical(p@spacing$title, c(above = 1L, below = 1L))
   expect_null(p@stripe)

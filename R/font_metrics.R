@@ -1,8 +1,8 @@
 # font_metrics.R — AFM-driven text width measurement.
 #
-# Foundation for `col_spec(width = "auto")` and any future
-# pixel-aware engine logic (decimal_metrics = "afm" prefix em
-# wiring is currently deferred — see preset.R::decimal_metrics).
+# Foundation for `col_spec(width = "auto")` and the em-aware
+# decimal padding behind decimal_metrics = "afm" (the default —
+# see preset.R::decimal_metrics and the as_grid.R decimal block).
 #
 # Two consumers:
 #
@@ -35,11 +35,12 @@
 )
 
 # Pick the family class for a font_family chain. Walks top-to-bottom;
-# first generic / aliased / Liberation hit wins. Defaults to "serif"
-# (the dominant clinical-TFL face) when nothing matches.
-.font_chain_family_class <- function(font_family) {
+# first generic / aliased / Liberation hit wins. Falls back to `default`
+# — "serif" (the dominant clinical-TFL face) unless the caller needs to
+# detect the no-match case (pass `default = NA_character_`).
+.font_chain_family_class <- function(font_family, default = "serif") {
   if (length(font_family) == 0L) {
-    return("serif")
+    return(default)
   }
   for (nm in as.character(font_family)) {
     if (.is_generic_family(nm)) {
@@ -54,7 +55,7 @@
       return(lib)
     }
   }
-  "serif"
+  default
 }
 
 # Resolve a font_family chain + style to an AFM lookup key.
