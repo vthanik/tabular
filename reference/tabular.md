@@ -103,7 +103,9 @@ resolve without writing.
 **Pre-summarised input contract.** `data` is one row per displayed row
 of the final table. `tabular()` does not aggregate, filter, weight, or
 generate subtotal rows — those happen upstream in `cards`, `dplyr`, or
-SAS. If the upstream is a long `cards::ard_stack()` ARD, pipe through
+SAS. If the upstream is a long
+[`cards::ard_stack()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html)
+ARD, pipe through
 [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
 first to land in the wide shape `tabular()` accepts.
 

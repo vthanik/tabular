@@ -123,10 +123,10 @@ chrome <- base |>
 chrome
 ```
 
-Protocol: XYZ-123  
+Protocol: XYZ-123\
 Analysis Set: Safety
 
-Page 1 of 1  
+Page 1 of 1\
 Data cut: 2026-01-15
 
 |  | placebo | drug_50 | drug_100 | Total |
@@ -256,7 +256,9 @@ once at the top of a study to make these defaults apply to every table
 without restating them.
 
 > **Decimal alignment** (`col_spec(align = "decimal")`) pads numeric
-> cells with non-breaking spaces so the decimal points line up.
-> Alignment is exact in a monospaced font; in proportional fonts it is
-> visually close (em-aware padding is future work). For submission TFLs
-> in Courier this is exact.
+> cells with non-breaking spaces so the decimal points line up. Padding
+> is measured with the built-in font metrics
+> (`preset(decimal_metrics = "afm")`, the default), so alignment is
+> exact in Courier and exact to within one padding space in proportional
+> fonts such as Times New Roman or Arial. Markdown output pads by
+> character count instead — the right geometry for a text medium.
