@@ -18,7 +18,7 @@
 #
 # Reading order is a (surface, subgroup, row, col) ladder; body anchors
 # are subgroup-major (a note whose cells live only in a later subgroup
-# is lettered after earlier ones), which is why `engine_footnotes_assign`
+# is lettered after earlier ones), which is why `.engine_footnotes_assign`
 # consumes the already-split `groups`.
 
 # ---------------------------------------------------------------------
@@ -252,7 +252,7 @@
 # and assemble the marked-footnote block. Returns NULL when the spec
 # carries no footnotes (every downstream helper is then a no-op).
 #' @noRd
-engine_footnotes_assign <- function(
+.engine_footnotes_assign <- function(
   spec,
   groups,
   call = rlang::caller_env()
@@ -286,20 +286,32 @@ engine_footnotes_assign <- function(
     ak <- .fn_anchor_key(r$location, groups, col_names, visible_cols, call)
     if (!isTRUE(ak$matched)) {
       if (isTRUE(ak$unsupported)) {
-        cli::cli_warn(c(
-          "Footnote anchored to an unsupported location; dropping it.",
-          "i" = "Anchor with {.fn cells_body}, {.fn cells_headers}, or {.fn cells_title}."
-        ))
+        cli::cli_warn(
+          c(
+            "Footnote anchored to an unsupported location; dropping it.",
+            "i" = "Anchor with {.fn cells_body}, {.fn cells_headers}, or {.fn cells_title}."
+          ),
+          class = "tabular_warning_input",
+          call = call
+        )
       } else if (isTRUE(ak$hidden)) {
-        cli::cli_warn(c(
-          "Footnote anchored to hidden column {.val {ak$col}}; dropping it.",
-          "i" = "Make the column visible with {.code col_spec(visible = TRUE)} to show its marker."
-        ))
+        cli::cli_warn(
+          c(
+            "Footnote anchored to hidden column {.val {ak$col}}; dropping it.",
+            "i" = "Make the column visible with {.code col_spec(visible = TRUE)} to show its marker."
+          ),
+          class = "tabular_warning_input",
+          call = call
+        )
       } else {
-        cli::cli_warn(c(
-          "Footnote matched no cells; dropping it.",
-          "i" = "Check the {.arg .at} location."
-        ))
+        cli::cli_warn(
+          c(
+            "Footnote matched no cells; dropping it.",
+            "i" = "Check the {.arg .at} location."
+          ),
+          class = "tabular_warning_input",
+          call = call
+        )
       }
       next
     }
@@ -319,8 +331,8 @@ engine_footnotes_assign <- function(
   # Same id + different text would silently drop the later text (the
   # block keeps the first); two distinct notes pinning the same symbol
   # would render one marker for two notes. Warn on both before assigning.
-  .fn_warn_id_text_clash(enriched)
-  .fn_warn_pin_clash(enriched)
+  .fn_warn_id_text_clash(enriched, call)
+  .fn_warn_pin_clash(enriched, call)
 
   keystr <- vapply(enriched, function(e) .fn_keystr(e$key), character(1L))
   reg <- .fn_registry_seed()
@@ -353,15 +365,19 @@ engine_footnotes_assign <- function(
 # Warn when one `id` is reused with different text: the block keeps the
 # first ref's text (Find() below), so any later text would vanish.
 #' @noRd
-.fn_warn_id_text_clash <- function(enriched) {
+.fn_warn_id_text_clash <- function(enriched, call = rlang::caller_env()) {
   ids <- vapply(enriched, function(e) e$id, character(1L))
   for (id in unique(ids)) {
     txt <- lapply(enriched[ids == id], function(e) as.character(e$text))
     if (length(unique(txt)) > 1L) {
-      cli::cli_warn(c(
-        "Footnote {.arg id} {.val {id}} reused with different text; keeping the first.",
-        "i" = "Give each distinct note its own {.arg id}, or omit {.arg id}."
-      ))
+      cli::cli_warn(
+        c(
+          "Footnote {.arg id} {.val {id}} reused with different text; keeping the first.",
+          "i" = "Give each distinct note its own {.arg id}, or omit {.arg id}."
+        ),
+        class = "tabular_warning_input",
+        call = call
+      )
     }
   }
 }
@@ -369,7 +385,7 @@ engine_footnotes_assign <- function(
 # Warn when two distinct footnotes pin the same `symbol`: they would
 # share one marker glyph while emitting two separate note lines.
 #' @noRd
-.fn_warn_pin_clash <- function(enriched) {
+.fn_warn_pin_clash <- function(enriched, call = rlang::caller_env()) {
   pin <- vapply(
     enriched,
     function(e) e$symbol %||% NA_character_,
@@ -379,10 +395,14 @@ engine_footnotes_assign <- function(
   for (sym in unique(pin[!is.na(pin)])) {
     sel <- !is.na(pin) & pin == sym
     if (length(unique(ids[sel])) > 1L) {
-      cli::cli_warn(c(
-        "Two footnotes pin the same {.arg symbol} {.val {sym}}; they will share one marker.",
-        "i" = "Pin distinct symbols, or share an {.arg id} to merge the notes."
-      ))
+      cli::cli_warn(
+        c(
+          "Two footnotes pin the same {.arg symbol} {.val {sym}}; they will share one marker.",
+          "i" = "Pin distinct symbols, or share an {.arg id} to merge the notes."
+        ),
+        class = "tabular_warning_input",
+        call = call
+      )
     }
   }
 }
@@ -393,9 +413,9 @@ engine_footnotes_assign <- function(
 .fn_block_line <- function(label_tmpl, marker, text) {
   label_str <- gsub("{m}", marker, label_tmpl, fixed = TRUE)
   runs <- c(
-    parse_inline(label_str)@runs,
+    .parse_inline(label_str)@runs,
     list(list(type = "plain", text = " ")),
-    parse_inline(text)@runs
+    .parse_inline(text)@runs
   )
   inline_ast(runs = runs)
 }
@@ -409,7 +429,7 @@ engine_footnotes_assign <- function(
 # local. Runs after engine_decimal so the sentinel sits past the padded
 # field and alignment is untouched.
 #' @noRd
-engine_footnotes_mark_body <- function(
+.engine_footnotes_mark_body <- function(
   cells_text,
   registry,
   data,
@@ -448,7 +468,7 @@ engine_footnotes_mark_body <- function(
 # the footnotes anchor to. These surfaces never pass through
 # engine_decimal, so order is unconstrained.
 #' @noRd
-engine_footnotes_mark_ast <- function(
+.engine_footnotes_mark_ast <- function(
   col_labels_ast,
   titles_ast,
   registry,
@@ -489,7 +509,7 @@ engine_footnotes_mark_ast <- function(
 # lines. Identical for every subgroup, so the first-subgroup-only grid
 # merge carries it correctly with no merge-side change.
 #' @noRd
-engine_footnotes_append_block <- function(footnotes_ast, registry) {
+.engine_footnotes_append_block <- function(footnotes_ast, registry) {
   if (is.null(registry) || length(registry$block_ast) == 0L) {
     return(footnotes_ast)
   }

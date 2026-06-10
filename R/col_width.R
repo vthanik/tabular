@@ -398,11 +398,11 @@
 #   - Pinned and resolved-percent widths take priority.
 #   - remaining = available - sum(pinned) - sum(resolved_percent).
 #   - If remaining <= 0: pinned overflow. Warn (class
-#     "tabular_warn_layout") and return widths as-is (auto values
+#     "tabular_warning_layout") and return widths as-is (auto values
 #     unchanged, percent values resolved).
 #   - "content" mode: keep auto widths as-is (Word AutoFit-to-
 #     Contents). Don't expand to fill; don't shrink on overflow.
-#     Warn (class "tabular_warn_layout") when the natural total
+#     Warn (class "tabular_warning_layout") when the natural total
 #     exceeds the page so the user can pin widths or switch mode.
 .distribute_widths <- function(widths, available, mode = "content") {
   if (length(widths) == 0L) {
@@ -435,7 +435,7 @@
         "i" = "Reserved: {round(reserved, 2)} in; available: {round(available, 2)} in.",
         "i" = "Auto-sized columns left at their natural width; layout may overflow."
       ),
-      class = "tabular_warn_layout"
+      class = "tabular_warning_layout"
     )
     return(resolved)
   }
@@ -466,7 +466,7 @@
         "i" = "Natural width {round(reserved + sum_auto, 2)} in; available {round(available, 2)} in.",
         "i" = "Columns kept at natural width; the table will overflow. Set {.code col_spec(width = ...)} or {.code preset(width_mode = \"fixed\")} to constrain it."
       ),
-      class = "tabular_warn_layout"
+      class = "tabular_warning_layout"
     )
   }
   resolved

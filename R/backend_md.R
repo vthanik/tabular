@@ -682,7 +682,7 @@ backend_md <- function(grid, file) {
 }
 
 # Render a link run: `[text](href)`. The link title attribute is
-# optional and rendered when set per CommonMark; parse_inline
+# optional and rendered when set per CommonMark; .parse_inline
 # emits a character NA when the source markdown carried no title,
 # so we guard against NA + empty string both.
 .render_md_link <- function(run, preserve = TRUE, lead = TRUE, trail = TRUE) {

@@ -92,7 +92,7 @@ test_that(".distribute_widths() mode='fixed' collapses auto cols to the minimum 
 test_that(".distribute_widths() mode='content' keeps natural width on overflow + warns", {
   # Word AutoFit-to-Contents: auto columns are NEVER silently shrunk.
   # When the natural total overflows the page, columns keep their
-  # measured width and a tabular_warn_layout fires so the user can
+  # measured width and a tabular_warning_layout fires so the user can
   # set explicit widths or switch width_mode.
   widths <- list(
     a = list(kind = "pin", value = 3.0),
@@ -101,7 +101,7 @@ test_that(".distribute_widths() mode='content' keeps natural width on overflow +
   )
   expect_warning(
     tabular:::.distribute_widths(widths, available = 10.0, mode = "content"),
-    class = "tabular_warn_layout"
+    class = "tabular_warning_layout"
   )
   out <- suppressWarnings(
     tabular:::.distribute_widths(widths, available = 10.0, mode = "content")
@@ -136,7 +136,7 @@ test_that(".distribute_widths() warns when pinned widths overflow regardless of 
   )
   expect_warning(
     tabular:::.distribute_widths(widths, available = 8.0, mode = "window"),
-    class = "tabular_warn_layout"
+    class = "tabular_warning_layout"
   )
 })
 

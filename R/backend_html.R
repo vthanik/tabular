@@ -1837,7 +1837,7 @@ backend_html <- function(grid, file) {
 
 # Render a link run as `<a href="..." title="...">text</a>`. The
 # title attribute is optional and emitted only when set per
-# CommonMark; parse_inline emits a character NA when the source
+# CommonMark; .parse_inline emits a character NA when the source
 # markdown carried no title, so we guard against NA + empty
 # string both. `href` and `title` are attribute-escaped.
 .render_html_link <- function(

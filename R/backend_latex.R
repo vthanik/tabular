@@ -718,7 +718,7 @@ backend_latex <- function(grid, file) {
     body_valign <- "top"
   }
   # tabularray border manifest. Reads `meta$body_borders` — the
-  # resolved-triples sidecar built by `body_border_manifest()` from
+  # resolved-triples sidecar built by `.body_border_manifest()` from
   # the spec's cells_table layer cascade — and emits one
   # `hline{i}={spec}` / `vline{j}={spec}` per non-null side.
   # Header band occupies rows 1..rowhead; first body row index is
@@ -763,7 +763,7 @@ backend_latex <- function(grid, file) {
 }
 
 # Translate the resolved body-region triples (one slot per side on
-# the `body_borders` sidecar built by `body_border_manifest()`) to
+# the `body_borders` sidecar built by `.body_border_manifest()`) to
 # tabularray's `hline{i}={spec}` / `vline{j}={spec}` directives.
 # Returns a character vector (zero or more entries) ready to splice
 # into the outer longtblr arg string.

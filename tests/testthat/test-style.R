@@ -58,7 +58,8 @@ test_that("style() warns on an unknown attribute name", {
   expect_warning(
     tabular(cdisc_saf_demo) |>
       style(jiggle = TRUE, .at = cells_body(where = TRUE)),
-    "jiggle"
+    "jiggle",
+    class = "tabular_warning_input"
   )
 })
 

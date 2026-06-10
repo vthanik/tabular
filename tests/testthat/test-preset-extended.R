@@ -289,7 +289,7 @@ test_that("engine_borders stamps outer bottom per-cell, top/L/R via manifest", {
   expect_true(is.na(c1@border_top_style))
   expect_true(is.na(c1@border_left_style))
   expect_true(is.na(c2@border_right_style))
-  man <- tabular:::body_border_manifest(spec)
+  man <- tabular:::.body_border_manifest(spec)
   expect_identical(man$outer_top$style, "solid")
   expect_identical(man$outer_left$style, "solid")
   expect_identical(man$outer_right$style, "solid")
@@ -313,7 +313,7 @@ test_that("engine_borders 'none' clears the structural outer_right edge", {
     style(border_right = "none", .at = cells_table(side = "outer_right"))
   # The right edge is structural: the "none" clear lands in the manifest
   # (style "none" -> backends suppress emission). No per-cell stamp.
-  man <- tabular:::body_border_manifest(spec)
+  man <- tabular:::.body_border_manifest(spec)
   expect_identical(man$outer_right$style, "none")
   cs <- as_grid(spec)@pages[[1]]$cells_style
   expect_true(is.na(cs[[1, "x"]]@border_right_style))

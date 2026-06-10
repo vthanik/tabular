@@ -61,7 +61,7 @@ post-sort data grid. A predicate may reference any column in
 \code{spec@data}.
 \item \code{engine_format()} — apply per-column formats, substitute
 \code{na_text}, and parse every cell / title / footnote / label
-through \code{parse_inline()} to its \code{inline_ast}.
+through \code{.parse_inline()} to its \code{inline_ast}.
 \item \code{engine_decimal()} — column-wide decimal alignment for any
 column flagged \code{col_spec(align = "decimal")}. Operates on the
 formatted text; output is the same character matrix with NBSP

@@ -315,6 +315,7 @@ cols <- function(.spec, ..., .default = NULL) {
         "{length(dups)} duplicate column name{?s} in {.fn cols}, last value wins.",
         "x" = "Repeated: {.val {dups}}."
       ),
+      class = "tabular_warning_input",
       call = call
     )
     keep <- !duplicated(arg_names, fromLast = TRUE)
@@ -521,6 +522,7 @@ cols_apply <- function(.spec, .cols, .col_spec) {
         "{.fn cols_apply} matched no columns; the spec was not applied.",
         "i" = "Check {.arg .cols} against the data columns: {.val {data_cols}}."
       ),
+      class = "tabular_warning_input",
       call = call
     )
     return(.spec)

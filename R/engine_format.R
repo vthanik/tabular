@@ -11,7 +11,7 @@
 #                      function, or pass-through).
 #   cells_ast        : list-matrix of `inline_ast`, one per cell.
 #                      Every cell text is parsed via
-#                      `parse_inline()` so cell-level md() / html()
+#                      `.parse_inline()` so cell-level md() / html()
 #                      content surfaces as structured runs.
 #   titles_ast       : list of `inline_ast`, one per title line.
 #                      Empty list when spec carries no titles.
@@ -43,7 +43,7 @@
 #     with `col_spec@na_text` (default "" empty string).
 #
 # Inline-format parsing:
-#   - Every formatted string is run through `parse_inline()` to
+#   - Every formatted string is run through `.parse_inline()` to
 #     produce an `inline_ast`. Plain strings parse to a trivial
 #     single-run AST; cells / titles / footnotes / labels that were
 #     constructed via `md()` or `html()` parse to the typed run
@@ -275,7 +275,7 @@ engine_format <- function(spec) {
   ncol_data <- ncol(cells_text)
   asts <- vector("list", nrow_data * ncol_data)
   for (k in seq_along(asts)) {
-    asts[[k]] <- parse_inline(cells_text[[k]], call = call)
+    asts[[k]] <- .parse_inline(cells_text[[k]], call = call)
   }
   dim(asts) <- c(nrow_data, ncol_data)
   dimnames(asts) <- dimnames(cells_text)
@@ -288,7 +288,7 @@ engine_format <- function(spec) {
   if (length(x) == 0L) {
     return(list())
   }
-  lapply(seq_along(x), function(i) parse_inline(x[[i]], call = call))
+  lapply(seq_along(x), function(i) .parse_inline(x[[i]], call = call))
 }
 
 # Build the per-column label AST. Source: col_spec@label when set
@@ -301,7 +301,7 @@ engine_format <- function(spec) {
     cs <- cols[[nm]]
     label <- cs@label
     text <- if (is.na(label)) nm else label
-    out[[nm]] <- parse_inline(text, call = call)
+    out[[nm]] <- .parse_inline(text, call = call)
   }
   out
 }

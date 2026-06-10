@@ -1122,8 +1122,8 @@ test_that("empty grid renders titles + (no rows) marker + footnotes", {
   fake <- tabular_grid(
     pages = list(),
     metadata = list(
-      titles_ast = list(parse_inline("Title")),
-      footnotes_ast = list(parse_inline("Foot"))
+      titles_ast = list(.parse_inline("Title")),
+      footnotes_ast = list(.parse_inline("Foot"))
     )
   )
   lines <- tabular:::.render_html_grid(fake)
@@ -1166,7 +1166,7 @@ test_that(".render_html_run falls through to (escaped) text for unknown types", 
 })
 
 test_that(".render_html_run handles span (wraps children in <span>)", {
-  ast <- parse_inline(html("<span style='color:red'>red</span>"))
+  ast <- .parse_inline(html("<span style='color:red'>red</span>"))
   expect_identical(
     tabular:::.render_html_inline(ast),
     "<span>red</span>"
@@ -1208,7 +1208,7 @@ test_that(".html_doc_title falls back to 'tabular' when no titles", {
 })
 
 test_that(".html_doc_title strips tags and entities from the first title", {
-  meta <- list(titles_ast = list(parse_inline(md("**Bold &amp; Big**"))))
+  meta <- list(titles_ast = list(.parse_inline(md("**Bold &amp; Big**"))))
   out <- tabular:::.html_doc_title(meta)
   expect_false(grepl("<", out, fixed = TRUE))
   expect_false(grepl("&", out, fixed = TRUE))
@@ -2585,7 +2585,7 @@ test_that("stripe + header background reach special rows in HTML (#thread-B)", {
 
 test_that(".html_render_slot_ast_with_tokens renders rich markup + tokens (#thread-F)", {
   # md() bold survives as <strong> (not flattened to literal **x**).
-  a1 <- parse_inline(md("**bold**"))
+  a1 <- .parse_inline(md("**bold**"))
   expect_match(
     tabular:::.html_render_slot_ast_with_tokens(a1, total_pages = 1L),
     "<strong>bold</strong>",
@@ -2593,7 +2593,7 @@ test_that(".html_render_slot_ast_with_tokens renders rich markup + tokens (#thre
   )
   # {page} / {npages} substitute AFTER rich rendering, so markup wrapping
   # the token survives.
-  a2 <- parse_inline(md("Page **{page}** of {npages}"))
+  a2 <- .parse_inline(md("Page **{page}** of {npages}"))
   expect_match(
     tabular:::.html_render_slot_ast_with_tokens(a2, total_pages = 42L),
     "Page <strong>1</strong> of 42",
@@ -2602,7 +2602,7 @@ test_that(".html_render_slot_ast_with_tokens renders rich markup + tokens (#thre
   # Empty AST -> "".
   expect_identical(
     tabular:::.html_render_slot_ast_with_tokens(
-      parse_inline(""),
+      .parse_inline(""),
       total_pages = 1L
     ),
     ""

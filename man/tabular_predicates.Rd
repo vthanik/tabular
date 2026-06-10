@@ -71,7 +71,7 @@ Twelve predicates cover the full S7 surface:\tabular{lll}{
    \code{is_pagination_spec()} \tab \code{pagination_spec} \tab \code{\link[=paginate]{paginate()}} \cr
    \code{is_preset_spec()} \tab \code{preset_spec} \tab \code{\link[=preset]{preset()}}, \code{\link[=set_preset]{set_preset()}} \cr
    \code{is_subgroup_spec()} \tab \code{subgroup_spec} \tab \code{\link[=subgroup]{subgroup()}} \cr
-   \code{is_inline_ast()} \tab \code{inline_ast} \tab \code{parse_inline()} (post-format) \cr
+   \code{is_inline_ast()} \tab \code{inline_ast} \tab \code{.parse_inline()} (post-format) \cr
 }
 
 

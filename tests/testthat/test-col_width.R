@@ -261,8 +261,8 @@ test_that(".resolve_col_widths measures with body padding override (padding SSOT
     dimnames = list(NULL, c("grp", "n"))
   )
   labels <- list(
-    grp = tabular:::parse_inline("grp"),
-    n = tabular:::parse_inline("n")
+    grp = tabular:::.parse_inline("grp"),
+    n = tabular:::.parse_inline("n")
   )
 
   none <- tabular:::.resolve_col_widths(spec, cells_text, labels)
@@ -322,7 +322,7 @@ test_that(".distribute_widths keeps natural auto width on overflow + warns", {
   # widths and warns instead of shrinking.
   expect_warning(
     tabular:::.distribute_widths(widths, available = 5),
-    class = "tabular_warn_layout"
+    class = "tabular_warning_layout"
   )
   result <- suppressWarnings(
     tabular:::.distribute_widths(widths, available = 5)
@@ -340,7 +340,7 @@ test_that(".distribute_widths preserves pinned, keeps natural auto on remainder"
   # autos keep natural width (3 each) and the call warns.
   expect_warning(
     tabular:::.distribute_widths(widths, available = 5),
-    class = "tabular_warn_layout"
+    class = "tabular_warning_layout"
   )
   result <- suppressWarnings(
     tabular:::.distribute_widths(widths, available = 5)
@@ -366,7 +366,7 @@ test_that(".distribute_widths warns on pinned overflow", {
   )
   expect_warning(
     result <- tabular:::.distribute_widths(widths, available = 5),
-    class = "tabular_warn_layout"
+    class = "tabular_warning_layout"
   )
   # Auto-sized column left at natural width (1), pin honoured (10).
   expect_equal(unname(result), c(10, 1))
@@ -380,10 +380,10 @@ test_that(".distribute_widths handles empty input", {
 })
 
 test_that(".ast_flatten_text drops markup, preserves text", {
-  ast_plain <- tabular:::parse_inline("plain text")
+  ast_plain <- tabular:::.parse_inline("plain text")
   expect_equal(tabular:::.ast_flatten_text(ast_plain), "plain text")
 
-  ast_md <- tabular:::parse_inline(tabular::md("**bold** and *italic*"))
+  ast_md <- tabular:::.parse_inline(tabular::md("**bold** and *italic*"))
   # Should yield bare "bold and italic" with no asterisks.
   flat <- tabular:::.ast_flatten_text(ast_md)
   expect_false(grepl("\\*", flat))

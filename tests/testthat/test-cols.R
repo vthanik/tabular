@@ -52,7 +52,8 @@ test_that("cols() warns on duplicate names and keeps the last", {
         param = col_spec(label = "First"),
         param = col_spec(label = "Second")
       ),
-    "duplicate"
+    "duplicate",
+    class = "tabular_warning_input"
   )
   expect_identical(s@cols$param@label, "Second")
 })
@@ -421,7 +422,8 @@ test_that("cols_apply() warns and no-ops when a predicate matches nothing (#revi
   expect_warning(
     s <- mk_arms_spec() |>
       cols_apply(\(nm) startsWith(nm, "ZZZ"), col_spec(align = "decimal")),
-    "matched no columns"
+    "matched no columns",
+    class = "tabular_warning_input"
   )
   expect_length(s@cols, 0L)
 })
@@ -561,7 +563,8 @@ test_that("an unmatched cols_apply() selection still warns with a deferred label
   expect_warning(
     s <- mk_arms_spec() |>
       cols_apply(\(nm) startsWith(nm, "ZZZ"), col_spec(label = "{.name}")),
-    "matched no columns"
+    "matched no columns",
+    class = "tabular_warning_input"
   )
   expect_length(s@cols, 0L)
 })
