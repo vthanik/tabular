@@ -74,10 +74,10 @@
 .paper_size_values <- c("letter", "a4")
 .align_anchor_values <- c("left", "center", "right")
 .valign_values <- c("top", "middle", "bottom")
-# After the rules/spacing SSOT redesign `decimal_metrics` carries only
-# the wired "chars" metric; the unwired "afm" / "systemfonts" values
-# were removed.
-.decimal_metrics_values <- c("chars")
+# Decimal-padding metric. "afm" (default) counts pads via the bundled
+# Core AFM em-widths so alignment is width-exact in proportional fonts;
+# "chars" counts every glyph as one pad unit (exact in monospace only).
+.decimal_metrics_values <- c("chars", "afm")
 .chrome_onscreen_values <- c("auto", "off")
 .whitespace_values <- c("preserve", "collapse")
 .footnote_markers_values <- c("letters", "numbers", "symbols")
@@ -836,7 +836,7 @@ preset_spec <- S7::new_class(
     stripe = S7::new_property(S7::class_any, default = NULL),
     decimal_metrics = S7::new_property(
       S7::class_character,
-      default = "chars"
+      default = "afm"
     ),
     decimal_markers = S7::new_property(
       S7::class_character,

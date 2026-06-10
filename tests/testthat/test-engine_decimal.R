@@ -1177,20 +1177,160 @@ test_that("as_grid threads preset@decimal_metrics='chars' end-to-end", {
   expect_type(grid@pages[[1]]$cells_text, "character")
 })
 
-test_that("preset_spec default for decimal_metrics is 'chars'", {
-  expect_equal(preset_spec()@decimal_metrics, "chars")
+test_that("preset_spec default for decimal_metrics is 'afm'", {
+  expect_equal(preset_spec()@decimal_metrics, "afm")
 })
 
-test_that("preset_spec accepts only the 'chars' decimal_metrics value", {
+test_that("preset_spec accepts 'chars' and 'afm' decimal_metrics values", {
   expect_equal(
     preset_spec(decimal_metrics = "chars")@decimal_metrics,
     "chars"
   )
-  expect_error(preset_spec(decimal_metrics = "afm"), "must be one of")
+  expect_equal(
+    preset_spec(decimal_metrics = "afm")@decimal_metrics,
+    "afm"
+  )
   expect_error(
     preset_spec(decimal_metrics = "systemfonts"),
     "must be one of"
   )
+})
+
+test_that("afm mode aligns the slot-1 decimal mark in proportional fonts", {
+  # Canonical mixed-shape clinical column: bare integers, mean (SD),
+  # one-decimal mean, and a range, with integer parts of differing
+  # width (1–3 digits) so the aligner must insert leading pads. In
+  # Helvetica an NBSP is 278/1000 em but a digit is 556/1000 em, so a
+  # chars-mode pad replaces half a digit and the anchors drift; afm
+  # mode must land every slot-1 decimal anchor within one NBSP.
+  v <- c("8", "86", "75.2 (8.59)", "108.0", "9.2, 81.8")
+  nbsp <- tabular:::.nbsp
+  nbsp_em <- tabular:::.text_width_em(nbsp, "Helvetica")
+  # x-offset (in 1/1000 em) of the slot-1 decimal anchor: the width of
+  # everything left of the first decimal mark, or of the integer part
+  # (trailing pads stripped) when the cell carries no mark.
+  anchor_em <- function(cells) {
+    vapply(
+      cells,
+      function(s) {
+        pre <- if (grepl(".", s, fixed = TRUE)) {
+          sub("\\..*$", "", s)
+        } else {
+          sub(paste0(nbsp, "+$"), "", s)
+        }
+        as.numeric(tabular:::.text_width_em(pre, "Helvetica"))
+      },
+      numeric(1)
+    )
+  }
+
+  m_afm <- tabular:::.build_measure("afm", "Helvetica", nbsp)
+  out_afm <- tabular:::.align_decimal_column(
+    v,
+    pad = nbsp,
+    measure = m_afm,
+    zero_suppress = FALSE,
+    edge_trim = FALSE
+  )
+  spread_afm <- diff(range(anchor_em(out_afm)))
+  expect_lte(spread_afm, nbsp_em)
+
+  # The same input in chars mode misses that tolerance — this is the
+  # proportional-font misalignment the afm default fixes.
+  m_chars <- tabular:::.build_measure("chars", NA_character_, nbsp)
+  out_chars <- tabular:::.align_decimal_column(
+    v,
+    pad = nbsp,
+    measure = m_chars,
+    zero_suppress = FALSE,
+    edge_trim = FALSE
+  )
+  spread_chars <- diff(range(anchor_em(out_chars)))
+  expect_gt(spread_chars, nbsp_em)
+})
+
+test_that("afm output is byte-identical to chars output under Courier", {
+  # Every ASCII Courier glyph is 600/1000 em, so AFM unit counts equal
+  # character counts and the default mono font preserves the historic
+  # chars-mode bytes exactly.
+  v <- c("86", "75.2 (8.59)", "76.0", "69.2, 81.8", "12 ( 4.6)")
+  nbsp <- tabular:::.nbsp
+  m_afm <- tabular:::.build_measure("afm", "Courier", nbsp)
+  m_chars <- tabular:::.build_measure("chars", NA_character_, nbsp)
+  out_afm <- tabular:::.align_decimal_column(
+    v,
+    pad = nbsp,
+    measure = m_afm,
+    zero_suppress = FALSE,
+    edge_trim = FALSE
+  )
+  out_chars <- tabular:::.align_decimal_column(
+    v,
+    pad = nbsp,
+    measure = m_chars,
+    zero_suppress = FALSE,
+    edge_trim = FALSE
+  )
+  expect_identical(out_afm, out_chars)
+})
+
+test_that("emit to md forces chars decimal padding; as_grid keeps afm", {
+  df <- data.frame(stat = c("8", "108.0"))
+  spec <- tabular(df) |>
+    cols(stat = col_spec(label = "Value", align = "decimal")) |>
+    preset(font_family = "Times New Roman")
+  # afm (Times): a digit is two NBSP units, so "8" takes four leading
+  # pads to reach "108"'s six units, plus three trailing for ".0".
+  nbsp <- tabular:::.nbsp
+  cell <- unname(as_grid(spec)@pages[[1]]$cells_text[1, "stat"])
+  expect_identical(cell, paste0(strrep(nbsp, 4), "8", strrep(nbsp, 3)))
+  # Markdown is a text medium where count-padding is the correct
+  # geometry: the same spec emits chars-mode pads (two either side).
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  txt <- readLines(out, warn = FALSE)
+  expect_in(paste0("| ", strrep(nbsp, 2), "8", strrep(nbsp, 2), " |"), txt)
+})
+
+test_that("afm with an unknown face and a decimal column warns serif fallback", {
+  tabular:::.fidelity_warn_reset()
+  df <- data.frame(stat = c("8", "108.0"))
+  spec <- tabular(df) |>
+    cols(stat = col_spec(label = "Value", align = "decimal")) |>
+    preset(font_family = "MyCorpFont")
+  expect_warning(as_grid(spec), class = "tabular_warning_fidelity")
+  # The grid still resolves with serif (Times) metrics: four leading
+  # pads, same as the known-serif geometry.
+  tabular:::.fidelity_warn_reset()
+  cell <- unname(
+    suppressWarnings(as_grid(spec))@pages[[1]]$cells_text[1, "stat"]
+  )
+  nbsp <- tabular:::.nbsp
+  expect_identical(cell, paste0(strrep(nbsp, 4), "8", strrep(nbsp, 3)))
+})
+
+test_that("afm unknown-face warning is silent for known faces and non-decimal specs", {
+  tabular:::.fidelity_warn_reset()
+  df <- data.frame(stat = c("8", "108.0"))
+  # Generic, aliased, and Liberation faces all carry metric tables.
+  for (fam in c(
+    "mono",
+    "serif",
+    "sans",
+    "Times New Roman",
+    "Arial",
+    "Liberation Serif"
+  )) {
+    spec <- tabular(df) |>
+      cols(stat = col_spec(label = "Value", align = "decimal")) |>
+      preset(font_family = fam)
+    expect_no_warning(as_grid(spec))
+  }
+  # Unknown face but no decimal column: silent.
+  spec_plain <- tabular(df) |>
+    cols(stat = col_spec(label = "Value")) |>
+    preset(font_family = "MyCorpFont")
+  expect_no_warning(as_grid(spec_plain))
 })
 
 test_that("preset_spec@decimal_markers default + preset() override flows to as_grid", {

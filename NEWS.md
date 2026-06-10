@@ -19,6 +19,9 @@
   `group_display` on a later call, and merge every column attribute
   field-completely (previously a default value could not be merged back and
   some fields could be dropped).
+* `preset()`'s `decimal_metrics` knob gained `"afm"` (now the default), making
+  decimal alignment width-exact in proportional fonts via the bundled font
+  metrics; Markdown output keeps character padding.
 
 # tabular 0.1.0
 

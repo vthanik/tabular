@@ -312,9 +312,10 @@ the baked default \code{"left"}.
 
 \strong{Tip:} \code{"decimal"} pads numerics with non-breaking spaces
 so the decimal mark falls on a single column-wide anchor.
-The active preset's \code{decimal_metrics} knob is reserved for
-future em-aware padding refinement (see \code{\link[=preset]{preset()}}); the
-current engine pads by character count.
+Pad counts follow the active preset's \code{decimal_metrics} knob
+(see \code{\link[=preset]{preset()}}): the default \code{"afm"} measures real glyph
+widths so the anchor holds in proportional fonts as well as
+monospace.
 
 \strong{Default behaviour.} When \code{align} is unset (\code{NULL} / \code{NA}),
 every column emits with body left-aligned and header centred,

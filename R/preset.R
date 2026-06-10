@@ -315,8 +315,13 @@
 #'       knob; blank-line spacing is set via `spacing` (above).
 #'   *   **`na_text`** — global NA fallback. `<character(1)>`.
 #'   *   **`decimal_metrics`** — decimal-padding metric.
-#'       `<character(1)>`. Only `"chars"` (default); the engine pads
-#'       decimal columns by character count.
+#'       `<character(1)>`. `"afm"` (default) measures glyphs with the
+#'       bundled Core font metrics, so decimal columns align
+#'       width-exact in proportional fonts (to within one padding
+#'       space of rounding; exact in Courier). `"chars"` pads by
+#'       character count — exact in monospaced faces only. Markdown
+#'       output always pads by character count, the correct geometry
+#'       for a text medium.
 #'   *   **`decimal_markers`** — missing-value tokens recognised by
 #'       `col_spec(align = "decimal")`. `<character>`. Default
 #'       `c("NR", "NE", "NC", "ND", "BLQ")`. A cell whose trimmed
