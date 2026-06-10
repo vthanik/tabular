@@ -136,6 +136,45 @@ Widths: `"auto"` (default) sizes to content; a pinned value (`"1in"`, `1.0`,
 last** — its non-default `width` then wins the field-merge; a later `cols()` call
 carrying the default `width = "auto"` would otherwise be ambiguous.
 
+## Sorting rows
+
+Display cells are formatted strings — `"54 (21.3)"` sorts lexically, not
+numerically. The idiom: carry one hidden **numeric key** per sort level, hide
+it with `col_spec(visible = FALSE)`, and hand the keys to `sort_rows()`.
+`descending` takes one value per key, so mixed-direction sorts are a single
+call.
+
+The bundled AE table ships its keys precomputed: `soc_n` (events in the parent
+SOC, constant down each SOC block) and `n_total` (events on the row). Sorting
+on both, descending, clusters every preferred term under its SOC and orders
+both levels by frequency — the standard SAP ordering:
+
+```{r}
+data(cdisc_saf_aesocpt, package = "tabular")
+
+tabular(cdisc_saf_aesocpt, titles = "AEs by SOC and PT, descending frequency") |>
+  cols(
+    label = col_spec(
+      label = "SOC / Preferred Term",
+      indent = "indent_level"
+    ),
+    soc = col_spec(
+      usage = "group",
+      visible = FALSE,
+      group_display = "column_repeat"
+    ),
+    row_type = col_spec(visible = FALSE),
+    n_total = col_spec(visible = FALSE),
+    soc_n = col_spec(visible = FALSE)
+  ) |>
+  cols_apply(arms, col_spec(align = "decimal")) |>
+  sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
+```
+
+Because `soc_n` is constant within a SOC block and never smaller than any PT's
+`n_total` inside it, each SOC's summary row sorts to the top of its own block —
+no separate "parent first" switch needed.
+
 ## Pagination — long tables
 
 `paginate()` derives the rows-per-page budget from the preset (paper, font,
