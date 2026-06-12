@@ -342,14 +342,29 @@ emit <- function(
 ) {
   call <- rlang::caller_env()
 
-  check_tabular_spec(.spec, call = call)
+  check_renderable_spec(.spec, call = call)
   file <- .check_emit_file(file, call = call, create_dir = create_dir)
   format <- .resolve_format(file, format, call = call)
   .check_emit_manifest_flag(manifest, call = call)
+  is_figure <- is_figure_spec(.spec)
+  if (is_figure && !is.null(data_file)) {
+    cli::cli_abort(
+      c(
+        "{.arg data_file} is not available for a figure.",
+        "i" = "A figure carries no resolved data frame to write."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
 
   backend <- .resolve_backend(format, call = call)
 
-  grid <- .resolve_spec_to_grid(.spec, format = format, call = call)
+  grid <- if (is_figure) {
+    .resolve_figure_to_grid(.spec, format = format, call = call)
+  } else {
+    .resolve_spec_to_grid(.spec, format = format, call = call)
+  }
 
   # Clear the per-render fidelity-warning dedup set so each backend
   # emulation drop (e.g. a colour on a Markdown surface) warns at most

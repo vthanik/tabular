@@ -1,0 +1,213 @@
+# test-figure.R — figure() constructor, classification, validation.
+
+png_fixture <- function() test_path("fixtures", "fig-sample.png")
+jpg_fixture <- function() test_path("fixtures", "fig-sample.jpg")
+
+test_that("figure() classifies each supported source kind", {
+  expect_equal(figure(function() plot(1))@source_kind, "function")
+  expect_equal(figure(png_fixture())@source_kind, "file")
+
+  # recorded plot
+  grDevices::pdf(tempfile(fileext = ".pdf"))
+  grDevices::dev.control("enable")
+  plot(1:3)
+  rp <- grDevices::recordPlot()
+  grDevices::dev.off()
+  expect_equal(figure(rp)@source_kind, "recordedplot")
+
+  # multi-page list, kinds may mix
+  fig <- figure(list(function() plot(1), png_fixture()))
+  expect_equal(fig@source_kind, "multi")
+  expect_length(fig@plots, 2L)
+})
+
+test_that("figure() detects a ggplot without attaching ggplot2", {
+  skip_if_not_installed("ggplot2")
+  p <- ggplot2::ggplot(mtcars, ggplot2::aes(mpg, wt)) + ggplot2::geom_point()
+  expect_equal(figure(p)@source_kind, "ggplot")
+})
+
+test_that("figure() normalises and interpolates titles / footnotes", {
+  k <- 3
+  fig <- figure(
+    function() plot(1),
+    titles = c("Figure {k}", "Sub"),
+    footnotes = "fn {k}"
+  )
+  expect_equal(fig@titles, c("Figure 3", "Sub"))
+  expect_equal(fig@footnotes, "fn 3")
+})
+
+test_that("figure() stores placement, dims, dpi", {
+  fig <- figure(
+    function() plot(1),
+    width = 4,
+    height = 3,
+    halign = "right",
+    valign = "top",
+    dpi = 150
+  )
+  expect_equal(fig@halign, "right")
+  expect_equal(fig@valign, "top")
+  expect_equal(fig@width, 4)
+  expect_equal(fig@height, 3)
+  expect_equal(fig@dpi, 150)
+})
+
+test_that("is_figure_spec discriminates", {
+  expect_true(is_figure_spec(figure(function() plot(1))))
+  expect_false(is_figure_spec(42))
+  expect_false(is_figure_spec(tabular(cdisc_saf_demo)))
+  expect_false(is_tabular_spec(figure(function() plot(1))))
+})
+
+test_that("figure() with meta defers interpolation to resolve time", {
+  meta <- data.frame(arm = c("A", "B"), stringsAsFactors = FALSE)
+  fig <- figure(
+    list(function() plot(1), function() plot(2)),
+    titles = "Arm: {arm}",
+    meta = meta
+  )
+  # raw token survives onto the spec (resolved per page in as_grid)
+  expect_equal(fig@titles, "Arm: {arm}")
+  expect_s3_class(fig@figure_meta, "data.frame")
+})
+
+test_that("figure() rejects unsupported inputs", {
+  expect_snapshot(figure(42), error = TRUE)
+  expect_error(figure(42), class = "tabular_error_input")
+  expect_error(figure(list()), class = "tabular_error_input")
+  expect_error(
+    figure(list(function() plot(1), 42)),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("figure() validates width / height / dpi", {
+  expect_error(
+    figure(function() plot(1), width = 0),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    figure(function() plot(1), width = "big"),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    figure(function() plot(1), height = NA_real_),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    figure(function() plot(1), dpi = 0),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    figure(function() plot(1), dpi = -10),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("figure() validates halign / valign", {
+  expect_error(
+    figure(function() plot(1), halign = "centre"),
+    class = "tabular_error_input"
+  )
+  # "center" is a halign value, not a valign value
+  expect_error(
+    figure(function() plot(1), valign = "center"),
+    class = "tabular_error_input"
+  )
+  expect_snapshot(figure(function() plot(1), halign = "middle"), error = TRUE)
+})
+
+test_that("figure() rejects NA in titles", {
+  expect_error(
+    figure(function() plot(1), titles = c("a", NA)),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("figure() meta validation", {
+  # warn + ignore for a single-plot figure
+  expect_warning(
+    figure(function() plot(1), meta = data.frame(a = 1)),
+    "ignored"
+  )
+  # non-data-frame meta on a multi-page figure errors
+  expect_error(
+    figure(list(function() plot(1), function() plot(2)), meta = 1:3),
+    class = "tabular_error_input"
+  )
+  # row count must match plot count
+  expect_error(
+    figure(
+      list(function() plot(1), function() plot(2)),
+      meta = data.frame(a = 1)
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("table build verbs reject a figure_spec", {
+  fig <- figure(function() plot(1))
+  expect_error(cols(fig, x = col_spec()), class = "tabular_error_input")
+  expect_error(headers(fig), class = "tabular_error_input")
+  expect_error(sort_rows(fig, by = "x"), class = "tabular_error_input")
+})
+
+test_that("emit() rejects data_file for a figure", {
+  fig <- figure(function() plot(1))
+  expect_error(
+    emit(
+      fig,
+      withr::local_tempfile(fileext = ".html"),
+      data_file = tempfile()
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+# ---------------------------------------------------------------------
+# Preview methods (as.tags / knit_print / print)
+# ---------------------------------------------------------------------
+
+test_that("as.tags.figure_spec yields an embeddable tagList", {
+  skip_if_not_installed("htmltools")
+  fig <- figure(
+    test_path("fixtures", "fig-sample.png"),
+    titles = "Figure 14.1.1"
+  )
+  tg <- htmltools::as.tags(fig)
+  expect_s3_class(tg, "shiny.tag.list")
+  html <- as.character(tg)
+  expect_true(grepl("data:image/png;base64,", html, fixed = TRUE))
+  expect_true(grepl("id=\"tabular-", html, fixed = TRUE))
+  expect_true(grepl("Figure 14.1.1", html, fixed = TRUE))
+})
+
+test_that("pkgdown print path returns a browsable tag list", {
+  skip_if_not_installed("htmltools")
+  withr::local_envvar(IN_PKGDOWN = "true")
+  fig <- figure(test_path("fixtures", "fig-sample.png"))
+  out <- tabular:::.figure_spec_print(fig)
+  expect_true(isTRUE(attr(out, "browsable_html")))
+})
+
+test_that("figure cli summary reports source kind, placement, titles", {
+  fig <- figure(
+    function() plot(1),
+    titles = c("Figure 14.1.1", "Sub"),
+    footnotes = "fn",
+    halign = "right",
+    valign = "top"
+  )
+  expect_snapshot(tabular:::.figure_spec_print_cli(fig))
+})
+
+test_that("knit_print.figure_spec emits a raw-html asis block", {
+  skip_if_not_installed("htmltools")
+  skip_if_not_installed("knitr")
+  fig <- figure(test_path("fixtures", "fig-sample.png"))
+  kp <- tabular:::.spec_knit_print(fig)
+  expect_s3_class(kp, "knit_asis")
+  expect_true(grepl("data:image/png;base64,", as.character(kp), fixed = TRUE))
+})

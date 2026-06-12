@@ -76,6 +76,9 @@ backend_html <- function(grid, file) {
 # them), footnotes (once), chrome footer. Returns a character
 # vector of lines ready for `writeLines()`. Pure — no I/O.
 .render_html_grid <- function(grid) {
+  if (identical(grid@metadata$content_type, "figure")) {
+    return(.render_html_figure(grid))
+  }
   pages <- grid@pages
   total <- length(pages)
   meta <- grid@metadata
@@ -284,6 +287,132 @@ backend_html <- function(grid, file) {
     "</figure>"
   )
   assemble(body_inner)
+}
+
+# ---------------------------------------------------------------------
+# Figure rendering (metadata$content_type == "figure")
+# ---------------------------------------------------------------------
+
+# Compose a figure document: the same self-contained HTML shell + on-screen
+# chrome + title / footnote blocks as a table, but each page emits a
+# data-URI `<img>` placed in a flex content box (halign -> justify-content,
+# valign -> align-items). HTML is continuous, so a multi-page figure stacks
+# one `<figure>` per page with a print-only page-break marker between them.
+.render_html_figure <- function(grid) {
+  meta <- grid@metadata
+  pages <- grid@pages
+  preset <- meta$preset
+  cs <- meta$chrome_style %||% chrome_style()
+  doc_title <- .html_doc_title(meta)
+
+  chrome_mode <- if (is_preset_spec(preset)) {
+    preset@chrome_onscreen
+  } else {
+    "auto"
+  }
+  total_for_chrome <- max(length(pages), 1L)
+  onscreen_header <- .html_render_chrome_band(
+    meta$pagehead_ast,
+    zone = "header",
+    total_pages = total_for_chrome,
+    chrome_mode = chrome_mode,
+    cs = cs
+  )
+  onscreen_footer <- .html_render_chrome_band(
+    meta$pagefoot_ast,
+    zone = "footer",
+    total_pages = total_for_chrome,
+    chrome_mode = chrome_mode,
+    cs = cs
+  )
+
+  n <- length(pages)
+  sections <- lapply(seq_len(n), function(i) {
+    pg <- pages[[i]]
+    titles <- .render_html_title_block(
+      pg$titles_ast,
+      preset = preset,
+      cs = cs
+    )
+    title_block <- if (length(titles) > 0L) {
+      c("<figcaption class=\"tabular-caption\">", titles, "</figcaption>")
+    } else {
+      character()
+    }
+    foot <- .render_html_footnote_block(
+      pg$footnotes_ast,
+      preset = preset,
+      cs = cs
+    )
+    brk <- if (i < n) "<div class=\"tabular-page-break-row\"></div>" else NULL
+    c(
+      "<figure class=\"tabular-content\">",
+      title_block,
+      .html_figure_image(pg),
+      foot,
+      "</figure>",
+      brk
+    )
+  })
+
+  body_inner <- unlist(sections, use.names = FALSE)
+  doc_body <- c(onscreen_header, body_inner, onscreen_footer)
+  scope_id <- paste0("tabular-", substr(rlang::hash(doc_body), 1L, 10L))
+  head <- c(
+    "<!DOCTYPE html>",
+    "<html lang=\"en\">",
+    "<head>",
+    "<meta charset=\"utf-8\">",
+    paste0("<title>", .html_escape(doc_title), "</title>"),
+    .html_inline_style(
+      preset = preset,
+      pagehead_ast = meta$pagehead_ast,
+      pagefoot_ast = meta$pagefoot_ast,
+      cs = cs,
+      body_borders = list(),
+      scope_id = scope_id
+    ),
+    "</head>",
+    sprintf("<body class=\"tabular-doc\" id=\"%s\">", scope_id)
+  )
+  c(head, doc_body, "</body>", "</html>")
+}
+
+# One figure page's image as a data-URI `<img>` inside a flex content box.
+# The box is sized to the body content box; the image to its drawn size.
+.html_figure_image <- function(pg) {
+  place <- pg$place %||% list(halign = "center", valign = "middle")
+  mime <- if (identical(pg$image_ext, "jpeg")) "image/jpeg" else "image/png"
+  b64 <- .base64_encode_raw(pg$image_bytes)
+  justify <- .html_flex_justify(place$halign %||% "center")
+  align <- .html_flex_align(place$valign %||% "middle")
+  box_w <- place$width_in %||% pg$draw_w_in
+  box_h <- place$height_in %||% pg$draw_h_in
+  c(
+    sprintf(
+      "<div class=\"tabular-figure\" style=\"display:flex; width:%.2fin; min-height:%.2fin; justify-content:%s; align-items:%s;\">",
+      box_w,
+      box_h,
+      justify,
+      align
+    ),
+    sprintf(
+      "<img alt=\"Figure\" src=\"data:%s;base64,%s\" style=\"width:%.2fin; height:%.2fin;\">",
+      mime,
+      b64,
+      pg$draw_w_in,
+      pg$draw_h_in
+    ),
+    "</div>"
+  )
+}
+
+.html_flex_justify <- function(halign) {
+  switch(halign, left = "flex-start", right = "flex-end", "center")
+}
+
+.html_flex_align <- function(valign) {
+  switch(valign, top = "flex-start", bottom = "flex-end", "center")
 }
 
 # Render a semantic HTML5 page band (`<header>` or `<footer>`) for

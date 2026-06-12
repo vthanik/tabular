@@ -61,7 +61,11 @@
 # `emit()` via the backend registry. Returns the file path
 # invisibly.
 backend_latex <- function(grid, file) {
-  lines <- .render_latex_doc(grid)
+  lines <- if (identical(grid@metadata$content_type, "figure")) {
+    .render_latex_figure(grid, file)
+  } else {
+    .render_latex_doc(grid)
+  }
   writeLines(lines, file, useBytes = FALSE)
   invisible(file)
 }
@@ -106,6 +110,105 @@ backend_latex <- function(grid, file) {
     body[[length(body) + 1L]] <- .render_latex_panel(panels[[k]], meta, cs)
   }
   c(preamble, begin, unlist(body, use.names = FALSE), end)
+}
+
+# ---------------------------------------------------------------------
+# Figure rendering (metadata$content_type == "figure")
+# ---------------------------------------------------------------------
+
+# Compose a figure document: the same preamble (graphicx + fancyhdr page
+# chrome) as a table, then one page per plot with the title block, the
+# `\includegraphics` of an image SIDECAR written next to the `.tex`, and
+# the footnote block. The image rides a fixed-height `minipage` whose inner
+# vertical position (t/c/b) carries valign and whose `\centering` family
+# carries halign. `\clearpage` separates pages. Writes the sidecars as a
+# side effect (PDF compiles them from the same temp dir; a `.tex` emit
+# keeps them next to the file).
+.render_latex_figure <- function(grid, file) {
+  meta <- grid@metadata
+  pages <- grid@pages
+  cs <- meta$chrome_style %||% chrome_style()
+  preamble <- .latex_preamble(
+    preset = meta$preset,
+    pagehead_ast = meta$pagehead_ast,
+    pagefoot_ast = meta$pagefoot_ast,
+    border_color_defs = .latex_border_color_definitions(meta),
+    cs = cs
+  )
+
+  stem <- tools::file_path_sans_ext(basename(file))
+  out_dir <- dirname(file)
+  sidecars <- character(0)
+
+  body <- list()
+  for (i in seq_along(pages)) {
+    pg <- pages[[i]]
+    if (i > 1L) {
+      body[[length(body) + 1L]] <- "\\clearpage"
+    }
+    sidecar_name <- sprintf("%s-fig%d.%s", stem, i, pg$image_ext)
+    writeBin(pg$image_bytes, file.path(out_dir, sidecar_name))
+    sidecars <- c(sidecars, file.path(out_dir, sidecar_name))
+    body[[length(body) + 1L]] <- c(
+      .render_latex_title_block(pg$titles_ast, preset = meta$preset, cs = cs),
+      "",
+      .latex_figure_image_block(pg, sidecar_name),
+      "",
+      .render_latex_footnote_block(
+        pg$footnotes_ast,
+        preset = meta$preset,
+        cs = cs
+      )
+    )
+  }
+
+  .figure_inform_sidecars(out_dir, sidecars, ".tex")
+  c(
+    preamble,
+    "\\begin{document}",
+    unlist(body, use.names = FALSE),
+    "\\end{document}"
+  )
+}
+
+# One figure image as a fixed-height minipage holding `\includegraphics`.
+# minipage inner position (t/c/b) = valign; the alignment command
+# (\raggedright / \centering / \raggedleft) = halign. keepaspectratio is a
+# safety net (the drawn dims already match the image aspect).
+.latex_figure_image_block <- function(pg, sidecar_name) {
+  place <- pg$place %||% list(halign = "center", valign = "middle")
+  vpos <- switch(
+    place$valign %||% "middle",
+    top = "t",
+    middle = "c",
+    bottom = "b",
+    "c"
+  )
+  hcmd <- switch(
+    place$halign %||% "center",
+    left = "\\raggedright ",
+    center = "\\centering ",
+    right = "\\raggedleft ",
+    "\\centering "
+  )
+  box_in <- if (is.finite(place$height_in) && place$height_in > 0) {
+    place$height_in
+  } else {
+    pg$draw_h_in
+  }
+  inc <- sprintf(
+    "\\includegraphics[width=%.2fin,height=%.2fin,keepaspectratio]{%s}",
+    pg$draw_w_in,
+    pg$draw_h_in,
+    sidecar_name
+  )
+  sprintf(
+    "{\\noindent\\begin{minipage}[c][%.2fin][%s]{\\linewidth}%s%s\\end{minipage}}",
+    box_in,
+    vpos,
+    hcmd,
+    inc
+  )
 }
 
 # Render the LaTeX skeleton for a spec whose grid has zero pages

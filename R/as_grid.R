@@ -250,7 +250,14 @@
 #' @export
 as_grid <- function(.spec) {
   call <- rlang::caller_env()
-  check_tabular_spec(.spec, call = call)
+  check_renderable_spec(.spec, call = call)
+  if (is_figure_spec(.spec)) {
+    return(.resolve_figure_to_grid(
+      .spec,
+      format = NA_character_,
+      call = call
+    ))
+  }
   .resolve_spec_to_grid(.spec, format = NA_character_, call = call)
 }
 

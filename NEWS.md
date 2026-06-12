@@ -1,5 +1,19 @@
 # tabular 0.1.1
 
+## New features
+
+* `figure()` renders a figure (the "F" in TFL) to every backend (RTF, LaTeX,
+  PDF, HTML, DOCX, and Markdown), wrapping a ggplot, a recorded base-R plot, a
+  zero-argument drawing function, or a PNG / JPG file in the same submission
+  chrome as a table (titles, footnotes, page header and footer). The image is
+  placed in the body content-box by `halign` and `valign` (both default to
+  centred), exact on the paged backends and approximate on the continuous
+  ones. A list input emits one figure per page, optionally driven by a `meta`
+  data frame whose columns become per-page `{token}` values. `is_figure_spec()`
+  tests for the new spec, and `emit()` writes it to a file. No new package
+  dependency: plots rasterise through base `grDevices` and ggplot2 (Suggests)
+  only when a ggplot is passed.
+
 ## Breaking changes
 
 * `col_spec()` gained a single `indent` argument (an integer for a fixed

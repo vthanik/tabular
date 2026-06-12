@@ -12,6 +12,7 @@
 \alias{.repeat_content_values}
 \alias{preset_spec}
 \alias{tabular_spec}
+\alias{figure_spec}
 \alias{inline_ast}
 \alias{tabular_grid}
 \title{tabular S7 classes}

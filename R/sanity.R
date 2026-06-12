@@ -41,6 +41,35 @@ check_tabular_spec <- function(
   )
 }
 
+#' Check that `x` is a renderable spec (`tabular_spec` or `figure_spec`)
+#'
+#' Gate at the top of the terminal verbs ([`emit()`], [`as_grid()`])
+#' that accept either a table or a figure. The build verbs keep
+#' [`check_tabular_spec()`], which rejects a figure.
+#'
+#' @inheritParams check_tabular_spec
+#' @return `x` invisibly on success; otherwise aborts.
+#' @keywords internal
+#' @noRd
+check_renderable_spec <- function(
+  x,
+  arg = rlang::caller_arg(x),
+  call = rlang::caller_env()
+) {
+  if (is_tabular_spec(x) || is_figure_spec(x)) {
+    return(invisible(x))
+  }
+  cli::cli_abort(
+    c(
+      "{.arg {arg}} must be a {.cls tabular_spec} or {.cls figure_spec}.",
+      "x" = "You supplied {.obj_type_friendly {x}}.",
+      "i" = "Build one with {.fn tabular} or {.fn figure}."
+    ),
+    class = "tabular_error_input",
+    call = call
+  )
+}
+
 #' Check that `x` is a data frame
 #'
 #' @inheritParams check_tabular_spec

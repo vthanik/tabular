@@ -75,9 +75,90 @@
 # backend registry. Returns the file path invisibly so the same
 # signature would also work when called directly in tests.
 backend_md <- function(grid, file) {
-  lines <- .render_md_grid(grid)
+  lines <- if (identical(grid@metadata$content_type, "figure")) {
+    .render_md_figure(grid, file)
+  } else {
+    .render_md_grid(grid)
+  }
   writeLines(lines, file, useBytes = FALSE)
   invisible(file)
+}
+
+# ---------------------------------------------------------------------
+# Figure rendering (metadata$content_type == "figure")
+# ---------------------------------------------------------------------
+
+# Compose a figure document: faux page chrome (pagehead / pagefoot bands)
+# top and bottom, then one block per plot with the title lines, a markdown
+# image referencing a sidecar PNG written next to the `.md`, and the
+# footnote lines. Markdown is a continuous medium with no page geometry, so
+# valign is a documented no-op and halign maps to an `<div align>` wrapper
+# (center / right; left is a bare image). Multi-page figures stack with a
+# `----` rule between plots.
+.render_md_figure <- function(grid, file) {
+  meta <- grid@metadata
+  pages <- grid@pages
+  ws_preserve <- .preset_ws_preserve(meta$preset)
+  total_for_chrome <- max(length(pages), 1L)
+  chrome_top <- .render_md_chrome_band(
+    meta$pagehead_ast,
+    total_pages = total_for_chrome
+  )
+  chrome_bot <- .render_md_chrome_band(
+    meta$pagefoot_ast,
+    total_pages = total_for_chrome
+  )
+
+  stem <- tools::file_path_sans_ext(basename(file))
+  out_dir <- dirname(file)
+  sidecars <- character(0)
+
+  out <- list()
+  if (length(chrome_top) > 0L) {
+    out[[length(out) + 1L]] <- c(chrome_top, "", "----", "")
+  }
+
+  n <- length(pages)
+  for (i in seq_len(n)) {
+    pg <- pages[[i]]
+    if (i > 1L) {
+      out[[length(out) + 1L]] <- c("", "----", "")
+    }
+    sidecar_name <- sprintf("%s-fig%d.%s", stem, i, pg$image_ext)
+    writeBin(pg$image_bytes, file.path(out_dir, sidecar_name))
+    sidecars <- c(sidecars, file.path(out_dir, sidecar_name))
+    titles <- .render_md_title_block(pg$titles_ast, preserve = ws_preserve)
+    foot <- .render_md_footnote_block(
+      pg$footnotes_ast,
+      preserve = ws_preserve
+    )
+    out[[length(out) + 1L]] <- c(
+      titles,
+      if (length(titles) > 0L) "" else character(),
+      .md_figure_image(pg, sidecar_name),
+      "",
+      foot
+    )
+  }
+
+  if (length(chrome_bot) > 0L) {
+    out[[length(out) + 1L]] <- c("", "----", "", chrome_bot)
+  }
+
+  .figure_inform_sidecars(out_dir, sidecars, ".md")
+  unlist(out, use.names = FALSE)
+}
+
+# One figure image as a markdown image reference. halign center / right
+# ride a `<div align>` wrapper (valign has no meaning in continuous
+# markdown); left is a bare image.
+.md_figure_image <- function(pg, sidecar_name) {
+  halign <- pg$place$halign %||% "center"
+  img <- sprintf("![Figure](%s)", sidecar_name)
+  if (identical(halign, "left")) {
+    return(img)
+  }
+  sprintf("<div align=\"%s\">%s</div>", halign, img)
 }
 
 # ---------------------------------------------------------------------

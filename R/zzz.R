@@ -55,6 +55,18 @@
       as.tags.tabular_spec,
       envir = asNamespace("htmltools")
     )
+    registerS3method(
+      "as.tags",
+      "tabular::figure_spec",
+      as.tags.figure_spec,
+      envir = asNamespace("htmltools")
+    )
+    registerS3method(
+      "as.tags",
+      "figure_spec",
+      as.tags.figure_spec,
+      envir = asNamespace("htmltools")
+    )
   }
   if (requireNamespace("knitr", quietly = TRUE)) {
     registerS3method(
@@ -67,6 +79,18 @@
       "knit_print",
       "tabular_spec",
       knit_print.tabular_spec,
+      envir = asNamespace("knitr")
+    )
+    registerS3method(
+      "knit_print",
+      "tabular::figure_spec",
+      knit_print.figure_spec,
+      envir = asNamespace("knitr")
+    )
+    registerS3method(
+      "knit_print",
+      "figure_spec",
+      knit_print.figure_spec,
       envir = asNamespace("knitr")
     )
   }

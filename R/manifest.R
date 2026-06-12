@@ -77,6 +77,9 @@
 # disk. The same builder is used by tests to pin the manifest shape
 # and by `.write_manifest()` to serialise it.
 .build_manifest <- function(spec, grid, file, format, data_file_path) {
+  if (is_figure_spec(spec)) {
+    return(.build_figure_manifest(spec, grid, file, format, data_file_path))
+  }
   list(
     id = .manifest_id(file, format),
     version = 1L,
@@ -92,6 +95,105 @@
     ),
     referencedAnalyses = list(),
     `x-tabular` = .manifest_x_tabular(spec = spec, grid = grid)
+  )
+}
+
+# Figure manifest: same envelope as a table, with a Title -> Figure ->
+# Footnote display (no Header / Body table sections) and a figure-specific
+# `x-tabular` block (source kind, page count, placement, drawn size).
+.build_figure_manifest <- function(spec, grid, file, format, data_file_path) {
+  list(
+    id = .manifest_id(file, format),
+    version = 1L,
+    name = .manifest_name(spec, file),
+    programmingCode = .manifest_programming_code(),
+    fileSpecifications = .manifest_file_specifications(
+      render_path = file,
+      format = format,
+      data_file_path = data_file_path
+    ),
+    displays = list(
+      .manifest_figure_display(spec = spec, grid = grid, file = file)
+    ),
+    referencedAnalyses = list(),
+    `x-tabular` = .manifest_x_tabular_figure(spec = spec, grid = grid)
+  )
+}
+
+# Figure display: Title (from titles) -> Figure (a pointer to the rendered
+# artefact) -> Footnote (lines plus any footnote() refs).
+.manifest_figure_display <- function(spec, grid, file) {
+  display_sections <- list()
+
+  title_section <- .display_section_title(spec@titles)
+  if (!is.null(title_section)) {
+    display_sections[[length(display_sections) + 1L]] <- title_section
+  }
+
+  display_sections[[length(display_sections) + 1L]] <-
+    .display_section_figure(file, grid)
+
+  fn_texts <- spec@footnotes
+  if (length(spec@footnote_refs) > 0L) {
+    ref_texts <- vapply(
+      spec@footnote_refs,
+      function(r) .strip_inline_marker(as.character(r$text)),
+      character(1L)
+    )
+    fn_texts <- c(fn_texts, ref_texts)
+  }
+  footnote_section <- .display_section_footnote(fn_texts)
+  if (!is.null(footnote_section)) {
+    display_sections[[length(display_sections) + 1L]] <- footnote_section
+  }
+
+  list(
+    order = 1L,
+    display = list(
+      id = paste0("d_", .manifest_id(file, "display")),
+      version = 1L,
+      name = .manifest_name(spec, file),
+      displayTitle = .manifest_name(spec, file),
+      displaySections = display_sections
+    )
+  )
+}
+
+# Figure section: a pointer to the rendered artefact (the image rides the
+# render file, not the manifest), naming the page count.
+.display_section_figure <- function(file, grid) {
+  n <- length(grid@pages)
+  list(
+    sectionType = "Figure",
+    text = sprintf(
+      "see fileSpecifications for the rendered figure (%d page%s) at ./%s",
+      n,
+      if (n == 1L) "" else "s",
+      basename(file)
+    )
+  )
+}
+
+# Figure `x-tabular`: preset snapshot plus a figure block (source kind,
+# page count, placement anchors, raster dpi, page-1 drawn size).
+.manifest_x_tabular_figure <- function(spec, grid) {
+  list(
+    schema_version = .pkg_version_string(),
+    preset = .x_tabular_preset(spec),
+    figure = .x_tabular_figure(spec, grid)
+  )
+}
+
+.x_tabular_figure <- function(spec, grid) {
+  pg1 <- grid@pages[[1L]]
+  list(
+    sourceKind = spec@source_kind,
+    pages = length(grid@pages),
+    halign = spec@halign,
+    valign = spec@valign,
+    dpi = as.integer(spec@dpi),
+    drawWidthInches = round(pg1$draw_w_in, 3L),
+    drawHeightInches = round(pg1$draw_h_in, 3L)
   )
 }
 

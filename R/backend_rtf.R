@@ -73,6 +73,9 @@ backend_rtf <- function(grid, file) {
 # chooses and paginates the body natively. `\sect` (with `\sbkpage`)
 # separates panels only.
 .render_rtf_doc <- function(grid) {
+  if (identical(grid@metadata$content_type, "figure")) {
+    return(.render_rtf_figure(grid))
+  }
   pages <- grid@pages
   meta <- grid@metadata
   preset <- .rtf_resolve_preset(meta$preset)
@@ -144,6 +147,141 @@ backend_rtf <- function(grid, file) {
       "\\par"
     ),
     .render_rtf_footnote_block(meta$footnotes_ast, preset, cs, colors, fonts)
+  )
+}
+
+# ---------------------------------------------------------------------
+# Figure rendering (metadata$content_type == "figure")
+# ---------------------------------------------------------------------
+
+# Compose a figure document: same preamble + per-section page chrome as a
+# table, but each figure page is one `\sect` carrying its title paragraphs,
+# the embedded `\pict` image, and its footnote paragraphs. The image rides
+# a single merged cell sized to the body content box so the cell vertical
+# alignment (`\clvertal*` from valign) places it exactly; the paragraph
+# alignment (`\q*` from halign) places it horizontally. A multi-page figure
+# emits one `\sect` (new page) per plot.
+.render_rtf_figure <- function(grid) {
+  pages <- grid@pages
+  meta <- grid@metadata
+  preset <- .rtf_resolve_preset(meta$preset)
+  cs <- meta$chrome_style %||% chrome_style()
+  colors <- .rtf_collect_colors(pages, cs, preset)
+  fonts <- .rtf_collect_fonts(pages, cs, preset)
+
+  preamble <- c(
+    "{\\rtf1\\ansi\\ansicpg1252\\deff0\\uc1",
+    .rtf_font_table(fonts),
+    .rtf_color_table(colors),
+    sprintf("\\fs%d", as.integer(round(.effective_font_size(preset) * 2)))
+  )
+  preamble <- preamble[nzchar(preamble)]
+
+  has_ph <- .page_band_is_populated(meta$pagehead_ast)
+  has_pf <- .page_band_is_populated(meta$pagefoot_ast)
+
+  sections <- lapply(seq_along(pages), function(i) {
+    pg <- pages[[i]]
+    sec_def <- .rtf_section_def(
+      preset,
+      has_pagehead = has_ph,
+      has_pagefoot = has_pf
+    )
+    out <- if (i == 1L) sec_def else paste0("\\sect", sec_def)
+    if (has_ph) {
+      out <- c(
+        out,
+        .rtf_header_group(meta$pagehead_ast, preset, cs, colors, fonts)
+      )
+    }
+    if (has_pf) {
+      out <- c(
+        out,
+        .rtf_footer_group(
+          meta$pagefoot_ast,
+          character(),
+          preset,
+          cs,
+          colors,
+          fonts
+        )
+      )
+    }
+    c(
+      out,
+      .render_rtf_title_block(pg$titles_ast, preset, cs, colors, fonts),
+      .render_rtf_figure_image(pg, preset),
+      .render_rtf_footnote_block(pg$footnotes_ast, preset, cs, colors, fonts)
+    )
+  })
+
+  c(preamble, unlist(sections, use.names = FALSE), "}")
+}
+
+# Embed one figure image as a `\pict` group inside a single merged table
+# cell sized to the body content box (exact-height row `\trrh-<box>` so the
+# cell vertical alignment is honoured). `\picw` / `\pich` carry the image's
+# real pixel dimensions (parsed from the bytes); `\picwgoal` / `\pichgoal`
+# carry the drawn size in twips, which is what Word actually lays out.
+.render_rtf_figure_image <- function(pg, preset) {
+  place <- pg$place %||% list(halign = "center", valign = "middle")
+  htok <- .rtf_align_token(place$halign %||% "center")
+  vtok <- .rtf_valign_token(place$valign %||% "middle")
+  box_twips <- as.integer(round(place$height_twips %||% 0))
+  box_w_twips <- as.integer(round(
+    place$width_twips %||% .inches_to_twips(pg$draw_w_in)
+  ))
+
+  dims <- .image_dims(pg$image_bytes, pg$image_ext)
+  px_w <- if (anyNA(dims["width"])) {
+    as.integer(round(pg$draw_w_in * 96))
+  } else {
+    as.integer(dims[["width"]])
+  }
+  px_h <- if (anyNA(dims["height"])) {
+    as.integer(round(pg$draw_h_in * 96))
+  } else {
+    as.integer(dims[["height"]])
+  }
+  blip <- if (identical(pg$image_ext, "jpeg")) "\\jpegblip" else "\\pngblip"
+  hex <- .rtf_wrap_hex(paste0(as.character(pg$image_bytes), collapse = ""))
+
+  pict <- paste0(
+    "{\\pict",
+    blip,
+    sprintf("\\picw%d\\pich%d", px_w, px_h),
+    sprintf(
+      "\\picwgoal%d\\pichgoal%d",
+      .inches_to_twips(pg$draw_w_in),
+      .inches_to_twips(pg$draw_h_in)
+    ),
+    "\n",
+    hex,
+    "}"
+  )
+
+  c(
+    paste0(
+      "\\trowd\\trgaph108\\trqc",
+      if (box_twips > 0L) sprintf("\\trrh%d", -box_twips) else ""
+    ),
+    paste0(vtok, sprintf("\\cellx%d", box_w_twips)),
+    paste0("\\pard\\plain\\intbl", htok, " ", pict, "\\cell"),
+    "\\row"
+  )
+}
+
+# Wrap a long hex string into fixed-width lines. RTF ignores whitespace
+# inside `\pict` hex data, so newlines are safe and keep lines parseable.
+.rtf_wrap_hex <- function(hex, width = 128L) {
+  n <- nchar(hex)
+  if (n <= width) {
+    return(hex)
+  }
+  starts <- seq(1L, n, by = width)
+  paste(
+    substring(hex, starts, pmin(starts + width - 1L, n)),
+    collapse = "\n"
   )
 }
 
