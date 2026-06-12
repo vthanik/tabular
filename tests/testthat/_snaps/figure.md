@@ -31,3 +31,17 @@
       Footnotes: 1 line
       Placement: halign="right", valign="top"
 
+# figure cli summary truncates long titles and reports a preset
+
+    Code
+      tabular:::.figure_spec_print_cli(fs)
+    Message
+      
+      -- <figure_spec> 
+      Source: "function" (1 page)
+      Titles (1):
+      1. "Long enrollment figure title Long enrollment figure title..."
+      Footnotes: 1 line
+      Placement: halign="center", valign="middle"
+      Preset: font_size=8
+

@@ -234,6 +234,28 @@ tabular(
     )
   )
 
+# ---- Example 5: Empty-data placeholder with a custom message ----
+#
+# When the input has zero rows, `tabular()` still renders the full page
+# chrome and the column headers, with a centred placeholder where the
+# body would go. `empty_text` overrides the default "No data available
+# to report"; it accepts the same glue `{}` interpolation and
+# `md()` / `html()` inline formatting as a title. Here a zero-row
+# demographics frame stands in for a subgroup that enrolled no subjects.
+tabular(
+  cdisc_saf_demo[0, ],
+  titles = c("Table 14.1.1", "Demographics", "Subjects < 18 Years"),
+  empty_text = "No subjects met the inclusion criteria for this subgroup."
+) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo"),
+    drug_50    = col_spec(label = "Drug 50"),
+    drug_100   = col_spec(label = "Drug 100"),
+    Total      = col_spec(label = "Total")
+  )
+
 }
 \seealso{
 \strong{Downstream build verbs:} \code{\link[=cols]{cols()}} / \code{\link[=col_spec]{col_spec()}},

@@ -211,3 +211,26 @@ test_that("knit_print.figure_spec emits a raw-html asis block", {
   expect_s3_class(kp, "knit_asis")
   expect_true(grepl("data:image/png;base64,", as.character(kp), fixed = TRUE))
 })
+
+test_that("figure_spec S7 validator guards every prop (defence in depth)", {
+  # The figure() verb validates first, so these exercise the S7 validator
+  # directly via raw construction with one bad prop at a time.
+  fs <- tabular:::figure_spec
+  expect_error(fs(source_kind = "bogus"), "source_kind")
+  expect_error(fs(halign = "bogus"), "halign")
+  expect_error(fs(valign = "bogus"), "valign")
+  expect_error(fs(dpi = -1), "dpi")
+  expect_error(fs(width = -1), "width")
+  expect_error(fs(height = 0), "height")
+})
+
+test_that("figure cli summary truncates long titles and reports a preset", {
+  fs <- tabular:::figure_spec(
+    source_kind = "function",
+    plots = list(function() NULL),
+    titles = strrep("Long enrollment figure title ", 4),
+    footnotes = "fn",
+    preset = preset_spec(font_size = 8)
+  )
+  expect_snapshot(tabular:::.figure_spec_print_cli(fs))
+})

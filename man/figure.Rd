@@ -57,9 +57,9 @@ in the body region.}
 \item \code{"bottom"}
 }
 
-\strong{Note:} continuous backends (HTML / Markdown) have no fixed page
-height, so vertical placement is approximate there; paged backends
-honour it exactly.}
+\strong{Note:} continuous backends (HTML / Markdown) render the figure
+contained to the viewport with no fixed page height, so \code{valign} is a
+no-op there; the paged backends honour it exactly.}
 
 \item{dpi}{\emph{Raster resolution for plot inputs.} \verb{<numeric(1)>}.
 Resolution in dots per inch for PNG rasterisation. Ignored for file
@@ -85,12 +85,14 @@ list to emit one figure per page in a single file.
 \details{
 \strong{Two-axis placement.} The drawn image is usually smaller than the
 body content box (the default \code{height} is 70\% of the printable
-height), so both \code{halign} and \code{valign} are load-bearing. They place
-the image in the content box independently — horizontally
-(\code{left} / \code{center} / \code{right}) and vertically (\code{top} / \code{middle} /
-\code{bottom}), defaulting to centred on both axes. Paged backends
-(RTF / PDF / DOCX) honour \code{valign} exactly against the content-box
-height; continuous backends (HTML / Markdown) approximate it.
+height), so both \code{halign} and \code{valign} are load-bearing on the paged
+backends. They place the image in the content box independently —
+horizontally (\code{left} / \code{center} / \code{right}) and vertically
+(\code{top} / \code{middle} / \code{bottom}), defaulting to centred on both axes.
+Paged backends (RTF / PDF / DOCX) honour \code{valign} exactly against the
+content-box height. The continuous backends (HTML / Markdown) render the
+figure responsively, contained to the viewport, so \code{halign} still
+applies but \code{valign} is a no-op there.
 
 \strong{Format-aware rasterisation.} Plot inputs render to vector PDF for
 \code{.pdf} / \code{.tex} targets and to PNG at \code{dpi} for every other backend;

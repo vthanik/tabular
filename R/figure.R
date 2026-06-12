@@ -18,12 +18,14 @@
 #' @details
 #' **Two-axis placement.** The drawn image is usually smaller than the
 #' body content box (the default `height` is 70% of the printable
-#' height), so both `halign` and `valign` are load-bearing. They place
-#' the image in the content box independently — horizontally
-#' (`left` / `center` / `right`) and vertically (`top` / `middle` /
-#' `bottom`), defaulting to centred on both axes. Paged backends
-#' (RTF / PDF / DOCX) honour `valign` exactly against the content-box
-#' height; continuous backends (HTML / Markdown) approximate it.
+#' height), so both `halign` and `valign` are load-bearing on the paged
+#' backends. They place the image in the content box independently —
+#' horizontally (`left` / `center` / `right`) and vertically
+#' (`top` / `middle` / `bottom`), defaulting to centred on both axes.
+#' Paged backends (RTF / PDF / DOCX) honour `valign` exactly against the
+#' content-box height. The continuous backends (HTML / Markdown) render the
+#' figure responsively, contained to the viewport, so `halign` still
+#' applies but `valign` is a no-op there.
 #'
 #' **Format-aware rasterisation.** Plot inputs render to vector PDF for
 #' `.pdf` / `.tex` targets and to PNG at `dpi` for every other backend;
@@ -67,9 +69,9 @@
 #'   - `"middle"` (default)
 #'   - `"bottom"`
 #'
-#'   **Note:** continuous backends (HTML / Markdown) have no fixed page
-#'   height, so vertical placement is approximate there; paged backends
-#'   honour it exactly.
+#'   **Note:** continuous backends (HTML / Markdown) render the figure
+#'   contained to the viewport with no fixed page height, so `valign` is a
+#'   no-op there; the paged backends honour it exactly.
 #'
 #' @param dpi *Raster resolution for plot inputs.* `<numeric(1)>`.
 #'   Resolution in dots per inch for PNG rasterisation. Ignored for file

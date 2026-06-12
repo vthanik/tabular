@@ -53,7 +53,7 @@ test_that("HTML figure embeds a deterministic data-URI image", {
   expect_true(grepl(paste0("data:image/png;base64,", b64), h, fixed = TRUE))
   expect_true(grepl("class=\"tabular-figure\"", h, fixed = TRUE))
   expect_true(grepl("justify-content:flex-end", h, fixed = TRUE)) # right
-  expect_true(grepl("align-items:flex-start", h, fixed = TRUE)) # top
+  expect_true(grepl("max-width:100%", h, fixed = TRUE)) # responsive, contained
   expect_true(grepl("Figure 14.1.1", h, fixed = TRUE))
   expect_true(grepl("N = 254.", h, fixed = TRUE))
   expect_true(grepl("<!DOCTYPE html>", h, fixed = TRUE))
@@ -208,21 +208,25 @@ test_that("every DOCX figure part is well-formed XML", {
 # Placement matrix
 # ---------------------------------------------------------------------
 
-test_that("HTML placement maps every halign x valign anchor", {
+test_that("HTML placement maps halign to justify-content (valign no-op)", {
+  # HTML is continuous and responsive: the image is contained to its own
+  # space (no fixed page box), so valign has no meaning -- only halign maps.
   jmap <- c(left = "flex-start", center = "center", right = "flex-end")
-  amap <- c(top = "flex-start", middle = "center", bottom = "flex-end")
   for (h in names(jmap)) {
-    for (v in names(amap)) {
-      out <- withr::local_tempfile(fileext = ".html")
-      emit(basic_figure(halign = h, valign = v), out)
-      doc <- paste(readLines(out), collapse = "\n")
-      expect_true(grepl(
-        paste0("justify-content:", jmap[[h]]),
-        doc,
-        fixed = TRUE
-      ))
-      expect_true(grepl(paste0("align-items:", amap[[v]]), doc, fixed = TRUE))
-    }
+    out <- withr::local_tempfile(fileext = ".html")
+    emit(basic_figure(halign = h), out)
+    doc <- paste(readLines(out), collapse = "\n")
+    fig_div <- regmatches(
+      doc,
+      regexpr("<div class=\"tabular-figure\"[^>]*>", doc)
+    )
+    expect_true(grepl(
+      paste0("justify-content:", jmap[[h]]),
+      fig_div,
+      fixed = TRUE
+    ))
+    expect_false(grepl("align-items", fig_div, fixed = TRUE))
+    expect_true(grepl("max-width:100%", doc, fixed = TRUE))
   }
 })
 

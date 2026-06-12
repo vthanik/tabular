@@ -378,30 +378,29 @@ backend_html <- function(grid, file) {
   c(head, doc_body, "</body>", "</html>")
 }
 
-# One figure page's image as a data-URI `<img>` inside a flex content box.
-# The box is sized to the body content box; the image to its drawn size.
+# One figure page's image as a responsive data-URI `<img>`. HTML is a
+# continuous, responsive medium: the image renders at its drawn width but
+# is capped to the container (`max-width: 100%`), so a full-page-width
+# figure scales down to the viewport instead of overflowing. No fixed box
+# height -- the figure is contained to its own space rather than stretched
+# over the page content-box. `justify-content` carries `halign`; valign is
+# a no-op here (only the paged backends place a figure vertically; see
+# `figure()` docs).
 .html_figure_image <- function(pg) {
-  place <- pg$place %||% list(halign = "center", valign = "middle")
+  place <- pg$place %||% list(halign = "center")
   mime <- if (identical(pg$image_ext, "jpeg")) "image/jpeg" else "image/png"
   b64 <- .base64_encode_raw(pg$image_bytes)
   justify <- .html_flex_justify(place$halign %||% "center")
-  align <- .html_flex_align(place$valign %||% "middle")
-  box_w <- place$width_in %||% pg$draw_w_in
-  box_h <- place$height_in %||% pg$draw_h_in
   c(
     sprintf(
-      "<div class=\"tabular-figure\" style=\"display:flex; width:%.2fin; min-height:%.2fin; justify-content:%s; align-items:%s;\">",
-      box_w,
-      box_h,
-      justify,
-      align
+      "<div class=\"tabular-figure\" style=\"display:flex; justify-content:%s;\">",
+      justify
     ),
     sprintf(
-      "<img alt=\"Figure\" src=\"data:%s;base64,%s\" style=\"width:%.2fin; height:%.2fin;\">",
+      "<img alt=\"Figure\" src=\"data:%s;base64,%s\" style=\"width:%.2fin; max-width:100%%; height:auto;\">",
       mime,
       b64,
-      pg$draw_w_in,
-      pg$draw_h_in
+      pg$draw_w_in
     ),
     "</div>"
   )
@@ -409,10 +408,6 @@ backend_html <- function(grid, file) {
 
 .html_flex_justify <- function(halign) {
   switch(halign, left = "flex-start", right = "flex-end", "center")
-}
-
-.html_flex_align <- function(valign) {
-  switch(valign, top = "flex-start", bottom = "flex-end", "center")
 }
 
 # Render a semantic HTML5 page band (`<header>` or `<footer>`) for
