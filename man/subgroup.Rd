@@ -250,10 +250,12 @@ tabular(cdisc_saf_subgroup, titles = "Vital Signs by Sex and Visit") |>
 # `(N=33)` on the Male page. RTF / PDF / DOCX carry the N on the
 # repeating header; HTML and Markdown add a per-arm N row under each
 # banner.
-big_n <- tibble::tribble(
-  ~sex, ~placebo, ~drug_50, ~drug_100, ~Total,
-  "F",       53L,      55L,       35L,    143L,
-  "M",       33L,      41L,       37L,    111L
+big_n <- data.frame(
+  sex = c("F", "M"),
+  placebo = c(53L, 33L),
+  drug_50 = c(55L, 41L),
+  drug_100 = c(35L, 37L),
+  Total = c(143L, 111L)
 )
 tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
   cols(
