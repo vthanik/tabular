@@ -11,6 +11,8 @@ shapes during pipeline debugging.
 ``` r
 is_tabular_spec(x)
 
+is_figure_spec(x)
+
 is_tabular_grid(x)
 
 is_col_spec(x)

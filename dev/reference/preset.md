@@ -217,12 +217,8 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
   - **`na_text`** — global NA fallback. `<character(1)>`.
 
   - **`decimal_metrics`** — decimal-padding metric. `<character(1)>`.
-    `"afm"` (default) measures glyphs with the bundled Core font
-    metrics, so decimal columns align width-exact in proportional fonts
-    (to within one padding space of rounding; exact in Courier).
-    `"chars"` pads by character count — exact in monospaced faces only.
-    Markdown output always pads by character count, the correct geometry
-    for a text medium.
+    Only `"chars"` (default); the engine pads decimal columns by
+    character count.
 
   - **`decimal_markers`** — missing-value tokens recognised by
     `col_spec(align = "decimal")`. `<character>`. Default
@@ -259,6 +255,37 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
     always fills its parent and columns wrap when the viewport narrows,
     regardless of `width_mode`. Per-column widths (`col_spec(width)`)
     emit verbatim into the HTML colgroup per the gt convention.
+
+  - **`empty_halign`** / **`empty_valign`** — placement of the
+    empty-state message within the body content-box when a spec resolves
+    to zero data rows. The message *wording* lives on the spec
+    (`tabular(empty_text = ...)`, default
+    `"No data available to report"`); these two knobs are the cosmetic
+    *placement*, so they ride the preset and cascade with the house
+    style. `<character(1)>` each, defaulting to centre x middle:
+
+    - **`empty_halign`** — `"left"`, `"center"` *(default)*, or
+      `"right"`. Horizontal anchor of the message line.
+
+    - **`empty_valign`** — `"top"`, `"middle"` *(default)*, or
+      `"bottom"`. Vertical anchor within the content-box — the region
+      between the column-header rule and the footnote rule.
+
+    **Interaction:** valign is exact on the paged backends (RTF / PDF /
+    DOCX), which size the host cell to the content-box height; HTML
+    approximates it with a min-height flex box, and Markdown, having no
+    page geometry, treats valign as a no-op. When a column structure is
+    present the column-header band still renders above the message; with
+    every column hidden, only the page chrome and the centred message
+    remain.
+
+    **Note:** this is the symmetric `halign` / `valign` placement pair,
+    shared with
+    [`style()`](https://vthanik.github.io/tabular/dev/reference/style.md)
+    and the other `*_halign` / `*_valign` alignment keys. It is
+    deliberately distinct from `col_spec(align = ...)`, whose extra
+    `"decimal"` mode makes it a column-content knob rather than a pure
+    two-axis anchor.
 
   - **`whitespace`** — how significant ASCII spaces in labels and cells
     render. `<character(1)>`. One of:

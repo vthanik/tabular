@@ -339,10 +339,9 @@ the decimal mark. Use for <code>"5 (3.2%)"</code> next to
 the baked default <code>"left"</code>.</p></li>
 </ul><p><strong>Tip:</strong> <code>"decimal"</code> pads numerics with non-breaking spaces
 so the decimal mark falls on a single column-wide anchor.
-Pad counts follow the active preset's <code>decimal_metrics</code> knob
-(see <code><a href="preset.html">preset()</a></code>): the default <code>"afm"</code> measures real glyph
-widths so the anchor holds in proportional fonts as well as
-monospace.</p>
+The active preset's <code>decimal_metrics</code> knob is reserved for
+future em-aware padding refinement (see <code><a href="preset.html">preset()</a></code>); the
+current engine pads by character count.</p>
 <p><strong>Default behaviour.</strong> When <code>align</code> is unset (<code>NULL</code> / <code>NA</code>),
 every column emits with body left-aligned and header centred,
 regardless of the column's R data type. tabular's canonical

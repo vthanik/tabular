@@ -1012,7 +1012,7 @@
 </div>
 <p>Use <code><a href="../reference/set_preset.html">set_preset()</a></code> once at the top of a study to make these defaults apply to every table without restating them.</p>
 <blockquote>
-<p><strong>Decimal alignment</strong> (<code>col_spec(align = "decimal")</code>) pads numeric cells with non-breaking spaces so the decimal points line up. Padding is measured with the built-in font metrics (<code>preset(decimal_metrics = "afm")</code>, the default), so alignment is exact in Courier and exact to within one padding space in proportional fonts such as Times New Roman or Arial. Markdown output pads by character count instead — the right geometry for a text medium.</p>
+<p><strong>Decimal alignment</strong> (<code>col_spec(align = "decimal")</code>) pads numeric cells with non-breaking spaces so the decimal points line up. Alignment is exact in a monospaced font; in proportional fonts it is visually close (em-aware padding is future work). For submission TFLs in Courier this is exact.</p>
 </blockquote>
 </section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {

@@ -63,6 +63,22 @@
         </dt>
         <dd>Convert a cards ARD to a wide display data.frame</dd>
       </dl></div><div class="section level2">
+      <h2 id="figures">Figures<a class="anchor" aria-label="anchor" href="#figures"></a></h2>
+
+      <div class="section-desc"><p>Wrap a ggplot, base-R plot, drawing function, or image file into a <code>figure_spec</code>, rendered with the same submission chrome as a table. A list input emits one figure per page.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="figure.html">figure()</a></code>
+
+        </dt>
+        <dd>Wrap a plot or image in submission chrome</dd>
+      </dl></div><div class="section level2">
       <h2 id="spec-building">Spec building<a class="anchor" aria-label="anchor" href="#spec-building"></a></h2>
 
       <div class="section-desc"><p>Configure per-column display, header bands, sort order, and subgrouping. Each verb attaches one slot onto the spec and returns the updated spec for chaining.</p></div>
@@ -312,14 +328,14 @@
 
         <dt>
 
-          <code><a href="tabular_classes.html">tabular_classes</a></code> <code><a href="tabular_classes.html">.col_spec_class</a></code> <code><a href="tabular_classes.html">header_node</a></code> <code><a href="tabular_classes.html">sort_spec</a></code> <code><a href="tabular_classes.html">subgroup_spec</a></code> <code><a href="tabular_classes.html">style_node</a></code> <code><a href="tabular_classes.html">style_layer</a></code> <code><a href="tabular_classes.html">style_spec</a></code> <code><a href="tabular_classes.html">.repeat_content_values</a></code> <code><a href="tabular_classes.html">preset_spec</a></code> <code><a href="tabular_classes.html">tabular_spec</a></code> <code><a href="tabular_classes.html">inline_ast</a></code> <code><a href="tabular_classes.html">tabular_grid</a></code>
+          <code><a href="tabular_classes.html">tabular_classes</a></code> <code><a href="tabular_classes.html">.col_spec_class</a></code> <code><a href="tabular_classes.html">header_node</a></code> <code><a href="tabular_classes.html">sort_spec</a></code> <code><a href="tabular_classes.html">subgroup_spec</a></code> <code><a href="tabular_classes.html">style_node</a></code> <code><a href="tabular_classes.html">style_layer</a></code> <code><a href="tabular_classes.html">style_spec</a></code> <code><a href="tabular_classes.html">.repeat_content_values</a></code> <code><a href="tabular_classes.html">preset_spec</a></code> <code><a href="tabular_classes.html">tabular_spec</a></code> <code><a href="tabular_classes.html">figure_spec</a></code> <code><a href="tabular_classes.html">inline_ast</a></code> <code><a href="tabular_classes.html">tabular_grid</a></code>
 
         </dt>
         <dd>tabular S7 classes</dd>
 
         <dt>
 
-          <code><a href="tabular_predicates.html">is_tabular_spec()</a></code> <code><a href="tabular_predicates.html">is_tabular_grid()</a></code> <code><a href="tabular_predicates.html">is_col_spec()</a></code> <code><a href="tabular_predicates.html">is_header_node()</a></code> <code><a href="tabular_predicates.html">is_sort_spec()</a></code> <code><a href="tabular_predicates.html">is_style_node()</a></code> <code><a href="tabular_predicates.html">is_style_layer()</a></code> <code><a href="tabular_predicates.html">is_style_spec()</a></code> <code><a href="tabular_predicates.html">is_pagination_spec()</a></code> <code><a href="tabular_predicates.html">is_preset_spec()</a></code> <code><a href="tabular_predicates.html">is_subgroup_spec()</a></code> <code><a href="tabular_predicates.html">is_inline_ast()</a></code>
+          <code><a href="tabular_predicates.html">is_tabular_spec()</a></code> <code><a href="tabular_predicates.html">is_figure_spec()</a></code> <code><a href="tabular_predicates.html">is_tabular_grid()</a></code> <code><a href="tabular_predicates.html">is_col_spec()</a></code> <code><a href="tabular_predicates.html">is_header_node()</a></code> <code><a href="tabular_predicates.html">is_sort_spec()</a></code> <code><a href="tabular_predicates.html">is_style_node()</a></code> <code><a href="tabular_predicates.html">is_style_layer()</a></code> <code><a href="tabular_predicates.html">is_style_spec()</a></code> <code><a href="tabular_predicates.html">is_pagination_spec()</a></code> <code><a href="tabular_predicates.html">is_preset_spec()</a></code> <code><a href="tabular_predicates.html">is_subgroup_spec()</a></code> <code><a href="tabular_predicates.html">is_inline_ast()</a></code>
 
         </dt>
         <dd>Test for tabular S7 class instances</dd>

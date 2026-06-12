@@ -18,7 +18,7 @@ returns an updated spec for further chaining, terminating in
 ## Usage
 
 ``` r
-tabular(data, titles = NULL, footnotes = NULL)
+tabular(data, titles = NULL, footnotes = NULL, empty_text = NULL)
 ```
 
 ## Arguments
@@ -83,6 +83,24 @@ tabular(data, titles = NULL, footnotes = NULL)
         "Percentages based on N per treatment group.",
         "TEAE = treatment-emergent adverse event."
       )
+
+- empty_text:
+
+  *Placeholder shown when `data` has zero rows.*
+  `<character(1)>: default "No data available to report"`. When the
+  display resolves to no data rows, the backends still emit the full
+  page chrome and — when a column structure is present — the column
+  headers, then place this message in the body where the rows would sit.
+  Override it with any sponsor or study wording (a localized string, "No
+  subjects met the criteria for this table.", a protocol-qualified
+  line); glue `{expr}` interpolation and
+  [`md()`](https://vthanik.github.io/tabular/dev/reference/md.md) /
+  [`html()`](https://vthanik.github.io/tabular/dev/reference/html.md)
+  are honoured, exactly like a title line.
+
+  **Interaction:** placement within the body box is cosmetic and lives
+  on the preset, `preset(empty_halign = ..., empty_valign = ...)`,
+  defaulting to centre x middle.
 
 ## Value
 

@@ -2,6 +2,25 @@
 
 ## tabular (development version)
 
+### New features
+
+- [`figure()`](https://vthanik.github.io/tabular/dev/reference/figure.md)
+  renders a figure (the “F” in TFL) to every backend (RTF, LaTeX, PDF,
+  HTML, DOCX, and Markdown), wrapping a ggplot, a recorded base-R plot,
+  a zero-argument drawing function, or a PNG / JPG file in the same
+  submission chrome as a table (titles, footnotes, page header and
+  footer). The image is placed in the body content-box by `halign` and
+  `valign` (both default to centred), exact on the paged backends and
+  approximate on the continuous ones. A list input emits one figure per
+  page, optionally driven by a `meta` data frame whose columns become
+  per-page `{token}` values.
+  [`is_figure_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  tests for the new spec, and
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  writes it to a file. No new package dependency: plots rasterise
+  through base `grDevices` and ggplot2 (Suggests) only when a ggplot is
+  passed.
+
 ### Breaking changes
 
 - [`col_spec()`](https://vthanik.github.io/tabular/dev/reference/col_spec.md)
@@ -26,10 +45,19 @@
   call, and merge every column attribute field-completely (previously a
   default value could not be merged back and some fields could be
   dropped).
-- [`preset()`](https://vthanik.github.io/tabular/dev/reference/preset.md)’s
-  `decimal_metrics` knob gained `"afm"` (now the default), making
-  decimal alignment width-exact in proportional fonts via the bundled
-  font metrics; Markdown output keeps character padding.
+- [`preset()`](https://vthanik.github.io/tabular/dev/reference/preset.md)
+  gained `empty_halign` and `empty_valign` knobs that place the zero-row
+  placeholder message within the body content-box, defaulting to centred
+  horizontally and middle vertically (exact on the paged backends,
+  approximate on HTML, a no-op on Markdown).
+- [`subgroup()`](https://vthanik.github.io/tabular/dev/reference/subgroup.md)
+  no longer errors on a zero-row input; the table renders the
+  empty-state placeholder once with no subgroup banner.
+- [`tabular()`](https://vthanik.github.io/tabular/dev/reference/tabular.md)
+  gained `empty_text`, the message shown when a table has zero data rows
+  (default “No data available to report”). Zero-row tables now render
+  the full page chrome and the column headers with the message placed in
+  the body, replacing the previous bare “(no rows)” marker.
 
 ## tabular 0.1.0
 

@@ -65,7 +65,7 @@ file) or <code><a href="as_grid.html">as_grid()</a></code> (resolve without writ
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tabular</span><span class="op">(</span><span class="va">data</span>, titles <span class="op">=</span> <span class="cn">NULL</span>, footnotes <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tabular</span><span class="op">(</span><span class="va">data</span>, titles <span class="op">=</span> <span class="cn">NULL</span>, footnotes <span class="op">=</span> <span class="cn">NULL</span>, empty_text <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -120,6 +120,21 @@ timestamp band below them at render time.</p>
 <span>  <span class="st">"Percentages based on N per treatment group."</span>,</span>
 <span>  <span class="st">"TEAE = treatment-emergent adverse event."</span></span>
 <span><span class="op">)</span></span></code></pre><p></p></div></dd>
+
+
+<dt id="arg-empty-text">empty_text<a class="anchor" aria-label="anchor" href="#arg-empty-text"></a></dt>
+<dd><p><em>Placeholder shown when <code>data</code> has zero rows.</em>
+<code>&lt;character(1)&gt;: default "No data available to report"</code>. When the
+display resolves to no data rows, the backends still emit the full
+page chrome and — when a column structure is present — the column
+headers, then place this message in the body where the rows would
+sit. Override it with any sponsor or study wording (a localized
+string, "No subjects met the criteria for this table.", a
+protocol-qualified line); glue <code>{expr}</code> interpolation and <code><a href="md.html">md()</a></code> /
+<code><a href="html.html">html()</a></code> are honoured, exactly like a title line.</p>
+<p><strong>Interaction:</strong> placement within the body box is cosmetic and lives
+on the preset, <code>preset(empty_halign = ..., empty_valign = ...)</code>,
+defaulting to centre x middle.</p></dd>
 
 </dl></div>
     <div class="section level2">

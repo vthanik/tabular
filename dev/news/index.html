@@ -43,6 +43,11 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="tabular-development-version">tabular (development version)<a class="anchor" aria-label="anchor" href="#tabular-development-version"></a></h2>
 <div class="section level3">
+<h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/figure.html">figure()</a></code> renders a figure (the “F” in TFL) to every backend (RTF, LaTeX, PDF, HTML, DOCX, and Markdown), wrapping a ggplot, a recorded base-R plot, a zero-argument drawing function, or a PNG / JPG file in the same submission chrome as a table (titles, footnotes, page header and footer). The image is placed in the body content-box by <code>halign</code> and <code>valign</code> (both default to centred), exact on the paged backends and approximate on the continuous ones. A list input emits one figure per page, optionally driven by a <code>meta</code> data frame whose columns become per-page <code>{token}</code> values. <code><a href="../reference/tabular_predicates.html">is_figure_spec()</a></code> tests for the new spec, and <code><a href="../reference/emit.html">emit()</a></code> writes it to a file. No new package dependency: plots rasterise through base <code>grDevices</code> and ggplot2 (Suggests) only when a ggplot is passed.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="breaking-changes-development-version">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-development-version"></a></h3>
 <ul><li>
 <code><a href="../reference/col_spec.html">col_spec()</a></code> gained a single <code>indent</code> argument (an integer for a fixed level on every body row, or a column name for per-row depth); the previous <code>indent_by</code> argument and the <code>usage = "indent"</code> value were removed in favour of it. An explicit <code>indent</code> on a <code>group_display = "header_row"</code> host now suppresses the section auto-indent, yielding a single rather than double indent.</li>
@@ -56,7 +61,11 @@
 <li>
 <code><a href="../reference/cols.html">cols()</a></code> / <code><a href="../reference/cols_apply.html">cols_apply()</a></code> now restore a column’s visibility and reset <code>group_display</code> on a later call, and merge every column attribute field-completely (previously a default value could not be merged back and some fields could be dropped).</li>
 <li>
-<code><a href="../reference/preset.html">preset()</a></code>’s <code>decimal_metrics</code> knob gained <code>"afm"</code> (now the default), making decimal alignment width-exact in proportional fonts via the bundled font metrics; Markdown output keeps character padding.</li>
+<code><a href="../reference/preset.html">preset()</a></code> gained <code>empty_halign</code> and <code>empty_valign</code> knobs that place the zero-row placeholder message within the body content-box, defaulting to centred horizontally and middle vertically (exact on the paged backends, approximate on HTML, a no-op on Markdown).</li>
+<li>
+<code><a href="../reference/subgroup.html">subgroup()</a></code> no longer errors on a zero-row input; the table renders the empty-state placeholder once with no subgroup banner.</li>
+<li>
+<code><a href="../reference/tabular.html">tabular()</a></code> gained <code>empty_text</code>, the message shown when a table has zero data rows (default “No data available to report”). Zero-row tables now render the full page chrome and the column headers with the message placed in the body, replacing the previous bare “(no rows)” marker.</li>
 </ul></div>
 </div>
     <div class="section level2">
