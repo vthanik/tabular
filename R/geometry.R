@@ -93,6 +93,52 @@
   )
 }
 
+# Resolve left/right margin twips from preset@margins. Mirror of
+# `.margin_top_bottom_twips` for the horizontal pair, using the same
+# CSS-shorthand length rule:
+#
+# * length 1: all four sides equal
+# * length 2: vertical (top+bottom), horizontal (left+right)
+# * length 4: top, right, bottom, left
+#
+# Used by `.content_box()` to size the body region's width.
+.margin_left_right_twips <- function(margins) {
+  parsed <- lapply(seq_along(margins), function(i) {
+    .parse_dim(margins[[i]], allow_percent = FALSE)
+  })
+  if (length(parsed) == 1L) {
+    m <- .dim_to_twips(parsed[[1L]])
+    return(c(left = m, right = m))
+  }
+  if (length(parsed) == 2L) {
+    m <- .dim_to_twips(parsed[[2L]])
+    return(c(left = m, right = m))
+  }
+  c(
+    left = .dim_to_twips(parsed[[4L]]),
+    right = .dim_to_twips(parsed[[2L]])
+  )
+}
+
+# Placement descriptor for a single content block (the empty-state
+# message; a figure image in a later release) within a content box.
+# Backend-neutral: each renderer translates `halign` / `valign` into its
+# native mechanism (RTF `\ql/\qc/\qr` + `\clvertalt/c/b`, DOCX `<w:jc>` +
+# `<w:vAlign>`, LaTeX `\raggedright/\centering/\raggedleft` + `\vfill`
+# bracketing, HTML flex `justify-content` / `align-items`). Carries the
+# box geometry so paged backends can size the host cell to the box height
+# and centre vertically exactly. `box` is a `.content_box()` result.
+.place_block <- function(halign, valign, box) {
+  list(
+    halign = halign,
+    valign = valign,
+    width_in = box$width_in,
+    height_in = box$height_in,
+    width_twips = box$width_twips,
+    height_twips = box$height_twips
+  )
+}
+
 # Return the effective preset_spec for `spec` using the documented
 # cascade:
 #   1. spec@preset (attached via `preset()`),

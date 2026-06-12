@@ -598,3 +598,26 @@ test_that("subgroup merge widens a column to the widest subgroup (#cw2)", {
   # flat table that measures all rows at once (not shrink to group F).
   expect_equal(w_sub, w_flat)
 })
+
+# ---------------------------------------------------------------------
+# Empty-state placeholder (zero-row spec)
+# ---------------------------------------------------------------------
+
+test_that("zero-row spec stamps is_empty_page + empty metadata on the page", {
+  g <- as_grid(tabular(data.frame(x = integer(0L), y = character(0L))))
+  expect_length(g@pages, 1L)
+  expect_true(isTRUE(g@pages[[1L]]$is_empty_page))
+  # The message AST and its content-box placement ride the metadata.
+  expect_identical(
+    g@metadata$empty_text_ast@runs[[1L]]$text,
+    "No data available to report"
+  )
+  expect_identical(g@metadata$empty_place$halign, "center")
+  expect_identical(g@metadata$empty_place$valign, "middle")
+  expect_gt(g@metadata$empty_place$height_in, 0)
+})
+
+test_that("non-empty spec leaves is_empty_page unset", {
+  g <- as_grid(tabular(data.frame(x = 1:2)))
+  expect_null(g@pages[[1L]]$is_empty_page)
+})

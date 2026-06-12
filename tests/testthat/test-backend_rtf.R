@@ -1088,7 +1088,7 @@ test_that("repeat_content without footnotes shows them on the last page only", {
   )
 })
 
-test_that("RTF backend renders an empty (zero-page) grid with a (no rows) marker", {
+test_that("RTF backend renders an empty (zero-page) grid with the empty message", {
   # The zero-page branch (.render_rtf_empty) is defensive: a normal
   # spec always yields >= 1 page, so build a grid then blank its pages.
   g <- as_grid(
@@ -1102,9 +1102,35 @@ test_that("RTF backend renders an empty (zero-page) grid with a (no rows) marker
   out <- withr::local_tempfile(fileext = ".rtf")
   tabular:::backend_rtf(g0, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_match(txt, "(no rows)", fixed = TRUE)
+  expect_match(txt, "No data available to report", fixed = TRUE)
   expect_match(txt, "Empty Table", fixed = TRUE)
   expect_match(txt, "No data.", fixed = TRUE)
+})
+
+test_that("RTF zero-row spec renders chrome + headers + content-box message row", {
+  spec <- tabular(data.frame(x = "a")[0L, , drop = FALSE], titles = "T")
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(txt, "No data available to report", fixed = TRUE)
+  # Message row sized to the body content-box (exact = negative \trrh)
+  # with a vertically-centred merged cell (\clvertalc) -> exact valign.
+  expect_match(txt, "\\\\trrh-[0-9]+")
+  expect_match(txt, "\\\\clvertalc")
+})
+
+test_that("RTF empty message honours empty_text + preset alignment", {
+  spec <- tabular(
+    data.frame(x = "a")[0L, , drop = FALSE],
+    empty_text = "None."
+  ) |>
+    preset(empty_halign = "left", empty_valign = "bottom")
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(txt, "None.", fixed = TRUE)
+  expect_match(txt, "\\\\clvertalb")
+  expect_match(txt, "\\\\ql ")
 })
 
 test_that("RTF backend emits the continuation marker on panel boundaries", {

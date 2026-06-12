@@ -135,7 +135,11 @@ backend_md <- function(grid, file) {
   }
 
   if (total == 0L) {
-    out[[length(out) + 1L]] <- c("", "(no rows)", "")
+    out[[length(out) + 1L]] <- c(
+      "",
+      .render_md_empty_line(meta$empty_text_ast, meta$empty_place),
+      ""
+    )
   } else {
     # Group pages by panel_index — each horizontal panel renders as
     # its own pipe table. The grid is row-paginated within a panel
@@ -175,6 +179,17 @@ backend_md <- function(grid, file) {
           )
         )
       }
+      if (isTRUE(panel_pages[[1L]]$is_empty_page)) {
+        # Zero-row page: header above is intact; the body is the empty
+        # message on its own line below the (closed) pipe table. Markdown
+        # has no page geometry, so empty_valign is a documented no-op;
+        # empty_halign rides a `<div align>` wrapper (raw HTML, GFM-safe).
+        panel_lines <- c(
+          panel_lines,
+          "",
+          .render_md_empty_line(meta$empty_text_ast, meta$empty_place)
+        )
+      }
       if (k > 1L) {
         out[[length(out) + 1L]] <- ""
       }
@@ -192,6 +207,20 @@ backend_md <- function(grid, file) {
     out[[length(out) + 1L]] <- c("", "----", "", chrome_bot)
   }
   unlist(out, use.names = FALSE)
+}
+
+# Empty-state message line for a zero-row page. Markdown cannot span a
+# pipe-table cell or vertically position content, so the message rides a
+# raw-HTML `<div align>` wrapper (GFM-safe) carrying empty_halign; valign
+# is a documented no-op on this continuous medium.
+.render_md_empty_line <- function(empty_text_ast, empty_place = NULL) {
+  halign <- empty_place$halign %||% "center"
+  msg <- if (is.null(empty_text_ast)) {
+    "No data available to report"
+  } else {
+    .render_md_inline(empty_text_ast)
+  }
+  sprintf("<div align=\"%s\">%s</div>", halign, msg)
 }
 
 # Render one page slice's body lines: an optional subgroup banner

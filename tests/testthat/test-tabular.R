@@ -136,3 +136,33 @@ test_that("tabular() with NULL titles produces empty character()", {
   expect_identical(s@titles, character())
   expect_identical(s@footnotes, character())
 })
+
+# ---------------------------------------------------------------------
+# empty_text (zero-row placeholder wording)
+# ---------------------------------------------------------------------
+
+test_that("tabular(empty_text=) defaults, stores, and interpolates", {
+  df <- data.frame(x = 1)
+  expect_identical(tabular(df)@empty_text, "No data available to report")
+  expect_identical(
+    tabular(df, empty_text = "Total {1 + 1}")@empty_text,
+    "Total 2"
+  )
+})
+
+test_that("tabular(empty_text=) rejects non-scalar / NA / empty", {
+  df <- data.frame(x = 1)
+  expect_error(
+    tabular(df, empty_text = ""),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    tabular(df, empty_text = c("a", "b")),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    tabular(df, empty_text = NA_character_),
+    class = "tabular_error_input"
+  )
+  expect_snapshot(tabular(df, empty_text = ""), error = TRUE)
+})

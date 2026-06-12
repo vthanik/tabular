@@ -275,3 +275,34 @@ test_that(".indent_native_twips_per_level returns an integer count", {
   expect_type(out, "integer")
   expect_gt(out, 0L)
 })
+
+# ---------------------------------------------------------------------
+# empty_halign / empty_valign (zero-row placeholder placement)
+# ---------------------------------------------------------------------
+
+test_that("preset() stores valid empty_halign / empty_valign", {
+  spec <- tabular(data.frame(x = 1)) |>
+    preset(empty_halign = "right", empty_valign = "bottom")
+  expect_identical(spec@preset@empty_halign, "right")
+  expect_identical(spec@preset@empty_valign, "bottom")
+})
+
+test_that("preset() rejects out-of-set empty_halign / empty_valign", {
+  spec <- tabular(data.frame(x = 1))
+  expect_error(
+    preset(spec, empty_halign = "middle"),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    preset(spec, empty_valign = "left"),
+    class = "tabular_error_input"
+  )
+  expect_snapshot(preset(spec, empty_halign = "middle"), error = TRUE)
+  expect_snapshot(preset(spec, empty_valign = "left"), error = TRUE)
+})
+
+test_that("preset_spec() defaults empty placement to centre x middle", {
+  p <- preset_spec()
+  expect_identical(p@empty_halign, "center")
+  expect_identical(p@empty_valign, "middle")
+})

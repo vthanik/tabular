@@ -765,8 +765,20 @@ backend_docx <- function(grid, file) {
 ) {
   meta <- grid@metadata
   pages <- grid@pages
-  if (length(pages) == 0L) {
-    return("<w:p><w:r><w:rPr><w:i/></w:rPr><w:t>(no rows)</w:t></w:r></w:p>")
+  if (
+    length(pages) == 0L ||
+      (isTRUE(pages[[1L]]$is_empty_page) &&
+        length(pages[[1L]]$col_names) == 0L)
+  ) {
+    # No column structure (a hand-built zero-page grid, or every column
+    # hidden): the empty message stands alone as a centred paragraph.
+    msg_runs <- if (is.null(meta$empty_text_ast)) {
+      "<w:r><w:t xml:space=\"preserve\">No data available to report</w:t></w:r>"
+    } else {
+      .render_docx_inline(meta$empty_text_ast)
+    }
+    jc <- .docx_align_token(meta$empty_place$halign %||% "center")
+    return(paste0("<w:p><w:pPr>", jc, "</w:pPr>", msg_runs, "</w:p>"))
   }
   col_names_vis <- pages[[1L]]$col_names
   cols <- meta$cols %||% list()
@@ -887,6 +899,22 @@ backend_docx <- function(grid, file) {
     emit_banner = !(big_n_active || subgroup_active)
   )
 
+  # Zero-row page with visible columns: the header band above is intact;
+  # the body is one full-span message row sized to the content-box for
+  # exact vertical centering (see `.render_docx_empty_row`).
+  empty_row <- if (isTRUE(pages[[1L]]$is_empty_page)) {
+    .render_docx_empty_row(
+      meta$empty_text_ast,
+      meta$empty_place,
+      length(col_names_vis),
+      widths,
+      preset = preset,
+      body_borders = body_borders
+    )
+  } else {
+    character()
+  }
+
   paste0(
     "<w:tbl>",
     .docx_tbl_pr(sum(widths)),
@@ -896,6 +924,7 @@ backend_docx <- function(grid, file) {
     paste(band_rows, collapse = ""),
     label_row,
     paste(body_rows, collapse = ""),
+    paste(empty_row, collapse = ""),
     "</w:tbl>"
   )
 }
@@ -1696,6 +1725,72 @@ backend_docx <- function(grid, file) {
     "</w:tcPr>",
     "<w:p><w:pPr>",
     page_break,
+    jc_tok,
+    "</w:pPr>",
+    inner_runs,
+    "</w:p>",
+    "</w:tc></w:tr>"
+  )
+}
+
+# Full-span empty-state message row for a zero-row page. A single
+# `<w:gridSpan>` cell spans the band; the row height is the body
+# content-box (`<w:trHeight w:hRule="exact">`) so the cell `<w:vAlign>`
+# (from empty_valign, OOXML "center" for middle) centres the message
+# vertically -- exact valign on the paged DOCX medium. The paragraph
+# `<w:jc>` carries empty_halign. CT_TcPr child order: tcW, gridSpan,
+# tcBorders, vAlign.
+.render_docx_empty_row <- function(
+  empty_text_ast,
+  empty_place,
+  n_cols,
+  widths_twips,
+  preset = NULL,
+  body_borders = NULL
+) {
+  if (n_cols < 1L) {
+    return(character())
+  }
+  span_w <- sum(as.integer(widths_twips))
+  jc_tok <- .docx_align_token(empty_place$halign %||% "center")
+  valign_tok <- .docx_valign_token(empty_place$valign %||% "middle")
+  box_twips <- if (is.null(empty_place)) {
+    0L
+  } else {
+    as.integer(round(empty_place$height_twips))
+  }
+  trheight <- if (box_twips > 0L) {
+    sprintf("<w:trHeight w:hRule=\"exact\" w:val=\"%d\"/>", box_twips)
+  } else {
+    ""
+  }
+  default_rpr <- .docx_rPr_from_style(NULL, preset, bold_default = FALSE)
+  inner_runs <- if (is.null(empty_text_ast)) {
+    paste0(
+      "<w:r>",
+      default_rpr,
+      "<w:t xml:space=\"preserve\">No data available to report</w:t></w:r>"
+    )
+  } else {
+    .render_docx_inline(empty_text_ast, default_rpr = default_rpr)
+  }
+  merged_edges <- .docx_tcborders(
+    .docx_border_seg_from_triple(NULL, "top", "none"),
+    .docx_frame_edge("left", body_borders),
+    .docx_border_seg_from_triple(NULL, "bottom", "none"),
+    .docx_frame_edge("right", body_borders)
+  )
+  paste0(
+    "<w:tr><w:trPr>",
+    trheight,
+    "</w:trPr>",
+    "<w:tc><w:tcPr>",
+    sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_w),
+    sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols),
+    merged_edges,
+    valign_tok,
+    "</w:tcPr>",
+    "<w:p><w:pPr>",
     jc_tok,
     "</w:pPr>",
     inner_runs,

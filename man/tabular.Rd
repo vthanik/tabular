@@ -4,7 +4,7 @@
 \alias{tabular}
 \title{Start a tabular display}
 \usage{
-tabular(data, titles = NULL, footnotes = NULL)
+tabular(data, titles = NULL, footnotes = NULL, empty_text = NULL)
 }
 \arguments{
 \item{data}{\emph{The display rows.}
@@ -59,6 +59,20 @@ footnotes = c(
   "TEAE = treatment-emergent adverse event."
 )
 }\if{html}{\out{</div>}}}
+
+\item{empty_text}{\emph{Placeholder shown when \code{data} has zero rows.}
+\verb{<character(1)>: default "No data available to report"}. When the
+display resolves to no data rows, the backends still emit the full
+page chrome and — when a column structure is present — the column
+headers, then place this message in the body where the rows would
+sit. Override it with any sponsor or study wording (a localized
+string, "No subjects met the criteria for this table.", a
+protocol-qualified line); glue \code{{expr}} interpolation and \code{md()} /
+\code{html()} are honoured, exactly like a title line.
+
+\strong{Interaction:} placement within the body box is cosmetic and lives
+on the preset, \code{preset(empty_halign = ..., empty_valign = ...)},
+defaulting to centre x middle.}
 }
 \value{
 \emph{A \code{tabular_spec} S7 object.} Pipe it into \code{\link[=cols]{cols()}},
