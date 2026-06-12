@@ -73,6 +73,9 @@ backend_rtf <- function(grid, file) {
 # chooses and paginates the body natively. `\sect` (with `\sbkpage`)
 # separates panels only.
 .render_rtf_doc <- function(grid) {
+  if (identical(grid@metadata$content_type, "figure")) {
+    return(.render_rtf_figure(grid))
+  }
   pages <- grid@pages
   meta <- grid@metadata
   preset <- .rtf_resolve_preset(meta$preset)
@@ -123,15 +126,162 @@ backend_rtf <- function(grid, file) {
 # marker. Single section, no page chrome.
 .render_rtf_empty <- function(grid, preset, cs, colors, fonts) {
   meta <- grid@metadata
+  halign <- meta$empty_place$halign %||% "center"
+  msg <- if (is.null(meta$empty_text_ast)) {
+    "No data available to report"
+  } else {
+    .render_rtf_inline(
+      meta$empty_text_ast,
+      preserve = .preset_ws_preserve(preset)
+    )
+  }
   c(
     .rtf_section_def(preset, has_pagehead = FALSE, has_pagefoot = FALSE),
     .render_rtf_title_block(meta$titles_ast, preset, cs, colors, fonts),
     paste0(
       "\\pard\\plain",
       .rtf_body_fs(preset),
-      "\\qc {\\i (no rows)}\\par"
+      .rtf_align_token(halign),
+      " ",
+      msg,
+      "\\par"
     ),
     .render_rtf_footnote_block(meta$footnotes_ast, preset, cs, colors, fonts)
+  )
+}
+
+# ---------------------------------------------------------------------
+# Figure rendering (metadata$content_type == "figure")
+# ---------------------------------------------------------------------
+
+# Compose a figure document: same preamble + per-section page chrome as a
+# table, but each figure page is one `\sect` carrying its title paragraphs,
+# the embedded `\pict` image, and its footnote paragraphs. The image rides
+# a single merged cell sized to the body content box so the cell vertical
+# alignment (`\clvertal*` from valign) places it exactly; the paragraph
+# alignment (`\q*` from halign) places it horizontally. A multi-page figure
+# emits one `\sect` (new page) per plot.
+.render_rtf_figure <- function(grid) {
+  pages <- grid@pages
+  meta <- grid@metadata
+  preset <- .rtf_resolve_preset(meta$preset)
+  cs <- meta$chrome_style %||% chrome_style()
+  colors <- .rtf_collect_colors(pages, cs, preset)
+  fonts <- .rtf_collect_fonts(pages, cs, preset)
+
+  preamble <- c(
+    "{\\rtf1\\ansi\\ansicpg1252\\deff0\\uc1",
+    .rtf_font_table(fonts),
+    .rtf_color_table(colors),
+    sprintf("\\fs%d", as.integer(round(.effective_font_size(preset) * 2)))
+  )
+  preamble <- preamble[nzchar(preamble)]
+
+  has_ph <- .page_band_is_populated(meta$pagehead_ast)
+  has_pf <- .page_band_is_populated(meta$pagefoot_ast)
+
+  sections <- lapply(seq_along(pages), function(i) {
+    pg <- pages[[i]]
+    sec_def <- .rtf_section_def(
+      preset,
+      has_pagehead = has_ph,
+      has_pagefoot = has_pf
+    )
+    out <- if (i == 1L) sec_def else paste0("\\sect", sec_def)
+    if (has_ph) {
+      out <- c(
+        out,
+        .rtf_header_group(meta$pagehead_ast, preset, cs, colors, fonts)
+      )
+    }
+    if (has_pf) {
+      out <- c(
+        out,
+        .rtf_footer_group(
+          meta$pagefoot_ast,
+          character(),
+          preset,
+          cs,
+          colors,
+          fonts
+        )
+      )
+    }
+    c(
+      out,
+      .render_rtf_title_block(pg$titles_ast, preset, cs, colors, fonts),
+      .render_rtf_figure_image(pg, preset),
+      .render_rtf_footnote_block(pg$footnotes_ast, preset, cs, colors, fonts)
+    )
+  })
+
+  c(preamble, unlist(sections, use.names = FALSE), "}")
+}
+
+# Embed one figure image as a `\pict` group inside a single merged table
+# cell sized to the body content box (exact-height row `\trrh-<box>` so the
+# cell vertical alignment is honoured). `\picw` / `\pich` carry the image's
+# real pixel dimensions (parsed from the bytes); `\picwgoal` / `\pichgoal`
+# carry the drawn size in twips, which is what Word actually lays out.
+.render_rtf_figure_image <- function(pg, preset) {
+  place <- pg$place %||% list(halign = "center", valign = "middle")
+  htok <- .rtf_align_token(place$halign %||% "center")
+  vtok <- .rtf_valign_token(place$valign %||% "middle")
+  box_twips <- as.integer(round(place$height_twips %||% 0))
+  box_w_twips <- as.integer(round(
+    place$width_twips %||% .inches_to_twips(pg$draw_w_in)
+  ))
+
+  dims <- .image_dims(pg$image_bytes, pg$image_ext)
+  px_w <- if (anyNA(dims["width"])) {
+    as.integer(round(pg$draw_w_in * 96))
+  } else {
+    as.integer(dims[["width"]])
+  }
+  px_h <- if (anyNA(dims["height"])) {
+    as.integer(round(pg$draw_h_in * 96))
+  } else {
+    as.integer(dims[["height"]])
+  }
+  blip <- if (identical(pg$image_ext, "jpeg")) "\\jpegblip" else "\\pngblip"
+  hex <- .rtf_wrap_hex(paste0(as.character(pg$image_bytes), collapse = ""))
+
+  pict <- paste0(
+    "{\\pict",
+    blip,
+    sprintf("\\picw%d\\pich%d", px_w, px_h),
+    sprintf(
+      "\\picwgoal%d\\pichgoal%d",
+      .inches_to_twips(pg$draw_w_in),
+      .inches_to_twips(pg$draw_h_in)
+    ),
+    "\n",
+    hex,
+    "}"
+  )
+
+  c(
+    paste0(
+      "\\trowd\\trgaph108\\trqc",
+      if (box_twips > 0L) sprintf("\\trrh%d", -box_twips) else ""
+    ),
+    paste0(vtok, sprintf("\\cellx%d", box_w_twips)),
+    paste0("\\pard\\plain\\intbl", htok, " ", pict, "\\cell"),
+    "\\row"
+  )
+}
+
+# Wrap a long hex string into fixed-width lines. RTF ignores whitespace
+# inside `\pict` hex data, so newlines are safe and keep lines parseable.
+.rtf_wrap_hex <- function(hex, width = 128L) {
+  n <- nchar(hex)
+  if (n <= width) {
+    return(hex)
+  }
+  starts <- seq(1L, n, by = width)
+  paste(
+    substring(hex, starts, pmin(starts + width - 1L, n)),
+    collapse = "\n"
   )
 }
 
@@ -378,24 +528,39 @@ backend_rtf <- function(grid, file) {
     body_borders = body_borders
   )
 
-  body <- .rtf_concat_panel_body(panel_pages)
-  table_rows[[length(table_rows) + 1L]] <- .render_rtf_body_rows(
-    body$cells_text,
-    col_names_vis,
-    cols,
-    cellx,
-    cells_style = body$cells_style,
-    cells_indent = body$cells_indent,
-    is_header_row = body$is_header_row,
-    is_blank_row = body$is_blank_row,
-    host_col = body$host_col,
-    keep_with_next = body$keep_with_next,
-    preset = preset,
-    cs = cs,
-    colors = colors,
-    fonts = fonts,
-    body_borders = body_borders
-  )
+  if (isTRUE(first$is_empty_page)) {
+    # Zero-row page: the chrome + header band above are intact; the body
+    # is one full-span message placed in the content-box (see
+    # `.render_rtf_empty_row`). `col_names_vis` empty (every column
+    # hidden) yields character() there, the rare degenerate that the
+    # zero-page `.render_rtf_empty` path covers instead.
+    table_rows[[length(table_rows) + 1L]] <- .render_rtf_empty_row(
+      meta$empty_text_ast,
+      meta$empty_place,
+      cellx,
+      preset,
+      body_borders = body_borders
+    )
+  } else {
+    body <- .rtf_concat_panel_body(panel_pages)
+    table_rows[[length(table_rows) + 1L]] <- .render_rtf_body_rows(
+      body$cells_text,
+      col_names_vis,
+      cols,
+      cellx,
+      cells_style = body$cells_style,
+      cells_indent = body$cells_indent,
+      is_header_row = body$is_header_row,
+      is_blank_row = body$is_blank_row,
+      host_col = body$host_col,
+      keep_with_next = body$keep_with_next,
+      preset = preset,
+      cs = cs,
+      colors = colors,
+      fonts = fonts,
+      body_borders = body_borders
+    )
+  }
 
   out[[length(out) + 1L]] <- unlist(table_rows, use.names = FALSE)
 
@@ -524,6 +689,77 @@ backend_rtf <- function(grid, file) {
       sprintf("\\trgaph%d\\trqc", as.integer(trgaph)),
       .rtf_row_height_str(preset),
       if (isTRUE(keep)) "\\trkeep" else "",
+      .rtf_row_frame_edges(body_borders)
+    ),
+    cell_defs,
+    cell_bodies,
+    "\\row"
+  )
+}
+
+# Full-span empty-state message row for a zero-row page. Sits where the
+# body rows would, below the column-label rule. Sized to the body
+# content-box via `\trrh` with a NEGATIVE value (exact height, not the
+# usual grow-from-minimum) so the cell vertical-alignment (`\clvertal*`
+# from empty_valign) centres the message in the page body; the paragraph
+# alignment (`\q*` from empty_halign) places it horizontally. One cell
+# merged across the whole band. valign is exact on RTF, the paged medium.
+.render_rtf_empty_row <- function(
+  empty_text_ast,
+  empty_place,
+  cellx,
+  preset,
+  body_borders = NULL
+) {
+  n <- length(cellx)
+  if (n == 0L) {
+    return(character())
+  }
+  halign <- empty_place$halign %||% "center"
+  valign <- empty_place$valign %||% "middle"
+  vtok <- .rtf_valign_token(valign)
+  htok <- .rtf_align_token(halign)
+  box_twips <- if (is.null(empty_place)) {
+    0L
+  } else {
+    as.integer(round(empty_place$height_twips))
+  }
+  msg <- if (is.null(empty_text_ast)) {
+    "No data available to report"
+  } else {
+    .render_rtf_inline(empty_text_ast, preserve = .preset_ws_preserve(preset))
+  }
+  cell_defs <- character(n)
+  cell_defs[[1L]] <- paste0(
+    vtok,
+    "\\clmgf",
+    sprintf("\\cellx%d", as.integer(cellx[[1L]]))
+  )
+  if (n > 1L) {
+    for (i in seq.int(2L, n)) {
+      cell_defs[[i]] <- paste0(
+        vtok,
+        "\\clmrg",
+        sprintf("\\cellx%d", as.integer(cellx[[i]]))
+      )
+    }
+  }
+  first_body <- paste0(
+    "\\pard\\plain\\intbl",
+    .rtf_body_fs(preset),
+    htok,
+    " ",
+    msg,
+    "\\cell"
+  )
+  cell_bodies <- c(
+    first_body,
+    rep("\\pard\\plain\\intbl\\cell", n - 1L)
+  )
+  c(
+    paste0(
+      "\\trowd\\trgaph108\\trqc",
+      if (box_twips > 0L) sprintf("\\trrh%d", -box_twips) else "",
       .rtf_row_frame_edges(body_borders)
     ),
     cell_defs,

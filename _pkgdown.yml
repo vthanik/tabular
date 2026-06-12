@@ -54,6 +54,13 @@ reference:
   - tabular
   - pivot_across
 
+- title: Figures
+  desc: Wrap a ggplot, base-R plot, drawing function, or image file into a
+        `figure_spec`, rendered with the same submission chrome as a table.
+        A list input emits one figure per page.
+  contents:
+  - figure
+
 - title: Spec building
   desc: Configure per-column display, header bands, sort order, and
         subgrouping. Each verb attaches one slot onto the spec

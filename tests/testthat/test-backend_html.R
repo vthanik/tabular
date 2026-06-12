@@ -1118,35 +1118,63 @@ test_that("subgroup banner row emits inline inside the single <tbody>", {
 # Edge: zero-row data + empty grid
 # ---------------------------------------------------------------------
 
-test_that("empty grid renders titles + (no rows) marker + footnotes", {
+test_that("empty grid (zero pages) renders titles + empty message + footnotes", {
   fake <- tabular_grid(
     pages = list(),
     metadata = list(
       titles_ast = list(parse_inline("Title")),
-      footnotes_ast = list(parse_inline("Foot"))
+      footnotes_ast = list(parse_inline("Foot")),
+      empty_text_ast = parse_inline("Nothing here")
     )
   )
   lines <- tabular:::.render_html_grid(fake)
   expect_true(any(grepl(">Title<", lines, fixed = TRUE)))
   expect_true(any(grepl(">Foot<", lines, fixed = TRUE)))
-  expect_true(any(grepl(">(no rows)<", lines, fixed = TRUE)))
+  # The message wording comes from metadata$empty_text_ast (user-set).
+  expect_true(any(grepl(">Nothing here<", lines, fixed = TRUE)))
   expect_false(any(grepl("<section", lines, fixed = TRUE)))
 })
 
-test_that("zero-row spec renders <thead> with no <tbody> rows", {
+test_that("zero-row spec renders chrome + headers + centred empty message row", {
   spec <- tabular(data.frame(x = integer(0L), y = character(0L)))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
   expect_true(grepl("<thead>", txt, fixed = TRUE))
   expect_true(grepl(">x</th>", txt, fixed = TRUE))
-  expect_true(grepl("<tbody>", txt, fixed = TRUE))
-  # No <tr> inside <tbody>.
-  tbody_chunk <- regmatches(
+  # The empty body is one full-span message row, centred both axes and
+  # sized to the body content-box so native cell vertical-align centres it.
+  expect_match(
     txt,
-    regexpr("(?s)<tbody>.*?</tbody>", txt, perl = TRUE)
+    "colspan=\"2\"[^>]*vertical-align:middle;text-align:center"
   )
-  expect_false(grepl("<tr>", tbody_chunk, fixed = TRUE))
+  expect_match(txt, "No data available to report")
+})
+
+test_that("zero-row empty message honours empty_text + preset alignment", {
+  spec <- tabular(
+    data.frame(x = integer(0L), y = character(0L)),
+    empty_text = md("**None** to report")
+  ) |>
+    preset(empty_halign = "left", empty_valign = "top")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(txt, "<strong>None</strong> to report")
+  expect_match(txt, "vertical-align:top;text-align:left")
+})
+
+test_that("zero-row spec with all columns hidden renders standalone message", {
+  spec <- tabular(data.frame(x = integer(0L), y = character(0L))) |>
+    cols(x = col_spec(visible = FALSE), y = col_spec(visible = FALSE))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_false(grepl("<thead>", txt, fixed = TRUE))
+  expect_match(
+    txt,
+    "<p class=\"tabular-empty\">No data available to report</p>"
+  )
 })
 
 # ---------------------------------------------------------------------

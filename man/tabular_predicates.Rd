@@ -3,6 +3,7 @@
 \name{tabular_predicates}
 \alias{tabular_predicates}
 \alias{is_tabular_spec}
+\alias{is_figure_spec}
 \alias{is_tabular_grid}
 \alias{is_col_spec}
 \alias{is_header_node}
@@ -17,6 +18,8 @@
 \title{Test for tabular S7 class instances}
 \usage{
 is_tabular_spec(x)
+
+is_figure_spec(x)
 
 is_tabular_grid(x)
 

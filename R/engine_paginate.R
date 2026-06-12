@@ -257,34 +257,62 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
 # keep_with_next mask (the consumer paginates), so a chrome block taller
 # than the printable area floors to `.min_rows_per_page` instead of
 # aborting, which the non-native split path does.
-.compute_rows_per_page <- function(spec, native = FALSE) {
+# Body content-box: the printable region between the header rule and
+# the footnote rule, after page margins and the chrome rows (titles plus
+# their separating blank line, the column-header band, footnotes plus
+# their separating blank line). Returns a named list in twips and
+# inches, plus the per-row height and chrome-row count the paginator
+# needs. SINGLE SOURCE OF TRUTH shared by `.compute_rows_per_page`
+# (rows-per-page) and the placement of full-box content — the empty-state
+# message, and figures in a later release. `usable_twips` is the height
+# before chrome (page minus top/bottom margins), kept for the
+# chrome-too-tall diagnostic. The one-blank-line separations match
+# galley's spacing convention.
+.content_box <- function(spec) {
   preset <- .effective_preset(spec)
 
   dims <- .paper_dims_twips(preset@paper_size, preset@orientation)
+  page_width <- dims[["width"]]
   page_height <- dims[["height"]]
 
-  m <- .margin_top_bottom_twips(preset@margins)
-  margin_total <- m[["top"]] + m[["bottom"]]
+  mtb <- .margin_top_bottom_twips(preset@margins)
+  mlr <- .margin_left_right_twips(preset@margins)
+  margin_v <- mtb[["top"]] + mtb[["bottom"]]
+  margin_h <- mlr[["left"]] + mlr[["right"]]
 
   one_row <- .row_height_twips(preset@font_size)
 
   n_title_lines <- .count_lines(spec@titles)
   n_footnote_lines <- .count_lines(spec@footnotes)
   n_header_lines <- .count_header_lines(spec)
-
-  # One blank line of separation after the title block (if any) and
-  # before the footnote block (if any). Matches galley's spacing
-  # convention.
   title_spacing <- if (n_title_lines > 0L) 1L else 0L
   footnote_spacing <- if (n_footnote_lines > 0L) 1L else 0L
-
   chrome_rows <- n_title_lines +
     title_spacing +
     n_header_lines +
     n_footnote_lines +
     footnote_spacing
 
-  available <- page_height - margin_total - chrome_rows * one_row
+  usable_twips <- page_height - margin_v
+  height_twips <- usable_twips - chrome_rows * one_row
+  width_twips <- page_width - margin_h
+
+  list(
+    width_twips = width_twips,
+    height_twips = height_twips,
+    usable_twips = usable_twips,
+    width_in = width_twips / 1440,
+    height_in = height_twips / 1440,
+    one_row_twips = one_row,
+    chrome_rows = chrome_rows
+  )
+}
+
+.compute_rows_per_page <- function(spec, native = FALSE) {
+  box <- .content_box(spec)
+  available <- box$height_twips
+  one_row <- box$one_row_twips
+
   if (available <= 0L) {
     # Native backends paginate the body themselves, so chrome taller than
     # the page is not fatal; floor the mask budget and let the consumer
@@ -297,7 +325,8 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
     # height, so no data row can fit. Abort loudly rather than
     # silently flooring to .min_rows_per_page (which would print data
     # rows on top of the chrome).
-    usable_rows <- as.integer((page_height - margin_total) %/% one_row)
+    usable_rows <- as.integer(box$usable_twips %/% one_row)
+    chrome_rows <- box$chrome_rows
     cli::cli_abort(
       c(
         "Page chrome is taller than the printable area.",

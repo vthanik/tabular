@@ -94,10 +94,20 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
   tex_file <- file.path(tex_dir, "tabular.tex")
   backend_latex(grid, tex_file)
 
+  # Compile with the working directory set to tex_dir so a figure's
+  # relative `\includegraphics` sidecar (written next to tabular.tex by
+  # backend_latex) resolves; latexmk searches graphics relative to its
+  # cwd, not the input file's directory. `file` is already absolute (emit
+  # absolutises it before dispatch), so the PDF still lands at the user's
+  # target. A table emits no graphics, so this is inert for the table path.
+  old_wd <- getwd()
+  setwd(tex_dir)
+  on.exit(setwd(old_wd), add = TRUE)
   result <- tryCatch(
     .compile(tex_file, file),
     error = function(e) e
   )
+  setwd(old_wd)
   if (inherits(result, "error")) {
     .pdf_compile_abort(result)
   }

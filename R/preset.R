@@ -41,6 +41,8 @@
   "footnote_markers",
   "footnote_label",
   "width_mode",
+  "empty_halign",
+  "empty_valign",
   "cell_padding",
   "spacing",
   "stripe",
@@ -111,10 +113,17 @@
 #' (3) `preset_spec()` factory defaults. The first non-NULL layer
 #' wins; layers are not field-merged across the cascade.
 #'
-#' @param .spec *The `tabular_spec` to attach the preset to.*
-#'   `<tabular_spec>: required`. Dot-prefixed so R's partial argument
-#'   matching cannot accidentally bind a knob name in `...` to the
-#'   spec slot.
+#' @param .spec *The spec to attach the preset to.*
+#'   `<tabular_spec | figure_spec>: required`. Dot-prefixed so R's
+#'   partial argument matching cannot accidentally bind a knob name in
+#'   `...` to the spec slot.
+#'
+#'   **Note:** a [`figure()`] spec accepts only the page-geometry knobs
+#'   (`paper_size`, `orientation`, `margins`, `font_size`, `font_family`,
+#'   `pagehead`, `pagefoot`, ...). The cosmetic surface knobs
+#'   (`alignment` / `rules` / `fonts` / `colors` / `padding`) and the
+#'   `.template` / `.style` style templates target table cells a figure
+#'   does not have, and are rejected.
 #'
 #' @param ... *Named preset knobs.* Any subset of the preset knobs the
 #'   `preset_spec` class carries. Knob values are validated against
@@ -353,6 +362,35 @@
 #'       `width_mode`. Per-column widths (`col_spec(width)`) emit
 #'       verbatim into the HTML colgroup per the gt convention.
 #'
+#'   *   **`empty_halign`** / **`empty_valign`** — placement of the
+#'       empty-state message within the body content-box when a spec
+#'       resolves to zero data rows. The message *wording* lives on the
+#'       spec (`tabular(empty_text = ...)`, default
+#'       `"No data available to report"`); these two knobs are the
+#'       cosmetic *placement*, so they ride the preset and cascade with
+#'       the house style. `<character(1)>` each, defaulting to
+#'       centre x middle:
+#'
+#'       *   **`empty_halign`** — `"left"`, `"center"` *(default)*, or
+#'           `"right"`. Horizontal anchor of the message line.
+#'       *   **`empty_valign`** — `"top"`, `"middle"` *(default)*, or
+#'           `"bottom"`. Vertical anchor within the content-box — the
+#'           region between the column-header rule and the footnote rule.
+#'
+#'       **Interaction:** valign is exact on the paged backends
+#'       (RTF / PDF / DOCX), which size the host cell to the content-box
+#'       height; HTML approximates it with a min-height flex box, and
+#'       Markdown, having no page geometry, treats valign as a no-op.
+#'       When a column structure is present the column-header band still
+#'       renders above the message; with every column hidden, only the
+#'       page chrome and the centred message remain.
+#'
+#'       **Note:** this is the symmetric `halign` / `valign` placement
+#'       pair, shared with [`style()`] and the other `*_halign` /
+#'       `*_valign` alignment keys. It is deliberately distinct from
+#'       `col_spec(align = ...)`, whose extra `"decimal"` mode makes it a
+#'       column-content knob rather than a pure two-axis anchor.
+#'
 #'   *   **`whitespace`** — how significant ASCII spaces in labels and
 #'       cells render. `<character(1)>`. One of:
 #'
@@ -561,12 +599,17 @@ preset <- function(
   .reset = FALSE
 ) {
   call <- rlang::caller_env()
-  check_tabular_spec(.spec, call = call)
+  check_renderable_spec(.spec, call = call)
   .reset <- .check_scalar_lgl(.reset, arg = ".reset", call = call)
 
   knobs <- rlang::list2(...)
   .check_preset_knob_names(knobs, call = call)
   .validate_lowered_knobs(knobs, call = call)
+  # A figure takes only page-geometry knobs; the cosmetic surface knobs
+  # and style templates target table cells a figure does not have.
+  if (is_figure_spec(.spec)) {
+    .check_figure_preset_knobs(knobs, .template, .style, call = call)
+  }
   template_knobs <- .extract_template_knobs(.template, call = call)
   template_style_layers <- .extract_template_style_layers(.template)
   style_layers <- .extract_style_template_layers(.style, call = call)
@@ -624,6 +667,36 @@ preset <- function(
     )
   }
   S7::set_props(.spec, preset = new_preset)
+}
+
+# Figures take only page-geometry preset knobs. The cosmetic named-list
+# knobs (alignment / rules / fonts / colors / padding) and style templates
+# (.template / .style) target table surfaces (cells, headers, rules) a
+# figure does not have, so reject them with a clear message rather than
+# store an inert layer that silently never renders.
+.check_figure_preset_knobs <- function(knobs, template, style, call) {
+  lowered <- intersect(names(knobs), .preset_lowered_knob_names)
+  if (length(lowered) > 0L) {
+    cli::cli_abort(
+      c(
+        "Preset knob{?s} {.val {lowered}} {?does/do} not apply to a figure.",
+        "i" = "A figure has no table surfaces to style. Pass page-geometry knobs only, e.g. {.arg paper_size}, {.arg orientation}, {.arg margins}, {.arg font_size}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  if (!is.null(template) || !is.null(style)) {
+    cli::cli_abort(
+      c(
+        "{.arg .template} and {.arg .style} do not apply to a figure.",
+        "i" = "Style templates target table cells and surfaces; a figure carries none."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  invisible()
 }
 
 #' Set or clear the session default preset

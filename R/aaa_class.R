@@ -875,6 +875,20 @@ preset_spec <- S7::new_class(
       S7::class_character,
       default = "content"
     ),
+    # empty_halign / empty_valign — placement of the empty-state message
+    # (its wording lives on `tabular_spec@empty_text`) within the body
+    # content-box when a spec has zero data rows. Cosmetic, so it rides
+    # the preset rather than the spec. Defaults centre x middle. valign is
+    # exact on paged backends (cell height = content-box height); HTML
+    # approximates via a min-height flex box; Markdown valign is a no-op.
+    empty_halign = S7::new_property(
+      S7::class_character,
+      default = "center"
+    ),
+    empty_valign = S7::new_property(
+      S7::class_character,
+      default = "middle"
+    ),
     # Cell padding in points, CSS shorthand length 1 / 2 / 4 (all |
     # vertical horizontal | top right bottom left), parsed by the same
     # `margins` length rule. SINGLE SOURCE OF TRUTH for column-width
@@ -1012,6 +1026,22 @@ preset_spec <- S7::new_class(
     if (!is.null(pf_err)) {
       return(paste0("@pagefoot ", pf_err))
     }
+    if (!(self@empty_halign %in% .align_anchor_values)) {
+      return(paste0(
+        "@empty_halign must be one of ",
+        paste(.sh_quote(.align_anchor_values), collapse = ", "),
+        "; got ",
+        .sh_quote(self@empty_halign)
+      ))
+    }
+    if (!(self@empty_valign %in% .valign_values)) {
+      return(paste0(
+        "@empty_valign must be one of ",
+        paste(.sh_quote(.valign_values), collapse = ", "),
+        "; got ",
+        .sh_quote(self@empty_valign)
+      ))
+    }
     # `alignment` / `borders` / `fonts` / `colors` / `padding` knobs
     # live only as `preset()` / `set_preset()` arguments after the
     # Task 4/5 cut — they lower to `style_layer` records on `@style`
@@ -1053,8 +1083,114 @@ tabular_spec <- S7::new_class(
     # markers once in reading order (deduped by id) and renders the
     # marked-footnote block after any manual `footnotes`.
     footnote_refs = S7::new_property(S7::class_list, default = list()),
-    subgroup = S7::class_any
+    subgroup = S7::class_any,
+    # empty_text — the placeholder rendered in the data section when the
+    # spec carries zero data rows. User-overridable wording: sponsors use
+    # house phrasings ("No subjects met the criteria for this table."),
+    # localized strings, or a protocol-qualified line — the default is
+    # just a default, never hard-coded into a backend. Glue `{}` and
+    # `md()` / `html()` are honoured, exactly like a title line. Placed in
+    # the body content-box per the preset's `empty_halign` / `empty_valign`.
+    empty_text = S7::new_property(
+      S7::class_character,
+      default = "No data available to report"
+    )
   )
+)
+
+# ---------------------------------------------------------------------
+# figure_spec — root IR for a clinical figure (the "F" in TFL)
+# ---------------------------------------------------------------------
+#
+# Sibling of tabular_spec: shares the canonical submission chrome
+# (titles, footnotes, page header / footer via the preset) but carries a
+# plot or image instead of @data. Built by figure(); resolved by
+# .resolve_figure_to_grid() into a one-page-per-plot tabular_grid whose
+# metadata$content_type is "figure". The table build verbs (cols /
+# headers / sort_rows / style / subgroup / pivot_across) do not apply and
+# reject a figure_spec through their check_tabular_spec() guard.
+
+# Recognised figure input kinds. "multi" is a list whose elements are
+# each any of the single-input kinds (objects and file paths may mix).
+.figure_source_kinds <- c(
+  "ggplot",
+  "recordedplot",
+  "function",
+  "file",
+  "multi"
+)
+
+#' @rdname tabular_classes
+#' @format NULL
+#' @usage NULL
+figure_spec <- S7::new_class(
+  "figure_spec",
+  package = "tabular",
+  properties = list(
+    # The original user input, kept for print / re-resolve.
+    source = S7::class_any,
+    source_kind = S7::new_property(
+      S7::class_character,
+      default = "ggplot"
+    ),
+    # Normalised per-page input list (length 1 for a single figure).
+    plots = S7::new_property(S7::class_list, default = list()),
+    # Per-page token data frame (one row per plot), or NULL.
+    figure_meta = S7::class_any,
+    titles = S7::new_property(S7::class_character, default = character()),
+    footnotes = S7::new_property(
+      S7::class_character,
+      default = character()
+    ),
+    footnote_refs = S7::new_property(S7::class_list, default = list()),
+    preset = S7::class_any,
+    pagination = S7::class_any,
+    # Draw size in inches; NULL = fit (full printable width, 70% height).
+    width = S7::class_any,
+    height = S7::class_any,
+    # Placement of the image in the body content-box (pure two-axis
+    # anchors, the halign / valign pair shared with style() and preset()).
+    halign = S7::new_property(S7::class_character, default = "center"),
+    valign = S7::new_property(S7::class_character, default = "middle"),
+    # Rasterisation resolution for plot inputs (ignored for file inputs).
+    dpi = S7::new_property(S7::class_numeric, default = 300)
+  ),
+  validator = function(self) {
+    if (!(self@source_kind %in% .figure_source_kinds)) {
+      return(paste0(
+        "@source_kind must be one of ",
+        paste(.sh_quote(.figure_source_kinds), collapse = ", ")
+      ))
+    }
+    if (!(self@halign %in% .align_anchor_values)) {
+      return(paste0(
+        "@halign must be one of ",
+        paste(.sh_quote(.align_anchor_values), collapse = ", ")
+      ))
+    }
+    if (!(self@valign %in% .valign_values)) {
+      return(paste0(
+        "@valign must be one of ",
+        paste(.sh_quote(.valign_values), collapse = ", ")
+      ))
+    }
+    if (length(self@dpi) != 1L || anyNA(self@dpi) || self@dpi <= 0) {
+      return("@dpi must be a single positive number")
+    }
+    if (
+      !is.null(self@width) &&
+        (length(self@width) != 1L || anyNA(self@width) || self@width <= 0)
+    ) {
+      return("@width must be NULL or a single positive number")
+    }
+    if (
+      !is.null(self@height) &&
+        (length(self@height) != 1L || anyNA(self@height) || self@height <= 0)
+    ) {
+      return("@height must be NULL or a single positive number")
+    }
+    NULL
+  }
 )
 
 # ---------------------------------------------------------------------
@@ -1241,6 +1377,10 @@ NULL
 #' @rdname tabular_predicates
 #' @export
 is_tabular_spec <- function(x) S7::S7_inherits(x, tabular_spec)
+
+#' @rdname tabular_predicates
+#' @export
+is_figure_spec <- function(x) S7::S7_inherits(x, figure_spec)
 
 #' @rdname tabular_predicates
 #' @export

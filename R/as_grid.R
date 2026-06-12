@@ -250,7 +250,14 @@
 #' @export
 as_grid <- function(.spec) {
   call <- rlang::caller_env()
-  check_tabular_spec(.spec, call = call)
+  check_renderable_spec(.spec, call = call)
+  if (is_figure_spec(.spec)) {
+    return(.resolve_figure_to_grid(
+      .spec,
+      format = NA_character_,
+      call = call
+    ))
+  }
   .resolve_spec_to_grid(.spec, format = NA_character_, call = call)
 }
 
@@ -600,6 +607,29 @@ as_grid <- function(.spec) {
   # default) leaves the pages untouched.
   pages <- .stamp_stripe(pages, resolve_stripe(eff_preset@stripe))
 
+  # Empty-state placement. When the spec resolves to zero data rows the
+  # (single) page carries no body rows; engine_group_display synthesises
+  # nothing (no group transitions), so `nrow(spec@data) == 0L` is the
+  # exact test. Stamp the page so every backend renders chrome + the
+  # column-header band (when columns are present) + the `empty_text`
+  # message placed in the body content-box, instead of an empty body.
+  # The message AST and its placement are table-level (one empty page),
+  # published on metadata; the per-page `is_empty_page` flag lets each
+  # backend's body loop branch. Computed unconditionally so `as_grid()`
+  # inspection always carries them; only consumed when a page is empty.
+  empty_text_ast <- parse_inline(spec@empty_text, call = call)
+  empty_place <- .place_block(
+    eff_preset@empty_halign,
+    eff_preset@empty_valign,
+    .content_box(spec)
+  )
+  if (nrow(spec@data) == 0L) {
+    pages <- lapply(pages, function(pg) {
+      pg$is_empty_page <- TRUE
+      pg
+    })
+  }
+
   tabular_grid(
     pages = pages,
     metadata = list(
@@ -623,6 +653,8 @@ as_grid <- function(.spec) {
       titles_ast = fmt$titles_ast,
       footnotes_ast = fmt$footnotes_ast,
       col_labels_ast = fmt$col_labels_ast,
+      empty_text_ast = empty_text_ast,
+      empty_place = empty_place,
       pagehead_ast = pagehead_ast,
       pagefoot_ast = pagefoot_ast,
       preset = eff_preset,

@@ -621,31 +621,46 @@ test_that("continuation marker renders as italic noindent on pages 2+", {
 # Edge: zero-row data + empty grid
 # ---------------------------------------------------------------------
 
-test_that("empty grid renders titles + (no rows) marker + footnotes", {
+test_that("empty grid (zero pages) renders titles + empty message + footnotes", {
   fake <- tabular_grid(
     pages = list(),
     metadata = list(
       titles_ast = list(parse_inline("Title")),
-      footnotes_ast = list(parse_inline("Foot"))
+      footnotes_ast = list(parse_inline("Foot")),
+      empty_text_ast = parse_inline("Nothing here")
     )
   )
   txt <- paste(tabular:::.render_latex_doc(fake), collapse = "\n")
   expect_match(txt, "Title", fixed = TRUE)
   expect_match(txt, "Foot", fixed = TRUE)
-  expect_match(txt, "\\emph{(no rows)}", fixed = TRUE)
+  expect_match(txt, "Nothing here", fixed = TRUE)
 })
 
-test_that("zero-row spec renders the longtblr with no body rows", {
+test_that("zero-row spec renders chrome + headers + content-box message row", {
   spec <- tabular(data.frame(x = integer(0L), y = character(0L)))
   txt <- render_tex(spec)
   expect_match(txt, "\\begin{longtblr}", fixed = TRUE)
-  # Header cells carry a per-cell \SetCell{valign=b} (bottom-valign
-  # default, HTML parity); non-decimal columns inherit colspec halign.
+  # Header band still renders above the message.
   expect_match(
     txt,
     "\\SetCell{valign=b} x & \\SetCell{valign=b} y \\\\",
     fixed = TRUE
   )
+  # Full-span message in a fixed-height minipage so the inner vertical
+  # position (c = middle by default) centres it in the content-box.
+  expect_match(txt, "No data available to report", fixed = TRUE)
+  expect_match(txt, "\\SetCell[c=2]{c} {\\begin{minipage}[c][", fixed = TRUE)
+  expect_match(txt, "][c]{\\linewidth}\\centering", fixed = TRUE)
+})
+
+test_that("LaTeX empty message honours empty_text + preset alignment", {
+  spec <- tabular(
+    data.frame(x = integer(0L), y = character(0L)),
+    empty_text = "None."
+  ) |>
+    preset(empty_halign = "left", empty_valign = "top")
+  txt <- render_tex(spec)
+  expect_match(txt, "][t]{\\linewidth}\\raggedright None.", fixed = TRUE)
 })
 
 # ---------------------------------------------------------------------

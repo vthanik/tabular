@@ -82,6 +82,20 @@
 #'   )
 #'   ```
 #'
+#' @param empty_text *Placeholder shown when `data` has zero rows.*
+#'   `<character(1)>: default "No data available to report"`. When the
+#'   display resolves to no data rows, the backends still emit the full
+#'   page chrome and — when a column structure is present — the column
+#'   headers, then place this message in the body where the rows would
+#'   sit. Override it with any sponsor or study wording (a localized
+#'   string, "No subjects met the criteria for this table.", a
+#'   protocol-qualified line); glue `{expr}` interpolation and `md()` /
+#'   `html()` are honoured, exactly like a title line.
+#'
+#'   **Interaction:** placement within the body box is cosmetic and lives
+#'   on the preset, `preset(empty_halign = ..., empty_valign = ...)`,
+#'   defaulting to centre x middle.
+#'
 #' @return *A `tabular_spec` S7 object.* Pipe it into [`cols()`],
 #'   [`headers()`], [`sort_rows()`], [`style()`],
 #'   [`paginate()`], and [`preset()`] to build the display, then
@@ -218,6 +232,28 @@
 #'     )
 #'   )
 #'
+#' # ---- Example 5: Empty-data placeholder with a custom message ----
+#' #
+#' # When the input has zero rows, `tabular()` still renders the full page
+#' # chrome and the column headers, with a centred placeholder where the
+#' # body would go. `empty_text` overrides the default "No data available
+#' # to report"; it accepts the same glue `{}` interpolation and
+#' # `md()` / `html()` inline formatting as a title. Here a zero-row
+#' # demographics frame stands in for a subgroup that enrolled no subjects.
+#' tabular(
+#'   cdisc_saf_demo[0, ],
+#'   titles = c("Table 14.1.1", "Demographics", "Subjects < 18 Years"),
+#'   empty_text = "No subjects met the inclusion criteria for this subgroup."
+#' ) |>
+#'   cols(
+#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     stat_label = col_spec(label = "Statistic"),
+#'     placebo    = col_spec(label = "Placebo"),
+#'     drug_50    = col_spec(label = "Drug 50"),
+#'     drug_100   = col_spec(label = "Drug 100"),
+#'     Total      = col_spec(label = "Total")
+#'   )
+#'
 #' @seealso
 #' **Downstream build verbs:** [`cols()`] / [`col_spec()`],
 #' [`headers()`], [`sort_rows()`], [`style()`],
@@ -232,7 +268,12 @@
 #' `cdisc_eff_n`.
 #'
 #' @export
-tabular <- function(data, titles = NULL, footnotes = NULL) {
+tabular <- function(
+  data,
+  titles = NULL,
+  footnotes = NULL,
+  empty_text = NULL
+) {
   call <- rlang::caller_env()
 
   data <- .normalise_data(data, call = call)
@@ -248,11 +289,26 @@ tabular <- function(data, titles = NULL, footnotes = NULL) {
   titles_val <- .interpolate_vec(titles_val, env = call, call = call)
   footnotes_val <- .interpolate_vec(footnotes_val, env = call, call = call)
 
-  tabular_spec(
+  spec <- tabular_spec(
     data = data,
     titles = titles_val,
     footnotes = footnotes_val
   )
+
+  # empty_text NULL = inherit the slot default ("No data available to
+  # report"), keeping a single source of truth. Supplied = validate,
+  # interpolate like a title line, override the slot.
+  if (!is.null(empty_text)) {
+    empty_text_val <- .check_empty_text(empty_text, call = call)
+    empty_text_val <- .interpolate_vec(
+      empty_text_val,
+      env = call,
+      call = call
+    )
+    spec <- S7::set_props(spec, empty_text = empty_text_val)
+  }
+
+  spec
 }
 
 # ---------------------------------------------------------------------
@@ -303,6 +359,23 @@ tabular <- function(data, titles = NULL, footnotes = NULL) {
     )
   }
   invisible(data)
+}
+
+.check_empty_text <- function(x, call) {
+  # md() / html() return classed character, so is.character() is the
+  # right gate (matches `.normalise_text_block`). Reject only a missing,
+  # non-scalar, NA, or empty-string value.
+  if (!is.character(x) || length(x) != 1L || anyNA(x) || !nzchar(x)) {
+    cli::cli_abort(
+      c(
+        "{.arg empty_text} must be a single non-empty string.",
+        "x" = "You supplied {.obj_type_friendly {x}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  x
 }
 
 .normalise_text_block <- function(x, arg, call) {

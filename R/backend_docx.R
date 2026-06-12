@@ -96,10 +96,308 @@
 # Render `grid` to a `.docx` ZIP at `file`. Called by `emit()` via
 # the backend registry. Returns the file path invisibly.
 backend_docx <- function(grid, file) {
-  entries <- .docx_zip_entries(grid)
+  entries <- if (identical(grid@metadata$content_type, "figure")) {
+    .docx_figure_zip_entries(grid)
+  } else {
+    .docx_zip_entries(grid)
+  }
   .docx_write_zip(entries, file)
   invisible(file)
 }
+
+# ---------------------------------------------------------------------
+# Figure rendering (metadata$content_type == "figure")
+# ---------------------------------------------------------------------
+
+# Build the full OPC part set for a figure. Returns a named LIST whose
+# text parts are UTF-8 strings and whose `word/media/image*` parts are raw
+# image bytes (`.docx_write_zip` branches on `is.raw`). One image per page;
+# footnotes trail each image in the body, the pagefoot band rides the page
+# footer. This is the one DOCX path that embeds binary media + DrawingML.
+.docx_figure_zip_entries <- function(grid) {
+  meta <- grid@metadata
+  pages <- grid@pages
+  preset <- .docx_resolve_preset(meta$preset)
+  cs <- meta$chrome_style %||% chrome_style()
+  has_ph <- .page_band_is_populated(meta$pagehead_ast)
+  has_footer <- .page_band_is_populated(meta$pagefoot_ast)
+
+  n_img <- length(pages)
+  rid_map <- .docx_figure_rid_map(has_ph, has_footer, n_img)
+  exts <- vapply(pages, function(p) p$image_ext %||% "png", character(1))
+  media_names <- sprintf("image%d.%s", seq_len(n_img), exts)
+
+  doc_xml <- .docx_figure_document_xml(grid, preset, rid_map, media_names, cs)
+
+  entries <- list(
+    "[Content_Types].xml" = .docx_figure_content_types(
+      has_ph,
+      has_footer,
+      unique(exts)
+    ),
+    "_rels/.rels" = .docx_root_rels(),
+    "docProps/app.xml" = .docx_app_xml(),
+    "docProps/core.xml" = .docx_core_xml(meta),
+    "word/_rels/document.xml.rels" = .docx_figure_doc_rels(
+      rid_map,
+      media_names
+    ),
+    "word/document.xml" = doc_xml,
+    "word/fontTable.xml" = .docx_font_table(preset),
+    "word/settings.xml" = .docx_settings_xml(),
+    "word/styles.xml" = .docx_styles_xml(preset),
+    "word/theme/theme1.xml" = .docx_theme_xml(preset),
+    "word/webSettings.xml" = .docx_web_settings_xml()
+  )
+  if (has_ph) {
+    entries[["word/header1.xml"]] <- .docx_header_xml(
+      meta$pagehead_ast,
+      preset,
+      cs = cs
+    )
+  }
+  if (has_footer) {
+    entries[["word/footer1.xml"]] <- .docx_footer_xml(
+      meta$pagefoot_ast,
+      preset,
+      footnote_block = "",
+      cs = cs
+    )
+  }
+  # Raw media parts.
+  for (i in seq_len(n_img)) {
+    entries[[paste0("word/media/", media_names[[i]])]] <- pages[[
+      i
+    ]]$image_bytes
+  }
+
+  # OPC: [Content_Types].xml first, remainder alphabetical for determinism.
+  ct_name <- "[Content_Types].xml"
+  rest <- setdiff(names(entries), ct_name)
+  entries[c(ct_name, sort(rest))]
+}
+
+# rId registry for a figure: the five fixed XML parts, optional header /
+# footer, then one image rId per page.
+.docx_figure_rid_map <- function(has_pagehead, has_pagefoot, n_images) {
+  m <- list(
+    styles = "rId1",
+    settings = "rId2",
+    theme = "rId3",
+    fontTable = "rId4",
+    webSettings = "rId5",
+    header = NULL,
+    footer = NULL,
+    images = character()
+  )
+  next_id <- 6L
+  if (has_pagehead) {
+    m$header <- sprintf("rId%d", next_id)
+    next_id <- next_id + 1L
+  }
+  if (has_pagefoot) {
+    m$footer <- sprintf("rId%d", next_id)
+    next_id <- next_id + 1L
+  }
+  if (n_images > 0L) {
+    m$images <- sprintf("rId%d", seq.int(next_id, length.out = n_images))
+  }
+  m
+}
+
+# Document rels for a figure: the base part rels (reusing the table
+# builder, no hyperlinks) plus one image relationship per page.
+.docx_figure_doc_rels <- function(rid_map, media_names) {
+  base <- .docx_doc_rels(character(), rid_map)
+  img_rels <- vapply(
+    seq_along(media_names),
+    function(i) {
+      sprintf(
+        "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/%s\"/>",
+        rid_map$images[[i]],
+        media_names[[i]]
+      )
+    },
+    character(1L)
+  )
+  sub(
+    "</Relationships>",
+    paste0(paste(img_rels, collapse = ""), "</Relationships>"),
+    base,
+    fixed = TRUE
+  )
+}
+
+# Content types for a figure: the base set plus a `<Default>` per image
+# extension so Word knows the media MIME type.
+.docx_figure_content_types <- function(has_pagehead, has_pagefoot, exts) {
+  ct <- .docx_content_types(has_pagehead, has_pagefoot)
+  defaults <- character()
+  if ("png" %in% exts) {
+    defaults <- c(
+      defaults,
+      "<Default Extension=\"png\" ContentType=\"image/png\"/>"
+    )
+  }
+  if (any(exts %in% c("jpeg", "jpg"))) {
+    defaults <- c(
+      defaults,
+      "<Default Extension=\"jpeg\" ContentType=\"image/jpeg\"/>",
+      "<Default Extension=\"jpg\" ContentType=\"image/jpeg\"/>"
+    )
+  }
+  if (length(defaults) == 0L) {
+    return(ct)
+  }
+  sub(
+    "</Types>",
+    paste0(paste(defaults, collapse = ""), "</Types>"),
+    ct,
+    fixed = TRUE
+  )
+}
+
+# Compose word/document.xml for a figure: per page, the title paragraphs,
+# the image (a single-cell table sized to the body content box so the cell
+# `<w:vAlign>` places it vertically and the paragraph `<w:jc>` horizontally),
+# and the footnote paragraphs. A page break separates pages; the trailing
+# `<w:sectPr>` carries page geometry + header / footer refs.
+.docx_figure_document_xml <- function(
+  grid,
+  preset,
+  rid_map,
+  media_names,
+  cs
+) {
+  pages <- grid@pages
+  body_parts <- character()
+  for (i in seq_along(pages)) {
+    pg <- pages[[i]]
+    if (i > 1L) {
+      body_parts <- c(
+        body_parts,
+        "<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>"
+      )
+    }
+    titles <- .docx_title_block(
+      pg$titles_ast,
+      character(),
+      rid_map,
+      preset = preset,
+      cs = cs
+    )
+    drawing <- .docx_figure_drawing(
+      rid_map$images[[i]],
+      pg$draw_w_in,
+      pg$draw_h_in,
+      i
+    )
+    foot <- .docx_footnote_block(
+      pg$footnotes_ast %||% list(),
+      character(),
+      rid_map,
+      preset = preset,
+      cs = cs
+    )
+    body_parts <- c(
+      body_parts,
+      titles,
+      .docx_figure_image_table(pg, drawing),
+      foot
+    )
+  }
+  body <- paste0(
+    paste(body_parts, collapse = ""),
+    .docx_section_pr(preset, rid_map)
+  )
+  paste0(
+    .docx_xml_prologue,
+    "<w:document ",
+    .docx_ns_decls,
+    "><w:body>",
+    body,
+    "</w:body></w:document>"
+  )
+}
+
+# One image as an inline DrawingML `<w:drawing>`. EMU = inches * 914400.
+# The blip's `r:embed` points at the page's image relationship.
+.docx_figure_drawing <- function(rid, draw_w_in, draw_h_in, idx) {
+  cx <- .docx_emu(draw_w_in)
+  cy <- .docx_emu(draw_h_in)
+  name <- sprintf("Figure %d", idx)
+  paste0(
+    "<w:drawing>",
+    "<wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\">",
+    sprintf("<wp:extent cx=\"%d\" cy=\"%d\"/>", cx, cy),
+    "<wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>",
+    sprintf("<wp:docPr id=\"%d\" name=\"%s\"/>", idx, name),
+    "<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect=\"1\"/></wp:cNvGraphicFramePr>",
+    "<a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\">",
+    "<pic:pic>",
+    sprintf(
+      "<pic:nvPicPr><pic:cNvPr id=\"%d\" name=\"%s\"/><pic:cNvPicPr/></pic:nvPicPr>",
+      idx,
+      name
+    ),
+    sprintf(
+      "<pic:blipFill><a:blip r:embed=\"%s\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>",
+      rid
+    ),
+    sprintf(
+      "<pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"%d\" cy=\"%d\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr>",
+      cx,
+      cy
+    ),
+    "</pic:pic>",
+    "</a:graphicData></a:graphic>",
+    "</wp:inline></w:drawing>"
+  )
+}
+
+# Single-cell table sized to the body content box, holding one figure's
+# drawing. `<w:trHeight w:hRule="exact">` pins the row to the box height so
+# the cell `<w:vAlign>` (valign) is exact; the paragraph `<w:jc>` (halign)
+# positions the image horizontally within the cell.
+.docx_figure_image_table <- function(pg, drawing) {
+  place <- pg$place %||% list(halign = "center", valign = "middle")
+  box_w <- as.integer(round(
+    place$width_twips %||% .inches_to_twips(pg$draw_w_in)
+  ))
+  box_h <- as.integer(round(place$height_twips %||% 0))
+  trheight <- if (box_h > 0L) {
+    sprintf("<w:trHeight w:hRule=\"exact\" w:val=\"%d\"/>", box_h)
+  } else {
+    ""
+  }
+  valign_tok <- .docx_valign_token(place$valign %||% "middle")
+  jc_tok <- .docx_align_token(place$halign %||% "center")
+  paste0(
+    "<w:tbl><w:tblPr>",
+    sprintf("<w:tblW w:w=\"%d\" w:type=\"dxa\"/>", box_w),
+    "<w:tblLayout w:type=\"fixed\"/>",
+    "</w:tblPr>",
+    sprintf("<w:tblGrid><w:gridCol w:w=\"%d\"/></w:tblGrid>", box_w),
+    "<w:tr><w:trPr>",
+    trheight,
+    "</w:trPr>",
+    "<w:tc><w:tcPr>",
+    sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", box_w),
+    valign_tok,
+    "</w:tcPr>",
+    "<w:p><w:pPr>",
+    jc_tok,
+    "</w:pPr>",
+    "<w:r>",
+    drawing,
+    "</w:r>",
+    "</w:p>",
+    "</w:tc></w:tr></w:tbl>"
+  )
+}
+
+# Inches -> EMU (English Metric Units). 1 inch = 914400 EMU.
+.docx_emu <- function(inches) as.integer(round(inches * 914400))
 
 # ---------------------------------------------------------------------
 # Document assembly
@@ -765,8 +1063,20 @@ backend_docx <- function(grid, file) {
 ) {
   meta <- grid@metadata
   pages <- grid@pages
-  if (length(pages) == 0L) {
-    return("<w:p><w:r><w:rPr><w:i/></w:rPr><w:t>(no rows)</w:t></w:r></w:p>")
+  if (
+    length(pages) == 0L ||
+      (isTRUE(pages[[1L]]$is_empty_page) &&
+        length(pages[[1L]]$col_names) == 0L)
+  ) {
+    # No column structure (a hand-built zero-page grid, or every column
+    # hidden): the empty message stands alone as a centred paragraph.
+    msg_runs <- if (is.null(meta$empty_text_ast)) {
+      "<w:r><w:t xml:space=\"preserve\">No data available to report</w:t></w:r>"
+    } else {
+      .render_docx_inline(meta$empty_text_ast)
+    }
+    jc <- .docx_align_token(meta$empty_place$halign %||% "center")
+    return(paste0("<w:p><w:pPr>", jc, "</w:pPr>", msg_runs, "</w:p>"))
   }
   col_names_vis <- pages[[1L]]$col_names
   cols <- meta$cols %||% list()
@@ -887,6 +1197,22 @@ backend_docx <- function(grid, file) {
     emit_banner = !(big_n_active || subgroup_active)
   )
 
+  # Zero-row page with visible columns: the header band above is intact;
+  # the body is one full-span message row sized to the content-box for
+  # exact vertical centering (see `.render_docx_empty_row`).
+  empty_row <- if (isTRUE(pages[[1L]]$is_empty_page)) {
+    .render_docx_empty_row(
+      meta$empty_text_ast,
+      meta$empty_place,
+      length(col_names_vis),
+      widths,
+      preset = preset,
+      body_borders = body_borders
+    )
+  } else {
+    character()
+  }
+
   paste0(
     "<w:tbl>",
     .docx_tbl_pr(sum(widths)),
@@ -896,6 +1222,7 @@ backend_docx <- function(grid, file) {
     paste(band_rows, collapse = ""),
     label_row,
     paste(body_rows, collapse = ""),
+    paste(empty_row, collapse = ""),
     "</w:tbl>"
   )
 }
@@ -1704,6 +2031,72 @@ backend_docx <- function(grid, file) {
   )
 }
 
+# Full-span empty-state message row for a zero-row page. A single
+# `<w:gridSpan>` cell spans the band; the row height is the body
+# content-box (`<w:trHeight w:hRule="exact">`) so the cell `<w:vAlign>`
+# (from empty_valign, OOXML "center" for middle) centres the message
+# vertically -- exact valign on the paged DOCX medium. The paragraph
+# `<w:jc>` carries empty_halign. CT_TcPr child order: tcW, gridSpan,
+# tcBorders, vAlign.
+.render_docx_empty_row <- function(
+  empty_text_ast,
+  empty_place,
+  n_cols,
+  widths_twips,
+  preset = NULL,
+  body_borders = NULL
+) {
+  if (n_cols < 1L) {
+    return(character())
+  }
+  span_w <- sum(as.integer(widths_twips))
+  jc_tok <- .docx_align_token(empty_place$halign %||% "center")
+  valign_tok <- .docx_valign_token(empty_place$valign %||% "middle")
+  box_twips <- if (is.null(empty_place)) {
+    0L
+  } else {
+    as.integer(round(empty_place$height_twips))
+  }
+  trheight <- if (box_twips > 0L) {
+    sprintf("<w:trHeight w:hRule=\"exact\" w:val=\"%d\"/>", box_twips)
+  } else {
+    ""
+  }
+  default_rpr <- .docx_rPr_from_style(NULL, preset, bold_default = FALSE)
+  inner_runs <- if (is.null(empty_text_ast)) {
+    paste0(
+      "<w:r>",
+      default_rpr,
+      "<w:t xml:space=\"preserve\">No data available to report</w:t></w:r>"
+    )
+  } else {
+    .render_docx_inline(empty_text_ast, default_rpr = default_rpr)
+  }
+  merged_edges <- .docx_tcborders(
+    .docx_border_seg_from_triple(NULL, "top", "none"),
+    .docx_frame_edge("left", body_borders),
+    .docx_border_seg_from_triple(NULL, "bottom", "none"),
+    .docx_frame_edge("right", body_borders)
+  )
+  paste0(
+    "<w:tr><w:trPr>",
+    trheight,
+    "</w:trPr>",
+    "<w:tc><w:tcPr>",
+    sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_w),
+    sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols),
+    merged_edges,
+    valign_tok,
+    "</w:tcPr>",
+    "<w:p><w:pPr>",
+    jc_tok,
+    "</w:pPr>",
+    inner_runs,
+    "</w:p>",
+    "</w:tc></w:tr>"
+  )
+}
+
 # Map an `align` value to a `<w:pPr><w:jc w:val="...">` token.
 # Defaults to left when align is unset / NA. `decimal` -> right
 # (engine_decimal has already padded with NBSP for visual alignment).
@@ -2493,7 +2886,15 @@ backend_docx <- function(grid, file) {
   for (rel in rels) {
     abs_path <- file.path(tmp, rel)
     dir.create(dirname(abs_path), recursive = TRUE, showWarnings = FALSE)
-    writeLines(entries[[rel]], abs_path, useBytes = TRUE)
+    content <- entries[[rel]]
+    # Binary parts (figure images in word/media) carry raw bytes;
+    # everything else is UTF-8 XML text. `entries` is a named list when
+    # any raw part is present, a named character vector otherwise.
+    if (is.raw(content)) {
+      writeBin(content, abs_path)
+    } else {
+      writeLines(content, abs_path, useBytes = TRUE)
+    }
     Sys.setFileTime(abs_path, .docx_fixed_mtime)
   }
 

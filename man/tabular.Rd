@@ -4,7 +4,7 @@
 \alias{tabular}
 \title{Start a tabular display}
 \usage{
-tabular(data, titles = NULL, footnotes = NULL)
+tabular(data, titles = NULL, footnotes = NULL, empty_text = NULL)
 }
 \arguments{
 \item{data}{\emph{The display rows.}
@@ -59,6 +59,20 @@ footnotes = c(
   "TEAE = treatment-emergent adverse event."
 )
 }\if{html}{\out{</div>}}}
+
+\item{empty_text}{\emph{Placeholder shown when \code{data} has zero rows.}
+\verb{<character(1)>: default "No data available to report"}. When the
+display resolves to no data rows, the backends still emit the full
+page chrome and — when a column structure is present — the column
+headers, then place this message in the body where the rows would
+sit. Override it with any sponsor or study wording (a localized
+string, "No subjects met the criteria for this table.", a
+protocol-qualified line); glue \code{{expr}} interpolation and \code{md()} /
+\code{html()} are honoured, exactly like a title line.
+
+\strong{Interaction:} placement within the body box is cosmetic and lives
+on the preset, \code{preset(empty_halign = ..., empty_valign = ...)},
+defaulting to centre x middle.}
 }
 \value{
 \emph{A \code{tabular_spec} S7 object.} Pipe it into \code{\link[=cols]{cols()}},
@@ -218,6 +232,28 @@ tabular(
       label = "Drug 100\nN={n['drug_100']}",
       align = "decimal"
     )
+  )
+
+# ---- Example 5: Empty-data placeholder with a custom message ----
+#
+# When the input has zero rows, `tabular()` still renders the full page
+# chrome and the column headers, with a centred placeholder where the
+# body would go. `empty_text` overrides the default "No data available
+# to report"; it accepts the same glue `{}` interpolation and
+# `md()` / `html()` inline formatting as a title. Here a zero-row
+# demographics frame stands in for a subgroup that enrolled no subjects.
+tabular(
+  cdisc_saf_demo[0, ],
+  titles = c("Table 14.1.1", "Demographics", "Subjects < 18 Years"),
+  empty_text = "No subjects met the inclusion criteria for this subgroup."
+) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo    = col_spec(label = "Placebo"),
+    drug_50    = col_spec(label = "Drug 50"),
+    drug_100   = col_spec(label = "Drug 100"),
+    Total      = col_spec(label = "Total")
   )
 
 }

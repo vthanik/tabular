@@ -341,3 +341,29 @@ test_that("backend_pdf() returns the file path invisibly on a successful compile
   expect_identical(result, out)
   expect_true(file.exists(out))
 })
+
+test_that("check_latex(quiet = FALSE) reaches the cli report", {
+  out <- suppressMessages(utils::capture.output(
+    res <- check_latex(quiet = FALSE)
+  ))
+  expect_true(is.data.frame(res))
+})
+
+test_that(".check_latex_report covers the all-installed and missing branches", {
+  ok <- data.frame(
+    package = c("base", "graphics"),
+    installed = c(TRUE, TRUE),
+    stringsAsFactors = FALSE
+  )
+  miss <- data.frame(
+    package = c("base", "tabularray"),
+    installed = c(TRUE, NA),
+    stringsAsFactors = FALSE
+  )
+  expect_no_error(suppressMessages(
+    utils::capture.output(tabular:::.check_latex_report(ok))
+  ))
+  expect_no_error(suppressMessages(
+    utils::capture.output(tabular:::.check_latex_report(miss))
+  ))
+})

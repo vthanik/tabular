@@ -1023,16 +1023,50 @@ test_that("preset header_valign override is honoured in the DOCX header row", {
   expect_match(doc, "<w:vAlign w:val=\"center\"/>", fixed = TRUE)
 })
 
-test_that(".render_docx_table emits the no-rows marker when the grid has zero pages", {
+test_that(".render_docx_table emits the empty message when the grid has zero pages", {
   # The engine always produces >=1 page even for empty data, so
   # exercise the empty-pages branch by handing the renderer a grid
   # with pages = list().
   empty_grid <- tabular:::tabular_grid(
     pages = list(),
-    metadata = list()
+    metadata = list(empty_text_ast = parse_inline("Nothing here"))
   )
   out <- tabular:::.render_docx_table(empty_grid, preset_spec())
-  expect_match(out, "(no rows)", fixed = TRUE)
+  expect_match(out, "Nothing here", fixed = TRUE)
+})
+
+test_that("DOCX zero-row spec renders chrome + headers + content-box message row", {
+  spec <- tabular(
+    data.frame(x = integer(0L), y = character(0L)),
+    titles = "T"
+  )
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  xml <- paste(
+    readLines(unz(out, "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_match(xml, "No data available to report", fixed = TRUE)
+  # Full-span message row, content-box height (exact), middle-valign cell.
+  expect_match(xml, "<w:gridSpan w:val=\"2\"/>", fixed = TRUE)
+  expect_match(xml, "<w:trHeight w:hRule=\"exact\"")
+  expect_match(xml, "<w:vAlign w:val=\"center\"/>", fixed = TRUE)
+})
+
+test_that("DOCX empty message honours empty_text + preset alignment", {
+  spec <- tabular(
+    data.frame(x = integer(0L), y = character(0L)),
+    empty_text = "None."
+  ) |>
+    preset(empty_halign = "left", empty_valign = "bottom")
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  xml <- paste(
+    readLines(unz(out, "word/document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_match(xml, "None.", fixed = TRUE)
+  expect_match(xml, "<w:vAlign w:val=\"bottom\"/>", fixed = TRUE)
 })
 
 test_that(".docx_align_token covers every align value plus the unset fallback", {

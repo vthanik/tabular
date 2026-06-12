@@ -427,27 +427,50 @@ test_that("Markdown warns once per render when a group-header carries colour (#e
 # Edge: zero-row data
 # ---------------------------------------------------------------------
 
-test_that("empty grid renders titles + (no rows) marker + footnotes", {
+test_that("empty grid (zero pages) renders titles + empty message + footnotes", {
   fake <- tabular_grid(
     pages = list(),
     metadata = list(
       titles_ast = list(parse_inline("Title")),
-      footnotes_ast = list(parse_inline("Foot"))
+      footnotes_ast = list(parse_inline("Foot")),
+      empty_text_ast = parse_inline("Nothing here")
     )
   )
   lines <- tabular:::.render_md_grid(fake)
-  expect_true("(no rows)" %in% lines)
+  expect_true(any(grepl("Nothing here", lines, fixed = TRUE)))
   expect_true("# Title" %in% lines)
   expect_true("Foot" %in% lines)
 })
 
-test_that("zero-row spec renders header + alignment with no body rows", {
+test_that("zero-row spec renders header + alignment + empty message line", {
   spec <- tabular(data.frame(x = integer(0L), y = character(0L)))
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   lines <- readLines(out)
   expect_true(any(grepl("^\\| x \\| y \\|", lines)))
   expect_true(any(grepl("^\\| :---", lines)))
+  # The message rides a <div align> wrapper below the (closed) pipe table.
+  expect_true(any(grepl(
+    "<div align=\"center\">No data available to report</div>",
+    lines,
+    fixed = TRUE
+  )))
+})
+
+test_that("Markdown empty message honours empty_text + empty_halign", {
+  spec <- tabular(
+    data.frame(x = integer(0L), y = character(0L)),
+    empty_text = "None."
+  ) |>
+    preset(empty_halign = "left")
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  lines <- readLines(out)
+  expect_true(any(grepl(
+    "<div align=\"left\">None.</div>",
+    lines,
+    fixed = TRUE
+  )))
 })
 
 # ---------------------------------------------------------------------

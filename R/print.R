@@ -331,6 +331,19 @@ NULL
 #'
 #' @exportS3Method htmltools::as.tags
 as.tags.tabular_spec <- function(x, ..., id = NULL) {
+  .spec_as_html_tags(x, id = id)
+}
+
+#' @exportS3Method htmltools::as.tags
+as.tags.figure_spec <- function(x, ..., id = NULL) {
+  .spec_as_html_tags(x, id = id)
+}
+
+# Shared as.tags core. Content-agnostic: emits the spec (table or figure)
+# to a self-contained HTML document, extracts the `<style>` + `<body>`
+# fragment, and re-wraps it in an `htmltools::tagList` with a scoped id.
+# Both `as.tags.tabular_spec()` and `as.tags.figure_spec()` delegate here.
+.spec_as_html_tags <- function(x, id = NULL) {
   dir <- getOption("tabular_preview_dir", default = tempdir())
   file <- tempfile(tmpdir = dir, fileext = ".html")
   # The HTML preview is a responsive medium — the wrapping div sets
@@ -444,6 +457,19 @@ as.tags.tabular_spec <- function(x, ..., id = NULL) {
 #' @rawNamespace S3method(knitr::knit_print, tabular_spec)
 #' @noRd
 knit_print.tabular_spec <- function(x, ..., inline = FALSE) {
+  .spec_knit_print(x, ..., inline = inline)
+}
+
+#' @rawNamespace S3method(knitr::knit_print, figure_spec)
+#' @noRd
+knit_print.figure_spec <- function(x, ..., inline = FALSE) {
+  .spec_knit_print(x, ..., inline = inline)
+}
+
+# Shared knit_print core. Content-agnostic: HTML / raw-HTML-passthrough
+# targets get a `{=html}` block from as.tags; non-HTML pandoc targets get
+# the markdown source. Both spec knit_print methods delegate here.
+.spec_knit_print <- function(x, ..., inline = FALSE) {
   pandoc_to <- tryCatch(knitr::pandoc_to(), error = function(e) NULL)
 
   if (isTRUE(pandoc_to %in% c("latex", "beamer", "docx", "rtf", "typst"))) {
@@ -578,5 +604,77 @@ knit_print.tabular_spec <- function(x, ..., inline = FALSE) {
 # covr; tests cover .tabular_spec_print() directly.
 S7::method(print, tabular_spec) <- function(x, ...) {
   .tabular_spec_print(x, ...)
+}
+# nocov end
+
+# ---------------------------------------------------------------------
+# figure_spec printing — same medium router as tabular_spec (pkgdown ->
+# live HTML, viewer -> HTML, error -> structural cli summary).
+# ---------------------------------------------------------------------
+
+.figure_spec_print <- function(x, ..., view = interactive()) {
+  if (.is_databricks()) {
+    html <- tryCatch(
+      as.character(htmltools::as.tags(x)),
+      error = function(e) NULL
+    )
+    if (!is.null(html)) {
+      return(rlang::exec("displayHTML", html))
+    }
+  }
+  if (.is_in_pkgdown()) {
+    return(htmltools::browsable(htmltools::as.tags(x, ...)))
+  }
+  tryCatch(
+    {
+      print(htmltools::as.tags(x, ...), browse = view, ...)
+    },
+    error = function(e) {
+      cli::cli_warn(
+        c(
+          "!" = "HTML preview failed; showing the structural summary instead.",
+          "i" = conditionMessage(e)
+        )
+      )
+      .figure_spec_print_cli(x)
+    }
+  )
+  invisible(x)
+}
+
+.figure_spec_print_cli <- function(x) {
+  cli::cli_h3("{.cls figure_spec}")
+  np <- length(x@plots)
+  cli::cli_text("Source: {.val {x@source_kind}} ({np} page{?s})")
+
+  n_titles <- length(x@titles)
+  if (n_titles > 0L) {
+    cli::cli_text("Titles ({n_titles}):")
+    for (i in seq_len(n_titles)) {
+      t <- .strip_inline_marker(x@titles[[i]])
+      if (nchar(t) > 60L) {
+        t <- paste0(substr(t, 1L, 57L), "...")
+      }
+      cli::cli_text("  {i}. {.val {t}}")
+    }
+  }
+  if (length(x@footnotes) > 0L) {
+    cli::cli_text("Footnotes: {length(x@footnotes)} line{?s}")
+  }
+  cli::cli_text(
+    "Placement: halign={.val {x@halign}}, valign={.val {x@valign}}"
+  )
+  if (is_preset_spec(x@preset)) {
+    bits <- .preset_diff_summary(x@preset)
+    cli::cli_text(
+      "Preset: {if (length(bits)) paste(bits, collapse = '; ') else 'defaults'}"
+    )
+  }
+  invisible(x)
+}
+
+# nocov start
+S7::method(print, figure_spec) <- function(x, ...) {
+  .figure_spec_print(x, ...)
 }
 # nocov end

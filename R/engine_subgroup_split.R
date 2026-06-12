@@ -55,6 +55,13 @@ engine_subgroup_split <- function(spec) {
   combos <- .subgroup_combos(data, by_cols)
 
   total <- nrow(combos)
+  if (total == 0L) {
+    # No observed value combinations (zero-row data under a subgroup):
+    # there are no groups to band. Fall back to a single runtime-less
+    # entry so the resolver renders the empty-state placeholder once,
+    # with no subgroup banner (there is no group value to name).
+    return(list(list(spec = spec, runtime = NULL)))
+  }
   out <- vector("list", total)
 
   for (i in seq_len(total)) {

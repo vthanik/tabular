@@ -61,7 +61,11 @@
 # `emit()` via the backend registry. Returns the file path
 # invisibly.
 backend_latex <- function(grid, file) {
-  lines <- .render_latex_doc(grid)
+  lines <- if (identical(grid@metadata$content_type, "figure")) {
+    .render_latex_figure(grid, file)
+  } else {
+    .render_latex_doc(grid)
+  }
   writeLines(lines, file, useBytes = FALSE)
   invisible(file)
 }
@@ -108,6 +112,105 @@ backend_latex <- function(grid, file) {
   c(preamble, begin, unlist(body, use.names = FALSE), end)
 }
 
+# ---------------------------------------------------------------------
+# Figure rendering (metadata$content_type == "figure")
+# ---------------------------------------------------------------------
+
+# Compose a figure document: the same preamble (graphicx + fancyhdr page
+# chrome) as a table, then one page per plot with the title block, the
+# `\includegraphics` of an image SIDECAR written next to the `.tex`, and
+# the footnote block. The image rides a fixed-height `minipage` whose inner
+# vertical position (t/c/b) carries valign and whose `\centering` family
+# carries halign. `\clearpage` separates pages. Writes the sidecars as a
+# side effect (PDF compiles them from the same temp dir; a `.tex` emit
+# keeps them next to the file).
+.render_latex_figure <- function(grid, file) {
+  meta <- grid@metadata
+  pages <- grid@pages
+  cs <- meta$chrome_style %||% chrome_style()
+  preamble <- .latex_preamble(
+    preset = meta$preset,
+    pagehead_ast = meta$pagehead_ast,
+    pagefoot_ast = meta$pagefoot_ast,
+    border_color_defs = .latex_border_color_definitions(meta),
+    cs = cs
+  )
+
+  stem <- tools::file_path_sans_ext(basename(file))
+  out_dir <- dirname(file)
+  sidecars <- character(0)
+
+  body <- list()
+  for (i in seq_along(pages)) {
+    pg <- pages[[i]]
+    if (i > 1L) {
+      body[[length(body) + 1L]] <- "\\clearpage"
+    }
+    sidecar_name <- sprintf("%s-fig%d.%s", stem, i, pg$image_ext)
+    writeBin(pg$image_bytes, file.path(out_dir, sidecar_name))
+    sidecars <- c(sidecars, file.path(out_dir, sidecar_name))
+    body[[length(body) + 1L]] <- c(
+      .render_latex_title_block(pg$titles_ast, preset = meta$preset, cs = cs),
+      "",
+      .latex_figure_image_block(pg, sidecar_name),
+      "",
+      .render_latex_footnote_block(
+        pg$footnotes_ast,
+        preset = meta$preset,
+        cs = cs
+      )
+    )
+  }
+
+  .figure_inform_sidecars(out_dir, sidecars, ".tex")
+  c(
+    preamble,
+    "\\begin{document}",
+    unlist(body, use.names = FALSE),
+    "\\end{document}"
+  )
+}
+
+# One figure image as a fixed-height minipage holding `\includegraphics`.
+# minipage inner position (t/c/b) = valign; the alignment command
+# (\raggedright / \centering / \raggedleft) = halign. keepaspectratio is a
+# safety net (the drawn dims already match the image aspect).
+.latex_figure_image_block <- function(pg, sidecar_name) {
+  place <- pg$place %||% list(halign = "center", valign = "middle")
+  vpos <- switch(
+    place$valign %||% "middle",
+    top = "t",
+    middle = "c",
+    bottom = "b",
+    "c"
+  )
+  hcmd <- switch(
+    place$halign %||% "center",
+    left = "\\raggedright ",
+    center = "\\centering ",
+    right = "\\raggedleft ",
+    "\\centering "
+  )
+  box_in <- if (is.finite(place$height_in) && place$height_in > 0) {
+    place$height_in
+  } else {
+    pg$draw_h_in
+  }
+  inc <- sprintf(
+    "\\includegraphics[width=%.2fin,height=%.2fin,keepaspectratio]{%s}",
+    pg$draw_w_in,
+    pg$draw_h_in,
+    sidecar_name
+  )
+  sprintf(
+    "{\\noindent\\begin{minipage}[c][%.2fin][%s]{\\linewidth}%s%s\\end{minipage}}",
+    box_in,
+    vpos,
+    hcmd,
+    inc
+  )
+}
+
 # Render the LaTeX skeleton for a spec whose grid has zero pages
 # (empty data + no body content). Titles + footnotes still
 # appear; the table block is replaced with an `\emph{(no rows)}`
@@ -115,10 +218,23 @@ backend_latex <- function(grid, file) {
 .render_latex_empty <- function(grid) {
   meta <- grid@metadata
   cs <- meta$chrome_style %||% chrome_style()
+  halign <- meta$empty_place$halign %||% "center"
+  hcmd <- switch(
+    halign,
+    left = "\\raggedright ",
+    center = "\\centering ",
+    right = "\\raggedleft ",
+    "\\centering "
+  )
+  msg <- if (is.null(meta$empty_text_ast)) {
+    "No data available to report"
+  } else {
+    .render_latex_inline(meta$empty_text_ast)
+  }
   c(
     .render_latex_title_block(meta$titles_ast, preset = meta$preset, cs = cs),
     "",
-    "\\emph{(no rows)}",
+    paste0("{", hcmd, msg, "}"),
     "",
     .render_latex_footnote_block(
       meta$footnotes_ast,
@@ -698,18 +814,32 @@ backend_latex <- function(grid, file) {
   )
   # Banner block (blank, banner, blank) leads the rowhead, then the band.
   header_rules <- c(banner_block, band_rows, label_row)
-  body_rows <- .render_latex_body_rows(
-    src$cells_text,
-    col_names_vis = col_names_vis,
-    cells_style = src$cells_style,
-    cells_indent = src$cells_indent,
-    is_header_row = src$is_header_row,
-    is_blank_row = src$is_blank_row,
-    host_col = src$host_col,
-    keep_with_next = src$keep_with_next,
-    cols = cols,
-    preset = meta$preset
-  )
+  body_rows <- if (isTRUE(page$is_empty_page)) {
+    # Zero-row page: header band above is intact; the body is one
+    # full-span message placed in the content-box (see
+    # `.render_latex_empty_row`). Empty `col_names_vis` (every column
+    # hidden) yields character(), the rare degenerate the zero-page
+    # `.render_latex_empty` path covers instead.
+    .render_latex_empty_row(
+      meta$empty_text_ast,
+      meta$empty_place,
+      length(col_names_vis),
+      meta$preset
+    )
+  } else {
+    .render_latex_body_rows(
+      src$cells_text,
+      col_names_vis = col_names_vis,
+      cells_style = src$cells_style,
+      cells_indent = src$cells_indent,
+      is_header_row = src$is_header_row,
+      is_blank_row = src$is_blank_row,
+      host_col = src$host_col,
+      keep_with_next = src$keep_with_next,
+      cols = cols,
+      preset = meta$preset
+    )
+  }
 
   # Table-level row baseline from cells_style[r,c]@valign
   # (cascade default top). Per-cell overrides emit `\SetCell{...}`.
@@ -992,6 +1122,67 @@ backend_latex <- function(grid, file) {
     )
   }
   row
+}
+
+# Full-span empty-state message row for a zero-row page. A single
+# `\SetCell[c=N]` cell holds a fixed-height `minipage` whose inner
+# vertical position (`t`/`c`/`b` from empty_valign) centres the message
+# in the body content-box -- exact valign on the paged LaTeX/PDF medium.
+# The horizontal anchor (empty_halign) rides a `\centering` /
+# `\raggedright` / `\raggedleft` inside the minipage.
+.render_latex_empty_row <- function(
+  empty_text_ast,
+  empty_place,
+  ncols,
+  preset = NULL
+) {
+  if (ncols < 1L) {
+    return(character())
+  }
+  halign <- empty_place$halign %||% "center"
+  valign <- empty_place$valign %||% "middle"
+  box_in <- if (
+    !is.null(empty_place) &&
+      is.finite(empty_place$height_in) &&
+      empty_place$height_in > 0
+  ) {
+    empty_place$height_in
+  } else {
+    NA_real_
+  }
+  vpos <- switch(valign, top = "t", middle = "c", bottom = "b", "c")
+  hcmd <- switch(
+    halign,
+    left = "\\raggedright ",
+    center = "\\centering ",
+    right = "\\raggedleft ",
+    "\\centering "
+  )
+  msg <- if (is.null(empty_text_ast)) {
+    "No data available to report"
+  } else {
+    .render_latex_inline(empty_text_ast)
+  }
+  inner <- if (!is.na(box_in)) {
+    sprintf(
+      "{\\begin{minipage}[c][%.2fin][%s]{\\linewidth}%s%s\\end{minipage}}",
+      box_in,
+      vpos,
+      hcmd,
+      msg
+    )
+  } else {
+    paste0("{", hcmd, msg, "}")
+  }
+  if (ncols == 1L) {
+    sprintf("\\SetCell{halign=c} %s \\\\", inner)
+  } else {
+    paste0(
+      sprintf("\\SetCell[c=%d]{c} %s", ncols, inner),
+      paste(rep(" &", ncols - 1L), collapse = ""),
+      " \\\\"
+    )
+  }
 }
 
 # Resolve a chrome border region into a tabularray border-spec

@@ -7,10 +7,17 @@
 preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
 }
 \arguments{
-\item{.spec}{\emph{The \code{tabular_spec} to attach the preset to.}
-\verb{<tabular_spec>: required}. Dot-prefixed so R's partial argument
-matching cannot accidentally bind a knob name in \code{...} to the
-spec slot.}
+\item{.spec}{\emph{The spec to attach the preset to.}
+\verb{<tabular_spec | figure_spec>: required}. Dot-prefixed so R's
+partial argument matching cannot accidentally bind a knob name in
+\code{...} to the spec slot.
+
+\strong{Note:} a \code{\link[=figure]{figure()}} spec accepts only the page-geometry knobs
+(\code{paper_size}, \code{orientation}, \code{margins}, \code{font_size}, \code{font_family},
+\code{pagehead}, \code{pagefoot}, ...). The cosmetic surface knobs
+(\code{alignment} / \code{rules} / \code{fonts} / \code{colors} / \code{padding}) and the
+\code{.template} / \code{.style} style templates target table cells a figure
+does not have, and are rejected.}
 
 \item{...}{\emph{Named preset knobs.} Any subset of the preset knobs the
 \code{preset_spec} class carries. Knob values are validated against
@@ -244,6 +251,35 @@ responsive — the table always fills its parent and
 columns wrap when the viewport narrows, regardless of
 \code{width_mode}. Per-column widths (\code{col_spec(width)}) emit
 verbatim into the HTML colgroup per the gt convention.
+\item \strong{\code{empty_halign}} / \strong{\code{empty_valign}} — placement of the
+empty-state message within the body content-box when a spec
+resolves to zero data rows. The message \emph{wording} lives on the
+spec (\code{tabular(empty_text = ...)}, default
+\code{"No data available to report"}); these two knobs are the
+cosmetic \emph{placement}, so they ride the preset and cascade with
+the house style. \verb{<character(1)>} each, defaulting to
+centre x middle:
+\itemize{
+\item \strong{\code{empty_halign}} — \code{"left"}, \code{"center"} \emph{(default)}, or
+\code{"right"}. Horizontal anchor of the message line.
+\item \strong{\code{empty_valign}} — \code{"top"}, \code{"middle"} \emph{(default)}, or
+\code{"bottom"}. Vertical anchor within the content-box — the
+region between the column-header rule and the footnote rule.
+}
+
+\strong{Interaction:} valign is exact on the paged backends
+(RTF / PDF / DOCX), which size the host cell to the content-box
+height; HTML approximates it with a min-height flex box, and
+Markdown, having no page geometry, treats valign as a no-op.
+When a column structure is present the column-header band still
+renders above the message; with every column hidden, only the
+page chrome and the centred message remain.
+
+\strong{Note:} this is the symmetric \code{halign} / \code{valign} placement
+pair, shared with \code{\link[=style]{style()}} and the other \verb{*_halign} /
+\verb{*_valign} alignment keys. It is deliberately distinct from
+\code{col_spec(align = ...)}, whose extra \code{"decimal"} mode makes it a
+column-content knob rather than a pure two-axis anchor.
 \item \strong{\code{whitespace}} — how significant ASCII spaces in labels and
 cells render. \verb{<character(1)>}. One of:
 \itemize{

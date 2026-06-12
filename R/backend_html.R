@@ -76,6 +76,9 @@ backend_html <- function(grid, file) {
 # them), footnotes (once), chrome footer. Returns a character
 # vector of lines ready for `writeLines()`. Pure — no I/O.
 .render_html_grid <- function(grid) {
+  if (identical(grid@metadata$content_type, "figure")) {
+    return(.render_html_figure(grid))
+  }
   pages <- grid@pages
   total <- length(pages)
   meta <- grid@metadata
@@ -231,11 +234,24 @@ backend_html <- function(grid, file) {
     c(head, doc_body, "</body>", "</html>")
   }
 
-  if (total == 0L) {
+  # Empty-state. Both shapes carry one message (`meta$empty_text_ast`,
+  # default "No data available to report"): a zero-row page WITH visible
+  # columns rides a full-span message row inside the table (so the
+  # column-header band still renders) and is handled in the normal path
+  # below; a page with NO column structure (a hand-built zero-page grid,
+  # or every column hidden) stands alone under the titles here. The
+  # `total == 0L` short-circuit guards the `pages[[1L]]` access.
+  empty_no_cols <- total == 0L ||
+    (isTRUE(pages[[1L]]$is_empty_page) &&
+      length(pages[[1L]]$col_names) == 0L)
+  if (empty_no_cols) {
     body_inner <- c(
       content_open,
       title_block,
-      "<p class=\"tabular-empty\">(no rows)</p>",
+      sprintf(
+        "<p class=\"tabular-empty\">%s</p>",
+        .html_empty_message(meta$empty_text_ast, preset)
+      ),
       footnote_block,
       "</figure>"
     )
@@ -271,6 +287,127 @@ backend_html <- function(grid, file) {
     "</figure>"
   )
   assemble(body_inner)
+}
+
+# ---------------------------------------------------------------------
+# Figure rendering (metadata$content_type == "figure")
+# ---------------------------------------------------------------------
+
+# Compose a figure document: the same self-contained HTML shell + on-screen
+# chrome + title / footnote blocks as a table, but each page emits a
+# data-URI `<img>` placed in a flex content box (halign -> justify-content,
+# valign -> align-items). HTML is continuous, so a multi-page figure stacks
+# one `<figure>` per page with a print-only page-break marker between them.
+.render_html_figure <- function(grid) {
+  meta <- grid@metadata
+  pages <- grid@pages
+  preset <- meta$preset
+  cs <- meta$chrome_style %||% chrome_style()
+  doc_title <- .html_doc_title(meta)
+
+  chrome_mode <- if (is_preset_spec(preset)) {
+    preset@chrome_onscreen
+  } else {
+    "auto"
+  }
+  total_for_chrome <- max(length(pages), 1L)
+  onscreen_header <- .html_render_chrome_band(
+    meta$pagehead_ast,
+    zone = "header",
+    total_pages = total_for_chrome,
+    chrome_mode = chrome_mode,
+    cs = cs
+  )
+  onscreen_footer <- .html_render_chrome_band(
+    meta$pagefoot_ast,
+    zone = "footer",
+    total_pages = total_for_chrome,
+    chrome_mode = chrome_mode,
+    cs = cs
+  )
+
+  n <- length(pages)
+  sections <- lapply(seq_len(n), function(i) {
+    pg <- pages[[i]]
+    titles <- .render_html_title_block(
+      pg$titles_ast,
+      preset = preset,
+      cs = cs
+    )
+    title_block <- if (length(titles) > 0L) {
+      c("<figcaption class=\"tabular-caption\">", titles, "</figcaption>")
+    } else {
+      character()
+    }
+    foot <- .render_html_footnote_block(
+      pg$footnotes_ast,
+      preset = preset,
+      cs = cs
+    )
+    brk <- if (i < n) "<div class=\"tabular-page-break-row\"></div>" else NULL
+    c(
+      "<figure class=\"tabular-content\">",
+      title_block,
+      .html_figure_image(pg),
+      foot,
+      "</figure>",
+      brk
+    )
+  })
+
+  body_inner <- unlist(sections, use.names = FALSE)
+  doc_body <- c(onscreen_header, body_inner, onscreen_footer)
+  scope_id <- paste0("tabular-", substr(rlang::hash(doc_body), 1L, 10L))
+  head <- c(
+    "<!DOCTYPE html>",
+    "<html lang=\"en\">",
+    "<head>",
+    "<meta charset=\"utf-8\">",
+    paste0("<title>", .html_escape(doc_title), "</title>"),
+    .html_inline_style(
+      preset = preset,
+      pagehead_ast = meta$pagehead_ast,
+      pagefoot_ast = meta$pagefoot_ast,
+      cs = cs,
+      body_borders = list(),
+      scope_id = scope_id
+    ),
+    "</head>",
+    sprintf("<body class=\"tabular-doc\" id=\"%s\">", scope_id)
+  )
+  c(head, doc_body, "</body>", "</html>")
+}
+
+# One figure page's image as a responsive data-URI `<img>`. HTML is a
+# continuous, responsive medium: the image renders at its drawn width but
+# is capped to the container (`max-width: 100%`), so a full-page-width
+# figure scales down to the viewport instead of overflowing. No fixed box
+# height -- the figure is contained to its own space rather than stretched
+# over the page content-box. `justify-content` carries `halign`; valign is
+# a no-op here (only the paged backends place a figure vertically; see
+# `figure()` docs).
+.html_figure_image <- function(pg) {
+  place <- pg$place %||% list(halign = "center")
+  mime <- if (identical(pg$image_ext, "jpeg")) "image/jpeg" else "image/png"
+  b64 <- .base64_encode_raw(pg$image_bytes)
+  justify <- .html_flex_justify(place$halign %||% "center")
+  c(
+    sprintf(
+      "<div class=\"tabular-figure\" style=\"display:flex; justify-content:%s;\">",
+      justify
+    ),
+    sprintf(
+      "<img alt=\"Figure\" src=\"data:%s;base64,%s\" style=\"width:%.2fin; max-width:100%%; height:auto;\">",
+      mime,
+      b64,
+      pg$draw_w_in
+    ),
+    "</div>"
+  )
+}
+
+.html_flex_justify <- function(halign) {
+  switch(halign, left = "flex-start", right = "flex-end", "center")
 }
 
 # Render a semantic HTML5 page band (`<header>` or `<footer>`) for
@@ -649,12 +786,59 @@ backend_html <- function(grid, file) {
         col_specs = col_specs,
         preset = preset,
         cs = cs,
-        headers = meta$headers
+        headers = meta$headers,
+        empty_text_ast = meta$empty_text_ast,
+        empty_place = meta$empty_place
       )
     )
   }
   out <- c(out, "<tbody>", body_lines, "</tbody>", "</table>", "</div>")
   out
+}
+
+# Render the empty-state message to inline HTML. `empty_text_ast` is the
+# parsed `tabular_spec@empty_text`; a NULL (hand-built grid without the
+# metadata) falls back to the canonical default text.
+.html_empty_message <- function(empty_text_ast, preset = NULL) {
+  if (is.null(empty_text_ast)) {
+    return(.html_escape("No data available to report"))
+  }
+  .render_html_inline(empty_text_ast, preserve = .preset_ws_preserve(preset))
+}
+
+# Full-span empty-state message row for a zero-row page that still has a
+# column structure. The host cell's `height` is the body content-box, so
+# the native `vertical-align` centres the message (top/middle/bottom from
+# `empty_valign`); `text-align` carries `empty_halign`. Reuses the
+# `.tabular-empty` muted style shared with the no-column standalone block.
+.render_html_empty_row <- function(
+  empty_text_ast,
+  empty_place,
+  ncols,
+  preset
+) {
+  halign <- empty_place$halign %||% "center"
+  valign <- empty_place$valign %||% "middle"
+  height_css <- if (
+    !is.null(empty_place) &&
+      is.finite(empty_place$height_in) &&
+      empty_place$height_in > 0
+  ) {
+    sprintf("height:%.2fin;", empty_place$height_in)
+  } else {
+    ""
+  }
+  sprintf(
+    paste0(
+      "<tr><td colspan=\"%d\" class=\"tabular-empty\" ",
+      "style=\"%svertical-align:%s;text-align:%s;\">%s</td></tr>"
+    ),
+    ncols,
+    height_css,
+    valign,
+    halign,
+    .html_empty_message(empty_text_ast, preset)
+  )
 }
 
 # Render one page slice's body `<tr>` lines: an optional subgroup
@@ -666,7 +850,9 @@ backend_html <- function(grid, file) {
   col_specs,
   preset = NULL,
   cs = NULL,
-  headers = NULL
+  headers = NULL,
+  empty_text_ast = NULL,
+  empty_place = NULL
 ) {
   out <- character()
   has_bign <- !is.null(page$subgroup_bign) && length(page$subgroup_bign) > 0L
@@ -699,6 +885,25 @@ backend_html <- function(grid, file) {
   cells_style <- page$cells_style
   nrow_data <- nrow(cells_text)
   if (nrow_data == 0L) {
+    # Empty-state placeholder: a zero-row page renders the chrome + the
+    # column-header band (the `<thead>` emitted by `.render_html_table`)
+    # + one full-span message row here. The host cell's `height` is the
+    # body content-box, so the native table-cell `vertical-align`
+    # (top/middle/bottom maps 1:1 to `empty_valign`) centres the message
+    # exactly; `text-align` carries `empty_halign`. A non-`is_empty_page`
+    # zero-row page (e.g. an all-blank synthetic slice) keeps the historic
+    # empty return.
+    if (isTRUE(page$is_empty_page) && length(col_names_visible) > 0L) {
+      out <- c(
+        out,
+        .render_html_empty_row(
+          empty_text_ast = empty_text_ast,
+          empty_place = empty_place,
+          ncols = length(col_names_visible),
+          preset = preset
+        )
+      )
+    }
     return(out)
   }
   # Per-cell indent depth comes from the engine sidecar (`col_spec@indent`

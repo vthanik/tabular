@@ -179,3 +179,19 @@ test_that("as_grid() with no subgroup returns single un-annotated grid", {
   expect_null(grid@pages[[1L]]$subgroup_line_ast)
   expect_null(grid@pages[[1L]]$subgroup_index)
 })
+
+test_that("zero-row data under a subgroup yields one runtime-less group", {
+  # Regression: an empty subgrouped spec used to crash .merge_subgroup_grids
+  # (sub_grids[[1L]] out of bounds) because there were zero observed groups.
+  spec <- tabular(data.frame(grp = character(0L), x = character(0L))) |>
+    cols(grp = col_spec(visible = FALSE)) |>
+    subgroup(by = "grp")
+  groups <- engine_subgroup_split(spec)
+  expect_length(groups, 1L)
+  expect_null(groups[[1L]]$runtime)
+  # End-to-end: resolves to a single empty page with no subgroup banner.
+  g <- as_grid(spec)
+  expect_length(g@pages, 1L)
+  expect_true(isTRUE(g@pages[[1L]]$is_empty_page))
+  expect_null(g@pages[[1L]]$subgroup_line_ast)
+})
