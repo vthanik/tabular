@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 300" font-family="'DM Sans', system-ui, sans-serif" role="img" aria-label="tabular pipeline. Upstream zone: patient-level data is aggregated by cards or cardx into a long ARD, then pivot_across widens it to a display-ready data frame. tabular zone: Build, Resolve and Emit turn that frame into RTF, PDF, HTML, LaTeX and DOCX.">
+  <defs>
+    <style>
+      .zoneA   { fill: #f9fafb; stroke: #e5e7eb; stroke-width: 1.5; }
+      .zoneB   { fill: #eff6ff; stroke: #dbeafe; stroke-width: 1.5; }
+      .zlblA   { font-size: 13px; fill: #6b7280; font-weight: 600; letter-spacing: .02em; }
+      .zlblB   { font-size: 13px; fill: #1e3a8a; font-weight: 700; letter-spacing: .02em; }
+      .phase   { fill: #ffffff; stroke: #3b82f6; stroke-width: 1.5; }
+      .phlbl   { font-size: 15px; fill: #1e3a8a; font-weight: 600; }
+      .phsub   { font-size: 11px; fill: #6b7280; font-family: 'DM Mono', ui-monospace, monospace; }
+      .data    { fill: #ffffff; stroke: #9ca3af; stroke-width: 1.5; }
+      .datalbl { font-size: 12px; fill: #374151; }
+      .datasub { font-size: 10.5px; fill: #9ca3af; font-family: 'DM Mono', ui-monospace, monospace; }
+      .fmt     { fill: #ffffff; stroke: #d1d5db; }
+      .fmtlbl  { font-size: 12px; fill: #111827; font-weight: 600; }
+      .arrow   { stroke: #9ca3af; stroke-width: 1.6; fill: none; }
+      .verb    { font-size: 11px; fill: #1e3a8a; font-family: 'DM Mono', ui-monospace, monospace; }
+      .act     { font-size: 11px; fill: #6b7280; font-family: 'DM Mono', ui-monospace, monospace; }
+      .cap     { font-size: 11.5px; fill: #6b7280; }
+    </style>
+    <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <!-- ── zone backgrounds + group labels ─────────────────────────────── -->
+  <rect class="zoneA" x="14" y="128" width="492" height="104" rx="6"/>
+  <text class="zlblA" x="260" y="120" text-anchor="middle">data prep · cards / cardx · dplyr · SAS</text>
+
+  <rect class="zoneB" x="552" y="128" width="470" height="104" rx="6"/>
+  <text class="zlblB" x="787" y="120" text-anchor="middle">tabular</text>
+
+  <!-- ── upstream stages ─────────────────────────────────────────────── -->
+  <rect class="data" x="24" y="152" width="104" height="56" rx="2"/>
+  <text class="datalbl" x="76" y="176" text-anchor="middle">ADaM</text>
+  <text class="datasub" x="76" y="194" text-anchor="middle">datasets</text>
+
+  <path class="arrow" d="M 128 180 L 200 180" marker-end="url(#ah)"/>
+  <text class="act" x="164" y="170" text-anchor="middle">aggregate</text>
+
+  <rect class="data" x="204" y="152" width="76" height="56" rx="2"/>
+  <text class="datalbl" x="242" y="176" text-anchor="middle">ARD</text>
+  <text class="datasub" x="242" y="194" text-anchor="middle">(long)</text>
+
+  <path class="arrow" d="M 280 180 L 388 180" marker-end="url(#ah)"/>
+  <text class="verb" x="334" y="170" text-anchor="middle">pivot_across()</text>
+
+  <rect class="data" x="392" y="152" width="104" height="56" rx="2"/>
+  <text class="datalbl" x="444" y="176" text-anchor="middle">wide</text>
+  <text class="datasub" x="444" y="194" text-anchor="middle">data.frame</text>
+
+  <!-- crossing into tabular -->
+  <path class="arrow" d="M 496 180 L 564 180" marker-end="url(#ah)"/>
+
+  <!-- ── tabular phases ──────────────────────────────────────────────── -->
+  <rect class="phase" x="566" y="144" width="118" height="72" rx="2"/>
+  <text class="phlbl" x="625" y="176" text-anchor="middle">Build</text>
+  <text class="phsub" x="625" y="196" text-anchor="middle">tabular()|&gt;cols()</text>
+
+  <path class="arrow" d="M 684 180 L 712 180" marker-end="url(#ah)"/>
+
+  <rect class="phase" x="714" y="144" width="118" height="72" rx="2"/>
+  <text class="phlbl" x="773" y="176" text-anchor="middle">Resolve</text>
+  <text class="phsub" x="773" y="196" text-anchor="middle">engine &#8594; grid</text>
+
+  <path class="arrow" d="M 832 180 L 860 180" marker-end="url(#ah)"/>
+
+  <rect class="phase" x="862" y="144" width="118" height="72" rx="2"/>
+  <text class="phlbl" x="921" y="176" text-anchor="middle">Emit</text>
+  <text class="phsub" x="921" y="196" text-anchor="middle">emit(file)</text>
+
+  <!-- ── output formats ──────────────────────────────────────────────── -->
+  <g>
+    <rect class="fmt" x="1040" y="74"  width="86" height="32"/><text class="fmtlbl" x="1083" y="95"  text-anchor="middle">RTF</text>
+    <rect class="fmt" x="1040" y="118" width="86" height="32"/><text class="fmtlbl" x="1083" y="139" text-anchor="middle">PDF</text>
+    <rect class="fmt" x="1040" y="162" width="86" height="32"/><text class="fmtlbl" x="1083" y="183" text-anchor="middle">HTML</text>
+    <rect class="fmt" x="1040" y="206" width="86" height="32"/><text class="fmtlbl" x="1083" y="227" text-anchor="middle">LaTeX</text>
+    <rect class="fmt" x="1040" y="250" width="86" height="32"/><text class="fmtlbl" x="1083" y="271" text-anchor="middle">DOCX</text>
+  </g>
+
+  <!-- fan-out arrows from Emit -->
+  <path class="arrow" d="M 980 172 C 1008 130, 1014 96,  1038 90"  marker-end="url(#ah)"/>
+  <path class="arrow" d="M 980 176 C 1008 150, 1014 134, 1038 134" marker-end="url(#ah)"/>
+  <path class="arrow" d="M 980 180 L 1038 178"                     marker-end="url(#ah)"/>
+  <path class="arrow" d="M 980 184 C 1008 210, 1014 222, 1038 222" marker-end="url(#ah)"/>
+  <path class="arrow" d="M 980 188 C 1008 230, 1014 266, 1038 266" marker-end="url(#ah)"/>
+
+  <!-- ── captions ────────────────────────────────────────────────────── -->
+  <text class="cap" x="274" y="252" text-anchor="middle">one input row = one display row — tabular never aggregates</text>
+  <text class="cap" x="787" y="252" text-anchor="middle">immutable S7 spec, one verb per step &#183; native emission, no JVM</text>
+</svg>

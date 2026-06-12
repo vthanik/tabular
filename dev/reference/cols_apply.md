@@ -1,0 +1,192 @@
+# Apply one column spec to many columns
+
+Field-merge a single
+[`col_spec()`](https://vthanik.github.io/tabular/dev/reference/col_spec.md)
+onto every column matched by name or by a predicate. The vectorized
+companion to
+[`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md) for
+the common case of a variable number of treatment-arm columns that all
+share the same display rule (decimal alignment, a numeric format), so
+you avoid [`do.call()`](https://rdrr.io/r/base/do.call.html) / `!!!`
+splicing one named argument per arm.
+
+## Usage
+
+``` r
+cols_apply(.spec, .cols, .col_spec)
+```
+
+## Arguments
+
+- .spec:
+
+  *The `tabular_spec` to extend.* `<tabular_spec>: required`.
+  Dot-prefixed so partial matching cannot bind a user name in another
+  slot.
+
+- .cols:
+
+  *Columns to match.* `<character | function>: required`. Either a
+  character vector of input column names in `.spec@data`, or a predicate
+  `function(names) -> logical` evaluated against `names(.spec@data)`
+  (one logical per column, same length).
+
+  **Restriction:** Named columns must exist in `.spec@data`. A predicate
+  must return a logical vector the length of `names(.spec@data)`.
+  **Tip:** No tidyselect helpers ship; pass a base vector
+  (`grep("^ARM", names(df), value = TRUE)`) or a predicate
+  (`\(nm) startsWith(nm, "ARM")`).
+
+- .col_spec:
+
+  *The spec to field-merge onto every match.* `<col_spec>: required`.
+  Built with
+  [`col_spec()`](https://vthanik.github.io/tabular/dev/reference/col_spec.md).
+
+## Value
+
+*The updated `tabular_spec`.* Continue chaining with
+[`headers()`](https://vthanik.github.io/tabular/dev/reference/headers.md),
+[`sort_rows()`](https://vthanik.github.io/tabular/dev/reference/sort_rows.md),
+[`style()`](https://vthanik.github.io/tabular/dev/reference/style.md).
+
+## Details
+
+**Field-merge, not replace.** `cols_apply()` reuses the same
+field-by-field merge as repeated
+[`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
+calls: a non-default field on `.col_spec` overrides; a default-valued
+field leaves any prior attribute on the matched column intact. Set the
+shared rule across arms first, then refine an individual arm with a
+later
+[`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md) call
+(or the reverse).
+
+**Per-column label token.** A `label` that references `{.name}` (or its
+alias `{.col}`) inside a `{expr}` is resolved *per matched column*, with
+`.name` and `.col` both bound to that column's name. This makes a
+variable-N arm header a single declarative call instead of a
+hand-written loop. The rest of the `{expr}` evaluates in the calling
+environment, so a per-arm BigN looked up from a named vector works
+directly:
+
+    n <- c(placebo = 86, drug_50 = 84, drug_100 = 84)
+    cols_apply(
+      spec, c("placebo", "drug_50", "drug_100"),
+      col_spec(label = "{.name}\n(N={n[.name]})", align = "decimal")
+    )
+    # placebo  -> "placebo\n(N=86)" ; drug_50 -> "drug_50\n(N=84)" ; ...
+
+The token is a plain-string feature; a label wrapped in
+[`md()`](https://vthanik.github.io/tabular/dev/reference/md.md) /
+[`html()`](https://vthanik.github.io/tabular/dev/reference/html.md) is
+parsed eagerly and does not interpolate. A failing token expression
+aborts naming the offending column.
+
+**`width` merge.** `width`'s default sentinel for the merge is `"auto"`:
+a later
+[`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md) /
+`cols_apply()` call carrying the default `width = "auto"` leaves a
+previously pinned width intact (only an explicit non-`"auto"` width
+overrides). Apply a shared width last to broadcast it across arms.
+
+## See also
+
+**Companion verbs:**
+[`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
+attaches per-column specs by name;
+[`col_spec()`](https://vthanik.github.io/tabular/dev/reference/col_spec.md)
+builds the spec.
+
+**Sibling build verbs:**
+[`headers()`](https://vthanik.github.io/tabular/dev/reference/headers.md),
+[`sort_rows()`](https://vthanik.github.io/tabular/dev/reference/sort_rows.md),
+[`style()`](https://vthanik.github.io/tabular/dev/reference/style.md),
+[`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md),
+[`preset()`](https://vthanik.github.io/tabular/dev/reference/preset.md).
+
+## Examples
+
+``` r
+# ---- Example 1: Decimal-align every arm column by name vector ----
+#
+# Demographics table whose treatment-arm columns are selected by a
+# name vector (`grep()` against the data) and given one shared
+# decimal-alignment spec, while the two row-label columns keep
+# their own roles set with `cols()`.
+arm_cols <- grep("^placebo$|^drug_|^Total$", names(cdisc_saf_demo), value = TRUE)
+
+tabular(
+  cdisc_saf_demo,
+  titles = c(
+    "Table 14.1.1",
+    "Demographics and Baseline Characteristics",
+    "Safety Population"
+  )
+) |>
+  cols(
+    variable   = col_spec(usage = "group", label = "Parameter"),
+    stat_label = col_spec(label = "Statistic")
+  ) |>
+  cols_apply(arm_cols, col_spec(align = "decimal")) |>
+  sort_rows(by = c("variable", "stat_label"))
+
+#tabular-fadfa62d9c { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-fadfa62d9c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-fadfa62d9c p { line-height: inherit; }
+#tabular-fadfa62d9c .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-fadfa62d9c .tabular-caption { margin: 0; padding: 0; }
+#tabular-fadfa62d9c .tabular-pad { margin: 0; line-height: 1; }
+#tabular-fadfa62d9c .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-fadfa62d9c .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-fadfa62d9c .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-fadfa62d9c .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-fadfa62d9c .tabular-table th, #tabular-fadfa62d9c .tabular-table td { padding: .18rem .6rem; }
+#tabular-fadfa62d9c .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-fadfa62d9c .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-fadfa62d9c .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-fadfa62d9c .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-fadfa62d9c .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-fadfa62d9c .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-fadfa62d9c .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-fadfa62d9c .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-fadfa62d9c .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-fadfa62d9c .tabular-table tbody tr td { border-top: none; }
+#tabular-fadfa62d9c .tabular-band { text-align: center; }
+#tabular-fadfa62d9c .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-fadfa62d9c .tabular-subgroup-label { font-weight: 600; }
+#tabular-fadfa62d9c .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-fadfa62d9c .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-fadfa62d9c .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-fadfa62d9c .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-fadfa62d9c .text-left { text-align: left; }
+#tabular-fadfa62d9c .text-center { text-align: center; }
+#tabular-fadfa62d9c .text-right { text-align: right; }
+#tabular-fadfa62d9c .tabular-table thead th.text-left { text-align: left; }
+#tabular-fadfa62d9c .tabular-table thead th.text-center { text-align: center; }
+#tabular-fadfa62d9c .tabular-table thead th.text-right { text-align: right; }
+#tabular-fadfa62d9c .valign-top { vertical-align: top; }
+#tabular-fadfa62d9c .valign-middle { vertical-align: middle; }
+#tabular-fadfa62d9c .valign-bottom { vertical-align: bottom; }
+#tabular-fadfa62d9c .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-fadfa62d9c .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-fadfa62d9c .tabular-page-break-row { display: none; }
+#tabular-fadfa62d9c { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-fadfa62d9c .tabular-page-header, #tabular-fadfa62d9c .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-fadfa62d9c .tabular-page-header { margin-bottom: 1rem; }
+#tabular-fadfa62d9c .tabular-page-footer { margin-top: 1rem; }
+#tabular-fadfa62d9c .tabular-page-header-left, #tabular-fadfa62d9c .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-fadfa62d9c .tabular-page-header-center, #tabular-fadfa62d9c .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-fadfa62d9c .tabular-page-header-right, #tabular-fadfa62d9c .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-fadfa62d9c .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-fadfa62d9c .tabular-table tr { page-break-inside: avoid; } #tabular-fadfa62d9c .tabular-page-header, #tabular-fadfa62d9c .tabular-page-footer { display: none; } #tabular-fadfa62d9c .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-fadfa62d9c .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-fadfa62d9c .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+
+ 
+Table 14.1.1
+Demographics and Baseline Characteristics
+Safety Population
+ 
+
+
+
+Statistic
+```

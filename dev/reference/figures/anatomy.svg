@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 660" font-family="'DM Sans', system-ui, sans-serif" role="img" aria-label="Anatomy of a clinical table page mapped to tabular verbs: header section from preset(), title lines from titles, data section from cols(), headers() and subgroup(), footnote lines from footnotes and footnote().">
+  <defs>
+    <style>
+      .box    { fill: #ffffff; stroke: #c0504d; stroke-width: 1.6; }
+      .mono   { font-family: 'DM Mono', ui-monospace, 'Courier New', monospace; font-size: 14px; fill: #1f2937; }
+      .blank  { font-family: 'DM Mono', ui-monospace, monospace; font-size: 13px; fill: #9ca3af; }
+      .tag    { fill: #ebf1de; stroke: #77933c; stroke-width: 1.2; }
+      .taglbl { font-size: 14px; fill: #4f6228; font-weight: 600; }
+      .tagverb{ font-family: 'DM Mono', ui-monospace, monospace; font-size: 11.5px; fill: #6f8f33; }
+      .tail   { fill: #ebf1de; stroke: #77933c; stroke-width: 1.2; }
+      .rule   { stroke: #1f2937; stroke-width: 1; }
+      .title  { font-size: 18px; fill: #111827; font-weight: 700; }
+      .ban    { font-family: 'DM Mono', ui-monospace, monospace; font-size: 11.5px; fill: #6f8f33; }
+    </style>
+  </defs>
+
+  <text class="title" x="40" y="36">Anatomy of a clinical table page</text>
+
+  <!-- ── 1. HEADER SECTION ───────────────────────────────────────────── -->
+  <rect class="box" x="40" y="78" width="720" height="40"/>
+  <text class="mono" x="54" y="103">Protocol: XYZ-123</text>
+  <text class="mono" x="400" y="103" text-anchor="middle">Draft</text>
+  <text class="mono" x="748" y="103" text-anchor="end">Page xx of yy</text>
+  <polygon class="tail" points="800,98 778,92 800,86"/>
+  <rect class="tag" x="800" y="75" width="216" height="46" rx="3"/>
+  <text class="taglbl" x="908" y="96"  text-anchor="middle">Header Section</text>
+  <text class="tagverb" x="908" y="113" text-anchor="middle">preset(pagehead/pagefoot)</text>
+
+  <text class="blank" x="400" y="140" text-anchor="middle">&lt;blank line&gt;</text>
+
+  <!-- ── 2. TITLE LINES ──────────────────────────────────────────────── -->
+  <rect class="box" x="40" y="154" width="720" height="110"/>
+  <text class="mono" x="400" y="180" text-anchor="middle">Table No.</text>
+  <text class="mono" x="400" y="204" text-anchor="middle">Primary Title</text>
+  <text class="mono" x="400" y="228" text-anchor="middle">Title 2</text>
+  <text class="mono" x="400" y="252" text-anchor="middle">Title X</text>
+  <polygon class="tail" points="800,200 778,194 800,188"/>
+  <rect class="tag" x="800" y="177" width="216" height="46" rx="3"/>
+  <text class="taglbl" x="908" y="198"  text-anchor="middle">Title Lines</text>
+  <text class="tagverb" x="908" y="215" text-anchor="middle">tabular(titles = ...)</text>
+
+  <text class="blank" x="400" y="286" text-anchor="middle">&lt;blank line&gt;</text>
+
+  <!-- ── 3. DATA SECTION ─────────────────────────────────────────────── -->
+  <rect class="box" x="40" y="300" width="720" height="196"/>
+  <text class="mono" x="54" y="324">Subgroup Variable Description: Subgroup Variable Value</text>
+  <text class="ban" x="748" y="324" text-anchor="end">&#8592; subgroup()</text>
+  <text class="blank" x="400" y="348" text-anchor="middle">&lt;blank line&gt;</text>
+  <line class="rule" x1="52" y1="362" x2="748" y2="362"/>
+  <text class="mono" x="400" y="386" text-anchor="middle">&lt;Column Headers&gt;</text>
+  <line class="rule" x1="52" y1="400" x2="748" y2="400"/>
+  <text class="mono" x="400" y="462" text-anchor="middle">&lt;data content&gt;</text>
+  <polygon class="tail" points="800,392 778,386 800,380"/>
+  <rect class="tag" x="800" y="369" width="216" height="46" rx="3"/>
+  <text class="taglbl" x="908" y="390"  text-anchor="middle">Data Section</text>
+  <text class="tagverb" x="908" y="407" text-anchor="middle">cols() · headers()</text>
+
+  <text class="blank" x="400" y="518" text-anchor="middle">&lt;blank line&gt;</text>
+
+  <!-- ── 4. FOOTNOTE LINES ───────────────────────────────────────────── -->
+  <rect class="box" x="40" y="532" width="720" height="104"/>
+  <line class="rule" x1="52" y1="540" x2="748" y2="540"/>
+  <text class="mono" x="54" y="560">Footnote 1</text>
+  <text class="mono" x="54" y="578">Footnote X</text>
+  <text class="mono" x="54" y="600">Program Path: &lt;program path&gt;</text>
+  <text class="mono" x="54" y="620">Program Name: &lt;program name&gt;</text>
+  <text class="mono" x="748" y="620" text-anchor="end">DDMMMYYYY:HH:MM:SS</text>
+  <polygon class="tail" points="800,575 778,569 800,563"/>
+  <rect class="tag" x="800" y="552" width="216" height="46" rx="3"/>
+  <text class="taglbl" x="908" y="573"  text-anchor="middle">Footnote Lines</text>
+  <text class="tagverb" x="908" y="590" text-anchor="middle">footnotes = · footnote()</text>
+</svg>

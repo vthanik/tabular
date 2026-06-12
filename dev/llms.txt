@@ -1,0 +1,450 @@
+# tabular
+
+**tabular** turns a pre-summarised data frame into a submission-grade
+clinical table and emits it natively to **RTF, PDF, HTML, LaTeX, and
+DOCX** — no Java, no LibreOffice, no Word automation. One short pipeline
+gives you decimal alignment via real font metrics, multi-level column
+headers, predicate-targeted styling, and group-aware pagination, built
+for CDISC ADaM workflows and FDA / EMA / PMDA submissions.
+
+It is the only R table package that pairs a **live HTML preview** with a
+**paginated print deliverable**: the same spec you eyeball in a notebook
+is the one that paginates into the RTF you ship.
+
+> **Scope.** `tabular` renders **tables and listings** today. Figure
+> (graph) output is **not yet supported** and is the focus of the next
+> release.
+
+## Installation
+
+Install the released version from CRAN:
+
+``` r
+
+install.packages("tabular")
+```
+
+Or the development version from GitHub:
+
+``` r
+
+# install.packages("pak")
+pak::pak("vthanik/tabular")
+# or
+remotes::install_github("vthanik/tabular")
+```
+
+R dependencies install automatically. The five backends differ in what
+*else* they need:
+
+| Backend | Extra requirement |
+|----|:---|
+| RTF, DOCX, HTML, Markdown | none — pure R, no Java, no `pandoc`, no Office |
+| LaTeX (`.tex` source) | none — `tabular` writes the fragment |
+| PDF | a TeX install (xelatex) with `tabularray` + `ninecolors` |
+
+PDF is the only backend that shells out. Install
+[`tinytex`](https://yihui.org/tinytex/) once per machine and `tabular`
+compiles with `xelatex` thereafter:
+
+``` r
+
+install.packages("tinytex")
+tinytex::install_tinytex() # one-time TeX setup
+tinytex::tlmgr_install(c("tabularray", "ninecolors", "siunitx", "tex-gyre"))
+```
+
+[`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
+reports which LaTeX packages are present and prints the exact
+`tlmgr_install()` line for anything missing; `check_fonts(spec)` does
+the same for the fonts a spec asks for, per backend.
+
+``` r
+
+tabular::check_latex()   # PDF readiness, with the install remedy
+```
+
+> **TeX Live on a managed OS.** If TeX Live came from the system package
+> manager (RHEL `dnf`, Debian/Ubuntu `apt`), its `tlmgr` is usually
+> locked and `tlmgr_install()` fails on permissions. Install user-space
+> TinyTeX alongside it rather than fighting the system copy — and never
+> reach for `--ignore-warning` to force it.
+
+## A table in one pipeline
+
+The pipeline starts from a pre-summarised wide data frame (one row in =
+one display row — `tabular` does no aggregation) and chains one verb per
+concern. Every verb returns an updated, immutable `tabular_spec`; the
+engine resolves it at render time.
+
+``` r
+
+library(tabular)
+
+# BigN denominators, keyed by arm
+n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
+
+# columns render in data-frame order, so put them in dose order first;
+# subset to Age / Sex / Race for a compact display
+keep <- c("Age (years)", "Sex, n (%)", "Race, n (%)")
+demo <- cdisc_saf_demo[
+  cdisc_saf_demo$variable %in% keep,
+  c("variable", "stat_label", "placebo", "drug_50", "drug_100", "Total")
+]
+
+tab <- tabular(
+  demo,
+  titles = c(
+    "Table 14.1.1",
+    "Demographic and Baseline Characteristics",
+    "Safety Population"
+  ),
+  footnotes = "Percentages are based on the number of subjects per treatment group."
+) |>
+  cols(
+    variable = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo = col_spec(
+      label = "Placebo (N={n['placebo']})",
+      align = "decimal"
+    ),
+    drug_50 = col_spec(
+      label = "Drug 50 (N={n['drug_50']})",
+      align = "decimal"
+    ),
+    drug_100 = col_spec(
+      label = "Drug 100 (N={n['drug_100']})",
+      align = "decimal"
+    ),
+    Total = col_spec(label = "Total (N={n['Total']})", align = "decimal")
+  )
+
+# render to any backend by file extension (or format = "...")
+path <- emit(tab, tempfile(fileext = ".rtf")) # submission deliverable
+```
+
+The same `tab` emits to every backend from the one spec. The table below
+is tabular’s own HTML render — the identical spec also produces RTF, a
+paginated PDF, a `tabularray` LaTeX fragment, and native OOXML `.docx`:
+
+![Demographic and baseline characteristics table rendered by tabular:
+decimal-aligned arm columns, a centred multi-line caption, and a single
+footnote.](reference/figures/README-hero.png)
+
+## Why tabular?
+
+- **Five native backends, one spec.**
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  dispatches on the file extension to RTF 1.9.1, PDF (via `tinytex`),
+  self-contained Bootstrap HTML, `tabularray` LaTeX, and native OOXML
+  DOCX. No JVM, no Office round-trip.
+- **Decimal alignment that survives the page.** Numbers align on the
+  decimal using the backend’s real font metrics, not guessed padding —
+  so columns stay aligned in print, not just on screen.
+- **Submission chrome built in.** Multi-line titles, up to eleven
+  footnote lines, page header/footer slots, and the four-section page
+  layout regulatory reviewers expect.
+- **Auto-numbered footnotes.**
+  [`footnote()`](https://vthanik.github.io/tabular/dev/reference/footnote.md)
+  anchors a marker to any cell, header, or title; the engine assigns the
+  glyph once, in reading order, deduped by `id`, and byte-identical
+  across every backend and page.
+- **Group-aware pagination.** Keep a SOC and its preferred terms on one
+  page, repeat titles/headers/footnotes per page, control orphan/widow
+  rows, and split wide tables into horizontal panels.
+- **Display-only by design.** `tabular` styles and renders; it never
+  filters, aggregates, or weights. Pair it with `cards` / `gtsummary` /
+  `dplyr` / SAS upstream and feed it a tidy wide frame.
+- **A QC trail.** `emit(data_file = ...)` writes the resolved wide data
+  beside the render, and a CDISC ARS audit manifest documents the
+  display.
+
+## Where tabular fits
+
+`tabular` is a *renderer* for pre-summarised clinical tables, not a
+statistics engine. Compute the summary upstream — with `cards`,
+`gtsummary`, `dplyr`, or SAS — then hand the finished wide frame to
+[`tabular()`](https://vthanik.github.io/tabular/dev/reference/tabular.md).
+Reach for `gtsummary` or `rtables` when you want the package to
+*compute* the summary; reach for `tabular` to *render* a summary you
+already have to submission-grade output.
+
+The matrix reflects each package’s documented export surface (verified
+against their namespaces; `via gt` means `gtsummary` renders through
+`gt`):
+
+|  | tabular | gt | rtables | gtsummary | flextable | huxtable |
+|----|:--:|:--:|:--:|:--:|:--:|:--:|
+| Computes statistics | — | — | ✓ | ✓ | — | — |
+| Live HTML preview | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+| Native RTF | ✓ | ✓ | — | via gt | ✓ | ✓ |
+| Native DOCX | ✓ | ✓ | — | via gt | ✓ | ✓ |
+| LaTeX | ✓ | ✓ | — | via gt | — | ✓ |
+| PDF | ✓ | ✓ | ✓ | via gt | — | ✓ |
+| Paginated submission output | ✓ | — | ✓ | — | — | — |
+| Decimal align via font metrics | ✓ | — | — | — | — | — |
+| CDISC ARS audit manifest | ✓ | — | — | — | — | — |
+
+Two notes on the marks:
+
+- **Live HTML preview** means the table renders as HTML *inline* when
+  you print it in a Quarto / R Markdown chunk or the RStudio viewer (a
+  `knit_print` method). `rtables` prints a monospace ASCII table by
+  default and ships no `knit_print` method, so it is `—` here; it can
+  still emit HTML through an explicit `as_html()` call.
+- **PDF** is compiled through LaTeX, so it needs a TeX installation —
+  see [Installation](#installation) above. Every other backend is pure
+  R.
+
+## Documentation
+
+- [Get started](https://vthanik.github.io/tabular/articles/tabular.html)
+  — the mental model and your first table
+- [Data in](https://vthanik.github.io/tabular/articles/data-in.html) —
+  turn a cards/cardx ARD into the wide frame with
+  [`pivot_across()`](https://vthanik.github.io/tabular/dev/reference/pivot_across.md)
+- [Structure](https://vthanik.github.io/tabular/articles/structure.html)
+  — columns, headers, BigN, and pagination
+- [Presentation](https://vthanik.github.io/tabular/articles/presentation.html)
+  — titles, footnotes, page chrome, and styling
+- [Output &
+  qualification](https://vthanik.github.io/tabular/articles/output.html)
+  — backends, requirements, and the CDISC-pilot validation
+- [Reference](https://vthanik.github.io/tabular/reference/index.html) —
+  every verb, grouped by role
+
+## License
+
+MIT © Vignesh Thanikachalam
+
+# Package index
+
+## Entry verbs
+
+Wrap a pre-summarised wide data frame into a `tabular_spec`.
+
+- [`tabular()`](https://vthanik.github.io/tabular/dev/reference/tabular.md)
+  : Start a tabular display
+- [`pivot_across()`](https://vthanik.github.io/tabular/dev/reference/pivot_across.md)
+  : Convert a cards ARD to a wide display data.frame
+
+## Spec building
+
+Configure per-column display, header bands, sort order, and subgrouping.
+Each verb attaches one slot onto the spec and returns the updated spec
+for chaining.
+
+- [`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md) :
+  Attach per-column specifications
+- [`cols_apply()`](https://vthanik.github.io/tabular/dev/reference/cols_apply.md)
+  : Apply one column spec to many columns
+- [`col_spec()`](https://vthanik.github.io/tabular/dev/reference/col_spec.md)
+  : Per-column display specification
+- [`headers()`](https://vthanik.github.io/tabular/dev/reference/headers.md)
+  : Attach multi-level column headers
+- [`sort_rows()`](https://vthanik.github.io/tabular/dev/reference/sort_rows.md)
+  : Sort the display rows
+- [`subgroup()`](https://vthanik.github.io/tabular/dev/reference/subgroup.md)
+  : Partition the report by a variable
+
+## Styling
+
+A single
+[`style()`](https://vthanik.github.io/tabular/dev/reference/style.md)
+verb, paired with one of the `cells_*()` location helpers, drives every
+visual rule — body cells, headers, footnotes, page chrome, table edges.
+Build a reusable house style with
+[`style_template()`](https://vthanik.github.io/tabular/dev/reference/style_template.md)
+and attach it to
+[`preset()`](https://vthanik.github.io/tabular/dev/reference/preset.md)
+so every downstream table inherits the look.
+
+- [`style()`](https://vthanik.github.io/tabular/dev/reference/style.md)
+  :
+
+  Attach a style layer to a `tabular_spec` or `style_template`
+
+- [`cells_body()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  [`cells_headers()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  [`cells_group_headers()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  [`cells_title()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  [`cells_subgroup_labels()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  [`cells_footnotes()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  [`cells_pagehead()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  [`cells_pagefoot()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  [`cells_table()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  [`is_tabular_location()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  :
+
+  Cell-location constructors for
+  [`style()`](https://vthanik.github.io/tabular/dev/reference/style.md)
+
+- [`style_template()`](https://vthanik.github.io/tabular/dev/reference/style_template.md)
+  [`is_style_template()`](https://vthanik.github.io/tabular/dev/reference/style_template.md)
+  : Reusable style template (for house-style presets)
+
+- [`brdr()`](https://vthanik.github.io/tabular/dev/reference/brdr.md)
+  [`is_brdr()`](https://vthanik.github.io/tabular/dev/reference/brdr.md)
+  : Border-line specification
+
+## Presets and theming
+
+Page geometry and cosmetic defaults.
+[`preset()`](https://vthanik.github.io/tabular/dev/reference/preset.md)
+overrides per spec in the pipe;
+[`set_preset()`](https://vthanik.github.io/tabular/dev/reference/set_preset.md)
+sets a session default;
+[`preset_minimal()`](https://vthanik.github.io/tabular/dev/reference/preset_minimal.md)
+applies a stripped-down look.
+
+- [`preset()`](https://vthanik.github.io/tabular/dev/reference/preset.md)
+  : Override the render preset on a spec
+- [`set_preset()`](https://vthanik.github.io/tabular/dev/reference/set_preset.md)
+  : Set or clear the session default preset
+- [`get_preset()`](https://vthanik.github.io/tabular/dev/reference/get_preset.md)
+  : Get the active session-default preset
+- [`preset_minimal()`](https://vthanik.github.io/tabular/dev/reference/preset_minimal.md)
+  : Minimal theme: one header rule, normal weight throughout
+
+## Inline markup
+
+Mark label and cell text as Markdown or HTML.
+
+- [`md()`](https://vthanik.github.io/tabular/dev/reference/md.md) : Mark
+  a string as Markdown for inline formatting
+- [`html()`](https://vthanik.github.io/tabular/dev/reference/html.md) :
+  Mark a string as HTML for inline formatting
+
+## Footnotes
+
+Attach an auto-numbered footnote to any `cells_*()` location. The engine
+assigns the marker once, in reading order, deduped by id, and
+byte-identical across every backend and page.
+
+- [`footnote()`](https://vthanik.github.io/tabular/dev/reference/footnote.md)
+  : Attach an auto-numbered footnote to a table location
+
+## Pagination
+
+Configure page splits, group-run protection, and horizontal panel layout
+for wide tables. Row budget per page is computed by the engine from the
+active preset and the spec’s chrome.
+
+- [`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md)
+  : Configure pagination
+
+## Rendering and inspection
+
+Terminal verbs.
+[`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+writes a file;
+[`as_grid()`](https://vthanik.github.io/tabular/dev/reference/as_grid.md)
+resolves the spec without I/O;
+[`check_fonts()`](https://vthanik.github.io/tabular/dev/reference/check_fonts.md)
+and
+[`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
+audit font and LaTeX-package availability; the print and `as.tags()`
+methods drive the live HTML preview.
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) :
+
+  Render a `tabular_spec` to a file
+
+- [`as_grid()`](https://vthanik.github.io/tabular/dev/reference/as_grid.md)
+  :
+
+  Resolve a `tabular_spec` into a `tabular_grid`
+
+- [`check_fonts()`](https://vthanik.github.io/tabular/dev/reference/check_fonts.md)
+  : Check font availability across backends
+
+- [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
+  : Check LaTeX-package availability for PDF output
+
+- [`print.tabular_spec`](https://vthanik.github.io/tabular/dev/reference/print.tabular_spec.md)
+  :
+
+  Print a `tabular_spec`
+
+- [`as.tags(`*`<tabular_spec>`*`)`](https://vthanik.github.io/tabular/dev/reference/as.tags.tabular_spec.md)
+  :
+
+  Convert a `tabular_spec` to an `htmltools` `tagList`
+
+## Predicates
+
+Class predicates for tabular’s S7 objects.
+
+- [`tabular-package`](https://vthanik.github.io/tabular/dev/reference/tabular-package.md)
+  : tabular: Render Tables and Listings for Clinical Submissions
+- [`tabular_classes`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`.col_spec_class`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`header_node`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`sort_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`subgroup_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`style_node`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`style_layer`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`style_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`.repeat_content_values`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`preset_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`tabular_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`inline_ast`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`tabular_grid`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  : tabular S7 classes
+- [`is_tabular_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_tabular_grid()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_col_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_header_node()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_sort_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_style_node()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_style_layer()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_style_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_pagination_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_preset_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_subgroup_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_inline_ast()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  : Test for tabular S7 class instances
+
+## Demo datasets
+
+Pre-summarised wide-format tables and their upstream `cards`-format
+counterparts. Power every `@examples` block, every vignette, and every
+smoke test.
+
+- [`cdisc_eff_estimates`](https://vthanik.github.io/tabular/dev/reference/cdisc_eff_estimates.md)
+  : Treatment-effect estimates by model
+- [`cdisc_eff_n`](https://vthanik.github.io/tabular/dev/reference/cdisc_eff_n.md)
+  : Efficacy-population BigN per arm
+- [`cdisc_eff_resp`](https://vthanik.github.io/tabular/dev/reference/cdisc_eff_resp.md)
+  : Best Overall Response and Response Rates
+- [`cdisc_saf_ae`](https://vthanik.github.io/tabular/dev/reference/cdisc_saf_ae.md)
+  : Overall adverse-event summary, Safety Population
+- [`cdisc_saf_aesocpt`](https://vthanik.github.io/tabular/dev/reference/cdisc_saf_aesocpt.md)
+  : Adverse events by System Organ Class and Preferred Term
+- [`cdisc_saf_aesocpt_ard`](https://vthanik.github.io/tabular/dev/reference/cdisc_saf_aesocpt_ard.md)
+  : Cards hierarchical ARD for AEs by SOC and PT
+- [`cdisc_saf_demo`](https://vthanik.github.io/tabular/dev/reference/cdisc_saf_demo.md)
+  : Demographics summary, Safety Population
+- [`cdisc_saf_demo_ard`](https://vthanik.github.io/tabular/dev/reference/cdisc_saf_demo_ard.md)
+  : Cards ARD for demographics (flat ARD companion)
+- [`cdisc_saf_n`](https://vthanik.github.io/tabular/dev/reference/cdisc_saf_n.md)
+  : Safety-population BigN per arm
+- [`cdisc_saf_subgroup`](https://vthanik.github.io/tabular/dev/reference/cdisc_saf_subgroup.md)
+  : Vital-signs subgroup summary by Sex, by Visit
+- [`cdisc_saf_vital`](https://vthanik.github.io/tabular/dev/reference/cdisc_saf_vital.md)
+  : Vital-signs summary
+
+# Articles
+
+### Articles
+
+- [Data in: the cards → tabular
+  pipeline](https://vthanik.github.io/tabular/dev/articles/data-in.md):
+- [Structure: columns, headers, and
+  pagination](https://vthanik.github.io/tabular/dev/articles/structure.md):
+- [Presentation: titles, footnotes, page chrome, and
+  styling](https://vthanik.github.io/tabular/dev/articles/presentation.md):
+- [Recipes: the CDISC-pilot tables, end to
+  end](https://vthanik.github.io/tabular/dev/articles/recipes.md):
+- [Output & qualification: backends, requirements, and the CDISC
+  pilot](https://vthanik.github.io/tabular/dev/articles/output.md):
