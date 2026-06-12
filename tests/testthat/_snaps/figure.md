@@ -17,6 +17,15 @@
       ! `halign` must be one of "left", "center", or "right".
       x You supplied a string.
 
+# preset() accepts a figure for page geometry, rejects cosmetics
+
+    Code
+      preset(fig, rules = list(midrule = "none"))
+    Condition
+      Error:
+      ! Preset knob "rules" does not apply to a figure.
+      i A figure has no table surfaces to style. Pass page-geometry knobs only, e.g. `paper_size`, `orientation`, `margins`, `font_size`.
+
 # figure cli summary reports source kind, placement, titles
 
     Code

@@ -113,10 +113,17 @@
 #' (3) `preset_spec()` factory defaults. The first non-NULL layer
 #' wins; layers are not field-merged across the cascade.
 #'
-#' @param .spec *The `tabular_spec` to attach the preset to.*
-#'   `<tabular_spec>: required`. Dot-prefixed so R's partial argument
-#'   matching cannot accidentally bind a knob name in `...` to the
-#'   spec slot.
+#' @param .spec *The spec to attach the preset to.*
+#'   `<tabular_spec | figure_spec>: required`. Dot-prefixed so R's
+#'   partial argument matching cannot accidentally bind a knob name in
+#'   `...` to the spec slot.
+#'
+#'   **Note:** a [`figure()`] spec accepts only the page-geometry knobs
+#'   (`paper_size`, `orientation`, `margins`, `font_size`, `font_family`,
+#'   `pagehead`, `pagefoot`, ...). The cosmetic surface knobs
+#'   (`alignment` / `rules` / `fonts` / `colors` / `padding`) and the
+#'   `.template` / `.style` style templates target table cells a figure
+#'   does not have, and are rejected.
 #'
 #' @param ... *Named preset knobs.* Any subset of the preset knobs the
 #'   `preset_spec` class carries. Knob values are validated against
@@ -592,12 +599,17 @@ preset <- function(
   .reset = FALSE
 ) {
   call <- rlang::caller_env()
-  check_tabular_spec(.spec, call = call)
+  check_renderable_spec(.spec, call = call)
   .reset <- .check_scalar_lgl(.reset, arg = ".reset", call = call)
 
   knobs <- rlang::list2(...)
   .check_preset_knob_names(knobs, call = call)
   .validate_lowered_knobs(knobs, call = call)
+  # A figure takes only page-geometry knobs; the cosmetic surface knobs
+  # and style templates target table cells a figure does not have.
+  if (is_figure_spec(.spec)) {
+    .check_figure_preset_knobs(knobs, .template, .style, call = call)
+  }
   template_knobs <- .extract_template_knobs(.template, call = call)
   template_style_layers <- .extract_template_style_layers(.template)
   style_layers <- .extract_style_template_layers(.style, call = call)
@@ -655,6 +667,36 @@ preset <- function(
     )
   }
   S7::set_props(.spec, preset = new_preset)
+}
+
+# Figures take only page-geometry preset knobs. The cosmetic named-list
+# knobs (alignment / rules / fonts / colors / padding) and style templates
+# (.template / .style) target table surfaces (cells, headers, rules) a
+# figure does not have, so reject them with a clear message rather than
+# store an inert layer that silently never renders.
+.check_figure_preset_knobs <- function(knobs, template, style, call) {
+  lowered <- intersect(names(knobs), .preset_lowered_knob_names)
+  if (length(lowered) > 0L) {
+    cli::cli_abort(
+      c(
+        "Preset knob{?s} {.val {lowered}} {?does/do} not apply to a figure.",
+        "i" = "A figure has no table surfaces to style. Pass page-geometry knobs only, e.g. {.arg paper_size}, {.arg orientation}, {.arg margins}, {.arg font_size}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  if (!is.null(template) || !is.null(style)) {
+    cli::cli_abort(
+      c(
+        "{.arg .template} and {.arg .style} do not apply to a figure.",
+        "i" = "Style templates target table cells and surfaces; a figure carries none."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  invisible()
 }
 
 #' Set or clear the session default preset

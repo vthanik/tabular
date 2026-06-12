@@ -154,6 +154,42 @@ test_that("table build verbs reject a figure_spec", {
   expect_error(sort_rows(fig, by = "x"), class = "tabular_error_input")
 })
 
+test_that("preset() accepts a figure for page geometry, rejects cosmetics", {
+  fig <- figure(function() plot(1), titles = "F")
+
+  # page-geometry knobs apply and drive the figure box
+  fp <- preset(
+    fig,
+    orientation = "portrait",
+    paper_size = "a4",
+    font_size = 8
+  )
+  expect_true(is_figure_spec(fp))
+  expect_true(is_preset_spec(fp@preset))
+  expect_equal(fp@preset@orientation, "portrait")
+  expect_equal(fp@preset@paper_size, "a4")
+  # portrait A4 is narrower than the default landscape letter
+  expect_lt(
+    as_grid(fp)@metadata$box$box_w_in,
+    as_grid(fig)@metadata$box$box_w_in
+  )
+
+  # cosmetic surface knobs + style templates are rejected
+  expect_error(
+    preset(fig, fonts = list(body = c(size = 9))),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    preset(fig, colors = list(body = c(text = "red"))),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    preset(fig, .template = preset_spec()),
+    class = "tabular_error_input"
+  )
+  expect_snapshot(preset(fig, rules = list(midrule = "none")), error = TRUE)
+})
+
 test_that("emit() rejects data_file for a figure", {
   fig <- figure(function() plot(1))
   expect_error(
@@ -210,6 +246,39 @@ test_that("knit_print.figure_spec emits a raw-html asis block", {
   kp <- tabular:::.spec_knit_print(fig)
   expect_s3_class(kp, "knit_asis")
   expect_true(grepl("data:image/png;base64,", as.character(kp), fixed = TRUE))
+})
+
+test_that("figure print routes through Databricks displayHTML when detected", {
+  skip_if_not_installed("htmltools")
+  fig <- figure(test_path("fixtures", "fig-sample.png"))
+  testthat::local_mocked_bindings(.is_databricks = function() TRUE)
+  shown <- NULL
+  # rlang::exec("displayHTML", html) resolves the name off the search path.
+  assign("displayHTML", function(html) shown <<- html, envir = globalenv())
+  withr::defer(rm("displayHTML", envir = globalenv()))
+  tabular:::.figure_spec_print(fig, view = FALSE)
+  expect_true(is.character(shown) && nzchar(shown))
+})
+
+test_that("figure print renders HTML, and a broken render falls back to cli", {
+  skip_if_not_installed("htmltools")
+  fig <- figure(test_path("fixtures", "fig-sample.png"))
+  # success path: prints the HTML tags (browse = FALSE, no browser)
+  expect_invisible(
+    withr::with_output_sink(
+      withr::local_tempfile(),
+      tabular:::.figure_spec_print(fig, view = FALSE)
+    )
+  )
+  # error path: as.tags throws -> warn + cli structural summary
+  testthat::local_mocked_bindings(
+    as.tags = function(...) stop("boom"),
+    .package = "htmltools"
+  )
+  expect_warning(
+    suppressMessages(tabular:::.figure_spec_print(fig, view = FALSE)),
+    "HTML preview failed"
+  )
 })
 
 test_that("figure_spec S7 validator guards every prop (defence in depth)", {

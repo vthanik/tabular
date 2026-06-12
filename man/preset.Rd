@@ -7,10 +7,17 @@
 preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
 }
 \arguments{
-\item{.spec}{\emph{The \code{tabular_spec} to attach the preset to.}
-\verb{<tabular_spec>: required}. Dot-prefixed so R's partial argument
-matching cannot accidentally bind a knob name in \code{...} to the
-spec slot.}
+\item{.spec}{\emph{The spec to attach the preset to.}
+\verb{<tabular_spec | figure_spec>: required}. Dot-prefixed so R's
+partial argument matching cannot accidentally bind a knob name in
+\code{...} to the spec slot.
+
+\strong{Note:} a \code{\link[=figure]{figure()}} spec accepts only the page-geometry knobs
+(\code{paper_size}, \code{orientation}, \code{margins}, \code{font_size}, \code{font_family},
+\code{pagehead}, \code{pagefoot}, ...). The cosmetic surface knobs
+(\code{alignment} / \code{rules} / \code{fonts} / \code{colors} / \code{padding}) and the
+\code{.template} / \code{.style} style templates target table cells a figure
+does not have, and are rejected.}
 
 \item{...}{\emph{Named preset knobs.} Any subset of the preset knobs the
 \code{preset_spec} class carries. Knob values are validated against
