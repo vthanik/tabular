@@ -166,7 +166,8 @@ methods drive the live HTML preview.
 Class predicates for tabular’s S7 objects.
 
 - [`tabular-package`](https://vthanik.github.io/tabular/dev/reference/tabular-package.md)
-  : tabular: Render Tables and Listings for Clinical Submissions
+  : tabular: Render Tables, Listings, and Figures for Clinical
+  Submissions
 - [`tabular_classes`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`.col_spec_class`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`header_node`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
