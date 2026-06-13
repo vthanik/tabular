@@ -469,6 +469,10 @@ figure <- function(
       content_type = "figure",
       total_pages = n_pages,
       total_panels = 1L,
+      # Chrome is identical across pages unless `meta` drove per-page
+      # interpolation. On a continuous backend (HTML / Markdown) shared
+      # chrome renders once, like a table; per-page chrome stays per page.
+      shared_chrome = !has_meta,
       titles = spec@titles,
       footnotes = spec@footnotes,
       titles_ast = meta_titles_ast,

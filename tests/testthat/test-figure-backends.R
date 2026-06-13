@@ -302,6 +302,121 @@ test_that("per-page meta tokens resolve into each page's chrome", {
 })
 
 # ---------------------------------------------------------------------
+# Shared chrome renders once on the continuous backends (HTML / MD).
+# A multi-page figure without `meta` carries identical titles / footnotes
+# on every page; on a continuous medium that chrome must render once, like
+# a table, not once per plot. Supplying `meta` switches back to per-page.
+# ---------------------------------------------------------------------
+
+test_that("multi-page figure renders shared chrome once on HTML", {
+  fig <- figure(
+    list(png_fixture(), function() plot(1:3)),
+    titles = c("Figure 14.1.2", "Enrollment by Arm"),
+    footnotes = "N = 254."
+  )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(fig, out)
+  h <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # one caption wraps the whole multi-page figure (was one per plot)
+  expect_equal(length(gregexpr("<figcaption", h, fixed = TRUE)[[1L]]), 1L)
+  # body-only chrome lines render once (the first title line also rides
+  # <head><title>, so assert on lines that never appear in <head>)
+  expect_equal(
+    length(gregexpr("Enrollment by Arm", h, fixed = TRUE)[[1L]]),
+    1L
+  )
+  expect_equal(length(gregexpr("N = 254.", h, fixed = TRUE)[[1L]]), 1L)
+  # both plots still render
+  expect_equal(
+    length(gregexpr("data:image/png;base64,", h, fixed = TRUE)[[1L]]),
+    2L
+  )
+})
+
+test_that("multi-page figure renders shared chrome once on Markdown", {
+  fig <- figure(
+    list(png_fixture(), png_fixture()),
+    titles = c("Figure 14.1.2", "Enrollment by Arm"),
+    footnotes = "N = 254."
+  )
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(fig, out)
+  md <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  stem <- tools::file_path_sans_ext(basename(out))
+  sidecars <- file.path(dirname(out), sprintf("%s-fig%d.png", stem, 1:2))
+  withr::defer(unlink(sidecars))
+
+  expect_equal(length(gregexpr("Figure 14.1.2", md, fixed = TRUE)[[1L]]), 1L)
+  expect_equal(
+    length(gregexpr("Enrollment by Arm", md, fixed = TRUE)[[1L]]),
+    1L
+  )
+  expect_equal(length(gregexpr("N = 254.", md, fixed = TRUE)[[1L]]), 1L)
+  # both sidecar images still referenced
+  expect_equal(length(gregexpr("![Figure](", md, fixed = TRUE)[[1L]]), 2L)
+})
+
+test_that("multi-page figure with meta keeps per-page chrome on HTML", {
+  fig <- figure(
+    list(png_fixture(), png_fixture()),
+    titles = c("Figure 14.1.2", "Enrollment {arm}"),
+    meta = data.frame(
+      arm = c("placebo", "drug_50"),
+      stringsAsFactors = FALSE
+    )
+  )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(fig, out)
+  h <- paste(readLines(out, warn = FALSE), collapse = "\n")
+
+  # meta => per-page captions retained: two captions, one per page
+  expect_equal(length(gregexpr("<figcaption", h, fixed = TRUE)[[1L]]), 2L)
+  # each page's interpolated line appears once
+  expect_equal(
+    length(gregexpr("Enrollment placebo", h, fixed = TRUE)[[1L]]),
+    1L
+  )
+  expect_equal(
+    length(gregexpr("Enrollment drug_50", h, fixed = TRUE)[[1L]]),
+    1L
+  )
+  expect_equal(
+    length(gregexpr("data:image/png;base64,", h, fixed = TRUE)[[1L]]),
+    2L
+  )
+})
+
+test_that("multi-page figure with meta keeps per-page chrome on Markdown", {
+  fig <- figure(
+    list(png_fixture(), png_fixture()),
+    titles = c("Figure 14.1.2", "Enrollment {arm}"),
+    meta = data.frame(
+      arm = c("placebo", "drug_50"),
+      stringsAsFactors = FALSE
+    )
+  )
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(fig, out)
+  md <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  stem <- tools::file_path_sans_ext(basename(out))
+  sidecars <- file.path(dirname(out), sprintf("%s-fig%d.png", stem, 1:2))
+  withr::defer(unlink(sidecars))
+
+  # per-page: the shared first line repeats, each token line appears once
+  expect_equal(length(gregexpr("Figure 14.1.2", md, fixed = TRUE)[[1L]]), 2L)
+  expect_equal(
+    length(gregexpr("Enrollment placebo", md, fixed = TRUE)[[1L]]),
+    1L
+  )
+  expect_equal(
+    length(gregexpr("Enrollment drug_50", md, fixed = TRUE)[[1L]]),
+    1L
+  )
+  expect_equal(length(gregexpr("![Figure](", md, fixed = TRUE)[[1L]]), 2L)
+})
+
+# ---------------------------------------------------------------------
 # Manifest
 # ---------------------------------------------------------------------
 

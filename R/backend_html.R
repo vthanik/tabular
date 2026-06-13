@@ -296,8 +296,10 @@ backend_html <- function(grid, file) {
 # Compose a figure document: the same self-contained HTML shell + on-screen
 # chrome + title / footnote blocks as a table, but each page emits a
 # data-URI `<img>` placed in a flex content box (halign -> justify-content,
-# valign -> align-items). HTML is continuous, so a multi-page figure stacks
-# one `<figure>` per page with a print-only page-break marker between them.
+# valign -> align-items). HTML is continuous, so shared chrome (no `meta`)
+# renders once around N stacked images in one `<figure>`, like a table;
+# per-page chrome (`meta` drove distinct titles) keeps one `<figure>` per
+# page. A print-only page-break marker sits between plots either way.
 .render_html_figure <- function(grid) {
   meta <- grid@metadata
   pages <- grid@pages
@@ -327,35 +329,67 @@ backend_html <- function(grid, file) {
   )
 
   n <- length(pages)
-  sections <- lapply(seq_len(n), function(i) {
-    pg <- pages[[i]]
-    titles <- .render_html_title_block(
-      pg$titles_ast,
-      preset = preset,
-      cs = cs
-    )
-    title_block <- if (length(titles) > 0L) {
+
+  # Wrap a resolved title AST in a <figcaption>, or nothing when empty.
+  caption_block <- function(titles_ast) {
+    titles <- .render_html_title_block(titles_ast, preset = preset, cs = cs)
+    if (length(titles) > 0L) {
       c("<figcaption class=\"tabular-caption\">", titles, "</figcaption>")
     } else {
       character()
     }
-    foot <- .render_html_footnote_block(
-      pg$footnotes_ast,
-      preset = preset,
-      cs = cs
-    )
-    brk <- if (i < n) "<div class=\"tabular-page-break-row\"></div>" else NULL
+  }
+
+  body_inner <- if (isTRUE(meta$shared_chrome)) {
+    # Shared chrome: identical on every page, so the caption and footnotes
+    # render once around the N stacked images inside one <figure>. Page-break
+    # rows still sit between images so print pagination splits the plots.
+    images <- lapply(seq_len(n), function(i) {
+      brk <- if (i < n) {
+        "<div class=\"tabular-page-break-row\"></div>"
+      } else {
+        NULL
+      }
+      c(.html_figure_image(pages[[i]]), brk)
+    })
     c(
       "<figure class=\"tabular-content\">",
-      title_block,
-      .html_figure_image(pg),
-      foot,
-      "</figure>",
-      brk
+      caption_block(meta$titles_ast),
+      unlist(images, use.names = FALSE),
+      .render_html_footnote_block(
+        meta$footnotes_ast,
+        preset = preset,
+        cs = cs
+      ),
+      "</figure>"
     )
-  })
+  } else {
+    # Per-page chrome (`meta`): one <figure> per plot, each with its own
+    # caption and footnote.
+    sections <- lapply(seq_len(n), function(i) {
+      pg <- pages[[i]]
+      foot <- .render_html_footnote_block(
+        pg$footnotes_ast,
+        preset = preset,
+        cs = cs
+      )
+      brk <- if (i < n) {
+        "<div class=\"tabular-page-break-row\"></div>"
+      } else {
+        NULL
+      }
+      c(
+        "<figure class=\"tabular-content\">",
+        caption_block(pg$titles_ast),
+        .html_figure_image(pg),
+        foot,
+        "</figure>",
+        brk
+      )
+    })
+    unlist(sections, use.names = FALSE)
+  }
 
-  body_inner <- unlist(sections, use.names = FALSE)
   doc_body <- c(onscreen_header, body_inner, onscreen_footer)
   scope_id <- paste0("tabular-", substr(rlang::hash(doc_body), 1L, 10L))
   head <- c(

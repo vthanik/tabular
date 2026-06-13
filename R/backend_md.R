@@ -89,12 +89,13 @@ backend_md <- function(grid, file) {
 # ---------------------------------------------------------------------
 
 # Compose a figure document: faux page chrome (pagehead / pagefoot bands)
-# top and bottom, then one block per plot with the title lines, a markdown
-# image referencing a sidecar PNG written next to the `.md`, and the
-# footnote lines. Markdown is a continuous medium with no page geometry, so
-# valign is a documented no-op and halign maps to an `<div align>` wrapper
-# (center / right; left is a bare image). Multi-page figures stack with a
-# `----` rule between plots.
+# top and bottom, then the plots, each a markdown image referencing a sidecar
+# PNG written next to the `.md`. Markdown is a continuous medium with no page
+# geometry, so valign is a documented no-op and halign maps to an `<div
+# align>` wrapper (center / right; left is a bare image). Multi-page figures
+# stack with a `----` rule between plots. Shared chrome (no `meta`) renders
+# the title block once at the top and footnotes once at the bottom, like a
+# table; per-page chrome (`meta`) keeps each page's own title / footnote.
 .render_md_figure <- function(grid, file) {
   meta <- grid@metadata
   pages <- grid@pages
@@ -111,34 +112,67 @@ backend_md <- function(grid, file) {
 
   stem <- tools::file_path_sans_ext(basename(file))
   out_dir <- dirname(file)
-  sidecars <- character(0)
+  n <- length(pages)
+
+  # Write each page's image sidecar once; both chrome layouts reference them.
+  sidecar_names <- vapply(
+    seq_len(n),
+    function(i) sprintf("%s-fig%d.%s", stem, i, pages[[i]]$image_ext),
+    character(1L)
+  )
+  for (i in seq_len(n)) {
+    writeBin(pages[[i]]$image_bytes, file.path(out_dir, sidecar_names[i]))
+  }
+  sidecars <- file.path(out_dir, sidecar_names)
 
   out <- list()
   if (length(chrome_top) > 0L) {
     out[[length(out) + 1L]] <- c(chrome_top, "", "----", "")
   }
 
-  n <- length(pages)
-  for (i in seq_len(n)) {
-    pg <- pages[[i]]
-    if (i > 1L) {
-      out[[length(out) + 1L]] <- c("", "----", "")
+  if (isTRUE(meta$shared_chrome)) {
+    # Shared chrome renders once: title block at the top, footnotes at the
+    # bottom, the N images stacked with a `----` rule between plots.
+    titles <- .render_md_title_block(meta$titles_ast, preserve = ws_preserve)
+    if (length(titles) > 0L) {
+      out[[length(out) + 1L]] <- c(titles, "")
     }
-    sidecar_name <- sprintf("%s-fig%d.%s", stem, i, pg$image_ext)
-    writeBin(pg$image_bytes, file.path(out_dir, sidecar_name))
-    sidecars <- c(sidecars, file.path(out_dir, sidecar_name))
-    titles <- .render_md_title_block(pg$titles_ast, preserve = ws_preserve)
+    for (i in seq_len(n)) {
+      if (i > 1L) {
+        out[[length(out) + 1L]] <- c("", "----", "")
+      }
+      out[[length(out) + 1L]] <- c(
+        .md_figure_image(pages[[i]], sidecar_names[i]),
+        ""
+      )
+    }
     foot <- .render_md_footnote_block(
-      pg$footnotes_ast,
+      meta$footnotes_ast,
       preserve = ws_preserve
     )
-    out[[length(out) + 1L]] <- c(
-      titles,
-      if (length(titles) > 0L) "" else character(),
-      .md_figure_image(pg, sidecar_name),
-      "",
-      foot
-    )
+    if (length(foot) > 0L) {
+      out[[length(out) + 1L]] <- foot
+    }
+  } else {
+    # Per-page chrome (`meta`): each page carries its own title / footnote.
+    for (i in seq_len(n)) {
+      pg <- pages[[i]]
+      if (i > 1L) {
+        out[[length(out) + 1L]] <- c("", "----", "")
+      }
+      titles <- .render_md_title_block(pg$titles_ast, preserve = ws_preserve)
+      foot <- .render_md_footnote_block(
+        pg$footnotes_ast,
+        preserve = ws_preserve
+      )
+      out[[length(out) + 1L]] <- c(
+        titles,
+        if (length(titles) > 0L) "" else character(),
+        .md_figure_image(pg, sidecar_names[i]),
+        "",
+        foot
+      )
+    }
   }
 
   if (length(chrome_bot) > 0L) {

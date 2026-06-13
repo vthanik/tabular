@@ -9,8 +9,11 @@
   placed in the body content-box by `halign` and `valign` (both default to
   centred), exact on the paged backends and approximate on the continuous
   ones. A list input emits one figure per page, optionally driven by a `meta`
-  data frame whose columns become per-page `{token}` values. `is_figure_spec()`
-  tests for the new spec, and `emit()` writes it to a file. No new package
+  data frame whose columns become per-page `{token}` values. On the continuous
+  backends (HTML and Markdown) a multi-page figure's shared titles and
+  footnotes render once above the stacked plots; supplying `meta` switches to
+  per-page chrome. `is_figure_spec()` tests for the new spec, and `emit()`
+  writes it to a file. No new package
   dependency: plots rasterise through base `grDevices` and ggplot2 (Suggests)
   only when a ggplot is passed.
 
