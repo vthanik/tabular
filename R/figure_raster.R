@@ -14,6 +14,7 @@
   width_in,
   height_in,
   dpi,
+  index = 1L,
   call = rlang::caller_env()
 ) {
   kind <- .figure_single_kind(plot)
@@ -39,6 +40,7 @@
     height_in = height_in,
     dpi = dpi,
     vector_target = vector_target,
+    index = index,
     call = call
   )
 
@@ -47,6 +49,11 @@
 }
 
 # Open a device sized to width_in x height_in inches, draw the plot, close.
+# `index` names the page for the failed-render error (F5). The actual draw
+# ops are wrapped so a throwing ggplot / recorded plot / drawing function
+# aborts with a clear `tabular_error_input` naming the page, not a cryptic
+# device-level error. The ggplot2 install check stays OUTSIDE the guard so
+# its own "please install" message is preserved.
 .figure_draw_to_device <- function(
   plot,
   kind,
@@ -55,6 +62,7 @@
   height_in,
   dpi,
   vector_target,
+  index,
   call
 ) {
   if (identical(kind, "ggplot")) {
@@ -74,7 +82,7 @@
     if (!vector_target) {
       args$dpi <- dpi
     }
-    do.call(ggplot2::ggsave, args)
+    .figure_try_draw(function() do.call(ggplot2::ggsave, args), index, call)
     return(invisible(path))
   }
 
@@ -92,13 +100,32 @@
   on.exit(grDevices::dev.off(), add = TRUE)
 
   if (identical(kind, "recordedplot")) {
-    grDevices::replayPlot(plot)
+    .figure_try_draw(function() grDevices::replayPlot(plot), index, call)
   } else {
     # Zero-arg drawing function: `plot` is the user's closure, not base
     # plot(); calling it draws to the open device.
-    plot()
+    .figure_try_draw(function() plot(), index, call)
   }
   invisible(path)
+}
+
+# Run one figure draw, converting any error into a typed, page-named abort.
+.figure_try_draw <- function(draw, index, call) {
+  tryCatch(
+    draw(),
+    error = function(e) {
+      cli::cli_abort(
+        c(
+          "Failed to render figure plot {index}.",
+          "x" = "The plot raised an error while drawing: {conditionMessage(e)}",
+          "i" = "Check the plot object or zero-argument drawing function for errors."
+        ),
+        class = "tabular_error_input",
+        call = call,
+        parent = e
+      )
+    }
+  )
 }
 
 # ---------------------------------------------------------------------

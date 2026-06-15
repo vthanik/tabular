@@ -100,6 +100,28 @@ backend_md <- function(grid, file) {
   meta <- grid@metadata
   pages <- grid@pages
   ws_preserve <- .preset_ws_preserve(meta$preset)
+  cs <- meta$chrome_style %||% chrome_style()
+  # Inter-section blank-line pads from the spacing gaps (`style()` override
+  # wins, else the preset `spacing` gap). Markdown is continuous, so these
+  # are blank lines around the title / footnote blocks.
+  pad_above_title <- .md_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_title_to_body <- .md_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
+  pad_body_to_foot <- .md_blank_count(
+    cs,
+    "footer",
+    "above",
+    .meta_gap(meta, "body_to_footnote", 0L)
+  )
   total_for_chrome <- max(length(pages), 1L)
   chrome_top <- .render_md_chrome_band(
     meta$pagehead_ast,
@@ -135,7 +157,11 @@ backend_md <- function(grid, file) {
     # bottom, the N images stacked with a `----` rule between plots.
     titles <- .render_md_title_block(meta$titles_ast, preserve = ws_preserve)
     if (length(titles) > 0L) {
-      out[[length(out) + 1L]] <- c(titles, "")
+      out[[length(out) + 1L]] <- c(
+        rep("", pad_above_title),
+        titles,
+        rep("", pad_title_to_body)
+      )
     }
     for (i in seq_len(n)) {
       if (i > 1L) {
@@ -151,7 +177,7 @@ backend_md <- function(grid, file) {
       preserve = ws_preserve
     )
     if (length(foot) > 0L) {
-      out[[length(out) + 1L]] <- foot
+      out[[length(out) + 1L]] <- c(rep("", pad_body_to_foot), foot)
     }
   } else {
     # Per-page chrome (`meta`): each page carries its own title / footnote.
@@ -165,12 +191,21 @@ backend_md <- function(grid, file) {
         pg$footnotes_ast,
         preserve = ws_preserve
       )
+      title_part <- if (length(titles) > 0L) {
+        c(rep("", pad_above_title), titles, rep("", pad_title_to_body))
+      } else {
+        character()
+      }
+      foot_part <- if (length(foot) > 0L) {
+        c(rep("", pad_body_to_foot), foot)
+      } else {
+        character()
+      }
       out[[length(out) + 1L]] <- c(
-        titles,
-        if (length(titles) > 0L) "" else character(),
+        title_part,
         .md_figure_image(pg, sidecar_names[i]),
         "",
-        foot
+        foot_part
       )
     }
   }
@@ -209,8 +244,18 @@ backend_md <- function(grid, file) {
   total <- length(pages)
   meta <- grid@metadata
   cs <- meta$chrome_style %||% chrome_style()
-  pad_title_top <- .md_blank_count(cs, "title", "above", 1L)
-  pad_title_bottom <- .md_blank_count(cs, "title", "below", 1L)
+  pad_title_top <- .md_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_title_bottom <- .md_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
 
   # Faux page chrome — markdown has no native page-band concept,
   # so emit pagehead at the top of the document and pagefoot at
@@ -315,8 +360,20 @@ backend_md <- function(grid, file) {
   if (length(footnote_block) > 0L) {
     # Blank line between the pipe table and the footnotes — strict
     # GFM parsers expect a blank line to close a pipe table cleanly
-    # before parsing the following prose.
-    out[[length(out) + 1L]] <- c("", footnote_block)
+    # before parsing the following prose. Any `body_to_footnote` spacing
+    # gap rides ON TOP of that mandatory closing blank (default 0 keeps
+    # output byte-identical).
+    foot_blank_above <- .md_blank_count(
+      cs,
+      "footer",
+      "above",
+      .meta_gap(meta, "body_to_footnote", 0L)
+    )
+    out[[length(out) + 1L]] <- c(
+      "",
+      rep("", foot_blank_above),
+      footnote_block
+    )
   }
   if (length(chrome_bot) > 0L) {
     out[[length(out) + 1L]] <- c("", "----", "", chrome_bot)

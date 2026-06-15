@@ -13,9 +13,13 @@
   backends (HTML and Markdown) a multi-page figure's shared titles and
   footnotes render once above the stacked plots; supplying `meta` switches to
   per-page chrome. `is_figure_spec()` tests for the new spec, and `emit()`
-  writes it to a file. No new package
-  dependency: plots rasterise through base `grDevices` and ggplot2 (Suggests)
-  only when a ggplot is passed.
+  writes it to a file. A figure's titles, footnotes, and page header / footer
+  honour `style()` and the `preset()` cosmetic knobs (fonts, colours,
+  alignment, padding) and the `preset(spacing = ...)` inter-section gaps, just
+  like a table; styling its (absent) body, headers, or subgroup is an error. A
+  drawing function that raises an error aborts with a clear message naming the
+  failing page. No new package dependency: plots rasterise through base
+  `grDevices` and ggplot2 (Suggests) only when a ggplot is passed.
 
 ## Breaking changes
 
@@ -36,10 +40,21 @@
   `group_display` on a later call, and merge every column attribute
   field-completely (previously a default value could not be merged back and
   some fields could be dropped).
+* `paginate()` now collapses a zero-row table to a single empty-state page;
+  horizontal `panels` no longer multiply an empty table into several identical
+  blank pages.
 * `preset()` gained `empty_halign` and `empty_valign` knobs that place the
   zero-row placeholder message within the body content-box, defaulting to
   centred horizontally and middle vertically (exact on the paged backends,
   approximate on HTML, a no-op on Markdown).
+* `preset()` gained an `empty_text` knob, a house-style default for the
+  zero-row message that a per-table `tabular(empty_text = ...)` still overrides.
+* `preset(spacing = ...)` now drives the blank lines around a subgroup banner
+  (the `subgroup` region) and around a `figure()` title and footnote; the
+  Markdown table title and footnote gaps now follow the same knob.
+* `subgroup()` gained a `keep_empty` argument; with `keep_empty = TRUE` a
+  zero-N crossing is retained and rendered as an empty-state page carrying its
+  banner instead of being dropped.
 * `subgroup()` no longer errors on a zero-row input; the table renders the
   empty-state placeholder once with no subgroup banner.
 * `tabular()` gained `empty_text`, the message shown when a table has zero

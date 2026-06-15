@@ -141,6 +141,19 @@
 #'   integer N. Only the `{n}` token is allowed; the default puts the
 #'   N on its own line under the arm name.
 #'
+#' @param keep_empty *Retain zero-N crossings.*
+#'   `<logical(1)>: default FALSE`. When `FALSE` (the default), a `by`
+#'   crossing combination with no data rows is dropped. When `TRUE`, it
+#'   is retained and rendered as an empty-state page carrying its banner,
+#'   so the report shows every combination explicitly. Only multi-variable
+#'   crossings can produce empty combinations; a single-variable partition
+#'   never does.
+#'
+#'   **Note:** an empty group has no data row to read constant-within-group
+#'   banner values from, so a `label` template that references a non-`by`
+#'   column (e.g. an auxiliary BigN column) resolves that token to `NA` for
+#'   the empty group; the `by`-column tokens always resolve.
+#'
 #' @return *The updated `tabular_spec`.* Continue chaining or
 #'   resolve via [`as_grid()`] / [`emit()`].
 #'
@@ -292,10 +305,26 @@ subgroup <- function(
   by,
   label = NULL,
   big_n = NULL,
-  big_n_fmt = "\n(N={n})"
+  big_n_fmt = "\n(N={n})",
+  keep_empty = FALSE
 ) {
   call <- rlang::caller_env()
   check_tabular_spec(.spec, call = call)
+
+  if (
+    !is.logical(keep_empty) ||
+      length(keep_empty) != 1L ||
+      is.na(keep_empty)
+  ) {
+    cli::cli_abort(
+      c(
+        "{.arg keep_empty} must be a single {.code TRUE} or {.code FALSE}.",
+        "x" = "You supplied {.obj_type_friendly {keep_empty}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
 
   if (missing(by) || is.null(by)) {
     by <- character()
@@ -415,7 +444,8 @@ subgroup <- function(
     by = by,
     label = label,
     big_n = big_n,
-    big_n_fmt = big_n_fmt
+    big_n_fmt = big_n_fmt,
+    keep_empty = keep_empty
   )
   S7::set_props(.spec, subgroup = sg)
 }

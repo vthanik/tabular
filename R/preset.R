@@ -43,6 +43,7 @@
   "width_mode",
   "empty_halign",
   "empty_valign",
+  "empty_text",
   "cell_padding",
   "spacing",
   "stripe",
@@ -118,12 +119,16 @@
 #'   partial argument matching cannot accidentally bind a knob name in
 #'   `...` to the spec slot.
 #'
-#'   **Note:** a [`figure()`] spec accepts only the page-geometry knobs
+#'   **Note:** a [`figure()`] spec accepts the page-geometry knobs
 #'   (`paper_size`, `orientation`, `margins`, `font_size`, `font_family`,
-#'   `pagehead`, `pagefoot`, ...). The cosmetic surface knobs
-#'   (`alignment` / `rules` / `fonts` / `colors` / `padding`) and the
-#'   `.template` / `.style` style templates target table cells a figure
-#'   does not have, and are rejected.
+#'   `pagehead`, `pagefoot`, ...) plus the cosmetic surface knobs
+#'   (`alignment` / `fonts` / `colors` / `padding`) that target its chrome
+#'   surfaces, the titles and footnotes, e.g.
+#'   `fonts = list(titles = c(size = 14))`. A cosmetic knob that targets a
+#'   table-only surface (`body` / `header` / `subgroup`), a `rules` knob
+#'   (the rules sit on the header band a figure lacks), and the
+#'   `.template` / `.style` style templates are rejected, since a figure
+#'   has no such surfaces.
 #'
 #' @param ... *Named preset knobs.* Any subset of the preset knobs the
 #'   `preset_spec` class carries. Knob values are validated against
@@ -362,14 +367,21 @@
 #'       `width_mode`. Per-column widths (`col_spec(width)`) emit
 #'       verbatim into the HTML colgroup per the gt convention.
 #'
+#'   *   **`empty_text`** — house-style *wording* for the empty-state
+#'       message shown when a spec resolves to zero data rows.
+#'       `<character(1)>`. The resolution is spec arg -> preset knob ->
+#'       built-in default: a per-table `tabular(empty_text = ...)` wins,
+#'       else this preset knob (set once via [`set_preset()`] for a whole
+#'       house style), else the built-in `"No data available to report"`.
+#'       Glue `{}` and [`md()`] / [`html()`] inline formatting are
+#'       honoured, exactly like a title line.
+#'
 #'   *   **`empty_halign`** / **`empty_valign`** — placement of the
 #'       empty-state message within the body content-box when a spec
-#'       resolves to zero data rows. The message *wording* lives on the
-#'       spec (`tabular(empty_text = ...)`, default
-#'       `"No data available to report"`); these two knobs are the
-#'       cosmetic *placement*, so they ride the preset and cascade with
-#'       the house style. `<character(1)>` each, defaulting to
-#'       centre x middle:
+#'       resolves to zero data rows. The message *wording* comes from
+#'       `empty_text` (above); these two knobs are the cosmetic
+#'       *placement*, so they ride the preset and cascade with the house
+#'       style. `<character(1)>` each, defaulting to centre x middle:
 #'
 #'       *   **`empty_halign`** — `"left"`, `"center"` *(default)*, or
 #'           `"right"`. Horizontal anchor of the message line.
@@ -669,18 +681,34 @@ preset <- function(
   S7::set_props(.spec, preset = new_preset)
 }
 
-# Figures take only page-geometry preset knobs. The cosmetic named-list
-# knobs (alignment / rules / fonts / colors / padding) and style templates
-# (.template / .style) target table surfaces (cells, headers, rules) a
-# figure does not have, so reject them with a clear message rather than
-# store an inert layer that silently never renders.
+# Figures share the canonical submission chrome (titles, footnotes, page
+# header / footer) but carry no body, column-header band, or subgroup
+# banner. A cosmetic named-list knob (alignment / rules / fonts / colors /
+# padding) is allowed on a figure only when EVERY surface it lowers to is a
+# figure chrome surface; a knob that touches a table-only surface is
+# rejected rather than stored as an inert layer that silently never
+# renders. Style templates (.template / .style) target table cells, so
+# they remain rejected outright.
 .check_figure_preset_knobs <- function(knobs, template, style, call) {
-  lowered <- intersect(names(knobs), .preset_lowered_knob_names)
-  if (length(lowered) > 0L) {
+  cosmetic <- intersect(names(knobs), .preset_lowered_knob_names)
+  bad <- character()
+  for (knob in cosmetic) {
+    layers <- .preset_args_to_layers(knobs[knob])
+    surfaces <- vapply(
+      layers,
+      function(l) l@location$surface,
+      character(1)
+    )
+    if (any(!surfaces %in% .figure_style_surfaces)) {
+      bad <- c(bad, knob)
+    }
+  }
+  if (length(bad) > 0L) {
     cli::cli_abort(
       c(
-        "Preset knob{?s} {.val {lowered}} {?does/do} not apply to a figure.",
-        "i" = "A figure has no table surfaces to style. Pass page-geometry knobs only, e.g. {.arg paper_size}, {.arg orientation}, {.arg margins}, {.arg font_size}."
+        "Preset knob{?s} {.val {bad}} cannot target a figure's table surfaces.",
+        "i" = "On a figure, cosmetic knobs may target titles, footnotes, or the page header / footer only.",
+        "i" = "e.g. {.code fonts = list(title = c(size = 14))} or {.code colors = list(footnotes = c(text = \"red\"))}."
       ),
       class = "tabular_error_input",
       call = call

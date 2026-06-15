@@ -32,6 +32,15 @@
 #' file inputs pass through byte-for-byte. No raster work happens until
 #' [`emit()`].
 #'
+#' **Styling the chrome.** A figure carries the same chrome surfaces as a
+#' table, so [`style()`] and the [`preset()`] cosmetic knobs reach its
+#' titles, footnotes, and page header / footer — e.g.
+#' `style(fig, font_size = 14, .at = cells_title())` or
+#' `preset(fig, colors = list(footnotes = c(text = "grey40")))`. A figure
+#' has no body, column headers, or subgroup banner, so styling those
+#' surfaces is an error. Inter-section spacing follows the preset `spacing`
+#' knob (`title`, `footnote`), exactly like a table.
+#'
 #' @param plot *The figure to display.* One of: a `ggplot` object; a
 #'   recorded base plot from [`grDevices::recordPlot()`]; a
 #'   zero-argument function that draws to the active device when called;
@@ -138,7 +147,8 @@
 #' **Terminal verb:** [`emit()`] (write the figure to a file).
 #'
 #' **Shared chrome:** [`preset()`] / [`set_preset()`] (page geometry,
-#' fonts, header / footer), [`tabular()`] (the table sibling).
+#' fonts, header / footer), [`style()`] (per-figure title / footnote /
+#' page-chrome styling), [`tabular()`] (the table sibling).
 #'
 #' **Class predicate:** [`is_figure_spec()`].
 #'
@@ -430,6 +440,7 @@ figure <- function(
       w_user = spec@width,
       h_user = spec@height,
       dpi = spec@dpi,
+      index = i,
       call = call
     )
     page_ast <- if (has_meta) {
@@ -483,7 +494,13 @@ figure <- function(
       place = place,
       box = geom,
       spacing = resolve_spacing(eff_preset@spacing),
-      gaps = gap_counts(eff_preset@spacing)
+      gaps = gap_counts(eff_preset@spacing),
+      # Lower the four-tier style cascade (session preset -> spec preset
+      # -> spec styles) into the chrome_style sidecar so style() and the
+      # preset cosmetic knobs reach a figure's title / footnote / page
+      # chrome. Backends already read meta$chrome_style; without this
+      # wire they fall back to a no-op default and styling never lands.
+      chrome_style = engine_chrome_borders(spec)
     )
   )
 }
@@ -520,9 +537,23 @@ figure <- function(
 
   n_title <- .count_lines(spec@titles)
   n_foot <- .count_lines(spec@footnotes)
-  title_spacing <- if (n_title > 0L) 1L else 0L
-  foot_spacing <- if (n_foot > 0L) 1L else 0L
-  chrome_rows <- n_title + title_spacing + n_foot + foot_spacing
+  # Reserve exactly the blank rows the backends emit around each chrome
+  # block, from the spacing gaps (title: above + below; footnote: above).
+  # The defaults (above_title 1, title_to_body 1, body_to_footnote 0) sum
+  # to the same two rows the fixed 1/1 reservation used, so a default
+  # figure's box height is unchanged; a custom `spacing` knob now tracks.
+  gaps <- gap_counts(preset@spacing)
+  title_rows <- if (n_title > 0L) {
+    gaps[["above_title"]] + n_title + gaps[["title_to_body"]]
+  } else {
+    0L
+  }
+  foot_rows <- if (n_foot > 0L) {
+    gaps[["body_to_footnote"]] + n_foot
+  } else {
+    0L
+  }
+  chrome_rows <- title_rows + foot_rows
 
   printable_w <- dims[["width"]] - (mlr[["left"]] + mlr[["right"]])
   printable_h <- dims[["height"]] - (mtb[["top"]] + mtb[["bottom"]])
@@ -549,6 +580,7 @@ figure <- function(
   w_user,
   h_user,
   dpi,
+  index = 1L,
   call
 ) {
   kind <- .figure_single_kind(plot)
@@ -559,6 +591,7 @@ figure <- function(
       width_in = NA,
       height_in = NA,
       dpi = dpi,
+      index = index,
       call = call
     )
     dims <- .image_dims(img$bytes, img$ext)
@@ -579,6 +612,7 @@ figure <- function(
     width_in = draw_w,
     height_in = draw_h,
     dpi = dpi,
+    index = index,
     call = call
   )
   list(

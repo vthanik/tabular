@@ -56,6 +56,11 @@ borders, body-row separators)
 Body filters live on \code{cells_body()}: \code{i = 1:3} for integer-index
 rows, \code{j = "Total"} for column-name targeting, \verb{where = <expr>}
 for a quosure-captured predicate evaluated against \code{spec@data}.
+
+A \code{\link[=figure]{figure()}} spec shares the chrome surfaces, so \code{style()} accepts a
+figure at \code{cells_title()}, \code{cells_footnotes()}, \code{cells_pagehead()}, and
+\code{cells_pagefoot()} only; a figure has no body, column headers, or
+subgroup banner, so those locations raise an error.
 }
 
 \section{Style attributes}{

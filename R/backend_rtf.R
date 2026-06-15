@@ -180,12 +180,42 @@ backend_rtf <- function(grid, file) {
   has_ph <- .page_band_is_populated(meta$pagehead_ast)
   has_pf <- .page_band_is_populated(meta$pagefoot_ast)
 
+  # Inter-section blank-line pads, resolved once from the spacing gaps
+  # (`style()` per-surface override wins, else the preset `spacing` gap).
+  # `\plain` reverts to RTF 12pt, so re-emit the preset body size on each
+  # spacer line to match the body height (mirrors `.render_rtf_panel`).
+  blank_par <- paste0("\\pard\\plain", .rtf_body_fs(preset), "\\par")
+  pad_above_title <- .rtf_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_title_to_body <- .rtf_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
+  pad_body_to_foot <- .rtf_blank_count(
+    cs,
+    "footer",
+    "above",
+    .meta_gap(meta, "body_to_footnote", 0L)
+  )
+
   sections <- lapply(seq_along(pages), function(i) {
     pg <- pages[[i]]
+    # Footnotes ride this page's `{\footer}` (the table footnote placement),
+    # not the body, so they land at the page bottom and repeat with the
+    # program-path band. A page with footnotes forces a footer even when
+    # there is no page-foot band.
+    has_fn <- length(pg$footnotes_ast) > 0L
+    footer_active <- has_pf || has_fn
     sec_def <- .rtf_section_def(
       preset,
       has_pagehead = has_ph,
-      has_pagefoot = has_pf
+      has_pagefoot = footer_active
     )
     out <- if (i == 1L) sec_def else paste0("\\sect", sec_def)
     if (has_ph) {
@@ -194,12 +224,26 @@ backend_rtf <- function(grid, file) {
         .rtf_header_group(meta$pagehead_ast, preset, cs, colors, fonts)
       )
     }
-    if (has_pf) {
+    if (footer_active) {
+      foot_lines <- if (has_fn) {
+        c(
+          rep(blank_par, pad_body_to_foot),
+          .render_rtf_footnote_block(
+            pg$footnotes_ast,
+            preset,
+            cs,
+            colors,
+            fonts
+          )
+        )
+      } else {
+        character()
+      }
       out <- c(
         out,
         .rtf_footer_group(
           meta$pagefoot_ast,
-          character(),
+          foot_lines,
           preset,
           cs,
           colors,
@@ -207,11 +251,26 @@ backend_rtf <- function(grid, file) {
         )
       )
     }
+    title_block <- .render_rtf_title_block(
+      pg$titles_ast,
+      preset,
+      cs,
+      colors,
+      fonts
+    )
+    title_part <- if (length(title_block) > 0L) {
+      c(
+        rep(blank_par, pad_above_title),
+        title_block,
+        rep(blank_par, pad_title_to_body)
+      )
+    } else {
+      character()
+    }
     c(
       out,
-      .render_rtf_title_block(pg$titles_ast, preset, cs, colors, fonts),
-      .render_rtf_figure_image(pg, preset),
-      .render_rtf_footnote_block(pg$footnotes_ast, preset, cs, colors, fonts)
+      title_part,
+      .render_rtf_figure_image(pg, preset)
     )
   })
 
@@ -483,16 +542,18 @@ backend_rtf <- function(grid, file) {
   if (length(banner) > 0L) {
     # The blank rows share the banner's repeat flag (`rep_headers`): when
     # the header band does not repeat, the banner and its blanks must drop
-    # off continuation pages together, not leave orphaned blank rows.
+    # off continuation pages together, not leave orphaned blank rows. The
+    # blank counts come from the `subgroup` spacing gaps (default 1/1, so
+    # output is unchanged; a `spacing` knob now tunes the banner gap).
     table_rows[[length(table_rows) + 1L]] <- .rtf_blank_trhdr_rows(
-      1L,
+      .meta_gap(meta, "subgroup_above", 1L),
       cellx,
       preset,
       trhdr = rep_headers
     )
     table_rows[[length(table_rows) + 1L]] <- banner
     table_rows[[length(table_rows) + 1L]] <- .rtf_blank_trhdr_rows(
-      1L,
+      .meta_gap(meta, "subgroup_to_body", 1L),
       cellx,
       preset,
       trhdr = rep_headers

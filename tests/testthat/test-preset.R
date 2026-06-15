@@ -306,3 +306,47 @@ test_that("preset_spec() defaults empty placement to centre x middle", {
   expect_identical(p@empty_halign, "center")
   expect_identical(p@empty_valign, "middle")
 })
+
+# ---------------------------------------------------------------------
+# empty_text preset knob (Part 4 / N2)
+# ---------------------------------------------------------------------
+
+test_that("empty_text resolves spec arg -> preset knob -> built-in default", {
+  empty_txt <- function(g) {
+    paste(
+      vapply(
+        g@metadata$empty_text_ast@runs,
+        function(r) r$text %||% "",
+        character(1L)
+      ),
+      collapse = ""
+    )
+  }
+  withr::defer(set_preset(.reset = TRUE))
+
+  # built-in default when nothing is set
+  expect_equal(
+    empty_txt(as_grid(tabular(cdisc_saf_demo))),
+    "No data available to report"
+  )
+
+  # preset knob reaches a table that set no empty_text of its own
+  set_preset(empty_text = "House: no records.")
+  expect_equal(
+    empty_txt(as_grid(tabular(cdisc_saf_demo))),
+    "House: no records."
+  )
+
+  # the spec arg still wins over the preset knob
+  expect_equal(
+    empty_txt(as_grid(tabular(cdisc_saf_demo, empty_text = "Spec wins."))),
+    "Spec wins."
+  )
+})
+
+test_that("preset(empty_text=) rejects an empty string", {
+  expect_error(
+    preset(tabular(cdisc_saf_demo), empty_text = ""),
+    class = "tabular_error_input"
+  )
+})

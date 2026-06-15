@@ -83,14 +83,17 @@
 #'   ```
 #'
 #' @param empty_text *Placeholder shown when `data` has zero rows.*
-#'   `<character(1)>: default "No data available to report"`. When the
-#'   display resolves to no data rows, the backends still emit the full
-#'   page chrome and — when a column structure is present — the column
-#'   headers, then place this message in the body where the rows would
-#'   sit. Override it with any sponsor or study wording (a localized
-#'   string, "No subjects met the criteria for this table.", a
-#'   protocol-qualified line); glue `{expr}` interpolation and `md()` /
-#'   `html()` are honoured, exactly like a title line.
+#'   `<character(1) | NULL>: default NULL`. When the display resolves to no
+#'   data rows, the backends still emit the full page chrome and — when a
+#'   column structure is present — the column headers, then place this
+#'   message in the body where the rows would sit. `NULL` (the default)
+#'   inherits the house-style wording from
+#'   `preset(empty_text = ...)` when set, falling back to the built-in
+#'   `"No data available to report"`. Pass any sponsor or study wording (a
+#'   localized string, "No subjects met the criteria for this table.", a
+#'   protocol-qualified line) to override per table; glue `{expr}`
+#'   interpolation and `md()` / `html()` are honoured, exactly like a title
+#'   line.
 #'
 #'   **Interaction:** placement within the body box is cosmetic and lives
 #'   on the preset, `preset(empty_halign = ..., empty_valign = ...)`,

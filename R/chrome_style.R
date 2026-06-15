@@ -84,6 +84,13 @@
   pagefoot = "pagefoot"
 )
 
+# The cells_*() LOCATION surfaces a figure can be styled at. A figure
+# carries the canonical submission chrome (titles, footnotes, page
+# header / footer) but has no body, column-header band, or subgroup
+# banner, so style() / preset() cosmetic knobs targeting those reject.
+# Used by `style()` (figure branch) and `.check_figure_preset_knobs()`.
+.figure_style_surfaces <- c("title", "footnotes", "pagehead", "pagefoot")
+
 # Build an empty chrome_style. Each border slot defaults to NULL
 # (= backend uses its built-in default rule); each surface slot
 # defaults to a no-op style_node (= no theme-side text-prop override).

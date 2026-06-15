@@ -140,6 +140,32 @@ backend_latex <- function(grid, file) {
   out_dir <- dirname(file)
   sidecars <- character(0)
 
+  # Inter-section blank-line pads, resolved once from the spacing gaps
+  # (`style()` per-surface override wins, else the preset `spacing` gap).
+  # `{\strut\par}` is one full-height blank line; an empty paragraph
+  # collapses to zero height under `\parskip=0pt`. Footnotes follow the
+  # full-height image minipage, so they sit at the page bottom (the figure
+  # is not a longtable, so there is no foot template to route through).
+  blank_line <- "{\\strut\\par}"
+  pad_above_title <- .latex_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_title_to_body <- .latex_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
+  pad_body_to_foot <- .latex_blank_count(
+    cs,
+    "footer",
+    "above",
+    .meta_gap(meta, "body_to_footnote", 0L)
+  )
+
   body <- list()
   for (i in seq_along(pages)) {
     pg <- pages[[i]]
@@ -149,16 +175,34 @@ backend_latex <- function(grid, file) {
     sidecar_name <- sprintf("%s-fig%d.%s", stem, i, pg$image_ext)
     writeBin(pg$image_bytes, file.path(out_dir, sidecar_name))
     sidecars <- c(sidecars, file.path(out_dir, sidecar_name))
-    body[[length(body) + 1L]] <- c(
-      .render_latex_title_block(pg$titles_ast, preset = meta$preset, cs = cs),
-      "",
-      .latex_figure_image_block(pg, sidecar_name),
-      "",
-      .render_latex_footnote_block(
-        pg$footnotes_ast,
-        preset = meta$preset,
-        cs = cs
+    title_block <- .render_latex_title_block(
+      pg$titles_ast,
+      preset = meta$preset,
+      cs = cs
+    )
+    title_part <- if (length(title_block) > 0L) {
+      c(
+        rep(blank_line, pad_above_title),
+        title_block,
+        rep(blank_line, pad_title_to_body)
       )
+    } else {
+      character()
+    }
+    foot_block <- .render_latex_footnote_block(
+      pg$footnotes_ast,
+      preset = meta$preset,
+      cs = cs
+    )
+    foot_part <- if (length(foot_block) > 0L) {
+      c(rep(blank_line, pad_body_to_foot), foot_block)
+    } else {
+      character()
+    }
+    body[[length(body) + 1L]] <- c(
+      title_part,
+      .latex_figure_image_block(pg, sidecar_name),
+      foot_part
     )
   }
 
@@ -767,10 +811,18 @@ backend_latex <- function(grid, file) {
     cs = cs
   )
   banner_block <- if (length(banner_row) > 0L) {
+    # Blank rows above / below the banner come from the `subgroup` spacing
+    # gaps (default 1/1, so output is unchanged; a `spacing` knob tunes it).
     c(
-      .latex_blank_row(length(col_names_vis)),
+      rep(
+        .latex_blank_row(length(col_names_vis)),
+        .meta_gap(meta, "subgroup_above", 1L)
+      ),
       banner_row,
-      .latex_blank_row(length(col_names_vis))
+      rep(
+        .latex_blank_row(length(col_names_vis)),
+        .meta_gap(meta, "subgroup_to_body", 1L)
+      )
     )
   } else {
     character()

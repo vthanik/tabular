@@ -330,11 +330,51 @@ backend_html <- function(grid, file) {
 
   n <- length(pages)
 
+  # Inter-section blank-line pads, resolved once from the spacing gaps
+  # (`style()` per-surface override wins, else the preset `spacing` gap).
+  # Title pads ride INSIDE the <figcaption> (mirror the table title block);
+  # the footnote pad leads the footnote block.
+  blank_p <- "<p class=\"tabular-pad\">&nbsp;</p>"
+  pad_title_top <- .html_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_title_bottom <- .html_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
+  pad_foot_above <- .html_blank_count(
+    cs,
+    "footer",
+    "above",
+    .meta_gap(meta, "body_to_footnote", 0L)
+  )
+
   # Wrap a resolved title AST in a <figcaption>, or nothing when empty.
   caption_block <- function(titles_ast) {
     titles <- .render_html_title_block(titles_ast, preset = preset, cs = cs)
     if (length(titles) > 0L) {
-      c("<figcaption class=\"tabular-caption\">", titles, "</figcaption>")
+      c(
+        "<figcaption class=\"tabular-caption\">",
+        rep(blank_p, pad_title_top),
+        titles,
+        rep(blank_p, pad_title_bottom),
+        "</figcaption>"
+      )
+    } else {
+      character()
+    }
+  }
+
+  # Render the footnote block with its leading blank-line pad, or nothing.
+  foot_block <- function(footnotes_ast) {
+    fn <- .render_html_footnote_block(footnotes_ast, preset = preset, cs = cs)
+    if (length(fn) > 0L) {
+      c(rep(blank_p, pad_foot_above), fn)
     } else {
       character()
     }
@@ -356,11 +396,7 @@ backend_html <- function(grid, file) {
       "<figure class=\"tabular-content\">",
       caption_block(meta$titles_ast),
       unlist(images, use.names = FALSE),
-      .render_html_footnote_block(
-        meta$footnotes_ast,
-        preset = preset,
-        cs = cs
-      ),
+      foot_block(meta$footnotes_ast),
       "</figure>"
     )
   } else {
@@ -368,11 +404,7 @@ backend_html <- function(grid, file) {
     # caption and footnote.
     sections <- lapply(seq_len(n), function(i) {
       pg <- pages[[i]]
-      foot <- .render_html_footnote_block(
-        pg$footnotes_ast,
-        preset = preset,
-        cs = cs
-      )
+      foot <- foot_block(pg$footnotes_ast)
       brk <- if (i < n) {
         "<div class=\"tabular-page-break-row\"></div>"
       } else {

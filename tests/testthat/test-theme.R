@@ -286,3 +286,17 @@ test_that("gap_counts treats a missing region side as a zero gap", {
   expect_identical(unname(g[["above_title"]]), 1L)
   expect_identical(unname(g[["title_to_body"]]), 1L)
 })
+
+# ---- subgroup default gap (F3) --------------------------------------
+
+test_that("gap_counts default has one blank gap above and below subgroup", {
+  g <- tabular:::gap_counts(NULL)
+  expect_identical(unname(g[["subgroup_above"]]), 1L)
+  expect_identical(unname(g[["subgroup_to_body"]]), 1L)
+})
+
+test_that("resolve_spacing subgroup defaults are 1/1", {
+  sp <- tabular:::resolve_spacing(NULL)
+  expect_identical(sp$subgroup[["above"]], 1L)
+  expect_identical(sp$subgroup[["below"]], 1L)
+})

@@ -12,12 +12,16 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
 partial argument matching cannot accidentally bind a knob name in
 \code{...} to the spec slot.
 
-\strong{Note:} a \code{\link[=figure]{figure()}} spec accepts only the page-geometry knobs
+\strong{Note:} a \code{\link[=figure]{figure()}} spec accepts the page-geometry knobs
 (\code{paper_size}, \code{orientation}, \code{margins}, \code{font_size}, \code{font_family},
-\code{pagehead}, \code{pagefoot}, ...). The cosmetic surface knobs
-(\code{alignment} / \code{rules} / \code{fonts} / \code{colors} / \code{padding}) and the
-\code{.template} / \code{.style} style templates target table cells a figure
-does not have, and are rejected.}
+\code{pagehead}, \code{pagefoot}, ...) plus the cosmetic surface knobs
+(\code{alignment} / \code{fonts} / \code{colors} / \code{padding}) that target its chrome
+surfaces, the titles and footnotes, e.g.
+\code{fonts = list(titles = c(size = 14))}. A cosmetic knob that targets a
+table-only surface (\code{body} / \code{header} / \code{subgroup}), a \code{rules} knob
+(the rules sit on the header band a figure lacks), and the
+\code{.template} / \code{.style} style templates are rejected, since a figure
+has no such surfaces.}
 
 \item{...}{\emph{Named preset knobs.} Any subset of the preset knobs the
 \code{preset_spec} class carries. Knob values are validated against
@@ -251,14 +255,20 @@ responsive — the table always fills its parent and
 columns wrap when the viewport narrows, regardless of
 \code{width_mode}. Per-column widths (\code{col_spec(width)}) emit
 verbatim into the HTML colgroup per the gt convention.
+\item \strong{\code{empty_text}} — house-style \emph{wording} for the empty-state
+message shown when a spec resolves to zero data rows.
+\verb{<character(1)>}. The resolution is spec arg -> preset knob ->
+built-in default: a per-table \code{tabular(empty_text = ...)} wins,
+else this preset knob (set once via \code{\link[=set_preset]{set_preset()}} for a whole
+house style), else the built-in \code{"No data available to report"}.
+Glue \code{{}} and \code{\link[=md]{md()}} / \code{\link[=html]{html()}} inline formatting are
+honoured, exactly like a title line.
 \item \strong{\code{empty_halign}} / \strong{\code{empty_valign}} — placement of the
 empty-state message within the body content-box when a spec
-resolves to zero data rows. The message \emph{wording} lives on the
-spec (\code{tabular(empty_text = ...)}, default
-\code{"No data available to report"}); these two knobs are the
-cosmetic \emph{placement}, so they ride the preset and cascade with
-the house style. \verb{<character(1)>} each, defaulting to
-centre x middle:
+resolves to zero data rows. The message \emph{wording} comes from
+\code{empty_text} (above); these two knobs are the cosmetic
+\emph{placement}, so they ride the preset and cascade with the house
+style. \verb{<character(1)>} each, defaulting to centre x middle:
 \itemize{
 \item \strong{\code{empty_halign}} — \code{"left"}, \code{"center"} \emph{(default)}, or
 \code{"right"}. Horizontal anchor of the message line.

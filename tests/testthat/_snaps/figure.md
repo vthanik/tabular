@@ -17,14 +17,15 @@
       ! `halign` must be one of "left", "center", or "right".
       x You supplied a string.
 
-# preset() accepts a figure for page geometry, rejects cosmetics
+# preset() on a figure: geometry + chrome cosmetics, not table cosmetics
 
     Code
       preset(fig, rules = list(midrule = "none"))
     Condition
       Error:
-      ! Preset knob "rules" does not apply to a figure.
-      i A figure has no table surfaces to style. Pass page-geometry knobs only, e.g. `paper_size`, `orientation`, `margins`, `font_size`.
+      ! Preset knob "rules" cannot target a figure's table surfaces.
+      i On a figure, cosmetic knobs may target titles, footnotes, or the page header / footer only.
+      i e.g. `fonts = list(title = c(size = 14))` or `colors = list(footnotes = c(text = "red"))`.
 
 # figure cli summary reports source kind, placement, titles
 

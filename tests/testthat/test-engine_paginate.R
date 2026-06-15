@@ -593,3 +593,26 @@ test_that("LaTeX backend emits \\\\* (no-page-break terminator) on non-last rows
   # At least one row terminator with the no-page-break modifier.
   expect_match(txt, "\\\\\\\\\\*", fixed = FALSE)
 })
+
+# ---------------------------------------------------------------------
+# No-data multi-page collapse (Part 5)
+# ---------------------------------------------------------------------
+
+test_that("a zero-row table collapses to a single empty page under panels", {
+  d <- cdisc_saf_demo[0, , drop = FALSE]
+  g <- as_grid(tabular(d) |> paginate(panels = 3))
+  expect_equal(g@metadata$total_pages, 1L)
+  expect_equal(g@metadata$total_panels, 1L)
+  n_empty <- sum(vapply(
+    g@pages,
+    function(p) isTRUE(p$is_empty_page),
+    logical(1L)
+  ))
+  expect_equal(n_empty, 1L)
+})
+
+test_that("a non-empty table still splits into horizontal panels", {
+  g <- as_grid(tabular(cdisc_saf_demo) |> paginate(panels = 3))
+  expect_equal(g@metadata$total_panels, 3L)
+  expect_gt(g@metadata$total_pages, 1L)
+})

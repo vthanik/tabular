@@ -496,11 +496,20 @@ subgroup_spec <- S7::new_class(
     by = S7::new_property(S7::class_character, default = character()),
     label = S7::class_any,
     big_n = S7::class_any,
-    big_n_fmt = S7::class_any
+    big_n_fmt = S7::class_any,
+    # keep_empty — when TRUE, the engine retains every `by` crossing
+    # combination even when it has zero data rows, rendering each as an
+    # empty-state page with its banner. Default FALSE drops zero-N combos
+    # (the prior behaviour). Only multi-variable crossings can produce
+    # empty combos; a single-var partition never does.
+    keep_empty = S7::new_property(S7::class_logical, default = FALSE)
   ),
   validator = function(self) {
     if (anyNA(self@by)) {
       return("@by must not contain NA")
+    }
+    if (length(self@keep_empty) != 1L || anyNA(self@keep_empty)) {
+      return("@keep_empty must be a single TRUE or FALSE")
     }
     if (length(self@by) > 0L && any(!nzchar(self@by))) {
       return("@by must not contain empty strings")
@@ -818,16 +827,16 @@ preset_spec <- S7::new_class(
     na_text = S7::new_property(S7::class_character, default = ""),
     # spacing — region-keyed blank-line control, resolved into the
     # five physical inter-section gaps by `gap_counts()` at render.
-    # Default is the 1/1 blank line above and below the
-    # title block, every other region 0. Set via the `spacing` knob.
-    # Literal here (not `.tabular_spacing_default()`) because aaa_class.R
-    # collates before theme.R.
+    # Default is the 1/1 blank line above and below the title block and
+    # above and below the subgroup banner; body and footnote 0. Set via
+    # the `spacing` knob. Literal here (not `.tabular_spacing_default()`)
+    # because aaa_class.R collates before theme.R.
     spacing = S7::new_property(
       S7::class_list,
       default = list(
         title = c(above = 1L, below = 1L),
         body = c(above = 0L, below = 0L),
-        subgroup = c(above = 0L, below = 0L),
+        subgroup = c(above = 1L, below = 1L),
         footnote = c(above = 0L)
       )
     ),
@@ -888,6 +897,16 @@ preset_spec <- S7::new_class(
     empty_valign = S7::new_property(
       S7::class_character,
       default = "middle"
+    ),
+    # empty_text — house-style wording for the empty-state message, the
+    # preset-level fallback for `tabular(empty_text = ...)`. Default
+    # NA_character_ is the "unset" sentinel: the resolver reads the spec
+    # arg first, then this preset knob, then the built-in default string
+    # (`.tabular_empty_text_default`). Lets a `set_preset()` house style
+    # change the wording once for every table that sets none of its own.
+    empty_text = S7::new_property(
+      S7::class_character,
+      default = NA_character_
     ),
     # Cell padding in points, CSS shorthand length 1 / 2 / 4 (all |
     # vertical horizontal | top right bottom left), parsed by the same
@@ -981,6 +1000,15 @@ preset_spec <- S7::new_class(
         "@cell_padding must be a non-negative numeric of length 1 (all ",
         "sides), 2 (vertical horizontal), or 4 (top right bottom left)"
       ))
+    }
+    # empty_text is length-1: NA (unset, fall back to spec arg / default)
+    # or a non-empty string. Empty string is rejected so a typo cannot
+    # silently blank the empty-state message.
+    if (
+      length(self@empty_text) != 1L ||
+        (!is.na(self@empty_text) && !nzchar(self@empty_text))
+    ) {
+      return("@empty_text must be NA or a single non-empty string")
     }
     sp_err <- .spacing_shape_error(self@spacing)
     if (!is.null(sp_err)) {
@@ -1091,12 +1119,24 @@ tabular_spec <- S7::new_class(
     # just a default, never hard-coded into a backend. Glue `{}` and
     # `md()` / `html()` are honoured, exactly like a title line. Placed in
     # the body content-box per the preset's `empty_halign` / `empty_valign`.
+    #
+    # Default NA_character_ is the "unset" sentinel: `.resolve_empty_text()`
+    # reads this spec arg first, then `preset@empty_text` (a house-style
+    # default via `set_preset()`), then the built-in
+    # `.tabular_empty_text_default`. The wording is resolved to a concrete
+    # string at render, so a backend never sees NA.
     empty_text = S7::new_property(
       S7::class_character,
-      default = "No data available to report"
+      default = NA_character_
     )
   )
 )
+
+# Built-in fallback wording for the zero-row empty-state message, used
+# when neither the spec arg (`tabular(empty_text = ...)`) nor the preset
+# knob (`preset(empty_text = ...)`) is set. Single source of truth for
+# the resolver in `.resolve_empty_text()` (R/as_grid.R).
+.tabular_empty_text_default <- "No data available to report"
 
 # ---------------------------------------------------------------------
 # figure_spec — root IR for a clinical figure (the "F" in TFL)
@@ -1145,6 +1185,11 @@ figure_spec <- S7::new_class(
     footnote_refs = S7::new_property(S7::class_list, default = list()),
     preset = S7::class_any,
     pagination = S7::class_any,
+    # style() layers targeting the figure's chrome surfaces (title /
+    # footnotes / page header / footer). A figure has no body, column
+    # headers, or subgroup banner, so style() rejects those locations;
+    # the cascade is resolved by engine_chrome_borders() at render.
+    styles = S7::class_any,
     # Draw size in inches; NULL = fit (full printable width, 70% height).
     width = S7::class_any,
     height = S7::class_any,

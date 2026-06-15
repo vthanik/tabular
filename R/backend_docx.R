@@ -270,6 +270,31 @@ backend_docx <- function(grid, file) {
   cs
 ) {
   pages <- grid@pages
+  meta <- grid@metadata
+  # Inter-section blank-line pads, resolved once from the spacing gaps
+  # (`style()` per-surface override wins, else the preset `spacing` gap).
+  # Footnotes follow the exact-height image table, so they bottom in the
+  # content flow (the single shared footer1.xml cannot carry per-page
+  # figure footnotes, so they are not routed through it).
+  blank_p <- "<w:p/>"
+  pad_above_title <- .docx_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_title_to_body <- .docx_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
+  pad_body_to_foot <- .docx_blank_count(
+    cs,
+    "footer",
+    "above",
+    .meta_gap(meta, "body_to_footnote", 0L)
+  )
   body_parts <- character()
   for (i in seq_along(pages)) {
     pg <- pages[[i]]
@@ -279,26 +304,40 @@ backend_docx <- function(grid, file) {
         "<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>"
       )
     }
-    titles <- .docx_title_block(
+    title_block <- .docx_title_block(
       pg$titles_ast,
       character(),
       rid_map,
       preset = preset,
       cs = cs
     )
+    titles <- if (length(pg$titles_ast) > 0L) {
+      c(
+        rep(blank_p, pad_above_title),
+        title_block,
+        rep(blank_p, pad_title_to_body)
+      )
+    } else {
+      character()
+    }
     drawing <- .docx_figure_drawing(
       rid_map$images[[i]],
       pg$draw_w_in,
       pg$draw_h_in,
       i
     )
-    foot <- .docx_footnote_block(
+    foot_block <- .docx_footnote_block(
       pg$footnotes_ast %||% list(),
       character(),
       rid_map,
       preset = preset,
       cs = cs
     )
+    foot <- if (length(pg$footnotes_ast %||% list()) > 0L) {
+      c(rep(blank_p, pad_body_to_foot), foot_block)
+    } else {
+      character()
+    }
     body_parts <- c(
       body_parts,
       titles,
@@ -1154,14 +1193,20 @@ backend_docx <- function(grid, file) {
       cs = cs,
       body_borders = body_borders
     )
-    # A blank row above and below the banner (anatomy). `.docx_full_width_row`
-    # carries `<w:tblHeader/>`, so they repeat per page with the banner.
+    # Blank rows above and below the banner (anatomy). `.docx_full_width_row`
+    # carries `<w:tblHeader/>`, so they repeat per page with the banner. The
+    # counts come from the `subgroup` spacing gaps (default 1/1, so output is
+    # unchanged; a `spacing` knob now tunes the banner gap).
     blank <- .docx_full_width_row(
       sum(widths),
       length(col_names_vis),
       "<w:p/>"
     )
-    c(blank, banner, blank)
+    c(
+      rep(blank, .meta_gap(meta, "subgroup_above", 1L)),
+      banner,
+      rep(blank, .meta_gap(meta, "subgroup_to_body", 1L))
+    )
   } else {
     character()
   }

@@ -98,6 +98,15 @@ applies but \code{valign} is a no-op there.
 \code{.pdf} / \code{.tex} targets and to PNG at \code{dpi} for every other backend;
 file inputs pass through byte-for-byte. No raster work happens until
 \code{\link[=emit]{emit()}}.
+
+\strong{Styling the chrome.} A figure carries the same chrome surfaces as a
+table, so \code{\link[=style]{style()}} and the \code{\link[=preset]{preset()}} cosmetic knobs reach its
+titles, footnotes, and page header / footer — e.g.
+\code{style(fig, font_size = 14, .at = cells_title())} or
+\code{preset(fig, colors = list(footnotes = c(text = "grey40")))}. A figure
+has no body, column headers, or subgroup banner, so styling those
+surfaces is an error. Inter-section spacing follows the preset \code{spacing}
+knob (\code{title}, \code{footnote}), exactly like a table.
 }
 \examples{
 # ---- Example 1: a single base-R figure with submission chrome ----
@@ -153,7 +162,8 @@ per_arm
 \strong{Terminal verb:} \code{\link[=emit]{emit()}} (write the figure to a file).
 
 \strong{Shared chrome:} \code{\link[=preset]{preset()}} / \code{\link[=set_preset]{set_preset()}} (page geometry,
-fonts, header / footer), \code{\link[=tabular]{tabular()}} (the table sibling).
+fonts, header / footer), \code{\link[=style]{style()}} (per-figure title / footnote /
+page-chrome styling), \code{\link[=tabular]{tabular()}} (the table sibling).
 
 \strong{Class predicate:} \code{\link[=is_figure_spec]{is_figure_spec()}}.
 }

@@ -154,7 +154,7 @@ test_that("table build verbs reject a figure_spec", {
   expect_error(sort_rows(fig, by = "x"), class = "tabular_error_input")
 })
 
-test_that("preset() accepts a figure for page geometry, rejects cosmetics", {
+test_that("preset() on a figure: geometry + chrome cosmetics, not table cosmetics", {
   fig <- figure(function() plot(1), titles = "F")
 
   # page-geometry knobs apply and drive the figure box
@@ -174,7 +174,14 @@ test_that("preset() accepts a figure for page geometry, rejects cosmetics", {
     as_grid(fig)@metadata$box$box_w_in
   )
 
-  # cosmetic surface knobs + style templates are rejected
+  # chrome-targeting cosmetic knobs ARE accepted (title / footnotes)
+  expect_no_error(preset(fig, fonts = list(titles = c(size = 14))))
+  expect_no_error(preset(fig, colors = list(footnotes = c(text = "red"))))
+  expect_no_error(
+    preset(fig, alignment = list(title_halign = "left"))
+  )
+
+  # table-only surface knobs + style templates are rejected
   expect_error(
     preset(fig, fonts = list(body = c(size = 9))),
     class = "tabular_error_input"
@@ -184,9 +191,14 @@ test_that("preset() accepts a figure for page geometry, rejects cosmetics", {
     class = "tabular_error_input"
   )
   expect_error(
+    preset(fig, fonts = list(subgroup = c(size = 9))),
+    class = "tabular_error_input"
+  )
+  expect_error(
     preset(fig, .template = preset_spec()),
     class = "tabular_error_input"
   )
+  # rules target the header band a figure lacks
   expect_snapshot(preset(fig, rules = list(midrule = "none")), error = TRUE)
 })
 

@@ -461,3 +461,125 @@ test_that("PDF figure compiles through xelatex", {
   hdr <- readBin(out, "raw", 5L)
   expect_equal(rawToChar(hdr), "%PDF-")
 })
+
+# ---------------------------------------------------------------------
+# Inter-section spacing gaps reach figure chrome (Part 1)
+# ---------------------------------------------------------------------
+
+# A figure whose plot is the byte-stable PNG fixture, with title +
+# footnote so both spacing surfaces are exercised.
+spaced_figure <- function(...) {
+  figure(png_fixture(), titles = "Fig title", footnotes = "Fig note", ...)
+}
+
+n_html_pad <- function(txt) {
+  lengths(regmatches(
+    txt,
+    gregexpr("<p class=\"tabular-pad\">", txt, fixed = TRUE)
+  ))
+}
+n_latex_pad <- function(txt) {
+  lengths(regmatches(txt, gregexpr("{\\strut\\par}", txt, fixed = TRUE)))
+}
+
+test_that("preset(spacing=) widens figure title/footnote gaps (HTML)", {
+  base <- emit(spaced_figure(), withr::local_tempfile(fileext = ".html"))
+  wide <- emit(
+    spaced_figure() |>
+      preset(
+        spacing = list(
+          title = c(above = 6, below = 6),
+          footnote = c(above = 6)
+        )
+      ),
+    withr::local_tempfile(fileext = ".html")
+  )
+  base_txt <- paste(readLines(base, warn = FALSE), collapse = "\n")
+  wide_txt <- paste(readLines(wide, warn = FALSE), collapse = "\n")
+  # default: 1 above + 1 below title + 0 above footnote = 2 pads
+  expect_equal(n_html_pad(base_txt), 2L)
+  # widened: 6 + 6 + 6 = 18 pads
+  expect_equal(n_html_pad(wide_txt), 18L)
+})
+
+test_that("preset(spacing=) widens figure title/footnote gaps (LaTeX)", {
+  base <- emit(spaced_figure(), withr::local_tempfile(fileext = ".tex"))
+  wide <- emit(
+    spaced_figure() |>
+      preset(
+        spacing = list(
+          title = c(above = 4, below = 4),
+          footnote = c(above = 4)
+        )
+      ),
+    withr::local_tempfile(fileext = ".tex")
+  )
+  base_txt <- paste(readLines(base, warn = FALSE), collapse = "\n")
+  wide_txt <- paste(readLines(wide, warn = FALSE), collapse = "\n")
+  expect_equal(n_latex_pad(base_txt), 2L)
+  expect_equal(n_latex_pad(wide_txt), 12L)
+})
+
+test_that("subgroup spacing region does NOT move a figure; title does", {
+  # A figure has no subgroup banner, so the subgroup gap is inert.
+  sg <- emit(
+    spaced_figure() |>
+      preset(spacing = list(subgroup = c(above = 9, below = 9))),
+    withr::local_tempfile(fileext = ".html")
+  )
+  base <- emit(spaced_figure(), withr::local_tempfile(fileext = ".html"))
+  expect_equal(
+    n_html_pad(paste(readLines(sg, warn = FALSE), collapse = "\n")),
+    n_html_pad(paste(readLines(base, warn = FALSE), collapse = "\n"))
+  )
+})
+
+test_that("default RTF figure has one blank par above title, one below", {
+  out <- emit(spaced_figure(), withr::local_tempfile(fileext = ".rtf"))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  blank <- paste0(
+    "\\pard\\plain",
+    tabular:::.rtf_body_fs(preset_spec()),
+    "\\par"
+  )
+  n <- lengths(regmatches(txt, gregexpr(blank, txt, fixed = TRUE)))
+  # 1 above + 1 below title; footnote pad default 0
+  expect_equal(n, 2L)
+})
+
+# ---------------------------------------------------------------------
+# F1 — figure footnotes ride the RTF footer band
+# ---------------------------------------------------------------------
+
+test_that("RTF figure footnotes render in the footer group, not the body", {
+  out <- emit(spaced_figure(), withr::local_tempfile(fileext = ".rtf"))
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # The footnote text appears inside the {\footer ...} group.
+  footer <- regmatches(txt, regexpr("\\{\\\\footer.*", txt))
+  expect_match(footer, "Fig note")
+})
+
+# ---------------------------------------------------------------------
+# F5 — failed-plot guard
+# ---------------------------------------------------------------------
+
+test_that("a throwing plot function aborts with a typed, page-named error", {
+  fig <- figure(function() stop("draw failure"))
+  expect_error(
+    emit(fig, withr::local_tempfile(fileext = ".html")),
+    class = "tabular_error_input"
+  )
+  expect_snapshot(
+    emit(fig, withr::local_tempfile(fileext = ".html")),
+    error = TRUE
+  )
+})
+
+test_that("the failed-plot error names the offending page index", {
+  fig <- figure(list(function() plot(1), function() stop("boom")))
+  err <- tryCatch(
+    emit(fig, withr::local_tempfile(fileext = ".html")),
+    tabular_error_input = function(e) conditionMessage(e)
+  )
+  expect_match(err, "figure plot 2")
+})

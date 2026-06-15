@@ -231,3 +231,31 @@ test_that("preset_spec validator surfaces a malformed pagefoot shape", {
     "@pagefoot"
   )
 })
+
+# ---- S7 last-line-defense validators (new properties) ---------------
+
+test_that("subgroup_spec() rejects a non-scalar / NA keep_empty", {
+  expect_error(
+    subgroup_spec(by = "sex", keep_empty = NA),
+    "single TRUE or FALSE"
+  )
+  expect_error(
+    subgroup_spec(by = "sex", keep_empty = c(TRUE, FALSE)),
+    "single TRUE or FALSE"
+  )
+})
+
+test_that("subgroup_spec() accepts a logical keep_empty", {
+  sg <- subgroup_spec(by = "sex", keep_empty = TRUE)
+  expect_true(sg@keep_empty)
+})
+
+test_that("preset_spec() rejects an empty or multi-element empty_text", {
+  expect_error(preset_spec(empty_text = ""), "non-empty string")
+  expect_error(preset_spec(empty_text = c("a", "b")), "non-empty string")
+})
+
+test_that("preset_spec() accepts NA (unset) and a string empty_text", {
+  expect_identical(preset_spec()@empty_text, NA_character_)
+  expect_identical(preset_spec(empty_text = "x")@empty_text, "x")
+})

@@ -143,7 +143,13 @@ test_that("tabular() with NULL titles produces empty character()", {
 
 test_that("tabular(empty_text=) defaults, stores, and interpolates", {
   df <- data.frame(x = 1)
-  expect_identical(tabular(df)@empty_text, "No data available to report")
+  # Unset is the NA sentinel; the built-in wording resolves at render
+  # (spec arg -> preset knob -> .tabular_empty_text_default).
+  expect_identical(tabular(df)@empty_text, NA_character_)
+  expect_identical(
+    tabular:::.resolve_empty_text(tabular(df)@empty_text, NULL),
+    "No data available to report"
+  )
   expect_identical(
     tabular(df, empty_text = "Total {1 + 1}")@empty_text,
     "Total 2"

@@ -189,8 +189,21 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   # drives the reported `total_panels`; `n_horiz` (post-collapse) drives
   # the page loop and `total_pages` -- the two are now distinct.
   n_panels_effective <- length(col_panels)
-  if (isTRUE(continuous) && n_panels_effective > 1L) {
+  # Collapse to ONE all-columns page when either (a) the medium is
+  # continuous (no page width, so the horizontal split is meaningless) or
+  # (b) the data is empty (no rows to split, so horizontal panels would
+  # only multiply the single empty-state page into N identical phantoms).
+  # `sort(unique(unlist(...)))` rebuilds the full ordered column set; the
+  # stub repeats across panels, so unique() drops the duplicates.
+  collapse_to_one <- (isTRUE(continuous) && n_panels_effective > 1L) ||
+    nrow_data == 0L
+  if (collapse_to_one) {
     col_panels <- list(sort(unique(unlist(col_panels))))
+  }
+  # An empty table renders as a single page; report one panel so
+  # total_panels and total_pages agree.
+  if (nrow_data == 0L) {
+    n_panels_effective <- 1L
   }
 
   n_vert <- length(row_pages)

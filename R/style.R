@@ -50,6 +50,11 @@
 #' rows, `j = "Total"` for column-name targeting, `where = <expr>`
 #' for a quosure-captured predicate evaluated against `spec@data`.
 #'
+#' A [`figure()`] spec shares the chrome surfaces, so `style()` accepts a
+#' figure at `cells_title()`, `cells_footnotes()`, `cells_pagehead()`, and
+#' `cells_pagefoot()` only; a figure has no body, column headers, or
+#' subgroup banner, so those locations raise an error.
+#'
 #' @section Style attributes:
 #'
 #' Each layer carries a `style_node` built from `...`. Recognised
@@ -167,7 +172,8 @@ style <- function(.spec, ..., .at = cells_body()) {
   call <- rlang::caller_env()
 
   is_template <- is_style_template(.spec)
-  if (!is_template) {
+  is_figure <- is_figure_spec(.spec)
+  if (!is_template && !is_figure) {
     check_tabular_spec(.spec, call = call)
   }
 
@@ -178,6 +184,19 @@ style <- function(.spec, ..., .at = cells_body()) {
         "{.arg .at} must be a {.cls tabular_location}.",
         "x" = "You supplied {.obj_type_friendly {at_value}}.",
         "i" = "Build one with {.fn cells_body} / {.fn cells_headers} / etc."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+
+  if (is_figure && !(.at$surface %in% .figure_style_surfaces)) {
+    bad_surface <- .at$surface
+    cli::cli_abort(
+      c(
+        "Cannot style the {.val {bad_surface}} surface on a figure.",
+        "i" = "A figure can be styled at its titles, footnotes, page header, or page footer only.",
+        "i" = "Use {.fn cells_title}, {.fn cells_footnotes}, {.fn cells_pagehead}, or {.fn cells_pagefoot}."
       ),
       class = "tabular_error_input",
       call = call

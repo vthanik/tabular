@@ -51,8 +51,11 @@ engine_subgroup_split <- function(spec) {
   template <- .subgroup_effective_template(spec)
 
   # Build the crossing of unique value combinations across all
-  # partition columns. Each crossing row defines one group.
-  combos <- .subgroup_combos(data, by_cols)
+  # partition columns. Each crossing row defines one group. With
+  # `keep_empty = TRUE`, zero-N crossings are retained and rendered as
+  # empty-state pages instead of dropped.
+  keep_empty <- isTRUE(spec@subgroup@keep_empty)
+  combos <- .subgroup_combos(data, by_cols, keep_empty = keep_empty)
 
   total <- nrow(combos)
   if (total == 0L) {
@@ -79,12 +82,18 @@ engine_subgroup_split <- function(spec) {
 
     # Render the banner against the first row of the filtered data.
     # Columns referenced in the template are assumed constant within
-    # group (clinical convention). Empty groups are filtered out
-    # upstream, so `sub_data` is guaranteed to have at least one row.
-    banner_text <- .subgroup_render_label(
-      template,
+    # group (clinical convention). Under `keep_empty = TRUE` a group can
+    # have zero rows; source the banner from the combo values instead (an
+    # all-NA row carrying just the `by`-column values), so a template that
+    # references only `by` columns still renders. Template refs to other
+    # columns resolve to NA for an empty group (there is no data row to
+    # read a constant-within-group value from).
+    banner_row <- if (nrow(sub_data) > 0L) {
       sub_data[1L, , drop = FALSE]
-    )
+    } else {
+      .subgroup_empty_banner_row(data, by_cols, combos[i, , drop = FALSE])
+    }
+    banner_text <- .subgroup_render_label(template, banner_row)
 
     runtime <- list(
       by = by_cols,
@@ -117,7 +126,7 @@ engine_subgroup_split <- function(spec) {
 # the FIRST column's ordering dominates, then the second within
 # each value of the first, and so on (matches SAS BY-group
 # processing semantics).
-.subgroup_combos <- function(data, by_cols) {
+.subgroup_combos <- function(data, by_cols, keep_empty = FALSE) {
   per_col <- lapply(by_cols, function(col) {
     .subgroup_unique_ordered(data[[col]])
   })
@@ -133,10 +142,28 @@ engine_subgroup_split <- function(spec) {
   )
   grid <- grid[, by_cols, drop = FALSE]
 
-  # Filter to combinations actually present in the data — empty
-  # cells would render meaningless banners with no body rows.
+  # By default, filter to combinations actually present in the data --
+  # empty cells would render meaningless banners with no body rows. With
+  # `keep_empty = TRUE` the user has opted to render every crossing, so
+  # keep the full grid (zero-N combos become empty-state pages).
+  if (isTRUE(keep_empty)) {
+    return(grid)
+  }
   present <- .subgroup_combo_present_mask(data, by_cols, grid)
   grid[present, , drop = FALSE]
+}
+
+# Build a 1-row banner source for a zero-N group: an all-NA row in the
+# shape of `data` (preserving column types / factor levels / labels)
+# with the `by` columns set to this combo's values. Lets the banner
+# template render its `by`-column references for an empty group.
+.subgroup_empty_banner_row <- function(data, by_cols, combo_row) {
+  row <- data[NA_integer_, , drop = FALSE]
+  row.names(row) <- NULL
+  for (col in by_cols) {
+    row[[col]] <- combo_row[[col]]
+  }
+  row
 }
 
 # Unique values of one partition column in display order
@@ -207,7 +234,11 @@ engine_subgroup_split <- function(spec) {
 
   idx <- which(.subgroup_match_mask(big_n, by_cols, combo_row))
   if (length(idx) == 0L) {
-    return(sub_spec) # nocov  (completeness enforced at verb time)
+    # No big_n row for this combo. For a present combo the verb-time
+    # completeness check guarantees a row; this is reachable only for a
+    # `keep_empty = TRUE` zero-N combo (not required to carry a big_n
+    # row), which keeps its default headers.
+    return(sub_spec)
   }
   idx <- idx[[1L]]
 
@@ -289,7 +320,11 @@ engine_subgroup_split <- function(spec) {
   if (length(val_cols) == 0L) {
     return(FALSE)
   }
-  combos <- .subgroup_combos(spec@data, by_cols)
+  combos <- .subgroup_combos(
+    spec@data,
+    by_cols,
+    keep_empty = isTRUE(sg@keep_empty)
+  )
   idx <- vapply(
     seq_len(nrow(combos)),
     function(i) {
@@ -320,7 +355,13 @@ engine_subgroup_split <- function(spec) {
   data_names <- names(spec@data)
   band_labels <- .subgroup_header_labels(spec@headers)
   n_cols <- setdiff(names(big_n), by_cols)
-  combos <- .subgroup_combos(spec@data, by_cols)
+  # Iterate the SAME combos the split iterates (keep_empty-aware) so the
+  # returned list index matches `runtime$index` at the as_grid merge.
+  combos <- .subgroup_combos(
+    spec@data,
+    by_cols,
+    keep_empty = isTRUE(sg@keep_empty)
+  )
 
   lapply(seq_len(nrow(combos)), function(i) {
     idx <- which(.subgroup_match_mask(
@@ -329,7 +370,9 @@ engine_subgroup_split <- function(spec) {
       combos[i, , drop = FALSE]
     ))
     if (length(idx) == 0L) {
-      return(list()) # nocov  (completeness enforced at verb time)
+      # A keep_empty zero-N combo has no big_n row; emit an empty record
+      # so the continuous backends render no per-arm N row for it.
+      return(list())
     }
     idx <- idx[[1L]]
     lapply(n_cols, function(nm) {

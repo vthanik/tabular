@@ -141,3 +141,47 @@ test_that("style() rejects the legacy nested-list padding form (#knob-shape)", {
     class = "tabular_error_input"
   )
 })
+
+# ---------------------------------------------------------------------
+# style() on a figure: chrome surfaces only (Part 7)
+# ---------------------------------------------------------------------
+
+test_that("style() accepts a figure at its chrome surfaces", {
+  fig <- figure(function() plot(1), titles = "T", footnotes = "fn")
+  expect_no_error(style(fig, font_size = 12, .at = cells_title()))
+  expect_no_error(style(fig, color = "red", .at = cells_footnotes()))
+  expect_no_error(style(fig, bold = TRUE, .at = cells_pagehead()))
+  expect_no_error(style(fig, italic = TRUE, .at = cells_pagefoot()))
+  styled <- style(fig, font_size = 12, .at = cells_title())
+  expect_true(is_figure_spec(styled))
+  expect_true(is_style_spec(styled@styles))
+})
+
+test_that("style() rejects a figure at table-only surfaces", {
+  fig <- figure(function() plot(1))
+  expect_error(
+    style(fig, bold = TRUE, .at = cells_body()),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    style(fig, bold = TRUE, .at = cells_headers()),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    style(fig, bold = TRUE, .at = cells_subgroup_labels()),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("a figure title style() reaches the rendered output", {
+  fig <- figure(function() plot(1), titles = "Styled title")
+  plain <- emit(fig, withr::local_tempfile(fileext = ".html"))
+  styled <- emit(
+    style(fig, color = "#ff0000", .at = cells_title()),
+    withr::local_tempfile(fileext = ".html")
+  )
+  plain_txt <- paste(readLines(plain, warn = FALSE), collapse = "")
+  styled_txt <- paste(readLines(styled, warn = FALSE), collapse = "")
+  expect_false(identical(plain_txt, styled_txt))
+  expect_match(styled_txt, "ff0000")
+})

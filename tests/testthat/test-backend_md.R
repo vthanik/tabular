@@ -743,3 +743,47 @@ test_that("whitespace='collapse' collapses runs in md title and footnotes (#cr5)
   txt_p <- paste(readLines(fp, warn = FALSE), collapse = "\n")
   expect_match(txt_p, "&nbsp;", fixed = TRUE)
 })
+
+# ---------------------------------------------------------------------
+# Inter-section spacing gaps (Part 1: MD table title + footnote)
+# ---------------------------------------------------------------------
+
+test_that("markdown table title gap responds to preset(spacing=)", {
+  d <- cdisc_saf_demo
+  base <- readLines(
+    emit(tabular(d, titles = "T"), withr::local_tempfile(fileext = ".md")),
+    warn = FALSE
+  )
+  wide <- readLines(
+    emit(
+      tabular(d, titles = "T") |>
+        preset(spacing = list(title = c(above = 4))),
+      withr::local_tempfile(fileext = ".md")
+    ),
+    warn = FALSE
+  )
+  expect_false(identical(base, wide))
+  # default above_title is 1; widening to 4 adds 3 blank lines
+  expect_equal(sum(wide == "") - sum(base == ""), 3L)
+})
+
+test_that("markdown table footnote gap defaults to zero extra blanks", {
+  d <- cdisc_saf_demo
+  base <- readLines(
+    emit(
+      tabular(d, footnotes = "fn"),
+      withr::local_tempfile(fileext = ".md")
+    ),
+    warn = FALSE
+  )
+  wide <- readLines(
+    emit(
+      tabular(d, footnotes = "fn") |>
+        preset(spacing = list(footnote = c(above = 3))),
+      withr::local_tempfile(fileext = ".md")
+    ),
+    warn = FALSE
+  )
+  # body_to_footnote default 0, so widening to 3 adds exactly 3 blanks
+  expect_equal(sum(wide == "") - sum(base == ""), 3L)
+})

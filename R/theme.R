@@ -324,13 +324,15 @@ resolve_rules <- function(rules = "booktabs", call = rlang::caller_env()) {
   footnote = "above"
 )
 
-# Region defaults. `title` 1/1 enforces the blank line above
-# and below the title block; every other region defaults to 0.
+# Region defaults. `title` 1/1 enforces the blank line above and below
+# the title block; `subgroup` 1/1 the blank line above and below the
+# subgroup banner (its structural separation, now a tunable gap); body
+# and footnote default to 0.
 .tabular_spacing_default <- function() {
   list(
     title = c(above = 1L, below = 1L),
     body = c(above = 0L, below = 0L),
-    subgroup = c(above = 0L, below = 0L),
+    subgroup = c(above = 1L, below = 1L),
     footnote = c(above = 0L)
   )
 }

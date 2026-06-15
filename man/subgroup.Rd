@@ -4,7 +4,14 @@
 \alias{subgroup}
 \title{Partition the report by a variable}
 \usage{
-subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\\n(N={n})")
+subgroup(
+  .spec,
+  by,
+  label = NULL,
+  big_n = NULL,
+  big_n_fmt = "\\n(N={n})",
+  keep_empty = FALSE
+)
 }
 \arguments{
 \item{.spec}{\emph{The \code{tabular_spec} to partition.}
@@ -86,6 +93,19 @@ aligned beneath its arm column.}
 header label, with \code{{n}} substituted by that page/column's
 integer N. Only the \code{{n}} token is allowed; the default puts the
 N on its own line under the arm name.}
+
+\item{keep_empty}{\emph{Retain zero-N crossings.}
+\verb{<logical(1)>: default FALSE}. When \code{FALSE} (the default), a \code{by}
+crossing combination with no data rows is dropped. When \code{TRUE}, it
+is retained and rendered as an empty-state page carrying its banner,
+so the report shows every combination explicitly. Only multi-variable
+crossings can produce empty combinations; a single-variable partition
+never does.
+
+\strong{Note:} an empty group has no data row to read constant-within-group
+banner values from, so a \code{label} template that references a non-\code{by}
+column (e.g. an auxiliary BigN column) resolves that token to \code{NA} for
+the empty group; the \code{by}-column tokens always resolve.}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining or

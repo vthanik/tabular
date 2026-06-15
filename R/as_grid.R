@@ -617,7 +617,10 @@ as_grid <- function(.spec) {
   # published on metadata; the per-page `is_empty_page` flag lets each
   # backend's body loop branch. Computed unconditionally so `as_grid()`
   # inspection always carries them; only consumed when a page is empty.
-  empty_text_ast <- parse_inline(spec@empty_text, call = call)
+  empty_text_ast <- parse_inline(
+    .resolve_empty_text(spec@empty_text, eff_preset),
+    call = call
+  )
   empty_place <- .place_block(
     eff_preset@empty_halign,
     eff_preset@empty_valign,
@@ -1291,6 +1294,28 @@ as_grid <- function(.spec) {
     return(as.integer(default))
   }
   as.integer(g[[key]])
+}
+
+# Resolve the empty-state wording: the spec arg (`tabular(empty_text=)`)
+# wins, then the preset knob (`preset(empty_text=)` / `set_preset()`),
+# then the built-in `.tabular_empty_text_default`. Both upstream sources
+# use NA_character_ as the "unset" sentinel, so a house style set once via
+# set_preset() reaches every table that did not set its own wording.
+.resolve_empty_text <- function(spec_text, preset) {
+  if (length(spec_text) == 1L && !is.na(spec_text) && nzchar(spec_text)) {
+    return(spec_text)
+  }
+  preset_text <- if (is_preset_spec(preset)) {
+    preset@empty_text
+  } else {
+    NA_character_
+  }
+  if (
+    length(preset_text) == 1L && !is.na(preset_text) && nzchar(preset_text)
+  ) {
+    return(preset_text)
+  }
+  .tabular_empty_text_default
 }
 
 .slice_one_page <- function(

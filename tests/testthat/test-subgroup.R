@@ -1205,3 +1205,166 @@ test_that("big_n: the per-arm N row repeats with the banner across vertical page
   expect_gt(banner_ct, 2L) # banner repeated beyond the two subgroups
   expect_identical(bign_ct, banner_ct) # N row tracks the banner exactly
 })
+
+# ---------------------------------------------------------------------
+# Subgroup banner spacing gap (F3)
+# ---------------------------------------------------------------------
+
+# The banner blank rows are a paged-medium primitive, so the subgroup
+# `spacing` gap moves RTF / LaTeX / DOCX. HTML is continuous: the banner
+# separation is a fixed CSS margin (like valign / pagination, paged-only),
+# so HTML output is unchanged by the knob, by design.
+test_that("subgroup banner gap responds to preset(spacing=) on paged backends", {
+  base_spec <- tabular(cdisc_saf_subgroup) |>
+    preset(width_mode = "fixed") |>
+    subgroup(by = "sex")
+  wide_spec <- tabular(cdisc_saf_subgroup) |>
+    preset(
+      width_mode = "fixed",
+      spacing = list(subgroup = c(above = 3, below = 3))
+    ) |>
+    subgroup(by = "sex")
+  read_docx <- function(p) {
+    td <- withr::local_tempdir()
+    utils::unzip(p, files = "word/document.xml", exdir = td)
+    readLines(file.path(td, "word", "document.xml"), warn = FALSE)
+  }
+  for (ext in c(".rtf", ".tex", ".docx")) {
+    b <- emit(base_spec, withr::local_tempfile(fileext = ext))
+    w <- emit(wide_spec, withr::local_tempfile(fileext = ext))
+    if (identical(ext, ".docx")) {
+      expect_false(identical(read_docx(b), read_docx(w)), info = ext)
+    } else {
+      expect_false(
+        identical(readLines(b, warn = FALSE), readLines(w, warn = FALSE)),
+        info = ext
+      )
+    }
+  }
+})
+
+test_that("subgroup gap leaves continuous HTML byte-identical (by design)", {
+  base_spec <- tabular(cdisc_saf_subgroup) |>
+    preset(width_mode = "fixed") |>
+    subgroup(by = "sex")
+  wide_spec <- tabular(cdisc_saf_subgroup) |>
+    preset(
+      width_mode = "fixed",
+      spacing = list(subgroup = c(above = 3, below = 3))
+    ) |>
+    subgroup(by = "sex")
+  b <- emit(base_spec, withr::local_tempfile(fileext = ".html"))
+  w <- emit(wide_spec, withr::local_tempfile(fileext = ".html"))
+  expect_identical(
+    readLines(b, warn = FALSE),
+    readLines(w, warn = FALSE)
+  )
+})
+
+# ---------------------------------------------------------------------
+# keep_empty (Part 6 / N1)
+# ---------------------------------------------------------------------
+
+# A multi-variable partition with one crossing deliberately absent.
+.sg_gapped_data <- function() {
+  d <- cdisc_saf_subgroup
+  vis <- unique(as.character(d$visit))[[1L]]
+  d[!(as.character(d$sex) == "F" & as.character(d$visit) == vis), ]
+}
+
+.sg_gapped_spec <- function(keep_empty) {
+  tabular(.sg_gapped_data()) |>
+    cols(
+      sex_n = col_spec(visible = FALSE),
+      paramcd = col_spec(visible = FALSE),
+      param = col_spec(usage = "group"),
+      stat_label = col_spec(),
+      placebo = col_spec(),
+      drug_50 = col_spec(),
+      drug_100 = col_spec(),
+      Total = col_spec()
+    ) |>
+    subgroup(
+      by = c("sex", "visit"),
+      label = "Sex: {sex} / Visit: {visit}",
+      keep_empty = keep_empty
+    )
+}
+
+test_that("keep_empty=TRUE retains a zero-N crossing as an empty page", {
+  drop <- as_grid(.sg_gapped_spec(FALSE))
+  keep <- as_grid(.sg_gapped_spec(TRUE))
+  expect_equal(keep@metadata$total_pages, drop@metadata$total_pages + 1L)
+  n_empty <- sum(vapply(
+    keep@pages,
+    function(p) isTRUE(p$is_empty_page),
+    logical(1L)
+  ))
+  expect_equal(n_empty, 1L)
+})
+
+test_that("keep_empty=FALSE (default) drops zero-N crossings", {
+  keep <- as_grid(.sg_gapped_spec(TRUE))
+  drop <- as_grid(.sg_gapped_spec(FALSE))
+  expect_lt(drop@metadata$total_pages, keep@metadata$total_pages)
+})
+
+test_that("subgroup() rejects a non-logical keep_empty", {
+  expect_error(
+    tabular(cdisc_saf_subgroup) |> subgroup(by = "sex", keep_empty = "yes"),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    tabular(cdisc_saf_subgroup) |> subgroup(by = "sex", keep_empty = NA),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("keep_empty empty-group banner renders the by-column values", {
+  keep <- as_grid(.sg_gapped_spec(TRUE))
+  empty_pg <- Filter(function(p) isTRUE(p$is_empty_page), keep@pages)[[1L]]
+  banner <- paste(
+    vapply(
+      empty_pg$subgroup_line_ast@runs,
+      function(r) r$text %||% "",
+      character(1L)
+    ),
+    collapse = ""
+  )
+  expect_match(banner, "Sex: F")
+})
+
+test_that("keep_empty=TRUE composes with big_n without index misalignment", {
+  # Regression: the BigN record helpers iterated present-only combos while
+  # the split (and the per-page merge) index by the keep_empty-aware combo
+  # position, so a zero-N crossing shifted/overran the records list and the
+  # continuous backends hit `subscript out of bounds`.
+  d <- .sg_gapped_data()
+  present <- unique(d[, c("sex", "visit")])
+  present <- present[order(present$sex, present$visit), ]
+  bn <- present
+  bn$placebo <- seq_len(nrow(present)) * 10L
+  bn$drug_50 <- seq_len(nrow(present)) * 5L
+  bn$drug_100 <- seq_len(nrow(present)) * 3L
+  bn$Total <- bn$placebo + bn$drug_50 + bn$drug_100
+  spec <- tabular(d) |>
+    cols(
+      sex_n = col_spec(visible = FALSE),
+      paramcd = col_spec(visible = FALSE),
+      param = col_spec(usage = "group"),
+      stat_label = col_spec(),
+      placebo = col_spec(),
+      drug_50 = col_spec(),
+      drug_100 = col_spec(),
+      Total = col_spec()
+    ) |>
+    subgroup(
+      by = c("sex", "visit"),
+      label = "Sex: {sex} / Visit: {visit}",
+      big_n = bn,
+      keep_empty = TRUE
+    )
+  for (ext in c(".html", ".md", ".rtf", ".docx")) {
+    expect_no_error(emit(spec, withr::local_tempfile(fileext = ext)))
+  }
+})
