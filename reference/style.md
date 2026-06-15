@@ -81,6 +81,16 @@ Body filters live on
 targeting, `where = <expr>` for a quosure-captured predicate evaluated
 against `spec@data`.
 
+A [`figure()`](https://vthanik.github.io/tabular/reference/figure.md)
+spec shares the chrome surfaces, so `style()` accepts a figure at
+[`cells_title()`](https://vthanik.github.io/tabular/reference/cells.md),
+[`cells_footnotes()`](https://vthanik.github.io/tabular/reference/cells.md),
+[`cells_pagehead()`](https://vthanik.github.io/tabular/reference/cells.md),
+and
+[`cells_pagefoot()`](https://vthanik.github.io/tabular/reference/cells.md)
+only; a figure has no body, column headers, or subgroup banner, so those
+locations raise an error.
+
 ## Style attributes
 
 Each layer carries a `style_node` built from `...`. Recognised attribute

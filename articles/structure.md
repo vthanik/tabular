@@ -212,6 +212,118 @@ last** — its non-default `width` then wins the field-merge; a later
 [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) call
 carrying the default `width = "auto"` would otherwise be ambiguous.
 
+## Sorting rows
+
+Display cells are formatted strings — `"54 (21.3)"` sorts lexically, not
+numerically. The idiom: carry one hidden **numeric key** per sort level,
+hide it with `col_spec(visible = FALSE)`, and hand the keys to
+[`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md).
+`descending` takes one value per key, so mixed-direction sorts are a
+single call.
+
+The bundled AE table ships its keys precomputed: `soc_n` (events in the
+parent SOC, constant down each SOC block) and `n_total` (events on the
+row). Sorting on both, descending, clusters every preferred term under
+its SOC and orders both levels by frequency — the standard SAP ordering:
+
+``` r
+
+data(cdisc_saf_aesocpt, package = "tabular")
+
+tabular(cdisc_saf_aesocpt, titles = "AEs by SOC and PT, descending frequency") |>
+  cols(
+    label = col_spec(
+      label = "SOC / Preferred Term",
+      indent = "indent_level"
+    ),
+    soc = col_spec(
+      usage = "group",
+      visible = FALSE,
+      group_display = "column_repeat"
+    ),
+    row_type = col_spec(visible = FALSE),
+    n_total = col_spec(visible = FALSE),
+    soc_n = col_spec(visible = FALSE)
+  ) |>
+  cols_apply(arms, col_spec(align = "decimal")) |>
+  sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
+```
+
+| SOC / Preferred Term | placebo | drug_50 | drug_100 | Total |
+|----|----|----|----|----|
+| TOTAL SUBJECTS WITH AN EVENT | 52 (60.5) | 81 (84.4) | 66 (91.7) | 199 (78.3) |
+| SKIN AND SUBCUTANEOUS TISSUE DISORDERS | 19 (22.1) | 36 (37.5) | 35 (48.6) |  90 (35.4) |
+| PRURITUS |  8 ( 9.3) | 21 (21.9) | 25 (34.7) |  54 (21.3) |
+| ERYTHEMA |  8 ( 9.3) | 14 (14.6) | 14 (19.4) |  36 (14.2) |
+| RASH |  5 ( 5.8) | 13 (13.5) |  8 (11.1) |  26 (10.2) |
+| HYPERHIDROSIS |  2 ( 2.3) |  4 ( 4.2) |  8 (11.1) |  14 ( 5.5) |
+| SKIN IRRITATION |  3 ( 3.5) |  6 ( 6.2) |  5 ( 6.9) |  14 ( 5.5) |
+| GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS | 15 (17.4) | 36 (37.5) | 30 (41.7) |  81 (31.9) |
+| APPLICATION SITE PRURITUS |  6 ( 7.0) | 23 (24.0) | 21 (29.2) |  50 (19.7) |
+| APPLICATION SITE ERYTHEMA |  3 ( 3.5) | 13 (13.5) | 14 (19.4) |  30 (11.8) |
+| APPLICATION SITE DERMATITIS |  5 ( 5.8) |  9 ( 9.4) |  7 ( 9.7) |  21 ( 8.3) |
+| APPLICATION SITE IRRITATION |  3 ( 3.5) |  9 ( 9.4) |  9 (12.5) |  21 ( 8.3) |
+| APPLICATION SITE VESICLES |  1 ( 1.2) |  5 ( 5.2) |  5 ( 6.9) |  11 ( 4.3) |
+| GASTROINTESTINAL DISORDERS | 13 (15.1) | 12 (12.5) | 17 (23.6) |  42 (16.5) |
+| DIARRHOEA |  9 (10.5) |  5 ( 5.2) |  3 ( 4.2) |  17 ( 6.7) |
+| VOMITING |  3 ( 3.5) |  4 ( 4.2) |  6 ( 8.3) |  13 ( 5.1) |
+| NAUSEA |  3 ( 3.5) |  3 ( 3.1) |  6 ( 8.3) |  12 ( 4.7) |
+| ABDOMINAL PAIN |  1 ( 1.2) |  3 ( 3.1) |  1 ( 1.4) |   5 ( 2.0) |
+| SALIVARY HYPERSECRETION |  0        |  0        |  4 ( 5.6) |   4 ( 1.6) |
+| NERVOUS SYSTEM DISORDERS |  6 ( 7.0) | 18 (18.8) | 17 (23.6) |  41 (16.1) |
+| DIZZINESS |  2 ( 2.3) |  9 ( 9.4) | 10 (13.9) |  21 ( 8.3) |
+| HEADACHE |  3 ( 3.5) |  3 ( 3.1) |  5 ( 6.9) |  11 ( 4.3) |
+| SYNCOPE |  0        |  5 ( 5.2) |  2 ( 2.8) |   7 ( 2.8) |
+| SOMNOLENCE |  2 ( 2.3) |  3 ( 3.1) |  1 ( 1.4) |   6 ( 2.4) |
+| TRANSIENT ISCHAEMIC ATTACK |  0        |  2 ( 2.1) |  1 ( 1.4) |   3 ( 1.2) |
+| CARDIAC DISORDERS |  7 ( 8.1) | 12 (12.5) | 14 (19.4) |  33 (13.0) |
+| SINUS BRADYCARDIA |  2 ( 2.3) |  7 ( 7.3) |  8 (11.1) |  17 ( 6.7) |
+| MYOCARDIAL INFARCTION |  4 ( 4.7) |  2 ( 2.1) |  4 ( 5.6) |  10 ( 3.9) |
+| ATRIAL FIBRILLATION |  1 ( 1.2) |  2 ( 2.1) |  2 ( 2.8) |   5 ( 2.0) |
+| SUPRAVENTRICULAR EXTRASYSTOLES |  1 ( 1.2) |  1 ( 1.0) |  1 ( 1.4) |   3 ( 1.2) |
+| VENTRICULAR EXTRASYSTOLES |  0        |  2 ( 2.1) |  1 ( 1.4) |   3 ( 1.2) |
+| INFECTIONS AND INFESTATIONS | 12 (14.0) |  6 ( 6.2) | 11 (15.3) |  29 (11.4) |
+| NASOPHARYNGITIS |  2 ( 2.3) |  4 ( 4.2) |  6 ( 8.3) |  12 ( 4.7) |
+|  |  |  |  |  |
+| UPPER RESPIRATORY TRACT INFECTION |  6 ( 7.0) |  1 ( 1.0) |  3 ( 4.2) |  10 ( 3.9) |
+| INFLUENZA |  1 ( 1.2) |  1 ( 1.0) |  1 ( 1.4) |   3 ( 1.2) |
+| URINARY TRACT INFECTION |  2 ( 2.3) |  0        |  1 ( 1.4) |   3 ( 1.2) |
+| CYSTITIS |  1 ( 1.2) |  0        |  1 ( 1.4) |   2 ( 0.8) |
+| RESPIRATORY, THORACIC AND MEDIASTINAL DISORDERS |  5 ( 5.8) |  8 ( 8.3) |  9 (12.5) |  22 ( 8.7) |
+| COUGH |  1 ( 1.2) |  5 ( 5.2) |  5 ( 6.9) |  11 ( 4.3) |
+| NASAL CONGESTION |  3 ( 3.5) |  1 ( 1.0) |  3 ( 4.2) |   7 ( 2.8) |
+| DYSPNOEA |  1 ( 1.2) |  1 ( 1.0) |  1 ( 1.4) |   3 ( 1.2) |
+| EPISTAXIS |  0        |  1 ( 1.0) |  2 ( 2.8) |   3 ( 1.2) |
+| PHARYNGOLARYNGEAL PAIN |  0        |  1 ( 1.0) |  1 ( 1.4) |   2 ( 0.8) |
+| PSYCHIATRIC DISORDERS |  7 ( 8.1) |  9 ( 9.4) |  3 ( 4.2) |  19 ( 7.5) |
+| CONFUSIONAL STATE |  2 ( 2.3) |  3 ( 3.1) |  1 ( 1.4) |   6 ( 2.4) |
+| AGITATION |  2 ( 2.3) |  3 ( 3.1) |  0        |   5 ( 2.0) |
+| INSOMNIA |  2 ( 2.3) |  0        |  2 ( 2.8) |   4 ( 1.6) |
+| ANXIETY |  0        |  3 ( 3.1) |  0        |   3 ( 1.2) |
+| DELUSION |  1 ( 1.2) |  0        |  1 ( 1.4) |   2 ( 0.8) |
+| MUSCULOSKELETAL AND CONNECTIVE TISSUE DISORDERS |  3 ( 3.5) |  6 ( 6.2) |  5 ( 6.9) |  14 ( 5.5) |
+| BACK PAIN |  1 ( 1.2) |  1 ( 1.0) |  3 ( 4.2) |   5 ( 2.0) |
+| ARTHRALGIA |  1 ( 1.2) |  2 ( 2.1) |  1 ( 1.4) |   4 ( 1.6) |
+| SHOULDER PAIN |  1 ( 1.2) |  2 ( 2.1) |  0        |   3 ( 1.2) |
+| MUSCLE SPASMS |  0        |  1 ( 1.0) |  1 ( 1.4) |   2 ( 0.8) |
+| ARTHRITIS |  0        |  0        |  1 ( 1.4) |   1 ( 0.4) |
+| INVESTIGATIONS |  5 ( 5.8) |  4 ( 4.2) |  3 ( 4.2) |  12 ( 4.7) |
+| ELECTROCARDIOGRAM ST SEGMENT DEPRESSION |  4 ( 4.7) |  1 ( 1.0) |  0        |   5 ( 2.0) |
+| ELECTROCARDIOGRAM T WAVE INVERSION |  2 ( 2.3) |  1 ( 1.0) |  1 ( 1.4) |   4 ( 1.6) |
+| BLOOD GLUCOSE INCREASED |  0        |  1 ( 1.0) |  1 ( 1.4) |   2 ( 0.8) |
+| ELECTROCARDIOGRAM T WAVE AMPLITUDE DECREASED |  1 ( 1.2) |  1 ( 1.0) |  0        |   2 ( 0.8) |
+| BIOPSY |  0        |  0        |  1 ( 1.4) |   1 ( 0.4) |
+
+ 
+
+AEs by SOC and PT, descending frequency
+
+ 
+
+Because `soc_n` is constant within a SOC block and never smaller than
+any PT’s `n_total` inside it, each SOC’s summary row sorts to the top of
+its own block — no separate “parent first” switch needed.
+
 ## Pagination — long tables
 
 [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
@@ -677,3 +789,62 @@ Vital signs by sex
 
 `big_n` accepts this wide shape (page column + one column per arm) or a
 long `count()`-style table (page, arm, n).
+
+## Empty tables: no data to report
+
+A table whose data has zero rows still renders — the full page chrome
+and the column headers stay intact, and an empty-data placeholder takes
+the place of the body. This is the correct output for a population that
+produced no records (a cohort with no subjects, a serious-AE table with
+no events), rather than an error or a blank page. The per-table message
+is `tabular(empty_text = ...)`; set a house default for every table with
+`preset(empty_text = ...)`, and place the message in the body box with
+`preset(empty_halign = ..., empty_valign = ...)`.
+
+``` r
+
+# Same demographics shell, but the population filter has left no rows.
+empty_demo <- cdisc_saf_demo[0, ]
+
+tabular(
+  empty_demo,
+  titles = c(
+    "Table 14.1.1",
+    "Demographic and Baseline Characteristics",
+    "Safety Population"
+  ),
+  footnotes = "No subjects met the inclusion criteria for this cohort.",
+  empty_text = "No data available to report"
+) |>
+  cols(
+    variable = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo = col_spec(label = "Placebo", align = "decimal"),
+    drug_50 = col_spec(label = "Drug 50 mg", align = "decimal"),
+    drug_100 = col_spec(label = "Drug 100 mg", align = "decimal"),
+    Total = col_spec(align = "decimal")
+  )
+```
+
+|       Characteristic        | Statistic | Placebo | Drug 50 mg | Drug 100 mg | Total |
+|:---------------------------:|:---------:|:-------:|:----------:|:-----------:|:-----:|
+| No data available to report |           |         |            |             |       |
+
+No subjects met the inclusion criteria for this cohort.
+
+ 
+
+Table 14.1.1
+
+Demographic and Baseline Characteristics
+
+Safety Population
+
+ 
+
+The same applies under
+[`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md):
+a zero-N crossing is dropped by default, but
+`subgroup(..., keep_empty = TRUE)` keeps it and renders its banner above
+the empty-data page — so every level in the shell appears even when one
+has no data.

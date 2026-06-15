@@ -11,7 +11,14 @@ canonical submission page-layout convention.
 ## Usage
 
 ``` r
-subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\n(N={n})")
+subgroup(
+  .spec,
+  by,
+  label = NULL,
+  big_n = NULL,
+  big_n_fmt = "\n(N={n})",
+  keep_empty = FALSE
+)
 ```
 
 ## Arguments
@@ -62,9 +69,8 @@ subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\n(N={n})")
     are the Ns).
 
   - **Long** — the `by` column(s) plus one arm-name column and one
-    numeric N column, i.e.
-    [`dplyr::count()`](https://dplyr.tidyverse.org/reference/count.html)
-    / `summarise()` output used directly with no reshaping.
+    numeric N column, i.e. `dplyr::count()` / `summarise()` output used
+    directly with no reshaping.
 
       # Wide: one column per arm.
       wide <- tibble::tribble(
@@ -103,6 +109,20 @@ subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\n(N={n})")
   Appended to each arm's header label, with `{n}` substituted by that
   page/column's integer N. Only the `{n}` token is allowed; the default
   puts the N on its own line under the arm name.
+
+- keep_empty:
+
+  *Retain zero-N crossings.* `<logical(1)>: default FALSE`. When `FALSE`
+  (the default), a `by` crossing combination with no data rows is
+  dropped. When `TRUE`, it is retained and rendered as an empty-state
+  page carrying its banner, so the report shows every combination
+  explicitly. Only multi-variable crossings can produce empty
+  combinations; a single-variable partition never does.
+
+  **Note:** an empty group has no data row to read constant-within-group
+  banner values from, so a `label` template that references a non-`by`
+  column (e.g. an auxiliary BigN column) resolves that token to `NA` for
+  the empty group; the `by`-column tokens always resolve.
 
 ## Value
 

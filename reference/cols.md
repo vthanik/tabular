@@ -30,9 +30,8 @@ cols(.spec, ..., .default = NULL)
 
   *Named `col_spec` objects, one per column.* Each name is the input
   column name in `.spec@data`. Names must match an existing column —
-  pre-compute derived columns upstream with
-  [`dplyr::mutate()`](https://dplyr.tidyverse.org/reference/mutate.html)
-  (or equivalent) before
+  pre-compute derived columns upstream with `dplyr::mutate()` (or
+  equivalent) before
   [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md).
 
   **Restriction:** Names must be unique within a single `cols()` call

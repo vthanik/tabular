@@ -123,10 +123,10 @@ chrome <- base |>
 chrome
 ```
 
-Protocol: XYZ-123\
+Protocol: XYZ-123  
 Analysis Set: Safety
 
-Page 1 of 1\
+Page 1 of 1  
 Data cut: 2026-01-15
 
 |  | placebo | drug_50 | drug_100 | Total |
@@ -204,6 +204,125 @@ Body filters live on
 [`cells_body()`](https://vthanik.github.io/tabular/reference/cells.md):
 `i =` (row index), `j =` (column name), `where =` (an expression over
 the data).
+
+A border attribute takes a
+[`brdr()`](https://vthanik.github.io/tabular/reference/brdr.md) value —
+width, line style, colour. Here a hairline rule separates the pooled
+Total column from the per-arm columns:
+
+``` r
+
+base |>
+  style(
+    border_left = brdr("hairline", "solid", "#ADB5BD"),
+    .at = cells_body(j = "Total")
+  )
+```
+
+|  | placebo | drug_50 | drug_100 | Total |
+|----|----|----|----|----|
+| **Age (years)** |  |  |  |  |
+| n | 86          | 96          | 72          | 254          |
+| Mean (SD) | 75.2 (8.59) | 76.0 (8.11) | 73.8 (7.94) |  75.1 (8.25) |
+| Median | 76.0        | 78.0        | 75.5        |  77.0        |
+| Q1, Q3 | 69.2, 81.8  | 71.0, 82.0  | 70.5, 79.0  |  70.0, 81.0  |
+| Min, Max | 52  , 89    | 51  , 88    | 56  , 88    |  51  , 89    |
+|   |  |  |  |  |
+| **Sex, n (%)** |  |  |  |  |
+| F | 53 (61.6)   | 55 (57.3)   | 35 (48.6)   | 143 (56.3)   |
+| M | 33 (38.4)   | 41 (42.7)   | 37 (51.4)   | 111 (43.7)   |
+|   |  |  |  |  |
+| **Race, n (%)** |  |  |  |  |
+| WHITE | 78 (90.7)   | 90 (93.8)   | 62 (86.1)   | 230 (90.6)   |
+| BLACK OR AFRICAN AMERICAN |  8 ( 9.3)   |  6 ( 6.2)   |  9 (12.5)   |  23 ( 9.1)   |
+| ASIAN |  0          |  0          |  0          |   0          |
+| AMERICAN INDIAN OR ALASKA NATIVE |  0          |  0          |  1 ( 1.4)   |   1 ( 0.4)   |
+
+`border` styles all four sides at once; `border_top` / `border_bottom` /
+`border_left` / `border_right` target one. The table-wide rules
+(toprule, midrule, bottomrule) are preset territory — see the `rules`
+knob on
+[`preset()`](https://vthanik.github.io/tabular/reference/preset.md).
+
+## Inline markup
+
+Plain strings render as plain text — a stray `**` never silently bolds
+the surrounding span. Wrap a string in
+[`md()`](https://vthanik.github.io/tabular/reference/md.md) (CommonMark
+plus `^sup^` / `~sub~`) or
+[`html()`](https://vthanik.github.io/tabular/reference/html.md) (a
+constrained inline tag set) to opt in, the same convention gt uses.
+Every string slot accepts them: titles, footnotes,
+[`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
+labels, and
+[`style()`](https://vthanik.github.io/tabular/reference/style.md)
+pretext / posttext:
+
+``` r
+
+tabular(
+  cdisc_saf_demo,
+  titles = c(
+    "Table 14-2.01",
+    "Demographic and Baseline Characteristics",
+    md("*ITT Population*")
+  ),
+  footnotes = c(
+    md("BMI = body mass index (kg/m^2^)."),
+    html("Source: <i>ADSL</i>, data cut 15JAN2026.")
+  )
+) |>
+  cols(
+    variable = col_spec(
+      usage = "group",
+      group_display = "header_row",
+      label = ""
+    ),
+    stat_label = col_spec(label = "")
+  ) |>
+  cols_apply(arms, col_spec(align = "decimal"))
+```
+
+|  | placebo | drug_50 | drug_100 | Total |
+|----|----|----|----|----|
+| **Age (years)** |  |  |  |  |
+| n | 86          | 96          | 72          | 254          |
+| Mean (SD) | 75.2 (8.59) | 76.0 (8.11) | 73.8 (7.94) |  75.1 (8.25) |
+| Median | 76.0        | 78.0        | 75.5        |  77.0        |
+| Q1, Q3 | 69.2, 81.8  | 71.0, 82.0  | 70.5, 79.0  |  70.0, 81.0  |
+| Min, Max | 52  , 89    | 51  , 88    | 56  , 88    |  51  , 89    |
+|   |  |  |  |  |
+| **Sex, n (%)** |  |  |  |  |
+| F | 53 (61.6)   | 55 (57.3)   | 35 (48.6)   | 143 (56.3)   |
+| M | 33 (38.4)   | 41 (42.7)   | 37 (51.4)   | 111 (43.7)   |
+|   |  |  |  |  |
+| **Race, n (%)** |  |  |  |  |
+| WHITE | 78 (90.7)   | 90 (93.8)   | 62 (86.1)   | 230 (90.6)   |
+| BLACK OR AFRICAN AMERICAN |  8 ( 9.3)   |  6 ( 6.2)   |  9 (12.5)   |  23 ( 9.1)   |
+| ASIAN |  0          |  0          |  0          |   0          |
+| AMERICAN INDIAN OR ALASKA NATIVE |  0          |  0          |  1 ( 1.4)   |   1 ( 0.4)   |
+
+BMI = body mass index (kg/m²).
+
+Source: *ADSL*, data cut 15JAN2026.
+
+ 
+
+Table 14-2.01
+
+Demographic and Baseline Characteristics
+
+*ITT Population*
+
+ 
+
+The marked string survives [`c()`](https://rdrr.io/r/base/c.html)
+concatenation, so plain and marked lines mix freely in one titles or
+footnotes vector. Raw HTML inside
+[`md()`](https://vthanik.github.io/tabular/reference/md.md) passes
+through the same tag whitelist as
+[`html()`](https://vthanik.github.io/tabular/reference/html.md); tags
+outside it drop their wrapper and keep the text.
 
 ## Presets: cosmetics and fit
 

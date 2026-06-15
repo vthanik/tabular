@@ -1,6 +1,36 @@
 # Changelog
 
-## tabular 0.1.1
+## tabular 0.2.0
+
+### New features
+
+- [`figure()`](https://vthanik.github.io/tabular/reference/figure.md)
+  renders a figure (the “F” in TFL) to every backend (RTF, LaTeX, PDF,
+  HTML, DOCX, and Markdown), wrapping a ggplot, a recorded base-R plot,
+  a zero-argument drawing function, or a PNG / JPG file in the same
+  submission chrome as a table (titles, footnotes, page header and
+  footer). The image is placed in the body content-box by `halign` and
+  `valign` (both default to centred), exact on the paged backends and
+  approximate on the continuous ones. A list input emits one figure per
+  page, optionally driven by a `meta` data frame whose columns become
+  per-page `{token}` values. On the continuous backends (HTML and
+  Markdown) a multi-page figure’s shared titles and footnotes render
+  once above the stacked plots; supplying `meta` switches to per-page
+  chrome.
+  [`is_figure_spec()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
+  tests for the new spec, and
+  [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) writes
+  it to a file. A figure’s titles, footnotes, and page header / footer
+  honour
+  [`style()`](https://vthanik.github.io/tabular/reference/style.md) and
+  the
+  [`preset()`](https://vthanik.github.io/tabular/reference/preset.md)
+  cosmetic knobs (fonts, colours, alignment, padding) and the
+  `preset(spacing = ...)` inter-section gaps, just like a table; styling
+  its (absent) body, headers, or subgroup is an error. A drawing
+  function that raises an error aborts with a clear message naming the
+  failing page. No new package dependency: plots rasterise through base
+  `grDevices` and ggplot2 (Suggests) only when a ggplot is passed.
 
 ### Breaking changes
 
@@ -17,6 +47,10 @@
 
 ### Minor improvements and bug fixes
 
+- Every warning now carries a `tabular_warning_<kind>` class (`input`,
+  `runtime`, `layout`, `fidelity`) mirroring the `tabular_error_<kind>`
+  error taxonomy, so warnings can be caught selectively; the former
+  `tabular_warn_layout` class was renamed to `tabular_warning_layout`.
 - [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
   now warns when `group_display` or `group_skip` is set on a non-group
   column (the knobs are inert unless `usage = "group"`).
@@ -26,12 +60,43 @@
   call, and merge every column attribute field-completely (previously a
   default value could not be merged back and some fields could be
   dropped).
+- [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
+  now collapses a zero-row table to a single empty-state page;
+  horizontal `panels` no longer multiply an empty table into several
+  identical blank pages.
 - [`preset()`](https://vthanik.github.io/tabular/reference/preset.md)’s
   `decimal_metrics` knob gained `"afm"` (now the default), making
   decimal alignment width-exact in proportional fonts via the bundled
   font metrics; Markdown output keeps character padding.
+- [`preset()`](https://vthanik.github.io/tabular/reference/preset.md)
+  gained `empty_halign` and `empty_valign` knobs that place the zero-row
+  placeholder message within the body content-box, defaulting to centred
+  horizontally and middle vertically (exact on the paged backends,
+  approximate on HTML, a no-op on Markdown).
+- [`preset()`](https://vthanik.github.io/tabular/reference/preset.md)
+  gained an `empty_text` knob, a house-style default for the zero-row
+  message that a per-table `tabular(empty_text = ...)` still overrides.
+- `preset(spacing = ...)` now drives the blank lines around a subgroup
+  banner (the `subgroup` region) and around a
+  [`figure()`](https://vthanik.github.io/tabular/reference/figure.md)
+  title and footnote; the Markdown table title and footnote gaps now
+  follow the same knob.
+- [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
+  gained a `keep_empty` argument; with `keep_empty = TRUE` a zero-N
+  crossing is retained and rendered as an empty-state page carrying its
+  banner instead of being dropped.
+- [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
+  no longer errors on a zero-row input; the table renders the
+  empty-state placeholder once with no subgroup banner.
+- [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md)
+  gained `empty_text`, the message shown when a table has zero data rows
+  (default “No data available to report”). Zero-row tables now render
+  the full page chrome and the column headers with the message placed in
+  the body, replacing the previous bare “(no rows)” marker.
 
 ## tabular 0.1.0
+
+CRAN release: 2026-06-11
 
 First release. `tabular` renders pre-summarised clinical tables and
 listings to RTF, LaTeX, HTML, PDF, and DOCX from one immutable verb

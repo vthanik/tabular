@@ -54,8 +54,7 @@ A data frame with 13 rows and 7 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from
-[`pharmaverseadam::adrs_onco`](https://pharmaverse.github.io/pharmaverseadam/reference/adrs_onco.html)
+Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::adrs_onco`
 filtered to `PARAMCD == "BOR"`.
 
 ## See also

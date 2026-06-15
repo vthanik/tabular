@@ -17,10 +17,22 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
 
 - .spec:
 
-  *The `tabular_spec` to attach the preset to.*
-  `<tabular_spec>: required`. Dot-prefixed so R's partial argument
-  matching cannot accidentally bind a knob name in `...` to the spec
-  slot.
+  *The spec to attach the preset to.*
+  `<tabular_spec | figure_spec>: required`. Dot-prefixed so R's partial
+  argument matching cannot accidentally bind a knob name in `...` to the
+  spec slot.
+
+  **Note:** a
+  [`figure()`](https://vthanik.github.io/tabular/reference/figure.md)
+  spec accepts the page-geometry knobs (`paper_size`, `orientation`,
+  `margins`, `font_size`, `font_family`, `pagehead`, `pagefoot`, ...)
+  plus the cosmetic surface knobs (`alignment` / `fonts` / `colors` /
+  `padding`) that target its chrome surfaces, the titles and footnotes,
+  e.g. `fonts = list(titles = c(size = 14))`. A cosmetic knob that
+  targets a table-only surface (`body` / `header` / `subgroup`), a
+  `rules` knob (the rules sit on the header band a figure lacks), and
+  the `.template` / `.style` style templates are rejected, since a
+  figure has no such surfaces.
 
 - ...:
 
@@ -258,6 +270,49 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
     always fills its parent and columns wrap when the viewport narrows,
     regardless of `width_mode`. Per-column widths (`col_spec(width)`)
     emit verbatim into the HTML colgroup per the gt convention.
+
+  - **`empty_text`** — house-style *wording* for the empty-state message
+    shown when a spec resolves to zero data rows. `<character(1)>`. The
+    resolution is spec arg -\> preset knob -\> built-in default: a
+    per-table `tabular(empty_text = ...)` wins, else this preset knob
+    (set once via
+    [`set_preset()`](https://vthanik.github.io/tabular/reference/set_preset.md)
+    for a whole house style), else the built-in
+    `"No data available to report"`. Glue
+    [`{}`](https://rdrr.io/r/base/Paren.html) and
+    [`md()`](https://vthanik.github.io/tabular/reference/md.md) /
+    [`html()`](https://vthanik.github.io/tabular/reference/html.md)
+    inline formatting are honoured, exactly like a title line.
+
+  - **`empty_halign`** / **`empty_valign`** — placement of the
+    empty-state message within the body content-box when a spec resolves
+    to zero data rows. The message *wording* comes from `empty_text`
+    (above); these two knobs are the cosmetic *placement*, so they ride
+    the preset and cascade with the house style. `<character(1)>` each,
+    defaulting to centre x middle:
+
+    - **`empty_halign`** — `"left"`, `"center"` *(default)*, or
+      `"right"`. Horizontal anchor of the message line.
+
+    - **`empty_valign`** — `"top"`, `"middle"` *(default)*, or
+      `"bottom"`. Vertical anchor within the content-box — the region
+      between the column-header rule and the footnote rule.
+
+    **Interaction:** valign is exact on the paged backends (RTF / PDF /
+    DOCX), which size the host cell to the content-box height; HTML
+    approximates it with a min-height flex box, and Markdown, having no
+    page geometry, treats valign as a no-op. When a column structure is
+    present the column-header band still renders above the message; with
+    every column hidden, only the page chrome and the centred message
+    remain.
+
+    **Note:** this is the symmetric `halign` / `valign` placement pair,
+    shared with
+    [`style()`](https://vthanik.github.io/tabular/reference/style.md)
+    and the other `*_halign` / `*_valign` alignment keys. It is
+    deliberately distinct from `col_spec(align = ...)`, whose extra
+    `"decimal"` mode makes it a column-content knob rather than a pure
+    two-axis anchor.
 
   - **`whitespace`** — how significant ASCII spaces in labels and cells
     render. `<character(1)>`. One of:

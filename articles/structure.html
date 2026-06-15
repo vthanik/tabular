@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/DM_Mono-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,7 +72,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/HEAD/vignettes/articles/structure.qmd" class="external-link"><code>vignettes/articles/structure.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/main/vignettes/articles/structure.qmd" class="external-link"><code>vignettes/articles/structure.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -886,11 +886,538 @@
 </div>
 </div>
 <p>Widths: <code>"auto"</code> (default) sizes to content; a pinned value (<code>"1in"</code>, <code>1.0</code>, <code>"20%"</code>) wraps within that width. <strong>Set the shared arm width via <code><a href="../reference/cols_apply.html">cols_apply()</a></code> last</strong> — its non-default <code>width</code> then wins the field-merge; a later <code><a href="../reference/cols.html">cols()</a></code> call carrying the default <code>width = "auto"</code> would otherwise be ambiguous.</p>
+</section><section class="level2"><h2 id="sorting-rows">Sorting rows<a class="anchor" aria-label="anchor" href="#sorting-rows"></a>
+</h2>
+<p>Display cells are formatted strings — <code>"54 (21.3)"</code> sorts lexically, not numerically. The idiom: carry one hidden <strong>numeric key</strong> per sort level, hide it with <code>col_spec(visible = FALSE)</code>, and hand the keys to <code><a href="../reference/sort_rows.html">sort_rows()</a></code>. <code>descending</code> takes one value per key, so mixed-direction sorts are a single call.</p>
+<p>The bundled AE table ships its keys precomputed: <code>soc_n</code> (events in the parent SOC, constant down each SOC block) and <code>n_total</code> (events on the row). Sorting on both, descending, clusters every preferred term under its SOC and orders both levels by frequency — the standard SAP ordering:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt</span>, titles <span class="op">=</span> <span class="st">"AEs by SOC and PT, descending frequency"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
+<span>    label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
+<span>      label <span class="op">=</span> <span class="st">"SOC / Preferred Term"</span>,</span>
+<span>      indent <span class="op">=</span> <span class="st">"indent_level"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    soc <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
+<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
+<span>      visible <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>      group_display <span class="op">=</span> <span class="st">"column_repeat"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    row_type <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>    n_total <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>    soc_n <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span><span class="va">arms</span>, <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/sort_rows.html">sort_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"soc_n"</span>, <span class="st">"n_total"</span><span class="op">)</span>, descending <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="cell-output-display">
+<style>
+#tabular-a551a4a051 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-a551a4a051 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-a551a4a051 p { line-height: inherit; }
+#tabular-a551a4a051 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-a551a4a051 .tabular-caption { margin: 0; padding: 0; }
+#tabular-a551a4a051 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-a551a4a051 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-a551a4a051 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-a551a4a051 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-a551a4a051 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-a551a4a051 .tabular-table th, #tabular-a551a4a051 .tabular-table td { padding: .18rem .6rem; }
+#tabular-a551a4a051 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-a551a4a051 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-a551a4a051 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-a551a4a051 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-a551a4a051 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a551a4a051 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a551a4a051 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a551a4a051 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a551a4a051 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-a551a4a051 .tabular-table tbody tr td { border-top: none; }
+#tabular-a551a4a051 .tabular-band { text-align: center; }
+#tabular-a551a4a051 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-a551a4a051 .tabular-subgroup-label { font-weight: 600; }
+#tabular-a551a4a051 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-a551a4a051 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-a551a4a051 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-a551a4a051 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-a551a4a051 .text-left { text-align: left; }
+#tabular-a551a4a051 .text-center { text-align: center; }
+#tabular-a551a4a051 .text-right { text-align: right; }
+#tabular-a551a4a051 .tabular-table thead th.text-left { text-align: left; }
+#tabular-a551a4a051 .tabular-table thead th.text-center { text-align: center; }
+#tabular-a551a4a051 .tabular-table thead th.text-right { text-align: right; }
+#tabular-a551a4a051 .valign-top { vertical-align: top; }
+#tabular-a551a4a051 .valign-middle { vertical-align: middle; }
+#tabular-a551a4a051 .valign-bottom { vertical-align: bottom; }
+#tabular-a551a4a051 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-a551a4a051 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-a551a4a051 .tabular-page-break-row { display: none; }
+#tabular-a551a4a051 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-a551a4a051 .tabular-page-header, #tabular-a551a4a051 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-a551a4a051 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-a551a4a051 .tabular-page-footer { margin-top: 1rem; }
+#tabular-a551a4a051 .tabular-page-header-left, #tabular-a551a4a051 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-a551a4a051 .tabular-page-header-center, #tabular-a551a4a051 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-a551a4a051 .tabular-page-header-right, #tabular-a551a4a051 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-a551a4a051 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-a551a4a051 .tabular-table tr { page-break-inside: avoid; } #tabular-a551a4a051 .tabular-page-header, #tabular-a551a4a051 .tabular-page-footer { display: none; } #tabular-a551a4a051 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-a551a4a051 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-a551a4a051 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style>
+<div id="tabular-a551a4a051" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<p class="tabular-title">AEs by SOC and PT, descending frequency</p>
+<p class="tabular-pad"> </p>
+</figcaption><div class="tabular-table-wrap">
+
+<table class="table tabular-table caption-top">
+<thead><tr class="header">
+<th data-quarto-table-cell-role="th">SOC / Preferred Term</th>
+<th class="text-center" data-quarto-table-cell-role="th">placebo</th>
+<th class="text-center" data-quarto-table-cell-role="th">drug_50</th>
+<th class="text-center" data-quarto-table-cell-role="th">drug_100</th>
+<th class="text-center" data-quarto-table-cell-role="th">Total</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>TOTAL SUBJECTS WITH AN EVENT</td>
+<td class="text-right">52 (60.5)</td>
+<td class="text-right">81 (84.4)</td>
+<td class="text-right">66 (91.7)</td>
+<td class="text-right">199 (78.3)</td>
+</tr>
+<tr class="even">
+<td>SKIN AND SUBCUTANEOUS TISSUE DISORDERS</td>
+<td class="text-right">19 (22.1)</td>
+<td class="text-right">36 (37.5)</td>
+<td class="text-right">35 (48.6)</td>
+<td class="text-right"> 90 (35.4)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">PRURITUS</td>
+<td class="text-right"> 8 ( 9.3)</td>
+<td class="text-right">21 (21.9)</td>
+<td class="text-right">25 (34.7)</td>
+<td class="text-right"> 54 (21.3)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">ERYTHEMA</td>
+<td class="text-right"> 8 ( 9.3)</td>
+<td class="text-right">14 (14.6)</td>
+<td class="text-right">14 (19.4)</td>
+<td class="text-right"> 36 (14.2)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">RASH</td>
+<td class="text-right"> 5 ( 5.8)</td>
+<td class="text-right">13 (13.5)</td>
+<td class="text-right"> 8 (11.1)</td>
+<td class="text-right"> 26 (10.2)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">HYPERHIDROSIS</td>
+<td class="text-right"> 2 ( 2.3)</td>
+<td class="text-right"> 4 ( 4.2)</td>
+<td class="text-right"> 8 (11.1)</td>
+<td class="text-right"> 14 ( 5.5)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">SKIN IRRITATION</td>
+<td class="text-right"> 3 ( 3.5)</td>
+<td class="text-right"> 6 ( 6.2)</td>
+<td class="text-right"> 5 ( 6.9)</td>
+<td class="text-right"> 14 ( 5.5)</td>
+</tr>
+<tr class="even">
+<td>GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS</td>
+<td class="text-right">15 (17.4)</td>
+<td class="text-right">36 (37.5)</td>
+<td class="text-right">30 (41.7)</td>
+<td class="text-right"> 81 (31.9)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">APPLICATION SITE PRURITUS</td>
+<td class="text-right"> 6 ( 7.0)</td>
+<td class="text-right">23 (24.0)</td>
+<td class="text-right">21 (29.2)</td>
+<td class="text-right"> 50 (19.7)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">APPLICATION SITE ERYTHEMA</td>
+<td class="text-right"> 3 ( 3.5)</td>
+<td class="text-right">13 (13.5)</td>
+<td class="text-right">14 (19.4)</td>
+<td class="text-right"> 30 (11.8)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">APPLICATION SITE DERMATITIS</td>
+<td class="text-right"> 5 ( 5.8)</td>
+<td class="text-right"> 9 ( 9.4)</td>
+<td class="text-right"> 7 ( 9.7)</td>
+<td class="text-right"> 21 ( 8.3)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">APPLICATION SITE IRRITATION</td>
+<td class="text-right"> 3 ( 3.5)</td>
+<td class="text-right"> 9 ( 9.4)</td>
+<td class="text-right"> 9 (12.5)</td>
+<td class="text-right"> 21 ( 8.3)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">APPLICATION SITE VESICLES</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 5 ( 5.2)</td>
+<td class="text-right"> 5 ( 6.9)</td>
+<td class="text-right"> 11 ( 4.3)</td>
+</tr>
+<tr class="even">
+<td>GASTROINTESTINAL DISORDERS</td>
+<td class="text-right">13 (15.1)</td>
+<td class="text-right">12 (12.5)</td>
+<td class="text-right">17 (23.6)</td>
+<td class="text-right"> 42 (16.5)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">DIARRHOEA</td>
+<td class="text-right"> 9 (10.5)</td>
+<td class="text-right"> 5 ( 5.2)</td>
+<td class="text-right"> 3 ( 4.2)</td>
+<td class="text-right"> 17 ( 6.7)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">VOMITING</td>
+<td class="text-right"> 3 ( 3.5)</td>
+<td class="text-right"> 4 ( 4.2)</td>
+<td class="text-right"> 6 ( 8.3)</td>
+<td class="text-right"> 13 ( 5.1)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">NAUSEA</td>
+<td class="text-right"> 3 ( 3.5)</td>
+<td class="text-right"> 3 ( 3.1)</td>
+<td class="text-right"> 6 ( 8.3)</td>
+<td class="text-right"> 12 ( 4.7)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">ABDOMINAL PAIN</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 3 ( 3.1)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  5 ( 2.0)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">SALIVARY HYPERSECRETION</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 4 ( 5.6)</td>
+<td class="text-right">  4 ( 1.6)</td>
+</tr>
+<tr class="even">
+<td>NERVOUS SYSTEM DISORDERS</td>
+<td class="text-right"> 6 ( 7.0)</td>
+<td class="text-right">18 (18.8)</td>
+<td class="text-right">17 (23.6)</td>
+<td class="text-right"> 41 (16.1)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">DIZZINESS</td>
+<td class="text-right"> 2 ( 2.3)</td>
+<td class="text-right"> 9 ( 9.4)</td>
+<td class="text-right">10 (13.9)</td>
+<td class="text-right"> 21 ( 8.3)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">HEADACHE</td>
+<td class="text-right"> 3 ( 3.5)</td>
+<td class="text-right"> 3 ( 3.1)</td>
+<td class="text-right"> 5 ( 6.9)</td>
+<td class="text-right"> 11 ( 4.3)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">SYNCOPE</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 5 ( 5.2)</td>
+<td class="text-right"> 2 ( 2.8)</td>
+<td class="text-right">  7 ( 2.8)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">SOMNOLENCE</td>
+<td class="text-right"> 2 ( 2.3)</td>
+<td class="text-right"> 3 ( 3.1)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  6 ( 2.4)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">TRANSIENT ISCHAEMIC ATTACK</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 2 ( 2.1)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  3 ( 1.2)</td>
+</tr>
+<tr class="even">
+<td>CARDIAC DISORDERS</td>
+<td class="text-right"> 7 ( 8.1)</td>
+<td class="text-right">12 (12.5)</td>
+<td class="text-right">14 (19.4)</td>
+<td class="text-right"> 33 (13.0)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">SINUS BRADYCARDIA</td>
+<td class="text-right"> 2 ( 2.3)</td>
+<td class="text-right"> 7 ( 7.3)</td>
+<td class="text-right"> 8 (11.1)</td>
+<td class="text-right"> 17 ( 6.7)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">MYOCARDIAL INFARCTION</td>
+<td class="text-right"> 4 ( 4.7)</td>
+<td class="text-right"> 2 ( 2.1)</td>
+<td class="text-right"> 4 ( 5.6)</td>
+<td class="text-right"> 10 ( 3.9)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">ATRIAL FIBRILLATION</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 2 ( 2.1)</td>
+<td class="text-right"> 2 ( 2.8)</td>
+<td class="text-right">  5 ( 2.0)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">SUPRAVENTRICULAR EXTRASYSTOLES</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  3 ( 1.2)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">VENTRICULAR EXTRASYSTOLES</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 2 ( 2.1)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  3 ( 1.2)</td>
+</tr>
+<tr class="even">
+<td>INFECTIONS AND INFESTATIONS</td>
+<td class="text-right">12 (14.0)</td>
+<td class="text-right"> 6 ( 6.2)</td>
+<td class="text-right">11 (15.3)</td>
+<td class="text-right"> 29 (11.4)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">NASOPHARYNGITIS</td>
+<td class="text-right"> 2 ( 2.3)</td>
+<td class="text-right"> 4 ( 4.2)</td>
+<td class="text-right"> 6 ( 8.3)</td>
+<td class="text-right"> 12 ( 4.7)</td>
+</tr>
+<tr class="tabular-page-break-row even" aria-hidden="true">
+<td colspan="5"></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">UPPER RESPIRATORY TRACT INFECTION</td>
+<td class="text-right"> 6 ( 7.0)</td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 3 ( 4.2)</td>
+<td class="text-right"> 10 ( 3.9)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">INFLUENZA</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  3 ( 1.2)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">URINARY TRACT INFECTION</td>
+<td class="text-right"> 2 ( 2.3)</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  3 ( 1.2)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">CYSTITIS</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  2 ( 0.8)</td>
+</tr>
+<tr class="odd">
+<td>RESPIRATORY, THORACIC AND MEDIASTINAL DISORDERS</td>
+<td class="text-right"> 5 ( 5.8)</td>
+<td class="text-right"> 8 ( 8.3)</td>
+<td class="text-right"> 9 (12.5)</td>
+<td class="text-right"> 22 ( 8.7)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">COUGH</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 5 ( 5.2)</td>
+<td class="text-right"> 5 ( 6.9)</td>
+<td class="text-right"> 11 ( 4.3)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">NASAL CONGESTION</td>
+<td class="text-right"> 3 ( 3.5)</td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 3 ( 4.2)</td>
+<td class="text-right">  7 ( 2.8)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">DYSPNOEA</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  3 ( 1.2)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">EPISTAXIS</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 2 ( 2.8)</td>
+<td class="text-right">  3 ( 1.2)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">PHARYNGOLARYNGEAL PAIN</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  2 ( 0.8)</td>
+</tr>
+<tr class="odd">
+<td>PSYCHIATRIC DISORDERS</td>
+<td class="text-right"> 7 ( 8.1)</td>
+<td class="text-right"> 9 ( 9.4)</td>
+<td class="text-right"> 3 ( 4.2)</td>
+<td class="text-right"> 19 ( 7.5)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">CONFUSIONAL STATE</td>
+<td class="text-right"> 2 ( 2.3)</td>
+<td class="text-right"> 3 ( 3.1)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  6 ( 2.4)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">AGITATION</td>
+<td class="text-right"> 2 ( 2.3)</td>
+<td class="text-right"> 3 ( 3.1)</td>
+<td class="text-right"> 0       </td>
+<td class="text-right">  5 ( 2.0)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">INSOMNIA</td>
+<td class="text-right"> 2 ( 2.3)</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 2 ( 2.8)</td>
+<td class="text-right">  4 ( 1.6)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">ANXIETY</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 3 ( 3.1)</td>
+<td class="text-right"> 0       </td>
+<td class="text-right">  3 ( 1.2)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">DELUSION</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  2 ( 0.8)</td>
+</tr>
+<tr class="odd">
+<td>MUSCULOSKELETAL AND CONNECTIVE TISSUE DISORDERS</td>
+<td class="text-right"> 3 ( 3.5)</td>
+<td class="text-right"> 6 ( 6.2)</td>
+<td class="text-right"> 5 ( 6.9)</td>
+<td class="text-right"> 14 ( 5.5)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">BACK PAIN</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 3 ( 4.2)</td>
+<td class="text-right">  5 ( 2.0)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">ARTHRALGIA</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 2 ( 2.1)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  4 ( 1.6)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">SHOULDER PAIN</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 2 ( 2.1)</td>
+<td class="text-right"> 0       </td>
+<td class="text-right">  3 ( 1.2)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">MUSCLE SPASMS</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  2 ( 0.8)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">ARTHRITIS</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  1 ( 0.4)</td>
+</tr>
+<tr class="odd">
+<td>INVESTIGATIONS</td>
+<td class="text-right"> 5 ( 5.8)</td>
+<td class="text-right"> 4 ( 4.2)</td>
+<td class="text-right"> 3 ( 4.2)</td>
+<td class="text-right"> 12 ( 4.7)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">ELECTROCARDIOGRAM ST SEGMENT DEPRESSION</td>
+<td class="text-right"> 4 ( 4.7)</td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 0       </td>
+<td class="text-right">  5 ( 2.0)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">ELECTROCARDIOGRAM T WAVE INVERSION</td>
+<td class="text-right"> 2 ( 2.3)</td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  4 ( 1.6)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em)">BLOOD GLUCOSE INCREASED</td>
+<td class="text-right"> 0       </td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 1 ( 1.4)</td>
+<td class="text-right">  2 ( 0.8)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 1.2em)">ELECTROCARDIOGRAM T WAVE AMPLITUDE DECREASED</td>
+<td class="text-right"> 1 ( 1.2)</td>
+<td class="text-right"> 1 ( 1.0)</td>
+<td class="text-right"> 0       </td>
+<td class="text-right">  2 ( 0.8)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529">BIOPSY</td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 0       </td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 0       </td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529"> 1 ( 1.4)</td>
+<td class="text-right" style="border-bottom: 0.5pt solid #212529">  1 ( 0.4)</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure></div>
+</div>
+</div>
+<p>Because <code>soc_n</code> is constant within a SOC block and never smaller than any PT’s <code>n_total</code> inside it, each SOC’s summary row sorts to the top of its own block — no separate “parent first” switch needed.</p>
 </section><section class="level2"><h2 id="pagination-long-tables">Pagination — long tables<a class="anchor" aria-label="anchor" href="#pagination-long-tables"></a>
 </h2>
 <p><code><a href="../reference/paginate.html">paginate()</a></code> derives the rows-per-page budget from the preset (paper, font, margins) and the title/footnote/header line counts — you never set rows-per-page by hand. <code>keep_together</code> stops a page break landing inside a section’s run:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span><span class="va">ae_pages</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt</span>, titles <span class="op">=</span> <span class="st">"AEs by SOC and PT"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
@@ -1421,14 +1948,14 @@
 </div>
 <p>The preview above is one continuous table: row pagination, <code>keep_together</code>, and the <code>continuation</code> marker materialise only in the <strong>paged backends</strong> (RTF, PDF, DOCX), not in HTML. Emit to one of those to see the page breaks:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">ae_pages</span>, <span class="st">"ae_soc_pt.pdf"</span><span class="op">)</span> <span class="co"># continuation marker repeats on each continued page</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="panels-wide-tables">Panels — wide tables<a class="anchor" aria-label="anchor" href="#panels-wide-tables"></a>
 </h2>
 <p>When the columns don’t fit one page, <code>paginate(panels = N)</code> splits the <strong>non-group</strong> columns into <code>N</code> chunks and repeats every <code>group</code>/<code>id</code> column on each panel (so the row labels reappear). Make the row label <code>usage = "id"</code> so it rides every panel:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">wide_split</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics (wide split)"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
 <span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
@@ -1613,7 +2140,7 @@
 </div>
 <p>Panels are a paged-backend feature: in HTML and Markdown the table stays one continuous block (the preview above), while RTF, PDF, and DOCX place each panel on its own page with the <code>id</code> / <code>group</code> columns repeated. Emit to a paged backend to see the split:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">wide_split</span>, <span class="st">"demographics_wide.pdf"</span><span class="op">)</span> <span class="co"># panel 2 carries the (continued) marker</span></span></code></pre></div>
 </div>
 <p>Two things to know:</p>
@@ -1626,7 +2153,7 @@
 </h2>
 <p><code><a href="../reference/subgroup.html">subgroup()</a></code> partitions the table — one page block per value, with a banner and a hard page break. A partition-constant column can ride into the banner:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_subgroup</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_subgroup</span>, titles <span class="op">=</span> <span class="st">"Vital signs by sex"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
@@ -2274,7 +2801,7 @@
 </div>
 <p>For a <strong>different <code>(N=)</code> per arm on each page</strong> (the column headers re-resolving per subgroup), pass <code>big_n</code> — a small table of N per page × arm. No bundled dataset carries per-arm-per-page counts, so build it inline (this is also the shape <code>big_n</code> expects):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">big_n</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
 <span>  <span class="op">~</span><span class="va">sex</span>, <span class="op">~</span><span class="va">placebo</span>, <span class="op">~</span><span class="va">drug_50</span>, <span class="op">~</span><span class="va">drug_100</span>, <span class="op">~</span><span class="va">Total</span>,</span>
 <span>  <span class="st">"F"</span>,       <span class="fl">53L</span>,      <span class="fl">55L</span>,       <span class="fl">35L</span>,    <span class="fl">143L</span>,</span>
@@ -2939,6 +3466,109 @@
 </div>
 </div>
 <p><code>big_n</code> accepts this wide shape (page column + one column per arm) or a long <code>count()</code>-style table (page, arm, n).</p>
+</section><section class="level2"><h2 id="empty-tables-no-data-to-report">Empty tables: no data to report<a class="anchor" aria-label="anchor" href="#empty-tables-no-data-to-report"></a>
+</h2>
+<p>A table whose data has zero rows still renders — the full page chrome and the column headers stay intact, and an empty-data placeholder takes the place of the body. This is the correct output for a population that produced no records (a cohort with no subjects, a serious-AE table with no events), rather than an error or a blank page. The per-table message is <code>tabular(empty_text = ...)</code>; set a house default for every table with <code>preset(empty_text = ...)</code>, and place the message in the body box with <code>preset(empty_halign = ..., empty_valign = ...)</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Same demographics shell, but the population filter has left no rows.</span></span>
+<span><span class="va">empty_demo</span> <span class="op">&lt;-</span> <span class="va">cdisc_saf_demo</span><span class="op">[</span><span class="fl">0</span>, <span class="op">]</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span></span>
+<span>  <span class="va">empty_demo</span>,</span>
+<span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Table 14.1.1"</span>,</span>
+<span>    <span class="st">"Demographic and Baseline Characteristics"</span>,</span>
+<span>    <span class="st">"Safety Population"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  footnotes <span class="op">=</span> <span class="st">"No subjects met the inclusion criteria for this cohort."</span>,</span>
+<span>  empty_text <span class="op">=</span> <span class="st">"No data available to report"</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
+<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span>
+<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span>
+<span>    placebo <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    drug_50 <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50 mg"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    drug_100 <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 100 mg"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
+<span>    Total <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<div class="cell-output-display">
+<style>
+#tabular-6253e59eaa { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-6253e59eaa .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6253e59eaa p { line-height: inherit; }
+#tabular-6253e59eaa .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-6253e59eaa .tabular-caption { margin: 0; padding: 0; }
+#tabular-6253e59eaa .tabular-pad { margin: 0; line-height: 1; }
+#tabular-6253e59eaa .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-6253e59eaa .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-6253e59eaa .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-6253e59eaa .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-6253e59eaa .tabular-table th, #tabular-6253e59eaa .tabular-table td { padding: .18rem .6rem; }
+#tabular-6253e59eaa .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-6253e59eaa .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-6253e59eaa .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-6253e59eaa .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-6253e59eaa .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6253e59eaa .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6253e59eaa .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6253e59eaa .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6253e59eaa .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-6253e59eaa .tabular-table tbody tr td { border-top: none; }
+#tabular-6253e59eaa .tabular-band { text-align: center; }
+#tabular-6253e59eaa .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-6253e59eaa .tabular-subgroup-label { font-weight: 600; }
+#tabular-6253e59eaa .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-6253e59eaa .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-6253e59eaa .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-6253e59eaa .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-6253e59eaa .text-left { text-align: left; }
+#tabular-6253e59eaa .text-center { text-align: center; }
+#tabular-6253e59eaa .text-right { text-align: right; }
+#tabular-6253e59eaa .tabular-table thead th.text-left { text-align: left; }
+#tabular-6253e59eaa .tabular-table thead th.text-center { text-align: center; }
+#tabular-6253e59eaa .tabular-table thead th.text-right { text-align: right; }
+#tabular-6253e59eaa .valign-top { vertical-align: top; }
+#tabular-6253e59eaa .valign-middle { vertical-align: middle; }
+#tabular-6253e59eaa .valign-bottom { vertical-align: bottom; }
+#tabular-6253e59eaa .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-6253e59eaa .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-6253e59eaa .tabular-page-break-row { display: none; }
+#tabular-6253e59eaa { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-6253e59eaa .tabular-page-header, #tabular-6253e59eaa .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-6253e59eaa .tabular-page-header { margin-bottom: 1rem; }
+#tabular-6253e59eaa .tabular-page-footer { margin-top: 1rem; }
+#tabular-6253e59eaa .tabular-page-header-left, #tabular-6253e59eaa .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-6253e59eaa .tabular-page-header-center, #tabular-6253e59eaa .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-6253e59eaa .tabular-page-header-right, #tabular-6253e59eaa .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-6253e59eaa .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-6253e59eaa .tabular-table tr { page-break-inside: avoid; } #tabular-6253e59eaa .tabular-page-header, #tabular-6253e59eaa .tabular-page-footer { display: none; } #tabular-6253e59eaa .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-6253e59eaa .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-6253e59eaa .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style>
+<div id="tabular-6253e59eaa" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<p class="tabular-title">Table 14.1.1</p>
+<p class="tabular-title">Demographic and Baseline Characteristics</p>
+<p class="tabular-title">Safety Population</p>
+<p class="tabular-pad"> </p>
+</figcaption><div class="tabular-table-wrap">
+
+<table class="table tabular-table caption-top">
+<thead><tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">Characteristic</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Statistic</th>
+<th class="text-center" style="text-align: center;" data-quarto-table-cell-role="th">Placebo</th>
+<th class="text-center" style="text-align: center;" data-quarto-table-cell-role="th">Drug 50 mg</th>
+<th class="text-center" style="text-align: center;" data-quarto-table-cell-role="th">Drug 100 mg</th>
+<th class="text-center" style="text-align: center;" data-quarto-table-cell-role="th">Total</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td colspan="6" class="tabular-empty" style="text-align: center; height: 5.24in; vertical-align: middle;">No data available to report</td>
+</tr></tbody>
+</table>
+</div>
+<p class="tabular-footnote">No subjects met the inclusion criteria for this cohort.</p>
+</figure></div>
+</div>
+</div>
+<p>The same applies under <code><a href="../reference/subgroup.html">subgroup()</a></code>: a zero-N crossing is dropped by default, but <code>subgroup(..., keep_empty = TRUE)</code> keeps it and renders its banner above the empty-data page — so every level in the shell appears even when one has no data.</p>
 </section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

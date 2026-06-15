@@ -9,6 +9,15 @@ Wrap a pre-summarised wide data frame into a `tabular_spec`.
 - [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
   : Convert a cards ARD to a wide display data.frame
 
+## Figures
+
+Wrap a ggplot, base-R plot, drawing function, or image file into a
+`figure_spec`, rendered with the same submission chrome as a table. A
+list input emits one figure per page.
+
+- [`figure()`](https://vthanik.github.io/tabular/reference/figure.md) :
+  Wrap a plot or image in submission chrome
+
 ## Spec building
 
 Configure per-column display, header bands, sort order, and subgrouping.
@@ -156,7 +165,8 @@ methods drive the live HTML preview.
 Class predicates for tabular’s S7 objects.
 
 - [`tabular-package`](https://vthanik.github.io/tabular/reference/tabular-package.md)
-  : tabular: Render Tables and Listings for Clinical Submissions
+  : tabular: Render Tables, Listings, and Figures for Clinical
+  Submissions
 - [`tabular_classes`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`.col_spec_class`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`header_node`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
@@ -168,10 +178,12 @@ Class predicates for tabular’s S7 objects.
   [`.repeat_content_values`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`preset_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`tabular_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
+  [`figure_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`inline_ast`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`tabular_grid`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   : tabular S7 classes
 - [`is_tabular_spec()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
+  [`is_figure_spec()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
   [`is_tabular_grid()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
   [`is_col_spec()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
   [`is_header_node()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)

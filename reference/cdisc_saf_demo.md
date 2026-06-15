@@ -44,8 +44,7 @@ A data frame with 11 rows and 6 columns:
 
 ## Source
 
-Derived in `data-raw/bundle-demo.R` from
-[`pharmaverseadam::adsl`](https://pharmaverse.github.io/pharmaverseadam/reference/adsl.html)
+Derived in `data-raw/bundle-demo.R` from `pharmaverseadam::adsl`
 filtered to `SAFFL == "Y"` and the three CDISCPILOT01 treatment arms.
 
 ## Details

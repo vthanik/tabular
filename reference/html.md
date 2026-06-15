@@ -29,7 +29,7 @@ Pass it directly into any string-bearing slot
 titles / footnotes,
 [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
 label, [`style()`](https://vthanik.github.io/tabular/reference/style.md)
-pretext / posttext); the resolve engine calls `parse_inline()`
+pretext / posttext); the resolve engine calls `.parse_inline()`
 internally and backends walk the resulting `inline_ast`.
 
 ## Details

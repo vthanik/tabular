@@ -78,7 +78,7 @@ previous-phase state of the spec:
 
 4.  `engine_format()` — apply per-column formats, substitute `na_text`,
     and parse every cell / title / footnote / label through
-    `parse_inline()` to its `inline_ast`.
+    `.parse_inline()` to its `inline_ast`.
 
 5.  `engine_decimal()` — column-wide decimal alignment for any column
     flagged `col_spec(align = "decimal")`. Operates on the formatted

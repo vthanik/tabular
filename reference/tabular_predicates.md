@@ -11,6 +11,8 @@ shapes during pipeline debugging.
 ``` r
 is_tabular_spec(x)
 
+is_figure_spec(x)
+
 is_tabular_grid(x)
 
 is_col_spec(x)
@@ -66,7 +68,7 @@ Twelve predicates cover the full S7 surface:
 | `is_pagination_spec()` | `pagination_spec` | [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md) |
 | `is_preset_spec()` | `preset_spec` | [`preset()`](https://vthanik.github.io/tabular/reference/preset.md), [`set_preset()`](https://vthanik.github.io/tabular/reference/set_preset.md) |
 | `is_subgroup_spec()` | `subgroup_spec` | [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md) |
-| `is_inline_ast()` | `inline_ast` | `parse_inline()` (post-format) |
+| `is_inline_ast()` | `inline_ast` | `.parse_inline()` (post-format) |
 
 Predicates never error — they return `FALSE` for `NULL`, vectors,
 objects of any other class, and S7 objects from other packages. Use them

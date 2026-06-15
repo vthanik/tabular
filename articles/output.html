@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/DM_Sans-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/DM_Mono-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -72,7 +72,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/HEAD/vignettes/articles/output.qmd" class="external-link"><code>vignettes/articles/output.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/main/vignettes/articles/output.qmd" class="external-link"><code>vignettes/articles/output.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -95,7 +95,34 @@
 <span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.pdf"</span><span class="op">)</span> <span class="co"># PDF (via LaTeX)</span></span>
 <span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.md"</span><span class="op">)</span> <span class="co"># Markdown</span></span></code></pre></div>
 </div>
-<p><code>as_grid(spec)</code> resolves the fully-laid-out grid <strong>without</strong> writing a file — useful for testing or programmatic inspection.</p>
+<p>It returns the written path invisibly, so the emit is chainable into scripted batch runs. One spec, any backend:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
+<span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
+<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
+<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
+<span>      group_display <span class="op">=</span> <span class="st">"header_row"</span>,</span>
+<span>      label <span class="op">=</span> <span class="st">""</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rtf"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+</div>
+<p><code>as_grid(spec)</code> resolves the fully-laid-out grid <strong>without</strong> writing a file — useful for testing or programmatic inspection. The grid carries the resolved pages plus a metadata block (pagination counts, resolved column names, the effective preset):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_grid.html">as_grid</a></span><span class="op">(</span><span class="va">spec</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">grid</span><span class="op">@</span><span class="va">pages</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 1</span></span>
+<span><span class="va">grid</span><span class="op">@</span><span class="va">metadata</span><span class="op">$</span><span class="va">col_names</span></span>
+<span><span class="co">#&gt; [1] "variable"   "stat_label" "placebo"    "drug_50"    "drug_100"  </span></span>
+<span><span class="co">#&gt; [6] "Total"</span></span></code></pre></div>
+</div>
 </section><section class="level2"><h2 id="backend-capability-matrix">Backend capability matrix<a class="anchor" aria-label="anchor" href="#backend-capability-matrix"></a>
 </h2>
 <p>One spec renders to every backend, but the page-oriented features differ:</p>
@@ -174,14 +201,14 @@
 </h2>
 <p><strong>RTF, HTML, DOCX, Markdown need nothing beyond the R package.</strong> Only PDF has a system dependency — a LaTeX engine plus the packages the backend uses (<code>tabularray</code>, <code>ninecolors</code>, <code>siunitx</code>, <code>tex-gyre</code>, …). Check and install:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/check_latex.html">check_latex</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># reports what's missing + the exact command</span></span>
 <span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/tlmgr.html" class="external-link">tlmgr_install</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"tabularray"</span>, <span class="st">"ninecolors"</span>, <span class="st">"siunitx"</span>, <span class="st">"tex-gyre"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <blockquote>
 <p><strong>OS-managed TeX Live (RHEL/dnf, Debian/apt):</strong> <code>tlmgr</code> is locked and refuses to install (“will likely destroy the … TeXLive install”). Do <strong>not</strong> force it with <code>--ignore-warning</code>. Install a user-space TinyTeX you control instead: <code><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">tinytex::install_tinytex()</a></code>, restart R, then <code>tlmgr_install(...)</code>.</p>
 </blockquote>
-<p>For decimal alignment in paper backends, metric-compatible fonts matter — check with <code><a href="../reference/check_fonts.html">check_fonts()</a></code>.</p>
+<p>For decimal alignment in paper backends, metric-compatible fonts matter — check with <code>check_fonts(spec)</code>.</p>
 </section><section class="level2"><h2 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
 </h2>
 <ul>

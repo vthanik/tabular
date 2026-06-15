@@ -18,7 +18,7 @@ to file) or
 ## Usage
 
 ``` r
-tabular(data, titles = NULL, footnotes = NULL)
+tabular(data, titles = NULL, footnotes = NULL, empty_text = NULL)
 ```
 
 ## Arguments
@@ -83,6 +83,26 @@ tabular(data, titles = NULL, footnotes = NULL)
         "TEAE = treatment-emergent adverse event."
       )
 
+- empty_text:
+
+  *Placeholder shown when `data` has zero rows.*
+  `<character(1) | NULL>: default NULL`. When the display resolves to no
+  data rows, the backends still emit the full page chrome and — when a
+  column structure is present — the column headers, then place this
+  message in the body where the rows would sit. `NULL` (the default)
+  inherits the house-style wording from `preset(empty_text = ...)` when
+  set, falling back to the built-in `"No data available to report"`.
+  Pass any sponsor or study wording (a localized string, "No subjects
+  met the criteria for this table.", a protocol-qualified line) to
+  override per table; glue `{expr}` interpolation and
+  [`md()`](https://vthanik.github.io/tabular/reference/md.md) /
+  [`html()`](https://vthanik.github.io/tabular/reference/html.md) are
+  honoured, exactly like a title line.
+
+  **Interaction:** placement within the body box is cosmetic and lives
+  on the preset, `preset(empty_halign = ..., empty_valign = ...)`,
+  defaulting to centre x middle.
+
 ## Value
 
 *A `tabular_spec` S7 object.* Pipe it into
@@ -103,9 +123,7 @@ resolve without writing.
 **Pre-summarised input contract.** `data` is one row per displayed row
 of the final table. `tabular()` does not aggregate, filter, weight, or
 generate subtotal rows — those happen upstream in `cards`, `dplyr`, or
-SAS. If the upstream is a long
-[`cards::ard_stack()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html)
-ARD, pipe through
+SAS. If the upstream is a long `cards::ard_stack()` ARD, pipe through
 [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
 first to land in the wide shape `tabular()` accepts.
 
