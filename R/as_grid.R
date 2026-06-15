@@ -19,7 +19,7 @@
 #   3. engine_style()     — resolve style predicates into a per-cell
 #                           style matrix (one style_node per cell).
 #   4. engine_format()    — per-column format + NA substitution +
-#                           parse_inline() over cells, titles,
+#                           .parse_inline() over cells, titles,
 #                           footnotes, and col labels.
 #   5. engine_decimal()   — column-wide decimal alignment for any
 #                           col_spec(align = "decimal").
@@ -59,7 +59,7 @@
 #'    `spec@data`.
 #' 4. `engine_format()` — apply per-column formats, substitute
 #'    `na_text`, and parse every cell / title / footnote / label
-#'    through `parse_inline()` to its `inline_ast`.
+#'    through `.parse_inline()` to its `inline_ast`.
 #' 5. `engine_decimal()` — column-wide decimal alignment for any
 #'    column flagged `col_spec(align = "decimal")`. Operates on the
 #'    formatted text; output is the same character matrix with NBSP
@@ -315,7 +315,7 @@ as_grid <- function(.spec) {
   # across the full data (subgroup-major), so the marker at every anchor
   # is byte-identical across subgroups and pages. NULL when the spec
   # carries no `footnote()` refs (every downstream helper is a no-op).
-  registry <- engine_footnotes_assign(spec, groups, call)
+  registry <- .engine_footnotes_assign(spec, groups, call)
   if (length(groups) == 1L && is.null(groups[[1L]]$runtime)) {
     return(.resolve_single_to_grid(
       groups[[1L]]$spec,
@@ -341,7 +341,7 @@ as_grid <- function(.spec) {
   base_headers <- NULL
   if (!is.null(spec@subgroup) && !is.null(spec@subgroup@big_n)) {
     base_cols <- .cols_by_name(spec@cols, names(spec@data))
-    base_labels <- engine_footnotes_mark_ast(
+    base_labels <- .engine_footnotes_mark_ast(
       .parse_col_labels(base_cols, names(spec@data), call),
       NULL,
       registry,
@@ -394,7 +394,7 @@ as_grid <- function(.spec) {
   # one resolved triple per side. Backends like LaTeX consume this
   # to emit table-level `hline{i}={spec}` / `vline{j}={spec}`
   # directives without inferring from per-cell scalars on cells_style.
-  body_borders_mat <- body_border_manifest(spec)
+  body_borders_mat <- .body_border_manifest(spec)
   # Chrome regions (header_*, subgroup_*, footer_*, pagehead_bottom,
   # pagefoot_top) live outside the body-cell matrix; populate the
   # parallel sidecar from the lowered cells_*() chrome layers.
@@ -407,7 +407,7 @@ as_grid <- function(.spec) {
   # subgroup, so the first-subgroup-only grid merge carries it correctly.
   # Body-cell markers are stamped later, after engine_decimal. All
   # no-ops when `registry` is NULL.
-  fn_ast <- engine_footnotes_mark_ast(
+  fn_ast <- .engine_footnotes_mark_ast(
     fmt$col_labels_ast,
     fmt$titles_ast,
     registry,
@@ -415,7 +415,7 @@ as_grid <- function(.spec) {
   )
   fmt$col_labels_ast <- fn_ast$col_labels_ast
   fmt$titles_ast <- fn_ast$titles_ast
-  fmt$footnotes_ast <- engine_footnotes_append_block(
+  fmt$footnotes_ast <- .engine_footnotes_append_block(
     fmt$footnotes_ast,
     registry
   )
@@ -537,7 +537,7 @@ as_grid <- function(.spec) {
   # the column reserves room for the superscript). Anchors resolve
   # against this (sub)grid's data; the marker glyph comes from the
   # spec-level registry. No-op when `registry` is NULL.
-  cells_text <- engine_footnotes_mark_body(
+  cells_text <- .engine_footnotes_mark_body(
     cells_text,
     registry,
     data = spec@data,
@@ -598,7 +598,7 @@ as_grid <- function(.spec) {
   # cascade-effective preset so the session default's pagehead /
   # pagefoot wins when the spec carries no per-call preset. Token
   # substitution for {program} / {datetime} happens inside
-  # `.resolve_page_band` before parse_inline runs. {page} /
+  # `.resolve_page_band` before .parse_inline runs. {page} /
   # {npages} are deferred to backend emission.
   eff_preset <- .effective_preset(spec)
   pagehead_ast <- .resolve_page_band(
@@ -735,10 +735,10 @@ as_grid <- function(.spec) {
       }
       runs <- ca[[i, j]]@runs
       if (has_pre) {
-        runs <- c(parse_inline(pre, call = call)@runs, runs)
+        runs <- c(.parse_inline(pre, call = call)@runs, runs)
       }
       if (has_post) {
-        runs <- c(runs, parse_inline(post, call = call)@runs)
+        runs <- c(runs, .parse_inline(post, call = call)@runs)
       }
       ca[[i, j]] <- inline_ast(runs = runs)
     }
@@ -757,7 +757,7 @@ as_grid <- function(.spec) {
   if (is.null(runtime)) {
     return(pages)
   }
-  banner_ast <- parse_inline(runtime$banner_text, call = call)
+  banner_ast <- .parse_inline(runtime$banner_text, call = call)
   lapply(pages, function(p) {
     p$subgroup_by <- runtime$by
     p$subgroup_values <- runtime$values

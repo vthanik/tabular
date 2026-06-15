@@ -96,7 +96,7 @@ engine_borders <- function(spec, cells_style) {
 #' @return Named list (length 6) of triples or NULLs.
 #' @keywords internal
 #' @noRd
-body_border_manifest <- function(spec) {
+.body_border_manifest <- function(spec) {
   out <- list(
     outer_top = NULL,
     outer_bottom = NULL,
@@ -189,7 +189,7 @@ body_border_manifest <- function(spec) {
   side <- layer@location$side
   node <- layer@style
   # Outer LEFT / RIGHT edges are NOT stamped per-cell. They are drawn
-  # structurally by each backend from `body_border_manifest()` (which
+  # structurally by each backend from `.body_border_manifest()` (which
   # reads the same cascade, so it already carries the resolved triple):
   # HTML as a table-level `border-left/right`, RTF as `\trbrdrl/r` on
   # every table-proper `\trowd`, DOCX as `<w:left>/<w:right>` on the
@@ -619,7 +619,7 @@ engine_chrome_borders <- function(spec) {
   # runs BEFORE that drop, their per-cell border stamps would land on a
   # column that never renders. Exclude them so outer_left / cols /
   # outer_right target the first/last true BODY column. (LaTeX is
-  # unaffected: it reads the per-side triple via body_border_manifest(),
+  # unaffected: it reads the per-side triple via .body_border_manifest(),
   # not these stamps.)
   group_names <- .group_display_columns(cols, col_names)
   header_row_names <- .header_row_columns(cols, group_names)

@@ -1,4 +1,4 @@
-# md() / html() inline-format wrappers and the parse_inline()
+# md() / html() inline-format wrappers and the .parse_inline()
 # dispatcher. Tests cover the S3-class round-trip, the input
 # validators, the Markdown parser (commonmark + ^sup^ / ~sub~
 # pre-processing), the HTML parser (xml2 + tag whitelist), the
@@ -28,8 +28,8 @@ test_that("md() / html() markers survive c() concatenation", {
   # S3 class.
   v <- c("Table 14.3.1", md("**Drug A**"), html("<i>x</i>"))
   expect_identical(length(v), 3L)
-  # Round-trip via parse_inline detects each element correctly:
-  asts <- lapply(v, parse_inline)
+  # Round-trip via .parse_inline detects each element correctly:
+  asts <- lapply(v, .parse_inline)
   expect_identical(asts[[1L]]@runs[[1L]]$type, "plain")
   expect_identical(asts[[2L]]@runs[[1L]]$type, "bold")
   expect_identical(asts[[3L]]@runs[[1L]]$type, "italic")
@@ -56,38 +56,38 @@ test_that("md() / html() accept empty string", {
 })
 
 # ---------------------------------------------------------------------
-# parse_inline() — dispatcher
+# .parse_inline() — dispatcher
 # ---------------------------------------------------------------------
 
-test_that("parse_inline() returns an inline_ast", {
-  ast <- parse_inline("Hello")
+test_that(".parse_inline() returns an inline_ast", {
+  ast <- .parse_inline("Hello")
   expect_true(is_inline_ast(ast))
 })
 
-test_that("parse_inline() is idempotent on inline_ast input", {
-  ast1 <- parse_inline("Hello")
-  ast2 <- parse_inline(ast1)
+test_that(".parse_inline() is idempotent on inline_ast input", {
+  ast1 <- .parse_inline("Hello")
+  ast2 <- .parse_inline(ast1)
   expect_identical(ast1, ast2)
 })
 
-test_that("parse_inline(NULL) returns an empty inline_ast", {
-  ast <- parse_inline(NULL)
+test_that(".parse_inline(NULL) returns an empty inline_ast", {
+  ast <- .parse_inline(NULL)
   expect_identical(length(ast@runs), 0L)
 })
 
-test_that("parse_inline(NA) returns an empty inline_ast", {
-  ast <- parse_inline(NA_character_)
+test_that(".parse_inline(NA) returns an empty inline_ast", {
+  ast <- .parse_inline(NA_character_)
   expect_identical(length(ast@runs), 0L)
 })
 
-test_that('parse_inline("") returns an empty inline_ast', {
-  ast <- parse_inline("")
+test_that('.parse_inline("") returns an empty inline_ast', {
+  ast <- .parse_inline("")
   expect_identical(length(ast@runs), 0L)
 })
 
-test_that("parse_inline() rejects non-scalar input", {
-  expect_error(parse_inline(c("a", "b")), class = "tabular_error_input")
-  expect_error(parse_inline(123), class = "tabular_error_input")
+test_that(".parse_inline() rejects non-scalar input", {
+  expect_error(.parse_inline(c("a", "b")), class = "tabular_error_input")
+  expect_error(.parse_inline(123), class = "tabular_error_input")
 })
 
 # ---------------------------------------------------------------------
@@ -95,14 +95,14 @@ test_that("parse_inline() rejects non-scalar input", {
 # ---------------------------------------------------------------------
 
 test_that("plain string yields a single plain run", {
-  ast <- parse_inline("Hello world")
+  ast <- .parse_inline("Hello world")
   expect_identical(length(ast@runs), 1L)
   expect_identical(ast@runs[[1L]]$type, "plain")
   expect_identical(ast@runs[[1L]]$text, "Hello world")
 })
 
 test_that("plain string with \\n splits into plain + newline + plain", {
-  ast <- parse_inline("line1\nline2")
+  ast <- .parse_inline("line1\nline2")
   expect_identical(length(ast@runs), 3L)
   expect_identical(ast@runs[[1L]]$type, "plain")
   expect_identical(ast@runs[[1L]]$text, "line1")
@@ -112,7 +112,7 @@ test_that("plain string with \\n splits into plain + newline + plain", {
 })
 
 test_that("multiple consecutive \\n yield multiple newline runs", {
-  ast <- parse_inline("a\n\n\nb")
+  ast <- .parse_inline("a\n\n\nb")
   types <- vapply(ast@runs, function(r) r$type, character(1L))
   expect_identical(
     types,
@@ -121,7 +121,7 @@ test_that("multiple consecutive \\n yield multiple newline runs", {
 })
 
 test_that("trailing \\n still emits the newline", {
-  ast <- parse_inline("a\n")
+  ast <- .parse_inline("a\n")
   types <- vapply(ast@runs, function(r) r$type, character(1L))
   expect_identical(types, c("plain", "newline"))
 })
@@ -131,7 +131,7 @@ test_that("trailing \\n still emits the newline", {
 # ---------------------------------------------------------------------
 
 test_that("md(**bold**) parses to a bold run", {
-  ast <- parse_inline(md("**bold**"))
+  ast <- .parse_inline(md("**bold**"))
   expect_identical(length(ast@runs), 1L)
   expect_identical(ast@runs[[1L]]$type, "bold")
   expect_identical(ast@runs[[1L]]$children[[1L]]$type, "plain")
@@ -139,17 +139,17 @@ test_that("md(**bold**) parses to a bold run", {
 })
 
 test_that("md(*italic*) parses to an italic run", {
-  ast <- parse_inline(md("*italic*"))
+  ast <- .parse_inline(md("*italic*"))
   expect_identical(ast@runs[[1L]]$type, "italic")
 })
 
 test_that("md(`code`) parses to a code run", {
-  ast <- parse_inline(md("`code`"))
+  ast <- .parse_inline(md("`code`"))
   expect_identical(ast@runs[[1L]]$type, "code")
 })
 
 test_that("md([link](url)) parses to a link run", {
-  ast <- parse_inline(md("see [docs](https://example.com)"))
+  ast <- .parse_inline(md("see [docs](https://example.com)"))
   types <- vapply(ast@runs, function(r) r$type, character(1L))
   expect_in("link", types)
   link_run <- ast@runs[[which(types == "link")[1L]]]
@@ -157,25 +157,25 @@ test_that("md([link](url)) parses to a link run", {
 })
 
 test_that("md() converts ^sup^ to superscript", {
-  ast <- parse_inline(md("E=mc^2^"))
+  ast <- .parse_inline(md("E=mc^2^"))
   types <- vapply(ast@runs, function(r) r$type, character(1L))
   expect_in("sup", types)
 })
 
 test_that("md() converts ~sub~ to subscript", {
-  ast <- parse_inline(md("H~2~O"))
+  ast <- .parse_inline(md("H~2~O"))
   types <- vapply(ast@runs, function(r) r$type, character(1L))
   expect_in("sub", types)
 })
 
 test_that("md() passes inline HTML through (subset)", {
-  ast <- parse_inline(md('a <b>bold</b> b'))
+  ast <- .parse_inline(md('a <b>bold</b> b'))
   types <- vapply(ast@runs, function(r) r$type, character(1L))
   expect_in("bold", types)
 })
 
 test_that("md() preserves a hard line break (linebreak)", {
-  ast <- parse_inline(md("a  \nb"))
+  ast <- .parse_inline(md("a  \nb"))
   types <- vapply(ast@runs, function(r) r$type, character(1L))
   expect_in("newline", types)
 })
@@ -185,46 +185,46 @@ test_that("md() preserves a hard line break (linebreak)", {
 # ---------------------------------------------------------------------
 
 test_that("html(<b>) parses to a bold run", {
-  ast <- parse_inline(html("<b>bold</b>"))
+  ast <- .parse_inline(html("<b>bold</b>"))
   expect_identical(ast@runs[[1L]]$type, "bold")
 })
 
 test_that("html(<strong>) parses to a bold run", {
-  ast <- parse_inline(html("<strong>bold</strong>"))
+  ast <- .parse_inline(html("<strong>bold</strong>"))
   expect_identical(ast@runs[[1L]]$type, "bold")
 })
 
 test_that("html(<em>) parses to an italic run", {
-  ast <- parse_inline(html("<em>x</em>"))
+  ast <- .parse_inline(html("<em>x</em>"))
   expect_identical(ast@runs[[1L]]$type, "italic")
 })
 
 test_that("html(<sup>) and <sub> parse to sup / sub runs", {
-  ast_sup <- parse_inline(html("<sup>1</sup>"))
-  ast_sub <- parse_inline(html("<sub>2</sub>"))
+  ast_sup <- .parse_inline(html("<sup>1</sup>"))
+  ast_sub <- .parse_inline(html("<sub>2</sub>"))
   expect_identical(ast_sup@runs[[1L]]$type, "sup")
   expect_identical(ast_sub@runs[[1L]]$type, "sub")
 })
 
 test_that("html(<code>) parses to a code run", {
-  ast <- parse_inline(html("<code>x</code>"))
+  ast <- .parse_inline(html("<code>x</code>"))
   expect_identical(ast@runs[[1L]]$type, "code")
 })
 
 test_that("html(<br>) parses to a newline run", {
-  ast <- parse_inline(html("a<br>b"))
+  ast <- .parse_inline(html("a<br>b"))
   types <- vapply(ast@runs, function(r) r$type, character(1L))
   expect_in("newline", types)
 })
 
 test_that("html(<a href=...>) parses to a link run with href", {
-  ast <- parse_inline(html('<a href="https://example.com">x</a>'))
+  ast <- .parse_inline(html('<a href="https://example.com">x</a>'))
   expect_identical(ast@runs[[1L]]$type, "link")
   expect_identical(ast@runs[[1L]]$href, "https://example.com")
 })
 
 test_that("html(<span style=...>) parses to a span run with CSS", {
-  ast <- parse_inline(html(
+  ast <- .parse_inline(html(
     '<span style="color: red; font-weight: bold">x</span>'
   ))
   expect_identical(ast@runs[[1L]]$type, "span")
@@ -233,7 +233,7 @@ test_that("html(<span style=...>) parses to a span run with CSS", {
 })
 
 test_that("html() unknown tags drop wrapper, keep text content", {
-  ast <- parse_inline(html("<u>x</u>"))
+  ast <- .parse_inline(html("<u>x</u>"))
   expect_identical(ast@runs[[1L]]$type, "plain")
   expect_identical(ast@runs[[1L]]$text, "x")
 })
@@ -243,7 +243,7 @@ test_that("html() unknown tags drop wrapper, keep text content", {
 # ---------------------------------------------------------------------
 
 test_that("CSS parser handles multiple declarations", {
-  ast <- parse_inline(html(
+  ast <- .parse_inline(html(
     '<span style="color: red; background: yellow">x</span>'
   ))
   style <- ast@runs[[1L]]$style
@@ -253,17 +253,17 @@ test_that("CSS parser handles multiple declarations", {
 })
 
 test_that("CSS parser handles empty style", {
-  ast <- parse_inline(html('<span style="">x</span>'))
+  ast <- .parse_inline(html('<span style="">x</span>'))
   expect_identical(length(ast@runs[[1L]]$style), 0L)
 })
 
 test_that("CSS parser handles missing style attribute", {
-  ast <- parse_inline(html("<span>x</span>"))
+  ast <- .parse_inline(html("<span>x</span>"))
   expect_identical(length(ast@runs[[1L]]$style), 0L)
 })
 
 test_that("CSS parser handles value with embedded colon (e.g. URL)", {
-  ast <- parse_inline(html(
+  ast <- .parse_inline(html(
     '<span style="background: url(https://x.com/i.png)">x</span>'
   ))
   style <- ast@runs[[1L]]$style
@@ -275,7 +275,7 @@ test_that("CSS parser handles value with embedded colon (e.g. URL)", {
 # ---------------------------------------------------------------------
 
 test_that("is_inline_ast() detects inline_ast objects", {
-  expect_true(is_inline_ast(parse_inline("Hello")))
+  expect_true(is_inline_ast(.parse_inline("Hello")))
   expect_false(is_inline_ast("Hello"))
   expect_false(is_inline_ast(NULL))
   expect_false(is_inline_ast(list()))
@@ -312,7 +312,7 @@ test_that("inline_ast() rejects malformed runs (non-list or missing type)", {
 # Snapshot the canonical 25 representative strings
 # ---------------------------------------------------------------------
 
-test_that("parse_inline snapshot suite (25 strings)", {
+test_that(".parse_inline snapshot suite (25 strings)", {
   cases <- list(
     plain = "Hello world",
     plain_newline = "first\nsecond",
@@ -364,7 +364,7 @@ test_that("parse_inline snapshot suite (25 strings)", {
   }
   summary_table <- vapply(
     cases,
-    function(x) summarise_ast(parse_inline(x)),
+    function(x) summarise_ast(.parse_inline(x)),
     character(1L)
   )
   expect_snapshot(summary_table)
@@ -379,22 +379,22 @@ test_that(".strip_inline_marker passes non-character through", {
   expect_null(tabular:::.strip_inline_marker(NULL))
 })
 
-test_that("parse_inline defensive S3 fallback parses classed-but-unmarked input", {
+test_that(".parse_inline defensive S3 fallback parses classed-but-unmarked input", {
   # Construct a string that has the from_markdown class but no
   # marker prefix (the constructor would always add one; this
   # exercises the defensive branch).
   x <- structure("**bold**", class = c("from_markdown", "character"))
-  ast <- parse_inline(x)
+  ast <- .parse_inline(x)
   expect_identical(ast@runs[[1L]]$type, "bold")
 
   y <- structure("<b>bold</b>", class = c("from_html", "character"))
-  ast2 <- parse_inline(y)
+  ast2 <- .parse_inline(y)
   expect_identical(ast2@runs[[1L]]$type, "bold")
 })
 
 test_that(".walk_html_node ignores comment-type nodes", {
   # HTML comments parse to a comment node, type != "element"/"text".
-  ast <- parse_inline(html("a<!-- comment -->b"))
+  ast <- .parse_inline(html("a<!-- comment -->b"))
   texts <- vapply(
     ast@runs,
     function(r) if (!is.null(r$text)) r$text else "",
@@ -407,7 +407,7 @@ test_that(".walk_html_node ignores comment-type nodes", {
 test_that(".parse_css_inline tolerates malformed declarations", {
   # Declaration without a colon should be dropped; declaration with
   # only a colon (no value) should yield an empty-string value.
-  ast <- parse_inline(html(
+  ast <- .parse_inline(html(
     '<span style="bad-decl; color: red; :no-key">x</span>'
   ))
   style <- ast@runs[[1L]]$style
@@ -415,19 +415,19 @@ test_that(".parse_css_inline tolerates malformed declarations", {
 })
 
 test_that(".parse_css_inline returns empty for whitespace-only style", {
-  ast <- parse_inline(html('<span style="   ">x</span>'))
+  ast <- .parse_inline(html('<span style="   ">x</span>'))
   expect_identical(length(ast@runs[[1L]]$style), 0L)
 })
 
 test_that(".parse_css_inline returns empty when all declarations malformed", {
   # No colons at all — every "declaration" is rejected by the
   # `length(parts) >= 2` filter; the result is empty.
-  ast <- parse_inline(html('<span style="bad1; bad2; bad3">x</span>'))
+  ast <- .parse_inline(html('<span style="bad1; bad2; bad3">x</span>'))
   expect_identical(length(ast@runs[[1L]]$style), 0L)
 })
 
 test_that("inline-format snapshot errors", {
   expect_snapshot(error = TRUE, md(NA_character_))
   expect_snapshot(error = TRUE, html(c("a", "b")))
-  expect_snapshot(error = TRUE, parse_inline(c("a", "b")))
+  expect_snapshot(error = TRUE, .parse_inline(c("a", "b")))
 })

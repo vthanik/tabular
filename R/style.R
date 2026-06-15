@@ -379,6 +379,7 @@ style <- function(.spec, ..., .at = cells_body()) {
         "Unknown style attribute{?s}: {.val {unknown}}.",
         "i" = "These will not be applied by tabular. Recognised attributes: {.val {known_list}}."
       ),
+      class = "tabular_warning_input",
       call = call
     )
   }

@@ -12,12 +12,12 @@
 #
 # Each returns a length-1 character vector with an S3 class
 # annotation (`from_markdown` or `from_html`). Engine_format calls
-# `parse_inline()` to convert the marker plus content into an
+# `.parse_inline()` to convert the marker plus content into an
 # `inline_ast` (S7 class declared in R/aaa_class.R), which carries
 # the typed run-list that backends consume.
 #
 # Plain strings (no md/html wrapper) round-trip through
-# `parse_inline()` as a trivial single-run AST.
+# `.parse_inline()` as a trivial single-run AST.
 #
 # Parser strategy:
 #
@@ -137,7 +137,7 @@
 #'   `c("from_markdown", "character")`.* Pass it directly into any
 #'   string-bearing slot ([`tabular()`] titles / footnotes,
 #'   [`col_spec()`] label, [`style()`] pretext / posttext); the
-#'   resolve engine calls `parse_inline()` internally and backends
+#'   resolve engine calls `.parse_inline()` internally and backends
 #'   walk the resulting `inline_ast`.
 #'
 #' @examples
@@ -256,7 +256,7 @@ md <- function(text) {
 #'   `c("from_html", "character")`.* Pass it directly into any
 #'   string-bearing slot ([`tabular()`] titles / footnotes,
 #'   [`col_spec()`] label, [`style()`] pretext / posttext); the
-#'   resolve engine calls `parse_inline()` internally and backends
+#'   resolve engine calls `.parse_inline()` internally and backends
 #'   walk the resulting `inline_ast`.
 #'
 #' @examples
@@ -311,7 +311,7 @@ html <- function(text) {
 }
 
 # ---------------------------------------------------------------------
-# parse_inline — dispatcher
+# .parse_inline — dispatcher
 # ---------------------------------------------------------------------
 
 # Convert a string (plain, `md()`-wrapped, or `html()`-wrapped) into
@@ -326,7 +326,7 @@ html <- function(text) {
 # @return An `inline_ast` S7 object.
 # @keywords internal
 # @noRd
-parse_inline <- function(x, call = rlang::caller_env()) {
+.parse_inline <- function(x, call = rlang::caller_env()) {
   if (is_inline_ast(x)) {
     return(x)
   }

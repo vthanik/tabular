@@ -34,6 +34,10 @@
 
 ## Minor improvements and bug fixes
 
+* Every warning now carries a `tabular_warning_<kind>` class (`input`,
+  `runtime`, `layout`, `fidelity`) mirroring the `tabular_error_<kind>` error
+  taxonomy, so warnings can be caught selectively; the former
+  `tabular_warn_layout` class was renamed to `tabular_warning_layout`.
 * `col_spec()` now warns when `group_display` or `group_skip` is set on a
   non-group column (the knobs are inert unless `usage = "group"`).
 * `cols()` / `cols_apply()` now restore a column's visibility and reset

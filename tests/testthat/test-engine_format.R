@@ -154,7 +154,7 @@ test_that("engine_format() handles zero-row data", {
 # Titles + footnotes
 # ---------------------------------------------------------------------
 
-test_that("engine_format() parses every title line through parse_inline", {
+test_that("engine_format() parses every title line through .parse_inline", {
   spec <- tabular(
     data.frame(x = 1),
     titles = c("Table 1", md("**Bold title**"), html("<i>Italic</i>"))
@@ -170,7 +170,7 @@ test_that("engine_format() parses every title line through parse_inline", {
   expect_equal(out$titles_ast[[3L]]@runs[[1L]]$type, "italic")
 })
 
-test_that("engine_format() parses every footnote line through parse_inline", {
+test_that("engine_format() parses every footnote line through .parse_inline", {
   spec <- tabular(
     data.frame(x = 1),
     footnotes = c(

@@ -226,7 +226,7 @@
 #' | `style_spec`        | the cascade root (defaults + cols + headers + layers) | internal — built by [`style()`]   |
 #' | `pagination_spec`   | page-split policy (keep_together, panels, floors)     | internal — built by [`paginate()`]|
 #' | `preset_spec`       | render geometry (paper, orientation, font, margins)   | internal — built by [`preset()`]  |
-#' | `inline_ast`        | parsed inline-formatting AST (runs of bold / sup / …) | internal — built by `parse_inline()`|
+#' | `inline_ast`        | parsed inline-formatting AST (runs of bold / sup / …) | internal — built by `.parse_inline()`|
 #' | `tabular_grid`      | resolved per-page cells + ASTs + styles + headers     | [`as_grid()`]                     |
 #'
 #' Every spec slot is typed: a verb that would mutate a slot to an
@@ -1242,7 +1242,7 @@ figure_spec <- S7::new_class(
 # inline_ast — parsed inline-formatting AST consumed by backends
 # ---------------------------------------------------------------------
 #
-# Holds a list of typed text "runs" produced by `parse_inline()` (in
+# Holds a list of typed text "runs" produced by `.parse_inline()` (in
 # R/inline_format.R) from plain strings, `md()`-wrapped Markdown, or
 # `html()`-wrapped HTML. Backends iterate `@runs` and emit
 # destination-specific markup. Each run is a plain R named-list
@@ -1338,7 +1338,7 @@ tabular_grid <- S7::new_class(
 #' | `is_pagination_spec()` | `pagination_spec`  | [`paginate()`]                    |
 #' | `is_preset_spec()`     | `preset_spec`      | [`preset()`], [`set_preset()`]    |
 #' | `is_subgroup_spec()`   | `subgroup_spec`    | [`subgroup()`]                    |
-#' | `is_inline_ast()`      | `inline_ast`       | `parse_inline()` (post-format)    |
+#' | `is_inline_ast()`      | `inline_ast`       | `.parse_inline()` (post-format)    |
 #'
 #' Predicates never error — they return `FALSE` for `NULL`, vectors,
 #' objects of any other class, and S7 objects from other packages.

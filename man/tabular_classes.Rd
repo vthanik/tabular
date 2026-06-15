@@ -37,7 +37,7 @@ fits in one mental model:\tabular{lll}{
    \code{style_spec} \tab the cascade root (defaults + cols + headers + layers) \tab internal — built by \code{\link[=style]{style()}} \cr
    \code{pagination_spec} \tab page-split policy (keep_together, panels, floors) \tab internal — built by \code{\link[=paginate]{paginate()}} \cr
    \code{preset_spec} \tab render geometry (paper, orientation, font, margins) \tab internal — built by \code{\link[=preset]{preset()}} \cr
-   \code{inline_ast} \tab parsed inline-formatting AST (runs of bold / sup / …) \tab internal — built by \code{parse_inline()} \cr
+   \code{inline_ast} \tab parsed inline-formatting AST (runs of bold / sup / …) \tab internal — built by \code{.parse_inline()} \cr
    \code{tabular_grid} \tab resolved per-page cells + ASTs + styles + headers \tab \code{\link[=as_grid]{as_grid()}} \cr
 }
 
