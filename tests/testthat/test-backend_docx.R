@@ -1032,7 +1032,7 @@ test_that(".render_docx_table emits the empty message when the grid has zero pag
   # with pages = list().
   empty_grid <- tabular:::tabular_grid(
     pages = list(),
-    metadata = list(empty_text_ast = parse_inline("Nothing here"))
+    metadata = list(empty_text_ast = tabular:::.parse_inline("Nothing here"))
   )
   out <- tabular:::.render_docx_table(empty_grid, preset_spec())
   expect_match(out, "Nothing here", fixed = TRUE)

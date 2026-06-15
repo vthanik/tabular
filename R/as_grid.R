@@ -645,7 +645,7 @@ as_grid <- function(.spec) {
   # published on metadata; the per-page `is_empty_page` flag lets each
   # backend's body loop branch. Computed unconditionally so `as_grid()`
   # inspection always carries them; only consumed when a page is empty.
-  empty_text_ast <- parse_inline(
+  empty_text_ast <- .parse_inline(
     .resolve_empty_text(spec@empty_text, eff_preset),
     call = call
   )
