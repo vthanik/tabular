@@ -215,6 +215,109 @@ test_that("emit() rejects data_file for a figure", {
 })
 
 # ---------------------------------------------------------------------
+# Chrome text color reaches every backend (#page-chrome)
+#
+# Guards the figure chrome-styling ungate (5ac864f): a figure carries
+# the same chrome surfaces as a table, and `style(color =, .at =
+# cells_*())` on each must land in the emitted bytes. The construction
+# checks above (`expect_no_error(preset(fig, colors = ...))`) only prove
+# the knob is accepted, not that the colour reaches output -- this is the
+# output-level assertion that ungate should have shipped. Each surface
+# carries a DISTINCT colour so a leak to the wrong surface is detectable.
+# ---------------------------------------------------------------------
+
+# Map a "#rrggbb" colour to its 1-based `\cf` index in the RTF colour
+# table (`{\colortbl;\red..\green..\blue..;...}`). Not an assertion
+# wrapper -- just resolves the index the run should reference.
+.cf_index_for <- function(rtf, rgb_token) {
+  ct <- regmatches(rtf, regexpr("[{]\\\\colortbl[^}]*[}]", rtf))
+  entries <- strsplit(ct, ";", fixed = TRUE)[[1]]
+  match(TRUE, grepl(rgb_token, entries, fixed = TRUE)) - 1L
+}
+
+.figure_chrome_color_spec <- function() {
+  figure(function() plot(1:5), titles = "T", footnotes = "FN") |>
+    preset(pagehead = list(left = "PH"), pagefoot = list(left = "PF")) |>
+    style(color = "#FF0000", .at = cells_pagehead(slot = "left")) |>
+    style(color = "#00AA00", .at = cells_pagefoot()) |>
+    style(color = "#0000FF", .at = cells_title()) |>
+    style(color = "#CC00CC", .at = cells_footnotes())
+}
+
+test_that("figure chrome text color reaches RTF header/footer (#page-chrome)", {
+  f <- withr::local_tempfile(fileext = ".rtf")
+  emit(.figure_chrome_color_spec(), f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  # Every surface colour is registered in the colour table.
+  expect_true(grepl("\\red255\\green0\\blue0", rtf, fixed = TRUE)) # pagehead
+  expect_true(grepl("\\red0\\green170\\blue0", rtf, fixed = TRUE)) # pagefoot
+  expect_true(grepl("\\red0\\green0\\blue255", rtf, fixed = TRUE)) # title
+  expect_true(grepl("\\red204\\green0\\blue204", rtf, fixed = TRUE)) # footnote
+
+  hdr <- regmatches(
+    rtf,
+    regexpr("[{]\\\\header[\\s\\S]*?\\n[}]", rtf, perl = TRUE)
+  )
+  ftr <- regmatches(
+    rtf,
+    regexpr("[{]\\\\footer[\\s\\S]*?\\n[}]", rtf, perl = TRUE)
+  )
+
+  # pagehead red is applied in {\header}; pagefoot green + footnote
+  # magenta are applied in {\footer}.
+  ph <- sprintf("\\cf%d", .cf_index_for(rtf, "\\red255\\green0\\blue0"))
+  pf <- sprintf("\\cf%d", .cf_index_for(rtf, "\\red0\\green170\\blue0"))
+  fn <- sprintf("\\cf%d", .cf_index_for(rtf, "\\red204\\green0\\blue204"))
+  expect_true(grepl(ph, hdr, fixed = TRUE))
+  expect_true(grepl(pf, ftr, fixed = TRUE))
+  expect_true(grepl(fn, ftr, fixed = TRUE))
+})
+
+test_that("figure chrome text color reaches LaTeX / HTML / DOCX (#page-chrome)", {
+  # LaTeX: \textcolor[HTML]{RRGGBB} (uppercase, no leading #).
+  ftex <- withr::local_tempfile(fileext = ".tex")
+  emit(.figure_chrome_color_spec(), ftex)
+  tex <- paste(readLines(ftex, warn = FALSE), collapse = "\n")
+  expect_true(grepl("\\textcolor[HTML]{FF0000}", tex, fixed = TRUE))
+  expect_true(grepl("\\textcolor[HTML]{00AA00}", tex, fixed = TRUE))
+  expect_true(grepl("\\textcolor[HTML]{0000FF}", tex, fixed = TRUE))
+  expect_true(grepl("\\textcolor[HTML]{CC00CC}", tex, fixed = TRUE))
+
+  # HTML: inline `color: #RRGGBB`.
+  fhtml <- withr::local_tempfile(fileext = ".html")
+  emit(.figure_chrome_color_spec(), fhtml)
+  html <- paste(readLines(fhtml, warn = FALSE), collapse = "\n")
+  expect_true(grepl("color: #FF0000", html, fixed = TRUE))
+  expect_true(grepl("color: #00AA00", html, fixed = TRUE))
+  expect_true(grepl("color: #0000FF", html, fixed = TRUE))
+  expect_true(grepl("color: #CC00CC", html, fixed = TRUE))
+
+  # DOCX: <w:color w:val="RRGGBB"> across document + header/footer parts.
+  fdocx <- withr::local_tempfile(fileext = ".docx")
+  emit(.figure_chrome_color_spec(), fdocx)
+  xdir <- withr::local_tempdir()
+  utils::unzip(fdocx, exdir = xdir)
+  parts <- list.files(
+    file.path(xdir, "word"),
+    pattern = "\\.xml$",
+    full.names = TRUE
+  )
+  docx <- paste(
+    vapply(
+      parts,
+      function(p) paste(readLines(p, warn = FALSE), collapse = "\n"),
+      character(1L)
+    ),
+    collapse = "\n"
+  )
+  expect_true(grepl('w:color w:val="FF0000"', docx, fixed = TRUE))
+  expect_true(grepl('w:color w:val="00AA00"', docx, fixed = TRUE))
+  expect_true(grepl('w:color w:val="0000FF"', docx, fixed = TRUE))
+  expect_true(grepl('w:color w:val="CC00CC"', docx, fixed = TRUE))
+})
+
+# ---------------------------------------------------------------------
 # Preview methods (as.tags / knit_print / print)
 # ---------------------------------------------------------------------
 

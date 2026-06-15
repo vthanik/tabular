@@ -1415,6 +1415,53 @@ test_that("RTF pagehead slot honors color / font_family / background (#page-chro
   expect_true(grepl("clcbpat", rtf, fixed = TRUE))
 })
 
+test_that("RTF applies text color to pagefoot / title / footnote chrome (#page-chrome)", {
+  # Beyond the pagehead case above: pagefoot, title, and footnote chrome
+  # each carry a distinct colour and must apply it in the right region
+  # (footer band / title block). Each surface gets a unique colour so a
+  # leak to the wrong region is detectable.
+  spec <- tabular(
+    data.frame(x = c("1", "2")),
+    titles = "My title",
+    footnotes = "My footnote"
+  ) |>
+    cols(x = col_spec(label = "X")) |>
+    preset(pagefoot = list(left = "PF")) |>
+    style(color = "#00AA00", .at = cells_pagefoot()) |>
+    style(color = "#0000FF", .at = cells_title()) |>
+    style(color = "#CC00CC", .at = cells_footnotes())
+  f <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, f)
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  # All three colours registered in the colour table.
+  expect_true(grepl("\\red0\\green170\\blue0", rtf, fixed = TRUE)) # pagefoot
+  expect_true(grepl("\\red0\\green0\\blue255", rtf, fixed = TRUE)) # title
+  expect_true(grepl("\\red204\\green0\\blue204", rtf, fixed = TRUE)) # footnote
+
+  # `\cf<idx>` for each colour resolved from the colour table order.
+  ct <- regmatches(rtf, regexpr("[{]\\\\colortbl[^}]*[}]", rtf))
+  entries <- strsplit(ct, ";", fixed = TRUE)[[1]]
+  idx_of <- function(tok) match(TRUE, grepl(tok, entries, fixed = TRUE)) - 1L
+  pf <- sprintf("\\cf%d", idx_of("\\red0\\green170\\blue0"))
+  fn <- sprintf("\\cf%d", idx_of("\\red204\\green0\\blue204"))
+
+  # pagefoot + footnote colours apply inside {\footer}.
+  ftr <- regmatches(
+    rtf,
+    regexpr("[{]\\\\footer[\\s\\S]*?\\n[}]", rtf, perl = TRUE)
+  )
+  expect_true(grepl(pf, ftr, fixed = TRUE))
+  expect_true(grepl(fn, ftr, fixed = TRUE))
+
+  # title colour applies somewhere in the document body (title block).
+  expect_true(grepl(
+    sprintf("\\cf%d", idx_of("\\red0\\green0\\blue255")),
+    rtf,
+    fixed = TRUE
+  ))
+})
+
 # ---- RTF body cell per-side padding (#cell-padding) ---------------------
 
 test_that("RTF body cells emit per-side padding via clpad (#cell-padding)", {
