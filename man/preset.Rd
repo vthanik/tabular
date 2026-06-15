@@ -217,8 +217,13 @@ body surfaces is set via the \code{alignment} named-list knob
 knob; blank-line spacing is set via \code{spacing} (above).
 \item \strong{\code{na_text}} — global NA fallback. \verb{<character(1)>}.
 \item \strong{\code{decimal_metrics}} — decimal-padding metric.
-\verb{<character(1)>}. Only \code{"chars"} (default); the engine pads
-decimal columns by character count.
+\verb{<character(1)>}. \code{"afm"} (default) measures glyphs with the
+bundled Core font metrics, so decimal columns align
+width-exact in proportional fonts (to within one padding
+space of rounding; exact in Courier). \code{"chars"} pads by
+character count — exact in monospaced faces only. Markdown
+output always pads by character count, the correct geometry
+for a text medium.
 \item \strong{\code{decimal_markers}} — missing-value tokens recognised by
 \code{col_spec(align = "decimal")}. \verb{<character>}. Default
 \code{c("NR", "NE", "NC", "ND", "BLQ")}. A cell whose trimmed

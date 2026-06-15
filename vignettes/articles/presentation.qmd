@@ -142,6 +142,8 @@ Use `set_preset()` once at the top of a study to make these defaults apply to
 every table without restating them.
 
 > **Decimal alignment** (`col_spec(align = "decimal")`) pads numeric cells with
-> non-breaking spaces so the decimal points line up. Alignment is exact in a
-> monospaced font; in proportional fonts it is visually close (em-aware padding
-> is future work). For submission TFLs in Courier this is exact.
+> non-breaking spaces so the decimal points line up. Padding is measured with
+> the built-in font metrics (`preset(decimal_metrics = "afm")`, the default), so
+> alignment is exact in Courier and exact to within one padding space in
+> proportional fonts such as Times New Roman or Arial. Markdown output pads by
+> character count instead — the right geometry for a text medium.

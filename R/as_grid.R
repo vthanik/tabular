@@ -470,15 +470,43 @@ as_grid <- function(.spec) {
   spec <- S7::set_props(spec, cols = spec_cols_post)
 
   cols_named <- spec_cols_post
-  # Em-aware decimal alignment when the active preset opts into it
-  # via `decimal_metrics = "afm"`. The default "chars" mode keeps
-  # the byte-for-byte legacy behaviour (every glyph counts as one
-  # NBSP-unit). The AFM mode looks up real glyph widths so the pad
-  # count converges on visually-equal slot widths in proportional
-  # fonts (Times-Roman, Helvetica).
+  # Em-aware decimal alignment via the active preset's decimal_metrics.
+  # The default "afm" mode looks up real Core-AFM glyph widths so the
+  # pad count converges on visually-equal slot widths in proportional
+  # fonts (Times-Roman, Helvetica); "chars" counts every glyph as one
+  # NBSP-unit (exact in monospace only). Markdown is a text medium
+  # where count-padding IS the correct geometry, so "md" always pads
+  # by chars regardless of the preset.
   decimal_metrics <- .effective_preset(spec)@decimal_metrics
+  if (identical(format, "md")) {
+    decimal_metrics <- "chars"
+  }
   afm_name <- if (identical(decimal_metrics, "afm")) {
-    .resolve_afm_name(.effective_preset(spec)@font_family)
+    family <- .effective_preset(spec)@font_family
+    has_decimal_col <- any(
+      vapply(
+        cols_named,
+        \(cs) is_col_spec(cs) && isTRUE(cs@align == "decimal"),
+        logical(1)
+      )
+    )
+    # No metric table for this face: be honest that we measure with
+    # the serif (Times) fallback. Gated on a decimal column actually
+    # being present so a custom font alone never warns.
+    if (
+      has_decimal_col &&
+        is.na(.font_chain_family_class(family, default = NA_character_))
+    ) {
+      .fidelity_warn(
+        "decimal_metrics = \"afm\"",
+        paste(as.character(family), collapse = ", "),
+        detail = paste(
+          "no metric table for this face; measuring with Times (serif)",
+          "metrics, alignment is approximate"
+        )
+      )
+    }
+    .resolve_afm_name(family)
   } else {
     NA_character_
   }

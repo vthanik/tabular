@@ -43,6 +43,9 @@
 * `paginate()` now collapses a zero-row table to a single empty-state page;
   horizontal `panels` no longer multiply an empty table into several identical
   blank pages.
+* `preset()`'s `decimal_metrics` knob gained `"afm"` (now the default), making
+  decimal alignment width-exact in proportional fonts via the bundled font
+  metrics; Markdown output keeps character padding.
 * `preset()` gained `empty_halign` and `empty_valign` knobs that place the
   zero-row placeholder message within the body content-box, defaulting to
   centred horizontally and middle vertically (exact on the paged backends,

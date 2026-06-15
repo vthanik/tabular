@@ -331,9 +331,10 @@
 #'
 #'   **Tip:** `"decimal"` pads numerics with non-breaking spaces
 #'   so the decimal mark falls on a single column-wide anchor.
-#'   The active preset's `decimal_metrics` knob is reserved for
-#'   future em-aware padding refinement (see [`preset()`]); the
-#'   current engine pads by character count.
+#'   Pad counts follow the active preset's `decimal_metrics` knob
+#'   (see [`preset()`]): the default `"afm"` measures real glyph
+#'   widths so the anchor holds in proportional fonts as well as
+#'   monospace.
 #'
 #'   **Default behaviour.** When `align` is unset (`NULL` / `NA`),
 #'   every column emits with body left-aligned and header centred,
