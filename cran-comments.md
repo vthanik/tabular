@@ -2,8 +2,8 @@
 
 0 errors | 0 warnings | 1 note
 
-* This is a new release, so the only NOTE is the standard CRAN
-  incoming-feasibility "New submission" note, which also lists some
+* This is an update from 0.1.0 to 0.2.0, adding figure (graph) output
+  alongside the existing tables and listings. The only NOTE lists some
   possibly-misspelled words in the Description (all intentional, see
   below). Local `R CMD check --as-cran` and the GitHub Actions runs
   report 0 errors / 0 warnings / 0 notes.
@@ -24,5 +24,4 @@
 * Some technical terms and file-format abbreviations in the
   `Description` (for example RTF, DOCX, ADaM) may be flagged as possibly
   misspelled. These are intentional.
-* This is the maintainer's first submission, so there is no reverse
-  dependency to check.
+* There are no reverse dependencies to check.

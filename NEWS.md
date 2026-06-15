@@ -1,4 +1,4 @@
-# tabular (development version)
+# tabular 0.2.0
 
 ## New features
 
