@@ -196,6 +196,70 @@ resp_tbl
 emit(resp_tbl, "t_14_2_1.rtf") # ship: or .pdf / .docx / .html / .md
 ```
 
+## A figure in the same chrome
+
+The "F" in TFL. `figure()` wraps a ggplot, a recorded base-R plot, a
+zero-argument drawing function, or a PNG / JPG file in the *same* submission
+chrome as a table — titles, footnotes, and the per-page header and footer — so a
+graph ships alongside its tables with identical page furniture. Here is the
+companion plot to the vitals table: mean diastolic blood pressure over visits, by
+arm, read straight from the bundled summary.
+
+```{r}
+# Mean (SD) rows from the bundled vitals summary, read as numeric means.
+diabp <- cdisc_saf_vital[
+  cdisc_saf_vital$paramcd == "DIABP" &
+    cdisc_saf_vital$stat_label == "Mean (SD)",
+]
+visit_order <- c("Baseline", "Week 8", "Week 16", "End of Treatment")
+diabp <- diabp[match(visit_order, diabp$visit), ]
+mean_of <- function(x) as.numeric(sub(" .*", "", x))
+arms <- c(placebo = "Placebo", drug_50 = "Drug 50 mg", drug_100 = "Drug 100 mg")
+
+draw_diabp <- function() {
+  ys <- do.call(cbind, lapply(names(arms), function(a) mean_of(diabp[[a]])))
+  matplot(
+    seq_along(visit_order),
+    ys,
+    type = "b",
+    pch = 16,
+    lty = 1,
+    col = seq_along(arms),
+    xaxt = "n",
+    xlab = "Visit",
+    ylab = "Mean DIABP (mmHg)"
+  )
+  axis(1, at = seq_along(visit_order), labels = visit_order, cex.axis = 0.8)
+  legend(
+    "topright",
+    legend = unname(arms),
+    pch = 16,
+    lty = 1,
+    col = seq_along(arms),
+    bty = "n"
+  )
+}
+
+vital_fig <- figure(
+  draw_diabp,
+  titles = c(
+    "Figure 7.1",
+    "Mean Diastolic Blood Pressure by Visit",
+    "Safety Population"
+  ),
+  footnotes = "Means are taken from the summary table; error bars omitted for clarity."
+)
+vital_fig
+```
+
+`emit()` writes a figure to any backend exactly like a table; on the paged
+backends (RTF, PDF, DOCX) the plot is placed in the body box by `halign` /
+`valign`, and a list of plots emits one figure per page.
+
+```{r eval = FALSE}
+emit(vital_fig, "g_7_1.rtf") # ship: or .pdf / .docx / .html / .md
+```
+
 ## See also
 
 - [Data in](data-in.html) — produce these wide frames from a cards/cardx ARD with

@@ -310,3 +310,41 @@ tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>
 
 `big_n` accepts this wide shape (page column + one column per arm) or a long
 `count()`-style table (page, arm, n).
+
+## Empty tables: no data to report
+
+A table whose data has zero rows still renders — the full page chrome and the
+column headers stay intact, and an empty-data placeholder takes the place of the
+body. This is the correct output for a population that produced no records (a
+cohort with no subjects, a serious-AE table with no events), rather than an error
+or a blank page. The per-table message is `tabular(empty_text = ...)`; set a
+house default for every table with `preset(empty_text = ...)`, and place the
+message in the body box with `preset(empty_halign = ..., empty_valign = ...)`.
+
+```{r}
+# Same demographics shell, but the population filter has left no rows.
+empty_demo <- cdisc_saf_demo[0, ]
+
+tabular(
+  empty_demo,
+  titles = c(
+    "Table 14.1.1",
+    "Demographic and Baseline Characteristics",
+    "Safety Population"
+  ),
+  footnotes = "No subjects met the inclusion criteria for this cohort.",
+  empty_text = "No data available to report"
+) |>
+  cols(
+    variable = col_spec(usage = "group", label = "Characteristic"),
+    stat_label = col_spec(label = "Statistic"),
+    placebo = col_spec(label = "Placebo", align = "decimal"),
+    drug_50 = col_spec(label = "Drug 50 mg", align = "decimal"),
+    drug_100 = col_spec(label = "Drug 100 mg", align = "decimal"),
+    Total = col_spec(align = "decimal")
+  )
+```
+
+The same applies under `subgroup()`: a zero-N crossing is dropped by default, but
+`subgroup(..., keep_empty = TRUE)` keeps it and renders its banner above the
+empty-data page — so every level in the shell appears even when one has no data.
