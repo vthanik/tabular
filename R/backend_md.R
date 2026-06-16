@@ -64,7 +64,8 @@
 #   "left"     -> :---
 #   "center"   -> :---:
 #   "right"    -> ---:
-#   "decimal"  -> ---:   (engine_decimal already padded with NBSP)
+#   "decimal"  -> :---:  (engine_decimal padded with NBSP; centres for
+#                         cross-backend parity)
 #   NA / unset -> :---   (the GFM default)
 
 # ---------------------------------------------------------------------
@@ -388,7 +389,7 @@ backend_md <- function(grid, file) {
 .render_md_empty_line <- function(empty_text_ast, empty_place = NULL) {
   halign <- empty_place$halign %||% "center"
   msg <- if (is.null(empty_text_ast)) {
-    "No data available to report"
+    .tabular_empty_text_default
   } else {
     .render_md_inline(empty_text_ast)
   }
@@ -665,7 +666,9 @@ backend_md <- function(grid, file) {
     left = ":---",
     center = ":---:",
     right = "---:",
-    decimal = "---:",
+    # decimal centres (engine_decimal pads every cell to a uniform column
+    # width with NBSP) for parity with the LaTeX / RTF / DOCX / HTML block.
+    decimal = ":---:",
     ":---"
   )
 }

@@ -471,6 +471,27 @@ test_that(".docx_styles_xml defaults to Liberation Mono and fontTable declares t
   expect_match(fonts, "<w:font w:name=\"Liberation Mono\">", fixed = TRUE)
   expect_match(fonts, "<w:font w:name=\"Courier New\">", fixed = TRUE)
   expect_match(fonts, "w:family w:val=\"modern\"", fixed = TRUE)
+  # Each face names its in-class successor via <w:altName> (first child of
+  # CT_Font), so Word keeps the substitution in class instead of panose
+  # guessing to a serif face when the primary is absent.
+  expect_match(
+    fonts,
+    "<w:font w:name=\"Liberation Mono\"><w:altName w:val=\"Courier New\"/>",
+    fixed = TRUE
+  )
+  expect_match(
+    fonts,
+    "<w:font w:name=\"Courier New\"><w:altName w:val=\"Courier\"/>",
+    fixed = TRUE
+  )
+  # The last face in the stack has no successor, so no altName.
+  expect_no_match(
+    fonts,
+    "<w:font w:name=\"Courier\"><w:altName",
+    fixed = TRUE
+  )
+  # fontTable is well-formed XML (altName placed per the CT_Font sequence).
+  expect_no_error(xml2::read_xml(fonts))
   # No vestigial Office theme faces (Calibri / Cambria) leak in.
   expect_false(grepl("Calibri", fonts, fixed = TRUE))
 })
@@ -846,7 +867,14 @@ test_that("col_spec@align surfaces as <w:jc> on data cells", {
   expect_match(doc, "<w:jc w:val=\"left\"/>", fixed = TRUE)
   expect_match(doc, "<w:jc w:val=\"center\"/>", fixed = TRUE)
   expect_match(doc, "<w:jc w:val=\"right\"/>", fixed = TRUE)
-  # decimal collapses to right at the <w:jc> level
+  # decimal centres at the <w:jc> level: the engine_decimal NBSP padding
+  # makes every cell a uniform column width, so the block sits under the
+  # centred decimal header rather than hugging the right (cross-backend
+  # parity with LaTeX / RTF / HTML).
+  expect_identical(
+    tabular:::.docx_align_token("decimal"),
+    "<w:jc w:val=\"center\"/>"
+  )
 })
 
 test_that("the table is centred on the page (<w:jc> in <w:tblPr>, RTF \\trqc parity)", {
@@ -1005,10 +1033,11 @@ test_that("decimal column header centres + defaults to bottom valign (HTML parit
     readLines(file.path(.unzip_docx(out), "word/document.xml")),
     collapse = ""
   )
-  # Header cells centre + bottom-align; the decimal body cell stays right.
+  # Header cells centre + bottom-align; the decimal body cell now centres
+  # too (uniform NBSP padding), so no cell hugs the right edge.
   expect_match(doc, "<w:jc w:val=\"center\"/>", fixed = TRUE)
   expect_match(doc, "<w:vAlign w:val=\"bottom\"/>", fixed = TRUE)
-  expect_match(doc, "<w:jc w:val=\"right\"/>", fixed = TRUE)
+  expect_no_match(doc, "<w:jc w:val=\"right\"/>", fixed = TRUE)
 })
 
 test_that("preset header_valign override is honoured in the DOCX header row", {
@@ -1087,7 +1116,7 @@ test_that(".docx_align_token covers every align value plus the unset fallback", 
   )
   expect_identical(
     tabular:::.docx_align_token("decimal"),
-    "<w:jc w:val=\"right\"/>"
+    "<w:jc w:val=\"center\"/>"
   )
   expect_identical(
     tabular:::.docx_align_token(NA_character_),

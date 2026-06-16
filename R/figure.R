@@ -535,8 +535,18 @@ figure <- function(
   mlr <- .margin_left_right_twips(preset@margins)
   one_row <- .row_height_twips(preset@font_size)
 
-  n_title <- .count_lines(spec@titles)
-  n_foot <- .count_lines(spec@footnotes)
+  printable_w <- dims[["width"]] - (mlr[["left"]] + mlr[["right"]])
+  printable_h <- dims[["height"]] - (mtb[["top"]] + mtb[["bottom"]])
+
+  # Count the PHYSICAL (wrapped) lines each chrome block occupies at the
+  # printable width, not just the element count: a long footnote or title
+  # wraps to several lines, and reserving only one row for it leaves the
+  # body box too tall, so the wrapped overflow pushes a DOCX figure
+  # footnote (which flows in the body, not the page footer) onto a second
+  # page. A short title / footnote wraps to one line, so a default figure's
+  # box height is unchanged.
+  n_title <- .wrapped_line_count(spec@titles, preset, printable_w / 1440)
+  n_foot <- .wrapped_line_count(spec@footnotes, preset, printable_w / 1440)
   # Reserve exactly the blank rows the backends emit around each chrome
   # block, from the spacing gaps (title: above + below; footnote: above).
   # The defaults (above_title 1, title_to_body 1, body_to_footnote 0) sum
@@ -555,8 +565,6 @@ figure <- function(
   }
   chrome_rows <- title_rows + foot_rows
 
-  printable_w <- dims[["width"]] - (mlr[["left"]] + mlr[["right"]])
-  printable_h <- dims[["height"]] - (mtb[["top"]] + mtb[["bottom"]])
   box_h <- printable_h - chrome_rows * one_row
 
   list(

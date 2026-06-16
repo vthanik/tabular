@@ -391,7 +391,7 @@ test_that(".latex_align_token maps every align value", {
   expect_identical(tabular:::.latex_align_token("left"), "Q[l]")
   expect_identical(tabular:::.latex_align_token("center"), "Q[c]")
   expect_identical(tabular:::.latex_align_token("right"), "Q[r]")
-  expect_identical(tabular:::.latex_align_token("decimal"), "Q[r]")
+  expect_identical(tabular:::.latex_align_token("decimal"), "Q[c]")
   expect_identical(tabular:::.latex_align_token(NA_character_), "Q[l]")
   expect_identical(tabular:::.latex_align_token(NULL), "Q[l]")
   expect_identical(tabular:::.latex_align_token("garbage"), "Q[l]")
@@ -411,18 +411,24 @@ test_that("col_spec align surfaces in the colspec={...} arg", {
     )
   txt <- render_tex(spec)
   expect_match(txt, "Q[l,wd=", fixed = TRUE)
+  # center + decimal both render as Q[c,wd=...] (decimal centres under its
+  # centred header now that engine_decimal pads to a uniform width).
   expect_match(txt, "Q[c,wd=", fixed = TRUE)
-  # right + decimal both render as Q[r,wd=...].
   expect_match(txt, "Q[r,wd=", fixed = TRUE)
+  # The decimal body column letter is "c".
+  expect_identical(tabular:::.latex_align_letter("decimal"), "c")
 })
 
 test_that("col_spec width numeric -> Q[align,wd=Nin]", {
   spec <- tabular(data.frame(x = "a", y = "b")) |>
     cols(x = col_spec(width = 2.5), y = col_spec(width = 1))
   txt <- render_tex(spec)
-  # Pinned widths pass through verbatim as inches.
-  expect_match(txt, "Q[l,wd=2.500000in]", fixed = TRUE)
-  expect_match(txt, "Q[l,wd=1.000000in]", fixed = TRUE)
+  # tabularray adds leftsep + rightsep (default 10.8pt = 0.14944in) OUTSIDE
+  # `wd`, so the backend subtracts it: the rendered column total equals the
+  # resolved width (2.5 / 1.0in), matching the DOCX / RTF cell width and
+  # keeping the table inside the printable area.
+  expect_match(txt, "Q[l,wd=2.350560in]", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=0.850560in]", fixed = TRUE)
 })
 
 test_that("col_spec width character with unit -> resolved inches", {
@@ -438,9 +444,12 @@ test_that("col_spec width character with unit -> resolved inches", {
       z = col_spec(width = "30pt")
     )
   txt <- render_tex(spec)
-  expect_match(txt, "Q[l,wd=0.787402in]", fixed = TRUE)
-  expect_match(txt, "Q[l,wd=2.362205in]", fixed = TRUE)
-  expect_match(txt, "Q[l,wd=0.416667in]", fixed = TRUE)
+  # wd = resolved width minus the 0.14944in column separation (see above):
+  # 0.787402 - 0.14944 = 0.637962; 2.362205 - 0.14944 = 2.212765;
+  # 0.416667 - 0.14944 floors at the 0.3in minimum sliver.
+  expect_match(txt, "Q[l,wd=0.637962in]", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=2.212765in]", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=0.300000in]", fixed = TRUE)
 })
 
 test_that("col_spec width percent -> resolved against available content width", {
@@ -453,8 +462,9 @@ test_that("col_spec width percent -> resolved against available content width", 
     preset(orientation = "portrait") |>
     cols(x = col_spec(width = "30%"), y = col_spec(width = "70%"))
   txt <- render_tex(spec)
-  expect_match(txt, "Q[l,wd=1.950000in]", fixed = TRUE)
-  expect_match(txt, "Q[l,wd=4.550000in]", fixed = TRUE)
+  # 1.95 / 4.55in resolved, each minus the 0.14944in separation.
+  expect_match(txt, "Q[l,wd=1.800560in]", fixed = TRUE)
+  expect_match(txt, "Q[l,wd=4.400560in]", fixed = TRUE)
 })
 
 test_that("col_spec width respects align letter", {
@@ -465,8 +475,9 @@ test_that("col_spec width respects align letter", {
       y = col_spec(align = "center", width = "20%")
     )
   txt <- render_tex(spec)
-  expect_match(txt, "Q[r,wd=1.000000in]", fixed = TRUE)
-  expect_match(txt, "Q[c,wd=1.300000in]", fixed = TRUE)
+  # 1.0 / 1.3in resolved, each minus the 0.14944in separation.
+  expect_match(txt, "Q[r,wd=0.850560in]", fixed = TRUE)
+  expect_match(txt, "Q[c,wd=1.150560in]", fixed = TRUE)
 })
 
 test_that("col_spec width = 'auto' default produces engine-measured widths", {
@@ -503,7 +514,8 @@ test_that("auto + pinned mix: pinned wins, auto distributes remainder", {
   ) |>
     cols(b = col_spec(width = 1.5))
   txt <- render_tex(spec)
-  expect_match(txt, "Q[l,wd=1.500000in]", fixed = TRUE)
+  # 1.5in resolved minus the 0.14944in separation.
+  expect_match(txt, "Q[l,wd=1.350560in]", fixed = TRUE)
 })
 
 test_that("col_spec width rejects bad units / negative / >100%", {
@@ -542,7 +554,7 @@ test_that("header bands emit as \\SetCell[c=N]{c}", {
   ) |>
     headers("Treatment Arm" = c("placebo", "active_low", "active_high"))
   txt <- render_tex(spec)
-  expect_match(txt, "\\SetCell[c=3]{c} Treatment Arm", fixed = TRUE)
+  expect_match(txt, "\\SetCell[c=3]{c} \\textbf{Treatment Arm}", fixed = TRUE)
 })
 
 test_that(".group_contiguous_runs preserves order and handles NA", {
@@ -643,24 +655,29 @@ test_that("zero-row spec renders chrome + headers + content-box message row", {
   # Header band still renders above the message.
   expect_match(
     txt,
-    "\\SetCell{valign=b} x & \\SetCell{valign=b} y \\\\",
+    "\\SetCell{valign=b} \\textbf{x} & \\SetCell{valign=b} \\textbf{y} \\\\",
     fixed = TRUE
   )
-  # Full-span message in a fixed-height minipage so the inner vertical
-  # position (c = middle by default) centres it in the content-box.
+  # Full-span message at natural height (halign only). A fixed-height
+  # minipage tipped the single message row plus the repeating header / footer
+  # over \textheight and left blank pages, so the message rides its natural
+  # height; empty_valign is a no-op on PDF / LaTeX (RTF / DOCX honour it).
   expect_match(txt, "No data available to report", fixed = TRUE)
-  expect_match(txt, "\\SetCell[c=2]{c} {\\begin{minipage}[c][", fixed = TRUE)
-  expect_match(txt, "][c]{\\linewidth}\\centering", fixed = TRUE)
+  expect_match(txt, "\\SetCell[c=2]{c} {\\centering No data", fixed = TRUE)
+  expect_no_match(txt, "\\begin{minipage}[c][", fixed = TRUE)
 })
 
-test_that("LaTeX empty message honours empty_text + preset alignment", {
+test_that("LaTeX empty message honours empty_text + halign (valign is a no-op)", {
   spec <- tabular(
     data.frame(x = integer(0L), y = character(0L)),
     empty_text = "None."
   ) |>
     preset(empty_halign = "left", empty_valign = "top")
   txt <- render_tex(spec)
-  expect_match(txt, "][t]{\\linewidth}\\raggedright None.", fixed = TRUE)
+  # halign (left -> \raggedright) applies; the message is natural-height so
+  # there is no fixed-height minipage and valign does not surface.
+  expect_match(txt, "{\\raggedright None.}", fixed = TRUE)
+  expect_no_match(txt, "\\begin{minipage}[c][", fixed = TRUE)
 })
 
 # ---------------------------------------------------------------------
@@ -694,7 +711,10 @@ test_that(".render_latex_col_labels_row falls back to column name on missing AST
     col_names_visible = c("x", "y"),
     cols = list()
   )
-  expect_identical(out, "\\SetCell{valign=b} x & \\SetCell{valign=b} y \\\\")
+  expect_identical(
+    out,
+    "\\SetCell{valign=b} \\textbf{x} & \\SetCell{valign=b} \\textbf{y} \\\\"
+  )
 })
 
 test_that("decimal column header gets \\SetCell{halign=c,valign=b}; non-decimal gets valign only", {
@@ -707,10 +727,39 @@ test_that("decimal column header gets \\SetCell{halign=c,valign=b}; non-decimal 
     )
   )
   # Decimal header centres + bottom; non-decimal omits halign (inherits
-  # the Q[...] colspec) but still gets the bottom valign default.
-  expect_match(out, "\\SetCell{halign=c,valign=b} n", fixed = TRUE)
-  expect_match(out, "\\SetCell{valign=b} grp", fixed = TRUE)
-  expect_false(grepl("halign=c,valign=b} grp", out, fixed = TRUE))
+  # the Q[...] colspec) but still gets the bottom valign default. Labels are
+  # bold by default (header-bold parity).
+  expect_match(out, "\\SetCell{halign=c,valign=b} \\textbf{n}", fixed = TRUE)
+  expect_match(out, "\\SetCell{valign=b} \\textbf{grp}", fixed = TRUE)
+  expect_false(grepl("halign=c,valign=b} \\textbf{grp}", out, fixed = TRUE))
+})
+
+test_that("column headers render bold by default on LaTeX (header-bold parity)", {
+  out <- tabular:::.render_latex_col_labels_row(
+    col_labels_ast = list(),
+    col_names_visible = c("grp", "n"),
+    cols = list(
+      grp = col_spec(label = "Group"),
+      n = col_spec(label = "N", align = "decimal")
+    )
+  )
+  # Both labels are wrapped in \textbf{...} with no chrome style present,
+  # matching the already-bold DOCX / RTF / HTML default. (With an empty
+  # col_labels_ast the label falls back to the column NAME.)
+  expect_match(out, "\\textbf{grp}", fixed = TRUE)
+  expect_match(out, "\\textbf{n}", fixed = TRUE)
+})
+
+test_that("style(.at = cells_headers(), bold = FALSE) overrides the header-bold default", {
+  template <- style_template() |>
+    style(.at = cells_headers(), bold = FALSE)
+  spec <- tabular(data.frame(Apple = 1:2)) |>
+    preset(.style = template)
+  tex <- render_tex(spec)
+  # The explicit bold = FALSE wins over the bold_default, so the column
+  # label is NOT wrapped in \textbf.
+  expect_no_match(tex, "\\textbf{Apple}", fixed = TRUE)
+  expect_match(tex, "Apple", fixed = TRUE)
 })
 
 test_that("backend_latex() is callable directly with a grid + file", {
@@ -819,6 +868,32 @@ test_that("headheight bumps when multi-row pagehead is present", {
   emit(spec, out)
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_true(grepl("\\setlength{\\headheight}", tex, fixed = TRUE))
+})
+
+test_that("running header sets a tightened \\headsep (header -> title gap)", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      font_size = 10,
+      pagehead = list(left = "Protocol: ABC", right = "Page {page}")
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # \headsep is derived as font_size * baseline_ratio (10 * 1.2 = 12pt), not
+  # the article class default (~25pt) that pushed the title far down.
+  expect_match(tex, "\\setlength{\\headsep}{12pt}", fixed = TRUE)
+})
+
+test_that("running footer sets a tightened \\footskip", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      font_size = 10,
+      pagefoot = list(left = "Program: t.sas", right = "{npages}")
+    )
+  out <- withr::local_tempfile(fileext = ".tex")
+  emit(spec, out)
+  tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(tex, "\\setlength{\\footskip}{12pt}", fixed = TRUE)
 })
 
 # ---------------------------------------------------------------------
@@ -1013,7 +1088,7 @@ test_that("LaTeX scenario G: band emits an outer hline under the two drug arms",
   # SetCell colspan over visible columns 4-5 (drug_50 + drug_100).
   expect_match(
     tex,
-    "\\\\SetCell\\[c=2\\]\\{c\\} Active Treatment",
+    "\\\\SetCell\\[c=2\\]\\{c\\} \\\\textbf\\{Active Treatment\\}",
     perl = TRUE
   )
   # Trimmed band underline under the same two columns, emitted as a
@@ -1733,4 +1808,78 @@ test_that("LaTeX body honors padding_bottom independently via belowsep (#cell-pa
   emit(spec, f)
   tex <- paste(readLines(f, warn = FALSE), collapse = "\n")
   expect_true(grepl("belowsep=20pt", tex, fixed = TRUE))
+})
+
+test_that("LaTeX body font size is set after begin{document}, not in preamble (#26)", {
+  # \begin{document} issues \normalsize, which resets the font to the
+  # \documentclass size, so a \fontsize placed in the preamble is discarded
+  # and an 8pt body (chrome included) renders at 10pt. The size command must
+  # follow \begin{document}. A figure box is sized assuming the requested
+  # font, so a too-large chrome overflowed the page (#26).
+  fig <- figure(function() plot(1), titles = "T", footnotes = "fn") |>
+    preset(font_size = 8)
+  tex <- withr::local_tempfile(fileext = ".tex")
+  suppressMessages(emit(fig, tex))
+  lines <- readLines(tex, warn = FALSE)
+  begin_at <- which(lines == "\\begin{document}")
+  size_at <- grep(
+    "\\\\fontsize\\{8\\}\\{9.6\\}\\\\selectfont",
+    lines,
+    fixed = FALSE
+  )
+  expect_length(begin_at, 1L)
+  expect_length(size_at, 1L)
+  expect_gt(size_at, begin_at)
+  # And it does NOT also linger in the preamble (exactly one occurrence).
+  expect_identical(
+    sum(grepl("\\\\selectfont", lines) & grepl("fontsize\\{8\\}", lines)),
+    1L
+  )
+
+  # Same for a table.
+  tspec <- tabular(data.frame(x = 1:2), titles = "T") |> preset(font_size = 8)
+  ttex <- withr::local_tempfile(fileext = ".tex")
+  emit(tspec, ttex)
+  tlines <- readLines(ttex, warn = FALSE)
+  expect_gt(
+    grep("\\\\fontsize\\{8\\}", tlines)[1],
+    which(tlines == "\\begin{document}")
+  )
+})
+
+test_that("LaTeX table total width stays inside the printable area (#right-margin)", {
+  # tabularray adds leftsep + rightsep OUTSIDE each `wd`. The colspec must
+  # subtract it so the rendered table (sum of wd + per-column sep) fits the
+  # printable width instead of bleeding `n_cols * sep` into the right margin.
+  spec <- tabular(
+    data.frame(a = "x", b = "1", c = "2", d = "3", e = "4")
+  ) |>
+    preset(orientation = "landscape", paper_size = "letter", margins = 1) |>
+    cols(a = col_spec(width = "3in"), b = col_spec(width = "2in")) # rest auto
+  txt <- render_tex(spec)
+  wd <- as.numeric(regmatches(
+    txt,
+    gregexpr("(?<=wd=)[0-9.]+(?=in)", txt, perl = TRUE)
+  )[[1L]])
+  sep_in <- 10.8 / 72.27
+  rendered <- sum(wd) + length(wd) * sep_in
+  available <- 11 - 2 # landscape letter (11in wide), 1in margins each side
+  expect_lte(rendered, available + 1e-6)
+})
+
+test_that("LaTeX page chrome inherits the body font size (#chrome-font)", {
+  # fancyhdr typesets the running header in the output routine at the
+  # \documentclass size, so the body \fontsize must be re-asserted inside
+  # each populated head / foot slot or an 8pt table prints 10pt chrome.
+  spec <- tabular(data.frame(x = "a"), titles = "T") |>
+    preset(
+      font_size = 8,
+      pagehead = list(left = "Protocol: ABC", right = "Page {page}")
+    )
+  txt <- render_tex(spec)
+  expect_match(
+    txt,
+    "\\fancyhead[L]{\\fontsize{8}{9.6}\\selectfont",
+    fixed = TRUE
+  )
 })

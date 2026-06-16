@@ -354,11 +354,11 @@ test_that(".effective_body_halign cascade: predicate > col_spec > NA", {
   )))
 })
 
-test_that(".effective_body_halign treats 'decimal' as right (engine padded)", {
+test_that(".effective_body_halign centres 'decimal' (engine padded to column width)", {
   cs <- col_spec(align = "decimal")
   expect_identical(
     tabular:::.effective_body_halign(style_node(), cs, preset_spec()),
-    "right"
+    "center"
   )
 })
 

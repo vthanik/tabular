@@ -408,7 +408,7 @@ test_that("RTF footnote + non-repeating-title spacers re-stamp font size", {
 # Header bands + body cells
 # ---------------------------------------------------------------------
 
-test_that("body cell alignment maps to \\ql / \\qc / \\qr / decimal -> \\qr", {
+test_that("body cell alignment maps to \\ql / \\qc / \\qr / decimal -> \\qc", {
   spec <- tabular(data.frame(L = 1, C = 1, R = 1, D = 1.5)) |>
     cols(
       L = col_spec(align = "left"),
@@ -420,6 +420,9 @@ test_that("body cell alignment maps to \\ql / \\qc / \\qr / decimal -> \\qr", {
   expect_true(grepl("\\ql", rtf, fixed = TRUE))
   expect_true(grepl("\\qc", rtf, fixed = TRUE))
   expect_true(grepl("\\qr", rtf, fixed = TRUE))
+  # decimal centres (uniform NBSP padding from engine_decimal): the block
+  # sits under the centred decimal header rather than hugging the right.
+  expect_identical(tabular:::.rtf_align_token("decimal"), "\\qc")
 })
 
 test_that("multi-level header bands emit one row per band depth", {
@@ -1229,7 +1232,7 @@ test_that("RTF backend renders styled multi-level headers with per-column valign
 # valign (HTML parity)
 # ---------------------------------------------------------------------
 
-test_that("decimal column header centres (\\qc) while the body stays right (\\qr)", {
+test_that("decimal column header AND body both centre (\\qc)", {
   spec <- tabular(data.frame(grp = "A", n = "12.3")) |>
     cols(
       grp = col_spec(label = "Group"),
@@ -1238,8 +1241,10 @@ test_that("decimal column header centres (\\qc) while the body stays right (\\qr
   txt <- .rtf_emit_text(spec)
   # Header label "N" centred.
   expect_match(txt, "\\\\qc[^A-Za-z]*\\{\\\\b N\\}", perl = TRUE)
-  # Body decimal cell right-aligned.
-  expect_match(txt, "\\\\qr[^A-Za-z]*12.3", perl = TRUE)
+  # Body decimal cell now centres too (uniform NBSP padding from
+  # engine_decimal), so the block sits under the centred header.
+  expect_match(txt, "\\\\qc[^A-Za-z]*12.3", perl = TRUE)
+  expect_no_match(txt, "\\\\qr[^A-Za-z]*12.3", perl = TRUE)
 })
 
 test_that("column header defaults to bottom valign (\\clvertalb)", {

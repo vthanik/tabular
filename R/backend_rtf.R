@@ -128,7 +128,7 @@ backend_rtf <- function(grid, file) {
   meta <- grid@metadata
   halign <- meta$empty_place$halign %||% "center"
   msg <- if (is.null(meta$empty_text_ast)) {
-    "No data available to report"
+    .tabular_empty_text_default
   } else {
     .render_rtf_inline(
       meta$empty_text_ast,
@@ -786,7 +786,7 @@ backend_rtf <- function(grid, file) {
     as.integer(round(empty_place$height_twips))
   }
   msg <- if (is.null(empty_text_ast)) {
-    "No data available to report"
+    .tabular_empty_text_default
   } else {
     .render_rtf_inline(empty_text_ast, preserve = .preset_ws_preserve(preset))
   }
@@ -2292,9 +2292,9 @@ backend_rtf <- function(grid, file) {
 }
 
 # Map an `align` value to the RTF paragraph alignment control.
-# `decimal` -> right-align (the engine_decimal phase has already
-# NBSP-padded the cell text, so visual alignment survives a
-# simple right-justify).
+# `decimal` -> centre: the engine_decimal phase has already NBSP-padded
+# the cell text to a uniform column width, so the block centres under the
+# (centred) decimal header rather than hugging the right edge (HTML parity).
 #
 # RTF cell text-property tokens from one style_node. All seven
 # text properties cascade through here now: bold (`\b`), italic
@@ -2393,7 +2393,7 @@ backend_rtf <- function(grid, file) {
     left = "\\ql",
     center = "\\qc",
     right = "\\qr",
-    decimal = "\\qr",
+    decimal = "\\qc",
     "\\ql"
   )
 }

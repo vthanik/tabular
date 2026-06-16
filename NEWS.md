@@ -44,6 +44,47 @@
   `group_display` on a later call, and merge every column attribute
   field-completely (previously a default value could not be merged back and
   some fields could be dropped).
+* `emit()` now centres decimal-aligned columns on every backend instead of
+  right-aligning the uniformly NBSP-padded block, so the values sit under the
+  centred column header (cross-backend parity).
+* `emit()` to DOCX now declares an in-class `<w:altName>` fallback for each
+  font, so a reader missing the primary face substitutes a metric-compatible
+  face in the same class (mono stays mono) instead of panose-guessing to a
+  serif. This brings DOCX in line with the RTF (`\*\falt`) and PDF / LaTeX
+  (`\IfFontExistsTF` cascade) backends, which already declared the same
+  in-class fallback chain.
+* `emit()` to HTML now aligns the running page header and footer to the table
+  width via a centred fit-content container, instead of spanning the full
+  document width.
+* `emit()` to PDF / LaTeX no longer renders the table wider than the printable
+  area: tabularray adds per-column separation outside each column's `wd`, so
+  the column widths are now reduced by that separation and the rendered table
+  total matches the resolved width (and the RTF / DOCX cell widths) instead of
+  bleeding into the right margin. (#27)
+* `emit()` to PDF / LaTeX now renders column headers in bold, matching the
+  DOCX, RTF and HTML backends.
+* `emit()` to PDF / LaTeX now sets the body font size after `\begin{document}`
+  (where it survives) and re-asserts it inside the running header / footer, so
+  an 8pt table no longer renders its body or page chrome at the 10pt
+  document-class default. (#27)
+* `emit()` to PDF / LaTeX now tightens the gap between a running page header
+  and the title (and body to a running footer) to one line via `\headsep` and
+  `\footskip`, instead of the wide document-class default.
+* `emit()` to PDF / LaTeX no longer overflows a figure onto a second page:
+  the image is placed with flexible `\vfill` glue rather than a fixed-height
+  box that reconstructed to just over the page height, so a multi-page figure
+  (for example one Kaplan-Meier plot per treatment arm) now fits one page per
+  plot.
+* `emit()` to PDF / LaTeX no longer leaves blank pages before a zero-row
+  table's empty-state message; the message renders at its natural height
+  instead of a full-height box that tipped over the page (`empty_valign` is a
+  no-op on PDF / LaTeX, still honoured exactly on RTF and DOCX).
+* `figure()` and the empty-state ("no data" / `empty_text`) message now size
+  the body box from the number of wrapped chrome lines a long title or
+  footnote actually occupies at the printable width, not the element count, so
+  a wrapped footnote no longer pushes content onto a second page on DOCX (and
+  any paged backend). Wrapping is computed by greedy word packing against the
+  font metrics. (#26)
 * `paginate()` now collapses a zero-row table to a single empty-state page;
   horizontal `panels` no longer multiply an empty table into several identical
   blank pages.
@@ -52,8 +93,8 @@
   metrics; Markdown output keeps character padding.
 * `preset()` gained `empty_halign` and `empty_valign` knobs that place the
   zero-row placeholder message within the body content-box, defaulting to
-  centred horizontally and middle vertically (exact on the paged backends,
-  approximate on HTML, a no-op on Markdown).
+  centred horizontally and middle vertically (`empty_valign` is exact on RTF
+  and DOCX, approximate on HTML, and a no-op on PDF / LaTeX and Markdown).
 * `preset()` gained an `empty_text` knob, a house-style default for the
   zero-row message that a per-table `tabular(empty_text = ...)` still overrides.
 * `preset(spacing = ...)` now drives the blank lines around a subgroup banner

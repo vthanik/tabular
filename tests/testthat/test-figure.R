@@ -418,3 +418,67 @@ test_that("figure cli summary truncates long titles and reports a preset", {
   )
   expect_snapshot(tabular:::.figure_spec_print_cli(fs))
 })
+
+test_that(".figure_box reserves wrapped chrome lines so footnotes fit (#26)", {
+  # A long footnote wraps to several physical lines at the printable width.
+  # The box must reserve by rendered lines, not element count, or it is too
+  # tall and the wrapped overflow pushes a DOCX figure footnote (which flows
+  # in the body) onto a second page.
+  long_fn <- paste(
+    "Note: Progression-free survival (PFS) is calculated from the date of",
+    "first dose to the date of disease progression or death, whichever",
+    "occurs first. Estimated with the Kaplan-Meier method; tick marks",
+    "denote censored observations; shaded band is the 95% CI."
+  )
+
+  # The wrapped-line counter sees more than one line for the long footnote.
+  geom <- tabular:::.figure_box(
+    figure(function() NULL, footnotes = long_fn)
+  )
+  expect_gt(
+    tabular:::.wrapped_line_count(
+      long_fn,
+      preset_spec(),
+      geom$printable_w_in
+    ),
+    1L
+  )
+
+  # A figure with the long footnote reserves more chrome, so its body box
+  # is SHORTER than one with a one-line footnote (regression: both used to
+  # reserve a single row, leaving the long-footnote box identically tall).
+  short_box <- tabular:::.figure_box(
+    figure(function() NULL, footnotes = "Note: short.")
+  )
+  long_box <- tabular:::.figure_box(
+    figure(function() NULL, footnotes = long_fn)
+  )
+  expect_lt(long_box$box_h_in, short_box$box_h_in)
+})
+
+test_that(".wrapped_line_count counts a short block as one line per element", {
+  # Default-figure invariant: short titles / footnotes wrap to one line
+  # each, so the reserved height is unchanged from the element count.
+  expect_identical(
+    tabular:::.wrapped_line_count(character(0), preset_spec(), 9),
+    0L
+  )
+  expect_identical(
+    tabular:::.wrapped_line_count(
+      c("Figure 14.1.1", "Subjects Enrolled"),
+      preset_spec(),
+      9
+    ),
+    2L
+  )
+  # Embedded "\n" breaks expand, mirroring .count_lines.
+  expect_identical(
+    tabular:::.wrapped_line_count("line one\nline two", preset_spec(), 9),
+    2L
+  )
+  # An empty element still counts as one line (strsplit("") is length 0).
+  expect_identical(
+    tabular:::.wrapped_line_count("", preset_spec(), 9),
+    1L
+  )
+})

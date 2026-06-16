@@ -294,9 +294,24 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   margin_h <- mlr[["left"]] + mlr[["right"]]
 
   one_row <- .row_height_twips(preset@font_size)
+  width_twips <- page_width - margin_h
 
-  n_title_lines <- .count_lines(spec@titles)
-  n_footnote_lines <- .count_lines(spec@footnotes)
+  # Title / footnote rows are counted by RENDERED (wrapped) lines at the
+  # printable width, not element count: a long footnote wraps to several
+  # lines, so reserving one row per element leaves the body box too tall
+  # and the wrapped overflow runs off the page (an empty-state message box
+  # is sized from this; a short block wraps to one line, matching the old
+  # element count, so a non-wrapping table paginates unchanged).
+  n_title_lines <- .wrapped_line_count(
+    spec@titles,
+    preset,
+    width_twips / 1440
+  )
+  n_footnote_lines <- .wrapped_line_count(
+    spec@footnotes,
+    preset,
+    width_twips / 1440
+  )
   n_header_lines <- .count_header_lines(spec)
   title_spacing <- if (n_title_lines > 0L) 1L else 0L
   footnote_spacing <- if (n_footnote_lines > 0L) 1L else 0L
@@ -308,7 +323,6 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
 
   usable_twips <- page_height - margin_v
   height_twips <- usable_twips - chrome_rows * one_row
-  width_twips <- page_width - margin_h
 
   list(
     width_twips = width_twips,
@@ -362,6 +376,63 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   }
   parts <- strsplit(x, "\n", fixed = TRUE)
   sum(vapply(parts, length, integer(1)))
+}
+
+# Count the PHYSICAL (wrapped) lines a chrome text block occupies at a
+# given printable width -- the line-aware sibling of .count_lines. A long
+# title or footnote wraps to several lines, so a box that reserves only one
+# row per element is too tall, and the wrapped overflow runs off the page
+# (DOCX figure footnotes flow in the body; an empty-state message box and a
+# table's footer reservation are likewise sized from this count).
+#
+# Wrapping is computed by GREEDY WORD PACKING against AFM-measured word
+# widths, mirroring how LaTeX (\raggedright), RTF and Word break a
+# paragraph: words are placed on a line until the next word would exceed
+# the available width, then a new line starts. A naive total-width / line-
+# width ratio systematically under-counts (it assumes characters pack with
+# no word-boundary slack), which let a footnote's last line spill onto a
+# second page. Embedded "\n" breaks expand first, mirroring .count_lines.
+# Length-0 input returns 0L; an empty element still counts as one line, so
+# a short, non-wrapping block matches .count_lines exactly (no change to a
+# default figure or table).
+.wrapped_line_count <- function(text, preset, avail_w_in) {
+  if (length(text) == 0L) {
+    return(0L)
+  }
+  afm <- .resolve_afm_name(.effective_font_family(preset))
+  size_pt <- .effective_font_size(preset)
+  w_in <- function(s) as.numeric(.text_width_em(s, afm)) / 1000 * size_pt / 72
+  space_w <- w_in(" ")
+  total <- 0L
+  for (el in text) {
+    sublines <- strsplit(el, "\n", fixed = TRUE)[[1L]]
+    if (length(sublines) == 0L) {
+      total <- total + 1L
+      next
+    }
+    for (s in sublines) {
+      words <- strsplit(s, "[ \t]+")[[1L]]
+      words <- words[nzchar(words)]
+      if (length(words) == 0L) {
+        total <- total + 1L
+        next
+      }
+      line_w <- 0
+      n_lines <- 1L
+      for (wd in words) {
+        ww <- w_in(wd)
+        candidate <- if (line_w == 0) ww else line_w + space_w + ww
+        if (candidate > avail_w_in && line_w > 0) {
+          n_lines <- n_lines + 1L
+          line_w <- ww
+        } else {
+          line_w <- candidate
+        }
+      }
+      total <- total + n_lines
+    }
+  }
+  total
 }
 
 # Count header-band rows. Header height is the max embedded-\n line

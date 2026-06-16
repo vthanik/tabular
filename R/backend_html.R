@@ -68,6 +68,26 @@ backend_html <- function(grid, file) {
 # Document shell + page composition
 # ---------------------------------------------------------------------
 
+# Wrap the page chrome (running header / footer bands) plus the body in
+# one `width: fit-content; margin: 0 auto` container so the bands align to
+# the body's width instead of spanning the full document. The bands carry
+# `width: 100%` (see `.html_inline_style`), so they fill this container,
+# whose width is the widest child (normally the table). Only wraps when at
+# least one chrome band is present: a table or figure with NO running chrome
+# keeps the prior structure exactly, so its snapshot stays byte-identical.
+.html_chrome_wrap <- function(header, body, footer) {
+  if (length(header) == 0L && length(footer) == 0L) {
+    return(c(header, body, footer))
+  }
+  c(
+    "<div class=\"tabular-chrome-wrap\">",
+    header,
+    body,
+    footer,
+    "</div>"
+  )
+}
+
 # Compose the full HTML document: doctype, head (charset, title,
 # inline stylesheet), then a continuous body — chrome header,
 # titles (once), one `<table>` per horizontal panel concatenating
@@ -212,7 +232,11 @@ backend_html <- function(grid, file) {
   # refs that hash differently between the two), so snapshots stay stable;
   # it is still unique per table, so two tables on one page never collide.
   assemble <- function(body_inner) {
-    doc_body <- c(onscreen_header, body_inner, onscreen_footer)
+    doc_body <- .html_chrome_wrap(
+      onscreen_header,
+      body_inner,
+      onscreen_footer
+    )
     scope_id <- paste0("tabular-", substr(rlang::hash(doc_body), 1L, 10L))
     head <- c(
       "<!DOCTYPE html>",
@@ -422,7 +446,7 @@ backend_html <- function(grid, file) {
     unlist(sections, use.names = FALSE)
   }
 
-  doc_body <- c(onscreen_header, body_inner, onscreen_footer)
+  doc_body <- .html_chrome_wrap(onscreen_header, body_inner, onscreen_footer)
   scope_id <- paste0("tabular-", substr(rlang::hash(doc_body), 1L, 10L))
   head <- c(
     "<!DOCTYPE html>",
@@ -867,7 +891,7 @@ backend_html <- function(grid, file) {
 # metadata) falls back to the canonical default text.
 .html_empty_message <- function(empty_text_ast, preset = NULL) {
   if (is.null(empty_text_ast)) {
-    return(.html_escape("No data available to report"))
+    return(.html_escape(.tabular_empty_text_default))
   }
   .render_html_inline(empty_text_ast, preserve = .preset_ws_preserve(preset))
 }
@@ -1320,15 +1344,13 @@ backend_html <- function(grid, file) {
       col <- cols[[nm]]
       # col_spec wins over chrome surface for header halign (per-
       # column override); fall back to chrome surface, then preset.
-      # `decimal` is the ONE carve-out: body cells render
-      # `text-right` with engine_decimal NBSP padding that aligns
-      # decimal points across rows, so the visible content's
-      # centre of mass sits INSIDE the cell (at the decimal point),
-      # not flush against the cell border. A CENTERED header sits
-      # over that centroid -- the dominant clinical-TFL convention
-      # and gt's default for numeric columns. Other body alignments
-      # (left / center / right) map straight through to the same
-      # value on the header.
+      # `decimal` is the ONE carve-out: engine_decimal pads every body
+      # cell to a uniform column width with NBSP that aligns decimal
+      # points across rows, so BOTH the body block and its header centre
+      # in the column (rather than hugging the right edge) -- the dominant
+      # clinical-TFL convention, and parity with LaTeX / RTF / DOCX. Other
+      # body alignments (left / center / right) map straight through to the
+      # same value on the header.
       halign <- if (
         is_col_spec(col) &&
           length(col@align) == 1L &&
@@ -1631,7 +1653,10 @@ backend_html <- function(grid, file) {
     left = "text-left",
     center = "text-center",
     right = "text-right",
-    decimal = "text-right",
+    # decimal: the engine_decimal phase pads every cell to a uniform column
+    # width with NBSP, so the block centres under the (centred) decimal
+    # header rather than hugging the right edge (LaTeX / RTF / DOCX parity).
+    decimal = "text-center",
     ""
   )
 }
@@ -2467,8 +2492,12 @@ backend_html <- function(grid, file) {
     # 6pt), matching galley, so the page bands never out-size the table.
     # Bands are borderless by default (galley parity); the spacing
     # margins stay so the header/footer keep their breathing room.
+    # The chrome wrapper shrinks to its widest child (normally the table),
+    # centred on the page; the bands fill it at width:100% so a running
+    # header / footer aligns to the body's width, not the full document.
+    ".tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }",
     sprintf(
-      ".tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: %gpt; color: var(--tabular-chrome-color); }",
+      ".tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%%; padding: .5rem 0; font-size: %gpt; color: var(--tabular-chrome-color); }",
       max(fs - 1, 6)
     ),
     ".tabular-page-header { margin-bottom: 1rem; }",

@@ -1110,7 +1110,10 @@ backend_docx <- function(grid, file) {
     # No column structure (a hand-built zero-page grid, or every column
     # hidden): the empty message stands alone as a centred paragraph.
     msg_runs <- if (is.null(meta$empty_text_ast)) {
-      "<w:r><w:t xml:space=\"preserve\">No data available to report</w:t></w:r>"
+      sprintf(
+        "<w:r><w:t xml:space=\"preserve\">%s</w:t></w:r>",
+        .tabular_empty_text_default
+      )
     } else {
       .render_docx_inline(meta$empty_text_ast)
     }
@@ -2112,7 +2115,10 @@ backend_docx <- function(grid, file) {
     paste0(
       "<w:r>",
       default_rpr,
-      "<w:t xml:space=\"preserve\">No data available to report</w:t></w:r>"
+      sprintf(
+        "<w:t xml:space=\"preserve\">%s</w:t></w:r>",
+        .tabular_empty_text_default
+      )
     )
   } else {
     .render_docx_inline(empty_text_ast, default_rpr = default_rpr)
@@ -2154,7 +2160,10 @@ backend_docx <- function(grid, file) {
     left = "<w:jc w:val=\"left\"/>",
     center = "<w:jc w:val=\"center\"/>",
     right = "<w:jc w:val=\"right\"/>",
-    decimal = "<w:jc w:val=\"right\"/>",
+    # decimal: the engine_decimal phase pads every cell to a uniform column
+    # width with NBSP, so the block centres under the (centred) decimal
+    # header rather than hugging the right edge (HTML / RTF / LaTeX parity).
+    decimal = "<w:jc w:val=\"center\"/>",
     "<w:jc w:val=\"left\"/>"
   )
 }
@@ -2791,15 +2800,32 @@ backend_docx <- function(grid, file) {
 # the declared substitutes, the OOXML form of RTF's `\*\falt`. Every
 # face in one stack shares the class fingerprint, since the stack is
 # metric-compatible by construction.
+#
+# Each `<w:font>` also carries `<w:altName>` naming the NEXT in-class face
+# in the resolved stack. Without it Word, on a box missing the primary
+# (e.g. a Windows reader with no Liberation Mono), falls back via panose
+# guessing and can land out of class (a mono face rendering as serif). The
+# explicit named successor keeps the substitution in class (Liberation Mono
+# -> Courier New -> Courier ...). `<w:altName>` is the FIRST child of
+# CT_Font (the schema sequence is altName, panose1, charset, family,
+# notTrueType, pitch, sig), so it precedes the shared fingerprint.
 .docx_font_table <- function(preset) {
   stack <- .resolve_font_stack(preset@font_family, "docx")
   fp <- .docx_font_fingerprint[[.docx_font_class(stack)]]
+  faces <- unique(stack)
   decls <- vapply(
-    unique(stack),
-    function(face) {
+    seq_along(faces),
+    function(i) {
+      successor <- if (i < length(faces)) faces[[i + 1L]] else NA_character_
+      alt <- if (!is.na(successor)) {
+        sprintf("<w:altName w:val=\"%s\"/>", .docx_escape_attr(successor))
+      } else {
+        ""
+      }
       sprintf(
-        "<w:font w:name=\"%s\">%s</w:font>",
-        .docx_escape_attr(face),
+        "<w:font w:name=\"%s\">%s%s</w:font>",
+        .docx_escape_attr(faces[[i]]),
+        alt,
         fp
       )
     },

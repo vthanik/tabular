@@ -200,6 +200,10 @@ test_that("alignment row maps every align value to its GFM token", {
   expect_true(grepl("---:", sep, fixed = TRUE))
 })
 
+test_that(".md_align_token centres decimal for cross-backend parity", {
+  expect_identical(tabular:::.md_align_token("decimal"), ":---:")
+})
+
 test_that(".md_align_token defaults to left for unknown / NA", {
   expect_identical(tabular:::.md_align_token(NA_character_), ":---")
   expect_identical(tabular:::.md_align_token(NULL), ":---")

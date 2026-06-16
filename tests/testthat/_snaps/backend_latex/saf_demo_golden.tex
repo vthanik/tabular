@@ -19,11 +19,11 @@
   \usepackage{fontspec}
   \IfFontExistsTF{Liberation Mono}{\setmainfont{Liberation Mono}}{\IfFontExistsTF{Courier New}{\setmainfont{Courier New}}{\IfFontExistsTF{Courier}{\setmainfont{Courier}}{\IfFontExistsTF{TeX Gyre Cursor}{\setmainfont{TeX Gyre Cursor}}{\setmainfont{Latin Modern Mono}}}}}
 \fi
-\fontsize{10}{12}\selectfont
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0pt}
 \pagestyle{empty}
 \begin{document}
+\fontsize{10}{12}\selectfont
 \DefTblrTemplate{firsthead}{default}{%
 {\strut\par}
 {\centering {\bfseries Table 14.1.1}\par}
@@ -45,8 +45,8 @@
 \normalsize
 \end{minipage}
 }
-\begin{longtblr}[caption={}, label={}, presep=0pt, postsep=0pt]{colspec={Q[l,wd=2.983333in] Q[r,wd=1.066667in] Q[r,wd=1.066667in] Q[r,wd=1.066667in] Q[r,wd=1.150000in]}, rowhead=1, leftsep=5.4pt, rightsep=5.4pt, rows={valign=t}, hline{1}={1-5}{0.5pt, solid, fg=tabularrule212529}, hline{2}={1-5}{0.5pt, solid, fg=tabularrule212529}, hline{18}={0.5pt, solid, fg=tabularrule212529}}
-\SetCell{valign=b} Statistic & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Placebo \\{} N=86} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Low Dose \\{} N=96} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering High Dose \\{} N=72} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering Total \\{} N=254} \\
+\begin{longtblr}[caption={}, label={}, presep=0pt, postsep=0pt]{colspec={Q[l,wd=2.833894in] Q[c,wd=0.917227in] Q[c,wd=0.917227in] Q[c,wd=0.917227in] Q[c,wd=1.000560in]}, rowhead=1, leftsep=5.4pt, rightsep=5.4pt, rows={valign=t}, hline{1}={1-5}{0.5pt, solid, fg=tabularrule212529}, hline{2}={1-5}{0.5pt, solid, fg=tabularrule212529}, hline{18}={0.5pt, solid, fg=tabularrule212529}}
+\SetCell{valign=b} \textbf{Statistic} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering \textbf{Placebo \\{} N=86}} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering \textbf{Low Dose \\{} N=96}} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering \textbf{High Dose \\{} N=72}} & \SetCell{valign=b} \parbox[b]{\hsize}{\centering \textbf{Total \\{} N=254}} \\
 \SetCell[c=5]{l} \textbf{Age (years)} & & & & \\*
 {\leftskip=12pt\relax n} & 86          & 96          & 72          & 254          \\
 {\leftskip=12pt\relax Mean (SD)} & 75.2 (8.59) & 76.0 (8.11) & 73.8 (7.94) &  75.1 (8.25) \\

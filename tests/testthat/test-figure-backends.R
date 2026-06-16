@@ -93,9 +93,31 @@ test_that("LaTeX figure writes a sidecar and references it", {
   expect_true(file.exists(sidecar))
   expect_true(grepl("\\includegraphics", tex, fixed = TRUE))
   expect_true(grepl(sprintf("%s-fig1.png", stem), tex, fixed = TRUE))
-  expect_true(grepl("][b]{\\linewidth}", tex, fixed = TRUE)) # valign bottom
-  expect_true(grepl("\\raggedright", tex, fixed = TRUE)) # halign left
+  # valign bottom -> a leading \vfill pushes the image down (the image is
+  # placed with flexible \vfill glue, not a fixed-height minipage that could
+  # overflow the page); halign left -> \raggedright.
+  expect_true(grepl("\\vfill", tex, fixed = TRUE))
+  expect_false(grepl("\\begin{minipage}[c][", tex, fixed = TRUE))
+  expect_true(grepl("\\raggedright", tex, fixed = TRUE))
   unlink(sidecar)
+})
+
+test_that("LaTeX figure places the image with \\vfill glue, not a fixed-height box", {
+  # Regression for the per-arm KM PDF overflow (one figure per arm rendered
+  # two physical pages each): a fixed-height minipage reconstructed to almost
+  # exactly \textheight and tipped over. \vfill glue absorbs the slack.
+  top <- withr::local_tempfile(fileext = ".tex")
+  emit(basic_figure(valign = "top"), top)
+  ttop <- paste(readLines(top), collapse = "\n")
+  # valign top -> image then a trailing \vfill (footnotes ride the bottom).
+  expect_match(ttop, "\\par}\n\\vfill", fixed = TRUE)
+  expect_no_match(ttop, "\\begin{minipage}[c][", fixed = TRUE)
+
+  mid <- withr::local_tempfile(fileext = ".tex")
+  emit(basic_figure(valign = "middle"), mid)
+  tmid <- paste(readLines(mid), collapse = "\n")
+  # valign middle -> \vfill image \vfill (image centred, footnotes bottom).
+  expect_match(tmid, "\\vfill\n{\\noindent\\centering", fixed = TRUE)
 })
 
 test_that("LaTeX rasterises a plot input to a vector PDF sidecar", {
@@ -460,6 +482,38 @@ test_that("PDF figure compiles through xelatex", {
   expect_true(file.exists(out))
   hdr <- readBin(out, "raw", 5L)
   expect_equal(rawToChar(hdr), "%PDF-")
+})
+
+test_that("figure with a long wrapped footnote still compiles to one page (#26)", {
+  # Regression for the PHUSE acceptance finding: a multi-line wrapped
+  # footnote (and tall figure) used to push a figure onto a second page.
+  # The wrapped-line reservation (.wrapped_line_count) sizes the box so the
+  # whole figure plus chrome fits exactly one physical page. Verified by a
+  # real xelatex compile + page count (poppler's pdfinfo).
+  skip_on_cran()
+  skip_if_not_installed("tinytex")
+  skip_if_not(nzchar(Sys.which("xelatex")) || tinytex::is_tinytex())
+  skip_if_not(nzchar(Sys.which("pdfinfo")))
+  long_foot <- paste(
+    rep(
+      paste(
+        "This is a deliberately long footnote sentence that wraps across",
+        "several physical lines when typeset at the body font size."
+      ),
+      3L
+    ),
+    collapse = " "
+  )
+  fig <- figure(
+    png_fixture(),
+    titles = c("Figure 14.1.1", "Enrollment"),
+    footnotes = long_foot
+  )
+  out <- withr::local_tempfile(fileext = ".pdf")
+  emit(fig, out)
+  info <- system2("pdfinfo", out, stdout = TRUE)
+  pages <- as.integer(sub(".*:\\s*", "", info[grepl("^Pages", info)]))
+  expect_equal(pages, 1L)
 })
 
 # ---------------------------------------------------------------------

@@ -331,7 +331,7 @@ test_that("alignment classes map every align value to its CSS class", {
   expect_identical(tabular:::.html_align_class("left"), "text-left")
   expect_identical(tabular:::.html_align_class("center"), "text-center")
   expect_identical(tabular:::.html_align_class("right"), "text-right")
-  expect_identical(tabular:::.html_align_class("decimal"), "text-right")
+  expect_identical(tabular:::.html_align_class("decimal"), "text-center")
   expect_identical(tabular:::.html_align_class(NA_character_), "")
   expect_identical(tabular:::.html_align_class(NULL), "")
   expect_identical(tabular:::.html_align_class("garbage"), "")
@@ -351,8 +351,8 @@ test_that("col_spec align surfaces as a CSS class on body cells", {
   # The single body row is also the last, so its cells additionally
   # carry the SSOT bottomrule style; match the alignment class loosely.
   expect_match(txt, "<td class=\"text-left\"[^>]*>x</td>")
+  # `text-center` covers both center + decimal (decimal centres now).
   expect_match(txt, "<td class=\"text-center\"[^>]*>x</td>")
-  # `text-right` covers both right + decimal
   expect_match(txt, "<td class=\"text-right\"[^>]*>x</td>")
 })
 
@@ -807,8 +807,13 @@ test_that("LaTeX / RTF / DOCX widths agree byte-for-byte; HTML is responsive (no
   # RTF and DOCX both snap to integer twips at cumulative
   # boundaries so they are byte-for-byte identical as twip vectors.
   expect_identical(round(rtf_in * 1440), round(docx_in * 1440))
-  # LaTeX (float-inch) agrees with RTF/DOCX to the twip granularity.
-  expect_true(all(abs(tex_in - docx_in) <= 1 / 1440))
+  # LaTeX `wd` is the CONTENT width: tabularray adds leftsep + rightsep
+  # (0.14944in default) outside it, so the rendered LaTeX column total
+  # (wd + sep) agrees with the RTF/DOCX total cell width to twip
+  # granularity. (Asserting wd == docx_in directly would re-encode the
+  # bug where the LaTeX table ran sep-per-column wider than the page.)
+  sep_in <- 10.8 / 72.27
+  expect_true(all(abs((tex_in + sep_in) - docx_in) <= 1 / 1440))
 })
 
 # ---------------------------------------------------------------------
@@ -1324,6 +1329,36 @@ test_that("populated pagefoot emits on-screen <footer> band", {
   ))
   expect_true(grepl("Footer left", html, fixed = TRUE))
   expect_true(grepl("Footer right", html, fixed = TRUE))
+})
+
+test_that("chrome bands wrap with the body in a fit-content container (width parity)", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(
+        left = "Protocol: XYZ",
+        right = "Page {page} of {npages}"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Header, body and footer share one fit-content wrapper, and the bands
+  # fill it at width:100% so they align to the body width, not the page.
+  expect_match(html, "<div class=\"tabular-chrome-wrap\">", fixed = TRUE)
+  expect_match(
+    html,
+    ".tabular-chrome-wrap { width: fit-content;",
+    fixed = TRUE
+  )
+  expect_match(html, "width: 100%;", fixed = TRUE)
+})
+
+test_that("a table without running chrome emits no chrome wrapper (byte-stable)", {
+  spec <- tabular(data.frame(x = 1:3), titles = "T")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_no_match(html, "<div class=\"tabular-chrome-wrap\">", fixed = TRUE)
 })
 
 test_that("chrome_onscreen = 'off' suppresses on-screen bands but keeps @page", {
@@ -2033,9 +2068,15 @@ test_that("decimal header projects to center (TFL centroid convention)", {
     "<th[^>]*class=\"text-right[^\"]*\"[^>]*>N</th>",
     perl = TRUE
   )
-  # Body <td>s still carry text-right -- only the header projection
-  # changes; body alignment is unaffected.
+  # Body <td>s now centre too: the engine_decimal NBSP padding makes every
+  # cell a uniform column width, so the block centres under the centred
+  # header (cross-backend parity) rather than hugging the right edge.
   expect_match(
+    txt,
+    "<td[^>]*class=\"text-center[^\"]*\"[^>]*>",
+    perl = TRUE
+  )
+  expect_no_match(
     txt,
     "<td[^>]*class=\"text-right[^\"]*\"[^>]*>",
     perl = TRUE
