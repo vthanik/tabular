@@ -356,6 +356,38 @@ test_that("col_spec align surfaces as a CSS class on body cells", {
   expect_match(txt, "<td class=\"text-right\"[^>]*>x</td>")
 })
 
+test_that("body alignment classes carry a specificity-bumped td override (effective)", {
+  # Regression: the baseline rule `.tabular-table td { text-align:left }`
+  # has specificity (0,1,1), outranking the plain `.text-center` class
+  # (0,1,0). Without a prefixed `.tabular-table td.text-center` override
+  # the per-cell alignment class is emitted but DEFEATED -- every body
+  # cell (decimal / centre / right) silently renders left. The override
+  # lifts specificity to (0,2,1) so the class actually wins.
+  spec <- tabular(data.frame(label = "x", val = "1.5")) |>
+    cols(val = col_spec(align = "decimal"))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(
+    txt,
+    ".tabular-table td.text-center { text-align: center; }",
+    fixed = TRUE
+  )
+  expect_match(
+    txt,
+    ".tabular-table td.text-right { text-align: right; }",
+    fixed = TRUE
+  )
+  expect_match(
+    txt,
+    ".tabular-table td.text-left { text-align: left; }",
+    fixed = TRUE
+  )
+  # The decimal value cell carries the centre class that the override
+  # now makes effective.
+  expect_match(txt, "<td class=\"text-center\"[^>]*>")
+})
+
 # ---------------------------------------------------------------------
 # Column widths (<colgroup>)
 # ---------------------------------------------------------------------

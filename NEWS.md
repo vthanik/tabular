@@ -53,6 +53,11 @@
   serif. This brings DOCX in line with the RTF (`\*\falt`) and PDF / LaTeX
   (`\IfFontExistsTF` cascade) backends, which already declared the same
   in-class fallback chain.
+* `emit()` to HTML now applies per-cell body alignment through a
+  specificity-bumped `.tabular-table td.text-*` rule, so decimal, centred and
+  right-aligned columns actually render aligned; previously the base
+  `.tabular-table td { text-align: left }` rule outranked the plain alignment
+  class and every body cell silently fell back to left.
 * `emit()` to HTML now aligns the running page header and footer to the table
   width via a centred fit-content container, instead of spanning the full
   document width.
@@ -79,6 +84,20 @@
   table's empty-state message; the message renders at its natural height
   instead of a full-height box that tipped over the page (`empty_valign` is a
   no-op on PDF / LaTeX, still honoured exactly on RTF and DOCX).
+* `emit()` to RTF now leads the body font slot with the first face of an
+  explicit `font_family` stack instead of the Linux-first default chain, and
+  classes a mono stack `\fmodern` (fixed pitch) the same way DOCX classes it
+  `modern`. A `font_family = c("Courier New", "Liberation Mono", "Courier")`
+  request now renders as Courier New mono in Word instead of substituting a
+  serif, because the named primary face leads the font table rather than being
+  demoted to a `\*\falt` alternate.
+* `emit()` to RTF now emits a section break only BETWEEN panels (n-1 breaks for
+  n panels) rather than after every panel, so a single-panel table no longer
+  ends with a trailing section break that Word renders as a phantom blank page.
+* `emit()` to RTF now reserves one line per running-header row in `\headery`,
+  so a multi-row page header (for example a protocol row plus an analysis-set
+  row) no longer bleeds back into the body and tips the last table rows, or the
+  table's trailing paragraph, onto a phantom second page.
 * `figure()` and the empty-state ("no data" / `empty_text`) message now size
   the body box from the number of wrapped chrome lines a long title or
   footnote actually occupies at the printable width, not the element count, so

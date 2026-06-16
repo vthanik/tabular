@@ -84,13 +84,39 @@ test_that("font_family = mono switches body class to \\fmodern", {
   expect_true(grepl("\\f0\\fmodern", rtf, fixed = TRUE))
 })
 
-test_that("font_family explicit-stack falls back to \\froman class", {
+test_that("font_family explicit mono stack leads \\f0 with the named face, \\fmodern", {
+  # Regression: a multi-element mono stack was spliced apart by a flat
+  # c(body_family, "mono", extras) in .rtf_collect_fonts, so \f0 led
+  # with the Linux-first default (Liberation Mono) and carried \froman
+  # (serif) -- Word then substituted a SERIF face for a request that
+  # was explicitly Courier New mono. The user's first choice must lead
+  # \f0 verbatim, classed \fmodern (parity with the DOCX `modern` class)
+  # and fixed-pitch (\fprq1).
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(font_family = c("Courier New", "Liberation Mono", "Courier"))
+  rtf <- .rtf_emit_text(spec)
+  expect_true(grepl(
+    "{\\f0\\fmodern\\fprq1 Courier New{\\*\\falt Liberation Mono};}",
+    rtf,
+    fixed = TRUE
+  ))
+  # The Linux-first default must NOT lead \f0 any more.
+  expect_false(grepl(
+    "\\f0\\fmodern\\fprq1 Liberation Mono",
+    rtf,
+    fixed = TRUE
+  ))
+  expect_false(grepl("\\f0\\froman", rtf, fixed = TRUE))
+})
+
+test_that("font_family mono stack classes \\fmodern even mixed with a generic", {
+  # c("Courier New", "mono") is mono-intended; classify it \fmodern,
+  # the same class DOCX gives it, not the old serif fallback.
   spec <- tabular(data.frame(x = 1:3)) |>
     preset(font_family = c("Courier New", "mono"))
   rtf <- .rtf_emit_text(spec)
-  expect_true(grepl("\\f0\\froman", rtf, fixed = TRUE))
-  # First entry of the stack lands as the named face in \f0.
-  expect_true(grepl("Courier New", rtf, fixed = TRUE))
+  expect_true(grepl("\\f0\\fmodern", rtf, fixed = TRUE))
+  expect_true(grepl("\\f0\\fmodern\\fprq1 Courier New", rtf, fixed = TRUE))
 })
 
 # ---------------------------------------------------------------------
@@ -99,8 +125,10 @@ test_that("font_family explicit-stack falls back to \\froman class", {
 
 test_that("default mono leads with Liberation Mono as \\f0 body", {
   rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
+  # \fprq1: a mono body declares FIXED pitch, matching the \f1 mono slot
+  # and the \f2+ extras (which already derive pitch from class).
   expect_true(grepl(
-    "{\\f0\\fmodern\\fprq2 Liberation Mono",
+    "{\\f0\\fmodern\\fprq1 Liberation Mono",
     rtf,
     fixed = TRUE
   ))
@@ -179,6 +207,34 @@ test_that("font_size emits \\fsN at body where N = 2*points", {
   expect_true(grepl("\\fs20", rtf, fixed = TRUE))
 })
 
+test_that("single-panel table emits no bare \\sect (no phantom blank page)", {
+  # Regression: .render_rtf_panel suffixed a bare \sect after every
+  # panel including the last, opening an empty trailing section that
+  # Word renders as a phantom blank page. A single-panel table must
+  # emit ZERO section breaks and end on \pard\par } directly.
+  rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
+  sect_lines <- grep("^\\\\sect$", strsplit(rtf, "\n")[[1L]])
+  expect_length(sect_lines, 0L)
+  expect_true(endsWith(rtf, "\\pard\\par\n}"))
+})
+
+test_that("multi-panel table emits one \\sect SEPARATOR between panels", {
+  # n panels -> n-1 section breaks (separators), n \sectd\sbkpage
+  # (one section def per panel), and no trailing break.
+  wide <- data.frame(id = c("A", "B", "C"))
+  for (k in 1:8) {
+    wide[[paste0("col", k)]] <- sprintf("%0.1f", (1:3) * k)
+  }
+  spec <- tabular(wide) |>
+    cols(id = col_spec(usage = "id", width = "1in")) |>
+    paginate(panels = 2L)
+  rtf <- .rtf_emit_text(spec)
+  lines <- strsplit(rtf, "\n")[[1L]]
+  expect_length(grep("^\\\\sect$", lines), 1L)
+  expect_length(grep("\\\\sectd\\\\sbkpage", lines), 2L)
+  expect_true(endsWith(rtf, "\\pard\\par\n}"))
+})
+
 test_that("section def emits letter landscape by default in twips", {
   rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
   # Letter landscape: 15840 x 12240 twips, with \lndscpsxn marker
@@ -248,6 +304,33 @@ test_that("populated pagehead emits {\\header} group + \\headery reservation", {
   expect_true(grepl("{\\field{\\*\\fldinst PAGE}}", rtf, fixed = TRUE))
   expect_true(grepl("{\\field{\\*\\fldinst NUMPAGES}}", rtf, fixed = TRUE))
   expect_false(grepl("{page}", rtf, fixed = TRUE))
+})
+
+test_that("multi-row pagehead reserves one body line PER row in \\headery", {
+  # Regression: \headery reserved a single line regardless of how many
+  # rows the running header had, so a 2-row header bled one line back
+  # into the body and tipped a full-page table (or its trailing
+  # paragraph) onto a phantom second page. With letter margins
+  # (top = 1 in = 1440 twips) and font_size 8 (one line = 8*28 = 224),
+  # a 1-row header reserves 1440-224 = 1216 and a 2-row header
+  # 1440-448 = 992.
+  one_row <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      font_size = 8,
+      margins = 1,
+      pagehead = list(left = "Protocol: ABC-123")
+    )
+  two_row <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      font_size = 8,
+      margins = 1,
+      pagehead = list(
+        left = c("Analysis Set: Safety", "Protocol: ABC-123"),
+        right = c("Data as of 01JAN2026", "Page {page} of {npages}")
+      )
+    )
+  expect_true(grepl("\\headery1216", .rtf_emit_text(one_row), fixed = TRUE))
+  expect_true(grepl("\\headery992", .rtf_emit_text(two_row), fixed = TRUE))
 })
 
 test_that("populated pagefoot emits {\\footer} group + \\footery reservation", {
@@ -511,28 +594,36 @@ test_that(".rtf_escape_cell turns embedded newline into \\line", {
 # Pagination — one \sect per render panel (native Word pagination)
 # ---------------------------------------------------------------------
 
-test_that("native RTF emits one \\sect per render panel, not per vertical page", {
+test_that("native RTF emits \\sect as an inter-panel SEPARATOR, not per page", {
+  # Count bare `\sect` section breaks robustly (gregexpr returns -1, a
+  # length-1 vector, for NO match -- so length() alone cannot tell 0
+  # from 1). `\sect` separates panels: n panels -> n-1 breaks. A
+  # trailing break would open an empty final section = phantom page.
+  count_sect <- function(rtf) {
+    sum(grepl("^\\\\sect$", strsplit(rtf, "\n")[[1L]]))
+  }
+
   # Single panel: Word paginates the one continuous table natively, so
-  # tabular emits exactly one section however many vertical pages the
-  # body spans (the old model forced one \sect per estimated page).
+  # tabular emits ZERO section breaks however many vertical pages the
+  # body spans (the old model forced one \sect per estimated page, plus
+  # a trailing one that opened a blank page).
   spec <- tabular(data.frame(x = 1:500)) |>
     preset(font_size = 9, margins = 0.5) |>
     paginate()
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  sect_count <- length(gregexpr("\\\\sect\\b", rtf, perl = TRUE)[[1L]])
-  expect_identical(sect_count, 1L)
+  expect_identical(count_sect(rtf), 0L)
 
-  # Two horizontal panels -> two sections (Word cannot reflow columns,
-  # so the column split is a genuine section break).
+  # Two horizontal panels -> two sections joined by ONE \sect separator
+  # (Word cannot reflow columns, so the column split is a genuine page
+  # break). No trailing break, no phantom third section.
   wide <- tabular(data.frame(a = 1:3, b = 1:3, c = 1:3, d = 1:3)) |>
     paginate(panels = 2)
   out2 <- withr::local_tempfile(fileext = ".rtf")
   emit(wide, out2)
   rtf2 <- paste(readLines(out2, warn = FALSE), collapse = "\n")
-  sect2 <- length(gregexpr("\\\\sect\\b", rtf2, perl = TRUE)[[1L]])
-  expect_identical(sect2, 2L)
+  expect_identical(count_sect(rtf2), 1L)
 })
 
 test_that("native RTF emits one continuous table (no per-vertical-page \\sbkpage) (#2)", {

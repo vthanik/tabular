@@ -2459,17 +2459,21 @@ backend_html <- function(grid, file) {
     ".text-left { text-align: left; }",
     ".text-center { text-align: center; }",
     ".text-right { text-align: right; }",
-    # Specificity bump for `<th>` cells. The baseline rule
-    # `.tabular-table thead th { ... text-align: center }` has
-    # selector specificity (0,1,2), which outranks the plain
-    # `.text-*` classes (0,1,0). Repeating each class under the
-    # `thead th` prefix lifts specificity to (0,2,2) so per-cell
-    # alignment classes actually win on header cells. Body `<td>`
-    # cells do not need this because their baseline is the same
-    # specificity as `.text-*` and class source order wins.
+    # Specificity bump for `<th>` and `<td>` cells. The baseline rules
+    # `.tabular-table thead th { ... text-align: center }` and
+    # `.tabular-table td { text-align: left }` have selector specificity
+    # (0,1,2) / (0,1,1), both of which outrank the plain `.text-*`
+    # classes (0,1,0) -- so without these prefixed copies the per-cell
+    # alignment class is silently defeated and EVERY body cell (decimal,
+    # centre, right) falls back to the baseline left. Repeating each
+    # class under the `thead th` / `td` prefix lifts specificity to
+    # (0,2,2) / (0,2,1) so the per-cell alignment class actually wins.
     ".tabular-table thead th.text-left { text-align: left; }",
     ".tabular-table thead th.text-center { text-align: center; }",
     ".tabular-table thead th.text-right { text-align: right; }",
+    ".tabular-table td.text-left { text-align: left; }",
+    ".tabular-table td.text-center { text-align: center; }",
+    ".tabular-table td.text-right { text-align: right; }",
     ".valign-top { vertical-align: top; }",
     ".valign-middle { vertical-align: middle; }",
     ".valign-bottom { vertical-align: bottom; }",

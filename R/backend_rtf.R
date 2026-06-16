@@ -107,15 +107,20 @@ backend_rtf <- function(grid, file) {
   }
 
   panels <- .group_pages_into_panels(pages)
-  body <- lapply(panels, function(panel_pages) {
-    .render_rtf_panel(
-      panel_pages = panel_pages,
+  # `\sect` SEPARATES panels: the break that starts panel i (>1) leads
+  # its section, mirroring the figure path. The final panel carries no
+  # trailing `\sect`, so a single-panel table emits ZERO section breaks
+  # and Word renders no phantom trailing page.
+  body <- lapply(seq_along(panels), function(i) {
+    panel_out <- .render_rtf_panel(
+      panel_pages = panels[[i]],
       meta = meta,
       preset = preset,
       cs = cs,
       colors = colors,
       fonts = fonts
     )
+    if (i == 1L) panel_out else c("\\sect", panel_out)
   })
   c(preamble, unlist(body, use.names = FALSE), "}")
 }
@@ -215,7 +220,8 @@ backend_rtf <- function(grid, file) {
     sec_def <- .rtf_section_def(
       preset,
       has_pagehead = has_ph,
-      has_pagefoot = footer_active
+      has_pagefoot = footer_active,
+      pagehead_rows = .page_band_nrow(meta$pagehead_ast)
     )
     out <- if (i == 1L) sec_def else paste0("\\sect", sec_def)
     if (has_ph) {
@@ -419,7 +425,8 @@ backend_rtf <- function(grid, file) {
   out[[length(out) + 1L]] <- .rtf_section_def(
     preset,
     has_pagehead = has_ph,
-    has_pagefoot = footer_active
+    has_pagefoot = footer_active,
+    pagehead_rows = .page_band_nrow(meta$pagehead_ast)
   )
   if (has_ph) {
     out[[length(out) + 1L]] <- .rtf_header_group(
@@ -641,8 +648,11 @@ backend_rtf <- function(grid, file) {
   }
 
   # `\pard\par` exits the table context so Word does not merge this
-  # panel's table with the next section's; `\sect` closes the section.
-  out[[length(out) + 1L]] <- c("\\pard\\par", "\\sect")
+  # panel's table with the next section's. The `\sect` section break
+  # that starts the NEXT panel is emitted by the caller as a SEPARATOR
+  # (n-1 breaks for n panels); a trailing `\sect` here would open an
+  # empty final section -> a phantom blank page in Word.
+  out[[length(out) + 1L]] <- "\\pard\\par"
   unlist(out, use.names = FALSE)
 }
 
@@ -969,7 +979,8 @@ backend_rtf <- function(grid, file) {
 .rtf_section_def <- function(
   preset,
   has_pagehead,
-  has_pagefoot
+  has_pagefoot,
+  pagehead_rows = 1L
 ) {
   paper <- .rtf_paper_twips(preset@paper_size, preset@orientation)
   margins <- .rtf_margins_twips(preset@margins)
@@ -994,9 +1005,15 @@ backend_rtf <- function(grid, file) {
   )
 
   if (has_pagehead) {
-    # Header starts one body line above the top margin and flows up.
+    # The header flows DOWN from `\headery`, so reserve one body line
+    # PER pagehead row above the top margin; an N-row header then ends
+    # exactly at the top margin and the body starts where the engine's
+    # rows-per-page model assumes. Reserving a single line regardless of
+    # row count (the old behaviour) let a multi-row running header bleed
+    # back into the body, pushing the last rows -- or the table's
+    # trailing paragraph -- onto a phantom second page.
     head_line <- as.integer(round(preset@font_size * 28))
-    headery <- max(360L, margins$top - head_line)
+    headery <- max(360L, margins$top - head_line * max(1L, pagehead_rows))
     parts <- c(parts, sprintf("\\headery%d", headery))
   }
   if (has_pagefoot) {
@@ -2807,12 +2824,18 @@ backend_rtf <- function(grid, file) {
   }
   body_chain <- .resolve_font_stack(values[[1L]], "rtf")
   mono_chain <- .resolve_font_stack(values[[2L]], "rtf")
-  body_class <- .rtf_family_class(values[[1L]], "serif")
+  body_class <- .rtf_family_class(values[[1L]])
+  # Pitch tracks the class: `\fmodern` (mono) is fixed-pitch (`\fprq1`),
+  # everything else variable (`\fprq2`). Mirrors the `\f2+` extras path
+  # and the mono `\f1` slot, so a mono body never declares variable
+  # pitch (which fights Word's substitution for a missing face).
+  body_pitch <- if (identical(body_class, "fmodern")) 1L else 2L
   out <- c(
     "{\\fonttbl",
     sprintf(
-      "{\\f0\\%s\\fprq2 %s%s;}",
+      "{\\f0\\%s\\fprq%d %s%s;}",
       body_class,
+      body_pitch,
       .rtf_escape(body_chain[[1L]]),
       .rtf_falt(body_chain)
     ),
@@ -2828,7 +2851,7 @@ backend_rtf <- function(grid, file) {
       function(i) {
         family <- values[[i]]
         chain <- .resolve_font_stack(family, "rtf")
-        class <- .rtf_family_class(family, "serif")
+        class <- .rtf_family_class(family)
         pitch <- if (identical(class, "fmodern")) 1L else 2L
         sprintf(
           "{\\f%d\\%s\\fprq%d %s%s;}",
@@ -2978,9 +3001,18 @@ backend_rtf <- function(grid, file) {
   # exist even when the body family is itself "mono"; only the extra
   # families (registering at `\f2+`) are deduplicated, and against the
   # seed so a cell font equal to the body resolves back to `\f0`.
+  #
+  # `values` is a LIST, not a flat vector: `values[[1L]]` holds the
+  # WHOLE body family (which may be a multi-element explicit stack such
+  # as `c("Courier New", "Liberation Mono", "Courier")`), `values[[2L]]`
+  # is the mono generic, and `values[[3L+]]` are scalar extra families.
+  # A flat `c(body_family, "mono", extras)` would splice a multi-element
+  # body stack apart, leaving `values[[1L]]` as only the first name --
+  # which `.resolve_font_stack()` then re-aliases back to the Linux-first
+  # default chain, defeating the user's `font_family` choice.
   extras <- unique(unlist(buf, use.names = FALSE))
   extras <- extras[!(extras %in% c(body_family, "mono"))]
-  values <- c(body_family, "mono", extras)
+  values <- c(list(body_family, "mono"), as.list(extras))
   lookup <- function(family) {
     if (
       is.null(family) ||
@@ -2990,8 +3022,15 @@ backend_rtf <- function(grid, file) {
     ) {
       return(0L)
     }
-    idx <- match(family, values)
-    if (is.na(idx)) 0L else as.integer(idx) - 1L
+    # A cell font matches a slot when it equals the slot's family spec
+    # (or any name within the slot's stack), so a per-cell font naming a
+    # body-stack member resolves back to `\f0`.
+    for (i in seq_along(values)) {
+      if (family %in% values[[i]]) {
+        return(as.integer(i - 1L))
+      }
+    }
+    0L
   }
   list(values = values, lookup = lookup)
 }
@@ -3008,31 +3047,21 @@ backend_rtf <- function(grid, file) {
   sprintf("{\\*\\falt %s}", .rtf_escape(chain[[2L]]))
 }
 
-# Map a `font_family` input to its RTF family-class keyword. Only
-# generic-family inputs route to `\fswiss` / `\fmodern`; explicit
-# named fonts and stacks default to `\froman` (safe fallback).
-.rtf_family_class <- function(font_family, default_generic) {
-  if (length(font_family) != 1L) {
-    return(switch(
-      default_generic,
-      sans = "fswiss",
-      mono = "fmodern",
-      "froman"
-    ))
-  }
-  gen <- switch(
-    font_family,
-    serif = "serif",
-    sans = "sans",
-    `sans-serif` = "sans",
-    mono = "mono",
-    monospace = "mono",
-    NA_character_
-  )
-  if (is.na(gen)) {
+# Map a `font_family` input to its RTF family-class keyword. A
+# multi-element explicit stack is classified by `.font_generic_class()`
+# (the SSOT shared with DOCX) so a mono stack such as
+# `c("Courier New", "Liberation Mono")` emits `\fmodern`, the same class
+# DOCX gives it (`modern`), instead of the old serif fallback that made
+# Word substitute a serif face when the primary was absent. A single
+# generic / alias name routes through the same classifier.
+.rtf_family_class <- function(font_family) {
+  cls <- .font_generic_class(font_family)
+  if (is.na(cls)) {
+    # Unclassifiable (a lone non-aliased named face): keep the serif
+    # fallback, the safest class for Word's font matcher.
     return("froman")
   }
-  switch(gen, serif = "froman", sans = "fswiss", mono = "fmodern", "froman")
+  switch(cls, sans = "fswiss", mono = "fmodern", "froman")
 }
 
 # ---------------------------------------------------------------------
