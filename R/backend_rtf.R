@@ -275,7 +275,11 @@ backend_rtf <- function(grid, file) {
     c(
       out,
       title_part,
-      .render_rtf_figure_image(pg, preset)
+      .render_rtf_figure_image(pg, preset),
+      # Exit table context so the following `\sect` (next figure) or the
+      # document-closing `}` does not land inside the image row, which
+      # makes Word emit phantom pages. Mirrors `.render_rtf_panel`.
+      "\\pard\\par"
     )
   })
 

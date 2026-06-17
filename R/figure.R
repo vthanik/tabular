@@ -563,7 +563,15 @@ figure <- function(
   } else {
     0L
   }
-  chrome_rows <- title_rows + foot_rows
+  # Every paged backend must emit ONE paragraph after the figure's
+  # exact-height image table (Word requires a paragraph after a table; RTF
+  # `\pard\par`, DOCX a terminal / continuation paragraph). The table path
+  # has natural slack from non-exact-height rows; the figure's exact-height
+  # row has none, so without reserving this row the mandatory closing
+  # paragraph spills onto a fresh page. Reserve it unconditionally (a
+  # footnote-less figure still gets a closing paragraph).
+  closing_rows <- 1L
+  chrome_rows <- title_rows + foot_rows + closing_rows
 
   box_h <- printable_h - chrome_rows * one_row
 

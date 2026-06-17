@@ -294,7 +294,7 @@ test_that("a mixed multi-page list emits one page per element", {
   expect_equal(length(gregexpr("\\pict", rr, fixed = TRUE)[[1L]]), 2L)
   expect_equal(length(gregexpr("\\sbkpage", rr, fixed = TRUE)[[1L]]), 2L)
 
-  # DOCX: 2 media images, 2 drawings, 1 page break
+  # DOCX: 2 media images, 2 drawings, page break via pageBreakBefore (#fig-blank)
   od <- withr::local_tempfile(fileext = ".docx")
   emit(fig, od)
   ex <- withr::local_tempdir()
@@ -303,10 +303,90 @@ test_that("a mixed multi-page list emits one page per element", {
   expect_equal(sum(grepl("word/media/image", f2)), 2L)
   doc <- paste(readLines(file.path(ex, "word/document.xml")), collapse = "")
   expect_equal(length(gregexpr("<w:drawing>", doc, fixed = TRUE)[[1L]]), 2L)
+  # No standalone page-break paragraph; one pageBreakBefore for the 2nd page.
+  expect_false(grepl("w:type=\"page\"", doc, fixed = TRUE))
   expect_equal(
-    length(gregexpr("w:type=\"page\"", doc, fixed = TRUE)[[1L]]),
+    length(gregexpr("<w:pageBreakBefore/>", doc, fixed = TRUE)[[1L]]),
     1L
   )
+})
+
+# ---------------------------------------------------------------------
+# Phantom blank page per plot (RTF \sect inside table context; DOCX
+# stranded page-break paragraph). The figure block fills the page, so the
+# mandatory closing paragraph spilled onto a fresh page. (#fig-blank)
+# ---------------------------------------------------------------------
+
+test_that("RTF figure exits table context after every image (#fig-blank)", {
+  one <- withr::local_tempfile(fileext = ".rtf")
+  emit(basic_figure(), one)
+  r1 <- paste(readLines(one, warn = FALSE), collapse = "\n")
+  # One \pard\par closing paragraph per plot, emitted right after the image
+  # \row. On the broken code the \row was followed directly by the closing }
+  # (single-plot) or \sect (multi-plot), with zero \pard\par.
+  expect_equal(length(gregexpr("\\pard\\par", r1, fixed = TRUE)[[1L]]), 1L)
+  expect_true(grepl("\\row\n\\pard\\par", r1, fixed = TRUE))
+  expect_false(grepl("\\row\n}", r1, fixed = TRUE))
+
+  three <- withr::local_tempfile(fileext = ".rtf")
+  emit(figure(list(png_fixture(), png_fixture(), png_fixture())), three)
+  r3 <- paste(readLines(three, warn = FALSE), collapse = "\n")
+  expect_equal(length(gregexpr("\\pard\\par", r3, fixed = TRUE)[[1L]]), 3L)
+  expect_false(grepl("\\row\n\\sect", r3, fixed = TRUE))
+})
+
+test_that("DOCX title-less figure separates tables with a break carrier (#fig-blank)", {
+  # No titles -> each page's first part is the image table; the page break
+  # must ride a carrier paragraph so the two tables don't merge and no
+  # standalone <w:br type=page> is emitted.
+  fig <- figure(list(png_fixture(), png_fixture()), footnotes = character())
+  od <- withr::local_tempfile(fileext = ".docx")
+  emit(fig, od)
+  ex <- withr::local_tempdir()
+  utils::unzip(od, exdir = ex)
+  doc <- paste(readLines(file.path(ex, "word/document.xml")), collapse = "")
+  expect_false(grepl("w:type=\"page\"", doc, fixed = TRUE))
+  expect_equal(
+    length(gregexpr("<w:pageBreakBefore/>", doc, fixed = TRUE)[[1L]]),
+    1L
+  )
+  # The carrier paragraph sits between the two image tables (no adjacency).
+  expect_false(grepl("</w:tbl><w:tbl>", doc, fixed = TRUE))
+  # Body does not end on a table: a terminal paragraph precedes <w:sectPr>.
+  expect_true(grepl("</w:tbl><w:p/><w:sectPr", doc, fixed = TRUE))
+})
+
+test_that(".figure_box reserves exactly one closing row (#fig-blank)", {
+  spec <- basic_figure()
+  preset <- tabular:::.effective_preset(spec)
+  one_row <- tabular:::.row_height_twips(preset@font_size)
+  box <- tabular:::.figure_box(spec)
+  # Reconstruct the chrome WITHOUT the closing reserve; the fixed box must be
+  # exactly one row shorter (this row holds the backend's closing paragraph).
+  dims <- tabular:::.paper_dims_twips(preset@paper_size, preset@orientation)
+  mtb <- tabular:::.margin_top_bottom_twips(preset@margins)
+  mlr <- tabular:::.margin_left_right_twips(preset@margins)
+  printable_w <- dims[["width"]] - (mlr[["left"]] + mlr[["right"]])
+  printable_h <- dims[["height"]] - (mtb[["top"]] + mtb[["bottom"]])
+  n_title <- tabular:::.wrapped_line_count(
+    spec@titles,
+    preset,
+    printable_w / 1440
+  )
+  n_foot <- tabular:::.wrapped_line_count(
+    spec@footnotes,
+    preset,
+    printable_w / 1440
+  )
+  gaps <- tabular:::gap_counts(preset@spacing)
+  title_rows <- if (n_title > 0L) {
+    gaps[["above_title"]] + n_title + gaps[["title_to_body"]]
+  } else {
+    0L
+  }
+  foot_rows <- if (n_foot > 0L) gaps[["body_to_footnote"]] + n_foot else 0L
+  no_reserve <- printable_h - (title_rows + foot_rows) * one_row
+  expect_equal(box$box_h_twips, no_reserve - one_row)
 })
 
 test_that("per-page meta tokens resolve into each page's chrome", {
