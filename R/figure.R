@@ -16,16 +16,17 @@
 #' list to emit one figure per page in a single file.
 #'
 #' @details
-#' **Two-axis placement.** The drawn image is usually smaller than the
-#' body content box (the default `height` is 70% of the printable
-#' height), so both `halign` and `valign` are load-bearing on the paged
-#' backends. They place the image in the content box independently —
-#' horizontally (`left` / `center` / `right`) and vertically
-#' (`top` / `middle` / `bottom`), defaulting to centred on both axes.
-#' Paged backends (RTF / PDF / DOCX) honour `valign` exactly against the
-#' content-box height. The continuous backends (HTML / Markdown) render the
-#' figure responsively, contained to the viewport, so `halign` still
-#' applies but `valign` is a no-op there.
+#' **Two-axis placement.** By default the image FILLS the body content box —
+#' the full printable width by the box height (the printable height minus the
+#' title / footnote chrome). Pass an explicit `width` / `height` smaller than
+#' the box and `halign` / `valign` place the image within the resulting slack,
+#' independently — horizontally (`left` / `center` / `right`) and vertically
+#' (`top` / `middle` / `bottom`), both defaulting to centred. Paged backends
+#' (RTF / PDF / DOCX) honour `valign` exactly against the content-box height;
+#' with the box-filling default there is no vertical slack, so `valign` only
+#' bites once you set a shorter `height`. The continuous backends (HTML /
+#' Markdown) render the figure responsively, contained to the viewport, so
+#' `halign` still applies but `valign` is a no-op there.
 #'
 #' **Format-aware rasterisation.** Plot inputs render to vector PDF for
 #' `.pdf` / `.tex` targets and to PNG at `dpi` for every other backend;
@@ -63,8 +64,9 @@
 #'   `NULL` fills the full printable width.
 #'
 #' @param height *Drawn image height in inches.* `<numeric(1)> | NULL`.
-#'   `NULL` uses 70% of the printable height, leaving the image centred
-#'   in the body region.
+#'   `NULL` fills the body box height (the printable height minus the title
+#'   and footnote chrome). Set a smaller value to leave vertical slack for
+#'   `valign` to place the image within.
 #'
 #' @param halign *Horizontal placement in the content box.*
 #'   `<character(1)>`. One of:

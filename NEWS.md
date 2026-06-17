@@ -80,6 +80,17 @@
   box that reconstructed to just over the page height, so a multi-page figure
   (for example one Kaplan-Meier plot per treatment arm) now fits one page per
   plot.
+* `emit()` to RTF and DOCX no longer emits a phantom blank page after each
+  figure plot. The figure box reserves a line for the closing paragraph every
+  paged backend appends after the exact-height image, RTF exits table context
+  with `\pard\par` before the next section break, and DOCX starts each
+  continuation page with a structural `<w:pageBreakBefore/>` instead of a
+  standalone page-break paragraph that stranded a blank page. A multi-page
+  figure driven by per-page `meta` also sizes each page's image box from that
+  page's interpolated footnotes, so a longer-footnote page no longer overflows.
+* `emit()` aborts with a clear `tabular_error_layout` message when a figure's
+  titles and footnotes alone exceed the printable height, instead of failing
+  with an opaque graphics-device error.
 * `emit()` to RTF now leads the body font slot with the first face of an
   explicit `font_family` stack instead of the Linux-first default chain, and
   classes a mono stack `\fmodern` (fixed pitch) the same way DOCX classes it

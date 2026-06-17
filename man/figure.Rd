@@ -38,8 +38,9 @@ formatting as \code{titles}. \code{NULL} draws no footnotes.}
 \code{NULL} fills the full printable width.}
 
 \item{height}{\emph{Drawn image height in inches.} \verb{<numeric(1)> | NULL}.
-\code{NULL} uses 70\% of the printable height, leaving the image centred
-in the body region.}
+\code{NULL} fills the body box height (the printable height minus the title
+and footnote chrome). Set a smaller value to leave vertical slack for
+\code{valign} to place the image within.}
 
 \item{halign}{\emph{Horizontal placement in the content box.}
 \verb{<character(1)>}. One of:
@@ -83,16 +84,17 @@ per-page header / footer drawn from the active \code{\link[=preset]{preset()}}. 
 list to emit one figure per page in a single file.
 }
 \details{
-\strong{Two-axis placement.} The drawn image is usually smaller than the
-body content box (the default \code{height} is 70\% of the printable
-height), so both \code{halign} and \code{valign} are load-bearing on the paged
-backends. They place the image in the content box independently —
-horizontally (\code{left} / \code{center} / \code{right}) and vertically
-(\code{top} / \code{middle} / \code{bottom}), defaulting to centred on both axes.
-Paged backends (RTF / PDF / DOCX) honour \code{valign} exactly against the
-content-box height. The continuous backends (HTML / Markdown) render the
-figure responsively, contained to the viewport, so \code{halign} still
-applies but \code{valign} is a no-op there.
+\strong{Two-axis placement.} By default the image FILLS the body content box —
+the full printable width by the box height (the printable height minus the
+title / footnote chrome). Pass an explicit \code{width} / \code{height} smaller than
+the box and \code{halign} / \code{valign} place the image within the resulting slack,
+independently — horizontally (\code{left} / \code{center} / \code{right}) and vertically
+(\code{top} / \code{middle} / \code{bottom}), both defaulting to centred. Paged backends
+(RTF / PDF / DOCX) honour \code{valign} exactly against the content-box height;
+with the box-filling default there is no vertical slack, so \code{valign} only
+bites once you set a shorter \code{height}. The continuous backends (HTML /
+Markdown) render the figure responsively, contained to the viewport, so
+\code{halign} still applies but \code{valign} is a no-op there.
 
 \strong{Format-aware rasterisation.} Plot inputs render to vector PDF for
 \code{.pdf} / \code{.tex} targets and to PNG at \code{dpi} for every other backend;
