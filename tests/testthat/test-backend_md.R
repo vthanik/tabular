@@ -461,17 +461,16 @@ test_that("zero-row spec renders header + alignment + empty message line", {
   )))
 })
 
-test_that("Markdown empty message honours empty_text + empty_halign", {
+test_that("Markdown empty message honours empty_text", {
   spec <- tabular(
     data.frame(x = integer(0L), y = character(0L)),
     empty_text = "None."
-  ) |>
-    preset(empty_halign = "left")
+  )
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   lines <- readLines(out)
   expect_true(any(grepl(
-    "<div align=\"left\">None.</div>",
+    "<div align=\"center\">None.</div>",
     lines,
     fixed = TRUE
   )))

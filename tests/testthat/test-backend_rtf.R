@@ -1201,31 +1201,28 @@ test_that("RTF backend renders an empty (zero-page) grid with the empty message"
   expect_match(txt, "No data.", fixed = TRUE)
 })
 
-test_that("RTF zero-row spec relocates chrome to the header + centres the message natively", {
+test_that("RTF zero-row spec renders the message as a centred body row", {
   spec <- tabular(data.frame(x = "a")[0L, , drop = FALSE], titles = "T")
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_match(txt, "No data available to report", fixed = TRUE)
-  # The message is centred natively by the section (\vertalc), not sized in an
-  # exact-height box; the old negative \trrh box is gone.
-  expect_match(txt, "\\\\vertalc")
-  expect_no_match(txt, "\\\\trrh-[0-9]+")
+  # A \qc-centred body row, not native section centring (\vertal*) and not an
+  # exact-height box (\trrh-).
+  expect_match(txt, "\\qc", fixed = TRUE)
+  expect_no_match(txt, "\\vertal", fixed = TRUE)
+  expect_no_match(txt, "\\trrh-", fixed = TRUE)
 })
 
-test_that("RTF empty message honours empty_text + preset alignment", {
+test_that("RTF empty message honours empty_text", {
   spec <- tabular(
     data.frame(x = "a")[0L, , drop = FALSE],
     empty_text = "None."
-  ) |>
-    preset(empty_halign = "left", empty_valign = "bottom")
+  )
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_match(txt, "None.", fixed = TRUE)
-  # Section bottom-alignment (\vertalb) + left-aligned message paragraph (\ql).
-  expect_match(txt, "\\\\vertalb")
-  expect_match(txt, "\\\\ql ")
 })
 
 test_that("RTF backend emits the continuation marker on panel boundaries", {

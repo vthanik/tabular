@@ -1067,7 +1067,7 @@ test_that(".render_docx_table emits the empty message when the grid has zero pag
   expect_match(out, "Nothing here", fixed = TRUE)
 })
 
-test_that("DOCX zero-row spec centres the message natively, no exact-height box", {
+test_that("DOCX zero-row spec renders the message as a centred body row", {
   spec <- tabular(
     data.frame(x = integer(0L), y = character(0L)),
     titles = "T"
@@ -1079,18 +1079,19 @@ test_that("DOCX zero-row spec centres the message natively, no exact-height box"
     collapse = ""
   )
   expect_match(xml, "No data available to report", fixed = TRUE)
-  # The chrome relocated to a header part; the body holds only the centred
-  # message and the section <w:vAlign> centres it -- no exact-height box.
+  # A centred gridSpan body row, not section <w:vAlign> centring and not an
+  # exact-height box.
+  expect_match(xml, "<w:jc w:val=\"center\"/>", fixed = TRUE)
   expect_no_match(xml, "<w:trHeight w:hRule=\"exact\"")
-  expect_match(xml, "<w:vAlign w:val=\"center\"/>", fixed = TRUE)
+  sect <- regmatches(xml, regexpr("<w:sectPr>.*</w:sectPr>", xml))
+  expect_no_match(sect, "vAlign", fixed = TRUE)
 })
 
-test_that("DOCX empty message honours empty_text + preset alignment", {
+test_that("DOCX empty message honours empty_text", {
   spec <- tabular(
     data.frame(x = integer(0L), y = character(0L)),
     empty_text = "None."
-  ) |>
-    preset(empty_halign = "left", empty_valign = "bottom")
+  )
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   xml <- paste(
@@ -1098,7 +1099,6 @@ test_that("DOCX empty message honours empty_text + preset alignment", {
     collapse = ""
   )
   expect_match(xml, "None.", fixed = TRUE)
-  expect_match(xml, "<w:vAlign w:val=\"bottom\"/>", fixed = TRUE)
 })
 
 test_that(".docx_align_token covers every align value plus the unset fallback", {

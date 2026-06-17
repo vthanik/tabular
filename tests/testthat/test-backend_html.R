@@ -1179,26 +1179,25 @@ test_that("zero-row spec renders chrome + headers + centred empty message row", 
   txt <- paste(readLines(out), collapse = "\n")
   expect_true(grepl("<thead>", txt, fixed = TRUE))
   expect_true(grepl(">x</th>", txt, fixed = TRUE))
-  # The empty body is one full-span message row, centred both axes and
-  # sized to the body content-box so native cell vertical-align centres it.
+  # The empty body is one full-span message row, horizontally centred in flow
+  # under the column header -- text-align only, no vertical placement.
   expect_match(
     txt,
-    "colspan=\"2\"[^>]*vertical-align:middle;text-align:center"
+    "colspan=\"2\"[^>]*text-align:center"
   )
+  expect_no_match(txt, "tabular-empty[^>]*vertical-align")
   expect_match(txt, "No data available to report")
 })
 
-test_that("zero-row empty message honours empty_text + preset alignment", {
+test_that("zero-row empty message honours empty_text", {
   spec <- tabular(
     data.frame(x = integer(0L), y = character(0L)),
     empty_text = md("**None** to report")
-  ) |>
-    preset(empty_halign = "left", empty_valign = "top")
+  )
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(txt, "<strong>None</strong> to report")
-  expect_match(txt, "vertical-align:top;text-align:left")
 })
 
 test_that("zero-row spec with all columns hidden renders standalone message", {

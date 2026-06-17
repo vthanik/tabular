@@ -73,9 +73,8 @@ protocol-qualified line) to override per table; glue \code{{expr}}
 interpolation and \code{md()} / \code{html()} are honoured, exactly like a title
 line.
 
-\strong{Interaction:} placement within the body box is cosmetic and lives
-on the preset, \code{preset(empty_halign = ..., empty_valign = ...)},
-defaulting to centre x middle.}
+The message renders as a single horizontally centred row in the table
+body, where the first data row would otherwise sit.}
 }
 \value{
 \emph{A \code{tabular_spec} S7 object.} Pipe it into \code{\link[=cols]{cols()}},

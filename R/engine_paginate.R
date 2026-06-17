@@ -288,9 +288,8 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
 # count: a long footnote wraps to several lines, so reserving one row per
 # element leaves the body box too tall and the wrapped overflow runs off the
 # page (a short block wraps to one line, matching the old element count, so a
-# non-wrapping table paginates unchanged). Single source of truth for both
-# `.content_box()` (body height) and `as_grid()`'s empty-state margin
-# reservation (`empty_header_twips` / `empty_footer_twips`).
+# non-wrapping table paginates unchanged). Single source of truth for
+# `.content_box()` (body height).
 .chrome_line_counts <- function(spec) {
   preset <- .effective_preset(spec)
   mlr <- .margin_left_right_twips(preset@margins)

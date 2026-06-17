@@ -1,11 +1,13 @@
-# test-empty-state.R — the zero-row "no data" page renders the message ALONE
-# in the page body, centred by each backend's NATIVE vertical alignment (DOCX
-# <w:vAlign>, RTF \vertalc, LaTeX \vfill), with the table chrome (titles,
-# banner, column header) relocated into the page margins (header / footer
-# parts) and the closing rule + footnotes in the footer. No predicted box
-# height -> no recurring phantom page. These are cross-backend regression tests
-# for the no-data state (code in backend_rtf / backend_docx / backend_latex /
-# backend_html + the engine geometry in as_grid).
+# test-empty-state.R — the zero-row "no data" page renders EXACTLY like a normal
+# short table: chrome (title, column header), then the `empty_text` message in a
+# SINGLE full-span, horizontally centred row in the BODY (where the first data
+# row would sit), then the footnote trailing immediately, flowing compactly at
+# the top of the body with blank space below. No vertical centring, no margin
+# chrome (DOCX header / footer parts + <w:vAlign>, RTF \vertal*, LaTeX \vfill),
+# no gap. The message line is centred via each backend's native cell alignment
+# (\qc / <w:jc> / \SetCell), not via placement knobs. These are cross-backend
+# regression tests for the revert of 74f1aa5 (code in backend_rtf / backend_docx
+# / backend_latex / backend_html / backend_md + as_grid).
 
 # A zero-row spec carrying a header band + title + footnote, plus whatever
 # preset knobs a test exercises.
@@ -48,9 +50,9 @@ mk_empty_subgroup <- function() {
     )
 }
 
-# Emit + read back. For DOCX the chrome / rule / footnotes ride header* /
-# footer* parts, so concatenate document.xml with every header / footer part:
-# assertions then find a token wherever the zone model places it.
+# Emit + read back. For DOCX concatenate document.xml with every header / footer
+# part: a positive assertion finds a token wherever it lands, and the absence
+# checks confirm the chrome did NOT relocate into a header / footer part.
 emit_read <- function(spec, ext, fmt = NULL) {
   f <- withr::local_tempfile(fileext = ext, .local_envir = parent.frame())
   emit(spec, f, format = fmt)
@@ -74,197 +76,157 @@ emit_read <- function(spec, ext, fmt = NULL) {
   paste(readLines(f, warn = FALSE), collapse = "\n")
 }
 
+# Unzip a DOCX and return both the word/ file list and document.xml, so a test
+# can assert the absence of empty header / footer parts and the message landing
+# in the body.
+emit_docx_parts <- function(spec) {
+  f <- withr::local_tempfile(fileext = ".docx", .local_envir = parent.frame())
+  emit(spec, f)
+  ex <- withr::local_tempdir(.local_envir = parent.frame())
+  utils::unzip(f, exdir = ex)
+  list(
+    files = list.files(file.path(ex, "word")),
+    document = paste(
+      readLines(file.path(ex, "word", "document.xml"), warn = FALSE),
+      collapse = ""
+    )
+  )
+}
+
 # Count fixed-pattern occurrences in a string.
 n_match <- function(s, p) {
   lengths(regmatches(s, gregexpr(p, s, fixed = TRUE)))
 }
 
 # ---------------------------------------------------------------------
-# Native centring — the chrome leaves the body, the section centres the
-# message (DOCX <w:vAlign>, RTF \vertalc), no exact-height box
+# Normal-table shape — the message is a centred BODY row, not margin chrome
 # ---------------------------------------------------------------------
 
-test_that("empty-state centres the message natively, chrome in the margins", {
+test_that("empty-state renders the message as a centred body row, not native-centred", {
   spec <- mk_empty()
-  rtf <- emit_read(spec, ".rtf")
-  expect_match(rtf, "\\vertalc", fixed = TRUE)
-  expect_no_match(rtf, "\\trrh-", fixed = TRUE)
-  expect_match(rtf, "No data.", fixed = TRUE)
 
-  docx <- emit_read(spec, ".docx")
-  expect_match(docx, "<w:vAlign w:val=\"center\"/>", fixed = TRUE)
-  expect_no_match(docx, "<w:trHeight w:hRule=\"exact\"")
-  expect_match(docx, "No data.", fixed = TRUE)
+  # RTF: a \qc-centred merged message row in the table body; NO native section
+  # vertical centring (\vertal*) and NO exact-height row (\trrh-).
+  rtf <- emit_read(spec, ".rtf")
+  expect_match(rtf, "\\qc No data.", fixed = TRUE)
+  expect_no_match(rtf, "\\vertal", fixed = TRUE)
+  expect_no_match(rtf, "\\trrh-", fixed = TRUE)
+
+  # LaTeX: a \SetCell[c=N]{c} full-span centred message row inside the NORMAL
+  # longtblr (not a plain tblr); NO \vfill placement.
+  tex <- emit_read(spec, ".tex", "latex")
+  expect_match(tex, "\\begin{longtblr}", fixed = TRUE)
+  expect_no_match(tex, "\\begin{tblr}", fixed = TRUE)
+  expect_match(tex, "\\SetCell[c=3]{c} No data.", fixed = TRUE)
+  expect_no_match(tex, "\\vfill", fixed = TRUE)
+
+  # HTML: a full-span colspan message row, centred in flow under the column
+  # header -- text-align only, NO vertical-align on the message cell.
+  html <- emit_read(spec, ".html")
+  expect_match(
+    html,
+    "<td colspan=\"3\" class=\"tabular-empty\" style=\"text-align:center;\">No data.</td>",
+    fixed = TRUE
+  )
+
+  # Markdown: the message rides a centred <div align> below the (closed) table.
+  md <- emit_read(spec, ".md")
+  expect_match(md, "<div align=\"center\">No data.</div>", fixed = TRUE)
 })
 
-test_that("empty-state DOCX emits dedicated header / footer parts for the section", {
-  f <- withr::local_tempfile(fileext = ".docx")
-  emit(mk_empty(), f)
-  ex <- withr::local_tempdir()
-  utils::unzip(f, exdir = ex)
-  files <- list.files(file.path(ex, "word"))
-  expect_true("header02.xml" %in% files)
-  expect_true("footer02.xml" %in% files)
-  # The relocated chrome (a <w:tbl>) lives in the header part.
-  hdr <- paste(
-    readLines(file.path(ex, "word", "header02.xml"), warn = FALSE),
-    collapse = ""
+test_that("empty-state DOCX renders the message in the body, no header / footer parts", {
+  parts <- emit_docx_parts(mk_empty())
+
+  # No relocated chrome: the standalone empty doc carries ONLY the shared
+  # header1 / footer1 (or none), never a second header02 / footer02 part.
+  expect_false("header02.xml" %in% parts$files)
+  expect_false("footer02.xml" %in% parts$files)
+
+  # The message is a centred gridSpan body row in document.xml.
+  expect_match(parts$document, "No data.", fixed = TRUE)
+  expect_match(parts$document, "<w:gridSpan w:val=\"3\"/>", fixed = TRUE)
+  expect_match(parts$document, "<w:jc w:val=\"center\"/>", fixed = TRUE)
+
+  # No native vertical centring: the section has no <w:vAlign>, and the message
+  # row has no exact-height trHeight.
+  sect <- regmatches(
+    parts$document,
+    regexpr("<w:sectPr>.*</w:sectPr>", parts$document)
   )
-  expect_match(hdr, "<w:tbl>", fixed = TRUE)
-  # Every part is declared in [Content_Types].xml and related in the doc rels.
-  ct <- paste(
-    readLines(file.path(ex, "[Content_Types].xml"), warn = FALSE),
-    collapse = ""
-  )
-  rels <- paste(
-    readLines(
-      file.path(ex, "word", "_rels", "document.xml.rels"),
-      warn = FALSE
-    ),
-    collapse = ""
-  )
-  expect_match(ct, "/word/header02.xml", fixed = TRUE)
-  expect_match(ct, "/word/footer02.xml", fixed = TRUE)
-  expect_match(rels, "Target=\"header02.xml\"", fixed = TRUE)
-  expect_match(rels, "Target=\"footer02.xml\"", fixed = TRUE)
+  expect_no_match(sect, "vAlign", fixed = TRUE)
+  expect_no_match(parts$document, "w:hRule=\"exact\"", fixed = TRUE)
 })
 
 # ---------------------------------------------------------------------
-# Borders / grid / colour — the body bottom rule closes the data region,
-# now flush above the footnote in the footer zone
+# Borders / grid / colour — the message row carries the body bottom rule
 # ---------------------------------------------------------------------
 
 test_that("empty-state closes the data region with the default body bottom rule", {
   spec <- mk_empty()
-  # RTF: the closer rides the {\footer} as a merged row's TOP border --
-  # canonical solid 0.5pt (\brdrw10).
+  # RTF: the closer rides the message row as its BOTTOM border -- canonical
+  # solid 0.5pt (\brdrw10).
   expect_match(
     emit_read(spec, ".rtf"),
-    "\\clbrdrt\\brdrs\\brdrw10",
+    "\\clbrdrb\\brdrs\\brdrw10",
     fixed = TRUE
   )
-  # DOCX: a 0.5pt (sz=4) top border on the footer-part rule table.
+  # DOCX: a 0.5pt (sz=4) bottom border on the message row's merged cell.
   expect_match(
     emit_read(spec, ".docx"),
-    "<w:top w:space=\"0\" w:val=\"single\" w:sz=\"4\"",
+    "<w:bottom w:space=\"0\" w:val=\"single\" w:sz=\"4\"",
     fixed = TRUE
   )
-  # LaTeX: a table-width closing \rule above the footnote.
-  expect_match(emit_read(spec, ".tex", "latex"), "\\rule{", fixed = TRUE)
+  # LaTeX: the normal outer_bottom hline directive, default solid 0.5pt.
+  expect_match(emit_read(spec, ".tex", "latex"), "0.5pt, solid", fixed = TRUE)
 })
 
 test_that("empty-state honours a custom bottomrule width + colour (rules knob)", {
   spec <- mk_empty(
     rules = list(bottomrule = brdr("thick", color = "#FF0000"))
   )
-  # RTF: thick = 1.5pt = \brdrw30 on the footer closer.
+  # RTF: thick = 1.5pt = \brdrw30 on the message-row bottom border.
   expect_match(
     emit_read(spec, ".rtf"),
-    "\\clbrdrt\\brdrs\\brdrw30",
+    "\\clbrdrb\\brdrs\\brdrw30",
     fixed = TRUE
   )
-  # DOCX: 1.5pt = sz=12, red, on the footer rule table.
+  # DOCX: 1.5pt = sz=12, red, on the message-row bottom border.
   expect_match(
     emit_read(spec, ".docx"),
-    "<w:top w:space=\"0\" w:val=\"single\" w:sz=\"12\" w:color=\"FF0000\"/>",
+    "<w:bottom w:space=\"0\" w:val=\"single\" w:sz=\"12\" w:color=\"FF0000\"/>",
     fixed = TRUE
   )
-  # LaTeX: 1.5pt rule in the red colour.
+  # LaTeX: 1.5pt rule in the red colour on the outer_bottom hline.
   tex <- emit_read(spec, ".tex", "latex")
-  expect_match(tex, "\\rule{", fixed = TRUE)
-  expect_match(tex, "{1.5pt}", fixed = TRUE)
+  expect_match(tex, "1.5pt, solid", fixed = TRUE)
   expect_match(tex, "FF0000", fixed = TRUE)
 })
 
 test_that("empty-state honours bottomrule = 'none' (drops the closer)", {
-  # The header band keeps its own top rule, so assert the closer specifically
-  # disappears: one fewer top-border on RTF / DOCX, and no LaTeX \rule at all.
+  # The header band keeps its own rules, so assert the closer specifically
+  # disappears: one fewer bottom-border on RTF / DOCX, and one fewer hline
+  # directive on LaTeX.
   rtf_d <- emit_read(mk_empty(), ".rtf")
   rtf_n <- emit_read(mk_empty(rules = list(bottomrule = "none")), ".rtf")
   expect_lt(
-    n_match(rtf_n, "\\clbrdrt\\brdrs"),
-    n_match(rtf_d, "\\clbrdrt\\brdrs")
+    n_match(rtf_n, "\\clbrdrb\\brdrs"),
+    n_match(rtf_d, "\\clbrdrb\\brdrs")
   )
 
   docx_d <- emit_read(mk_empty(), ".docx")
   docx_n <- emit_read(mk_empty(rules = list(bottomrule = "none")), ".docx")
   expect_lt(
-    n_match(docx_n, "<w:top w:space=\"0\" w:val=\"single\""),
-    n_match(docx_d, "<w:top w:space=\"0\" w:val=\"single\"")
+    n_match(docx_n, "<w:bottom w:space=\"0\" w:val=\"single\""),
+    n_match(docx_d, "<w:bottom w:space=\"0\" w:val=\"single\"")
   )
 
-  expect_no_match(
-    emit_read(mk_empty(rules = list(bottomrule = "none")), ".tex", "latex"),
-    "\\rule{",
-    fixed = TRUE
+  tex_d <- emit_read(mk_empty(), ".tex", "latex")
+  tex_n <- emit_read(
+    mk_empty(rules = list(bottomrule = "none")),
+    ".tex",
+    "latex"
   )
-})
-
-# ---------------------------------------------------------------------
-# Alignment — empty_halign / empty_valign place the message
-# ---------------------------------------------------------------------
-
-test_that("empty-state honours empty_halign across backends", {
-  spec <- mk_empty(empty_halign = "left")
-  expect_match(emit_read(spec, ".rtf"), "\\ql No data", fixed = TRUE)
-  expect_match(
-    emit_read(spec, ".docx"),
-    "<w:jc w:val=\"left\"/>",
-    fixed = TRUE
-  )
-  expect_match(
-    emit_read(spec, ".tex", "latex"),
-    "\\raggedright No data",
-    fixed = TRUE
-  )
-})
-
-test_that("empty_valign maps to native section alignment (top / middle / bottom)", {
-  # RTF section control words.
-  expect_match(
-    emit_read(mk_empty(empty_valign = "top"), ".rtf"),
-    "\\vertalt",
-    fixed = TRUE
-  )
-  expect_match(
-    emit_read(mk_empty(empty_valign = "middle"), ".rtf"),
-    "\\vertalc",
-    fixed = TRUE
-  )
-  expect_match(
-    emit_read(mk_empty(empty_valign = "bottom"), ".rtf"),
-    "\\vertalb",
-    fixed = TRUE
-  )
-  # DOCX section <w:vAlign>.
-  expect_match(
-    emit_read(mk_empty(empty_valign = "top"), ".docx"),
-    "<w:vAlign w:val=\"top\"/>",
-    fixed = TRUE
-  )
-  expect_match(
-    emit_read(mk_empty(empty_valign = "bottom"), ".docx"),
-    "<w:vAlign w:val=\"bottom\"/>",
-    fixed = TRUE
-  )
-})
-
-test_that("empty_valign is honoured on LaTeX via \\vfill placement", {
-  # top: message rides the top (message line then \vfill); middle (default)
-  # centres it (\vfill message \vfill).
-  top <- strsplit(
-    emit_read(mk_empty(empty_valign = "top"), ".tex", "latex"),
-    "\n"
-  )[[1L]]
-  i <- grep("No data", top, fixed = TRUE)[[1L]]
-  expect_match(top[[i + 1L]], "\\vfill", fixed = TRUE)
-  mid <- strsplit(
-    emit_read(mk_empty(empty_valign = "middle"), ".tex", "latex"),
-    "\n"
-  )[[1L]]
-  j <- grep("No data", mid, fixed = TRUE)[[1L]]
-  expect_match(mid[[j - 1L]], "\\vfill", fixed = TRUE)
-  expect_match(mid[[j + 1L]], "\\vfill", fixed = TRUE)
+  expect_lt(n_match(tex_n, "hline{"), n_match(tex_d, "hline{"))
 })
 
 # ---------------------------------------------------------------------
@@ -282,12 +244,12 @@ test_that("empty-state honours font_family", {
 })
 
 # ---------------------------------------------------------------------
-# Spacing — the title spacing gap reserves more room in the header chrome
+# Spacing — the title spacing gap reserves more room in the chrome
 # ---------------------------------------------------------------------
 
 test_that("empty-state honours the title spacing gap", {
-  # A larger above-title gap injects more blank \trhdr rows into the header
-  # chrome table, raising the total \row count.
+  # A larger above-title gap injects more blank title rows into the chrome,
+  # raising the total \row count.
   rows <- function(spec) {
     lines <- strsplit(emit_read(spec, ".rtf"), "\n")[[1L]]
     sum(grepl("^\\\\row$", lines))
@@ -308,11 +270,11 @@ test_that("empty-state stays a single RTF section (no phantom page)", {
 })
 
 # ---------------------------------------------------------------------
-# Per-subgroup — an empty crossing between data crossings renders as its own
-# centred empty section, with its own header / footer parts
+# Per-subgroup — an empty crossing between data crossings renders as one
+# message row in its own panel, with no relocated chrome
 # ---------------------------------------------------------------------
 
-test_that("per-subgroup empty crossing renders one centred empty section", {
+test_that("per-subgroup empty crossing renders one message row", {
   spec <- mk_empty_subgroup()
   # Exactly one empty crossing -> one empty page in the grid.
   g <- as_grid(spec)
@@ -323,26 +285,22 @@ test_that("per-subgroup empty crossing renders one centred empty section", {
   ))
   expect_equal(n_empty, 1L)
 
-  # DOCX: one empty section -> one header / footer empty part + one centring
-  # vAlign; the data sections are unaffected.
-  f <- withr::local_tempfile(fileext = ".docx")
-  emit(spec, f)
-  ex <- withr::local_tempdir()
-  utils::unzip(f, exdir = ex)
-  files <- list.files(file.path(ex, "word"))
-  expect_true("header02.xml" %in% files)
-  expect_true("footer02.xml" %in% files)
-  doc <- paste(
-    readLines(file.path(ex, "word", "document.xml"), warn = FALSE),
-    collapse = ""
+  # DOCX: the empty crossing renders its message in the body (document.xml),
+  # with no relocated header02 / footer02 part and no section <w:vAlign>.
+  parts <- emit_docx_parts(spec)
+  expect_false("header02.xml" %in% parts$files)
+  expect_false("footer02.xml" %in% parts$files)
+  expect_match(parts$document, "No data here.", fixed = TRUE)
+  expect_no_match(
+    parts$document,
+    "<w:vAlign w:val=\"center\"/>",
+    fixed = TRUE
   )
-  expect_equal(n_match(doc, "<w:vAlign w:val=\"center\"/>"), 1L)
-  expect_match(doc, "No data here.", fixed = TRUE)
 
-  # RTF: the empty crossing is its own \vertalc section; the message appears.
+  # RTF: the message appears once; no native centring.
   rtf <- emit_read(spec, ".rtf")
-  expect_match(rtf, "\\vertalc", fixed = TRUE)
   expect_match(rtf, "No data here.", fixed = TRUE)
+  expect_no_match(rtf, "\\vertal", fixed = TRUE)
 })
 
 test_that("per-subgroup empty emits on every backend without error", {

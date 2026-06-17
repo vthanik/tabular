@@ -603,40 +603,19 @@ test_that("subgroup merge widens a column to the widest subgroup (#cw2)", {
 # Empty-state placeholder (zero-row spec)
 # ---------------------------------------------------------------------
 
-test_that("zero-row spec stamps is_empty_page + empty metadata on the page", {
+test_that("zero-row spec stamps is_empty_page + empty_text_ast on the page", {
   g <- as_grid(tabular(data.frame(x = integer(0L), y = character(0L))))
   expect_length(g@pages, 1L)
   expect_true(isTRUE(g@pages[[1L]]$is_empty_page))
-  # The message AST and its content-box placement ride the metadata.
+  # The message AST rides the metadata; each backend renders it as one centred
+  # body row. No placement metadata: the message is always horizontally centred,
+  # and there is no margin reservation (the message is a normal body row).
   expect_identical(
     g@metadata$empty_text_ast@runs[[1L]]$text,
     "No data available to report"
   )
-  expect_identical(g@metadata$empty_place$halign, "center")
-  expect_identical(g@metadata$empty_place$valign, "middle")
-  # Geometry is the margin reservation, not a predicted box height.
-  expect_null(g@metadata$empty_place$height_in)
-  expect_gt(g@metadata$empty_header_twips, 0L)
-  expect_gt(g@metadata$empty_footer_twips, 0L)
-})
-
-test_that("empty-state reserves margin room, not a predicted box height", {
-  # Root-cause fix: the chrome relocates into the page margins and the message
-  # is centred natively (section vAlign / \vertalc / \vfill), so as_grid
-  # publishes the margin reservation (empty_header_twips / empty_footer_twips)
-  # instead of an exact box height. The old box-height prediction was the
-  # recurring phantom-page bug.
-  spec <- tabular(
-    data.frame(x = integer(0L), y = character(0L)),
-    titles = "T",
-    footnotes = "F"
-  )
-  g <- as_grid(spec)
-  expect_gt(g@metadata$empty_header_twips, 0L)
-  expect_gt(g@metadata$empty_footer_twips, 0L)
-  expect_gt(g@metadata$empty_one_row_twips, 0L)
-  expect_null(g@metadata$empty_place$height_twips)
-  expect_null(g@metadata$empty_place$height_in)
+  expect_null(g@metadata$empty_place)
+  expect_null(g@metadata$empty_header_twips)
 })
 
 test_that("non-empty spec leaves is_empty_page unset", {

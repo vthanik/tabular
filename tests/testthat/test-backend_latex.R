@@ -675,44 +675,35 @@ test_that("empty grid (zero pages) renders titles + empty message + footnotes", 
   expect_match(txt, "Nothing here", fixed = TRUE)
 })
 
-test_that("zero-row spec renders chrome + header-band tblr + vfill-centred message", {
+test_that("zero-row spec renders the message as a centred longtblr body row", {
   spec <- tabular(data.frame(x = integer(0L), y = character(0L)))
   txt <- render_tex(spec)
-  # The header band rides a plain `tblr`: a header-only `longtblr` has no
-  # body rows and fails to compile (`\end{longtblr}` -> "Missing number").
-  expect_match(txt, "\\begin{tblr}", fixed = TRUE)
-  expect_no_match(txt, "\\begin{longtblr}", fixed = TRUE)
+  # The empty page uses the NORMAL longtblr with one centred SetCell message
+  # row, not a plain tblr + \vfill placement.
+  expect_match(txt, "\\begin{longtblr}", fixed = TRUE)
+  expect_no_match(txt, "\\begin{tblr}", fixed = TRUE)
   # Header band still renders above the message.
   expect_match(
     txt,
     "\\SetCell{valign=b} \\textbf{x} & \\SetCell{valign=b} \\textbf{y} \\\\",
     fixed = TRUE
   )
-  # The message is placed BELOW the table with `\vfill` glue so it centres in
-  # the body without a fixed-height row that overflows onto a second page.
+  # The message is a full-span centred body row inside the table.
   expect_match(
     txt,
-    "{\\centering No data available to report\\par}",
+    "\\SetCell[c=2]{c} No data available to report",
     fixed = TRUE
   )
-  expect_match(txt, "\\vfill", fixed = TRUE)
-  expect_no_match(txt, "\\begin{minipage}[c][", fixed = TRUE)
+  expect_no_match(txt, "\\vfill", fixed = TRUE)
 })
 
-test_that("LaTeX empty message honours empty_text + halign + valign via \\vfill", {
+test_that("LaTeX empty message honours empty_text", {
   spec <- tabular(
     data.frame(x = integer(0L), y = character(0L)),
     empty_text = "None."
-  ) |>
-    preset(empty_halign = "left", empty_valign = "top")
+  )
   txt <- render_tex(spec)
-  # halign (left -> \raggedright) applies; valign is now HONOURED via \vfill
-  # placement (top = message then \vfill, riding the top of the body).
-  expect_match(txt, "{\\raggedright None.\\par}", fixed = TRUE)
-  lines <- strsplit(txt, "\n")[[1L]]
-  i <- grep("None.", lines, fixed = TRUE)[[1L]]
-  expect_match(lines[[i + 1L]], "\\vfill", fixed = TRUE)
-  expect_no_match(txt, "\\begin{minipage}[c][", fixed = TRUE)
+  expect_match(txt, "\\SetCell[c=2]{c} None.", fixed = TRUE)
 })
 
 # ---------------------------------------------------------------------

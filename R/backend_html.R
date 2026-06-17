@@ -877,8 +877,7 @@ backend_html <- function(grid, file) {
         preset = preset,
         cs = cs,
         headers = meta$headers,
-        empty_text_ast = meta$empty_text_ast,
-        empty_place = meta$empty_place
+        empty_text_ast = meta$empty_text_ast
       )
     )
   }
@@ -898,26 +897,21 @@ backend_html <- function(grid, file) {
 
 # Full-span empty-state message row for a zero-row page that still has a
 # column structure. HTML is continuous (no page geometry), so the message
-# rides in flow under the column header -- no predicted box height. `text-align`
-# carries `empty_halign`; `vertical-align` carries `empty_valign` (a no-op in a
-# continuous row, kept for parity). Reuses the `.tabular-empty` muted style
-# shared with the no-column standalone block.
+# rides in flow under the column header -- no predicted box height. The
+# message line is horizontally centred (the universal no-data convention).
+# Reuses the `.tabular-empty` muted style shared with the no-column
+# standalone block.
 .render_html_empty_row <- function(
   empty_text_ast,
-  empty_place,
   ncols,
   preset
 ) {
-  halign <- empty_place$halign %||% "center"
-  valign <- empty_place$valign %||% "middle"
   sprintf(
     paste0(
       "<tr><td colspan=\"%d\" class=\"tabular-empty\" ",
-      "style=\"vertical-align:%s;text-align:%s;\">%s</td></tr>"
+      "style=\"text-align:center;\">%s</td></tr>"
     ),
     ncols,
-    valign,
-    halign,
     .html_empty_message(empty_text_ast, preset)
   )
 }
@@ -932,8 +926,7 @@ backend_html <- function(grid, file) {
   preset = NULL,
   cs = NULL,
   headers = NULL,
-  empty_text_ast = NULL,
-  empty_place = NULL
+  empty_text_ast = NULL
 ) {
   out <- character()
   has_bign <- !is.null(page$subgroup_bign) && length(page$subgroup_bign) > 0L
@@ -968,18 +961,14 @@ backend_html <- function(grid, file) {
   if (nrow_data == 0L) {
     # Empty-state placeholder: a zero-row page renders the chrome + the
     # column-header band (the `<thead>` emitted by `.render_html_table`)
-    # + one full-span message row here. The host cell's `height` is the
-    # body content-box, so the native table-cell `vertical-align`
-    # (top/middle/bottom maps 1:1 to `empty_valign`) centres the message
-    # exactly; `text-align` carries `empty_halign`. A non-`is_empty_page`
-    # zero-row page (e.g. an all-blank synthetic slice) keeps the historic
-    # empty return.
+    # + one full-span, horizontally centred message row here, in flow
+    # under the column header. A non-`is_empty_page` zero-row page (e.g.
+    # an all-blank synthetic slice) keeps the historic empty return.
     if (isTRUE(page$is_empty_page) && length(col_names_visible) > 0L) {
       out <- c(
         out,
         .render_html_empty_row(
           empty_text_ast = empty_text_ast,
-          empty_place = empty_place,
           ncols = length(col_names_visible),
           preset = preset
         )

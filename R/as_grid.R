@@ -640,38 +640,14 @@ as_grid <- function(.spec) {
   # nothing (no group transitions), so `nrow(spec@data) == 0L` is the
   # exact test. Stamp the page so every backend renders chrome + the
   # column-header band (when columns are present) + the `empty_text`
-  # message placed in the body content-box, instead of an empty body.
-  # The message AST and its placement are table-level (one empty page),
-  # published on metadata; the per-page `is_empty_page` flag lets each
-  # backend's body loop branch. Computed unconditionally so `as_grid()`
-  # inspection always carries them; only consumed when a page is empty.
+  # message as a single centred row in the table body, instead of an
+  # empty body. The message AST is table-level (one empty page), published
+  # on metadata; the per-page `is_empty_page` flag lets each backend's body
+  # loop emit the message row. Computed unconditionally so `as_grid()`
+  # inspection always carries it; only consumed when a page is empty.
   empty_text_ast <- .parse_inline(
     .resolve_empty_text(spec@empty_text, eff_preset),
     call = call
-  )
-  # Empty-state geometry. The message renders ALONE in the page body and is
-  # centred by each paged backend's NATIVE vertical alignment (DOCX
-  # `<w:vAlign>`, RTF `\vertalc`, LaTeX `\vfill`); the table chrome (titles,
-  # banner, column-header band) relocates into the page margins (header /
-  # footer parts), so the body needs the top and bottom margins enlarged by
-  # the chrome line count. Over-reserving only shrinks the centred body zone,
-  # it can never push content off the page -- a safe inequality that replaces
-  # the old exact-height-box prediction (the recurring phantom-page bug).
-  # Banner-free here: a per-section subgroup banner adds its rows at backend
-  # render time, because the subgroup merge keeps only the first sub-grid's
-  # metadata. The `+ 1` footer line reserves the closing rule above the
-  # footnote block. Computed unconditionally so `as_grid()` inspection always
-  # carries them; only consumed when a page is empty.
-  cl <- .chrome_line_counts(spec)
-  empty_header_twips <- as.integer(ceiling(
-    (cl$n_title + cl$title_spacing + cl$n_header) * cl$one_row_twips
-  ))
-  empty_footer_twips <- as.integer(ceiling(
-    (cl$n_footnote + cl$footnote_spacing + 1L) * cl$one_row_twips
-  ))
-  empty_place <- list(
-    halign = eff_preset@empty_halign,
-    valign = eff_preset@empty_valign
   )
   if (nrow(spec@data) == 0L) {
     pages <- lapply(pages, function(pg) {
@@ -704,10 +680,6 @@ as_grid <- function(.spec) {
       footnotes_ast = fmt$footnotes_ast,
       col_labels_ast = fmt$col_labels_ast,
       empty_text_ast = empty_text_ast,
-      empty_place = empty_place,
-      empty_header_twips = empty_header_twips,
-      empty_footer_twips = empty_footer_twips,
-      empty_one_row_twips = cl$one_row_twips,
       pagehead_ast = pagehead_ast,
       pagefoot_ast = pagefoot_ast,
       preset = eff_preset,

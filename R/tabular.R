@@ -95,9 +95,8 @@
 #'   interpolation and `md()` / `html()` are honoured, exactly like a title
 #'   line.
 #'
-#'   **Interaction:** placement within the body box is cosmetic and lives
-#'   on the preset, `preset(empty_halign = ..., empty_valign = ...)`,
-#'   defaulting to centre x middle.
+#'   The message renders as a single horizontally centred row in the table
+#'   body, where the first data row would otherwise sit.
 #'
 #' @return *A `tabular_spec` S7 object.* Pipe it into [`cols()`],
 #'   [`headers()`], [`sort_rows()`], [`style()`],

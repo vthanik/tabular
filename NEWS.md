@@ -94,48 +94,38 @@
   so a multi-row page header (for example a protocol row plus an analysis-set
   row) no longer bleeds back into the body and tips the last table rows, or the
   table's trailing paragraph, onto a phantom second page.
-* `emit()` to RTF and DOCX now renders a zero-row empty-state page by
-  relocating the table chrome (titles, subgroup banner, column header) into the
-  page margins and centring the "no data" message alone in the body via the
-  backend's native section vertical alignment (RTF `\vertalc`, DOCX
-  `<w:vAlign>`), honouring `empty_valign` (top / middle / bottom). Replacing the
-  fixed-height message box, whose predicted height tipped the page onto a
-  phantom second page, with a margin reservation that can only shrink the
-  centred body and never overflow it removes the recurring phantom-page bug. A
-  `subgroup(keep_empty = TRUE)` empty crossing between data crossings now
-  renders as its own centred empty section with its own header and footer parts.
+* `emit()` now renders a zero-row empty-state page as a normal table whose
+  body is a single full-span, horizontally centred "no data" message row, where
+  the first data row would sit: the table chrome (titles, column header) leads,
+  the message follows in the body, and the footnote trails immediately, all
+  flowing compactly at the top of the page with blank space below. The message
+  is centred by each backend's native cell alignment on every backend (RTF,
+  LaTeX, PDF, HTML, DOCX, Markdown); it is no longer vertically centred or
+  relocated into the page margins. A natural-height message row plus trailing
+  footnote cannot overflow, so the recurring phantom-page bug stays fixed. A
+  `subgroup(keep_empty = TRUE)` empty crossing renders the same way, as one
+  message row in its own panel.
 * `emit()` now closes a zero-row empty-state table's data region with the body
   bottom rule on every backend, so the "no data" page carries the same closing
   rule a populated table does. The rule follows the `rules` preset (a custom
   `bottomrule` width / style / colour is honoured, and `bottomrule = "none"`
   drops it) instead of being absent (RTF / DOCX) or a fixed default.
-* `emit()` to PDF / LaTeX now centres the zero-row empty-state message in the
-  page body and honours `empty_valign` (top / middle / bottom): the header
-  band rides a plain `tblr` and the message is placed below it with `\vfill`
-  glue (the footnote riding the page bottom), so the message no longer sits
-  at the top as a natural-height row. `empty_valign` is therefore no longer a
-  no-op on PDF / LaTeX.
 * `emit()` to PDF / LaTeX now wraps a table footnote to the table width rather
   than overrunning it: the footnote minipage no longer double-counts the column
   separation that the column widths already fold in, so on a narrow table the
   footnote text stays within the table-width footnote rule instead of spilling
   past it (and past the printable width).
-* `figure()` and the empty-state ("no data" / `empty_text`) message now size
-  the body box from the number of wrapped chrome lines a long title or
-  footnote actually occupies at the printable width, not the element count, so
-  a wrapped footnote no longer pushes content onto a second page on DOCX (and
-  any paged backend). Wrapping is computed by greedy word packing against the
-  font metrics. (#26)
+* `figure()` and paged-table pagination now size the body box from the number
+  of wrapped chrome lines a long title or footnote actually occupies at the
+  printable width, not the element count, so a wrapped footnote no longer pushes
+  content onto a second page on DOCX (and any paged backend). Wrapping is
+  computed by greedy word packing against the font metrics. (#26)
 * `paginate()` now collapses a zero-row table to a single empty-state page;
   horizontal `panels` no longer multiply an empty table into several identical
   blank pages.
 * `preset()`'s `decimal_metrics` knob gained `"afm"` (now the default), making
   decimal alignment width-exact in proportional fonts via the bundled font
   metrics; Markdown output keeps character padding.
-* `preset()` gained `empty_halign` and `empty_valign` knobs that place the
-  zero-row placeholder message within the body content-box, defaulting to
-  centred horizontally and middle vertically (`empty_valign` is exact on RTF
-  and DOCX, approximate on HTML, and a no-op on PDF / LaTeX and Markdown).
 * `preset()` gained an `empty_text` knob, a house-style default for the
   zero-row message that a per-table `tabular(empty_text = ...)` still overrides.
 * `preset(spacing = ...)` now drives the blank lines around a subgroup banner

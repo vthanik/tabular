@@ -41,8 +41,6 @@
   "footnote_markers",
   "footnote_label",
   "width_mode",
-  "empty_halign",
-  "empty_valign",
   "empty_text",
   "cell_padding",
   "spacing",
@@ -380,33 +378,6 @@
 #'       house style), else the built-in `"No data available to report"`.
 #'       Glue `{}` and [`md()`] / [`html()`] inline formatting are
 #'       honoured, exactly like a title line.
-#'
-#'   *   **`empty_halign`** / **`empty_valign`** — placement of the
-#'       empty-state message within the body content-box when a spec
-#'       resolves to zero data rows. The message *wording* comes from
-#'       `empty_text` (above); these two knobs are the cosmetic
-#'       *placement*, so they ride the preset and cascade with the house
-#'       style. `<character(1)>` each, defaulting to centre x middle:
-#'
-#'       *   **`empty_halign`** — `"left"`, `"center"` *(default)*, or
-#'           `"right"`. Horizontal anchor of the message line.
-#'       *   **`empty_valign`** — `"top"`, `"middle"` *(default)*, or
-#'           `"bottom"`. Vertical anchor of the message within the page
-#'           body, between the top and bottom margins.
-#'
-#'       **Interaction:** valign is exact on the paged backends
-#'       (RTF / PDF / DOCX): the table chrome (titles, subgroup banner,
-#'       column-header band) relocates into the page margins, and the
-#'       message is centred by the backend's native section vertical
-#'       alignment. HTML renders the message in flow under the column
-#'       header and Markdown has no page geometry, so both treat valign
-#'       as a no-op.
-#'
-#'       **Note:** this is the symmetric `halign` / `valign` placement
-#'       pair, shared with [`style()`] and the other `*_halign` /
-#'       `*_valign` alignment keys. It is deliberately distinct from
-#'       `col_spec(align = ...)`, whose extra `"decimal"` mode makes it a
-#'       column-content knob rather than a pure two-axis anchor.
 #'
 #'   *   **`whitespace`** — how significant ASCII spaces in labels and
 #'       cells render. `<character(1)>`. One of:
