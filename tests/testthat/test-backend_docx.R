@@ -1067,7 +1067,7 @@ test_that(".render_docx_table emits the empty message when the grid has zero pag
   expect_match(out, "Nothing here", fixed = TRUE)
 })
 
-test_that("DOCX zero-row spec renders chrome + headers + content-box message row", {
+test_that("DOCX zero-row spec centres the message natively, no exact-height box", {
   spec <- tabular(
     data.frame(x = integer(0L), y = character(0L)),
     titles = "T"
@@ -1079,9 +1079,9 @@ test_that("DOCX zero-row spec renders chrome + headers + content-box message row
     collapse = ""
   )
   expect_match(xml, "No data available to report", fixed = TRUE)
-  # Full-span message row, content-box height (exact), middle-valign cell.
-  expect_match(xml, "<w:gridSpan w:val=\"2\"/>", fixed = TRUE)
-  expect_match(xml, "<w:trHeight w:hRule=\"exact\"")
+  # The chrome relocated to a header part; the body holds only the centred
+  # message and the section <w:vAlign> centres it -- no exact-height box.
+  expect_no_match(xml, "<w:trHeight w:hRule=\"exact\"")
   expect_match(xml, "<w:vAlign w:val=\"center\"/>", fixed = TRUE)
 })
 

@@ -80,10 +80,6 @@
   box that reconstructed to just over the page height, so a multi-page figure
   (for example one Kaplan-Meier plot per treatment arm) now fits one page per
   plot.
-* `emit()` to PDF / LaTeX no longer leaves blank pages before a zero-row
-  table's empty-state message; the message renders at its natural height
-  instead of a full-height box that tipped over the page (`empty_valign` is a
-  no-op on PDF / LaTeX, still honoured exactly on RTF and DOCX).
 * `emit()` to RTF now leads the body font slot with the first face of an
   explicit `font_family` stack instead of the Linux-first default chain, and
   classes a mono stack `\fmodern` (fixed pitch) the same way DOCX classes it
@@ -98,6 +94,32 @@
   so a multi-row page header (for example a protocol row plus an analysis-set
   row) no longer bleeds back into the body and tips the last table rows, or the
   table's trailing paragraph, onto a phantom second page.
+* `emit()` to RTF and DOCX now renders a zero-row empty-state page by
+  relocating the table chrome (titles, subgroup banner, column header) into the
+  page margins and centring the "no data" message alone in the body via the
+  backend's native section vertical alignment (RTF `\vertalc`, DOCX
+  `<w:vAlign>`), honouring `empty_valign` (top / middle / bottom). Replacing the
+  fixed-height message box, whose predicted height tipped the page onto a
+  phantom second page, with a margin reservation that can only shrink the
+  centred body and never overflow it removes the recurring phantom-page bug. A
+  `subgroup(keep_empty = TRUE)` empty crossing between data crossings now
+  renders as its own centred empty section with its own header and footer parts.
+* `emit()` now closes a zero-row empty-state table's data region with the body
+  bottom rule on every backend, so the "no data" page carries the same closing
+  rule a populated table does. The rule follows the `rules` preset (a custom
+  `bottomrule` width / style / colour is honoured, and `bottomrule = "none"`
+  drops it) instead of being absent (RTF / DOCX) or a fixed default.
+* `emit()` to PDF / LaTeX now centres the zero-row empty-state message in the
+  page body and honours `empty_valign` (top / middle / bottom): the header
+  band rides a plain `tblr` and the message is placed below it with `\vfill`
+  glue (the footnote riding the page bottom), so the message no longer sits
+  at the top as a natural-height row. `empty_valign` is therefore no longer a
+  no-op on PDF / LaTeX.
+* `emit()` to PDF / LaTeX now wraps a table footnote to the table width rather
+  than overrunning it: the footnote minipage no longer double-counts the column
+  separation that the column widths already fold in, so on a narrow table the
+  footnote text stays within the table-width footnote rule instead of spilling
+  past it (and past the printable width).
 * `figure()` and the empty-state ("no data" / `empty_text`) message now size
   the body box from the number of wrapped chrome lines a long title or
   footnote actually occupies at the printable width, not the element count, so

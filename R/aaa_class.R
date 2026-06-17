@@ -888,8 +888,10 @@ preset_spec <- S7::new_class(
     # (its wording lives on `tabular_spec@empty_text`) within the body
     # content-box when a spec has zero data rows. Cosmetic, so it rides
     # the preset rather than the spec. Defaults centre x middle. valign is
-    # exact on paged backends (cell height = content-box height); HTML
-    # approximates via a min-height flex box; Markdown valign is a no-op.
+    # exact on paged backends: the chrome relocates to the page margins and
+    # the message is centred natively in the body (DOCX vAlign / RTF
+    # \vertalc / LaTeX \vfill). HTML renders the message in flow and Markdown
+    # has no page geometry, so both treat valign as a no-op.
     empty_halign = S7::new_property(
       S7::class_character,
       default = "center"

@@ -360,6 +360,49 @@ backend_latex <- function(grid, file) {
 
   is_cont_panel <- isTRUE((first$panel_index %||% 1L) > 1L)
   continuation <- first$continuation %||% character()
+  is_empty <- isTRUE(first$is_empty_page)
+  body <- .latex_concat_panel_body(panel_pages)
+  tbl <- .render_latex_table(first, meta, cs, body = body)
+
+  if (is_empty) {
+    # Empty-state: the header band rides a plain `tblr` (no firsthead /
+    # foot templates), so the title is rendered directly above it and the
+    # message + footnote below it with `\vfill` glue. This centres the
+    # message in the body and rides the footnote at the page bottom
+    # without a fixed-height row that would overflow onto a second page.
+    blank_line <- "{\\strut\\par}"
+    title_block <- .render_latex_title_block(
+      meta$titles_ast,
+      preset = meta$preset,
+      cs = cs
+    )
+    title_part <- if (length(title_block) > 0L) {
+      c(
+        rep(
+          blank_line,
+          .latex_blank_count(
+            cs,
+            "title",
+            "above",
+            .meta_gap(meta, "above_title", 1L)
+          )
+        ),
+        title_block,
+        rep(
+          blank_line,
+          .latex_blank_count(
+            cs,
+            "title",
+            "below",
+            .meta_gap(meta, "title_to_body", 1L)
+          )
+        )
+      )
+    } else {
+      character()
+    }
+    return(c(title_part, tbl, .latex_empty_message_block(first, meta, cs)))
+  }
 
   head_tpl <- .latex_head_template(
     meta$titles_ast,
@@ -381,9 +424,100 @@ backend_latex <- function(grid, file) {
     cs = cs,
     gap_above = .meta_gap(meta, "body_to_footnote", 0L)
   )
+  c(head_tpl, foot_tpl, tbl)
+}
 
-  body <- .latex_concat_panel_body(panel_pages)
-  c(head_tpl, foot_tpl, .render_latex_table(first, meta, cs, body = body))
+# Place the zero-row "no data" message in the page body BELOW the header-
+# band longtblr, with `\vfill` glue carrying the vertical placement and the
+# footnote riding the page bottom. `\vfill` is shrinkable, so this can never
+# overflow onto a second page (unlike the old fixed-height message row). The
+# footnote sits in a table-width `minipage` so it aligns with the table, and
+# `empty_valign` is now HONOURED on PDF / LaTeX (top / middle / bottom),
+# matching RTF and DOCX.
+.latex_empty_message_block <- function(page, meta, cs) {
+  place <- meta$empty_place %||% list(halign = "center", valign = "middle")
+  hcmd <- switch(
+    place$halign %||% "center",
+    left = "\\raggedright ",
+    center = "\\centering ",
+    right = "\\raggedleft ",
+    "\\centering "
+  )
+  msg <- if (is.null(meta$empty_text_ast)) {
+    .tabular_empty_text_default
+  } else {
+    .render_latex_inline(meta$empty_text_ast)
+  }
+  msg_line <- sprintf("{%s%s\\par}", hcmd, msg)
+  placed <- switch(
+    place$valign %||% "middle",
+    top = c(msg_line, "\\vfill"),
+    bottom = c("\\vfill", msg_line),
+    c("\\vfill", msg_line, "\\vfill")
+  )
+  width_in <- .latex_table_width_in(
+    page$col_names,
+    meta$cols,
+    page$cells_style,
+    meta$preset
+  )
+  width_tok <- if (is.na(width_in)) {
+    "\\linewidth"
+  } else {
+    sprintf("%gin", round(width_in, 4L))
+  }
+  # The data region closes with a table-width bottom rule, the SAME canonical
+  # closer a normal table's last body row carries (matching RTF / DOCX). Its
+  # width / colour are read from the body-border manifest's `outer_bottom`, so
+  # a custom `rules = list(bottomrule = brdr(...))` is honoured; an explicit
+  # `bottomrule = "none"` drops it. It rides the page bottom (after the
+  # message's trailing `\vfill`), above the footnote.
+  ob <- if (is.list(meta$body_borders)) {
+    meta$body_borders[["outer_bottom"]]
+  } else {
+    NULL
+  }
+  closing_rule <- .latex_empty_closing_rule(ob, width_tok)
+  fn <- .render_latex_footnote_block(
+    meta$footnotes_ast,
+    preset = meta$preset,
+    cs = cs
+  )
+  if (length(fn) == 0L) {
+    return(c(placed, closing_rule))
+  }
+  c(placed, closing_rule, .latex_minipage_wrap(fn, width_in, NULL))
+}
+
+# Compose the empty-state data-closing rule from the `outer_bottom` triple
+# (or NULL -> the default solid 0.5pt). `width_tok` is the table width
+# (`<n>in` or `\linewidth`); the rule honours the triple's width and colour,
+# and `style = "none"` drops it entirely.
+.latex_empty_closing_rule <- function(triple, width_tok) {
+  if (!is.null(triple) && identical(triple$style, "none")) {
+    return(character())
+  }
+  width <- if (is.null(triple)) {
+    .tabular_rule_width
+  } else {
+    triple$width %||% .tabular_rule_width
+  }
+  color <- if (is.null(triple)) NULL else triple$color
+  has_color <- !is.null(color) &&
+    !is.na(color) &&
+    nzchar(color) &&
+    !identical(color, "currentColor") &&
+    !.is_default_ink(color)
+  if (has_color) {
+    sprintf(
+      "\\noindent{\\color{%s}\\rule{%s}{%gpt}}\\par",
+      .latex_border_color_token(color),
+      width_tok,
+      width
+    )
+  } else {
+    sprintf("\\noindent\\rule{%s}{%gpt}\\par", width_tok, width)
+  }
 }
 
 # Warn once when a table is long enough that tabularray's whole-table
@@ -778,15 +912,16 @@ backend_latex <- function(grid, file) {
   if (anyNA(widths)) {
     return(NA_real_)
   }
-  # Per-column horizontal padding (leftsep + rightsep) needs a preset to
-  # resolve; a headless caller without one contributes zero padding.
-  lr <- if (is_preset_spec(preset)) {
-    .resolve_cell_padding_lr(cells_style, preset)
-  } else {
-    c(0, 0)
-  }
-  pad_in <- length(col_names_vis) * (lr[[1L]] + lr[[2L]]) / 72.27
-  sum(widths) + pad_in
+  # The rendered table width is exactly the sum of the resolved column
+  # widths. `.latex_colspec()` sets each `Q[wd=...]` to `resolved - sep`
+  # so the column's footprint (`wd` + leftsep + rightsep) equals the
+  # resolved width again; summed, that is `sum(widths)`. Adding the
+  # per-column padding on top would DOUBLE-count the separation (it was
+  # already folded into `wd`), inflating the footnote minipage past the
+  # table -- and past the printable width on a narrow table -- so the
+  # footnote text overran the table-width footnote rule. `cells_style` /
+  # `preset` are retained for signature stability.
+  sum(widths)
 }
 
 # ---------------------------------------------------------------------
@@ -894,17 +1029,15 @@ backend_latex <- function(grid, file) {
   # Banner block (blank, banner, blank) leads the rowhead, then the band.
   header_rules <- c(banner_block, band_rows, label_row)
   body_rows <- if (isTRUE(page$is_empty_page)) {
-    # Zero-row page: header band above is intact; the body is one
-    # full-span message placed in the content-box (see
-    # `.render_latex_empty_row`). Empty `col_names_vis` (every column
-    # hidden) yields character(), the rare degenerate the zero-page
-    # `.render_latex_empty` path covers instead.
-    .render_latex_empty_row(
-      meta$empty_text_ast,
-      meta$empty_place,
-      length(col_names_vis),
-      meta$preset
-    )
+    # Zero-row page: the longtblr renders the header band ONLY (no body
+    # rows). The "no data" message and the footnote are placed BELOW the
+    # table by `.render_latex_panel()` with `\vfill` glue, so the message
+    # centres in the page body and the footnote rides the page bottom
+    # WITHOUT a fixed-height message row -- a fixed-height row reconstructs
+    # to almost exactly the body height and tips onto a phantom second page
+    # (same failure family as the figure overflow). `\vfill` is shrinkable
+    # glue, so it can never overflow.
+    character()
   } else {
     .render_latex_body_rows(
       src$cells_text,
@@ -944,18 +1077,32 @@ backend_latex <- function(grid, file) {
     sprintf("valign=%s", .latex_valign_letter(body_valign)),
     .latex_rowsep_inner(src$cells_style)
   )
+  # A zero-row page renders the header band ONLY, in a plain `tblr` (not
+  # `longtblr`): a header-only `longtblr` has no body rows and fails to
+  # typeset (`\end{longtblr}` -> "Missing number"). `tblr` needs no
+  # `rowhead` (nothing repeats) and no body-border directives (no body);
+  # the "no data" message, the data-closing rule, and the footnote are
+  # placed below the table with `\vfill` glue by `.render_latex_panel()`.
+  is_empty <- isTRUE(page$is_empty_page)
   outer_args <- paste(
     c(
       sprintf("colspec={%s}", colspec),
-      sprintf("rowhead=%d", rowhead),
+      if (!is_empty) sprintf("rowhead=%d", rowhead) else NULL,
       .latex_cellsep_inner(src$cells_style, meta$preset),
       sprintf("rows={%s}", paste(rows_inner, collapse = ", ")),
       header_rule_dirs,
-      border_directives,
+      if (!is_empty) border_directives else NULL,
       bands$band_hlines
     ),
     collapse = ", "
   )
+  if (is_empty) {
+    return(c(
+      paste0("\\begin{tblr}{", outer_args, "}"),
+      header_rules,
+      "\\end{tblr}"
+    ))
+  }
   # `presep=0pt, postsep=0pt` so the head/foot templates (titles /
   # footnotes) butt directly against the table rather than gaining
   # tabularray's default outer padding.
@@ -1201,53 +1348,6 @@ backend_latex <- function(grid, file) {
     )
   }
   row
-}
-
-# Full-span empty-state message row for a zero-row page. A single
-# `\SetCell[c=N]` cell holds a fixed-height `minipage` whose inner
-# vertical position (`t`/`c`/`b` from empty_valign) centres the message
-# in the body content-box -- exact valign on the paged LaTeX/PDF medium.
-# The horizontal anchor (empty_halign) rides a `\centering` /
-# `\raggedright` / `\raggedleft` inside the minipage.
-.render_latex_empty_row <- function(
-  empty_text_ast,
-  empty_place,
-  ncols,
-  preset = NULL
-) {
-  if (ncols < 1L) {
-    return(character())
-  }
-  halign <- empty_place$halign %||% "center"
-  hcmd <- switch(
-    halign,
-    left = "\\raggedright ",
-    center = "\\centering ",
-    right = "\\raggedleft ",
-    "\\centering "
-  )
-  msg <- if (is.null(empty_text_ast)) {
-    .tabular_empty_text_default
-  } else {
-    .render_latex_inline(empty_text_ast)
-  }
-  # The message rides at its natural height (halign only), NOT a fixed-height
-  # `\begin{minipage}[c][<content_box>in][c]`: that forced full-height box
-  # reconstructs to almost exactly `\textheight`, so with the repeating
-  # header / footer band it tips over the page and leaves two blank pages
-  # before the content (same family as the figure overflow). Natural height
-  # keeps a zero-row table to one page. `empty_valign` is therefore a no-op
-  # on PDF / LaTeX (RTF and DOCX still honour it via exact row heights).
-  inner <- paste0("{", hcmd, msg, "}")
-  if (ncols == 1L) {
-    sprintf("\\SetCell{halign=c} %s \\\\", inner)
-  } else {
-    paste0(
-      sprintf("\\SetCell[c=%d]{c} %s", ncols, inner),
-      paste(rep(" &", ncols - 1L), collapse = ""),
-      " \\\\"
-    )
-  }
 }
 
 # Resolve a chrome border region into a tabularray border-spec

@@ -359,6 +359,18 @@ backend_rtf <- function(grid, file) {
 # exits table context before the closing `\sect`.
 .render_rtf_panel <- function(panel_pages, meta, preset, cs, colors, fonts) {
   first <- panel_pages[[1L]]
+  if (isTRUE(first$is_empty_page)) {
+    # An empty panel is its own section: chrome -> {\header}, closing rule +
+    # footnotes -> {\footer}, body = the centred message (section `\vertal*`).
+    return(.render_rtf_empty_panel(
+      panel_pages,
+      meta,
+      preset,
+      cs,
+      colors,
+      fonts
+    ))
+  }
   col_names_vis <- first$col_names
   cols <- meta$cols %||% list()
   # Frame outer LEFT / RIGHT edges, drawn structurally on every table-
@@ -596,39 +608,26 @@ backend_rtf <- function(grid, file) {
     body_borders = body_borders
   )
 
-  if (isTRUE(first$is_empty_page)) {
-    # Zero-row page: the chrome + header band above are intact; the body
-    # is one full-span message placed in the content-box (see
-    # `.render_rtf_empty_row`). `col_names_vis` empty (every column
-    # hidden) yields character() there, the rare degenerate that the
-    # zero-page `.render_rtf_empty` path covers instead.
-    table_rows[[length(table_rows) + 1L]] <- .render_rtf_empty_row(
-      meta$empty_text_ast,
-      meta$empty_place,
-      cellx,
-      preset,
-      body_borders = body_borders
-    )
-  } else {
-    body <- .rtf_concat_panel_body(panel_pages)
-    table_rows[[length(table_rows) + 1L]] <- .render_rtf_body_rows(
-      body$cells_text,
-      col_names_vis,
-      cols,
-      cellx,
-      cells_style = body$cells_style,
-      cells_indent = body$cells_indent,
-      is_header_row = body$is_header_row,
-      is_blank_row = body$is_blank_row,
-      host_col = body$host_col,
-      keep_with_next = body$keep_with_next,
-      preset = preset,
-      cs = cs,
-      colors = colors,
-      fonts = fonts,
-      body_borders = body_borders
-    )
-  }
+  # An empty panel never reaches here (handled by the early return into
+  # `.render_rtf_empty_panel`); a populated panel renders its body rows.
+  body <- .rtf_concat_panel_body(panel_pages)
+  table_rows[[length(table_rows) + 1L]] <- .render_rtf_body_rows(
+    body$cells_text,
+    col_names_vis,
+    cols,
+    cellx,
+    cells_style = body$cells_style,
+    cells_indent = body$cells_indent,
+    is_header_row = body$is_header_row,
+    is_blank_row = body$is_blank_row,
+    host_col = body$host_col,
+    keep_with_next = body$keep_with_next,
+    preset = preset,
+    cs = cs,
+    colors = colors,
+    fonts = fonts,
+    body_borders = body_borders
+  )
 
   out[[length(out) + 1L]] <- unlist(table_rows, use.names = FALSE)
 
@@ -648,12 +647,255 @@ backend_rtf <- function(grid, file) {
   }
 
   # `\pard\par` exits the table context so Word does not merge this
-  # panel's table with the next section's. The `\sect` section break
-  # that starts the NEXT panel is emitted by the caller as a SEPARATOR
-  # (n-1 breaks for n panels); a trailing `\sect` here would open an
-  # empty final section -> a phantom blank page in Word.
+  # panel's table with the next section's. The `\sect` break that starts
+  # the NEXT panel is emitted by the caller as a SEPARATOR (n-1 breaks for
+  # n panels); the final panel is closed by the document's `}`.
   out[[length(out) + 1L]] <- "\\pard\\par"
   unlist(out, use.names = FALSE)
+}
+
+# Render one EMPTY panel as its own section. The table chrome (page-head band
+# + titles + subgroup banner + spanner bands + column-label row) rides the
+# {\header}; the data-region closing rule + footnotes + page-foot band ride
+# the {\footer}; the body holds ONLY the centred message. The section enlarges
+# its top / bottom margins by the chrome height and sets `\vertal*` so Word
+# centres just the message -- no predicted box height, so the page can never
+# spill onto a phantom second page. Naturally per-section, so it covers both a
+# standalone empty table and an empty subgroup sitting between data panels.
+.render_rtf_empty_panel <- function(
+  panel_pages,
+  meta,
+  preset,
+  cs,
+  colors,
+  fonts
+) {
+  first <- panel_pages[[1L]]
+  col_names_vis <- first$col_names
+  cols <- meta$cols %||% list()
+  body_borders <- meta$body_borders %||% list()
+  cellx <- .rtf_cellx_positions(col_names_vis, cols, preset)
+  halign <- meta$empty_place$halign %||% "center"
+  valign <- meta$empty_place$valign %||% "middle"
+  msg <- if (is.null(meta$empty_text_ast)) {
+    .tabular_empty_text_default
+  } else {
+    .render_rtf_inline(
+      meta$empty_text_ast,
+      preserve = .preset_ws_preserve(preset)
+    )
+  }
+  body_msg <- paste0(
+    "\\pard\\plain",
+    .rtf_body_fs(preset),
+    .rtf_align_token(halign),
+    " ",
+    msg,
+    "\\par"
+  )
+
+  # Degenerate: no visible columns (every column hidden). No chrome table to
+  # relocate, so titles / footnotes ride the body as paragraphs and the
+  # message sits between them (mirrors the zero-page `.render_rtf_empty`).
+  if (length(cellx) == 0L) {
+    return(c(
+      .rtf_section_def(preset, has_pagehead = FALSE, has_pagefoot = FALSE),
+      .render_rtf_title_block(meta$titles_ast, preset, cs, colors, fonts),
+      body_msg,
+      .render_rtf_footnote_block(
+        meta$footnotes_ast,
+        preset,
+        cs,
+        colors,
+        fonts
+      ),
+      "\\pard\\par"
+    ))
+  }
+
+  has_ph <- .page_band_is_populated(meta$pagehead_ast)
+
+  # ---- chrome rows for the {\header}: titles + banner + bands + labels ----
+  pad_top <- .rtf_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_bottom <- .rtf_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
+  chrome <- list()
+  if (length(meta$titles_ast) > 0L) {
+    chrome[[length(chrome) + 1L]] <- .rtf_blank_trhdr_rows(
+      pad_top,
+      cellx,
+      preset,
+      trhdr = FALSE
+    )
+    chrome[[length(chrome) + 1L]] <- .rtf_title_header_rows(
+      meta$titles_ast,
+      cellx,
+      preset,
+      cs,
+      colors,
+      fonts
+    )
+    chrome[[length(chrome) + 1L]] <- .rtf_blank_trhdr_rows(
+      pad_bottom,
+      cellx,
+      preset,
+      trhdr = FALSE
+    )
+  }
+  panel_hdr <- .page_header_for_render(meta, first)
+  banner <- .render_rtf_subgroup_banner_row(
+    first$subgroup_line_ast,
+    cellx = cellx,
+    preset = preset,
+    cs = cs,
+    colors = colors,
+    fonts = fonts,
+    trhdr = FALSE,
+    body_borders = body_borders
+  )
+  if (length(banner) > 0L) {
+    chrome[[length(chrome) + 1L]] <- .rtf_blank_trhdr_rows(
+      .meta_gap(meta, "subgroup_above", 1L),
+      cellx,
+      preset,
+      trhdr = FALSE
+    )
+    chrome[[length(chrome) + 1L]] <- banner
+    chrome[[length(chrome) + 1L]] <- .rtf_blank_trhdr_rows(
+      .meta_gap(meta, "subgroup_to_body", 1L),
+      cellx,
+      preset,
+      trhdr = FALSE
+    )
+  }
+  has_bands <- is.data.frame(panel_hdr$headers) &&
+    nrow(panel_hdr$headers) > 0L
+  chrome[[length(chrome) + 1L]] <- .render_rtf_header_bands(
+    panel_hdr$headers,
+    col_names_vis,
+    cols,
+    cellx,
+    preset,
+    cs,
+    colors,
+    fonts,
+    trhdr = FALSE,
+    body_borders = body_borders
+  )
+  chrome[[length(chrome) + 1L]] <- .render_rtf_col_labels_row(
+    panel_hdr$col_labels_ast,
+    col_names_vis,
+    cols,
+    cellx,
+    preset,
+    cs,
+    colors,
+    fonts,
+    trhdr = FALSE,
+    outer_top = !has_bands,
+    body_borders = body_borders
+  )
+  header_group <- c(
+    "{\\header",
+    if (has_ph) {
+      .rtf_pagehead_band_rows(meta$pagehead_ast, preset, cs, colors, fonts)
+    } else {
+      character()
+    },
+    unlist(chrome, use.names = FALSE),
+    "}"
+  )
+
+  # ---- closing rule + footnotes for the {\footer} ----
+  # The data-region closing rule (the `outer_bottom` triple, defaulting solid)
+  # rides the {\footer} as a merged row's TOP border, flush above the footnote
+  # block. `.rtf_border_token` honours a custom width / style / colour and the
+  # solid default; an explicit "none" drops the rule entirely.
+  bottom_triple <- if (is.list(body_borders)) {
+    body_borders[["outer_bottom"]]
+  } else {
+    NULL
+  }
+  drop_rule <- !is.null(bottom_triple) &&
+    identical(bottom_triple$style, "none")
+  closing_rule <- if (drop_rule) {
+    character()
+  } else {
+    .rtf_merged_row(
+      "",
+      cellx,
+      preset,
+      prelude = .rtf_border_token("top", bottom_triple, "solid", colors)
+    )
+  }
+  foot_pad <- rep(
+    paste0("\\pard\\plain", .rtf_body_fs(preset), "\\par"),
+    .rtf_blank_count(
+      cs,
+      "footer",
+      "above",
+      .meta_gap(meta, "body_to_footnote", 0L)
+    )
+  )
+  footnote_lines <- if (length(meta$footnotes_ast) > 0L) {
+    c(
+      foot_pad,
+      .render_rtf_footnote_block(
+        meta$footnotes_ast,
+        preset,
+        cs,
+        colors,
+        fonts,
+        cellx
+      )
+    )
+  } else {
+    character()
+  }
+  footer_group <- .rtf_footer_group(
+    meta$pagefoot_ast,
+    c(closing_rule, footnote_lines),
+    preset,
+    cs,
+    colors,
+    fonts
+  )
+
+  # ---- section: enlarge margins by the chrome height, centre the body ----
+  # A subgroup banner adds rows to this section's {\header}; reserve them in
+  # the (enlarged) top margin so the message still centres below the banner.
+  banner_rows <- if (length(banner) > 0L) {
+    .meta_gap(meta, "subgroup_above", 1L) +
+      1L +
+      .meta_gap(meta, "subgroup_to_body", 1L)
+  } else {
+    0L
+  }
+  extra_top <- (meta$empty_header_twips %||% 0L) +
+    as.integer(banner_rows * (meta$empty_one_row_twips %||% 0L))
+  c(
+    .rtf_section_def(
+      preset,
+      has_pagehead = TRUE,
+      has_pagefoot = TRUE,
+      vertical_align = valign,
+      extra_top = extra_top,
+      extra_bottom = meta$empty_footer_twips %||% 0L
+    ),
+    header_group,
+    footer_group,
+    body_msg,
+    "\\pard\\par"
+  )
 }
 
 # Concatenate a panel's page slices into one body. For a native (unsplit)
@@ -768,76 +1010,6 @@ backend_rtf <- function(grid, file) {
   )
 }
 
-# Full-span empty-state message row for a zero-row page. Sits where the
-# body rows would, below the column-label rule. Sized to the body
-# content-box via `\trrh` with a NEGATIVE value (exact height, not the
-# usual grow-from-minimum) so the cell vertical-alignment (`\clvertal*`
-# from empty_valign) centres the message in the page body; the paragraph
-# alignment (`\q*` from empty_halign) places it horizontally. One cell
-# merged across the whole band. valign is exact on RTF, the paged medium.
-.render_rtf_empty_row <- function(
-  empty_text_ast,
-  empty_place,
-  cellx,
-  preset,
-  body_borders = NULL
-) {
-  n <- length(cellx)
-  if (n == 0L) {
-    return(character())
-  }
-  halign <- empty_place$halign %||% "center"
-  valign <- empty_place$valign %||% "middle"
-  vtok <- .rtf_valign_token(valign)
-  htok <- .rtf_align_token(halign)
-  box_twips <- if (is.null(empty_place)) {
-    0L
-  } else {
-    as.integer(round(empty_place$height_twips))
-  }
-  msg <- if (is.null(empty_text_ast)) {
-    .tabular_empty_text_default
-  } else {
-    .render_rtf_inline(empty_text_ast, preserve = .preset_ws_preserve(preset))
-  }
-  cell_defs <- character(n)
-  cell_defs[[1L]] <- paste0(
-    vtok,
-    "\\clmgf",
-    sprintf("\\cellx%d", as.integer(cellx[[1L]]))
-  )
-  if (n > 1L) {
-    for (i in seq.int(2L, n)) {
-      cell_defs[[i]] <- paste0(
-        vtok,
-        "\\clmrg",
-        sprintf("\\cellx%d", as.integer(cellx[[i]]))
-      )
-    }
-  }
-  first_body <- paste0(
-    "\\pard\\plain\\intbl",
-    .rtf_body_fs(preset),
-    htok,
-    " ",
-    msg,
-    "\\cell"
-  )
-  cell_bodies <- c(
-    first_body,
-    rep("\\pard\\plain\\intbl\\cell", n - 1L)
-  )
-  c(
-    paste0(
-      "\\trowd\\trgaph108\\trqc",
-      if (box_twips > 0L) sprintf("\\trrh%d", -box_twips) else "",
-      .rtf_row_frame_edges(body_borders)
-    ),
-    cell_defs,
-    cell_bodies,
-    "\\row"
-  )
-}
 
 # Render the title block as `\trhdr` merged rows (one per title line),
 # centred + bold by the title-surface cascade. The continuation marker,
@@ -980,25 +1152,34 @@ backend_rtf <- function(grid, file) {
   preset,
   has_pagehead,
   has_pagefoot,
-  pagehead_rows = 1L
+  pagehead_rows = 1L,
+  vertical_align = NULL,
+  extra_top = 0L,
+  extra_bottom = 0L
 ) {
   paper <- .rtf_paper_twips(preset@paper_size, preset@orientation)
   margins <- .rtf_margins_twips(preset@margins)
 
-  # Margins are exactly the preset values, never enlarged. The footer
-  # (footnotes + program-path band) sits at `\footery = bottom margin`
-  # and flows DOWNWARD; the header at `\headery` flows UPWARD. Word
-  # auto-expands either band into the body when its content exceeds
-  # the margin, so a tall footnote block eats body space instead of
-  # growing the page margin (galley's model).
+  # For a DATA section margins are exactly the preset values. The footer
+  # (footnotes + program-path band) sits at `\footery = bottom margin` and
+  # flows DOWNWARD; the header at `\headery` flows UPWARD. Word auto-expands
+  # either band into the body when its content exceeds the margin, so a tall
+  # footnote block eats body space instead of growing the page (galley's
+  # model). EXCEPTION: an EMPTY section enlarges the top / bottom margins by
+  # `extra_top` / `extra_bottom` (the relocated chrome height) so the body
+  # holds only the centred message and the section `\vertal*` centres just
+  # that message. `\headery` / `\footery` still measure from the ORIGINAL
+  # margins, so the chrome flows into the widened margin from the usual edge.
+  margt <- margins$top + as.integer(extra_top)
+  margb <- margins$bottom + as.integer(extra_bottom)
   parts <- c(
     "\\sectd\\sbkpage",
     if (identical(preset@orientation, "landscape")) "\\lndscpsxn" else "",
     sprintf("\\pgwsxn%d\\pghsxn%d", paper$width, paper$height),
     sprintf(
       "\\margt%d\\margb%d\\margl%d\\margr%d",
-      margins$top,
-      margins$bottom,
+      margt,
+      margb,
       margins$left,
       margins$right
     )
@@ -1011,15 +1192,35 @@ backend_rtf <- function(grid, file) {
     # rows-per-page model assumes. Reserving a single line regardless of
     # row count (the old behaviour) let a multi-row running header bleed
     # back into the body, pushing the last rows -- or the table's
-    # trailing paragraph -- onto a phantom second page.
+    # trailing paragraph -- onto a phantom second page. On an EMPTY section
+    # `\headery` is the original top margin: the chrome flows down from there
+    # into the widened margin, ending at the (enlarged) body top.
     head_line <- as.integer(round(preset@font_size * 28))
-    headery <- max(360L, margins$top - head_line * max(1L, pagehead_rows))
+    headery <- if (extra_top > 0L) {
+      margins$top
+    } else {
+      max(360L, margins$top - head_line * max(1L, pagehead_rows))
+    }
     parts <- c(parts, sprintf("\\headery%d", headery))
   }
   if (has_pagefoot) {
     # Footer sits at the bottom-margin line and flows downward; Word
     # expands it upward into the body when footnotes are tall.
     parts <- c(parts, sprintf("\\footery%d", margins$bottom))
+  }
+  # Section vertical alignment for the lone body message on an empty page;
+  # NULL omits it (every data section). `\vertalt` top, `\vertalc` centre,
+  # `\vertalb` bottom.
+  if (!is.null(vertical_align)) {
+    parts <- c(
+      parts,
+      switch(
+        vertical_align,
+        top = "\\vertalt",
+        bottom = "\\vertalb",
+        "\\vertalc"
+      )
+    )
   }
   paste(parts[nzchar(parts)], collapse = "")
 }
@@ -1079,9 +1280,11 @@ backend_rtf <- function(grid, file) {
 # `{\header ...}` group. Emits one invisible 1-row 3-cell table
 # per band row, in REVERSE index order so row 1 (body-edge) ends
 # up at the bottom of the header zone, closest to the table body.
-.rtf_header_group <- function(pagehead_ast, preset, cs, colors, fonts) {
-  nrow_band <- .page_band_nrow(pagehead_ast)
-  order <- rev(seq_len(nrow_band))
+# Page-head band rows, REVERSE index order (row 1 = body edge at the bottom
+# of the header zone). Shared by `.rtf_header_group` and the empty-section
+# header so the page chrome renders identically in both.
+.rtf_pagehead_band_rows <- function(pagehead_ast, preset, cs, colors, fonts) {
+  order <- rev(seq_len(.page_band_nrow(pagehead_ast)))
   rows <- lapply(order, function(i) {
     .rtf_chrome_row(
       .page_band_row(pagehead_ast, i),
@@ -1092,7 +1295,15 @@ backend_rtf <- function(grid, file) {
       fonts
     )
   })
-  c("{\\header", unlist(rows, use.names = FALSE), "}")
+  unlist(rows, use.names = FALSE)
+}
+
+.rtf_header_group <- function(pagehead_ast, preset, cs, colors, fonts) {
+  c(
+    "{\\header",
+    .rtf_pagehead_band_rows(pagehead_ast, preset, cs, colors, fonts),
+    "}"
+  )
 }
 
 # `{\footer ...}` group. Emits one invisible 1-row 3-cell table
@@ -2447,7 +2658,26 @@ backend_rtf <- function(grid, file) {
   backend_default = "none",
   colors = NULL
 ) {
-  brd <- .effective_border(side, cell_style)
+  .rtf_border_token(
+    side,
+    .effective_border(side, cell_style),
+    backend_default,
+    colors
+  )
+}
+
+# Compose one `\clbrdr<side>` cell-border token from a resolved border
+# triple (or NULL). Factored out of `.rtf_border_seg()` so a caller that
+# already holds a triple -- e.g. the empty-state message box reading the
+# body-border manifest's `outer_bottom` -- emits a rule with the same
+# width / style / colour resolution as a normal body cell, honouring a
+# custom `rules = list(bottomrule = brdr(...))` preset.
+.rtf_border_token <- function(
+  side,
+  brd,
+  backend_default = "none",
+  colors = NULL
+) {
   letter <- substr(side, 1, 1)
   prefix <- paste0("\\clbrdr", letter)
   if (is.null(brd)) {

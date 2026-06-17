@@ -1201,16 +1201,16 @@ test_that("RTF backend renders an empty (zero-page) grid with the empty message"
   expect_match(txt, "No data.", fixed = TRUE)
 })
 
-test_that("RTF zero-row spec renders chrome + headers + content-box message row", {
+test_that("RTF zero-row spec relocates chrome to the header + centres the message natively", {
   spec <- tabular(data.frame(x = "a")[0L, , drop = FALSE], titles = "T")
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_match(txt, "No data available to report", fixed = TRUE)
-  # Message row sized to the body content-box (exact = negative \trrh)
-  # with a vertically-centred merged cell (\clvertalc) -> exact valign.
-  expect_match(txt, "\\\\trrh-[0-9]+")
-  expect_match(txt, "\\\\clvertalc")
+  # The message is centred natively by the section (\vertalc), not sized in an
+  # exact-height box; the old negative \trrh box is gone.
+  expect_match(txt, "\\\\vertalc")
+  expect_no_match(txt, "\\\\trrh-[0-9]+")
 })
 
 test_that("RTF empty message honours empty_text + preset alignment", {
@@ -1223,7 +1223,8 @@ test_that("RTF empty message honours empty_text + preset alignment", {
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_match(txt, "None.", fixed = TRUE)
-  expect_match(txt, "\\\\clvertalb")
+  # Section bottom-alignment (\vertalb) + left-aligned message paragraph (\ql).
+  expect_match(txt, "\\\\vertalb")
   expect_match(txt, "\\\\ql ")
 })
 

@@ -281,6 +281,45 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
 # before chrome (page minus top/bottom margins), kept for the
 # chrome-too-tall diagnostic. The one-blank-line separations match
 # galley's spacing convention.
+# Count the chrome rows that frame the data body: title lines, the blank
+# line below the title block, header (spanner + column-label) lines, footnote
+# lines, and the blank line above the footnote block. Title / footnote rows
+# are counted by RENDERED (wrapped) lines at the printable width, not element
+# count: a long footnote wraps to several lines, so reserving one row per
+# element leaves the body box too tall and the wrapped overflow runs off the
+# page (a short block wraps to one line, matching the old element count, so a
+# non-wrapping table paginates unchanged). Single source of truth for both
+# `.content_box()` (body height) and `as_grid()`'s empty-state margin
+# reservation (`empty_header_twips` / `empty_footer_twips`).
+.chrome_line_counts <- function(spec) {
+  preset <- .effective_preset(spec)
+  mlr <- .margin_left_right_twips(preset@margins)
+  width_in <- (.paper_dims_twips(preset@paper_size, preset@orientation)[[
+    "width"
+  ]] -
+    (mlr[["left"]] + mlr[["right"]])) /
+    1440
+
+  n_title_lines <- .wrapped_line_count(spec@titles, preset, width_in)
+  n_footnote_lines <- .wrapped_line_count(spec@footnotes, preset, width_in)
+  n_header_lines <- .count_header_lines(spec)
+  title_spacing <- if (n_title_lines > 0L) 1L else 0L
+  footnote_spacing <- if (n_footnote_lines > 0L) 1L else 0L
+  list(
+    n_title = n_title_lines,
+    title_spacing = title_spacing,
+    n_header = n_header_lines,
+    n_footnote = n_footnote_lines,
+    footnote_spacing = footnote_spacing,
+    one_row_twips = .row_height_twips(preset@font_size),
+    chrome_rows = n_title_lines +
+      title_spacing +
+      n_header_lines +
+      n_footnote_lines +
+      footnote_spacing
+  )
+}
+
 .content_box <- function(spec) {
   preset <- .effective_preset(spec)
 
@@ -293,33 +332,11 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   margin_v <- mtb[["top"]] + mtb[["bottom"]]
   margin_h <- mlr[["left"]] + mlr[["right"]]
 
-  one_row <- .row_height_twips(preset@font_size)
   width_twips <- page_width - margin_h
 
-  # Title / footnote rows are counted by RENDERED (wrapped) lines at the
-  # printable width, not element count: a long footnote wraps to several
-  # lines, so reserving one row per element leaves the body box too tall
-  # and the wrapped overflow runs off the page (an empty-state message box
-  # is sized from this; a short block wraps to one line, matching the old
-  # element count, so a non-wrapping table paginates unchanged).
-  n_title_lines <- .wrapped_line_count(
-    spec@titles,
-    preset,
-    width_twips / 1440
-  )
-  n_footnote_lines <- .wrapped_line_count(
-    spec@footnotes,
-    preset,
-    width_twips / 1440
-  )
-  n_header_lines <- .count_header_lines(spec)
-  title_spacing <- if (n_title_lines > 0L) 1L else 0L
-  footnote_spacing <- if (n_footnote_lines > 0L) 1L else 0L
-  chrome_rows <- n_title_lines +
-    title_spacing +
-    n_header_lines +
-    n_footnote_lines +
-    footnote_spacing
+  cl <- .chrome_line_counts(spec)
+  one_row <- cl$one_row_twips
+  chrome_rows <- cl$chrome_rows
 
   usable_twips <- page_height - margin_v
   height_twips <- usable_twips - chrome_rows * one_row

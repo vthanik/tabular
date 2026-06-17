@@ -463,25 +463,76 @@ backend_docx <- function(grid, file) {
   footer_footnotes <- has_footnotes && isTRUE(rep_footnotes)
   has_footer <- has_pf_band || footer_footnotes
 
+  # Empty-state sections: one header + footer part per EMPTY panel. An empty
+  # panel's chrome moves into its header part, its closing rule + footnotes
+  # into its footer part, and the page body holds only the centred message
+  # (the section's <w:vAlign>). A DATA panel keeps the shared header1 /
+  # footer1; those shared parts are emitted only when a data panel needs them
+  # (an all-empty doc routes the page chrome into the empty parts instead).
+  panel_groups <- .docx_panel_groups(grid)
+  empty_flags <- vapply(panel_groups, .docx_panel_is_empty, logical(1L))
+  n_empty_panels <- sum(empty_flags)
+  has_data_panel <- length(panel_groups) == 0L || any(!empty_flags)
+  has_ph_shared <- has_ph && has_data_panel
+  has_footer_shared <- has_footer && has_data_panel
+
   # One-pass hyperlink walk over every AST surface so the rels file
   # and the inline renderer agree on rId numbering. First-encounter
   # order is deterministic given the walk order in
   # `.docx_collect_hyperlinks()`.
   hyperlinks <- .docx_collect_hyperlinks(grid)
-  rid_map <- .docx_rid_map(has_ph, has_footer, length(hyperlinks))
+  rid_map <- .docx_rid_map(
+    has_ph_shared,
+    has_footer_shared,
+    length(hyperlinks),
+    n_empty_panels
+  )
 
-  # Build the footnote section once. It lands in the body when
-  # trailing, or in `footer1.xml` when repeating; never both.
+  # Build the footnote section once. It trails in the body only when NOT
+  # repeating and a data panel exists to trail it, rides `footer1.xml` when
+  # repeating, and rides each empty-section footer part; an all-empty doc
+  # routes it to the empty footer parts only.
   foot_section <- if (has_footnotes) {
     .docx_footnote_section(grid, preset, hyperlinks, rid_map, cs)
   } else {
     ""
   }
-  body_footnotes <- if (footer_footnotes) "" else foot_section
-  footer_foot_block <- if (footer_footnotes) foot_section else ""
+  body_footnotes <- if (footer_footnotes || !has_data_panel) {
+    ""
+  } else {
+    foot_section
+  }
+  footer_foot_block <- if (footer_footnotes && has_data_panel) {
+    foot_section
+  } else {
+    ""
+  }
+  empty_header_names <- if (n_empty_panels > 0L) {
+    vapply(
+      seq_len(n_empty_panels),
+      function(k) .docx_empty_part_name("header", k),
+      character(1L)
+    )
+  } else {
+    character()
+  }
+  empty_footer_names <- if (n_empty_panels > 0L) {
+    vapply(
+      seq_len(n_empty_panels),
+      function(k) .docx_empty_part_name("footer", k),
+      character(1L)
+    )
+  } else {
+    character()
+  }
 
   entries <- c(
-    "[Content_Types].xml" = .docx_content_types(has_ph, has_footer),
+    "[Content_Types].xml" = .docx_content_types(
+      has_ph_shared,
+      has_footer_shared,
+      empty_header_names,
+      empty_footer_names
+    ),
     "_rels/.rels" = .docx_root_rels(),
     "docProps/app.xml" = .docx_app_xml(),
     "docProps/core.xml" = .docx_core_xml(meta),
@@ -502,20 +553,49 @@ backend_docx <- function(grid, file) {
     "word/theme/theme1.xml" = .docx_theme_xml(preset),
     "word/webSettings.xml" = .docx_web_settings_xml()
   )
-  if (has_ph) {
+  if (has_ph_shared) {
     entries[["word/header1.xml"]] <- .docx_header_xml(
       meta$pagehead_ast,
       preset,
       cs = cs
     )
   }
-  if (has_footer) {
+  if (has_footer_shared) {
     entries[["word/footer1.xml"]] <- .docx_footer_xml(
       meta$pagefoot_ast,
       preset,
       footnote_block = footer_foot_block,
       cs = cs
     )
+  }
+  if (n_empty_panels > 0L) {
+    empty_idx <- which(empty_flags)
+    for (k in seq_len(n_empty_panels)) {
+      pgrid <- S7::set_props(grid, pages = panel_groups[[empty_idx[k]]])
+      entries[[paste0(
+        "word/",
+        empty_header_names[k]
+      )]] <- .docx_empty_header_part(
+        pgrid,
+        preset,
+        hyperlinks,
+        rid_map,
+        cs,
+        has_ph
+      )
+      entries[[paste0(
+        "word/",
+        empty_footer_names[k]
+      )]] <- .docx_empty_footer_part(
+        pgrid,
+        preset,
+        hyperlinks,
+        rid_map,
+        cs,
+        has_pf_band,
+        foot_section
+      )
+    }
   }
   # OPC (Open Packaging Conventions) MANDATES that `[Content_Types].xml`
   # is the FIRST part in the ZIP central directory. Word and many
@@ -551,7 +631,12 @@ backend_docx <- function(grid, file) {
 #   $styles / $settings / $theme / $fontTable / $webSettings  one rId each
 #   $header / $footer    one rId each (NULL when absent)
 #   $hyperlinks          character() of rIds, parallel to the URL vector
-.docx_rid_map <- function(has_pagehead, has_pagefoot, n_hyperlinks) {
+.docx_rid_map <- function(
+  has_pagehead,
+  has_pagefoot,
+  n_hyperlinks,
+  n_empty_panels = 0L
+) {
   m <- list(
     styles = "rId1",
     settings = "rId2",
@@ -560,6 +645,8 @@ backend_docx <- function(grid, file) {
     webSettings = "rId5",
     header = NULL,
     footer = NULL,
+    empty_headers = character(),
+    empty_footers = character(),
     hyperlinks = character()
   )
   next_id <- 6L
@@ -570,6 +657,23 @@ backend_docx <- function(grid, file) {
   if (has_pagefoot) {
     m$footer <- sprintf("rId%d", next_id)
     next_id <- next_id + 1L
+  }
+  # One header + one footer part per EMPTY section (the relocated chrome and
+  # the closing-rule + footnote block). Assigned AFTER the shared page-chrome
+  # parts and BEFORE hyperlinks. `n_empty_panels = 0L` (every non-empty doc
+  # and the figure path) collapses these to length 0, so the rId sequence is
+  # byte-identical to the pre-refactor map.
+  if (n_empty_panels > 0L) {
+    m$empty_headers <- sprintf(
+      "rId%d",
+      seq.int(next_id, length.out = n_empty_panels)
+    )
+    next_id <- next_id + n_empty_panels
+    m$empty_footers <- sprintf(
+      "rId%d",
+      seq.int(next_id, length.out = n_empty_panels)
+    )
+    next_id <- next_id + n_empty_panels
   }
   if (n_hyperlinks > 0L) {
     m$hyperlinks <- sprintf(
@@ -635,32 +739,91 @@ backend_docx <- function(grid, file) {
       rep(blank_p, pad_title_bottom)
     )
   }
-  # One `<w:tbl>` per horizontal panel: each panel pins its own column
-  # set, so panel 2's body rows can no longer render under panel 1's
-  # grid/header. Word paginates the body within a panel via
-  # `<w:tblHeader/>` + `<w:cantSplit/>`; subgroups stay inline within a
-  # panel's table (the banner rows in `.render_docx_body_rows`). Panels
-  # are separated by a next-page section break (see below). When
-  # `repeat_titles` is set
-  # (the `repeat_content` default), the title block rides EVERY panel's
-  # table as `<w:tblHeader/>` rows so it repeats on every panel page,
-  # matching RTF; otherwise it renders once as paragraphs above panel 1
-  # (`titles_block`). An empty grid falls through one call so the
-  # "(no rows)" marker still appears.
-  # Any active subgroup (not only the per-page BigN case) renders one
-  # `<w:tbl>` per subgroup so its banner can lead ABOVE the column-header
-  # band (anatomy), matching RTF / PDF. Inline body banners landed below
-  # the header and duplicated as repeating `<w:tblHeader/>` rows.
-  sg_active <- any(vapply(
-    grid@pages,
-    function(p) !is.null(p$subgroup_index),
-    logical(1L)
-  ))
-  panel_groups <- .group_pages_into_panels(
-    grid@pages,
-    by_subgroup = isTRUE(grid@metadata$subgroup_big_n_active) || sg_active
-  )
-  if (length(panel_groups) <= 1L) {
+  # One `<w:tbl>` per horizontal panel (one per subgroup when a subgroup or
+  # per-page BigN is active, so each banner can lead ABOVE its column-header
+  # band, matching RTF / PDF). Panels are separated by a next-page section
+  # break -- a paragraph carrying the section's `<w:sectPr>` -- placed AFTER
+  # every panel but the last, which is closed by the body-level sectPr. When
+  # `repeat_titles` is set the title block rides each panel's table as
+  # `<w:tblHeader/>` rows; otherwise it renders once as `titles_block` above
+  # panel 1. EMPTY panels are different: the chrome rode the panel's header
+  # part and the closing rule + footnotes its footer part, so the panel body
+  # is ONLY the centred message and its terminating sectPr references those
+  # empty parts, enlarges the body margins by the chrome height, and sets
+  # `<w:vAlign>` (no predicted box height -> never a phantom page). Section
+  # properties travel with the panel the break ENDS, so an interior empty
+  # section centres correctly. A zero-page grid (no panels) falls through to
+  # `.render_docx_table`'s bare-paragraph branch.
+  panel_groups <- .docx_panel_groups(grid)
+  n_panels <- length(panel_groups)
+  shared_sect <- .docx_section_pr(preset, rid_map)
+  one_row <- .row_height_twips(preset@font_size)
+  empty_k <- 0L
+  panel_xml <- character(n_panels)
+  panel_sect <- character(n_panels)
+  for (gi in seq_len(n_panels)) {
+    panel_pages <- panel_groups[[gi]]
+    if (.docx_panel_is_empty(panel_pages)) {
+      empty_k <- empty_k + 1L
+      default_rpr <- .docx_rPr_from_style(NULL, preset, bold_default = FALSE)
+      msg_runs <- if (is.null(meta$empty_text_ast)) {
+        paste0(
+          "<w:r>",
+          default_rpr,
+          sprintf(
+            "<w:t xml:space=\"preserve\">%s</w:t></w:r>",
+            .tabular_empty_text_default
+          )
+        )
+      } else {
+        .render_docx_inline(meta$empty_text_ast, default_rpr = default_rpr)
+      }
+      jc <- .docx_align_token(meta$empty_place$halign %||% "center")
+      panel_xml[[gi]] <- paste0(
+        "<w:p><w:pPr>",
+        jc,
+        "</w:pPr>",
+        msg_runs,
+        "</w:p>"
+      )
+      # A subgroup banner adds rows to THIS panel's header part; reserve them
+      # in the (enlarged) top margin so the message still centres below it.
+      banner_rows <- if (!is.null(panel_pages[[1L]]$subgroup_line_ast)) {
+        .meta_gap(meta, "subgroup_above", 1L) +
+          1L +
+          .meta_gap(meta, "subgroup_to_body", 1L)
+      } else {
+        0L
+      }
+      panel_sect[[gi]] <- .docx_section_pr(
+        preset,
+        rid_map,
+        header_rid = rid_map$empty_headers[[empty_k]],
+        footer_rid = rid_map$empty_footers[[empty_k]],
+        vertical_align = meta$empty_place$valign %||% "middle",
+        extra_top = (meta$empty_header_twips %||% 0L) +
+          as.integer(banner_rows * one_row),
+        extra_bottom = meta$empty_footer_twips %||% 0L
+      )
+    } else {
+      panel_grid <- S7::set_props(grid, pages = panel_pages)
+      panel_xml[[gi]] <- .render_docx_table(
+        panel_grid,
+        preset,
+        hyperlinks,
+        rid_map,
+        cs = cs,
+        title_ast = if (title_in_table) titles_ast else list(),
+        pad_title_top = pad_title_top,
+        pad_title_bottom = pad_title_bottom
+      )
+      panel_sect[[gi]] <- shared_sect
+    }
+  }
+
+  if (n_panels == 0L) {
+    # Zero-page degenerate (hand-built grid / every column hidden): the
+    # bare-paragraph empty path in `.render_docx_table`.
     table_block <- .render_docx_table(
       grid,
       preset,
@@ -671,49 +834,30 @@ backend_docx <- function(grid, file) {
       pad_title_top = pad_title_top,
       pad_title_bottom = pad_title_bottom
     )
+    body <- paste0(
+      paste(titles_block, collapse = ""),
+      table_block,
+      body_footnotes,
+      shared_sect
+    )
   } else {
-    # Separate panels with a next-page SECTION break (a paragraph
-    # carrying the section's `<w:sectPr>`), placed AFTER each panel
-    # except the last. The section mark forces the next panel onto a
-    # fresh page AND keeps Word from merging the two `<w:tbl>`
-    # elements, with no visible blank line above the next panel's
-    # title -- an empty `pageBreakBefore` paragraph would render as a
-    # leading blank line. Mirrors RTF's `\sect` per panel; the final
-    # panel is closed by the body-level `sect_pr` appended downstream.
-    sect_break <- paste0(
-      "<w:p><w:pPr>",
-      .docx_section_pr(preset, rid_map),
-      "</w:pPr></w:p>"
-    )
-    n_panels <- length(panel_groups)
-    panel_tables <- vapply(
-      seq_along(panel_groups),
-      function(gi) {
-        panel_grid <- S7::set_props(grid, pages = panel_groups[[gi]])
-        tbl <- .render_docx_table(
-          panel_grid,
-          preset,
-          hyperlinks,
-          rid_map,
-          cs = cs,
-          title_ast = if (title_in_table) titles_ast else list(),
-          pad_title_top = pad_title_top,
-          pad_title_bottom = pad_title_bottom
+    pieces <- character()
+    for (gi in seq_len(n_panels)) {
+      pieces <- c(pieces, panel_xml[[gi]])
+      if (gi < n_panels) {
+        pieces <- c(
+          pieces,
+          paste0("<w:p><w:pPr>", panel_sect[[gi]], "</w:pPr></w:p>")
         )
-        if (gi < n_panels) paste0(tbl, sect_break) else tbl
-      },
-      character(1L)
+      }
+    }
+    body <- paste0(
+      paste(titles_block, collapse = ""),
+      paste(pieces, collapse = ""),
+      body_footnotes,
+      panel_sect[[n_panels]]
     )
-    table_block <- paste(panel_tables, collapse = "")
   }
-  sect_pr <- .docx_section_pr(preset, rid_map)
-
-  body <- paste0(
-    paste(titles_block, collapse = ""),
-    table_block,
-    body_footnotes,
-    sect_pr
-  )
   paste0(
     .docx_xml_prologue,
     "<w:document ",
@@ -1023,6 +1167,7 @@ backend_docx <- function(grid, file) {
 # the body (`trailing_footnotes`) or in `footer1.xml`
 # (`footer_footnotes`), so both placements render identically. Mirrors
 # RTF's `.render_rtf_footnote_block`.
+#
 .docx_footnote_section <- function(grid, preset, hyperlinks, rid_map, cs) {
   meta <- grid@metadata
   paras <- .docx_footnote_block(
@@ -1067,6 +1212,211 @@ backend_docx <- function(grid, file) {
 # ---------------------------------------------------------------------
 # Table emission
 # ---------------------------------------------------------------------
+
+# Empty-section header part: the table chrome a populated panel would show
+# ABOVE its data -- page-head band (when present) + titles + subgroup banner
+# + spanner bands + column-label row -- wrapped in one <w:tbl> and emitted as
+# word/headerNN.xml. With the chrome relocated to the page margin, the page
+# body holds ONLY the centred message, so the section's <w:vAlign> centres
+# exactly that message. Reuses the SAME row builders as `.render_docx_table`,
+# so the chrome renders as it would in a data panel's repeating header.
+.docx_empty_header_part <- function(
+  grid,
+  preset,
+  hyperlinks,
+  rid_map,
+  cs,
+  has_ph
+) {
+  meta <- grid@metadata
+  first_page <- grid@pages[[1L]]
+  col_names_vis <- first_page$col_names
+  cols <- meta$cols %||% list()
+  widths <- .docx_col_widths_twips(col_names_vis, cols, preset)
+  body_borders <- meta$body_borders %||% list()
+
+  outer_top_triple <- if (is.list(body_borders)) {
+    body_borders[["outer_top"]]
+  } else {
+    NULL
+  }
+  top_el <- if (!is.null(outer_top_triple)) {
+    .docx_border_seg_from_triple(outer_top_triple, "top")
+  } else {
+    .docx_chrome_border_seg(cs, "header_top", "top")
+  }
+  mid_el <- .docx_chrome_border_seg(cs, "header_bottom", "bottom")
+
+  pad_title_top <- .docx_blank_count(
+    cs,
+    "title",
+    "above",
+    .meta_gap(meta, "above_title", 1L)
+  )
+  pad_title_bottom <- .docx_blank_count(
+    cs,
+    "title",
+    "below",
+    .meta_gap(meta, "title_to_body", 1L)
+  )
+  title_rows <- .docx_title_header_rows(
+    meta$titles_ast %||% list(),
+    sum(widths),
+    length(widths),
+    pad_title_top,
+    pad_title_bottom,
+    hyperlinks,
+    rid_map,
+    preset = preset,
+    cs = cs
+  )
+
+  hdr <- .page_header_for_render(meta, first_page)
+  has_bands <- is.data.frame(hdr$headers) && nrow(hdr$headers) > 0L
+  subgroup_active <- !is.null(first_page$subgroup_line_ast)
+  banner_lead <- if (subgroup_active) {
+    banner <- .render_docx_subgroup_banner_row(
+      first_page$subgroup_line_ast,
+      n_cols = length(col_names_vis),
+      widths_twips = widths,
+      page_break_before = FALSE,
+      preset = preset,
+      cs = cs,
+      body_borders = body_borders
+    )
+    blank <- .docx_full_width_row(
+      sum(widths),
+      length(col_names_vis),
+      "<w:p/>"
+    )
+    c(
+      rep(blank, .meta_gap(meta, "subgroup_above", 1L)),
+      banner,
+      rep(blank, .meta_gap(meta, "subgroup_to_body", 1L))
+    )
+  } else {
+    character()
+  }
+  band_rows <- .render_docx_header_bands(
+    hdr$headers,
+    col_names_vis,
+    widths,
+    cs = cs,
+    top_border = top_el,
+    body_borders = body_borders
+  )
+  label_row <- .render_docx_col_labels_row(
+    hdr$col_labels_ast,
+    col_names_vis,
+    cols,
+    widths,
+    hyperlinks,
+    rid_map,
+    preset = preset,
+    cs = cs,
+    top_border = if (has_bands) "" else top_el,
+    bottom_border = mid_el,
+    body_borders = body_borders
+  )
+  chrome_tbl <- paste0(
+    "<w:tbl>",
+    .docx_tbl_pr(sum(widths)),
+    .docx_tbl_grid(widths),
+    title_rows,
+    paste(banner_lead, collapse = ""),
+    paste(band_rows, collapse = ""),
+    label_row,
+    "</w:tbl>"
+  )
+  pagehead_rows <- if (isTRUE(has_ph)) {
+    .docx_pagehead_rows(meta$pagehead_ast, preset, cs = cs)
+  } else {
+    character()
+  }
+  paste0(
+    .docx_xml_prologue,
+    "<w:hdr ",
+    .docx_ns_decls,
+    ">",
+    paste(pagehead_rows, collapse = ""),
+    chrome_tbl,
+    "</w:hdr>"
+  )
+}
+
+# Empty-section footer part: the data-region closing rule (the `outer_bottom`
+# triple, defaulting to the solid 0.5pt body rule) flush above the footnote
+# block, then the footnotes, then the page-foot band (when present), emitted
+# as word/footerNN.xml. The closing rule moves here from the old in-body
+# message box so the body holds only the centred message.
+.docx_empty_footer_part <- function(
+  grid,
+  preset,
+  hyperlinks,
+  rid_map,
+  cs,
+  has_pf,
+  foot_section
+) {
+  meta <- grid@metadata
+  col_names_vis <- grid@pages[[1L]]$col_names
+  widths <- .docx_col_widths_twips(
+    col_names_vis,
+    meta$cols %||% list(),
+    preset
+  )
+  body_borders <- meta$body_borders %||% list()
+  bottom_triple <- if (is.list(body_borders)) {
+    body_borders[["outer_bottom"]]
+  } else {
+    NULL
+  }
+  closing_triple <- if (is.null(bottom_triple)) {
+    list(style = "solid", width = 0.5, color = .tabular_ink)
+  } else {
+    bottom_triple
+  }
+  rule_tbl <- .docx_foot_rule_table(closing_triple, sum(widths))
+  pagefoot_rows <- if (isTRUE(has_pf)) {
+    .docx_pagefoot_rows(meta$pagefoot_ast, preset, cs = cs)
+  } else {
+    character()
+  }
+  paste0(
+    .docx_xml_prologue,
+    "<w:ftr ",
+    .docx_ns_decls,
+    ">",
+    paste(rule_tbl, collapse = ""),
+    foot_section,
+    paste(pagefoot_rows, collapse = ""),
+    "</w:ftr>"
+  )
+}
+
+# Horizontal panels for this grid: one per subgroup when a subgroup (or
+# per-page BigN) is active, else a single panel. Shared by `.docx_zip_entries`
+# (to build one empty header / footer part per empty panel) and
+# `.docx_document_xml` (to render + reference them) so both agree on panel
+# identity and order.
+.docx_panel_groups <- function(grid) {
+  sg_active <- any(vapply(
+    grid@pages,
+    function(p) !is.null(p$subgroup_index),
+    logical(1L)
+  ))
+  .group_pages_into_panels(
+    grid@pages,
+    by_subgroup = isTRUE(grid@metadata$subgroup_big_n_active) || sg_active
+  )
+}
+
+# A panel is empty-state when its lead page is flagged empty AND it has a
+# column structure (a zero-column page is the degenerate handled in-body).
+.docx_panel_is_empty <- function(panel_pages) {
+  isTRUE(panel_pages[[1L]]$is_empty_page) &&
+    length(panel_pages[[1L]]$col_names) > 0L
+}
 
 # Page grouping uses the shared `.group_pages_into_panels()`
 # (R/as_grid.R). DOCX passes `by_subgroup = FALSE` normally (subgroups
@@ -1245,21 +1595,12 @@ backend_docx <- function(grid, file) {
     emit_banner = !(big_n_active || subgroup_active)
   )
 
-  # Zero-row page with visible columns: the header band above is intact;
-  # the body is one full-span message row sized to the content-box for
-  # exact vertical centering (see `.render_docx_empty_row`).
-  empty_row <- if (isTRUE(pages[[1L]]$is_empty_page)) {
-    .render_docx_empty_row(
-      meta$empty_text_ast,
-      meta$empty_place,
-      length(col_names_vis),
-      widths,
-      preset = preset,
-      body_borders = body_borders
-    )
-  } else {
-    character()
-  }
+  # An empty page is no longer rendered as an in-body message row: the chrome
+  # moves into the page margin (header / footer parts) and the message stands
+  # alone in the body, centred by the section's <w:vAlign>. A standalone empty
+  # doc never reaches here (`.docx_document_xml` returns early); empty panels
+  # within a subgroup table are routed the same way (later increment).
+  empty_row <- character()
 
   paste0(
     "<w:tbl>",
@@ -2079,75 +2420,6 @@ backend_docx <- function(grid, file) {
   )
 }
 
-# Full-span empty-state message row for a zero-row page. A single
-# `<w:gridSpan>` cell spans the band; the row height is the body
-# content-box (`<w:trHeight w:hRule="exact">`) so the cell `<w:vAlign>`
-# (from empty_valign, OOXML "center" for middle) centres the message
-# vertically -- exact valign on the paged DOCX medium. The paragraph
-# `<w:jc>` carries empty_halign. CT_TcPr child order: tcW, gridSpan,
-# tcBorders, vAlign.
-.render_docx_empty_row <- function(
-  empty_text_ast,
-  empty_place,
-  n_cols,
-  widths_twips,
-  preset = NULL,
-  body_borders = NULL
-) {
-  if (n_cols < 1L) {
-    return(character())
-  }
-  span_w <- sum(as.integer(widths_twips))
-  jc_tok <- .docx_align_token(empty_place$halign %||% "center")
-  valign_tok <- .docx_valign_token(empty_place$valign %||% "middle")
-  box_twips <- if (is.null(empty_place)) {
-    0L
-  } else {
-    as.integer(round(empty_place$height_twips))
-  }
-  trheight <- if (box_twips > 0L) {
-    sprintf("<w:trHeight w:hRule=\"exact\" w:val=\"%d\"/>", box_twips)
-  } else {
-    ""
-  }
-  default_rpr <- .docx_rPr_from_style(NULL, preset, bold_default = FALSE)
-  inner_runs <- if (is.null(empty_text_ast)) {
-    paste0(
-      "<w:r>",
-      default_rpr,
-      sprintf(
-        "<w:t xml:space=\"preserve\">%s</w:t></w:r>",
-        .tabular_empty_text_default
-      )
-    )
-  } else {
-    .render_docx_inline(empty_text_ast, default_rpr = default_rpr)
-  }
-  merged_edges <- .docx_tcborders(
-    .docx_border_seg_from_triple(NULL, "top", "none"),
-    .docx_frame_edge("left", body_borders),
-    .docx_border_seg_from_triple(NULL, "bottom", "none"),
-    .docx_frame_edge("right", body_borders)
-  )
-  paste0(
-    "<w:tr><w:trPr>",
-    trheight,
-    "</w:trPr>",
-    "<w:tc><w:tcPr>",
-    sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_w),
-    sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols),
-    merged_edges,
-    valign_tok,
-    "</w:tcPr>",
-    "<w:p><w:pPr>",
-    jc_tok,
-    "</w:pPr>",
-    inner_runs,
-    "</w:p>",
-    "</w:tc></w:tr>"
-  )
-}
-
 # Map an `align` value to a `<w:pPr><w:jc w:val="...">` token.
 # Defaults to left when align is unset / NA. `decimal` -> right
 # (engine_decimal has already padded with NBSP for visual alignment).
@@ -2192,7 +2464,15 @@ backend_docx <- function(grid, file) {
 # Compose the trailing `<w:sectPr>` carrying paper size, orientation,
 # margins, and (when chrome is populated) header / footer references.
 # Lives at the end of `<w:body>` so it applies to the document body.
-.docx_section_pr <- function(preset, rid_map = NULL) {
+.docx_section_pr <- function(
+  preset,
+  rid_map = NULL,
+  header_rid = NULL,
+  footer_rid = NULL,
+  vertical_align = NULL,
+  extra_top = 0L,
+  extra_bottom = 0L
+) {
   paper <- .docx_paper_twips(preset@paper_size, preset@orientation)
   margins <- .docx_margins_twips(preset@margins)
 
@@ -2207,50 +2487,61 @@ backend_docx <- function(grid, file) {
     }
   )
   # Header / footer placement mirrors RTF's `.rtf_section_def`
-  # (`\headery` / `\footery`). Margins stay EXACTLY the preset values,
-  # never enlarged: the header sits one body line above the top margin
-  # and flows upward (row 1 = body edge), the footer sits at the
-  # bottom-margin line and flows downward (footnotes near the body,
-  # program-path below). Word auto-expands the footer upward INTO the
-  # body when the footnote block is tall, so extra footnotes eat body
-  # space instead of growing the page (galley's model) -- never
-  # reserve margin, never overlap.
+  # (`\headery` / `\footery`). For a DATA section margins stay EXACTLY the
+  # preset values: the header sits one body line above the top margin and
+  # flows upward (row 1 = body edge), the footer sits at the bottom-margin
+  # line and flows downward (footnotes near the body, program-path below).
+  # Word auto-expands the footer upward INTO the body when the footnote block
+  # is tall, so extra footnotes eat body space instead of growing the page
+  # (galley's model). EXCEPTION: an EMPTY section enlarges the body top /
+  # bottom margins by `extra_top` / `extra_bottom` (the relocated chrome
+  # height) so the page body holds only the centred message and the section's
+  # `<w:vAlign>` centres just that message. The header / footer DISTANCES are
+  # still measured from the original margins, so the chrome starts at the
+  # usual offset and flows into the widened margin without overlapping.
   head_line <- as.integer(round(preset@font_size * 28))
   header_dist <- max(360L, margins$top - head_line)
   footer_dist <- margins$bottom
   pg_mar <- sprintf(
     "<w:pgMar w:top=\"%d\" w:right=\"%d\" w:bottom=\"%d\" w:left=\"%d\" w:header=\"%d\" w:footer=\"%d\" w:gutter=\"0\"/>",
-    margins$top,
+    margins$top + as.integer(extra_top),
     margins$right,
-    margins$bottom,
+    margins$bottom + as.integer(extra_bottom),
     margins$left,
     header_dist,
     footer_dist
   )
+  hdr_id <- header_rid %||% (if (!is.null(rid_map)) rid_map$header else NULL)
+  ftr_id <- footer_rid %||% (if (!is.null(rid_map)) rid_map$footer else NULL)
   refs <- character()
-  if (!is.null(rid_map) && !is.null(rid_map$header)) {
+  if (!is.null(hdr_id)) {
     refs <- c(
       refs,
-      sprintf(
-        "<w:headerReference r:id=\"%s\" w:type=\"default\"/>",
-        rid_map$header
-      )
+      sprintf("<w:headerReference r:id=\"%s\" w:type=\"default\"/>", hdr_id)
     )
   }
-  if (!is.null(rid_map) && !is.null(rid_map$footer)) {
+  if (!is.null(ftr_id)) {
     refs <- c(
       refs,
-      sprintf(
-        "<w:footerReference r:id=\"%s\" w:type=\"default\"/>",
-        rid_map$footer
-      )
+      sprintf("<w:footerReference r:id=\"%s\" w:type=\"default\"/>", ftr_id)
     )
+  }
+  # Section vertical alignment (top / center / bottom) centres the lone body
+  # message on an empty page; NULL omits it (every data section).
+  valign_xml <- if (!is.null(vertical_align)) {
+    sprintf(
+      "<w:vAlign w:val=\"%s\"/>",
+      switch(vertical_align, top = "top", bottom = "bottom", "center")
+    )
+  } else {
+    ""
   }
   paste0(
     "<w:sectPr>",
     paste(refs, collapse = ""),
     pg_sz,
     pg_mar,
+    valign_xml,
     "</w:sectPr>"
   )
 }
@@ -2311,7 +2602,10 @@ backend_docx <- function(grid, file) {
 # REVERSE index order so row 1 (body edge) ends up at the bottom of
 # the header zone, closest to the table body — matches the RTF
 # header convention.
-.docx_header_xml <- function(pagehead_ast, preset, cs = NULL) {
+# Page-head band rows, REVERSE index order (row 1 = body edge ends at the
+# bottom of the header zone). Shared by `header1.xml` and the empty-section
+# header part, so the page chrome renders identically in both.
+.docx_pagehead_rows <- function(pagehead_ast, preset, cs = NULL) {
   nrow_band <- .page_band_nrow(pagehead_ast)
   rows <- character()
   for (i in rev(seq_len(nrow_band))) {
@@ -2321,12 +2615,16 @@ backend_docx <- function(grid, file) {
       .docx_chrome_row(row_ast, preset, cs = cs, surface = "pagehead")
     )
   }
+  rows
+}
+
+.docx_header_xml <- function(pagehead_ast, preset, cs = NULL) {
   paste0(
     .docx_xml_prologue,
     "<w:hdr ",
     .docx_ns_decls,
     ">",
-    paste(rows, collapse = ""),
+    paste(.docx_pagehead_rows(pagehead_ast, preset, cs = cs), collapse = ""),
     "</w:hdr>"
   )
 }
@@ -2340,12 +2638,9 @@ backend_docx <- function(grid, file) {
 # pagefoot chrome rows, so the footer reads footnotes-then-program-path
 # top to bottom, repeating on every page. Mirrors RTF's `{\footer}`
 # (footnote lines above the program-path band).
-.docx_footer_xml <- function(
-  pagefoot_ast,
-  preset,
-  footnote_block = "",
-  cs = NULL
-) {
+# Page-foot band rows, FORWARD index order (row 1 = body edge at the top of
+# the footer zone). Shared by `footer1.xml` and the empty-section footer part.
+.docx_pagefoot_rows <- function(pagefoot_ast, preset, cs = NULL) {
   nrow_band <- .page_band_nrow(pagefoot_ast)
   rows <- character()
   for (i in seq_len(nrow_band)) {
@@ -2355,13 +2650,22 @@ backend_docx <- function(grid, file) {
       .docx_chrome_row(row_ast, preset, cs = cs, surface = "pagefoot")
     )
   }
+  rows
+}
+
+.docx_footer_xml <- function(
+  pagefoot_ast,
+  preset,
+  footnote_block = "",
+  cs = NULL
+) {
   paste0(
     .docx_xml_prologue,
     "<w:ftr ",
     .docx_ns_decls,
     ">",
     footnote_block,
-    paste(rows, collapse = ""),
+    paste(.docx_pagefoot_rows(pagefoot_ast, preset, cs = cs), collapse = ""),
     "</w:ftr>"
   )
 }
@@ -2559,7 +2863,12 @@ backend_docx <- function(grid, file) {
 # `[Content_Types].xml` — MIME type map. Defaults cover rels + XML;
 # overrides nail down each document part. Header / footer overrides
 # are conditional on chrome presence.
-.docx_content_types <- function(has_pagehead, has_pagefoot) {
+.docx_content_types <- function(
+  has_pagehead,
+  has_pagefoot,
+  empty_header_names = character(),
+  empty_footer_names = character()
+) {
   overrides <- c(
     "<Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>",
     "<Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>",
@@ -2580,6 +2889,24 @@ backend_docx <- function(grid, file) {
     overrides <- c(
       overrides,
       "<Override PartName=\"/word/footer1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml\"/>"
+    )
+  }
+  for (nm in empty_header_names) {
+    overrides <- c(
+      overrides,
+      sprintf(
+        "<Override PartName=\"/word/%s\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml\"/>",
+        nm
+      )
+    )
+  }
+  for (nm in empty_footer_names) {
+    overrides <- c(
+      overrides,
+      sprintf(
+        "<Override PartName=\"/word/%s\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml\"/>",
+        nm
+      )
     )
   }
   paste0(
@@ -2612,6 +2939,15 @@ backend_docx <- function(grid, file) {
 # `TargetMode="External"` is mandatory on every hyperlink rel.
 # Numeric rIds are assigned by `.docx_rid_map()` so the format
 # matches the convention Word's relationship resolver expects.
+# Deterministic zip name for the i-th (1-based) empty-section header / footer
+# part. The shared page-chrome band claims `header1.xml` / `footer1.xml`, so
+# empty parts start at `02` regardless of whether a shared band is present
+# (a benign gap when it is not). Zero-padded so lexical zip-entry sort equals
+# numeric order. `kind` is "header" or "footer".
+.docx_empty_part_name <- function(kind, i) {
+  sprintf("%s%02d.xml", kind, i + 1L)
+}
+
 .docx_doc_rels <- function(hyperlinks, rid_map) {
   rels <- c(
     sprintf(
@@ -2650,6 +2986,32 @@ backend_docx <- function(grid, file) {
       sprintf(
         "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer\" Target=\"footer1.xml\"/>",
         rid_map$footer
+      )
+    )
+  }
+  # One header / footer relationship per empty section. `%||% character()`
+  # tolerates a rid_map without these keys (the figure path's map), so the
+  # figure delegation `.docx_doc_rels(character(), figure_rid_map)` is
+  # byte-identical.
+  empty_headers <- rid_map$empty_headers %||% character()
+  for (i in seq_along(empty_headers)) {
+    rels <- c(
+      rels,
+      sprintf(
+        "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header\" Target=\"%s\"/>",
+        empty_headers[[i]],
+        .docx_empty_part_name("header", i)
+      )
+    )
+  }
+  empty_footers <- rid_map$empty_footers %||% character()
+  for (i in seq_along(empty_footers)) {
+    rels <- c(
+      rels,
+      sprintf(
+        "<Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer\" Target=\"%s\"/>",
+        empty_footers[[i]],
+        .docx_empty_part_name("footer", i)
       )
     )
   }

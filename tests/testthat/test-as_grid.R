@@ -614,7 +614,29 @@ test_that("zero-row spec stamps is_empty_page + empty metadata on the page", {
   )
   expect_identical(g@metadata$empty_place$halign, "center")
   expect_identical(g@metadata$empty_place$valign, "middle")
-  expect_gt(g@metadata$empty_place$height_in, 0)
+  # Geometry is the margin reservation, not a predicted box height.
+  expect_null(g@metadata$empty_place$height_in)
+  expect_gt(g@metadata$empty_header_twips, 0L)
+  expect_gt(g@metadata$empty_footer_twips, 0L)
+})
+
+test_that("empty-state reserves margin room, not a predicted box height", {
+  # Root-cause fix: the chrome relocates into the page margins and the message
+  # is centred natively (section vAlign / \vertalc / \vfill), so as_grid
+  # publishes the margin reservation (empty_header_twips / empty_footer_twips)
+  # instead of an exact box height. The old box-height prediction was the
+  # recurring phantom-page bug.
+  spec <- tabular(
+    data.frame(x = integer(0L), y = character(0L)),
+    titles = "T",
+    footnotes = "F"
+  )
+  g <- as_grid(spec)
+  expect_gt(g@metadata$empty_header_twips, 0L)
+  expect_gt(g@metadata$empty_footer_twips, 0L)
+  expect_gt(g@metadata$empty_one_row_twips, 0L)
+  expect_null(g@metadata$empty_place$height_twips)
+  expect_null(g@metadata$empty_place$height_in)
 })
 
 test_that("non-empty spec leaves is_empty_page unset", {

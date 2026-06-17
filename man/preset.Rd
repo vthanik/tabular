@@ -278,17 +278,17 @@ style. \verb{<character(1)>} each, defaulting to centre x middle:
 \item \strong{\code{empty_halign}} — \code{"left"}, \code{"center"} \emph{(default)}, or
 \code{"right"}. Horizontal anchor of the message line.
 \item \strong{\code{empty_valign}} — \code{"top"}, \code{"middle"} \emph{(default)}, or
-\code{"bottom"}. Vertical anchor within the content-box — the
-region between the column-header rule and the footnote rule.
+\code{"bottom"}. Vertical anchor of the message within the page
+body, between the top and bottom margins.
 }
 
 \strong{Interaction:} valign is exact on the paged backends
-(RTF / PDF / DOCX), which size the host cell to the content-box
-height; HTML approximates it with a min-height flex box, and
-Markdown, having no page geometry, treats valign as a no-op.
-When a column structure is present the column-header band still
-renders above the message; with every column hidden, only the
-page chrome and the centred message remain.
+(RTF / PDF / DOCX): the table chrome (titles, subgroup banner,
+column-header band) relocates into the page margins, and the
+message is centred by the backend's native section vertical
+alignment. HTML renders the message in flow under the column
+header and Markdown has no page geometry, so both treat valign
+as a no-op.
 
 \strong{Note:} this is the symmetric \code{halign} / \code{valign} placement
 pair, shared with \code{\link[=style]{style()}} and the other \verb{*_halign} /

@@ -897,10 +897,11 @@ backend_html <- function(grid, file) {
 }
 
 # Full-span empty-state message row for a zero-row page that still has a
-# column structure. The host cell's `height` is the body content-box, so
-# the native `vertical-align` centres the message (top/middle/bottom from
-# `empty_valign`); `text-align` carries `empty_halign`. Reuses the
-# `.tabular-empty` muted style shared with the no-column standalone block.
+# column structure. HTML is continuous (no page geometry), so the message
+# rides in flow under the column header -- no predicted box height. `text-align`
+# carries `empty_halign`; `vertical-align` carries `empty_valign` (a no-op in a
+# continuous row, kept for parity). Reuses the `.tabular-empty` muted style
+# shared with the no-column standalone block.
 .render_html_empty_row <- function(
   empty_text_ast,
   empty_place,
@@ -909,22 +910,12 @@ backend_html <- function(grid, file) {
 ) {
   halign <- empty_place$halign %||% "center"
   valign <- empty_place$valign %||% "middle"
-  height_css <- if (
-    !is.null(empty_place) &&
-      is.finite(empty_place$height_in) &&
-      empty_place$height_in > 0
-  ) {
-    sprintf("height:%.2fin;", empty_place$height_in)
-  } else {
-    ""
-  }
   sprintf(
     paste0(
       "<tr><td colspan=\"%d\" class=\"tabular-empty\" ",
-      "style=\"%svertical-align:%s;text-align:%s;\">%s</td></tr>"
+      "style=\"vertical-align:%s;text-align:%s;\">%s</td></tr>"
     ),
     ncols,
-    height_css,
     valign,
     halign,
     .html_empty_message(empty_text_ast, preset)

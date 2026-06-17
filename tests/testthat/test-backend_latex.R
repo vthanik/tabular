@@ -285,6 +285,33 @@ test_that("footnotes render in small font with \\par separators", {
   expect_match(txt, "\\noindent\\small", fixed = TRUE)
 })
 
+test_that(".latex_table_width_in is the rendered table width (no sep double-count)", {
+  # Regression: `.latex_colspec()` already folds the column separation
+  # into each `Q[wd = resolved - sep]`, so the rendered width is exactly
+  # the sum of the resolved widths. Adding the per-column padding on top
+  # double-counted the separation, so the footnote minipage overran the
+  # table (and the printable width) -- the footnote text spilled past the
+  # table-width footnote rule.
+  widths <- c(a = 2, b = 3, c = 1.5)
+  cols <- lapply(widths, function(w) col_spec(width = w))
+  spec <- tabular(data.frame(a = "x", b = "y", c = "z"))
+  preset <- tabular:::.effective_preset(spec)
+  tw <- tabular:::.latex_table_width_in(names(widths), cols, NULL, preset)
+  expect_identical(tw, sum(widths))
+})
+
+test_that("footnote minipage matches the resolved table width", {
+  spec <- tabular(
+    data.frame(a = "x", b = "y"),
+    footnotes = "A footnote that should wrap within the table width only."
+  ) |>
+    cols(a = col_spec(width = 2), b = col_spec(width = 3))
+  txt <- render_tex(spec)
+  # Table width = 2 + 3 = 5in; the footnote minipage must use that width,
+  # not the wider full-text width that overran the table.
+  expect_match(txt, "\\begin{minipage}{5in}", fixed = TRUE)
+})
+
 test_that("no titles -> no \\begin{center}; no footnotes -> no \\small", {
   spec <- tabular(data.frame(x = 1L))
   txt <- render_tex(spec)
@@ -648,35 +675,43 @@ test_that("empty grid (zero pages) renders titles + empty message + footnotes", 
   expect_match(txt, "Nothing here", fixed = TRUE)
 })
 
-test_that("zero-row spec renders chrome + headers + content-box message row", {
+test_that("zero-row spec renders chrome + header-band tblr + vfill-centred message", {
   spec <- tabular(data.frame(x = integer(0L), y = character(0L)))
   txt <- render_tex(spec)
-  expect_match(txt, "\\begin{longtblr}", fixed = TRUE)
+  # The header band rides a plain `tblr`: a header-only `longtblr` has no
+  # body rows and fails to compile (`\end{longtblr}` -> "Missing number").
+  expect_match(txt, "\\begin{tblr}", fixed = TRUE)
+  expect_no_match(txt, "\\begin{longtblr}", fixed = TRUE)
   # Header band still renders above the message.
   expect_match(
     txt,
     "\\SetCell{valign=b} \\textbf{x} & \\SetCell{valign=b} \\textbf{y} \\\\",
     fixed = TRUE
   )
-  # Full-span message at natural height (halign only). A fixed-height
-  # minipage tipped the single message row plus the repeating header / footer
-  # over \textheight and left blank pages, so the message rides its natural
-  # height; empty_valign is a no-op on PDF / LaTeX (RTF / DOCX honour it).
-  expect_match(txt, "No data available to report", fixed = TRUE)
-  expect_match(txt, "\\SetCell[c=2]{c} {\\centering No data", fixed = TRUE)
+  # The message is placed BELOW the table with `\vfill` glue so it centres in
+  # the body without a fixed-height row that overflows onto a second page.
+  expect_match(
+    txt,
+    "{\\centering No data available to report\\par}",
+    fixed = TRUE
+  )
+  expect_match(txt, "\\vfill", fixed = TRUE)
   expect_no_match(txt, "\\begin{minipage}[c][", fixed = TRUE)
 })
 
-test_that("LaTeX empty message honours empty_text + halign (valign is a no-op)", {
+test_that("LaTeX empty message honours empty_text + halign + valign via \\vfill", {
   spec <- tabular(
     data.frame(x = integer(0L), y = character(0L)),
     empty_text = "None."
   ) |>
     preset(empty_halign = "left", empty_valign = "top")
   txt <- render_tex(spec)
-  # halign (left -> \raggedright) applies; the message is natural-height so
-  # there is no fixed-height minipage and valign does not surface.
-  expect_match(txt, "{\\raggedright None.}", fixed = TRUE)
+  # halign (left -> \raggedright) applies; valign is now HONOURED via \vfill
+  # placement (top = message then \vfill, riding the top of the body).
+  expect_match(txt, "{\\raggedright None.\\par}", fixed = TRUE)
+  lines <- strsplit(txt, "\n")[[1L]]
+  i <- grep("None.", lines, fixed = TRUE)[[1L]]
+  expect_match(lines[[i + 1L]], "\\vfill", fixed = TRUE)
   expect_no_match(txt, "\\begin{minipage}[c][", fixed = TRUE)
 })
 
