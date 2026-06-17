@@ -685,8 +685,14 @@ figure <- function(
     ))
   }
 
-  draw_w <- w_user %||% geom$printable_w_in
-  draw_h <- h_user %||% (0.7 * geom$box_h_in)
+  # Default plot size FILLS the available body box: full printable width by
+  # the full box height (printable height minus chrome). An explicit
+  # `width` / `height` overrides either. Filling the box (rather than an
+  # arbitrary fraction of it) gives the largest legible plot and a
+  # predictable default; growing the title / footnote chrome shrinks the
+  # box, and the plot tracks exactly the space that remains.
+  draw_w <- w_user %||% geom$box_w_in
+  draw_h <- h_user %||% geom$box_h_in
   img <- .figure_rasterise(
     plot,
     format = format,

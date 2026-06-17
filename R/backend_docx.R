@@ -277,6 +277,9 @@ backend_docx <- function(grid, file) {
   # content flow (the single shared footer1.xml cannot carry per-page
   # figure footnotes, so they are not routed through it).
   blank_p <- "<w:p/>"
+  # A blank paragraph carrying only the page-break property; used to start
+  # each continuation page on a fresh page (see the loop below).
+  break_p <- "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>"
   pad_above_title <- .docx_blank_count(
     cs,
     "title",
@@ -337,14 +340,20 @@ backend_docx <- function(grid, file) {
       .docx_figure_image_table(pg, drawing),
       foot
     )
-    # Pages after the first start on a fresh page via `<w:pageBreakBefore/>`
-    # on the page's first paragraph, NOT a standalone `<w:br w:type="page"/>`
-    # paragraph. A standalone break paragraph is stranded onto its own blank
-    # page when the preceding exact-height figure block fills the page; the
-    # property form carries no stray line and reliably separates the two
-    # adjacent image tables.
+    # Pages after the first start on a fresh page via a STRUCTURAL
+    # `<w:pageBreakBefore/>` paragraph property, NOT a standalone
+    # `<w:br w:type="page"/>` paragraph (which is stranded onto its own blank
+    # page when the preceding exact-height figure block fills the page). The
+    # page's leading blank pad already exists, so reuse it as the break
+    # carrier (no extra line); a page with no leading pad (titles stripped,
+    # or a title-less page leading with the image table) gets a dedicated
+    # carrier, which also keeps the two adjacent image tables from merging.
     if (i > 1L) {
-      page_parts <- .docx_figure_page_break_before(page_parts)
+      if (length(page_parts) > 0L && identical(page_parts[[1L]], blank_p)) {
+        page_parts[[1L]] <- break_p
+      } else {
+        page_parts <- c(break_p, page_parts)
+      }
     }
     body_parts <- c(body_parts, page_parts)
   }
@@ -446,50 +455,6 @@ backend_docx <- function(grid, file) {
     "</w:p>",
     "</w:tc></w:tr></w:tbl>"
   )
-}
-
-# Force a figure page's content onto a fresh page by setting
-# `<w:pageBreakBefore/>` on its FIRST paragraph (a blank pad, a title, or -
-# for a title-less page - a dedicated carrier paragraph prepended before the
-# image table, since the property is unreliable on a table cell paragraph and
-# two adjacent tables would otherwise merge). The break is spliced AFTER any
-# leading CT_PPr children that must precede it in schema order (pStyle,
-# keepNext, keepLines, framePr, widowControl) so the child order stays valid
-# whatever paragraph leads the page. Returns the page parts with the break
-# applied; used only for pages after the first.
-.docx_figure_page_break_before <- function(page_parts) {
-  brk <- "<w:pageBreakBefore/>"
-  if (length(page_parts) == 0L) {
-    return(paste0("<w:p><w:pPr>", brk, "</w:pPr></w:p>"))
-  }
-  first <- page_parts[[1L]]
-  if (identical(first, "<w:p/>")) {
-    page_parts[[1L]] <- paste0("<w:p><w:pPr>", brk, "</w:pPr></w:p>")
-  } else if (startsWith(first, "<w:p><w:pPr>")) {
-    # Insert after the leading run of must-precede children; for a plain
-    # pPr (e.g. a leading <w:jc/>) the run is empty and the break becomes
-    # the first pPr child, which is also valid order.
-    lead <- paste0(
-      "(?:<w:pStyle[^>]*/>|<w:keepNext/>|<w:keepLines/>",
-      "|<w:framePr[^>]*/>|<w:widowControl[^>]*/?>)*"
-    )
-    page_parts[[1L]] <- sub(
-      paste0("^(<w:p><w:pPr>", lead, ")"),
-      paste0("\\1", brk),
-      first,
-      perl = TRUE
-    )
-  } else if (startsWith(first, "<w:p>")) {
-    page_parts[[1L]] <- sub(
-      "<w:p>",
-      paste0("<w:p><w:pPr>", brk, "</w:pPr>"),
-      first,
-      fixed = TRUE
-    )
-  } else {
-    page_parts <- c(paste0("<w:p><w:pPr>", brk, "</w:pPr></w:p>"), page_parts)
-  }
-  page_parts
 }
 
 # Inches -> EMU (English Metric Units). 1 inch = 914400 EMU.

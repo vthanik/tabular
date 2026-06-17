@@ -154,6 +154,53 @@ backend_rtf <- function(grid, file) {
   )
 }
 
+# Assemble the leading page-chrome of one RTF section, shared by the table
+# panel path and the figure path: the section definition (geometry +
+# repeating header / footer flags) then the optional `{\header}` band and
+# the optional `{\footer}` band (program-path + any repeating footnote
+# lines). The two paths differ only in how they compute `footnote_lines`
+# (a table's carry the `cellx` for a table-width rule; a figure's do not)
+# and in the body that follows, so only this scaffold is shared.
+# `lead_sect` prefixes `\sect` for a non-leading figure section; the table
+# path emits its inter-panel `\sect` from the caller, so it passes FALSE.
+.rtf_chrome_section <- function(
+  preset,
+  cs,
+  colors,
+  fonts,
+  pagehead_ast,
+  pagefoot_ast,
+  has_ph,
+  footer_active,
+  footnote_lines,
+  lead_sect = FALSE
+) {
+  sec_def <- .rtf_section_def(
+    preset,
+    has_pagehead = has_ph,
+    has_pagefoot = footer_active,
+    pagehead_rows = .page_band_nrow(pagehead_ast)
+  )
+  out <- if (lead_sect) paste0("\\sect", sec_def) else sec_def
+  if (has_ph) {
+    out <- c(out, .rtf_header_group(pagehead_ast, preset, cs, colors, fonts))
+  }
+  if (footer_active) {
+    out <- c(
+      out,
+      .rtf_footer_group(
+        pagefoot_ast,
+        footnote_lines,
+        preset,
+        cs,
+        colors,
+        fonts
+      )
+    )
+  }
+  out
+}
+
 # ---------------------------------------------------------------------
 # Figure rendering (metadata$content_type == "figure")
 # ---------------------------------------------------------------------
@@ -216,46 +263,32 @@ backend_rtf <- function(grid, file) {
     # there is no page-foot band.
     has_fn <- length(pg$footnotes_ast) > 0L
     footer_active <- has_pf || has_fn
-    sec_def <- .rtf_section_def(
-      preset,
-      has_pagehead = has_ph,
-      has_pagefoot = footer_active,
-      pagehead_rows = .page_band_nrow(meta$pagehead_ast)
-    )
-    out <- if (i == 1L) sec_def else paste0("\\sect", sec_def)
-    if (has_ph) {
-      out <- c(
-        out,
-        .rtf_header_group(meta$pagehead_ast, preset, cs, colors, fonts)
-      )
-    }
-    if (footer_active) {
-      foot_lines <- if (has_fn) {
-        c(
-          rep(blank_par, pad_body_to_foot),
-          .render_rtf_footnote_block(
-            pg$footnotes_ast,
-            preset,
-            cs,
-            colors,
-            fonts
-          )
-        )
-      } else {
-        character()
-      }
-      out <- c(
-        out,
-        .rtf_footer_group(
-          meta$pagefoot_ast,
-          foot_lines,
+    foot_lines <- if (has_fn) {
+      c(
+        rep(blank_par, pad_body_to_foot),
+        .render_rtf_footnote_block(
+          pg$footnotes_ast,
           preset,
           cs,
           colors,
           fonts
         )
       )
+    } else {
+      character()
     }
+    out <- .rtf_chrome_section(
+      preset,
+      cs,
+      colors,
+      fonts,
+      meta$pagehead_ast,
+      meta$pagefoot_ast,
+      has_ph,
+      footer_active,
+      foot_lines,
+      lead_sect = i > 1L
+    )
     title_block <- .render_rtf_title_block(
       pg$titles_ast,
       preset,
@@ -425,31 +458,18 @@ backend_rtf <- function(grid, file) {
   }
 
   out <- list()
-  out[[length(out) + 1L]] <- .rtf_section_def(
+  out[[length(out) + 1L]] <- .rtf_chrome_section(
     preset,
-    has_pagehead = has_ph,
-    has_pagefoot = footer_active,
-    pagehead_rows = .page_band_nrow(meta$pagehead_ast)
+    cs,
+    colors,
+    fonts,
+    meta$pagehead_ast,
+    meta$pagefoot_ast,
+    has_ph,
+    footer_active,
+    footnote_lines,
+    lead_sect = FALSE
   )
-  if (has_ph) {
-    out[[length(out) + 1L]] <- .rtf_header_group(
-      meta$pagehead_ast,
-      preset,
-      cs,
-      colors,
-      fonts
-    )
-  }
-  if (footer_active) {
-    out[[length(out) + 1L]] <- .rtf_footer_group(
-      meta$pagefoot_ast,
-      footnote_lines,
-      preset,
-      cs,
-      colors,
-      fonts
-    )
-  }
 
   pad_top <- .rtf_blank_count(
     cs,

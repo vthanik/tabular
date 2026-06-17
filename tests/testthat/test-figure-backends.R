@@ -762,34 +762,25 @@ test_that("multi-page meta figure sizes each page's box from its own chrome (#fi
   )
 })
 
-test_that(".docx_figure_page_break_before keeps CT_PPr child order (#fig-blank)", {
-  f <- tabular:::.docx_figure_page_break_before
-  # Blank pad -> a pPr carrying only the break.
-  expect_identical(
-    f(list("<w:p/>"))[[1L]],
-    "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>"
-  )
-  # pStyle must precede pageBreakBefore, which must precede jc.
-  styled <- f(list(paste0(
-    "<w:p><w:pPr><w:pStyle w:val=\"T\"/>",
-    "<w:jc w:val=\"center\"/></w:pPr><w:r/></w:p>"
-  )))[[1L]]
-  expect_match(
-    styled,
-    "<w:pStyle w:val=\"T\"/><w:pageBreakBefore/><w:jc",
+test_that("DOCX continuation page rides a structural pageBreakBefore paragraph (#fig-blank)", {
+  # A titled multi-page figure: each page after the first reuses its leading
+  # blank pad as the break carrier -- a pPr whose only child is
+  # pageBreakBefore, so the child order is trivially valid and no string
+  # surgery on serialized XML is needed. No standalone <w:br type=page>.
+  fig <- figure(list(png_fixture(), png_fixture()), titles = "Fig")
+  od <- withr::local_tempfile(fileext = ".docx")
+  emit(fig, od)
+  ex <- withr::local_tempdir()
+  utils::unzip(od, exdir = ex)
+  doc <- paste(readLines(file.path(ex, "word/document.xml")), collapse = "")
+  expect_true(grepl(
+    "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>",
+    doc,
     fixed = TRUE
+  ))
+  expect_equal(
+    length(gregexpr("<w:pageBreakBefore/>", doc, fixed = TRUE)[[1L]]),
+    1L
   )
-  # keepNext also precedes pageBreakBefore.
-  kn <- f(list(
-    "<w:p><w:pPr><w:keepNext/><w:jc w:val=\"left\"/></w:pPr></w:p>"
-  ))[[1L]]
-  expect_match(kn, "<w:keepNext/><w:pageBreakBefore/><w:jc", fixed = TRUE)
-  # Title-less page (leading table) gets a carrier paragraph; tables stay
-  # separated.
-  carried <- f(list("<w:tbl>X</w:tbl>"))
-  expect_identical(
-    carried[[1L]],
-    "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>"
-  )
-  expect_identical(carried[[2L]], "<w:tbl>X</w:tbl>")
+  expect_false(grepl("w:type=\"page\"", doc, fixed = TRUE))
 })
