@@ -654,4 +654,7 @@ test_that(".wrapped_line_count counts an empty spacer element as one line (#fig-
   expect_equal(tabular:::.wrapped_line_count("", preset, 6), 1L)
   expect_equal(tabular:::.wrapped_line_count(c("a", "", "b"), preset, 6), 3L)
   expect_equal(tabular:::.wrapped_line_count(character(0), preset, 6), 0L)
+  # An embedded blank line ("\n\n") splits to an empty sub-line, which still
+  # counts as one physical row (the inner all-whitespace branch).
+  expect_equal(tabular:::.wrapped_line_count("a\n\nb", preset, 6), 3L)
 })

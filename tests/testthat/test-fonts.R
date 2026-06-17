@@ -292,4 +292,9 @@ test_that(".font_generic_class classifies stacks the same way for both Word back
   docx_cls <- tabular:::.docx_font_class(c("Courier New", "Liberation Mono"))
   expect_identical(rtf_cls, "fmodern")
   expect_identical(docx_cls, "modern")
+  # DOCX maps the serif / sans / unclassified generic classes to OOXML:
+  # serif -> roman, sans and unknown -> swiss (the variable-pitch default).
+  expect_identical(tabular:::.docx_font_class("Times New Roman"), "roman")
+  expect_identical(tabular:::.docx_font_class("Arial"), "swiss")
+  expect_identical(tabular:::.docx_font_class("Wingdings 9000"), "swiss")
 })

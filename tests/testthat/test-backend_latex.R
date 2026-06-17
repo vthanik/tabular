@@ -1944,3 +1944,16 @@ test_that("LaTeX page chrome inherits the body font size (#chrome-font)", {
     fixed = TRUE
   )
 })
+
+test_that("LaTeX italicises a styled chrome surface and sizes a page band (#cov)", {
+  # An italic-styled title exercises the \textit branch of the chrome text
+  # wrapper; a populated pagehead band exercises the body-size baseline the
+  # band directives set (fancyhdr typesets at the class size otherwise).
+  spec <- tabular(data.frame(x = c("1", "2")), titles = "T") |>
+    cols(x = col_spec(label = "X")) |>
+    preset(pagehead = list(left = "Protocol: X")) |>
+    style(.at = cells_title(), italic = TRUE)
+  txt <- render_tex(spec)
+  expect_match(txt, "\\textit{", fixed = TRUE)
+  expect_match(txt, "\\fancyhead", fixed = TRUE)
+})

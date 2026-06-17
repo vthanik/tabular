@@ -314,3 +314,86 @@ test_that("per-subgroup empty emits on every backend without error", {
     format = "latex"
   ))
 })
+
+# ---------------------------------------------------------------------
+# Coverage: the default (no `empty_text`) message branch on every backend,
+# and the all-columns-hidden degenerate (n_panels == 0). (#cov)
+# ---------------------------------------------------------------------
+
+test_that("empty-state default message (no empty_text) renders on every backend (#cov)", {
+  spec <- tabular(
+    data.frame(grp = character(), x = character()),
+    titles = "T"
+  ) |>
+    cols(
+      grp = col_spec(usage = "group", group_display = "header_row"),
+      x = col_spec()
+    )
+  msg <- tabular:::.tabular_empty_text_default
+  for (ext in c(".rtf", ".tex", ".html", ".md")) {
+    expect_match(emit_read(spec, ext), msg, fixed = TRUE)
+  }
+  expect_match(emit_docx_parts(spec)$document, msg, fixed = TRUE)
+})
+
+test_that("empty-state with every column hidden renders a standalone message (#cov)", {
+  # No visible columns -> n_panels == 0 (DOCX bare-paragraph path) and the
+  # n_cols <= 1 single-cell branch (LaTeX); the default message still shows.
+  spec <- tabular(
+    data.frame(a = character(), b = character()),
+    titles = "T"
+  ) |>
+    cols(a = col_spec(visible = FALSE), b = col_spec(visible = FALSE))
+  msg <- tabular:::.tabular_empty_text_default
+  expect_match(emit_read(spec, ".tex"), msg, fixed = TRUE)
+  expect_match(emit_docx_parts(spec)$document, msg, fixed = TRUE)
+})
+
+# ---------------------------------------------------------------------
+# Coverage: the empty-text DEFAULT-literal fallback each backend uses when a
+# grid carries no parsed empty_text_ast (a hand-built grid; emit() always
+# parses one). A single visible column also drives the LaTeX <=1-column
+# single-cell message branch. (#cov)
+# ---------------------------------------------------------------------
+
+test_that("empty-state backends fall back to the default literal when empty_text_ast is NULL (#cov)", {
+  spec <- tabular(data.frame(x = character()), titles = "T") |>
+    cols(x = col_spec())
+  g <- as_grid(spec)
+  m <- g@metadata
+  m["empty_text_ast"] <- list(NULL)
+  g2 <- S7::set_props(g, metadata = m)
+  for (be in c(
+    "backend_rtf",
+    "backend_latex",
+    "backend_html",
+    "backend_md"
+  )) {
+    f <- withr::local_tempfile(fileext = ".out")
+    fn <- get(be, asNamespace("tabular"))
+    expect_no_error(fn(g2, f))
+    expect_match(
+      paste(readLines(f, warn = FALSE), collapse = "\n"),
+      tabular:::.tabular_empty_text_default,
+      fixed = TRUE
+    )
+  }
+  fd <- withr::local_tempfile(fileext = ".docx")
+  expect_no_error(get("backend_docx", asNamespace("tabular"))(g2, fd))
+})
+
+test_that("zero-page grid renders the no-panel degenerate on each paged backend (#cov)", {
+  # A hand-built grid with no pages (no visible columns / no body at all):
+  # backends fall through to the bare-paragraph empty path. emit() never
+  # produces this, but the degenerate guard must hold for hand-built grids.
+  spec <- tabular(data.frame(x = character()), titles = "T") |>
+    cols(x = col_spec())
+  g <- as_grid(spec)
+  m <- g@metadata
+  m["empty_text_ast"] <- list(NULL) # also hit the default-literal fallback
+  g0 <- S7::set_props(g, pages = list(), metadata = m)
+  for (be in c("backend_rtf", "backend_latex", "backend_docx")) {
+    f <- withr::local_tempfile(fileext = ".out")
+    expect_no_error(get(be, asNamespace("tabular"))(g0, f))
+  }
+})

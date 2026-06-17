@@ -557,3 +557,17 @@ test_that("style(halign=, .at=cells_headers()) drives header alignment on every 
   tex <- paste(readLines(ft, warn = FALSE), collapse = "\n")
   expect_true(grepl("halign=r", tex, fixed = TRUE))
 })
+
+test_that(".effective_header_halign centres a decimal-aligned column header (#cov)", {
+  # A decimal column header centres (decimal -> center in the header cascade,
+  # mirroring the body); a plain align passes through.
+  p <- tabular:::.effective_preset(tabular(data.frame(x = 1)))
+  expect_identical(
+    tabular:::.effective_header_halign(col_spec(align = "decimal"), p),
+    "center"
+  )
+  expect_identical(
+    tabular:::.effective_header_halign(col_spec(align = "left"), p),
+    "left"
+  )
+})
