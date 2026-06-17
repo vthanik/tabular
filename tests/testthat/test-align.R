@@ -354,11 +354,11 @@ test_that(".effective_body_halign cascade: predicate > col_spec > NA", {
   )))
 })
 
-test_that(".effective_body_halign treats 'decimal' as right (engine padded)", {
+test_that(".effective_body_halign centres 'decimal' (engine padded to column width)", {
   cs <- col_spec(align = "decimal")
   expect_identical(
     tabular:::.effective_body_halign(style_node(), cs, preset_spec()),
-    "right"
+    "center"
   )
 })
 
@@ -556,4 +556,18 @@ test_that("style(halign=, .at=cells_headers()) drives header alignment on every 
   emit(spec, ft)
   tex <- paste(readLines(ft, warn = FALSE), collapse = "\n")
   expect_true(grepl("halign=r", tex, fixed = TRUE))
+})
+
+test_that(".effective_header_halign centres a decimal-aligned column header (#cov)", {
+  # A decimal column header centres (decimal -> center in the header cascade,
+  # mirroring the body); a plain align passes through.
+  p <- tabular:::.effective_preset(tabular(data.frame(x = 1)))
+  expect_identical(
+    tabular:::.effective_header_halign(col_spec(align = "decimal"), p),
+    "center"
+  )
+  expect_identical(
+    tabular:::.effective_header_halign(col_spec(align = "left"), p),
+    "left"
+  )
 })

@@ -41,8 +41,6 @@
   "footnote_markers",
   "footnote_label",
   "width_mode",
-  "empty_halign",
-  "empty_valign",
   "empty_text",
   "cell_padding",
   "spacing",
@@ -380,33 +378,6 @@
 #'       house style), else the built-in `"No data available to report"`.
 #'       Glue `{}` and [`md()`] / [`html()`] inline formatting are
 #'       honoured, exactly like a title line.
-#'
-#'   *   **`empty_halign`** / **`empty_valign`** — placement of the
-#'       empty-state message within the body content-box when a spec
-#'       resolves to zero data rows. The message *wording* comes from
-#'       `empty_text` (above); these two knobs are the cosmetic
-#'       *placement*, so they ride the preset and cascade with the house
-#'       style. `<character(1)>` each, defaulting to centre x middle:
-#'
-#'       *   **`empty_halign`** — `"left"`, `"center"` *(default)*, or
-#'           `"right"`. Horizontal anchor of the message line.
-#'       *   **`empty_valign`** — `"top"`, `"middle"` *(default)*, or
-#'           `"bottom"`. Vertical anchor within the content-box — the
-#'           region between the column-header rule and the footnote rule.
-#'
-#'       **Interaction:** valign is exact on the paged backends
-#'       (RTF / PDF / DOCX), which size the host cell to the content-box
-#'       height; HTML approximates it with a min-height flex box, and
-#'       Markdown, having no page geometry, treats valign as a no-op.
-#'       When a column structure is present the column-header band still
-#'       renders above the message; with every column hidden, only the
-#'       page chrome and the centred message remain.
-#'
-#'       **Note:** this is the symmetric `halign` / `valign` placement
-#'       pair, shared with [`style()`] and the other `*_halign` /
-#'       `*_valign` alignment keys. It is deliberately distinct from
-#'       `col_spec(align = ...)`, whose extra `"decimal"` mode makes it a
-#'       column-content knob rather than a pure two-axis anchor.
 #'
 #'   *   **`whitespace`** — how significant ASCII spaces in labels and
 #'       cells render. `<character(1)>`. One of:

@@ -93,9 +93,31 @@ test_that("LaTeX figure writes a sidecar and references it", {
   expect_true(file.exists(sidecar))
   expect_true(grepl("\\includegraphics", tex, fixed = TRUE))
   expect_true(grepl(sprintf("%s-fig1.png", stem), tex, fixed = TRUE))
-  expect_true(grepl("][b]{\\linewidth}", tex, fixed = TRUE)) # valign bottom
-  expect_true(grepl("\\raggedright", tex, fixed = TRUE)) # halign left
+  # valign bottom -> a leading \vfill pushes the image down (the image is
+  # placed with flexible \vfill glue, not a fixed-height minipage that could
+  # overflow the page); halign left -> \raggedright.
+  expect_true(grepl("\\vfill", tex, fixed = TRUE))
+  expect_false(grepl("\\begin{minipage}[c][", tex, fixed = TRUE))
+  expect_true(grepl("\\raggedright", tex, fixed = TRUE))
   unlink(sidecar)
+})
+
+test_that("LaTeX figure places the image with \\vfill glue, not a fixed-height box", {
+  # Regression for the per-arm KM PDF overflow (one figure per arm rendered
+  # two physical pages each): a fixed-height minipage reconstructed to almost
+  # exactly \textheight and tipped over. \vfill glue absorbs the slack.
+  top <- withr::local_tempfile(fileext = ".tex")
+  emit(basic_figure(valign = "top"), top)
+  ttop <- paste(readLines(top), collapse = "\n")
+  # valign top -> image then a trailing \vfill (footnotes ride the bottom).
+  expect_match(ttop, "\\par}\n\\vfill", fixed = TRUE)
+  expect_no_match(ttop, "\\begin{minipage}[c][", fixed = TRUE)
+
+  mid <- withr::local_tempfile(fileext = ".tex")
+  emit(basic_figure(valign = "middle"), mid)
+  tmid <- paste(readLines(mid), collapse = "\n")
+  # valign middle -> \vfill image \vfill (image centred, footnotes bottom).
+  expect_match(tmid, "\\vfill\n{\\noindent\\centering", fixed = TRUE)
 })
 
 test_that("LaTeX rasterises a plot input to a vector PDF sidecar", {
@@ -272,7 +294,7 @@ test_that("a mixed multi-page list emits one page per element", {
   expect_equal(length(gregexpr("\\pict", rr, fixed = TRUE)[[1L]]), 2L)
   expect_equal(length(gregexpr("\\sbkpage", rr, fixed = TRUE)[[1L]]), 2L)
 
-  # DOCX: 2 media images, 2 drawings, 1 page break
+  # DOCX: 2 media images, 2 drawings, page break via pageBreakBefore (#fig-blank)
   od <- withr::local_tempfile(fileext = ".docx")
   emit(fig, od)
   ex <- withr::local_tempdir()
@@ -281,10 +303,90 @@ test_that("a mixed multi-page list emits one page per element", {
   expect_equal(sum(grepl("word/media/image", f2)), 2L)
   doc <- paste(readLines(file.path(ex, "word/document.xml")), collapse = "")
   expect_equal(length(gregexpr("<w:drawing>", doc, fixed = TRUE)[[1L]]), 2L)
+  # No standalone page-break paragraph; one pageBreakBefore for the 2nd page.
+  expect_false(grepl("w:type=\"page\"", doc, fixed = TRUE))
   expect_equal(
-    length(gregexpr("w:type=\"page\"", doc, fixed = TRUE)[[1L]]),
+    length(gregexpr("<w:pageBreakBefore/>", doc, fixed = TRUE)[[1L]]),
     1L
   )
+})
+
+# ---------------------------------------------------------------------
+# Phantom blank page per plot (RTF \sect inside table context; DOCX
+# stranded page-break paragraph). The figure block fills the page, so the
+# mandatory closing paragraph spilled onto a fresh page. (#fig-blank)
+# ---------------------------------------------------------------------
+
+test_that("RTF figure exits table context after every image (#fig-blank)", {
+  one <- withr::local_tempfile(fileext = ".rtf")
+  emit(basic_figure(), one)
+  r1 <- paste(readLines(one, warn = FALSE), collapse = "\n")
+  # One \pard\par closing paragraph per plot, emitted right after the image
+  # \row. On the broken code the \row was followed directly by the closing }
+  # (single-plot) or \sect (multi-plot), with zero \pard\par.
+  expect_equal(length(gregexpr("\\pard\\par", r1, fixed = TRUE)[[1L]]), 1L)
+  expect_true(grepl("\\row\n\\pard\\par", r1, fixed = TRUE))
+  expect_false(grepl("\\row\n}", r1, fixed = TRUE))
+
+  three <- withr::local_tempfile(fileext = ".rtf")
+  emit(figure(list(png_fixture(), png_fixture(), png_fixture())), three)
+  r3 <- paste(readLines(three, warn = FALSE), collapse = "\n")
+  expect_equal(length(gregexpr("\\pard\\par", r3, fixed = TRUE)[[1L]]), 3L)
+  expect_false(grepl("\\row\n\\sect", r3, fixed = TRUE))
+})
+
+test_that("DOCX title-less figure separates tables with a break carrier (#fig-blank)", {
+  # No titles -> each page's first part is the image table; the page break
+  # must ride a carrier paragraph so the two tables don't merge and no
+  # standalone <w:br type=page> is emitted.
+  fig <- figure(list(png_fixture(), png_fixture()), footnotes = character())
+  od <- withr::local_tempfile(fileext = ".docx")
+  emit(fig, od)
+  ex <- withr::local_tempdir()
+  utils::unzip(od, exdir = ex)
+  doc <- paste(readLines(file.path(ex, "word/document.xml")), collapse = "")
+  expect_false(grepl("w:type=\"page\"", doc, fixed = TRUE))
+  expect_equal(
+    length(gregexpr("<w:pageBreakBefore/>", doc, fixed = TRUE)[[1L]]),
+    1L
+  )
+  # The carrier paragraph sits between the two image tables (no adjacency).
+  expect_false(grepl("</w:tbl><w:tbl>", doc, fixed = TRUE))
+  # Body does not end on a table: a terminal paragraph precedes <w:sectPr>.
+  expect_true(grepl("</w:tbl><w:p/><w:sectPr", doc, fixed = TRUE))
+})
+
+test_that(".figure_box reserves exactly one closing row (#fig-blank)", {
+  spec <- basic_figure()
+  preset <- tabular:::.effective_preset(spec)
+  one_row <- tabular:::.row_height_twips(preset@font_size)
+  box <- tabular:::.figure_box(spec)
+  # Reconstruct the chrome WITHOUT the closing reserve; the fixed box must be
+  # exactly one row shorter (this row holds the backend's closing paragraph).
+  dims <- tabular:::.paper_dims_twips(preset@paper_size, preset@orientation)
+  mtb <- tabular:::.margin_top_bottom_twips(preset@margins)
+  mlr <- tabular:::.margin_left_right_twips(preset@margins)
+  printable_w <- dims[["width"]] - (mlr[["left"]] + mlr[["right"]])
+  printable_h <- dims[["height"]] - (mtb[["top"]] + mtb[["bottom"]])
+  n_title <- tabular:::.wrapped_line_count(
+    spec@titles,
+    preset,
+    printable_w / 1440
+  )
+  n_foot <- tabular:::.wrapped_line_count(
+    spec@footnotes,
+    preset,
+    printable_w / 1440
+  )
+  gaps <- tabular:::gap_counts(preset@spacing)
+  title_rows <- if (n_title > 0L) {
+    gaps[["above_title"]] + n_title + gaps[["title_to_body"]]
+  } else {
+    0L
+  }
+  foot_rows <- if (n_foot > 0L) gaps[["body_to_footnote"]] + n_foot else 0L
+  no_reserve <- printable_h - (title_rows + foot_rows) * one_row
+  expect_equal(box$box_h_twips, no_reserve - one_row)
 })
 
 test_that("per-page meta tokens resolve into each page's chrome", {
@@ -462,6 +564,38 @@ test_that("PDF figure compiles through xelatex", {
   expect_equal(rawToChar(hdr), "%PDF-")
 })
 
+test_that("figure with a long wrapped footnote still compiles to one page (#26)", {
+  # Regression for the PHUSE acceptance finding: a multi-line wrapped
+  # footnote (and tall figure) used to push a figure onto a second page.
+  # The wrapped-line reservation (.wrapped_line_count) sizes the box so the
+  # whole figure plus chrome fits exactly one physical page. Verified by a
+  # real xelatex compile + page count (poppler's pdfinfo).
+  skip_on_cran()
+  skip_if_not_installed("tinytex")
+  skip_if_not(nzchar(Sys.which("xelatex")) || tinytex::is_tinytex())
+  skip_if_not(nzchar(Sys.which("pdfinfo")))
+  long_foot <- paste(
+    rep(
+      paste(
+        "This is a deliberately long footnote sentence that wraps across",
+        "several physical lines when typeset at the body font size."
+      ),
+      3L
+    ),
+    collapse = " "
+  )
+  fig <- figure(
+    png_fixture(),
+    titles = c("Figure 14.1.1", "Enrollment"),
+    footnotes = long_foot
+  )
+  out <- withr::local_tempfile(fileext = ".pdf")
+  emit(fig, out)
+  info <- system2("pdfinfo", out, stdout = TRUE)
+  pages <- as.integer(sub(".*:\\s*", "", info[grepl("^Pages", info)]))
+  expect_equal(pages, 1L)
+})
+
 # ---------------------------------------------------------------------
 # Inter-section spacing gaps reach figure chrome (Part 1)
 # ---------------------------------------------------------------------
@@ -582,4 +716,71 @@ test_that("the failed-plot error names the offending page index", {
     tabular_error_input = function(e) conditionMessage(e)
   )
   expect_match(err, "figure plot 2")
+})
+
+# ---------------------------------------------------------------------
+# Figure layout guard, per-page meta box, page-break child order
+# (#fig-blank, follow-up hardening)
+# ---------------------------------------------------------------------
+
+test_that("figure aborts with a layout error when chrome exceeds the page (#fig-blank)", {
+  # Chrome taller than the printable area leaves no image box. The figure
+  # path must abort like the table path (.compute_rows_per_page), not feed a
+  # negative box height to the rasteriser (an opaque device crash).
+  fig <- figure(
+    png_fixture(),
+    footnotes = rep("A long footnote line of text.", 30)
+  ) |>
+    preset(font_size = 40)
+  out <- withr::local_tempfile(fileext = ".rtf")
+  expect_error(emit(fig, out), class = "tabular_error_layout")
+})
+
+test_that("multi-page meta figure sizes each page's box from its own chrome (#fig-blank)", {
+  # Per-page meta interpolates each page's footnotes; a page whose footnote
+  # wraps to more lines must get a shorter image box, not share one box sized
+  # from the raw template (which would overflow the longer page).
+  meta <- data.frame(
+    note = c(
+      "Short.",
+      paste(
+        rep("A much longer footnote that wraps across lines.", 6),
+        collapse = " "
+      )
+    ),
+    stringsAsFactors = FALSE
+  )
+  fig <- figure(
+    list(png_fixture(), png_fixture()),
+    footnotes = "{note}",
+    meta = meta
+  )
+  g <- as_grid(fig)
+  expect_lt(
+    g@pages[[2L]]$place$height_twips,
+    g@pages[[1L]]$place$height_twips
+  )
+})
+
+test_that("DOCX continuation page rides a structural pageBreakBefore paragraph (#fig-blank)", {
+  # A titled multi-page figure: each page after the first reuses its leading
+  # blank pad as the break carrier -- a pPr whose only child is
+  # pageBreakBefore, so the child order is trivially valid and no string
+  # surgery on serialized XML is needed. No standalone <w:br type=page>.
+  fig <- figure(list(png_fixture(), png_fixture()), titles = "Fig")
+  od <- withr::local_tempfile(fileext = ".docx")
+  emit(fig, od)
+  ex <- withr::local_tempdir()
+  utils::unzip(od, exdir = ex)
+  doc <- paste(readLines(file.path(ex, "word/document.xml")), collapse = "")
+  expect_true(grepl(
+    "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>",
+    doc,
+    fixed = TRUE
+  ))
+  expect_equal(
+    length(gregexpr("<w:pageBreakBefore/>", doc, fixed = TRUE)[[1L]]),
+    1L
+  )
+  expect_false(grepl("w:type=\"page\"", doc, fixed = TRUE))
 })

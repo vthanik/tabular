@@ -268,33 +268,6 @@ else this preset knob (set once via \code{\link[=set_preset]{set_preset()}} for 
 house style), else the built-in \code{"No data available to report"}.
 Glue \code{{}} and \code{\link[=md]{md()}} / \code{\link[=html]{html()}} inline formatting are
 honoured, exactly like a title line.
-\item \strong{\code{empty_halign}} / \strong{\code{empty_valign}} — placement of the
-empty-state message within the body content-box when a spec
-resolves to zero data rows. The message \emph{wording} comes from
-\code{empty_text} (above); these two knobs are the cosmetic
-\emph{placement}, so they ride the preset and cascade with the house
-style. \verb{<character(1)>} each, defaulting to centre x middle:
-\itemize{
-\item \strong{\code{empty_halign}} — \code{"left"}, \code{"center"} \emph{(default)}, or
-\code{"right"}. Horizontal anchor of the message line.
-\item \strong{\code{empty_valign}} — \code{"top"}, \code{"middle"} \emph{(default)}, or
-\code{"bottom"}. Vertical anchor within the content-box — the
-region between the column-header rule and the footnote rule.
-}
-
-\strong{Interaction:} valign is exact on the paged backends
-(RTF / PDF / DOCX), which size the host cell to the content-box
-height; HTML approximates it with a min-height flex box, and
-Markdown, having no page geometry, treats valign as a no-op.
-When a column structure is present the column-header band still
-renders above the message; with every column hidden, only the
-page chrome and the centred message remain.
-
-\strong{Note:} this is the symmetric \code{halign} / \code{valign} placement
-pair, shared with \code{\link[=style]{style()}} and the other \verb{*_halign} /
-\verb{*_valign} alignment keys. It is deliberately distinct from
-\code{col_spec(align = ...)}, whose extra \code{"decimal"} mode makes it a
-column-content knob rather than a pure two-axis anchor.
 \item \strong{\code{whitespace}} — how significant ASCII spaces in labels and
 cells render. \verb{<character(1)>}. One of:
 \itemize{

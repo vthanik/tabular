@@ -564,6 +564,28 @@ test_that(".compute_rows_per_page(native = TRUE) floors instead of aborting", {
   )
 })
 
+test_that(".content_box reserves wrapped footnote lines (#26)", {
+  # A long footnote wraps to several physical lines at the printable width.
+  # The content box must reserve by rendered lines, not element count, or
+  # the body box (and the empty-state message sized from it) is too tall and
+  # the wrapped overflow runs off the page.
+  long_fn <- paste(
+    "Note: Progression-free survival (PFS) is calculated from the date of",
+    "first dose to the date of disease progression or death, whichever",
+    "occurs first. Estimated with the Kaplan-Meier method; tick marks",
+    "denote censored observations; shaded band is the 95% CI."
+  )
+  short <- tabular(data.frame(x = 1:3), footnotes = "Note: short.")
+  long <- tabular(data.frame(x = 1:3), footnotes = long_fn)
+
+  short_box <- tabular:::.content_box(short)
+  long_box <- tabular:::.content_box(long)
+
+  # The long footnote reserves more chrome rows, so its body box is shorter.
+  expect_gt(long_box$chrome_rows, short_box$chrome_rows)
+  expect_lt(long_box$height_in, short_box$height_in)
+})
+
 test_that("RTF backend emits \\trkeep + \\keepn on non-last body rows", {
   df <- data.frame(grp = c("A", "A", "B"), val = c("1", "2", "3"))
   spec <- tabular(df) |>
@@ -615,4 +637,24 @@ test_that("a non-empty table still splits into horizontal panels", {
   g <- as_grid(tabular(cdisc_saf_demo) |> paginate(panels = 3))
   expect_equal(g@metadata$total_panels, 3L)
   expect_gt(g@metadata$total_pages, 1L)
+})
+
+# ---------------------------------------------------------------------
+# Blank spacer lines count as physical rows (#fig-blank)
+# ---------------------------------------------------------------------
+
+test_that(".wrapped_line_count counts an empty spacer element as one line (#fig-blank)", {
+  # A "" element is a blank display line per the one-element-one-line
+  # contract for titles / footnotes (it renders as an empty paragraph that
+  # occupies a row), so it must reserve a row. The removed .count_lines
+  # dropped it (strsplit("", "\n") is character(0)); reserving zero left the
+  # content box one row too tall and the blank line spilled off the page.
+  spec <- tabular(data.frame(x = 1L))
+  preset <- tabular:::.effective_preset(spec)
+  expect_equal(tabular:::.wrapped_line_count("", preset, 6), 1L)
+  expect_equal(tabular:::.wrapped_line_count(c("a", "", "b"), preset, 6), 3L)
+  expect_equal(tabular:::.wrapped_line_count(character(0), preset, 6), 0L)
+  # An embedded blank line ("\n\n") splits to an empty sub-line, which still
+  # counts as one physical row (the inner all-whitespace branch).
+  expect_equal(tabular:::.wrapped_line_count("a\n\nb", preset, 6), 3L)
 })

@@ -203,6 +203,51 @@
 }
 
 # ---------------------------------------------------------------------
+# Generic-class classifier — single source of truth for Word formats
+# ---------------------------------------------------------------------
+
+# Classify a font specification (a resolved stack, a generic keyword, or
+# an alias-named PS face) into ONE of "mono" / "serif" / "sans". This is
+# the SSOT both Word-family backends consult so RTF and DOCX classify a
+# given `font_family` identically: RTF maps the result to its family
+# class (`mono` -> `\fmodern`, `serif` -> `\froman`, `sans` -> `\fswiss`)
+# and DOCX to its OOXML class (`modern` / `roman` / `swiss`).
+#
+# Resolution: membership in the shared metric-compatible cores wins
+# first (mono before serif before sans, matching the package default),
+# then a literal generic keyword or PS-era alias appearing anywhere in
+# the stack. A spec with no recognisable signal returns NA so each
+# backend applies its own unclassified default (RTF -> `\froman`, the
+# serif fallback; DOCX -> `swiss`) without this helper having to pick a
+# class it cannot justify.
+.font_generic_class <- function(stack) {
+  if (any(stack %in% .stack_mono)) {
+    return("mono")
+  }
+  if (any(stack %in% .stack_serif)) {
+    return("serif")
+  }
+  if (any(stack %in% .stack_sans)) {
+    return("sans")
+  }
+  generics <- vapply(
+    stack,
+    function(f) {
+      if (.is_generic_family(f)) {
+        return(.normalize_generic(f))
+      }
+      .resolve_font_alias(f) %||% NA_character_
+    },
+    character(1L)
+  )
+  generics <- generics[!is.na(generics)]
+  if (length(generics) > 0L) {
+    return(generics[[1L]])
+  }
+  NA_character_
+}
+
+# ---------------------------------------------------------------------
 # CSS name quoting helper used by backend_html
 # ---------------------------------------------------------------------
 

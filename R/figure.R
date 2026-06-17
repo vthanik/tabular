@@ -16,16 +16,17 @@
 #' list to emit one figure per page in a single file.
 #'
 #' @details
-#' **Two-axis placement.** The drawn image is usually smaller than the
-#' body content box (the default `height` is 70% of the printable
-#' height), so both `halign` and `valign` are load-bearing on the paged
-#' backends. They place the image in the content box independently —
-#' horizontally (`left` / `center` / `right`) and vertically
-#' (`top` / `middle` / `bottom`), defaulting to centred on both axes.
-#' Paged backends (RTF / PDF / DOCX) honour `valign` exactly against the
-#' content-box height. The continuous backends (HTML / Markdown) render the
-#' figure responsively, contained to the viewport, so `halign` still
-#' applies but `valign` is a no-op there.
+#' **Two-axis placement.** By default the image FILLS the body content box —
+#' the full printable width by the box height (the printable height minus the
+#' title / footnote chrome). Pass an explicit `width` / `height` smaller than
+#' the box and `halign` / `valign` place the image within the resulting slack,
+#' independently — horizontally (`left` / `center` / `right`) and vertically
+#' (`top` / `middle` / `bottom`), both defaulting to centred. Paged backends
+#' (RTF / PDF / DOCX) honour `valign` exactly against the content-box height;
+#' with the box-filling default there is no vertical slack, so `valign` only
+#' bites once you set a shorter `height`. The continuous backends (HTML /
+#' Markdown) render the figure responsively, contained to the viewport, so
+#' `halign` still applies but `valign` is a no-op there.
 #'
 #' **Format-aware rasterisation.** Plot inputs render to vector PDF for
 #' `.pdf` / `.tex` targets and to PNG at `dpi` for every other backend;
@@ -63,8 +64,9 @@
 #'   `NULL` fills the full printable width.
 #'
 #' @param height *Drawn image height in inches.* `<numeric(1)> | NULL`.
-#'   `NULL` uses 70% of the printable height, leaving the image centred
-#'   in the body region.
+#'   `NULL` fills the body box height (the printable height minus the title
+#'   and footnote chrome). Set a smaller value to leave vertical slack for
+#'   `valign` to place the image within.
 #'
 #' @param halign *Horizontal placement in the content box.*
 #'   `<character(1)>`. One of:
@@ -433,16 +435,6 @@ figure <- function(
   n_pages <- length(plots)
 
   pages <- lapply(seq_len(n_pages), function(i) {
-    img <- .resolve_figure_page(
-      plot = plots[[i]],
-      format = format,
-      geom = geom,
-      w_user = spec@width,
-      h_user = spec@height,
-      dpi = spec@dpi,
-      index = i,
-      call = call
-    )
     page_ast <- if (has_meta) {
       .figure_page_chrome_ast(
         spec@titles,
@@ -453,6 +445,53 @@ figure <- function(
     } else {
       list(titles_ast = base_titles_ast, footnotes_ast = base_footnotes_ast)
     }
+    # A `meta` figure interpolates each page's chrome from its own row, so
+    # a page's titles / footnotes can wrap to a different height than the
+    # raw template `.figure_box(spec)` measured. Re-size the box (and thus
+    # the exact-height image row + the image draw size) from THIS page's
+    # interpolated text so a longer-footnote page does not overflow. Without
+    # `meta`, every page shares the one base box.
+    page_geom <- if (has_meta) {
+      .figure_box(
+        spec,
+        titles = vapply(
+          page_ast$titles_ast,
+          .ast_flatten_text,
+          character(1L)
+        ),
+        footnotes = vapply(
+          page_ast$footnotes_ast,
+          .ast_flatten_text,
+          character(1L)
+        )
+      )
+    } else {
+      geom
+    }
+    page_place <- if (has_meta) {
+      .place_block(
+        spec@halign,
+        spec@valign,
+        list(
+          width_in = page_geom$box_w_in,
+          height_in = page_geom$box_h_in,
+          width_twips = page_geom$printable_w_twips,
+          height_twips = page_geom$box_h_twips
+        )
+      )
+    } else {
+      place
+    }
+    img <- .resolve_figure_page(
+      plot = plots[[i]],
+      format = format,
+      geom = page_geom,
+      w_user = spec@width,
+      h_user = spec@height,
+      dpi = spec@dpi,
+      index = i,
+      call = call
+    )
     list(
       page_index = i,
       panel_index = 1L,
@@ -464,7 +503,7 @@ figure <- function(
       draw_h_in = img$draw_h_in,
       titles_ast = page_ast$titles_ast,
       footnotes_ast = page_ast$footnotes_ast,
-      place = place
+      place = page_place
     )
   })
 
@@ -528,15 +567,36 @@ figure <- function(
 # (printable height minus the title / footnote chrome rows; a figure has
 # NO column-header band, the one structural difference from .content_box).
 # Twips with inch mirrors for device sizing.
-.figure_box <- function(spec) {
+#
+# `titles` / `footnotes` default to the spec's, but a multi-page `meta`
+# figure passes each page's INTERPOLATED chrome text so the box is sized
+# per page: a page whose `{token}`-expanded footnote wraps to more lines
+# than the raw template gets a correspondingly shorter image box, instead
+# of every page sharing one box sized from the un-interpolated template
+# (which would overflow the longer pages).
+.figure_box <- function(
+  spec,
+  titles = spec@titles,
+  footnotes = spec@footnotes
+) {
   preset <- .effective_preset(spec)
   dims <- .paper_dims_twips(preset@paper_size, preset@orientation)
   mtb <- .margin_top_bottom_twips(preset@margins)
   mlr <- .margin_left_right_twips(preset@margins)
   one_row <- .row_height_twips(preset@font_size)
 
-  n_title <- .count_lines(spec@titles)
-  n_foot <- .count_lines(spec@footnotes)
+  printable_w <- dims[["width"]] - (mlr[["left"]] + mlr[["right"]])
+  printable_h <- dims[["height"]] - (mtb[["top"]] + mtb[["bottom"]])
+
+  # Count the PHYSICAL (wrapped) lines each chrome block occupies at the
+  # printable width, not just the element count: a long footnote or title
+  # wraps to several lines, and reserving only one row for it leaves the
+  # body box too tall, so the wrapped overflow pushes a DOCX figure
+  # footnote (which flows in the body, not the page footer) onto a second
+  # page. A short title / footnote wraps to one line, so a default figure's
+  # box height is unchanged.
+  n_title <- .wrapped_line_count(titles, preset, printable_w / 1440)
+  n_foot <- .wrapped_line_count(footnotes, preset, printable_w / 1440)
   # Reserve exactly the blank rows the backends emit around each chrome
   # block, from the spacing gaps (title: above + below; footnote: above).
   # The defaults (above_title 1, title_to_body 1, body_to_footnote 0) sum
@@ -553,11 +613,34 @@ figure <- function(
   } else {
     0L
   }
-  chrome_rows <- title_rows + foot_rows
+  # Every paged backend must emit ONE paragraph after the figure's
+  # exact-height image table (Word requires a paragraph after a table; RTF
+  # `\pard\par`, DOCX a terminal / continuation paragraph). The table path
+  # has natural slack from non-exact-height rows; the figure's exact-height
+  # row has none, so without reserving this row the mandatory closing
+  # paragraph spills onto a fresh page. Reserve it unconditionally (a
+  # footnote-less figure still gets a closing paragraph).
+  closing_rows <- 1L
+  chrome_rows <- title_rows + foot_rows + closing_rows
 
-  printable_w <- dims[["width"]] - (mlr[["left"]] + mlr[["right"]])
-  printable_h <- dims[["height"]] - (mtb[["top"]] + mtb[["bottom"]])
   box_h <- printable_h - chrome_rows * one_row
+
+  # Chrome alone exceeds the printable height: no image box remains. Abort
+  # with a layout error (mirrors .compute_rows_per_page for tables) rather
+  # than letting a non-positive box_h reach the rasteriser as a negative
+  # device size, which dies with an opaque "invalid device size" crash.
+  if (box_h <= 0L) {
+    usable_rows <- as.integer(printable_h %/% one_row)
+    cli::cli_abort(
+      c(
+        "Page chrome is taller than the printable area.",
+        "x" = "The figure's titles and footnotes need {chrome_rows} row{?s}; the page holds {usable_rows}.",
+        "i" = "Reduce title or footnote lines, shrink {.code preset(font_size = ...)}, or widen the page or margins."
+      ),
+      class = "tabular_error_layout",
+      call = rlang::caller_env()
+    )
+  }
 
   list(
     printable_w_twips = printable_w,
@@ -604,8 +687,14 @@ figure <- function(
     ))
   }
 
-  draw_w <- w_user %||% geom$printable_w_in
-  draw_h <- h_user %||% (0.7 * geom$box_h_in)
+  # Default plot size FILLS the available body box: full printable width by
+  # the full box height (printable height minus chrome). An explicit
+  # `width` / `height` overrides either. Filling the box (rather than an
+  # arbitrary fraction of it) gives the largest legible plot and a
+  # predictable default; growing the title / footnote chrome shrinks the
+  # box, and the plot tracks exactly the space that remains.
+  draw_w <- w_user %||% geom$box_w_in
+  draw_h <- h_user %||% geom$box_h_in
   img <- .figure_rasterise(
     plot,
     format = format,

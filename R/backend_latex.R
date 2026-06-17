@@ -89,7 +89,9 @@ backend_latex <- function(grid, file) {
     border_color_defs = .latex_border_color_definitions(meta),
     cs = meta$chrome_style %||% chrome_style()
   )
-  begin <- "\\begin{document}"
+  # The body font size is set right after \begin{document} (never in the
+  # preamble, where \begin{document}'s implicit \normalsize discards it).
+  begin <- c("\\begin{document}", .latex_body_font_size_line(meta$preset))
   end <- "\\end{document}"
 
   if (total == 0L) {
@@ -209,25 +211,34 @@ backend_latex <- function(grid, file) {
   .figure_inform_sidecars(out_dir, sidecars, ".tex")
   c(
     preamble,
+    # Body font size after \begin{document}, never in the preamble (the
+    # implicit \normalsize there would discard it, leaving the chrome at the
+    # documentclass size and overflowing the figure box).
     "\\begin{document}",
+    .latex_body_font_size_line(meta$preset),
     unlist(body, use.names = FALSE),
     "\\end{document}"
   )
 }
 
-# One figure image as a fixed-height minipage holding `\includegraphics`.
-# minipage inner position (t/c/b) = valign; the alignment command
-# (\raggedright / \centering / \raggedleft) = halign. keepaspectratio is a
-# safety net (the drawn dims already match the image aspect).
+# One figure image placed in the page's body with `\vfill` glue.
+#
+# valign maps to the glue around the image: top = image then \vfill (image
+# rides the top, footnotes pushed to the page bottom); middle = \vfill image
+# \vfill (image centred, footnotes at the bottom); bottom = \vfill image
+# (image hugs the bottom). halign is the alignment command
+# (\raggedright / \centering / \raggedleft). keepaspectratio is a safety net
+# (the drawn dims already match the image aspect).
+#
+# Why \vfill, not a fixed-height `\begin{minipage}[c][<box>in][c]`: the
+# row-based box height reconstructs to almost exactly `\textheight`, but it
+# cannot match LaTeX's true vertical metrics (minipage glue, the running
+# header / footer band heights), so it tips just over the page and spills the
+# figure footnotes onto a second page (one KM per arm rendered 2 pages, not
+# 1). `\vfill` is shrinkable glue: it absorbs whatever slack remains, so the
+# figure can never overflow. Returns a character vector of body lines.
 .latex_figure_image_block <- function(pg, sidecar_name) {
   place <- pg$place %||% list(halign = "center", valign = "middle")
-  vpos <- switch(
-    place$valign %||% "middle",
-    top = "t",
-    middle = "c",
-    bottom = "b",
-    "c"
-  )
   hcmd <- switch(
     place$halign %||% "center",
     left = "\\raggedright ",
@@ -235,23 +246,18 @@ backend_latex <- function(grid, file) {
     right = "\\raggedleft ",
     "\\centering "
   )
-  box_in <- if (is.finite(place$height_in) && place$height_in > 0) {
-    place$height_in
-  } else {
-    pg$draw_h_in
-  }
   inc <- sprintf(
     "\\includegraphics[width=%.2fin,height=%.2fin,keepaspectratio]{%s}",
     pg$draw_w_in,
     pg$draw_h_in,
     sidecar_name
   )
-  sprintf(
-    "{\\noindent\\begin{minipage}[c][%.2fin][%s]{\\linewidth}%s%s\\end{minipage}}",
-    box_in,
-    vpos,
-    hcmd,
-    inc
+  img <- sprintf("{\\noindent%s%s\\par}", hcmd, inc)
+  switch(
+    place$valign %||% "middle",
+    top = c(img, "\\vfill"),
+    bottom = c("\\vfill", img),
+    c("\\vfill", img, "\\vfill")
   )
 }
 
@@ -262,23 +268,15 @@ backend_latex <- function(grid, file) {
 .render_latex_empty <- function(grid) {
   meta <- grid@metadata
   cs <- meta$chrome_style %||% chrome_style()
-  halign <- meta$empty_place$halign %||% "center"
-  hcmd <- switch(
-    halign,
-    left = "\\raggedright ",
-    center = "\\centering ",
-    right = "\\raggedleft ",
-    "\\centering "
-  )
   msg <- if (is.null(meta$empty_text_ast)) {
-    "No data available to report"
+    .tabular_empty_text_default
   } else {
     .render_latex_inline(meta$empty_text_ast)
   }
   c(
     .render_latex_title_block(meta$titles_ast, preset = meta$preset, cs = cs),
     "",
-    paste0("{", hcmd, msg, "}"),
+    paste0("{\\centering ", msg, "}"),
     "",
     .render_latex_footnote_block(
       meta$footnotes_ast,
@@ -354,6 +352,8 @@ backend_latex <- function(grid, file) {
 
   is_cont_panel <- isTRUE((first$panel_index %||% 1L) > 1L)
   continuation <- first$continuation %||% character()
+  body <- .latex_concat_panel_body(panel_pages)
+  tbl <- .render_latex_table(first, meta, cs, body = body)
 
   head_tpl <- .latex_head_template(
     meta$titles_ast,
@@ -375,9 +375,7 @@ backend_latex <- function(grid, file) {
     cs = cs,
     gap_above = .meta_gap(meta, "body_to_footnote", 0L)
   )
-
-  body <- .latex_concat_panel_body(panel_pages)
-  c(head_tpl, foot_tpl, .render_latex_table(first, meta, cs, body = body))
+  c(head_tpl, foot_tpl, tbl)
 }
 
 # Warn once when a table is long enough that tabularray's whole-table
@@ -385,6 +383,23 @@ backend_latex <- function(grid, file) {
 # the LaTeX/PDF compile slow or memory-hungry. Threshold is deliberately
 # conservative; the message points at the chunking escape hatches.
 .latex_long_table_threshold <- 1000L
+
+# LaTeX standard-class (article / report / book) default body point size.
+# These classes only accept 10 / 11 / 12pt as the class option, and 11pt is
+# the article default; we use it as the numeric fallback whenever a preset's
+# resolved `font_size` is unavailable or non-finite. A single named source so
+# the documentclass default is never a bare literal scattered across the file.
+.latex_default_class_pt <- 11
+
+# Slack added above the stacked baselines of a multi-row running header so
+# fancyhdr's `\headheight` clears the band without its "headheight too small"
+# warning. Expressed in points; the per-row height itself derives from the
+# preset font size and `.tabular_baseline_ratio` (see `.latex_pagestyle_block`).
+.latex_headheight_pad_pt <- 2
+
+# LaTeX's default `\headheight` (12pt). Floor for the running-header zone so a
+# small body font never shrinks the header band below the class default.
+.latex_headheight_floor_pt <- 12
 
 .latex_warn_long_table <- function(nrow_total) {
   n <- suppressWarnings(as.integer(nrow_total))
@@ -755,15 +770,23 @@ backend_latex <- function(grid, file) {
   if (anyNA(widths)) {
     return(NA_real_)
   }
-  # Per-column horizontal padding (leftsep + rightsep) needs a preset to
-  # resolve; a headless caller without one contributes zero padding.
-  lr <- if (is_preset_spec(preset)) {
-    .resolve_cell_padding_lr(cells_style, preset)
-  } else {
-    c(0, 0)
-  }
-  pad_in <- length(col_names_vis) * (lr[[1L]] + lr[[2L]]) / 72.27
-  sum(widths) + pad_in
+  # The rendered table width is the sum of each column's FOOTPRINT, which
+  # must mirror `.latex_col_token` exactly: `wd = max(width - sep, .min)`
+  # and the footprint is `wd + sep`. When `width - sep >= .min` the
+  # footprint is exactly `width` (so a normal table is still `sum(widths)`),
+  # but a narrow pinned column hits the `.min_auto_width_in` floor, making
+  # its footprint `.min + sep > width`. Summing raw `widths` there
+  # under-measured the table, so the footnote rule rendered NARROWER than
+  # the table. Use the same separation the colspec uses (from the body
+  # cells_style). The branch (not `width - sep + sep`) keeps the unfloored
+  # footprint bit-identical to `width`.
+  sep_in <- .latex_colsep_in(cells_style, preset)
+  footprints <- ifelse(
+    widths - sep_in >= .min_auto_width_in,
+    widths,
+    .min_auto_width_in + sep_in
+  )
+  sum(footprints)
 }
 
 # ---------------------------------------------------------------------
@@ -776,7 +799,6 @@ backend_latex <- function(grid, file) {
 .render_latex_table <- function(page, meta, cs = NULL, body = NULL) {
   col_names_vis <- page$col_names
   cols <- meta$cols %||% list()
-  colspec <- .latex_colspec(col_names_vis, cols)
 
   # Body source: the concatenated panel body when the panel renderer
   # supplies one (native pagination), else the single page's slices
@@ -792,6 +814,19 @@ backend_latex <- function(grid, file) {
       host_col = page$host_col,
       keep_with_next = page$keep_with_next
     )
+
+  # Column separation is derived from the BODY cells_style (per-cell
+  # `style(.at = cells_body(), padding = ...)` overrides win, else the
+  # preset default), NOT the chrome style `cs`: the engine folds body
+  # padding into each resolved column width, so `wd` must subtract the
+  # SAME separation the table-width / footnote-rule calc adds back, or the
+  # rule mismatches the table. Passing `cs` here read all-NA padding and
+  # silently ignored body padding overrides.
+  colspec <- .latex_colspec(
+    col_names_vis,
+    cols,
+    sep_in = .latex_colsep_in(src$cells_style, meta$preset)
+  )
 
   # Per-page BigN: one longtblr per subgroup, so read that subgroup's
   # SUFFIXED bands + leaf labels from the page descriptor via the shared
@@ -867,17 +902,14 @@ backend_latex <- function(grid, file) {
   # Banner block (blank, banner, blank) leads the rowhead, then the band.
   header_rules <- c(banner_block, band_rows, label_row)
   body_rows <- if (isTRUE(page$is_empty_page)) {
-    # Zero-row page: header band above is intact; the body is one
-    # full-span message placed in the content-box (see
-    # `.render_latex_empty_row`). Empty `col_names_vis` (every column
-    # hidden) yields character(), the rare degenerate the zero-page
-    # `.render_latex_empty` path covers instead.
-    .render_latex_empty_row(
-      meta$empty_text_ast,
-      meta$empty_place,
-      length(col_names_vis),
-      meta$preset
-    )
+    # Zero-row page: the body is ONE full-span, horizontally centred message
+    # row, so the empty page renders as a normal short table -- the title
+    # rides the head template, the message sits where the first data row
+    # would, and the footnote trails via the foot template. Being a real body
+    # row makes `nrow_body = 1`, so the normal `outer_bottom` directive closes
+    # the data region below it. A natural-height single row + trailing footnote
+    # cannot overflow, so no phantom page.
+    .latex_empty_message_row(meta, length(col_names_vis))
   } else {
     .render_latex_body_rows(
       src$cells_text,
@@ -942,6 +974,29 @@ backend_latex <- function(grid, file) {
     body_rows,
     "\\end{longtblr}"
   )
+}
+
+# One full-span, horizontally centred empty-state message row for a zero-row
+# page, occupying the body slot of the normal `longtblr`. `\SetCell[c=N]{c}`
+# spans every visible column; trailing empty `&`-cells keep tabularray's
+# column count consistent (mirrors `.render_latex_subgroup_banner_row`). It is
+# a real body row, so the table's `outer_bottom` directive closes the data
+# region below it.
+.latex_empty_message_row <- function(meta, n_cols) {
+  msg <- if (is.null(meta$empty_text_ast)) {
+    .tabular_empty_text_default
+  } else {
+    .render_latex_inline(meta$empty_text_ast)
+  }
+  if (n_cols <= 1L) {
+    sprintf("\\SetCell{halign=c} %s \\\\", msg)
+  } else {
+    paste0(
+      sprintf("\\SetCell[c=%d]{c} %s", n_cols, msg),
+      paste(rep(" &", n_cols - 1L), collapse = ""),
+      " \\\\"
+    )
+  }
 }
 
 # Translate the resolved body-region triples (one slot per side on
@@ -1176,67 +1231,6 @@ backend_latex <- function(grid, file) {
   row
 }
 
-# Full-span empty-state message row for a zero-row page. A single
-# `\SetCell[c=N]` cell holds a fixed-height `minipage` whose inner
-# vertical position (`t`/`c`/`b` from empty_valign) centres the message
-# in the body content-box -- exact valign on the paged LaTeX/PDF medium.
-# The horizontal anchor (empty_halign) rides a `\centering` /
-# `\raggedright` / `\raggedleft` inside the minipage.
-.render_latex_empty_row <- function(
-  empty_text_ast,
-  empty_place,
-  ncols,
-  preset = NULL
-) {
-  if (ncols < 1L) {
-    return(character())
-  }
-  halign <- empty_place$halign %||% "center"
-  valign <- empty_place$valign %||% "middle"
-  box_in <- if (
-    !is.null(empty_place) &&
-      is.finite(empty_place$height_in) &&
-      empty_place$height_in > 0
-  ) {
-    empty_place$height_in
-  } else {
-    NA_real_
-  }
-  vpos <- switch(valign, top = "t", middle = "c", bottom = "b", "c")
-  hcmd <- switch(
-    halign,
-    left = "\\raggedright ",
-    center = "\\centering ",
-    right = "\\raggedleft ",
-    "\\centering "
-  )
-  msg <- if (is.null(empty_text_ast)) {
-    "No data available to report"
-  } else {
-    .render_latex_inline(empty_text_ast)
-  }
-  inner <- if (!is.na(box_in)) {
-    sprintf(
-      "{\\begin{minipage}[c][%.2fin][%s]{\\linewidth}%s%s\\end{minipage}}",
-      box_in,
-      vpos,
-      hcmd,
-      msg
-    )
-  } else {
-    paste0("{", hcmd, msg, "}")
-  }
-  if (ncols == 1L) {
-    sprintf("\\SetCell{halign=c} %s \\\\", inner)
-  } else {
-    paste0(
-      sprintf("\\SetCell[c=%d]{c} %s", ncols, inner),
-      paste(rep(" &", ncols - 1L), collapse = ""),
-      " \\\\"
-    )
-  }
-}
-
 # Resolve a chrome border region into a tabularray border-spec
 # fragment (e.g. `"0.5pt, solid"`) for use inside an outer
 # `hline{i}={range}{spec}` directive. No user override -> the
@@ -1312,24 +1306,39 @@ backend_latex <- function(grid, file) {
 # Fixed and proportional columns coexist cleanly — tabularray
 # resolves proportional widths against the leftover space after
 # fixed columns are claimed.
-.latex_colspec <- function(col_names_vis, cols) {
+.latex_colspec <- function(col_names_vis, cols, sep_in = 0) {
   toks <- vapply(
     col_names_vis,
     function(nm) {
       cs <- cols[[nm]]
       align <- if (is_col_spec(cs)) cs@align else NA_character_
       width <- if (is_col_spec(cs)) cs@width else NA_real_
-      .latex_col_token(align, width)
+      .latex_col_token(align, width, sep_in)
     },
     character(1L)
   )
   paste(toks, collapse = " ")
 }
 
+# Per-column horizontal separation in inches: tabularray adds
+# `leftsep + rightsep` OUTSIDE each column's `wd`, so the rendered column
+# is `wd + sep`. The engine resolves every width as the TOTAL column width
+# (auto-measure includes padding; DOCX/RTF set the cell width to it), so the
+# LaTeX `wd` must be the resolved width MINUS this separation or the table
+# renders `n_cols * sep` wider than the printable area and bleeds into the
+# right margin. Zero without a preset (headless callers stay byte-stable).
+.latex_colsep_in <- function(cells_style, preset) {
+  if (!is_preset_spec(preset)) {
+    return(0)
+  }
+  lr <- .resolve_cell_padding_lr(cells_style, preset)
+  (lr[[1L]] + lr[[2L]]) / 72.27
+}
+
 # Compose one tabularray column token from an align value and a
 # width value. Routes percent widths to the proportional `X[...]`
 # column type and fixed dimensions to `Q[<align>,wd=<dim>]`.
-.latex_col_token <- function(align, width) {
+.latex_col_token <- function(align, width, sep_in = 0) {
   align_letter <- .latex_align_letter(align)
   # Engine resolves every width to numeric inches (auto / pct /
   # dim string -> inches). Defensive fallback for the rare case
@@ -1338,7 +1347,11 @@ backend_latex <- function(grid, file) {
   if (!is.numeric(width) || length(width) != 1L || is.na(width)) {
     return(sprintf("Q[%s]", align_letter))
   }
-  sprintf("Q[%s,wd=%fin]", align_letter, width)
+  # Resolved width is the total column width; tabularray adds the
+  # separation outside `wd`, so subtract it (floored at the minimum
+  # sliver) to keep the rendered column at the resolved width.
+  wd <- max(width - sep_in, .min_auto_width_in)
+  sprintf("Q[%s,wd=%fin]", align_letter, wd)
 }
 
 # Map an align value to the single-letter tabularray code.
@@ -1351,7 +1364,10 @@ backend_latex <- function(grid, file) {
     left = "l",
     center = "c",
     right = "r",
-    decimal = "r",
+    # decimal: the engine_decimal phase pads every cell to a uniform
+    # column width with NBSP, so the block centres under the (centred)
+    # decimal header rather than hugging the right edge (HTML parity).
+    decimal = "c",
     "l"
   )
 }
@@ -1370,7 +1386,7 @@ backend_latex <- function(grid, file) {
     left = "Q[l]",
     center = "Q[c]",
     right = "Q[r]",
-    decimal = "Q[r]",
+    decimal = "Q[c]",
     "Q[l]"
   )
 }
@@ -1482,7 +1498,11 @@ backend_latex <- function(grid, file) {
     if (is.na(run$value)) {
       cells <- c(cells, rep("", span))
     } else {
-      lbl <- .latex_wrap_text_props(.latex_escape(run$value), surface_node)
+      lbl <- .latex_wrap_text_props(
+        .latex_escape(run$value),
+        surface_node,
+        bold_default = TRUE
+      )
       # Multi-line spanner labels wrap so the `\\` breaks the line inside
       # the (merged) cell rather than ending the band row.
       lbl <- .latex_linebreak_wrap(lbl, halign = "center", valign = "bottom")
@@ -1528,7 +1548,7 @@ backend_latex <- function(grid, file) {
       } else {
         .render_latex_inline(ast, preserve = ws_preserve)
       }
-      body <- .latex_wrap_text_props(raw, surface_node)
+      body <- .latex_wrap_text_props(raw, surface_node, bold_default = TRUE)
       col <- cols[[nm]]
       # Valign cascade (HTML parity): col_spec > surface > preset, then a
       # bottom default so a wrapped multi-line header sits flush with
@@ -1860,13 +1880,23 @@ backend_latex <- function(grid, file) {
 #   background  \colorbox[HTML]{RRGGBB}{...}            (xcolor)
 #   font_family {\fontfamily{ff}\selectfont ...}        (group-scoped)
 #   font_size   {\fontsize{pt}{1.2pt}\selectfont ...}   (group-scoped)
-.latex_wrap_text_props <- function(text, style) {
-  if (!is_style_node(style) || !is.character(text) || length(text) != 1L) {
+.latex_wrap_text_props <- function(text, style, bold_default = FALSE) {
+  if (!is.character(text) || length(text) != 1L) {
     return(text)
   }
+  # Bold is resolved BEFORE the style-node guard so a `bold_default = TRUE`
+  # surface (column headers, header bands) bolds even when no chrome style
+  # node is present, mirroring the title block's `{\bfseries ...}` default.
+  # With the default `bold_default = FALSE` the resolution collapses to the
+  # original `isTRUE(style@bold)`, so body cells stay byte-identical.
+  bold <- if (is_style_node(style)) style@bold else NA
+  do_bold <- if (bold_default) !isTRUE(bold == FALSE) else isTRUE(bold)
   out <- text
-  if (isTRUE(style@bold)) {
+  if (do_bold) {
     out <- paste0("\\textbf{", out, "}")
+  }
+  if (!is_style_node(style)) {
+    return(out)
   }
   if (isTRUE(style@italic)) {
     out <- paste0("\\textit{", out, "}")
@@ -1879,7 +1909,7 @@ backend_latex <- function(grid, file) {
     out <- sprintf(
       "{\\fontsize{%s}{%s}\\selectfont %s}",
       format(fs, trim = TRUE),
-      format(fs * 1.2, trim = TRUE),
+      format(fs * .tabular_baseline_ratio, trim = TRUE),
       out
     )
   }
@@ -2358,22 +2388,56 @@ backend_latex <- function(grid, file) {
   # overflow the default header zone.
   if (ph_pop) {
     nrow_h <- .page_band_nrow(pagehead_ast)
-    headheight_pt <- max(12, (preset@font_size + 4) * nrow_h)
+    # Header zone height: the stacked single-line baselines of the band
+    # (font_size * baseline_ratio per row) plus a small slack, floored at
+    # LaTeX's default headheight so a small font never undershoots it.
+    headheight_pt <- max(
+      .latex_headheight_floor_pt,
+      nrow_h *
+        preset@font_size *
+        .tabular_baseline_ratio +
+        .latex_headheight_pad_pt
+    )
+    # Tighten the header band -> title gap to one blank line
+    # (font_size * baseline_ratio), matching the engine's above_title = 1
+    # reservation and DOCX single-line spacing. The article class default
+    # \headsep (~25pt) otherwise pushes the title far below the header.
+    headsep_pt <- preset@font_size * .tabular_baseline_ratio
     body <- c(
       body,
-      sprintf("\\setlength{\\headheight}{%dpt}", as.integer(headheight_pt))
+      sprintf("\\setlength{\\headheight}{%dpt}", as.integer(headheight_pt)),
+      sprintf("\\setlength{\\headsep}{%gpt}", headsep_pt)
+    )
+  }
+  if (pf_pop) {
+    # Symmetric tightening for the running footer band: one blank line
+    # between the body and the footer (derived, not a class default).
+    footskip_pt <- preset@font_size * .tabular_baseline_ratio
+    body <- c(
+      body,
+      sprintf("\\setlength{\\footskip}{%gpt}", footskip_pt)
     )
   }
   if (ph_pop) {
     body <- c(
       body,
-      .latex_band_directives(pagehead_ast, head = TRUE, cs = cs)
+      .latex_band_directives(
+        pagehead_ast,
+        head = TRUE,
+        cs = cs,
+        preset = preset
+      )
     )
   }
   if (pf_pop) {
     body <- c(
       body,
-      .latex_band_directives(pagefoot_ast, head = FALSE, cs = cs)
+      .latex_band_directives(
+        pagefoot_ast,
+        head = FALSE,
+        cs = cs,
+        preset = preset
+      )
     )
   }
   # Head- / footrule width: 0pt by default (the page bands are unruled,
@@ -2410,10 +2474,20 @@ backend_latex <- function(grid, file) {
 # `\fancyfoot[L/C/R]{}` (head = FALSE) directives for one band.
 # Empty slots emit `\fancyhead[L]{}` (or equivalent) so any prior
 # default for that slot is cleared.
-.latex_band_directives <- function(band, head, cs = NULL) {
+.latex_band_directives <- function(band, head, cs = NULL, preset = NULL) {
   cmd <- if (head) "\\fancyhead" else "\\fancyfoot"
   surface <- if (head) "pagehead" else "pagefoot"
   slot_letters <- c(left = "L", center = "C", right = "R")
+  # fancyhdr typesets the head / foot in the output routine at the
+  # \documentclass size (10/11/12pt), NOT the body \fontsize, so the page
+  # chrome would print larger than an 8pt table. Set the body size as the
+  # slot baseline; a cells_pagehead font_size (wrapped below) still wins via
+  # its own group.
+  size_cmd <- if (is_preset_spec(preset)) {
+    .latex_body_font_size_line(preset)
+  } else {
+    ""
+  }
   vapply(
     names(slot_letters),
     function(s) {
@@ -2423,6 +2497,9 @@ backend_latex <- function(grid, file) {
       node <- .chrome_surface_at_slot(cs, surface, slot = s)
       if (nzchar(txt) && is_style_node(node)) {
         txt <- .latex_wrap_text_props(txt, node)
+      }
+      if (nzchar(txt) && nzchar(size_cmd)) {
+        txt <- paste0(size_cmd, " ", txt)
       }
       sprintf("%s[%s]{%s}", cmd, slot_letters[[s]], txt)
     },
@@ -2529,9 +2606,12 @@ backend_latex <- function(grid, file) {
 # scale via `\fontsize` inside the document body — that path
 # is added by backend_pdf when it wraps backend_latex's output.
 .latex_class_size <- function(font_size) {
-  size <- tryCatch(as.numeric(font_size), error = function(e) 11)
+  size <- tryCatch(
+    as.numeric(font_size),
+    error = function(e) .latex_default_class_pt
+  )
   if (length(size) == 0L || !is.finite(size)) {
-    return("11pt")
+    return(sprintf("%dpt", .latex_default_class_pt))
   }
   if (size <= 10.5) {
     return("10pt")
@@ -2559,11 +2639,14 @@ backend_latex <- function(grid, file) {
     font_family <- "serif"
   }
   chain <- .resolve_font_stack(font_family, "latex")
-  size <- tryCatch(as.numeric(font_size), error = function(e) 11)
+  size <- tryCatch(
+    as.numeric(font_size),
+    error = function(e) .latex_default_class_pt
+  )
   if (length(size) == 0L || !is.finite(size)) {
-    size <- 11
+    size <- .latex_default_class_pt
   }
-  leading <- size * 1.2
+  leading <- size * .tabular_baseline_ratio
   pdftex_pkg <- .latex_pdftex_font_pkg(font_family)
   c(
     "\\usepackage{iftex}",
@@ -2576,8 +2659,31 @@ backend_latex <- function(grid, file) {
     "\\else",
     "  \\usepackage{fontspec}",
     .latex_fontspec_cascade(chain),
-    "\\fi",
-    sprintf("\\fontsize{%g}{%g}\\selectfont", size, leading)
+    "\\fi"
+  )
+}
+
+# The body font-size command. Emitted right AFTER `\begin{document}`, never
+# in the preamble: `\begin{document}` issues `\normalsize`, which resets the
+# font to the `\documentclass` size (10/11/12pt), so a `\fontsize` placed in
+# the preamble is silently discarded. Standard classes have no 8pt option, so
+# an 8pt body MUST set its size in the document body or every line (and the
+# title / footnote chrome a figure box is sized around) renders too tall.
+.latex_body_font_size_line <- function(preset) {
+  if (is.null(preset) || !is_preset_spec(preset)) {
+    preset <- preset_spec()
+  }
+  size <- tryCatch(
+    as.numeric(.effective_font_size(preset)),
+    error = function(e) .latex_default_class_pt
+  )
+  if (length(size) == 0L || !is.finite(size)) {
+    size <- .latex_default_class_pt
+  }
+  sprintf(
+    "\\fontsize{%g}{%g}\\selectfont",
+    size,
+    size * .tabular_baseline_ratio
   )
 }
 

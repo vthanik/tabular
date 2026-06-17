@@ -255,3 +255,46 @@ test_that(".font_status marks a clearly-missing font as not on this machine", {
   expect_identical(out$marker, "x")
   expect_match(out$note, "not on this machine", fixed = TRUE)
 })
+
+test_that(".font_generic_class classifies stacks the same way for both Word backends", {
+  # The shared SSOT both RTF and DOCX consult, so a font_family classes
+  # identically across them. Mono wins first, then serif, then sans; an
+  # unrecognised face returns NA_character_ (each backend then applies its
+  # OWN unclassified default -- RTF \froman, DOCX swiss -- as asserted
+  # below), it does NOT itself fall back to sans.
+  expect_identical(tabular:::.font_generic_class("mono"), "mono")
+  expect_identical(tabular:::.font_generic_class("serif"), "serif")
+  expect_identical(tabular:::.font_generic_class("sans"), "sans")
+  # Explicit mono stack (the PHUSE harness case) classes mono, not sans.
+  expect_identical(
+    tabular:::.font_generic_class(c(
+      "Courier New",
+      "Liberation Mono",
+      "Courier"
+    )),
+    "mono"
+  )
+  # Mixed name + generic resolves to the in-stack signal.
+  expect_identical(
+    tabular:::.font_generic_class(c("Courier New", "mono")),
+    "mono"
+  )
+  expect_identical(tabular:::.font_generic_class(c("Inter", "sans")), "sans")
+  # Unrecognised single named face -> NA (each backend picks its own
+  # unclassified default: RTF \froman, DOCX swiss).
+  expect_identical(
+    tabular:::.font_generic_class("Wingdings 9000"),
+    NA_character_
+  )
+  expect_identical(tabular:::.rtf_family_class("Wingdings 9000"), "froman")
+  # RTF maps the classifier to the same class DOCX gives the stack.
+  rtf_cls <- tabular:::.rtf_family_class(c("Courier New", "Liberation Mono"))
+  docx_cls <- tabular:::.docx_font_class(c("Courier New", "Liberation Mono"))
+  expect_identical(rtf_cls, "fmodern")
+  expect_identical(docx_cls, "modern")
+  # DOCX maps the serif / sans / unclassified generic classes to OOXML:
+  # serif -> roman, sans and unknown -> swiss (the variable-pitch default).
+  expect_identical(tabular:::.docx_font_class("Times New Roman"), "roman")
+  expect_identical(tabular:::.docx_font_class("Arial"), "swiss")
+  expect_identical(tabular:::.docx_font_class("Wingdings 9000"), "swiss")
+})

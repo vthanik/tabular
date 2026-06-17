@@ -4,7 +4,7 @@
 # Safety Population
 
 | Statistic | Placebo<br/>N=86 | Low Dose<br/>N=96 | High Dose<br/>N=72 | Total<br/>N=254 |
-| :--- | ---: | ---: | ---: | ---: |
+| :--- | :---: | :---: | :---: | :---: |
 | **Age (years)** | &nbsp; | &nbsp; | &nbsp; | &nbsp; |
 | &nbsp;&nbsp;n | 86          | 96          | 72          | 254          |
 | &nbsp;&nbsp;Mean (SD) | 75.2 (8.59) | 76.0 (8.11) | 73.8 (7.94) |  75.1 (8.25) |

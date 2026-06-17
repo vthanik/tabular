@@ -107,15 +107,20 @@ backend_rtf <- function(grid, file) {
   }
 
   panels <- .group_pages_into_panels(pages)
-  body <- lapply(panels, function(panel_pages) {
-    .render_rtf_panel(
-      panel_pages = panel_pages,
+  # `\sect` SEPARATES panels: the break that starts panel i (>1) leads
+  # its section, mirroring the figure path. The final panel carries no
+  # trailing `\sect`, so a single-panel table emits ZERO section breaks
+  # and Word renders no phantom trailing page.
+  body <- lapply(seq_along(panels), function(i) {
+    panel_out <- .render_rtf_panel(
+      panel_pages = panels[[i]],
       meta = meta,
       preset = preset,
       cs = cs,
       colors = colors,
       fonts = fonts
     )
+    if (i == 1L) panel_out else c("\\sect", panel_out)
   })
   c(preamble, unlist(body, use.names = FALSE), "}")
 }
@@ -126,9 +131,8 @@ backend_rtf <- function(grid, file) {
 # marker. Single section, no page chrome.
 .render_rtf_empty <- function(grid, preset, cs, colors, fonts) {
   meta <- grid@metadata
-  halign <- meta$empty_place$halign %||% "center"
   msg <- if (is.null(meta$empty_text_ast)) {
-    "No data available to report"
+    .tabular_empty_text_default
   } else {
     .render_rtf_inline(
       meta$empty_text_ast,
@@ -141,13 +145,60 @@ backend_rtf <- function(grid, file) {
     paste0(
       "\\pard\\plain",
       .rtf_body_fs(preset),
-      .rtf_align_token(halign),
+      .rtf_align_token("center"),
       " ",
       msg,
       "\\par"
     ),
     .render_rtf_footnote_block(meta$footnotes_ast, preset, cs, colors, fonts)
   )
+}
+
+# Assemble the leading page-chrome of one RTF section, shared by the table
+# panel path and the figure path: the section definition (geometry +
+# repeating header / footer flags) then the optional `{\header}` band and
+# the optional `{\footer}` band (program-path + any repeating footnote
+# lines). The two paths differ only in how they compute `footnote_lines`
+# (a table's carry the `cellx` for a table-width rule; a figure's do not)
+# and in the body that follows, so only this scaffold is shared.
+# `lead_sect` prefixes `\sect` for a non-leading figure section; the table
+# path emits its inter-panel `\sect` from the caller, so it passes FALSE.
+.rtf_chrome_section <- function(
+  preset,
+  cs,
+  colors,
+  fonts,
+  pagehead_ast,
+  pagefoot_ast,
+  has_ph,
+  footer_active,
+  footnote_lines,
+  lead_sect = FALSE
+) {
+  sec_def <- .rtf_section_def(
+    preset,
+    has_pagehead = has_ph,
+    has_pagefoot = footer_active,
+    pagehead_rows = .page_band_nrow(pagehead_ast)
+  )
+  out <- if (lead_sect) paste0("\\sect", sec_def) else sec_def
+  if (has_ph) {
+    out <- c(out, .rtf_header_group(pagehead_ast, preset, cs, colors, fonts))
+  }
+  if (footer_active) {
+    out <- c(
+      out,
+      .rtf_footer_group(
+        pagefoot_ast,
+        footnote_lines,
+        preset,
+        cs,
+        colors,
+        fonts
+      )
+    )
+  }
+  out
 }
 
 # ---------------------------------------------------------------------
@@ -212,45 +263,32 @@ backend_rtf <- function(grid, file) {
     # there is no page-foot band.
     has_fn <- length(pg$footnotes_ast) > 0L
     footer_active <- has_pf || has_fn
-    sec_def <- .rtf_section_def(
-      preset,
-      has_pagehead = has_ph,
-      has_pagefoot = footer_active
-    )
-    out <- if (i == 1L) sec_def else paste0("\\sect", sec_def)
-    if (has_ph) {
-      out <- c(
-        out,
-        .rtf_header_group(meta$pagehead_ast, preset, cs, colors, fonts)
-      )
-    }
-    if (footer_active) {
-      foot_lines <- if (has_fn) {
-        c(
-          rep(blank_par, pad_body_to_foot),
-          .render_rtf_footnote_block(
-            pg$footnotes_ast,
-            preset,
-            cs,
-            colors,
-            fonts
-          )
-        )
-      } else {
-        character()
-      }
-      out <- c(
-        out,
-        .rtf_footer_group(
-          meta$pagefoot_ast,
-          foot_lines,
+    foot_lines <- if (has_fn) {
+      c(
+        rep(blank_par, pad_body_to_foot),
+        .render_rtf_footnote_block(
+          pg$footnotes_ast,
           preset,
           cs,
           colors,
           fonts
         )
       )
+    } else {
+      character()
     }
+    out <- .rtf_chrome_section(
+      preset,
+      cs,
+      colors,
+      fonts,
+      meta$pagehead_ast,
+      meta$pagefoot_ast,
+      has_ph,
+      footer_active,
+      foot_lines,
+      lead_sect = i > 1L
+    )
     title_block <- .render_rtf_title_block(
       pg$titles_ast,
       preset,
@@ -270,7 +308,11 @@ backend_rtf <- function(grid, file) {
     c(
       out,
       title_part,
-      .render_rtf_figure_image(pg, preset)
+      .render_rtf_figure_image(pg, preset),
+      # Exit table context so the following `\sect` (next figure) or the
+      # document-closing `}` does not land inside the image row, which
+      # makes Word emit phantom pages. Mirrors `.render_rtf_panel`.
+      "\\pard\\par"
     )
   })
 
@@ -416,30 +458,18 @@ backend_rtf <- function(grid, file) {
   }
 
   out <- list()
-  out[[length(out) + 1L]] <- .rtf_section_def(
+  out[[length(out) + 1L]] <- .rtf_chrome_section(
     preset,
-    has_pagehead = has_ph,
-    has_pagefoot = footer_active
+    cs,
+    colors,
+    fonts,
+    meta$pagehead_ast,
+    meta$pagefoot_ast,
+    has_ph,
+    footer_active,
+    footnote_lines,
+    lead_sect = FALSE
   )
-  if (has_ph) {
-    out[[length(out) + 1L]] <- .rtf_header_group(
-      meta$pagehead_ast,
-      preset,
-      cs,
-      colors,
-      fonts
-    )
-  }
-  if (footer_active) {
-    out[[length(out) + 1L]] <- .rtf_footer_group(
-      meta$pagefoot_ast,
-      footnote_lines,
-      preset,
-      cs,
-      colors,
-      fonts
-    )
-  }
 
   pad_top <- .rtf_blank_count(
     cs,
@@ -589,18 +619,18 @@ backend_rtf <- function(grid, file) {
     body_borders = body_borders
   )
 
+  # A zero-row (empty-state) panel renders ONE full-span centred message row
+  # in the body slot, carrying the data-region closing rule; a populated panel
+  # renders its data rows. Both flow through the same chrome above and footnote
+  # below, so the empty page is just a normal short table with a single message
+  # row -- chrome, message, then trailing footnote, with blank space below.
   if (isTRUE(first$is_empty_page)) {
-    # Zero-row page: the chrome + header band above are intact; the body
-    # is one full-span message placed in the content-box (see
-    # `.render_rtf_empty_row`). `col_names_vis` empty (every column
-    # hidden) yields character() there, the rare degenerate that the
-    # zero-page `.render_rtf_empty` path covers instead.
-    table_rows[[length(table_rows) + 1L]] <- .render_rtf_empty_row(
-      meta$empty_text_ast,
-      meta$empty_place,
+    table_rows[[length(table_rows) + 1L]] <- .render_rtf_empty_message_row(
+      meta,
       cellx,
       preset,
-      body_borders = body_borders
+      colors,
+      body_borders
     )
   } else {
     body <- .rtf_concat_panel_body(panel_pages)
@@ -641,9 +671,54 @@ backend_rtf <- function(grid, file) {
   }
 
   # `\pard\par` exits the table context so Word does not merge this
-  # panel's table with the next section's; `\sect` closes the section.
-  out[[length(out) + 1L]] <- c("\\pard\\par", "\\sect")
+  # panel's table with the next section's. The `\sect` break that starts
+  # the NEXT panel is emitted by the caller as a SEPARATOR (n-1 breaks for
+  # n panels); the final panel is closed by the document's `}`.
+  out[[length(out) + 1L]] <- "\\pard\\par"
   unlist(out, use.names = FALSE)
+}
+
+# One full-span, horizontally centred empty-state message row, occupying the
+# body slot of an otherwise-normal table when the spec resolves to zero data
+# rows. Carries the data-region closing rule (the `outer_bottom` triple,
+# defaulting solid) as its own BOTTOM border and the frame's left / right
+# edges, so the empty page closes exactly like a populated short table. The row
+# is natural height (no `\trrh-` exact box), so the message + trailing footnote
+# can never spill onto a phantom second page.
+.render_rtf_empty_message_row <- function(
+  meta,
+  cellx,
+  preset,
+  colors,
+  body_borders
+) {
+  msg <- if (is.null(meta$empty_text_ast)) {
+    .tabular_empty_text_default
+  } else {
+    .render_rtf_inline(
+      meta$empty_text_ast,
+      preserve = .preset_ws_preserve(preset)
+    )
+  }
+  first_body <- paste0(
+    "\\pard\\plain\\intbl",
+    .rtf_body_fs(preset),
+    .rtf_align_token("center"),
+    " ",
+    msg
+  )
+  bottom_triple <- if (is.list(body_borders)) {
+    body_borders[["outer_bottom"]]
+  } else {
+    NULL
+  }
+  .rtf_merged_row(
+    first_body,
+    cellx,
+    preset,
+    prelude = .rtf_border_token("bottom", bottom_triple, "solid", colors),
+    body_borders = body_borders
+  )
 }
 
 # Concatenate a panel's page slices into one body. For a native (unsplit)
@@ -758,76 +833,6 @@ backend_rtf <- function(grid, file) {
   )
 }
 
-# Full-span empty-state message row for a zero-row page. Sits where the
-# body rows would, below the column-label rule. Sized to the body
-# content-box via `\trrh` with a NEGATIVE value (exact height, not the
-# usual grow-from-minimum) so the cell vertical-alignment (`\clvertal*`
-# from empty_valign) centres the message in the page body; the paragraph
-# alignment (`\q*` from empty_halign) places it horizontally. One cell
-# merged across the whole band. valign is exact on RTF, the paged medium.
-.render_rtf_empty_row <- function(
-  empty_text_ast,
-  empty_place,
-  cellx,
-  preset,
-  body_borders = NULL
-) {
-  n <- length(cellx)
-  if (n == 0L) {
-    return(character())
-  }
-  halign <- empty_place$halign %||% "center"
-  valign <- empty_place$valign %||% "middle"
-  vtok <- .rtf_valign_token(valign)
-  htok <- .rtf_align_token(halign)
-  box_twips <- if (is.null(empty_place)) {
-    0L
-  } else {
-    as.integer(round(empty_place$height_twips))
-  }
-  msg <- if (is.null(empty_text_ast)) {
-    "No data available to report"
-  } else {
-    .render_rtf_inline(empty_text_ast, preserve = .preset_ws_preserve(preset))
-  }
-  cell_defs <- character(n)
-  cell_defs[[1L]] <- paste0(
-    vtok,
-    "\\clmgf",
-    sprintf("\\cellx%d", as.integer(cellx[[1L]]))
-  )
-  if (n > 1L) {
-    for (i in seq.int(2L, n)) {
-      cell_defs[[i]] <- paste0(
-        vtok,
-        "\\clmrg",
-        sprintf("\\cellx%d", as.integer(cellx[[i]]))
-      )
-    }
-  }
-  first_body <- paste0(
-    "\\pard\\plain\\intbl",
-    .rtf_body_fs(preset),
-    htok,
-    " ",
-    msg,
-    "\\cell"
-  )
-  cell_bodies <- c(
-    first_body,
-    rep("\\pard\\plain\\intbl\\cell", n - 1L)
-  )
-  c(
-    paste0(
-      "\\trowd\\trgaph108\\trqc",
-      if (box_twips > 0L) sprintf("\\trrh%d", -box_twips) else "",
-      .rtf_row_frame_edges(body_borders)
-    ),
-    cell_defs,
-    cell_bodies,
-    "\\row"
-  )
-}
 
 # Render the title block as `\trhdr` merged rows (one per title line),
 # centred + bold by the title-surface cascade. The continuation marker,
@@ -969,17 +974,18 @@ backend_rtf <- function(grid, file) {
 .rtf_section_def <- function(
   preset,
   has_pagehead,
-  has_pagefoot
+  has_pagefoot,
+  pagehead_rows = 1L
 ) {
   paper <- .rtf_paper_twips(preset@paper_size, preset@orientation)
   margins <- .rtf_margins_twips(preset@margins)
 
-  # Margins are exactly the preset values, never enlarged. The footer
-  # (footnotes + program-path band) sits at `\footery = bottom margin`
-  # and flows DOWNWARD; the header at `\headery` flows UPWARD. Word
-  # auto-expands either band into the body when its content exceeds
-  # the margin, so a tall footnote block eats body space instead of
-  # growing the page margin (galley's model).
+  # Margins are exactly the preset values. The footer (footnotes +
+  # program-path band) sits at `\footery = bottom margin` and flows
+  # DOWNWARD; the header at `\headery` flows UPWARD. Word auto-expands
+  # either band into the body when its content exceeds the margin, so a tall
+  # footnote block eats body space instead of growing the page (galley's
+  # model).
   parts <- c(
     "\\sectd\\sbkpage",
     if (identical(preset@orientation, "landscape")) "\\lndscpsxn" else "",
@@ -994,9 +1000,15 @@ backend_rtf <- function(grid, file) {
   )
 
   if (has_pagehead) {
-    # Header starts one body line above the top margin and flows up.
+    # The header flows DOWN from `\headery`, so reserve one body line
+    # PER pagehead row above the top margin; an N-row header then ends
+    # exactly at the top margin and the body starts where the engine's
+    # rows-per-page model assumes. Reserving a single line regardless of
+    # row count (the old behaviour) let a multi-row running header bleed
+    # back into the body, pushing the last rows -- or the table's
+    # trailing paragraph -- onto a phantom second page.
     head_line <- as.integer(round(preset@font_size * 28))
-    headery <- max(360L, margins$top - head_line)
+    headery <- max(360L, margins$top - head_line * max(1L, pagehead_rows))
     parts <- c(parts, sprintf("\\headery%d", headery))
   }
   if (has_pagefoot) {
@@ -1062,9 +1074,11 @@ backend_rtf <- function(grid, file) {
 # `{\header ...}` group. Emits one invisible 1-row 3-cell table
 # per band row, in REVERSE index order so row 1 (body-edge) ends
 # up at the bottom of the header zone, closest to the table body.
-.rtf_header_group <- function(pagehead_ast, preset, cs, colors, fonts) {
-  nrow_band <- .page_band_nrow(pagehead_ast)
-  order <- rev(seq_len(nrow_band))
+# Page-head band rows, REVERSE index order (row 1 = body edge at the bottom
+# of the header zone). Shared by `.rtf_header_group` and the empty-section
+# header so the page chrome renders identically in both.
+.rtf_pagehead_band_rows <- function(pagehead_ast, preset, cs, colors, fonts) {
+  order <- rev(seq_len(.page_band_nrow(pagehead_ast)))
   rows <- lapply(order, function(i) {
     .rtf_chrome_row(
       .page_band_row(pagehead_ast, i),
@@ -1075,7 +1089,15 @@ backend_rtf <- function(grid, file) {
       fonts
     )
   })
-  c("{\\header", unlist(rows, use.names = FALSE), "}")
+  unlist(rows, use.names = FALSE)
+}
+
+.rtf_header_group <- function(pagehead_ast, preset, cs, colors, fonts) {
+  c(
+    "{\\header",
+    .rtf_pagehead_band_rows(pagehead_ast, preset, cs, colors, fonts),
+    "}"
+  )
 }
 
 # `{\footer ...}` group. Emits one invisible 1-row 3-cell table
@@ -2292,9 +2314,9 @@ backend_rtf <- function(grid, file) {
 }
 
 # Map an `align` value to the RTF paragraph alignment control.
-# `decimal` -> right-align (the engine_decimal phase has already
-# NBSP-padded the cell text, so visual alignment survives a
-# simple right-justify).
+# `decimal` -> centre: the engine_decimal phase has already NBSP-padded
+# the cell text to a uniform column width, so the block centres under the
+# (centred) decimal header rather than hugging the right edge (HTML parity).
 #
 # RTF cell text-property tokens from one style_node. All seven
 # text properties cascade through here now: bold (`\b`), italic
@@ -2393,7 +2415,7 @@ backend_rtf <- function(grid, file) {
     left = "\\ql",
     center = "\\qc",
     right = "\\qr",
-    decimal = "\\qr",
+    decimal = "\\qc",
     "\\ql"
   )
 }
@@ -2430,7 +2452,26 @@ backend_rtf <- function(grid, file) {
   backend_default = "none",
   colors = NULL
 ) {
-  brd <- .effective_border(side, cell_style)
+  .rtf_border_token(
+    side,
+    .effective_border(side, cell_style),
+    backend_default,
+    colors
+  )
+}
+
+# Compose one `\clbrdr<side>` cell-border token from a resolved border
+# triple (or NULL). Factored out of `.rtf_border_seg()` so a caller that
+# already holds a triple -- e.g. the empty-state message box reading the
+# body-border manifest's `outer_bottom` -- emits a rule with the same
+# width / style / colour resolution as a normal body cell, honouring a
+# custom `rules = list(bottomrule = brdr(...))` preset.
+.rtf_border_token <- function(
+  side,
+  brd,
+  backend_default = "none",
+  colors = NULL
+) {
   letter <- substr(side, 1, 1)
   prefix <- paste0("\\clbrdr", letter)
   if (is.null(brd)) {
@@ -2807,12 +2848,18 @@ backend_rtf <- function(grid, file) {
   }
   body_chain <- .resolve_font_stack(values[[1L]], "rtf")
   mono_chain <- .resolve_font_stack(values[[2L]], "rtf")
-  body_class <- .rtf_family_class(values[[1L]], "serif")
+  body_class <- .rtf_family_class(values[[1L]])
+  # Pitch tracks the class: `\fmodern` (mono) is fixed-pitch (`\fprq1`),
+  # everything else variable (`\fprq2`). Mirrors the `\f2+` extras path
+  # and the mono `\f1` slot, so a mono body never declares variable
+  # pitch (which fights Word's substitution for a missing face).
+  body_pitch <- if (identical(body_class, "fmodern")) 1L else 2L
   out <- c(
     "{\\fonttbl",
     sprintf(
-      "{\\f0\\%s\\fprq2 %s%s;}",
+      "{\\f0\\%s\\fprq%d %s%s;}",
       body_class,
+      body_pitch,
       .rtf_escape(body_chain[[1L]]),
       .rtf_falt(body_chain)
     ),
@@ -2828,7 +2875,7 @@ backend_rtf <- function(grid, file) {
       function(i) {
         family <- values[[i]]
         chain <- .resolve_font_stack(family, "rtf")
-        class <- .rtf_family_class(family, "serif")
+        class <- .rtf_family_class(family)
         pitch <- if (identical(class, "fmodern")) 1L else 2L
         sprintf(
           "{\\f%d\\%s\\fprq%d %s%s;}",
@@ -2978,9 +3025,18 @@ backend_rtf <- function(grid, file) {
   # exist even when the body family is itself "mono"; only the extra
   # families (registering at `\f2+`) are deduplicated, and against the
   # seed so a cell font equal to the body resolves back to `\f0`.
+  #
+  # `values` is a LIST, not a flat vector: `values[[1L]]` holds the
+  # WHOLE body family (which may be a multi-element explicit stack such
+  # as `c("Courier New", "Liberation Mono", "Courier")`), `values[[2L]]`
+  # is the mono generic, and `values[[3L+]]` are scalar extra families.
+  # A flat `c(body_family, "mono", extras)` would splice a multi-element
+  # body stack apart, leaving `values[[1L]]` as only the first name --
+  # which `.resolve_font_stack()` then re-aliases back to the Linux-first
+  # default chain, defeating the user's `font_family` choice.
   extras <- unique(unlist(buf, use.names = FALSE))
   extras <- extras[!(extras %in% c(body_family, "mono"))]
-  values <- c(body_family, "mono", extras)
+  values <- c(list(body_family, "mono"), as.list(extras))
   lookup <- function(family) {
     if (
       is.null(family) ||
@@ -2990,8 +3046,15 @@ backend_rtf <- function(grid, file) {
     ) {
       return(0L)
     }
-    idx <- match(family, values)
-    if (is.na(idx)) 0L else as.integer(idx) - 1L
+    # A cell font matches a slot when it equals the slot's family spec
+    # (or any name within the slot's stack), so a per-cell font naming a
+    # body-stack member resolves back to `\f0`.
+    for (i in seq_along(values)) {
+      if (family %in% values[[i]]) {
+        return(as.integer(i - 1L))
+      }
+    }
+    0L
   }
   list(values = values, lookup = lookup)
 }
@@ -3008,31 +3071,21 @@ backend_rtf <- function(grid, file) {
   sprintf("{\\*\\falt %s}", .rtf_escape(chain[[2L]]))
 }
 
-# Map a `font_family` input to its RTF family-class keyword. Only
-# generic-family inputs route to `\fswiss` / `\fmodern`; explicit
-# named fonts and stacks default to `\froman` (safe fallback).
-.rtf_family_class <- function(font_family, default_generic) {
-  if (length(font_family) != 1L) {
-    return(switch(
-      default_generic,
-      sans = "fswiss",
-      mono = "fmodern",
-      "froman"
-    ))
-  }
-  gen <- switch(
-    font_family,
-    serif = "serif",
-    sans = "sans",
-    `sans-serif` = "sans",
-    mono = "mono",
-    monospace = "mono",
-    NA_character_
-  )
-  if (is.na(gen)) {
+# Map a `font_family` input to its RTF family-class keyword. A
+# multi-element explicit stack is classified by `.font_generic_class()`
+# (the SSOT shared with DOCX) so a mono stack such as
+# `c("Courier New", "Liberation Mono")` emits `\fmodern`, the same class
+# DOCX gives it (`modern`), instead of the old serif fallback that made
+# Word substitute a serif face when the primary was absent. A single
+# generic / alias name routes through the same classifier.
+.rtf_family_class <- function(font_family) {
+  cls <- .font_generic_class(font_family)
+  if (is.na(cls)) {
+    # Unclassifiable (a lone non-aliased named face): keep the serif
+    # fallback, the safest class for Word's font matcher.
     return("froman")
   }
-  switch(gen, serif = "froman", sans = "fswiss", mono = "fmodern", "froman")
+  switch(cls, sans = "fswiss", mono = "fmodern", "froman")
 }
 
 # ---------------------------------------------------------------------

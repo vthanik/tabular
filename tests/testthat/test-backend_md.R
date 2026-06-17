@@ -200,6 +200,10 @@ test_that("alignment row maps every align value to its GFM token", {
   expect_true(grepl("---:", sep, fixed = TRUE))
 })
 
+test_that(".md_align_token centres decimal for cross-backend parity", {
+  expect_identical(tabular:::.md_align_token("decimal"), ":---:")
+})
+
 test_that(".md_align_token defaults to left for unknown / NA", {
   expect_identical(tabular:::.md_align_token(NA_character_), ":---")
   expect_identical(tabular:::.md_align_token(NULL), ":---")
@@ -457,17 +461,16 @@ test_that("zero-row spec renders header + alignment + empty message line", {
   )))
 })
 
-test_that("Markdown empty message honours empty_text + empty_halign", {
+test_that("Markdown empty message honours empty_text", {
   spec <- tabular(
     data.frame(x = integer(0L), y = character(0L)),
     empty_text = "None."
-  ) |>
-    preset(empty_halign = "left")
+  )
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   lines <- readLines(out)
   expect_true(any(grepl(
-    "<div align=\"left\">None.</div>",
+    "<div align=\"center\">None.</div>",
     lines,
     fixed = TRUE
   )))

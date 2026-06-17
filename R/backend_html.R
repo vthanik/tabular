@@ -68,6 +68,26 @@ backend_html <- function(grid, file) {
 # Document shell + page composition
 # ---------------------------------------------------------------------
 
+# Wrap the page chrome (running header / footer bands) plus the body in
+# one `width: fit-content; margin: 0 auto` container so the bands align to
+# the body's width instead of spanning the full document. The bands carry
+# `width: 100%` (see `.html_inline_style`), so they fill this container,
+# whose width is the widest child (normally the table). Only wraps when at
+# least one chrome band is present: a table or figure with NO running chrome
+# keeps the prior structure exactly, so its snapshot stays byte-identical.
+.html_chrome_wrap <- function(header, body, footer) {
+  if (length(header) == 0L && length(footer) == 0L) {
+    return(c(header, body, footer))
+  }
+  c(
+    "<div class=\"tabular-chrome-wrap\">",
+    header,
+    body,
+    footer,
+    "</div>"
+  )
+}
+
 # Compose the full HTML document: doctype, head (charset, title,
 # inline stylesheet), then a continuous body — chrome header,
 # titles (once), one `<table>` per horizontal panel concatenating
@@ -212,7 +232,11 @@ backend_html <- function(grid, file) {
   # refs that hash differently between the two), so snapshots stay stable;
   # it is still unique per table, so two tables on one page never collide.
   assemble <- function(body_inner) {
-    doc_body <- c(onscreen_header, body_inner, onscreen_footer)
+    doc_body <- .html_chrome_wrap(
+      onscreen_header,
+      body_inner,
+      onscreen_footer
+    )
     scope_id <- paste0("tabular-", substr(rlang::hash(doc_body), 1L, 10L))
     head <- c(
       "<!DOCTYPE html>",
@@ -422,7 +446,7 @@ backend_html <- function(grid, file) {
     unlist(sections, use.names = FALSE)
   }
 
-  doc_body <- c(onscreen_header, body_inner, onscreen_footer)
+  doc_body <- .html_chrome_wrap(onscreen_header, body_inner, onscreen_footer)
   scope_id <- paste0("tabular-", substr(rlang::hash(doc_body), 1L, 10L))
   head <- c(
     "<!DOCTYPE html>",
@@ -853,8 +877,7 @@ backend_html <- function(grid, file) {
         preset = preset,
         cs = cs,
         headers = meta$headers,
-        empty_text_ast = meta$empty_text_ast,
-        empty_place = meta$empty_place
+        empty_text_ast = meta$empty_text_ast
       )
     )
   }
@@ -867,42 +890,28 @@ backend_html <- function(grid, file) {
 # metadata) falls back to the canonical default text.
 .html_empty_message <- function(empty_text_ast, preset = NULL) {
   if (is.null(empty_text_ast)) {
-    return(.html_escape("No data available to report"))
+    return(.html_escape(.tabular_empty_text_default))
   }
   .render_html_inline(empty_text_ast, preserve = .preset_ws_preserve(preset))
 }
 
 # Full-span empty-state message row for a zero-row page that still has a
-# column structure. The host cell's `height` is the body content-box, so
-# the native `vertical-align` centres the message (top/middle/bottom from
-# `empty_valign`); `text-align` carries `empty_halign`. Reuses the
-# `.tabular-empty` muted style shared with the no-column standalone block.
+# column structure. HTML is continuous (no page geometry), so the message
+# rides in flow under the column header -- no predicted box height. The
+# message line is horizontally centred (the universal no-data convention).
+# Reuses the `.tabular-empty` muted style shared with the no-column
+# standalone block.
 .render_html_empty_row <- function(
   empty_text_ast,
-  empty_place,
   ncols,
   preset
 ) {
-  halign <- empty_place$halign %||% "center"
-  valign <- empty_place$valign %||% "middle"
-  height_css <- if (
-    !is.null(empty_place) &&
-      is.finite(empty_place$height_in) &&
-      empty_place$height_in > 0
-  ) {
-    sprintf("height:%.2fin;", empty_place$height_in)
-  } else {
-    ""
-  }
   sprintf(
     paste0(
       "<tr><td colspan=\"%d\" class=\"tabular-empty\" ",
-      "style=\"%svertical-align:%s;text-align:%s;\">%s</td></tr>"
+      "style=\"text-align:center;\">%s</td></tr>"
     ),
     ncols,
-    height_css,
-    valign,
-    halign,
     .html_empty_message(empty_text_ast, preset)
   )
 }
@@ -917,8 +926,7 @@ backend_html <- function(grid, file) {
   preset = NULL,
   cs = NULL,
   headers = NULL,
-  empty_text_ast = NULL,
-  empty_place = NULL
+  empty_text_ast = NULL
 ) {
   out <- character()
   has_bign <- !is.null(page$subgroup_bign) && length(page$subgroup_bign) > 0L
@@ -953,18 +961,14 @@ backend_html <- function(grid, file) {
   if (nrow_data == 0L) {
     # Empty-state placeholder: a zero-row page renders the chrome + the
     # column-header band (the `<thead>` emitted by `.render_html_table`)
-    # + one full-span message row here. The host cell's `height` is the
-    # body content-box, so the native table-cell `vertical-align`
-    # (top/middle/bottom maps 1:1 to `empty_valign`) centres the message
-    # exactly; `text-align` carries `empty_halign`. A non-`is_empty_page`
-    # zero-row page (e.g. an all-blank synthetic slice) keeps the historic
-    # empty return.
+    # + one full-span, horizontally centred message row here, in flow
+    # under the column header. A non-`is_empty_page` zero-row page (e.g.
+    # an all-blank synthetic slice) keeps the historic empty return.
     if (isTRUE(page$is_empty_page) && length(col_names_visible) > 0L) {
       out <- c(
         out,
         .render_html_empty_row(
           empty_text_ast = empty_text_ast,
-          empty_place = empty_place,
           ncols = length(col_names_visible),
           preset = preset
         )
@@ -1320,15 +1324,13 @@ backend_html <- function(grid, file) {
       col <- cols[[nm]]
       # col_spec wins over chrome surface for header halign (per-
       # column override); fall back to chrome surface, then preset.
-      # `decimal` is the ONE carve-out: body cells render
-      # `text-right` with engine_decimal NBSP padding that aligns
-      # decimal points across rows, so the visible content's
-      # centre of mass sits INSIDE the cell (at the decimal point),
-      # not flush against the cell border. A CENTERED header sits
-      # over that centroid -- the dominant clinical-TFL convention
-      # and gt's default for numeric columns. Other body alignments
-      # (left / center / right) map straight through to the same
-      # value on the header.
+      # `decimal` is the ONE carve-out: engine_decimal pads every body
+      # cell to a uniform column width with NBSP that aligns decimal
+      # points across rows, so BOTH the body block and its header centre
+      # in the column (rather than hugging the right edge) -- the dominant
+      # clinical-TFL convention, and parity with LaTeX / RTF / DOCX. Other
+      # body alignments (left / center / right) map straight through to the
+      # same value on the header.
       halign <- if (
         is_col_spec(col) &&
           length(col@align) == 1L &&
@@ -1631,7 +1633,10 @@ backend_html <- function(grid, file) {
     left = "text-left",
     center = "text-center",
     right = "text-right",
-    decimal = "text-right",
+    # decimal: the engine_decimal phase pads every cell to a uniform column
+    # width with NBSP, so the block centres under the (centred) decimal
+    # header rather than hugging the right edge (LaTeX / RTF / DOCX parity).
+    decimal = "text-center",
     ""
   )
 }
@@ -2434,17 +2439,21 @@ backend_html <- function(grid, file) {
     ".text-left { text-align: left; }",
     ".text-center { text-align: center; }",
     ".text-right { text-align: right; }",
-    # Specificity bump for `<th>` cells. The baseline rule
-    # `.tabular-table thead th { ... text-align: center }` has
-    # selector specificity (0,1,2), which outranks the plain
-    # `.text-*` classes (0,1,0). Repeating each class under the
-    # `thead th` prefix lifts specificity to (0,2,2) so per-cell
-    # alignment classes actually win on header cells. Body `<td>`
-    # cells do not need this because their baseline is the same
-    # specificity as `.text-*` and class source order wins.
+    # Specificity bump for `<th>` and `<td>` cells. The baseline rules
+    # `.tabular-table thead th { ... text-align: center }` and
+    # `.tabular-table td { text-align: left }` have selector specificity
+    # (0,1,2) / (0,1,1), both of which outrank the plain `.text-*`
+    # classes (0,1,0) -- so without these prefixed copies the per-cell
+    # alignment class is silently defeated and EVERY body cell (decimal,
+    # centre, right) falls back to the baseline left. Repeating each
+    # class under the `thead th` / `td` prefix lifts specificity to
+    # (0,2,2) / (0,2,1) so the per-cell alignment class actually wins.
     ".tabular-table thead th.text-left { text-align: left; }",
     ".tabular-table thead th.text-center { text-align: center; }",
     ".tabular-table thead th.text-right { text-align: right; }",
+    ".tabular-table td.text-left { text-align: left; }",
+    ".tabular-table td.text-center { text-align: center; }",
+    ".tabular-table td.text-right { text-align: right; }",
     ".valign-top { vertical-align: top; }",
     ".valign-middle { vertical-align: middle; }",
     ".valign-bottom { vertical-align: bottom; }",
@@ -2467,8 +2476,12 @@ backend_html <- function(grid, file) {
     # 6pt), matching galley, so the page bands never out-size the table.
     # Bands are borderless by default (galley parity); the spacing
     # margins stay so the header/footer keep their breathing room.
+    # The chrome wrapper shrinks to its widest child (normally the table),
+    # centred on the page; the bands fill it at width:100% so a running
+    # header / footer aligns to the body's width, not the full document.
+    ".tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }",
     sprintf(
-      ".tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: %gpt; color: var(--tabular-chrome-color); }",
+      ".tabular-page-header, .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%%; padding: .5rem 0; font-size: %gpt; color: var(--tabular-chrome-color); }",
       max(fs - 1, 6)
     ),
     ".tabular-page-header { margin-bottom: 1rem; }",

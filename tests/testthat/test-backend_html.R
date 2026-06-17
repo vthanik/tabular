@@ -331,7 +331,7 @@ test_that("alignment classes map every align value to its CSS class", {
   expect_identical(tabular:::.html_align_class("left"), "text-left")
   expect_identical(tabular:::.html_align_class("center"), "text-center")
   expect_identical(tabular:::.html_align_class("right"), "text-right")
-  expect_identical(tabular:::.html_align_class("decimal"), "text-right")
+  expect_identical(tabular:::.html_align_class("decimal"), "text-center")
   expect_identical(tabular:::.html_align_class(NA_character_), "")
   expect_identical(tabular:::.html_align_class(NULL), "")
   expect_identical(tabular:::.html_align_class("garbage"), "")
@@ -351,9 +351,41 @@ test_that("col_spec align surfaces as a CSS class on body cells", {
   # The single body row is also the last, so its cells additionally
   # carry the SSOT bottomrule style; match the alignment class loosely.
   expect_match(txt, "<td class=\"text-left\"[^>]*>x</td>")
+  # `text-center` covers both center + decimal (decimal centres now).
   expect_match(txt, "<td class=\"text-center\"[^>]*>x</td>")
-  # `text-right` covers both right + decimal
   expect_match(txt, "<td class=\"text-right\"[^>]*>x</td>")
+})
+
+test_that("body alignment classes carry a specificity-bumped td override (effective)", {
+  # Regression: the baseline rule `.tabular-table td { text-align:left }`
+  # has specificity (0,1,1), outranking the plain `.text-center` class
+  # (0,1,0). Without a prefixed `.tabular-table td.text-center` override
+  # the per-cell alignment class is emitted but DEFEATED -- every body
+  # cell (decimal / centre / right) silently renders left. The override
+  # lifts specificity to (0,2,1) so the class actually wins.
+  spec <- tabular(data.frame(label = "x", val = "1.5")) |>
+    cols(val = col_spec(align = "decimal"))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  txt <- paste(readLines(out), collapse = "\n")
+  expect_match(
+    txt,
+    ".tabular-table td.text-center { text-align: center; }",
+    fixed = TRUE
+  )
+  expect_match(
+    txt,
+    ".tabular-table td.text-right { text-align: right; }",
+    fixed = TRUE
+  )
+  expect_match(
+    txt,
+    ".tabular-table td.text-left { text-align: left; }",
+    fixed = TRUE
+  )
+  # The decimal value cell carries the centre class that the override
+  # now makes effective.
+  expect_match(txt, "<td class=\"text-center\"[^>]*>")
 })
 
 # ---------------------------------------------------------------------
@@ -807,8 +839,13 @@ test_that("LaTeX / RTF / DOCX widths agree byte-for-byte; HTML is responsive (no
   # RTF and DOCX both snap to integer twips at cumulative
   # boundaries so they are byte-for-byte identical as twip vectors.
   expect_identical(round(rtf_in * 1440), round(docx_in * 1440))
-  # LaTeX (float-inch) agrees with RTF/DOCX to the twip granularity.
-  expect_true(all(abs(tex_in - docx_in) <= 1 / 1440))
+  # LaTeX `wd` is the CONTENT width: tabularray adds leftsep + rightsep
+  # (0.14944in default) outside it, so the rendered LaTeX column total
+  # (wd + sep) agrees with the RTF/DOCX total cell width to twip
+  # granularity. (Asserting wd == docx_in directly would re-encode the
+  # bug where the LaTeX table ran sep-per-column wider than the page.)
+  sep_in <- 10.8 / 72.27
+  expect_true(all(abs((tex_in + sep_in) - docx_in) <= 1 / 1440))
 })
 
 # ---------------------------------------------------------------------
@@ -1142,26 +1179,25 @@ test_that("zero-row spec renders chrome + headers + centred empty message row", 
   txt <- paste(readLines(out), collapse = "\n")
   expect_true(grepl("<thead>", txt, fixed = TRUE))
   expect_true(grepl(">x</th>", txt, fixed = TRUE))
-  # The empty body is one full-span message row, centred both axes and
-  # sized to the body content-box so native cell vertical-align centres it.
+  # The empty body is one full-span message row, horizontally centred in flow
+  # under the column header -- text-align only, no vertical placement.
   expect_match(
     txt,
-    "colspan=\"2\"[^>]*vertical-align:middle;text-align:center"
+    "colspan=\"2\"[^>]*text-align:center"
   )
+  expect_no_match(txt, "tabular-empty[^>]*vertical-align")
   expect_match(txt, "No data available to report")
 })
 
-test_that("zero-row empty message honours empty_text + preset alignment", {
+test_that("zero-row empty message honours empty_text", {
   spec <- tabular(
     data.frame(x = integer(0L), y = character(0L)),
     empty_text = md("**None** to report")
-  ) |>
-    preset(empty_halign = "left", empty_valign = "top")
+  )
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
   expect_match(txt, "<strong>None</strong> to report")
-  expect_match(txt, "vertical-align:top;text-align:left")
 })
 
 test_that("zero-row spec with all columns hidden renders standalone message", {
@@ -1324,6 +1360,36 @@ test_that("populated pagefoot emits on-screen <footer> band", {
   ))
   expect_true(grepl("Footer left", html, fixed = TRUE))
   expect_true(grepl("Footer right", html, fixed = TRUE))
+})
+
+test_that("chrome bands wrap with the body in a fit-content container (width parity)", {
+  spec <- tabular(data.frame(x = 1:3)) |>
+    preset(
+      pagehead = list(
+        left = "Protocol: XYZ",
+        right = "Page {page} of {npages}"
+      )
+    )
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  # Header, body and footer share one fit-content wrapper, and the bands
+  # fill it at width:100% so they align to the body width, not the page.
+  expect_match(html, "<div class=\"tabular-chrome-wrap\">", fixed = TRUE)
+  expect_match(
+    html,
+    ".tabular-chrome-wrap { width: fit-content;",
+    fixed = TRUE
+  )
+  expect_match(html, "width: 100%;", fixed = TRUE)
+})
+
+test_that("a table without running chrome emits no chrome wrapper (byte-stable)", {
+  spec <- tabular(data.frame(x = 1:3), titles = "T")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_no_match(html, "<div class=\"tabular-chrome-wrap\">", fixed = TRUE)
 })
 
 test_that("chrome_onscreen = 'off' suppresses on-screen bands but keeps @page", {
@@ -2033,9 +2099,15 @@ test_that("decimal header projects to center (TFL centroid convention)", {
     "<th[^>]*class=\"text-right[^\"]*\"[^>]*>N</th>",
     perl = TRUE
   )
-  # Body <td>s still carry text-right -- only the header projection
-  # changes; body alignment is unaffected.
+  # Body <td>s now centre too: the engine_decimal NBSP padding makes every
+  # cell a uniform column width, so the block centres under the centred
+  # header (cross-backend parity) rather than hugging the right edge.
   expect_match(
+    txt,
+    "<td[^>]*class=\"text-center[^\"]*\"[^>]*>",
+    perl = TRUE
+  )
+  expect_no_match(
     txt,
     "<td[^>]*class=\"text-right[^\"]*\"[^>]*>",
     perl = TRUE

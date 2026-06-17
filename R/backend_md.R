@@ -64,7 +64,8 @@
 #   "left"     -> :---
 #   "center"   -> :---:
 #   "right"    -> ---:
-#   "decimal"  -> ---:   (engine_decimal already padded with NBSP)
+#   "decimal"  -> :---:  (engine_decimal padded with NBSP; centres for
+#                         cross-backend parity)
 #   NA / unset -> :---   (the GFM default)
 
 # ---------------------------------------------------------------------
@@ -297,7 +298,7 @@ backend_md <- function(grid, file) {
   if (total == 0L) {
     out[[length(out) + 1L]] <- c(
       "",
-      .render_md_empty_line(meta$empty_text_ast, meta$empty_place),
+      .render_md_empty_line(meta$empty_text_ast),
       ""
     )
   } else {
@@ -341,13 +342,12 @@ backend_md <- function(grid, file) {
       }
       if (isTRUE(panel_pages[[1L]]$is_empty_page)) {
         # Zero-row page: header above is intact; the body is the empty
-        # message on its own line below the (closed) pipe table. Markdown
-        # has no page geometry, so empty_valign is a documented no-op;
-        # empty_halign rides a `<div align>` wrapper (raw HTML, GFM-safe).
+        # message on its own line below the (closed) pipe table, centred
+        # in a `<div align>` wrapper (raw HTML, GFM-safe).
         panel_lines <- c(
           panel_lines,
           "",
-          .render_md_empty_line(meta$empty_text_ast, meta$empty_place)
+          .render_md_empty_line(meta$empty_text_ast)
         )
       }
       if (k > 1L) {
@@ -382,17 +382,15 @@ backend_md <- function(grid, file) {
 }
 
 # Empty-state message line for a zero-row page. Markdown cannot span a
-# pipe-table cell or vertically position content, so the message rides a
-# raw-HTML `<div align>` wrapper (GFM-safe) carrying empty_halign; valign
-# is a documented no-op on this continuous medium.
-.render_md_empty_line <- function(empty_text_ast, empty_place = NULL) {
-  halign <- empty_place$halign %||% "center"
+# pipe-table cell, so the message rides a raw-HTML `<div align>` wrapper
+# (GFM-safe), horizontally centred (the universal no-data convention).
+.render_md_empty_line <- function(empty_text_ast) {
   msg <- if (is.null(empty_text_ast)) {
-    "No data available to report"
+    .tabular_empty_text_default
   } else {
     .render_md_inline(empty_text_ast)
   }
-  sprintf("<div align=\"%s\">%s</div>", halign, msg)
+  sprintf("<div align=\"center\">%s</div>", msg)
 }
 
 # Render one page slice's body lines: an optional subgroup banner
@@ -665,7 +663,9 @@ backend_md <- function(grid, file) {
     left = ":---",
     center = ":---:",
     right = "---:",
-    decimal = "---:",
+    # decimal centres (engine_decimal pads every cell to a uniform column
+    # width with NBSP) for parity with the LaTeX / RTF / DOCX / HTML block.
+    decimal = ":---:",
     ":---"
   )
 }

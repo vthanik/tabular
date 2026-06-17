@@ -277,6 +277,9 @@ backend_docx <- function(grid, file) {
   # content flow (the single shared footer1.xml cannot carry per-page
   # figure footnotes, so they are not routed through it).
   blank_p <- "<w:p/>"
+  # A blank paragraph carrying only the page-break property; used to start
+  # each continuation page on a fresh page (see the loop below).
+  break_p <- "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>"
   pad_above_title <- .docx_blank_count(
     cs,
     "title",
@@ -298,12 +301,6 @@ backend_docx <- function(grid, file) {
   body_parts <- character()
   for (i in seq_along(pages)) {
     pg <- pages[[i]]
-    if (i > 1L) {
-      body_parts <- c(
-        body_parts,
-        "<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>"
-      )
-    }
     title_block <- .docx_title_block(
       pg$titles_ast,
       character(),
@@ -338,12 +335,37 @@ backend_docx <- function(grid, file) {
     } else {
       character()
     }
-    body_parts <- c(
-      body_parts,
+    page_parts <- c(
       titles,
       .docx_figure_image_table(pg, drawing),
       foot
     )
+    # Pages after the first start on a fresh page via a STRUCTURAL
+    # `<w:pageBreakBefore/>` paragraph property, NOT a standalone
+    # `<w:br w:type="page"/>` paragraph (which is stranded onto its own blank
+    # page when the preceding exact-height figure block fills the page). The
+    # page's leading blank pad already exists, so reuse it as the break
+    # carrier (no extra line); a page with no leading pad (titles stripped,
+    # or a title-less page leading with the image table) gets a dedicated
+    # carrier, which also keeps the two adjacent image tables from merging.
+    if (i > 1L) {
+      if (length(page_parts) > 0L && identical(page_parts[[1L]], blank_p)) {
+        page_parts[[1L]] <- break_p
+      } else {
+        page_parts <- c(break_p, page_parts)
+      }
+    }
+    body_parts <- c(body_parts, page_parts)
+  }
+  # The body must not end on a table: Word requires a paragraph after a
+  # table, and the final section `<w:sectPr>` is a bare child of `<w:body>`
+  # (OOXML, mirroring the table path). A figure whose last page has no
+  # footnotes ends on the image table, so append a terminal empty paragraph.
+  if (
+    length(body_parts) > 0L &&
+      startsWith(body_parts[[length(body_parts)]], "<w:tbl")
+  ) {
+    body_parts <- c(body_parts, blank_p)
   }
   body <- paste0(
     paste(body_parts, collapse = ""),
@@ -468,20 +490,35 @@ backend_docx <- function(grid, file) {
   # order is deterministic given the walk order in
   # `.docx_collect_hyperlinks()`.
   hyperlinks <- .docx_collect_hyperlinks(grid)
-  rid_map <- .docx_rid_map(has_ph, has_footer, length(hyperlinks))
+  rid_map <- .docx_rid_map(
+    has_ph,
+    has_footer,
+    length(hyperlinks)
+  )
 
-  # Build the footnote section once. It lands in the body when
-  # trailing, or in `footer1.xml` when repeating; never both.
+  # Build the footnote section once. It trails in the body when NOT
+  # repeating (final page only) and rides `footer1.xml` when repeating.
   foot_section <- if (has_footnotes) {
     .docx_footnote_section(grid, preset, hyperlinks, rid_map, cs)
   } else {
     ""
   }
-  body_footnotes <- if (footer_footnotes) "" else foot_section
-  footer_foot_block <- if (footer_footnotes) foot_section else ""
+  body_footnotes <- if (footer_footnotes) {
+    ""
+  } else {
+    foot_section
+  }
+  footer_foot_block <- if (footer_footnotes) {
+    foot_section
+  } else {
+    ""
+  }
 
   entries <- c(
-    "[Content_Types].xml" = .docx_content_types(has_ph, has_footer),
+    "[Content_Types].xml" = .docx_content_types(
+      has_ph,
+      has_footer
+    ),
     "_rels/.rels" = .docx_root_rels(),
     "docProps/app.xml" = .docx_app_xml(),
     "docProps/core.xml" = .docx_core_xml(meta),
@@ -551,7 +588,11 @@ backend_docx <- function(grid, file) {
 #   $styles / $settings / $theme / $fontTable / $webSettings  one rId each
 #   $header / $footer    one rId each (NULL when absent)
 #   $hyperlinks          character() of rIds, parallel to the URL vector
-.docx_rid_map <- function(has_pagehead, has_pagefoot, n_hyperlinks) {
+.docx_rid_map <- function(
+  has_pagehead,
+  has_pagefoot,
+  n_hyperlinks
+) {
   m <- list(
     styles = "rId1",
     settings = "rId2",
@@ -635,32 +676,42 @@ backend_docx <- function(grid, file) {
       rep(blank_p, pad_title_bottom)
     )
   }
-  # One `<w:tbl>` per horizontal panel: each panel pins its own column
-  # set, so panel 2's body rows can no longer render under panel 1's
-  # grid/header. Word paginates the body within a panel via
-  # `<w:tblHeader/>` + `<w:cantSplit/>`; subgroups stay inline within a
-  # panel's table (the banner rows in `.render_docx_body_rows`). Panels
-  # are separated by a next-page section break (see below). When
-  # `repeat_titles` is set
-  # (the `repeat_content` default), the title block rides EVERY panel's
-  # table as `<w:tblHeader/>` rows so it repeats on every panel page,
-  # matching RTF; otherwise it renders once as paragraphs above panel 1
-  # (`titles_block`). An empty grid falls through one call so the
-  # "(no rows)" marker still appears.
-  # Any active subgroup (not only the per-page BigN case) renders one
-  # `<w:tbl>` per subgroup so its banner can lead ABOVE the column-header
-  # band (anatomy), matching RTF / PDF. Inline body banners landed below
-  # the header and duplicated as repeating `<w:tblHeader/>` rows.
-  sg_active <- any(vapply(
-    grid@pages,
-    function(p) !is.null(p$subgroup_index),
-    logical(1L)
-  ))
-  panel_groups <- .group_pages_into_panels(
-    grid@pages,
-    by_subgroup = isTRUE(grid@metadata$subgroup_big_n_active) || sg_active
-  )
-  if (length(panel_groups) <= 1L) {
+  # One `<w:tbl>` per horizontal panel (one per subgroup when a subgroup or
+  # per-page BigN is active, so each banner can lead ABOVE its column-header
+  # band, matching RTF / PDF). Panels are separated by a next-page section
+  # break -- a paragraph carrying the section's `<w:sectPr>` -- placed AFTER
+  # every panel but the last, which is closed by the body-level sectPr. When
+  # `repeat_titles` is set the title block rides each panel's table as
+  # `<w:tblHeader/>` rows; otherwise it renders once as `titles_block` above
+  # panel 1. An empty (zero-row) grid is just a single short panel whose
+  # body is one centred message row: it renders through this same path with
+  # the identical `shared_sect`, no special empty-panel section handling. A
+  # zero-page grid (no panels) falls through to `.render_docx_table`'s
+  # bare-paragraph branch.
+  panel_groups <- .docx_panel_groups(grid)
+  n_panels <- length(panel_groups)
+  shared_sect <- .docx_section_pr(preset, rid_map)
+  panel_xml <- character(n_panels)
+  panel_sect <- character(n_panels)
+  for (gi in seq_len(n_panels)) {
+    panel_pages <- panel_groups[[gi]]
+    panel_grid <- S7::set_props(grid, pages = panel_pages)
+    panel_xml[[gi]] <- .render_docx_table(
+      panel_grid,
+      preset,
+      hyperlinks,
+      rid_map,
+      cs = cs,
+      title_ast = if (title_in_table) titles_ast else list(),
+      pad_title_top = pad_title_top,
+      pad_title_bottom = pad_title_bottom
+    )
+    panel_sect[[gi]] <- shared_sect
+  }
+
+  if (n_panels == 0L) {
+    # Zero-page degenerate (hand-built grid / every column hidden): the
+    # bare-paragraph empty path in `.render_docx_table`.
     table_block <- .render_docx_table(
       grid,
       preset,
@@ -671,49 +722,30 @@ backend_docx <- function(grid, file) {
       pad_title_top = pad_title_top,
       pad_title_bottom = pad_title_bottom
     )
+    body <- paste0(
+      paste(titles_block, collapse = ""),
+      table_block,
+      body_footnotes,
+      shared_sect
+    )
   } else {
-    # Separate panels with a next-page SECTION break (a paragraph
-    # carrying the section's `<w:sectPr>`), placed AFTER each panel
-    # except the last. The section mark forces the next panel onto a
-    # fresh page AND keeps Word from merging the two `<w:tbl>`
-    # elements, with no visible blank line above the next panel's
-    # title -- an empty `pageBreakBefore` paragraph would render as a
-    # leading blank line. Mirrors RTF's `\sect` per panel; the final
-    # panel is closed by the body-level `sect_pr` appended downstream.
-    sect_break <- paste0(
-      "<w:p><w:pPr>",
-      .docx_section_pr(preset, rid_map),
-      "</w:pPr></w:p>"
-    )
-    n_panels <- length(panel_groups)
-    panel_tables <- vapply(
-      seq_along(panel_groups),
-      function(gi) {
-        panel_grid <- S7::set_props(grid, pages = panel_groups[[gi]])
-        tbl <- .render_docx_table(
-          panel_grid,
-          preset,
-          hyperlinks,
-          rid_map,
-          cs = cs,
-          title_ast = if (title_in_table) titles_ast else list(),
-          pad_title_top = pad_title_top,
-          pad_title_bottom = pad_title_bottom
+    pieces <- character()
+    for (gi in seq_len(n_panels)) {
+      pieces <- c(pieces, panel_xml[[gi]])
+      if (gi < n_panels) {
+        pieces <- c(
+          pieces,
+          paste0("<w:p><w:pPr>", panel_sect[[gi]], "</w:pPr></w:p>")
         )
-        if (gi < n_panels) paste0(tbl, sect_break) else tbl
-      },
-      character(1L)
+      }
+    }
+    body <- paste0(
+      paste(titles_block, collapse = ""),
+      paste(pieces, collapse = ""),
+      body_footnotes,
+      panel_sect[[n_panels]]
     )
-    table_block <- paste(panel_tables, collapse = "")
   }
-  sect_pr <- .docx_section_pr(preset, rid_map)
-
-  body <- paste0(
-    paste(titles_block, collapse = ""),
-    table_block,
-    body_footnotes,
-    sect_pr
-  )
   paste0(
     .docx_xml_prologue,
     "<w:document ",
@@ -1023,6 +1055,7 @@ backend_docx <- function(grid, file) {
 # the body (`trailing_footnotes`) or in `footer1.xml`
 # (`footer_footnotes`), so both placements render identically. Mirrors
 # RTF's `.render_rtf_footnote_block`.
+#
 .docx_footnote_section <- function(grid, preset, hyperlinks, rid_map, cs) {
   meta <- grid@metadata
   paras <- .docx_footnote_block(
@@ -1068,6 +1101,21 @@ backend_docx <- function(grid, file) {
 # Table emission
 # ---------------------------------------------------------------------
 
+# Horizontal panels for this grid: one per subgroup when a subgroup (or
+# per-page BigN) is active, else a single panel. `.docx_document_xml`
+# renders one `<w:tbl>` per panel.
+.docx_panel_groups <- function(grid) {
+  sg_active <- any(vapply(
+    grid@pages,
+    function(p) !is.null(p$subgroup_index),
+    logical(1L)
+  ))
+  .group_pages_into_panels(
+    grid@pages,
+    by_subgroup = isTRUE(grid@metadata$subgroup_big_n_active) || sg_active
+  )
+}
+
 # Page grouping uses the shared `.group_pages_into_panels()`
 # (R/as_grid.R). DOCX passes `by_subgroup = FALSE` normally (subgroups
 # stay inline in one table per panel) and `TRUE` under per-page BigN
@@ -1110,11 +1158,14 @@ backend_docx <- function(grid, file) {
     # No column structure (a hand-built zero-page grid, or every column
     # hidden): the empty message stands alone as a centred paragraph.
     msg_runs <- if (is.null(meta$empty_text_ast)) {
-      "<w:r><w:t xml:space=\"preserve\">No data available to report</w:t></w:r>"
+      sprintf(
+        "<w:r><w:t xml:space=\"preserve\">%s</w:t></w:r>",
+        .tabular_empty_text_default
+      )
     } else {
       .render_docx_inline(meta$empty_text_ast)
     }
-    jc <- .docx_align_token(meta$empty_place$halign %||% "center")
+    jc <- .docx_align_token("center")
     return(paste0("<w:p><w:pPr>", jc, "</w:pPr>", msg_runs, "</w:p>"))
   }
   col_names_vis <- pages[[1L]]$col_names
@@ -1242,17 +1293,18 @@ backend_docx <- function(grid, file) {
     emit_banner = !(big_n_active || subgroup_active)
   )
 
-  # Zero-row page with visible columns: the header band above is intact;
-  # the body is one full-span message row sized to the content-box for
-  # exact vertical centering (see `.render_docx_empty_row`).
-  empty_row <- if (isTRUE(pages[[1L]]$is_empty_page)) {
-    .render_docx_empty_row(
-      meta$empty_text_ast,
-      meta$empty_place,
-      length(col_names_vis),
+  # A zero-row (empty-state) page fills the body slot with ONE full-span,
+  # horizontally centred message row carrying the data-region closing rule, so
+  # the empty page is just a normal short table -- chrome, message, then the
+  # trailing footnote (the document-level footnote block), with blank space
+  # below.
+  empty_row <- if (isTRUE(first_page$is_empty_page)) {
+    .docx_empty_message_row(
+      meta,
       widths,
-      preset = preset,
-      body_borders = body_borders
+      length(col_names_vis),
+      preset,
+      body_borders
     )
   } else {
     character()
@@ -1269,6 +1321,66 @@ backend_docx <- function(grid, file) {
     paste(body_rows, collapse = ""),
     paste(empty_row, collapse = ""),
     "</w:tbl>"
+  )
+}
+
+# One full-span, horizontally centred empty-state message row occupying the
+# body slot of an otherwise-normal `<w:tbl>` when the spec resolves to zero
+# data rows. A single `<w:gridSpan>` cell spanning every visible column,
+# `<w:cantSplit/>` (a body row, NOT a repeating `<w:tblHeader/>`), carrying the
+# data-region closing rule (`outer_bottom`, defaulting solid) as its bottom
+# border plus the frame's left / right edges -- so the empty page closes
+# exactly like a populated short table. Natural row height (no
+# `<w:trHeight w:hRule="exact">`), so the message + trailing footnote cannot
+# spill onto a phantom page.
+.docx_empty_message_row <- function(
+  meta,
+  widths_twips,
+  n_cols,
+  preset,
+  body_borders
+) {
+  default_rpr <- .docx_rPr_from_style(NULL, preset, bold_default = FALSE)
+  msg_runs <- if (is.null(meta$empty_text_ast)) {
+    paste0(
+      "<w:r>",
+      default_rpr,
+      sprintf(
+        "<w:t xml:space=\"preserve\">%s</w:t></w:r>",
+        .tabular_empty_text_default
+      )
+    )
+  } else {
+    .render_docx_inline(meta$empty_text_ast, default_rpr = default_rpr)
+  }
+  bottom_triple <- if (is.list(body_borders)) {
+    body_borders[["outer_bottom"]]
+  } else {
+    NULL
+  }
+  # CT_TcBorders order: top, left, bottom, right. No top rule (the column-label
+  # band's midrule above already closes the header); the closing rule rides the
+  # bottom; the frame rides left / right.
+  merged_edges <- .docx_tcborders(
+    "",
+    .docx_frame_edge("left", body_borders),
+    .docx_border_seg_from_triple(bottom_triple, "bottom", "solid"),
+    .docx_frame_edge("right", body_borders)
+  )
+  paste0(
+    "<w:tr><w:trPr><w:cantSplit/></w:trPr>",
+    "<w:tc><w:tcPr>",
+    sprintf(
+      "<w:tcW w:w=\"%d\" w:type=\"dxa\"/>",
+      sum(as.integer(widths_twips))
+    ),
+    sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols),
+    merged_edges,
+    "</w:tcPr>",
+    "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr>",
+    msg_runs,
+    "</w:p>",
+    "</w:tc></w:tr>"
   )
 }
 
@@ -2076,72 +2188,6 @@ backend_docx <- function(grid, file) {
   )
 }
 
-# Full-span empty-state message row for a zero-row page. A single
-# `<w:gridSpan>` cell spans the band; the row height is the body
-# content-box (`<w:trHeight w:hRule="exact">`) so the cell `<w:vAlign>`
-# (from empty_valign, OOXML "center" for middle) centres the message
-# vertically -- exact valign on the paged DOCX medium. The paragraph
-# `<w:jc>` carries empty_halign. CT_TcPr child order: tcW, gridSpan,
-# tcBorders, vAlign.
-.render_docx_empty_row <- function(
-  empty_text_ast,
-  empty_place,
-  n_cols,
-  widths_twips,
-  preset = NULL,
-  body_borders = NULL
-) {
-  if (n_cols < 1L) {
-    return(character())
-  }
-  span_w <- sum(as.integer(widths_twips))
-  jc_tok <- .docx_align_token(empty_place$halign %||% "center")
-  valign_tok <- .docx_valign_token(empty_place$valign %||% "middle")
-  box_twips <- if (is.null(empty_place)) {
-    0L
-  } else {
-    as.integer(round(empty_place$height_twips))
-  }
-  trheight <- if (box_twips > 0L) {
-    sprintf("<w:trHeight w:hRule=\"exact\" w:val=\"%d\"/>", box_twips)
-  } else {
-    ""
-  }
-  default_rpr <- .docx_rPr_from_style(NULL, preset, bold_default = FALSE)
-  inner_runs <- if (is.null(empty_text_ast)) {
-    paste0(
-      "<w:r>",
-      default_rpr,
-      "<w:t xml:space=\"preserve\">No data available to report</w:t></w:r>"
-    )
-  } else {
-    .render_docx_inline(empty_text_ast, default_rpr = default_rpr)
-  }
-  merged_edges <- .docx_tcborders(
-    .docx_border_seg_from_triple(NULL, "top", "none"),
-    .docx_frame_edge("left", body_borders),
-    .docx_border_seg_from_triple(NULL, "bottom", "none"),
-    .docx_frame_edge("right", body_borders)
-  )
-  paste0(
-    "<w:tr><w:trPr>",
-    trheight,
-    "</w:trPr>",
-    "<w:tc><w:tcPr>",
-    sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", span_w),
-    sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols),
-    merged_edges,
-    valign_tok,
-    "</w:tcPr>",
-    "<w:p><w:pPr>",
-    jc_tok,
-    "</w:pPr>",
-    inner_runs,
-    "</w:p>",
-    "</w:tc></w:tr>"
-  )
-}
-
 # Map an `align` value to a `<w:pPr><w:jc w:val="...">` token.
 # Defaults to left when align is unset / NA. `decimal` -> right
 # (engine_decimal has already padded with NBSP for visual alignment).
@@ -2154,7 +2200,10 @@ backend_docx <- function(grid, file) {
     left = "<w:jc w:val=\"left\"/>",
     center = "<w:jc w:val=\"center\"/>",
     right = "<w:jc w:val=\"right\"/>",
-    decimal = "<w:jc w:val=\"right\"/>",
+    # decimal: the engine_decimal phase pads every cell to a uniform column
+    # width with NBSP, so the block centres under the (centred) decimal
+    # header rather than hugging the right edge (HTML / RTF / LaTeX parity).
+    decimal = "<w:jc w:val=\"center\"/>",
     "<w:jc w:val=\"left\"/>"
   )
 }
@@ -2198,14 +2247,12 @@ backend_docx <- function(grid, file) {
     }
   )
   # Header / footer placement mirrors RTF's `.rtf_section_def`
-  # (`\headery` / `\footery`). Margins stay EXACTLY the preset values,
-  # never enlarged: the header sits one body line above the top margin
-  # and flows upward (row 1 = body edge), the footer sits at the
-  # bottom-margin line and flows downward (footnotes near the body,
-  # program-path below). Word auto-expands the footer upward INTO the
-  # body when the footnote block is tall, so extra footnotes eat body
-  # space instead of growing the page (galley's model) -- never
-  # reserve margin, never overlap.
+  # (`\headery` / `\footery`). Margins stay EXACTLY the preset values: the
+  # header sits one body line above the top margin and flows upward (row 1 =
+  # body edge), the footer sits at the bottom-margin line and flows downward
+  # (footnotes near the body, program-path below). Word auto-expands the footer
+  # upward INTO the body when the footnote block is tall, so extra footnotes
+  # eat body space instead of growing the page (galley's model).
   head_line <- as.integer(round(preset@font_size * 28))
   header_dist <- max(360L, margins$top - head_line)
   footer_dist <- margins$bottom
@@ -2218,23 +2265,19 @@ backend_docx <- function(grid, file) {
     header_dist,
     footer_dist
   )
+  hdr_id <- if (!is.null(rid_map)) rid_map$header else NULL
+  ftr_id <- if (!is.null(rid_map)) rid_map$footer else NULL
   refs <- character()
-  if (!is.null(rid_map) && !is.null(rid_map$header)) {
+  if (!is.null(hdr_id)) {
     refs <- c(
       refs,
-      sprintf(
-        "<w:headerReference r:id=\"%s\" w:type=\"default\"/>",
-        rid_map$header
-      )
+      sprintf("<w:headerReference r:id=\"%s\" w:type=\"default\"/>", hdr_id)
     )
   }
-  if (!is.null(rid_map) && !is.null(rid_map$footer)) {
+  if (!is.null(ftr_id)) {
     refs <- c(
       refs,
-      sprintf(
-        "<w:footerReference r:id=\"%s\" w:type=\"default\"/>",
-        rid_map$footer
-      )
+      sprintf("<w:footerReference r:id=\"%s\" w:type=\"default\"/>", ftr_id)
     )
   }
   paste0(
@@ -2302,7 +2345,10 @@ backend_docx <- function(grid, file) {
 # REVERSE index order so row 1 (body edge) ends up at the bottom of
 # the header zone, closest to the table body — matches the RTF
 # header convention.
-.docx_header_xml <- function(pagehead_ast, preset, cs = NULL) {
+# Page-head band rows, REVERSE index order (row 1 = body edge ends at the
+# bottom of the header zone). Shared by `header1.xml` and the empty-section
+# header part, so the page chrome renders identically in both.
+.docx_pagehead_rows <- function(pagehead_ast, preset, cs = NULL) {
   nrow_band <- .page_band_nrow(pagehead_ast)
   rows <- character()
   for (i in rev(seq_len(nrow_band))) {
@@ -2312,12 +2358,16 @@ backend_docx <- function(grid, file) {
       .docx_chrome_row(row_ast, preset, cs = cs, surface = "pagehead")
     )
   }
+  rows
+}
+
+.docx_header_xml <- function(pagehead_ast, preset, cs = NULL) {
   paste0(
     .docx_xml_prologue,
     "<w:hdr ",
     .docx_ns_decls,
     ">",
-    paste(rows, collapse = ""),
+    paste(.docx_pagehead_rows(pagehead_ast, preset, cs = cs), collapse = ""),
     "</w:hdr>"
   )
 }
@@ -2331,12 +2381,9 @@ backend_docx <- function(grid, file) {
 # pagefoot chrome rows, so the footer reads footnotes-then-program-path
 # top to bottom, repeating on every page. Mirrors RTF's `{\footer}`
 # (footnote lines above the program-path band).
-.docx_footer_xml <- function(
-  pagefoot_ast,
-  preset,
-  footnote_block = "",
-  cs = NULL
-) {
+# Page-foot band rows, FORWARD index order (row 1 = body edge at the top of
+# the footer zone). Shared by `footer1.xml` and the empty-section footer part.
+.docx_pagefoot_rows <- function(pagefoot_ast, preset, cs = NULL) {
   nrow_band <- .page_band_nrow(pagefoot_ast)
   rows <- character()
   for (i in seq_len(nrow_band)) {
@@ -2346,13 +2393,22 @@ backend_docx <- function(grid, file) {
       .docx_chrome_row(row_ast, preset, cs = cs, surface = "pagefoot")
     )
   }
+  rows
+}
+
+.docx_footer_xml <- function(
+  pagefoot_ast,
+  preset,
+  footnote_block = "",
+  cs = NULL
+) {
   paste0(
     .docx_xml_prologue,
     "<w:ftr ",
     .docx_ns_decls,
     ">",
     footnote_block,
-    paste(rows, collapse = ""),
+    paste(.docx_pagefoot_rows(pagefoot_ast, preset, cs = cs), collapse = ""),
     "</w:ftr>"
   )
 }
@@ -2770,18 +2826,19 @@ backend_docx <- function(grid, file) {
   )
 )
 
-# Classify a resolved font stack into one OOXML family class by
-# membership in the shared cores from `R/fonts.R`. Mono wins first
-# (the `"mono"` default), then serif, then sans; an unrecognised
-# named face defaults to `swiss` (the safe variable-pitch class).
+# Map a resolved font stack to one OOXML family class via the shared
+# `.font_generic_class()` SSOT (the same classifier the RTF backend uses),
+# translating its generic class to the OOXML vocabulary: mono -> modern,
+# serif -> roman, sans (and any unclassified face) -> swiss, the safe
+# variable-pitch default. Keeping both Word-family backends on the one
+# classifier prevents the RTF and DOCX font fingerprints from drifting.
 .docx_font_class <- function(stack) {
-  if (any(stack %in% .stack_mono)) {
-    return("modern")
-  }
-  if (any(stack %in% .stack_serif)) {
-    return("roman")
-  }
-  "swiss"
+  switch(
+    .font_generic_class(stack) %||% "sans",
+    mono = "modern",
+    serif = "roman",
+    "swiss"
+  )
 }
 
 # `word/fontTable.xml` — declares the resolved `preset@font_family`
@@ -2791,15 +2848,32 @@ backend_docx <- function(grid, file) {
 # the declared substitutes, the OOXML form of RTF's `\*\falt`. Every
 # face in one stack shares the class fingerprint, since the stack is
 # metric-compatible by construction.
+#
+# Each `<w:font>` also carries `<w:altName>` naming the NEXT in-class face
+# in the resolved stack. Without it Word, on a box missing the primary
+# (e.g. a Windows reader with no Liberation Mono), falls back via panose
+# guessing and can land out of class (a mono face rendering as serif). The
+# explicit named successor keeps the substitution in class (Liberation Mono
+# -> Courier New -> Courier ...). `<w:altName>` is the FIRST child of
+# CT_Font (the schema sequence is altName, panose1, charset, family,
+# notTrueType, pitch, sig), so it precedes the shared fingerprint.
 .docx_font_table <- function(preset) {
   stack <- .resolve_font_stack(preset@font_family, "docx")
   fp <- .docx_font_fingerprint[[.docx_font_class(stack)]]
+  faces <- unique(stack)
   decls <- vapply(
-    unique(stack),
-    function(face) {
+    seq_along(faces),
+    function(i) {
+      successor <- if (i < length(faces)) faces[[i + 1L]] else NA_character_
+      alt <- if (!is.na(successor)) {
+        sprintf("<w:altName w:val=\"%s\"/>", .docx_escape_attr(successor))
+      } else {
+        ""
+      }
       sprintf(
-        "<w:font w:name=\"%s\">%s</w:font>",
-        .docx_escape_attr(face),
+        "<w:font w:name=\"%s\">%s%s</w:font>",
+        .docx_escape_attr(faces[[i]]),
+        alt,
         fp
       )
     },

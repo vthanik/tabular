@@ -23,10 +23,10 @@
 # cell layer; they consult the chrome layer + legacy scalars.
 #
 # `col_spec@align == "decimal"` is special: the engine_decimal phase
-# has already NBSP-padded the cell text, so the visual decimal mark
-# falls on a single column-wide anchor when the cell renders
-# right-aligned. We therefore project "decimal" to "right" inside
-# the cascade.
+# has already NBSP-padded every cell to a uniform column width, so the
+# decimal block centres in the column (its visual centroid sits on the
+# shared decimal anchor). We therefore project "decimal" to "center"
+# inside the cascade, matching the centred decimal header.
 
 # ---------------------------------------------------------------------
 # `preset(alignment = list(...))` knob shape validator (called from
@@ -117,7 +117,7 @@
 
 # Effective horizontal alignment for one body cell. Walks:
 #
-#   style_node@halign  >  col_spec@align (decimal -> right)
+#   style_node@halign  >  col_spec@align (decimal -> center)
 #                       >  NA (backend default takes over)
 #
 # Body alignment from `preset(alignment = list(body_halign = ...))`
@@ -137,7 +137,12 @@
       !is.na(col_spec@align)
   ) {
     if (col_spec@align == "decimal") {
-      return("right")
+      # engine_decimal pads every decimal cell to a uniform column width
+      # with NBSP, so the block centres under the (centred) decimal header
+      # rather than hugging the right edge. Single source of truth for the
+      # body-cell halign across DOCX / HTML / RTF; LaTeX mirrors it via the
+      # colspec letter and Markdown via the alignment row.
+      return("center")
     }
     return(col_spec@align)
   }
@@ -184,7 +189,7 @@
       !is.na(col_spec@align)
   ) {
     if (col_spec@align == "decimal") {
-      return("right")
+      return("center")
     }
     return(col_spec@align)
   }
