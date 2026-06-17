@@ -471,7 +471,7 @@ test_that(".wrapped_line_count counts a short block as one line per element", {
     ),
     2L
   )
-  # Embedded "\n" breaks expand, mirroring .count_lines.
+  # Embedded "\n" breaks expand to separate physical lines.
   expect_identical(
     tabular:::.wrapped_line_count("line one\nline two", preset_spec(), 9),
     2L

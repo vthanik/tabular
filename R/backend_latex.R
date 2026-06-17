@@ -770,16 +770,23 @@ backend_latex <- function(grid, file) {
   if (anyNA(widths)) {
     return(NA_real_)
   }
-  # The rendered table width is exactly the sum of the resolved column
-  # widths. `.latex_colspec()` sets each `Q[wd=...]` to `resolved - sep`
-  # so the column's footprint (`wd` + leftsep + rightsep) equals the
-  # resolved width again; summed, that is `sum(widths)`. Adding the
-  # per-column padding on top would DOUBLE-count the separation (it was
-  # already folded into `wd`), inflating the footnote minipage past the
-  # table -- and past the printable width on a narrow table -- so the
-  # footnote text overran the table-width footnote rule. `cells_style` /
-  # `preset` are retained for signature stability.
-  sum(widths)
+  # The rendered table width is the sum of each column's FOOTPRINT, which
+  # must mirror `.latex_col_token` exactly: `wd = max(width - sep, .min)`
+  # and the footprint is `wd + sep`. When `width - sep >= .min` the
+  # footprint is exactly `width` (so a normal table is still `sum(widths)`),
+  # but a narrow pinned column hits the `.min_auto_width_in` floor, making
+  # its footprint `.min + sep > width`. Summing raw `widths` there
+  # under-measured the table, so the footnote rule rendered NARROWER than
+  # the table. Use the same separation the colspec uses (from the body
+  # cells_style). The branch (not `width - sep + sep`) keeps the unfloored
+  # footprint bit-identical to `width`.
+  sep_in <- .latex_colsep_in(cells_style, preset)
+  footprints <- ifelse(
+    widths - sep_in >= .min_auto_width_in,
+    widths,
+    .min_auto_width_in + sep_in
+  )
+  sum(footprints)
 }
 
 # ---------------------------------------------------------------------
@@ -792,11 +799,6 @@ backend_latex <- function(grid, file) {
 .render_latex_table <- function(page, meta, cs = NULL, body = NULL) {
   col_names_vis <- page$col_names
   cols <- meta$cols %||% list()
-  colspec <- .latex_colspec(
-    col_names_vis,
-    cols,
-    sep_in = .latex_colsep_in(cs, meta$preset)
-  )
 
   # Body source: the concatenated panel body when the panel renderer
   # supplies one (native pagination), else the single page's slices
@@ -812,6 +814,19 @@ backend_latex <- function(grid, file) {
       host_col = page$host_col,
       keep_with_next = page$keep_with_next
     )
+
+  # Column separation is derived from the BODY cells_style (per-cell
+  # `style(.at = cells_body(), padding = ...)` overrides win, else the
+  # preset default), NOT the chrome style `cs`: the engine folds body
+  # padding into each resolved column width, so `wd` must subtract the
+  # SAME separation the table-width / footnote-rule calc adds back, or the
+  # rule mismatches the table. Passing `cs` here read all-NA padding and
+  # silently ignored body padding overrides.
+  colspec <- .latex_colspec(
+    col_names_vis,
+    cols,
+    sep_in = .latex_colsep_in(src$cells_style, meta$preset)
+  )
 
   # Per-page BigN: one longtblr per subgroup, so read that subgroup's
   # SUFFIXED bands + leaf labels from the page descriptor via the shared

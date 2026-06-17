@@ -384,22 +384,12 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   max(.min_rows_per_page, rpp)
 }
 
-# Count display lines in a character vector, expanding any embedded
-# "\n" line breaks. Length-0 input returns 0L.
-.count_lines <- function(x) {
-  if (length(x) == 0L) {
-    return(0L)
-  }
-  parts <- strsplit(x, "\n", fixed = TRUE)
-  sum(vapply(parts, length, integer(1)))
-}
-
 # Count the PHYSICAL (wrapped) lines a chrome text block occupies at a
-# given printable width -- the line-aware sibling of .count_lines. A long
-# title or footnote wraps to several lines, so a box that reserves only one
-# row per element is too tall, and the wrapped overflow runs off the page
-# (DOCX figure footnotes flow in the body; an empty-state message box and a
-# table's footer reservation are likewise sized from this count).
+# given printable width. A long title or footnote wraps to several lines,
+# so a box that reserves only one row per element is too short, and the
+# wrapped overflow runs off the page (DOCX figure footnotes flow in the
+# body; an empty-state message box and a table's footer reservation are
+# likewise sized from this count).
 #
 # Wrapping is computed by GREEDY WORD PACKING against AFM-measured word
 # widths, mirroring how LaTeX (\raggedright), RTF and Word break a
@@ -407,10 +397,15 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
 # the available width, then a new line starts. A naive total-width / line-
 # width ratio systematically under-counts (it assumes characters pack with
 # no word-boundary slack), which let a footnote's last line spill onto a
-# second page. Embedded "\n" breaks expand first, mirroring .count_lines.
-# Length-0 input returns 0L; an empty element still counts as one line, so
-# a short, non-wrapping block matches .count_lines exactly (no change to a
-# default figure or table).
+# second page.
+#
+# The word widths come from the Core-12 AFM metric model resolved through
+# the font's generic class (the same approximation the column-width
+# auto-measure uses); for a non-metric-compatible face it is an estimate,
+# not exact. Embedded "\n" breaks expand first. Length-0 input returns 0L;
+# EACH element counts as at least one physical line -- including an empty
+# "" spacer element, which renders as a blank display line per the
+# one-element-one-display-line contract for titles / footnotes.
 .wrapped_line_count <- function(text, preset, avail_w_in) {
   if (length(text) == 0L) {
     return(0L)

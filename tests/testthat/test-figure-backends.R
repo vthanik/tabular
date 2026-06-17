@@ -717,3 +717,79 @@ test_that("the failed-plot error names the offending page index", {
   )
   expect_match(err, "figure plot 2")
 })
+
+# ---------------------------------------------------------------------
+# Figure layout guard, per-page meta box, page-break child order
+# (#fig-blank, follow-up hardening)
+# ---------------------------------------------------------------------
+
+test_that("figure aborts with a layout error when chrome exceeds the page (#fig-blank)", {
+  # Chrome taller than the printable area leaves no image box. The figure
+  # path must abort like the table path (.compute_rows_per_page), not feed a
+  # negative box height to the rasteriser (an opaque device crash).
+  fig <- figure(
+    png_fixture(),
+    footnotes = rep("A long footnote line of text.", 30)
+  ) |>
+    preset(font_size = 40)
+  out <- withr::local_tempfile(fileext = ".rtf")
+  expect_error(emit(fig, out), class = "tabular_error_layout")
+})
+
+test_that("multi-page meta figure sizes each page's box from its own chrome (#fig-blank)", {
+  # Per-page meta interpolates each page's footnotes; a page whose footnote
+  # wraps to more lines must get a shorter image box, not share one box sized
+  # from the raw template (which would overflow the longer page).
+  meta <- data.frame(
+    note = c(
+      "Short.",
+      paste(
+        rep("A much longer footnote that wraps across lines.", 6),
+        collapse = " "
+      )
+    ),
+    stringsAsFactors = FALSE
+  )
+  fig <- figure(
+    list(png_fixture(), png_fixture()),
+    footnotes = "{note}",
+    meta = meta
+  )
+  g <- as_grid(fig)
+  expect_lt(
+    g@pages[[2L]]$place$height_twips,
+    g@pages[[1L]]$place$height_twips
+  )
+})
+
+test_that(".docx_figure_page_break_before keeps CT_PPr child order (#fig-blank)", {
+  f <- tabular:::.docx_figure_page_break_before
+  # Blank pad -> a pPr carrying only the break.
+  expect_identical(
+    f(list("<w:p/>"))[[1L]],
+    "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>"
+  )
+  # pStyle must precede pageBreakBefore, which must precede jc.
+  styled <- f(list(paste0(
+    "<w:p><w:pPr><w:pStyle w:val=\"T\"/>",
+    "<w:jc w:val=\"center\"/></w:pPr><w:r/></w:p>"
+  )))[[1L]]
+  expect_match(
+    styled,
+    "<w:pStyle w:val=\"T\"/><w:pageBreakBefore/><w:jc",
+    fixed = TRUE
+  )
+  # keepNext also precedes pageBreakBefore.
+  kn <- f(list(
+    "<w:p><w:pPr><w:keepNext/><w:jc w:val=\"left\"/></w:pPr></w:p>"
+  ))[[1L]]
+  expect_match(kn, "<w:keepNext/><w:pageBreakBefore/><w:jc", fixed = TRUE)
+  # Title-less page (leading table) gets a carrier paragraph; tables stay
+  # separated.
+  carried <- f(list("<w:tbl>X</w:tbl>"))
+  expect_identical(
+    carried[[1L]],
+    "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>"
+  )
+  expect_identical(carried[[2L]], "<w:tbl>X</w:tbl>")
+})

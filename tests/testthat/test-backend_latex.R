@@ -312,6 +312,41 @@ test_that("footnote minipage matches the resolved table width", {
   expect_match(txt, "\\begin{minipage}{5in}", fixed = TRUE)
 })
 
+test_that(".latex_table_width_in sums footprints, not raw widths, for narrow pins (#fig-blank)", {
+  # A pinned column narrower than sep + .min_auto_width_in hits the wd floor
+  # in .latex_col_token, so its footprint (.min + sep) EXCEEDS its width.
+  # The table width must reflect that or the footnote rule renders narrower
+  # than the table (the inverse of the double-count bug above).
+  widths <- c(a = 0.4, b = 0.4)
+  cols <- lapply(widths, function(w) col_spec(width = w))
+  spec <- tabular(data.frame(a = "x", b = "y"))
+  preset <- tabular:::.effective_preset(spec)
+  sep <- tabular:::.latex_colsep_in(NULL, preset)
+  tw <- tabular:::.latex_table_width_in(names(widths), cols, NULL, preset)
+  expected <- sum(pmax(widths - sep, tabular:::.min_auto_width_in) + sep)
+  expect_equal(tw, expected)
+  expect_gt(tw, sum(widths)) # floored columns make the table wider than raw sum
+})
+
+test_that("LaTeX colspec width correction honours per-cell body padding (#fig-blank)", {
+  # The colsep correction must read the BODY cells_style (per-cell padding
+  # overrides), not the chrome style. A large body padding override widens
+  # the separation, so the colspec wd shrinks vs the default-padding table.
+  base <- tabular(data.frame(a = "x", b = "y")) |>
+    cols(a = col_spec(width = 2), b = col_spec(width = 3))
+  padded <- base |>
+    style(.at = cells_body(), padding_left = 20, padding_right = 20)
+  wd_of <- function(spec) {
+    txt <- render_tex(spec)
+    as.numeric(sub(
+      "wd=([0-9.]+)in",
+      "\\1",
+      regmatches(txt, regexpr("wd=[0-9.]+in", txt))
+    ))
+  }
+  expect_lt(wd_of(padded), wd_of(base))
+})
+
 test_that("no titles -> no \\begin{center}; no footnotes -> no \\small", {
   spec <- tabular(data.frame(x = 1L))
   txt <- render_tex(spec)

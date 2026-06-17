@@ -452,9 +452,10 @@ backend_docx <- function(grid, file) {
 # `<w:pageBreakBefore/>` on its FIRST paragraph (a blank pad, a title, or -
 # for a title-less page - a dedicated carrier paragraph prepended before the
 # image table, since the property is unreliable on a table cell paragraph and
-# two adjacent tables would otherwise merge). The break is spliced after
-# `<w:pStyle>` when present to keep the CT_PPr child order valid
-# (pStyle precedes pageBreakBefore). Returns the page parts with the break
+# two adjacent tables would otherwise merge). The break is spliced AFTER any
+# leading CT_PPr children that must precede it in schema order (pStyle,
+# keepNext, keepLines, framePr, widowControl) so the child order stays valid
+# whatever paragraph leads the page. Returns the page parts with the break
 # applied; used only for pages after the first.
 .docx_figure_page_break_before <- function(page_parts) {
   brk <- "<w:pageBreakBefore/>"
@@ -464,14 +465,19 @@ backend_docx <- function(grid, file) {
   first <- page_parts[[1L]]
   if (identical(first, "<w:p/>")) {
     page_parts[[1L]] <- paste0("<w:p><w:pPr>", brk, "</w:pPr></w:p>")
-  } else if (grepl("^<w:p><w:pPr><w:pStyle[^>]*/>", first)) {
-    page_parts[[1L]] <- sub("(<w:pStyle[^>]*/>)", paste0("\\1", brk), first)
   } else if (startsWith(first, "<w:p><w:pPr>")) {
+    # Insert after the leading run of must-precede children; for a plain
+    # pPr (e.g. a leading <w:jc/>) the run is empty and the break becomes
+    # the first pPr child, which is also valid order.
+    lead <- paste0(
+      "(?:<w:pStyle[^>]*/>|<w:keepNext/>|<w:keepLines/>",
+      "|<w:framePr[^>]*/>|<w:widowControl[^>]*/?>)*"
+    )
     page_parts[[1L]] <- sub(
-      "<w:pPr>",
-      paste0("<w:pPr>", brk),
+      paste0("^(<w:p><w:pPr>", lead, ")"),
+      paste0("\\1", brk),
       first,
-      fixed = TRUE
+      perl = TRUE
     )
   } else if (startsWith(first, "<w:p>")) {
     page_parts[[1L]] <- sub(
@@ -514,20 +520,14 @@ backend_docx <- function(grid, file) {
   footer_footnotes <- has_footnotes && isTRUE(rep_footnotes)
   has_footer <- has_pf_band || footer_footnotes
 
-  # Every panel -- empty or populated -- renders through the normal table
-  # path with the shared header1 / footer1, so an empty page is just a short
-  # table whose body is a single centred message row.
-  has_ph_shared <- has_ph
-  has_footer_shared <- has_footer
-
   # One-pass hyperlink walk over every AST surface so the rels file
   # and the inline renderer agree on rId numbering. First-encounter
   # order is deterministic given the walk order in
   # `.docx_collect_hyperlinks()`.
   hyperlinks <- .docx_collect_hyperlinks(grid)
   rid_map <- .docx_rid_map(
-    has_ph_shared,
-    has_footer_shared,
+    has_ph,
+    has_footer,
     length(hyperlinks)
   )
 
@@ -551,8 +551,8 @@ backend_docx <- function(grid, file) {
 
   entries <- c(
     "[Content_Types].xml" = .docx_content_types(
-      has_ph_shared,
-      has_footer_shared
+      has_ph,
+      has_footer
     ),
     "_rels/.rels" = .docx_root_rels(),
     "docProps/app.xml" = .docx_app_xml(),
@@ -574,14 +574,14 @@ backend_docx <- function(grid, file) {
     "word/theme/theme1.xml" = .docx_theme_xml(preset),
     "word/webSettings.xml" = .docx_web_settings_xml()
   )
-  if (has_ph_shared) {
+  if (has_ph) {
     entries[["word/header1.xml"]] <- .docx_header_xml(
       meta$pagehead_ast,
       preset,
       cs = cs
     )
   }
-  if (has_footer_shared) {
+  if (has_footer) {
     entries[["word/footer1.xml"]] <- .docx_footer_xml(
       meta$pagefoot_ast,
       preset,
@@ -718,14 +718,11 @@ backend_docx <- function(grid, file) {
   # every panel but the last, which is closed by the body-level sectPr. When
   # `repeat_titles` is set the title block rides each panel's table as
   # `<w:tblHeader/>` rows; otherwise it renders once as `titles_block` above
-  # panel 1. EMPTY panels are different: the chrome rode the panel's header
-  # part and the closing rule + footnotes its footer part, so the panel body
-  # is ONLY the centred message and its terminating sectPr references those
-  # empty parts, enlarges the body margins by the chrome height, and sets
-  # `<w:vAlign>` (no predicted box height -> never a phantom page). Section
-  # properties travel with the panel the break ENDS, so an interior empty
-  # section centres correctly. A zero-page grid (no panels) falls through to
-  # `.render_docx_table`'s bare-paragraph branch.
+  # panel 1. An empty (zero-row) grid is just a single short panel whose
+  # body is one centred message row: it renders through this same path with
+  # the identical `shared_sect`, no special empty-panel section handling. A
+  # zero-page grid (no panels) falls through to `.render_docx_table`'s
+  # bare-paragraph branch.
   panel_groups <- .docx_panel_groups(grid)
   n_panels <- length(panel_groups)
   shared_sect <- .docx_section_pr(preset, rid_map)
@@ -2864,18 +2861,19 @@ backend_docx <- function(grid, file) {
   )
 )
 
-# Classify a resolved font stack into one OOXML family class by
-# membership in the shared cores from `R/fonts.R`. Mono wins first
-# (the `"mono"` default), then serif, then sans; an unrecognised
-# named face defaults to `swiss` (the safe variable-pitch class).
+# Map a resolved font stack to one OOXML family class via the shared
+# `.font_generic_class()` SSOT (the same classifier the RTF backend uses),
+# translating its generic class to the OOXML vocabulary: mono -> modern,
+# serif -> roman, sans (and any unclassified face) -> swiss, the safe
+# variable-pitch default. Keeping both Word-family backends on the one
+# classifier prevents the RTF and DOCX font fingerprints from drifting.
 .docx_font_class <- function(stack) {
-  if (any(stack %in% .stack_mono)) {
-    return("modern")
-  }
-  if (any(stack %in% .stack_serif)) {
-    return("roman")
-  }
-  "swiss"
+  switch(
+    .font_generic_class(stack) %||% "sans",
+    mono = "modern",
+    serif = "roman",
+    "swiss"
+  )
 }
 
 # `word/fontTable.xml` — declares the resolved `preset@font_family`

@@ -117,7 +117,7 @@
 
 # Effective horizontal alignment for one body cell. Walks:
 #
-#   style_node@halign  >  col_spec@align (decimal -> right)
+#   style_node@halign  >  col_spec@align (decimal -> center)
 #                       >  NA (backend default takes over)
 #
 # Body alignment from `preset(alignment = list(body_halign = ...))`

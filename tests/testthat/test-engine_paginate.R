@@ -638,3 +638,20 @@ test_that("a non-empty table still splits into horizontal panels", {
   expect_equal(g@metadata$total_panels, 3L)
   expect_gt(g@metadata$total_pages, 1L)
 })
+
+# ---------------------------------------------------------------------
+# Blank spacer lines count as physical rows (#fig-blank)
+# ---------------------------------------------------------------------
+
+test_that(".wrapped_line_count counts an empty spacer element as one line (#fig-blank)", {
+  # A "" element is a blank display line per the one-element-one-line
+  # contract for titles / footnotes (it renders as an empty paragraph that
+  # occupies a row), so it must reserve a row. The removed .count_lines
+  # dropped it (strsplit("", "\n") is character(0)); reserving zero left the
+  # content box one row too tall and the blank line spilled off the page.
+  spec <- tabular(data.frame(x = 1L))
+  preset <- tabular:::.effective_preset(spec)
+  expect_equal(tabular:::.wrapped_line_count("", preset, 6), 1L)
+  expect_equal(tabular:::.wrapped_line_count(c("a", "", "b"), preset, 6), 3L)
+  expect_equal(tabular:::.wrapped_line_count(character(0), preset, 6), 0L)
+})

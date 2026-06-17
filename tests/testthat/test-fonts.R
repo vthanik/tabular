@@ -258,8 +258,10 @@ test_that(".font_status marks a clearly-missing font as not on this machine", {
 
 test_that(".font_generic_class classifies stacks the same way for both Word backends", {
   # The shared SSOT both RTF and DOCX consult, so a font_family classes
-  # identically across them. Mono wins first, then serif, then sans;
-  # unrecognised faces fall back to sans (the OOXML swiss default).
+  # identically across them. Mono wins first, then serif, then sans; an
+  # unrecognised face returns NA_character_ (each backend then applies its
+  # OWN unclassified default -- RTF \froman, DOCX swiss -- as asserted
+  # below), it does NOT itself fall back to sans.
   expect_identical(tabular:::.font_generic_class("mono"), "mono")
   expect_identical(tabular:::.font_generic_class("serif"), "serif")
   expect_identical(tabular:::.font_generic_class("sans"), "sans")
