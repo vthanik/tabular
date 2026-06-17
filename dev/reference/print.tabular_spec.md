@@ -1,10 +1,9 @@
 # Print a `tabular_spec`
 
 Renders a `tabular_spec` interactively. The default behaviour mirrors
-[`gt::gt()`](https://gt.rstudio.com/reference/gt.html): convert the spec
-to an `htmltools` tag list and let htmltools dispatch — RStudio +
-Positron viewer panes, Quarto / Rmd notebook inline, Databricks
-`displayHTML`, and plain-console
+`gt::gt()`: convert the spec to an `htmltools` tag list and let
+htmltools dispatch — RStudio + Positron viewer panes, Quarto / Rmd
+notebook inline, Databricks `displayHTML`, and plain-console
 [`cat()`](https://rdrr.io/r/base/cat.html) are all handled without any
 IDE- specific branching.
 
@@ -24,10 +23,9 @@ IDE- specific branching.
 - view:
 
   *Open the viewer?* `<logical(1)>: default `interactive()“. Same role
-  as [`gt::gt`](https://gt.rstudio.com/reference/gt.html)'s \`view\`
-  argument: passes through to htmltools as \`browse = view\`. Set \`view
-  = FALSE\` to suppress the viewer for one call (e.g. to capture the
-  HTML string without launching a window).
+  as `gt::gt`'s \`view\` argument: passes through to htmltools as
+  \`browse = view\`. Set \`view = FALSE\` to suppress the viewer for one
+  call (e.g. to capture the HTML string without launching a window).
 
 - output:
 
@@ -58,11 +56,10 @@ heuristics — htmltools already knows.
 
 **`view` argument.** Defaults to
 [`interactive()`](https://rdrr.io/r/base/interactive.html), the same
-universal off-switch
-[`gt::gt()`](https://gt.rstudio.com/reference/gt.html) uses.
-Non-interactive contexts (`Rscript`, `R CMD check`, CI, devtools::test)
-bypass the viewer automatically. Pass `view = FALSE` explicitly at an
-interactive prompt to suppress the viewer for a single call.
+universal off-switch `gt::gt()` uses. Non-interactive contexts
+(`Rscript`, `R CMD check`, CI, devtools::test) bypass the viewer
+automatically. Pass `view = FALSE` explicitly at an interactive prompt
+to suppress the viewer for a single call.
 
 **`output` argument.** Forces a specific preview format instead of the
 default HTML-via-htmltools path. One of:
@@ -165,6 +162,9 @@ tabular(
 #tabular-e65ff1c855 .tabular-table thead th.text-left { text-align: left; }
 #tabular-e65ff1c855 .tabular-table thead th.text-center { text-align: center; }
 #tabular-e65ff1c855 .tabular-table thead th.text-right { text-align: right; }
+#tabular-e65ff1c855 .tabular-table td.text-left { text-align: left; }
+#tabular-e65ff1c855 .tabular-table td.text-center { text-align: center; }
+#tabular-e65ff1c855 .tabular-table td.text-right { text-align: right; }
 #tabular-e65ff1c855 .valign-top { vertical-align: top; }
 #tabular-e65ff1c855 .valign-middle { vertical-align: middle; }
 #tabular-e65ff1c855 .valign-bottom { vertical-align: bottom; }
@@ -172,7 +172,8 @@ tabular(
 #tabular-e65ff1c855 .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-e65ff1c855 .tabular-page-break-row { display: none; }
 #tabular-e65ff1c855 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-e65ff1c855 .tabular-page-header, #tabular-e65ff1c855 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-e65ff1c855 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-e65ff1c855 .tabular-page-header, #tabular-e65ff1c855 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
 #tabular-e65ff1c855 .tabular-page-header { margin-bottom: 1rem; }
 #tabular-e65ff1c855 .tabular-page-footer { margin-top: 1rem; }
 #tabular-e65ff1c855 .tabular-page-header-left, #tabular-e65ff1c855 .tabular-page-footer-left { flex: 1; text-align: left; }

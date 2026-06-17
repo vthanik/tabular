@@ -68,7 +68,7 @@ Twelve predicates cover the full S7 surface:
 | `is_pagination_spec()` | `pagination_spec` | [`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md) |
 | `is_preset_spec()` | `preset_spec` | [`preset()`](https://vthanik.github.io/tabular/dev/reference/preset.md), [`set_preset()`](https://vthanik.github.io/tabular/dev/reference/set_preset.md) |
 | `is_subgroup_spec()` | `subgroup_spec` | [`subgroup()`](https://vthanik.github.io/tabular/dev/reference/subgroup.md) |
-| `is_inline_ast()` | `inline_ast` | `parse_inline()` (post-format) |
+| `is_inline_ast()` | `inline_ast` | `.parse_inline()` (post-format) |
 
 Predicates never error — they return `FALSE` for `NULL`, vectors,
 objects of any other class, and S7 objects from other packages. Use them
@@ -147,6 +147,9 @@ add_safety_footnote(demo)
 #tabular-30edc9b813 .tabular-table thead th.text-left { text-align: left; }
 #tabular-30edc9b813 .tabular-table thead th.text-center { text-align: center; }
 #tabular-30edc9b813 .tabular-table thead th.text-right { text-align: right; }
+#tabular-30edc9b813 .tabular-table td.text-left { text-align: left; }
+#tabular-30edc9b813 .tabular-table td.text-center { text-align: center; }
+#tabular-30edc9b813 .tabular-table td.text-right { text-align: right; }
 #tabular-30edc9b813 .valign-top { vertical-align: top; }
 #tabular-30edc9b813 .valign-middle { vertical-align: middle; }
 #tabular-30edc9b813 .valign-bottom { vertical-align: bottom; }
@@ -154,7 +157,8 @@ add_safety_footnote(demo)
 #tabular-30edc9b813 .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-30edc9b813 .tabular-page-break-row { display: none; }
 #tabular-30edc9b813 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-30edc9b813 .tabular-page-header, #tabular-30edc9b813 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-30edc9b813 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-30edc9b813 .tabular-page-header, #tabular-30edc9b813 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
 #tabular-30edc9b813 .tabular-page-header { margin-bottom: 1rem; }
 #tabular-30edc9b813 .tabular-page-footer { margin-top: 1rem; }
 #tabular-30edc9b813 .tabular-page-header-left, #tabular-30edc9b813 .tabular-page-footer-left { flex: 1; text-align: left; }

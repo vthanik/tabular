@@ -28,15 +28,15 @@ ARD’s `context` column **verbatim**. That value depends on which
 function built the ARD — use the wrong key and those rows are dropped
 **silently**. Always check `unique(ard$context)` first.
 
-| Generating function | `context` |
-|----|----|
-| [`cards::ard_summary()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_summary.html) | `summary` |
-| [`cards::ard_tabulate()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_tabulate.html) | `tabulate` |
-| [`cards::ard_continuous()`](https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html) | `continuous` |
-| [`cards::ard_categorical()`](https://insightsengineering.github.io/cards/latest-tag/reference/deprecated.html) | `categorical` |
-| [`cards::ard_stack_hierarchical()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack_hierarchical.html) | `tabulate` + `hierarchical` |
-| [`cardx::ard_categorical_ci()`](https://insightsengineering.github.io/cardx/latest-tag/reference/ard_categorical_ci.html) | `proportion_ci` |
-| [`cardx::ard_continuous_ci()`](https://insightsengineering.github.io/cardx/latest-tag/reference/ard_continuous_ci.html) | `continuous_ci` |
+| Generating function               | `context`                   |
+|-----------------------------------|-----------------------------|
+| `cards::ard_summary()`            | `summary`                   |
+| `cards::ard_tabulate()`           | `tabulate`                  |
+| `cards::ard_continuous()`         | `continuous`                |
+| `cards::ard_categorical()`        | `categorical`               |
+| `cards::ard_stack_hierarchical()` | `tabulate` + `hierarchical` |
+| `cardx::ard_categorical_ci()`     | `proportion_ci`             |
+| `cardx::ard_continuous_ci()`      | `continuous_ci`             |
 
 A single string, or `statistic = list(default = ...)`, applies one
 format to every context.

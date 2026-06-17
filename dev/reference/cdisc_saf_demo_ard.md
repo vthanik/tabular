@@ -1,9 +1,8 @@
 # Cards ARD for demographics (flat ARD companion)
 
 The same demographics summary as `cdisc_saf_demo`, but in the long
-Analysis Results Data (ARD) format produced by
-[`cards::ard_stack()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html).
-One row per (treatment arm, variable, statistic). Shipped as a teaching
+Analysis Results Data (ARD) format produced by `cards::ard_stack()`. One
+row per (treatment arm, variable, statistic). Shipped as a teaching
 dataset that shows the upstream shape users typically have when they
 start from `cards`. Convert it to the wide form
 [`tabular()`](https://vthanik.github.io/tabular/dev/reference/tabular.md)
@@ -33,7 +32,7 @@ renders those into a `Total` column.
 
 Derived in `data-raw/bundle-demo.R` via
 `cards::ard_stack(.by = "TRT01A", .overall = TRUE)` over
-[`pharmaverseadam::adsl`](https://pharmaverse.github.io/pharmaverseadam/reference/adsl.html).
+`pharmaverseadam::adsl`.
 
 ## Details
 
@@ -111,6 +110,9 @@ cdisc_saf_demo_ard |>
 #tabular-fa605876dd .tabular-table thead th.text-left { text-align: left; }
 #tabular-fa605876dd .tabular-table thead th.text-center { text-align: center; }
 #tabular-fa605876dd .tabular-table thead th.text-right { text-align: right; }
+#tabular-fa605876dd .tabular-table td.text-left { text-align: left; }
+#tabular-fa605876dd .tabular-table td.text-center { text-align: center; }
+#tabular-fa605876dd .tabular-table td.text-right { text-align: right; }
 #tabular-fa605876dd .valign-top { vertical-align: top; }
 #tabular-fa605876dd .valign-middle { vertical-align: middle; }
 #tabular-fa605876dd .valign-bottom { vertical-align: bottom; }
@@ -118,7 +120,8 @@ cdisc_saf_demo_ard |>
 #tabular-fa605876dd .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-fa605876dd .tabular-page-break-row { display: none; }
 #tabular-fa605876dd { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-fa605876dd .tabular-page-header, #tabular-fa605876dd .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-fa605876dd .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-fa605876dd .tabular-page-header, #tabular-fa605876dd .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
 #tabular-fa605876dd .tabular-page-header { margin-bottom: 1rem; }
 #tabular-fa605876dd .tabular-page-footer { margin-top: 1rem; }
 #tabular-fa605876dd .tabular-page-header-left, #tabular-fa605876dd .tabular-page-footer-left { flex: 1; text-align: left; }

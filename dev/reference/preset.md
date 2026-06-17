@@ -17,10 +17,22 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
 
 - .spec:
 
-  *The `tabular_spec` to attach the preset to.*
-  `<tabular_spec>: required`. Dot-prefixed so R's partial argument
-  matching cannot accidentally bind a knob name in `...` to the spec
-  slot.
+  *The spec to attach the preset to.*
+  `<tabular_spec | figure_spec>: required`. Dot-prefixed so R's partial
+  argument matching cannot accidentally bind a knob name in `...` to the
+  spec slot.
+
+  **Note:** a
+  [`figure()`](https://vthanik.github.io/tabular/dev/reference/figure.md)
+  spec accepts the page-geometry knobs (`paper_size`, `orientation`,
+  `margins`, `font_size`, `font_family`, `pagehead`, `pagefoot`, ...)
+  plus the cosmetic surface knobs (`alignment` / `fonts` / `colors` /
+  `padding`) that target its chrome surfaces, the titles and footnotes,
+  e.g. `fonts = list(titles = c(size = 14))`. A cosmetic knob that
+  targets a table-only surface (`body` / `header` / `subgroup`), a
+  `rules` knob (the rules sit on the header band a figure lacks), and
+  the `.template` / `.style` style templates are rejected, since a
+  figure has no such surfaces.
 
 - ...:
 
@@ -217,8 +229,12 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
   - **`na_text`** — global NA fallback. `<character(1)>`.
 
   - **`decimal_metrics`** — decimal-padding metric. `<character(1)>`.
-    Only `"chars"` (default); the engine pads decimal columns by
-    character count.
+    `"afm"` (default) measures glyphs with the bundled Core font
+    metrics, so decimal columns align width-exact in proportional fonts
+    (to within one padding space of rounding; exact in Courier).
+    `"chars"` pads by character count — exact in monospaced faces only.
+    Markdown output always pads by character count, the correct geometry
+    for a text medium.
 
   - **`decimal_markers`** — missing-value tokens recognised by
     `col_spec(align = "decimal")`. `<character>`. Default
@@ -256,36 +272,18 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
     regardless of `width_mode`. Per-column widths (`col_spec(width)`)
     emit verbatim into the HTML colgroup per the gt convention.
 
-  - **`empty_halign`** / **`empty_valign`** — placement of the
-    empty-state message within the body content-box when a spec resolves
-    to zero data rows. The message *wording* lives on the spec
-    (`tabular(empty_text = ...)`, default
-    `"No data available to report"`); these two knobs are the cosmetic
-    *placement*, so they ride the preset and cascade with the house
-    style. `<character(1)>` each, defaulting to centre x middle:
-
-    - **`empty_halign`** — `"left"`, `"center"` *(default)*, or
-      `"right"`. Horizontal anchor of the message line.
-
-    - **`empty_valign`** — `"top"`, `"middle"` *(default)*, or
-      `"bottom"`. Vertical anchor within the content-box — the region
-      between the column-header rule and the footnote rule.
-
-    **Interaction:** valign is exact on the paged backends (RTF / PDF /
-    DOCX), which size the host cell to the content-box height; HTML
-    approximates it with a min-height flex box, and Markdown, having no
-    page geometry, treats valign as a no-op. When a column structure is
-    present the column-header band still renders above the message; with
-    every column hidden, only the page chrome and the centred message
-    remain.
-
-    **Note:** this is the symmetric `halign` / `valign` placement pair,
-    shared with
-    [`style()`](https://vthanik.github.io/tabular/dev/reference/style.md)
-    and the other `*_halign` / `*_valign` alignment keys. It is
-    deliberately distinct from `col_spec(align = ...)`, whose extra
-    `"decimal"` mode makes it a column-content knob rather than a pure
-    two-axis anchor.
+  - **`empty_text`** — house-style *wording* for the empty-state message
+    shown when a spec resolves to zero data rows. `<character(1)>`. The
+    resolution is spec arg -\> preset knob -\> built-in default: a
+    per-table `tabular(empty_text = ...)` wins, else this preset knob
+    (set once via
+    [`set_preset()`](https://vthanik.github.io/tabular/dev/reference/set_preset.md)
+    for a whole house style), else the built-in
+    `"No data available to report"`. Glue
+    [`{}`](https://rdrr.io/r/base/Paren.html) and
+    [`md()`](https://vthanik.github.io/tabular/dev/reference/md.md) /
+    [`html()`](https://vthanik.github.io/tabular/dev/reference/html.md)
+    inline formatting are honoured, exactly like a title line.
 
   - **`whitespace`** — how significant ASCII spaces in labels and cells
     render. `<character(1)>`. One of:
@@ -548,6 +546,9 @@ tabular(
 #tabular-6baf110ab1 .tabular-table thead th.text-left { text-align: left; }
 #tabular-6baf110ab1 .tabular-table thead th.text-center { text-align: center; }
 #tabular-6baf110ab1 .tabular-table thead th.text-right { text-align: right; }
+#tabular-6baf110ab1 .tabular-table td.text-left { text-align: left; }
+#tabular-6baf110ab1 .tabular-table td.text-center { text-align: center; }
+#tabular-6baf110ab1 .tabular-table td.text-right { text-align: right; }
 #tabular-6baf110ab1 .valign-top { vertical-align: top; }
 #tabular-6baf110ab1 .valign-middle { vertical-align: middle; }
 #tabular-6baf110ab1 .valign-bottom { vertical-align: bottom; }
@@ -555,7 +556,8 @@ tabular(
 #tabular-6baf110ab1 .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-6baf110ab1 .tabular-page-break-row { display: none; }
 #tabular-6baf110ab1 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-6baf110ab1 .tabular-page-header, #tabular-6baf110ab1 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
+#tabular-6baf110ab1 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6baf110ab1 .tabular-page-header, #tabular-6baf110ab1 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
 #tabular-6baf110ab1 .tabular-page-header { margin-bottom: 1rem; }
 #tabular-6baf110ab1 .tabular-page-footer { margin-top: 1rem; }
 #tabular-6baf110ab1 .tabular-page-header-left, #tabular-6baf110ab1 .tabular-page-footer-left { flex: 1; text-align: left; }

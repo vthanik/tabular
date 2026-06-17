@@ -18,8 +18,41 @@ emit(spec, "table.pdf") # PDF (via LaTeX)
 emit(spec, "table.md") # Markdown
 ```
 
+It returns the written path invisibly, so the emit is chainable into
+scripted batch runs. One spec, any backend:
+
+``` r
+
+data(cdisc_saf_demo, package = "tabular")
+spec <- tabular(cdisc_saf_demo, titles = "Demographics") |>
+  cols(
+    variable = col_spec(
+      usage = "group",
+      group_display = "header_row",
+      label = ""
+    ),
+    stat_label = col_spec(label = "")
+  )
+
+path <- emit(spec, tempfile(fileext = ".rtf"))
+file.exists(path)
+#> [1] TRUE
+```
+
 `as_grid(spec)` resolves the fully-laid-out grid **without** writing a
-file — useful for testing or programmatic inspection.
+file — useful for testing or programmatic inspection. The grid carries
+the resolved pages plus a metadata block (pagination counts, resolved
+column names, the effective preset):
+
+``` r
+
+grid <- as_grid(spec)
+length(grid@pages)
+#> [1] 1
+grid@metadata$col_names
+#> [1] "variable"   "stat_label" "placebo"    "drug_50"    "drug_100"  
+#> [6] "Total"
+```
 
 ## Backend capability matrix
 
@@ -63,8 +96,7 @@ tinytex::tlmgr_install(c("tabularray", "ninecolors", "siunitx", "tex-gyre"))
 > restart R, then `tlmgr_install(...)`.
 
 For decimal alignment in paper backends, metric-compatible fonts matter
-— check with
-[`check_fonts()`](https://vthanik.github.io/tabular/dev/reference/check_fonts.md).
+— check with `check_fonts(spec)`.
 
 ## Troubleshooting
 

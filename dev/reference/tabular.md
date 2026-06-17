@@ -87,20 +87,21 @@ tabular(data, titles = NULL, footnotes = NULL, empty_text = NULL)
 - empty_text:
 
   *Placeholder shown when `data` has zero rows.*
-  `<character(1)>: default "No data available to report"`. When the
-  display resolves to no data rows, the backends still emit the full
-  page chrome and — when a column structure is present — the column
-  headers, then place this message in the body where the rows would sit.
-  Override it with any sponsor or study wording (a localized string, "No
-  subjects met the criteria for this table.", a protocol-qualified
-  line); glue `{expr}` interpolation and
+  `<character(1) | NULL>: default NULL`. When the display resolves to no
+  data rows, the backends still emit the full page chrome and — when a
+  column structure is present — the column headers, then place this
+  message in the body where the rows would sit. `NULL` (the default)
+  inherits the house-style wording from `preset(empty_text = ...)` when
+  set, falling back to the built-in `"No data available to report"`.
+  Pass any sponsor or study wording (a localized string, "No subjects
+  met the criteria for this table.", a protocol-qualified line) to
+  override per table; glue `{expr}` interpolation and
   [`md()`](https://vthanik.github.io/tabular/dev/reference/md.md) /
   [`html()`](https://vthanik.github.io/tabular/dev/reference/html.md)
   are honoured, exactly like a title line.
 
-  **Interaction:** placement within the body box is cosmetic and lives
-  on the preset, `preset(empty_halign = ..., empty_valign = ...)`,
-  defaulting to centre x middle.
+  The message renders as a single horizontally centred row in the table
+  body, where the first data row would otherwise sit.
 
 ## Value
 
@@ -123,9 +124,7 @@ to resolve without writing.
 **Pre-summarised input contract.** `data` is one row per displayed row
 of the final table. `tabular()` does not aggregate, filter, weight, or
 generate subtotal rows — those happen upstream in `cards`, `dplyr`, or
-SAS. If the upstream is a long
-[`cards::ard_stack()`](https://insightsengineering.github.io/cards/latest-tag/reference/ard_stack.html)
-ARD, pipe through
+SAS. If the upstream is a long `cards::ard_stack()` ARD, pipe through
 [`pivot_across()`](https://vthanik.github.io/tabular/dev/reference/pivot_across.md)
 first to land in the wide shape `tabular()` accepts.
 
@@ -238,6 +237,9 @@ tabular(
 #tabular-4b8d16e13e .tabular-table thead th.text-left { text-align: left; }
 #tabular-4b8d16e13e .tabular-table thead th.text-center { text-align: center; }
 #tabular-4b8d16e13e .tabular-table thead th.text-right { text-align: right; }
+#tabular-4b8d16e13e .tabular-table td.text-left { text-align: left; }
+#tabular-4b8d16e13e .tabular-table td.text-center { text-align: center; }
+#tabular-4b8d16e13e .tabular-table td.text-right { text-align: right; }
 #tabular-4b8d16e13e .valign-top { vertical-align: top; }
 #tabular-4b8d16e13e .valign-middle { vertical-align: middle; }
 #tabular-4b8d16e13e .valign-bottom { vertical-align: bottom; }
@@ -245,7 +247,8 @@ tabular(
 #tabular-4b8d16e13e .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-4b8d16e13e .tabular-page-break-row { display: none; }
 #tabular-4b8d16e13e { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-4b8d16e13e .tabular-page-header, #tabular-4b8d16e13e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-4b8d16e13e .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-4b8d16e13e .tabular-page-header, #tabular-4b8d16e13e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
 #tabular-4b8d16e13e .tabular-page-header { margin-bottom: 1rem; }
 #tabular-4b8d16e13e .tabular-page-footer { margin-top: 1rem; }
 #tabular-4b8d16e13e .tabular-page-header-left, #tabular-4b8d16e13e .tabular-page-footer-left { flex: 1; text-align: left; }

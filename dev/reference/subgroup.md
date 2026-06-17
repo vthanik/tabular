@@ -11,7 +11,14 @@ canonical submission page-layout convention.
 ## Usage
 
 ``` r
-subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\n(N={n})")
+subgroup(
+  .spec,
+  by,
+  label = NULL,
+  big_n = NULL,
+  big_n_fmt = "\n(N={n})",
+  keep_empty = FALSE
+)
 ```
 
 ## Arguments
@@ -62,9 +69,8 @@ subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\n(N={n})")
     are the Ns).
 
   - **Long** — the `by` column(s) plus one arm-name column and one
-    numeric N column, i.e.
-    [`dplyr::count()`](https://dplyr.tidyverse.org/reference/count.html)
-    / `summarise()` output used directly with no reshaping.
+    numeric N column, i.e. `dplyr::count()` / `summarise()` output used
+    directly with no reshaping.
 
       # Wide: one column per arm.
       wide <- tibble::tribble(
@@ -103,6 +109,20 @@ subgroup(.spec, by, label = NULL, big_n = NULL, big_n_fmt = "\n(N={n})")
   Appended to each arm's header label, with `{n}` substituted by that
   page/column's integer N. Only the `{n}` token is allowed; the default
   puts the N on its own line under the arm name.
+
+- keep_empty:
+
+  *Retain zero-N crossings.* `<logical(1)>: default FALSE`. When `FALSE`
+  (the default), a `by` crossing combination with no data rows is
+  dropped. When `TRUE`, it is retained and rendered as an empty-state
+  page carrying its banner, so the report shows every combination
+  explicitly. Only multi-variable crossings can produce empty
+  combinations; a single-variable partition never does.
+
+  **Note:** an empty group has no data row to read constant-within-group
+  banner values from, so a `label` template that references a non-`by`
+  column (e.g. an auxiliary BigN column) resolves that token to `NA` for
+  the empty group; the `by`-column tokens always resolve.
 
 ## Value
 
@@ -197,54 +217,58 @@ tabular(
   ) |>
   subgroup(by = "sex")
 
-#tabular-92cc3908bb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-92cc3908bb .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-92cc3908bb p { line-height: inherit; }
-#tabular-92cc3908bb .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-92cc3908bb .tabular-caption { margin: 0; padding: 0; }
-#tabular-92cc3908bb .tabular-pad { margin: 0; line-height: 1; }
-#tabular-92cc3908bb .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-92cc3908bb .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-92cc3908bb .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-92cc3908bb .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-92cc3908bb .tabular-table th, #tabular-92cc3908bb .tabular-table td { padding: .18rem .6rem; }
-#tabular-92cc3908bb .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-92cc3908bb .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-92cc3908bb .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-92cc3908bb .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-92cc3908bb .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-92cc3908bb .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-92cc3908bb .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-92cc3908bb .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-92cc3908bb .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-92cc3908bb .tabular-table tbody tr td { border-top: none; }
-#tabular-92cc3908bb .tabular-band { text-align: center; }
-#tabular-92cc3908bb .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-92cc3908bb .tabular-subgroup-label { font-weight: 600; }
-#tabular-92cc3908bb .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-92cc3908bb .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-92cc3908bb .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-92cc3908bb .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-92cc3908bb .text-left { text-align: left; }
-#tabular-92cc3908bb .text-center { text-align: center; }
-#tabular-92cc3908bb .text-right { text-align: right; }
-#tabular-92cc3908bb .tabular-table thead th.text-left { text-align: left; }
-#tabular-92cc3908bb .tabular-table thead th.text-center { text-align: center; }
-#tabular-92cc3908bb .tabular-table thead th.text-right { text-align: right; }
-#tabular-92cc3908bb .valign-top { vertical-align: top; }
-#tabular-92cc3908bb .valign-middle { vertical-align: middle; }
-#tabular-92cc3908bb .valign-bottom { vertical-align: bottom; }
-#tabular-92cc3908bb .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-92cc3908bb .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-92cc3908bb .tabular-page-break-row { display: none; }
-#tabular-92cc3908bb { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-92cc3908bb .tabular-page-header, #tabular-92cc3908bb .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-92cc3908bb .tabular-page-header { margin-bottom: 1rem; }
-#tabular-92cc3908bb .tabular-page-footer { margin-top: 1rem; }
-#tabular-92cc3908bb .tabular-page-header-left, #tabular-92cc3908bb .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-92cc3908bb .tabular-page-header-center, #tabular-92cc3908bb .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-92cc3908bb .tabular-page-header-right, #tabular-92cc3908bb .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-92cc3908bb .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-92cc3908bb .tabular-table tr { page-break-inside: avoid; } #tabular-92cc3908bb .tabular-page-header, #tabular-92cc3908bb .tabular-page-footer { display: none; } #tabular-92cc3908bb .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-92cc3908bb .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-92cc3908bb .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-6df3873879 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-6df3873879 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6df3873879 p { line-height: inherit; }
+#tabular-6df3873879 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-6df3873879 .tabular-caption { margin: 0; padding: 0; }
+#tabular-6df3873879 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-6df3873879 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-6df3873879 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-6df3873879 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-6df3873879 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-6df3873879 .tabular-table th, #tabular-6df3873879 .tabular-table td { padding: .18rem .6rem; }
+#tabular-6df3873879 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-6df3873879 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-6df3873879 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-6df3873879 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-6df3873879 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6df3873879 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6df3873879 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6df3873879 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6df3873879 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-6df3873879 .tabular-table tbody tr td { border-top: none; }
+#tabular-6df3873879 .tabular-band { text-align: center; }
+#tabular-6df3873879 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-6df3873879 .tabular-subgroup-label { font-weight: 600; }
+#tabular-6df3873879 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-6df3873879 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-6df3873879 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-6df3873879 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-6df3873879 .text-left { text-align: left; }
+#tabular-6df3873879 .text-center { text-align: center; }
+#tabular-6df3873879 .text-right { text-align: right; }
+#tabular-6df3873879 .tabular-table thead th.text-left { text-align: left; }
+#tabular-6df3873879 .tabular-table thead th.text-center { text-align: center; }
+#tabular-6df3873879 .tabular-table thead th.text-right { text-align: right; }
+#tabular-6df3873879 .tabular-table td.text-left { text-align: left; }
+#tabular-6df3873879 .tabular-table td.text-center { text-align: center; }
+#tabular-6df3873879 .tabular-table td.text-right { text-align: right; }
+#tabular-6df3873879 .valign-top { vertical-align: top; }
+#tabular-6df3873879 .valign-middle { vertical-align: middle; }
+#tabular-6df3873879 .valign-bottom { vertical-align: bottom; }
+#tabular-6df3873879 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-6df3873879 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-6df3873879 .tabular-page-break-row { display: none; }
+#tabular-6df3873879 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-6df3873879 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6df3873879 .tabular-page-header, #tabular-6df3873879 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-6df3873879 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-6df3873879 .tabular-page-footer { margin-top: 1rem; }
+#tabular-6df3873879 .tabular-page-header-left, #tabular-6df3873879 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-6df3873879 .tabular-page-header-center, #tabular-6df3873879 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-6df3873879 .tabular-page-header-right, #tabular-6df3873879 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-6df3873879 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-6df3873879 .tabular-table tr { page-break-inside: avoid; } #tabular-6df3873879 .tabular-page-header, #tabular-6df3873879 .tabular-page-footer { display: none; } #tabular-6df3873879 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-6df3873879 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-6df3873879 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.2.1

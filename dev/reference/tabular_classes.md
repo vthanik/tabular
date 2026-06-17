@@ -37,7 +37,7 @@ one mental model:
 | `style_spec` | the cascade root (defaults + cols + headers + layers) | internal — built by [`style()`](https://vthanik.github.io/tabular/dev/reference/style.md) |
 | `pagination_spec` | page-split policy (keep_together, panels, floors) | internal — built by [`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md) |
 | `preset_spec` | render geometry (paper, orientation, font, margins) | internal — built by [`preset()`](https://vthanik.github.io/tabular/dev/reference/preset.md) |
-| `inline_ast` | parsed inline-formatting AST (runs of bold / sup / …) | internal — built by `parse_inline()` |
+| `inline_ast` | parsed inline-formatting AST (runs of bold / sup / …) | internal — built by `.parse_inline()` |
 | `tabular_grid` | resolved per-page cells + ASTs + styles + headers | [`as_grid()`](https://vthanik.github.io/tabular/dev/reference/as_grid.md) |
 
 Every spec slot is typed: a verb that would mutate a slot to an invalid
