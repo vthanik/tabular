@@ -145,6 +145,23 @@ test_that("Hierarchical ARD keeps the ..ard_hierarchical_overall.. sentinel as a
   expect_true(any(out$row_type == "overall"))
 })
 
+test_that("keyed `hierarchical` statistic interpolates {p} on the hierarchical path", {
+  # Regression: the hierarchical builder hardcoded context "categorical"
+  # when resolving the format string, so a list keyed by the ARD's actual
+  # `hierarchical` context fell through to the bare "{n}" default and
+  # silently dropped the percent. A bare string still worked because it is
+  # mirrored onto the `default` key. Both forms must now produce n (p%).
+  keyed <- pivot_across(
+    cdisc_saf_aesocpt_ard,
+    statistic = list(hierarchical = "{n} ({p}%)")
+  )
+  bare <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
+  col <- grep("[Pp]lacebo", names(keyed), value = TRUE)[1L]
+  pruritus <- which(keyed$label == "PRURITUS")[1L]
+  expect_match(keyed[[col]][pruritus], "^[0-9]+ \\([0-9.]+%\\)$")
+  expect_identical(keyed[[col]], bare[[col]])
+})
+
 # ---------------------------------------------------------------------
 # Edge case 9: ^\.\. sentinels other than the overall are filtered
 # ---------------------------------------------------------------------

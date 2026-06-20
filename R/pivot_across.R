@@ -1824,7 +1824,7 @@ pivot_across <- function(
     if (nrow(hv_df) == 0L) {
       next
     }
-    fs <- .resolve_ard_statistic(hv, "categorical", statistic)
+    fs <- .resolve_ard_statistic(hv, hv_df$ctx[1L], statistic)
     if (.is_multirow_spec(fs)) {
       fs <- fs[[1L]]
     }
@@ -1847,7 +1847,7 @@ pivot_across <- function(
   if (!is.null(overall_df) && nrow(overall_df) > 0L) {
     fmt_str <- .resolve_ard_statistic(
       "..ard_hierarchical_overall..",
-      "categorical",
+      overall_df$ctx[1L],
       statistic
     )
     if (.is_multirow_spec(fmt_str)) {
