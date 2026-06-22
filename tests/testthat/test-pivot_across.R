@@ -1617,6 +1617,24 @@ test_that("overall = NULL still relabels the hierarchical overall row (#ard-over
   expect_false(any(grepl("..", wide$label, fixed = TRUE)))
 })
 
+test_that("`overall` colliding with a real arm warns (collision guard) (#ard-overall)", {
+  # A study arm literally named the same as `overall` collides with the
+  # relabeled NA-arm pooled rows: both land in one column. Warn so the
+  # silent merge is visible.
+  df <- data.frame(
+    arm = c("Drug", "Total", NA),
+    stat = c(1, 2, 3),
+    stringsAsFactors = FALSE
+  )
+  expect_warning(
+    tabular:::.apply_overall_label(df, overall = "Total"),
+    class = "tabular_warning_input"
+  )
+  # No NA rows -> nothing relabeled -> no collision, no warning.
+  clean <- data.frame(arm = c("Drug", "Total"), stat = c(1, 2))
+  expect_no_warning(tabular:::.apply_overall_label(clean, overall = "Total"))
+})
+
 test_that("every kept sentinel has a default label (registry drift guard) (#ard-overall)", {
   # If a future kept sentinel is added without a default label it would leak;
   # this pins names(sentinel_labels) == keep_sentinels.

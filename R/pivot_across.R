@@ -177,6 +177,19 @@
 #'   `<character(1) | NULL>: default "Total"`. Pass `NULL` to drop
 #'   overall rows entirely (per-arm only output).
 #'
+#'   **Requirement:** this relabels pooled rows the ARD already
+#'   carries — the `NA`-arm rows cards emits from
+#'   `cards::ard_stack_hierarchical(overall = TRUE)` or an
+#'   `ard_*(.overall = TRUE)`. It does not synthesize a total: cards
+#'   re-runs the calculation with the `by` variable removed, so the
+#'   pooled `n` / `N` / `p` stay internally consistent. With no such
+#'   rows in the input there is no overall column to label.
+#'
+#'   **Note:** if a study arm is literally named the same as `overall`
+#'   (default `"Total"`), that arm and the pooled rows collide under
+#'   one label and the pivot warns. Pass a distinct `overall =` or
+#'   rename the arm upstream.
+#'
 #' @param decimals *Per-stat decimal precision.*
 #'   `<named integer | named list>: default `c()``. Accepts two
 #'   forms:
@@ -572,7 +585,7 @@ pivot_across <- function(
     )
   }
 
-  df <- .apply_overall_label(df, overall = overall)
+  df <- .apply_overall_label(df, overall = overall, call = call)
   df <- .filter_to_column_group(df, column = column, overall = overall)
 
   # Warn once when an explicitly-supplied `statistic` matches no context
@@ -1187,9 +1200,19 @@ pivot_across <- function(
   df[keep, , drop = FALSE]
 }
 
-.apply_overall_label <- function(df, overall) {
+.apply_overall_label <- function(df, overall, call = rlang::caller_env()) {
   if (is.null(overall)) {
     return(df[!is.na(df$arm), , drop = FALSE])
+  }
+  if (anyNA(df$arm) && overall %in% df$arm[!is.na(df$arm)]) {
+    cli::cli_warn(
+      c(
+        "Overall label {.val {overall}} collides with an existing arm.",
+        "i" = "The pooled rows and that arm now share one column; pass a distinct {.arg overall} or rename the arm upstream."
+      ),
+      class = "tabular_warning_input",
+      call = call
+    )
   }
   df$arm <- ifelse(is.na(df$arm), overall, df$arm)
   df
