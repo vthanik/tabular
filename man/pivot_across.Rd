@@ -12,7 +12,8 @@ pivot_across(
   label = NULL,
   overall = "Total",
   decimals = NULL,
-  fmt = NULL
+  fmt = NULL,
+  aux = NULL
 )
 }
 \arguments{
@@ -116,11 +117,31 @@ label. Use for \verb{N / Mean (SD) / Median / Min, Max}-style blocks.
 }\if{html}{\out{</div>}}
 }}
 
-\item{column}{\emph{Grouping column whose unique values become arms.}
-\verb{<character(1) | NULL>: default NULL}. \code{NULL} auto-detects
-from the ARD's \code{group1} value or — for renamed input — picks
-the single non-standard column. Pass a string when multiple
-group columns exist.}
+\item{column}{\emph{What runs across the top of the table.}
+\verb{<character | NULL>: default NULL}. A single grouping variable
+whose unique values become arm columns (\code{NULL} auto-detects from
+\code{group1}, or picks the single non-standard column of renamed
+input). Two reserved tokens turn the analysis variable into a
+\strong{column band}:
+\itemize{
+\item \code{c(".variable", "<arm>")} — each variable becomes a band of
+arm columns; the statistic entries stack as rows. The cells
+are combined strings (e.g. \code{"323.9 (106)"}). Emitted columns
+are named \code{"<variable>..<arm>"}.
+\item \code{c(".variable", ".stat")} — each variable becomes a band whose
+statistic entries become their own columns (the landscape
+"value and change" shell); the arm drops to a leading row
+stub. Emitted columns are named \code{"<variable>..<stat-entry>"}.
+}
+
+Anything present in the ARD but not named in \code{column} (and not in
+\code{row_group}) stacks as rows. Per-variable \code{statistic} / \code{decimals}
+resolve inside each band, so bands may carry different (even
+different-length) stat lists; ragged bands pad with \code{NA}.
+
+\strong{Tip:} you reference the emitted column names verbatim in a
+manual \code{\link[=headers]{headers()}} call to build the band spanners; pivot_across
+does not build spanners itself.}
 
 \item{row_group}{\emph{Second, non-column grouping dimension.}
 \verb{<character(1) | NULL>: default NULL}. Names the non-arm group
@@ -175,7 +196,27 @@ Built-in defaults apply when neither sets a stat.}
 \verb{<named list of function>: default }list()``. Each function
 takes a numeric value and returns a character string;
 overrides built-ins and \code{decimals} for that stat. Useful for
-p-value styling and other domain-specific formatting.
+p-value styling and other domain-specific formatting.}
+
+\item{aux}{\emph{Auxiliary comparison columns from a second ARD.}
+\verb{<named list | NULL>: default NULL}. Each entry is a between-arm
+statistic (difference, hazard ratio, p-value, ...) computed in its
+own ARD and bound on as a trailing column, aligned 1:1 on the
+\code{row_group} key. The entry name is the column name; reference it in
+a manual \code{\link[=headers]{headers()}} call. Each entry is a list:
+\itemize{
+\item \code{ard} — the auxiliary ARD (required), one row per \code{row_group}.
+\item \code{statistic} — its format string (e.g.
+\code{"{estimate} ({conf.low}, {conf.high})"}); defaults to \code{"{n}"}.
+\item \code{decimals} / \code{fmt} — optional, as for the main pivot.
+}
+
+Entries append left to right. One entry is one column; for several
+comparison columns (estimate then p-value) pass several entries.
+
+\strong{Requirement:} needs a \code{row_group}; the auxiliary rows align to
+the main table on it, which must be unique 1:1 on both sides (a
+many-to-many key would silently fabricate rows, so it aborts).
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# p-value formatter: render below-threshold values as "<0.001".
 fmt = list(
@@ -464,6 +505,68 @@ pivot_across(
     tabulate = "{n} ({p}\%)"
   )
 )
+
+# ---- Example 6: Analysis variables as side-by-side column bands ----
+#
+# `column = c(".variable", "<arm>")` turns each analysis variable into
+# its own band of arm columns (the "value and change side by side"
+# shape), with statistics stacked as rows. Per-variable `statistic` /
+# `decimals` resolve inside each band. Emitted columns are named
+# "<variable>..<arm>"; reference them verbatim in a manual `headers()`
+# call to draw the band spanners (pivot_across never builds spanners).
+vitals <- cdisc_saf_demo_ard[
+  cdisc_saf_demo_ard$variable \%in\% c("AGE", "WEIGHT"),
+]
+vitals |>
+  pivot_across(
+    column = c(".variable", "TRT01A"),
+    overall = NULL,
+    statistic = list(
+      AGE    = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})", Median = "{median}"),
+      WEIGHT = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})", Median = "{median}")
+    ),
+    decimals = list(
+      AGE    = c(mean = 1, sd = 2, median = 1),
+      WEIGHT = c(mean = 1, sd = 2, median = 1)
+    )
+  ) |>
+  tabular(
+    titles = c(
+      "Table 14.2.1",
+      "Summary of Continuous Parameters by Treatment",
+      "Safety Population"
+    )
+  ) |>
+  cols(stat_label = col_spec(label = "Statistic")) |>
+  headers(
+    Age = c(
+      "AGE..Placebo",
+      "AGE..Xanomeline Low Dose",
+      "AGE..Xanomeline High Dose"
+    ),
+    Weight = c(
+      "WEIGHT..Placebo",
+      "WEIGHT..Xanomeline Low Dose",
+      "WEIGHT..Xanomeline High Dose"
+    )
+  )
+
+# ---- Example 7: Statistics as columns within each band ----
+#
+# `column = c(".variable", ".stat")` spreads each statistic entry into
+# its own column (the landscape shell); the arm drops to a leading row
+# stub. Emitted columns are named "<variable>..<stat-entry>". Bands may
+# carry different stat sets, with no row-alignment needed.
+vitals |>
+  pivot_across(
+    column = c(".variable", ".stat"),
+    overall = NULL,
+    statistic = list(
+      AGE    = c(N = "{N}", Mean = "{mean}", SD = "{sd}"),
+      WEIGHT = c(N = "{N}", Mean = "{mean}", SD = "{sd}", Median = "{median}")
+    ),
+    decimals = c(mean = 1, sd = 2, median = 1)
+  )
 
 }
 \seealso{
