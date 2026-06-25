@@ -284,6 +284,18 @@ in place (HTML / md / LaTeX collapse runs to one space).
 
 \strong{Note:} never affects \code{col_spec(align = "decimal")} padding,
 which uses U+00A0 and is preserved unconditionally.
+\item \strong{\code{chrome_onscreen}} — whether the on-screen running header /
+footer bands render in HTML output. \verb{<character(1)>}. One of:
+\itemize{
+\item \strong{\code{"auto"}} \emph{(default)} — the \code{pagehead} / \code{pagefoot}
+content renders as on-screen \verb{<header>} / \verb{<footer>} bands.
+\item \strong{\code{"off"}} — suppress the on-screen bands; the print-time
+\verb{@page} chrome still renders, so print-to-PDF output is
+unchanged. Useful when the HTML is consumed only via print.
+}
+
+HTML-only; the paged backends (RTF / PDF / DOCX) always emit
+per-page chrome regardless of this knob.
 \item \strong{\code{footnote_markers}} — the glyph scheme for \code{\link[=footnote]{footnote()}}
 markers, which the engine allocates once in reading order.
 \verb{<character(1)>}. One of:
