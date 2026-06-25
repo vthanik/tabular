@@ -197,15 +197,28 @@
 #'   overall rows entirely (per-arm only output).
 #'
 #' @param decimals *Per-stat decimal precision.*
-#'   `<named integer | named list>: default `c()``. Accepts two
+#'   `<named integer | named list>: default `c()``. Accepts three
 #'   forms:
 #'
 #'   *   **named integer vector** — global per-stat overrides
 #'       (`c(mean = 1, sd = 2, p = 0)`).
-#'   *   **named list** — per-variable plus `.default`
+#'   *   **named list keyed by variable** — per-variable plus `.default`
 #'       (`list(AGE = c(mean = 2), .default = c(p = 1))`).
+#'   *   **named list keyed by `row_group` value** — per-group precision in
+#'       one call (`list(SYSBP = c(mean = 0, sd = 1), WEIGHT = c(mean = 1),
+#'       .default = c(mean = 1, sd = 2))`). Each entry is a per-token spec (a
+#'       named numeric vector, or a bare scalar applied to every token).
 #'
-#'   Built-in defaults apply when neither sets a stat.
+#'   Built-in defaults apply when none sets a stat.
+#'
+#'   **Interaction:** a list `decimals` is read as per-`row_group` only when
+#'   `row_group` is set and every key (apart from `.default`) is one of its
+#'   levels; otherwise it stays per-variable. Within the matched group the
+#'   token falls back group token, then the per-group `.default` token, then
+#'   the built-in default. A group present in the data but absent from the
+#'   list (and NA / ungrouped rows) uses `.default`. If `row_group` is `NULL`
+#'   but the keys match no variable, `pivot_across()` errors and asks for a
+#'   `row_group`.
 #'
 #' @param fmt *Per-stat custom formatter functions.*
 #'   `<named list of function>: default `list()``. Each function
@@ -565,6 +578,52 @@
 #'     decimals = c(mean = 1, sd = 2, median = 1)
 #'   )
 #'
+#' # ---- Example 8: Per-row-group decimal precision ----
+#' #
+#' # A by-parameter vitals table where each parameter carries its own
+#' # value precision: systolic BP to 0 dp, weight to 1 dp, in ONE call.
+#' # `decimals` is keyed by the `row_group` (PARAM) value; the engine
+#' # selects each row's token precision by its parameter. No bundled ARD
+#' # carries a second grouping dimension, so build a tiny one inline.
+#' vital_ard <- do.call(rbind, lapply(
+#'   list(
+#'     c("SYSBP", "Placebo", "mean", "133.27"),
+#'     c("SYSBP", "Placebo", "sd", "15.81"),
+#'     c("SYSBP", "Drug", "mean", "128.94"),
+#'     c("SYSBP", "Drug", "sd", "14.02"),
+#'     c("WEIGHT", "Placebo", "mean", "71.43"),
+#'     c("WEIGHT", "Placebo", "sd", "12.77"),
+#'     c("WEIGHT", "Drug", "mean", "73.06"),
+#'     c("WEIGHT", "Drug", "sd", "13.19")
+#'   ),
+#'   function(r) {
+#'     data.frame(
+#'       group1 = "PARAM",
+#'       group1_level = r[[1]],
+#'       group2 = "TRTA",
+#'       group2_level = r[[2]],
+#'       variable = "AVAL",
+#'       variable_level = NA_character_,
+#'       context = "continuous",
+#'       stat_name = r[[3]],
+#'       stat_label = r[[3]],
+#'       stat = I(list(as.numeric(r[[4]]))),
+#'       stringsAsFactors = FALSE
+#'     )
+#'   }
+#' ))
+#' vital_ard |>
+#'   pivot_across(
+#'     column = "TRTA",
+#'     row_group = "PARAM",
+#'     overall = NULL,
+#'     statistic = list(continuous = "{mean} ({sd})"),
+#'     decimals = list(
+#'       SYSBP = c(mean = 0, sd = 1),
+#'       WEIGHT = c(mean = 1, sd = 2)
+#'     )
+#'   )
+#'
 #' @seealso
 #' **Pipeline entry consumer:** [`tabular()`] — wraps the wide data
 #' frame this helper returns.
@@ -770,13 +829,26 @@ pivot_across <- function(
   }
   # nocov end
 
-  decimals_resolved <- .resolve_ard_decimals(decimals)
+  rg_levels <- if (!is.null(row_group) && row_group %in% names(df)) {
+    lv <- .normalise_ard_chr(df[[row_group]])
+    unique(lv[!is.na(lv)])
+  } else {
+    NULL
+  }
+  decimals_resolved <- .resolve_ard_decimals(
+    decimals,
+    row_group = row_group,
+    rg_levels = rg_levels,
+    variables = unique(df$variable),
+    call = call
+  )
   df$stat_fmt <- .format_stat_vectorised(
     df,
     decimals = decimals_resolved,
     fmt = fmt,
     pct_threshold = TRUE,
-    call = call
+    call = call,
+    row_group = row_group
   )
 
   # Zero-suppression default: show "0" for n=0 rows. A user-supplied
@@ -1960,7 +2032,13 @@ pivot_across <- function(
 # Decimals + per-stat formatting (vectorised by stat_name group)
 # ---------------------------------------------------------------------
 
-.resolve_ard_decimals <- function(decimals) {
+.resolve_ard_decimals <- function(
+  decimals,
+  row_group = NULL,
+  rg_levels = NULL,
+  variables = NULL,
+  call = rlang::caller_env()
+) {
   if (is.null(decimals)) {
     return(list(global = NULL, per_var = NULL))
   }
@@ -1968,15 +2046,77 @@ pivot_across <- function(
     return(list(global = decimals, per_var = NULL))
   }
   if (is.list(decimals)) {
+    keys <- setdiff(names(decimals), ".default")
+    # Per-row-group: a list keyed by row_group values. Engages only when a
+    # row_group is declared AND every non-.default key is one of its levels,
+    # so a per-variable list (keyed by variable names) is never reinterpreted.
+    if (
+      !is.null(row_group) && length(keys) > 0L && all(keys %in% rg_levels)
+    ) {
+      return(list(
+        global = NULL,
+        per_var = NULL,
+        per_group = list(
+          default = decimals[[".default"]],
+          map = decimals[keys]
+        )
+      ))
+    }
+    # A list whose keys look like group values but no row_group was passed:
+    # the keys match nothing in the data, so the user almost certainly meant
+    # per-row-group. Fail loud rather than silently format nothing.
+    if (
+      is.null(row_group) &&
+        length(keys) > 0L &&
+        !is.null(variables) &&
+        !any(keys %in% variables)
+    ) {
+      cli::cli_abort(
+        c(
+          "{.arg decimals} keys match no variable in {.arg data}.",
+          "x" = "Names {.val {keys}} look like {.arg row_group} values.",
+          "i" = "Pass {.arg row_group} to format decimals per row group."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
     return(list(
       global = decimals[[".default"]],
-      per_var = decimals[setdiff(names(decimals), ".default")]
+      per_var = decimals[keys]
     ))
   }
   list(global = NULL, per_var = NULL)
 }
 
-.format_stat_vectorised <- function(df, decimals, fmt, pct_threshold, call) {
+# Resolve a per-row-group token spec to a decimal count for one stat.
+# Token fallback mirrors the per-variable path: the matched group's token, then
+# the per-group .default token, then NULL (built-in). A bare unnamed scalar
+# applies to every token in the group.
+.group_decimals_for_stat <- function(spec_map, spec_def, stat_name) {
+  pick <- function(spec) {
+    if (is.null(spec)) {
+      return(NULL)
+    }
+    if (is.null(names(spec)) && length(spec) == 1L) {
+      return(spec[[1L]])
+    }
+    if (stat_name %in% names(spec)) {
+      return(spec[[stat_name]])
+    }
+    NULL
+  }
+  pick(spec_map) %||% pick(spec_def)
+}
+
+.format_stat_vectorised <- function(
+  df,
+  decimals,
+  fmt,
+  pct_threshold,
+  call,
+  row_group = NULL
+) {
   # Vectorised by stat_name group (fixes galley B1: per-row vapply).
   out <- character(nrow(df))
   if (nrow(df) == 0L) {
@@ -1985,6 +2125,11 @@ pivot_across <- function(
 
   stat_names <- df$stat_name
   unique_stats <- unique(stat_names)
+  groups <- if (!is.null(row_group) && row_group %in% names(df)) {
+    .normalise_ard_chr(df[[row_group]])
+  } else {
+    NULL
+  }
 
   for (sn in unique_stats) {
     idx <- which(stat_names == sn)
@@ -2000,7 +2145,8 @@ pivot_across <- function(
       decimals = decimals,
       fmt = fmt,
       pct_threshold = pct_threshold,
-      call = call
+      call = call,
+      groups = if (is.null(groups)) NULL else groups[idx]
     )
   }
   out
@@ -2014,7 +2160,8 @@ pivot_across <- function(
   decimals,
   fmt,
   pct_threshold,
-  call
+  call,
+  groups = NULL
 ) {
   n <- length(values)
   out <- character(n)
@@ -2043,6 +2190,35 @@ pivot_across <- function(
       function(v) as.character(fn(v)),
       character(1L)
     )
+    return(out)
+  }
+
+  # Per-row-group decimals: select the token precision by each row's row_group
+  # value. Sits after the fmt override (fmt still wins) and before per_var /
+  # global. `groups` is aligned 1:1 with `values`.
+  per_group <- decimals[["per_group"]]
+  if (!is.null(per_group) && !is.null(groups)) {
+    # split() drops NA-group rows (overall-arm / ungrouped rows reach format
+    # time with NA row_group), which would blank them. Bucket NA to a sentinel
+    # that never matches a real level, so it falls to .default then built-in.
+    gv <- groups[todo]
+    gv[is.na(gv)] <- "\x01"
+    by_grp <- split(which(todo), gv)
+    for (g in names(by_grp)) {
+      sel <- by_grp[[g]]
+      grp_dec <- if (identical(g, "\x01")) NULL else per_group$map[[g]]
+      d <- .group_decimals_for_stat(grp_dec, per_group$default, stat_name)
+      if (!is.null(d)) {
+        out[sel] <- .format_stat_with_decimals(
+          values[sel],
+          stat_name,
+          as.integer(d),
+          pct_threshold
+        )
+      } else {
+        out[sel] <- .format_stat_default(values[sel], stat_name)
+      }
+    }
     return(out)
   }
 

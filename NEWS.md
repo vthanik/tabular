@@ -32,6 +32,9 @@
   the arm as a row stub. Per-variable `statistic` / `decimals` resolve inside
   each band.
 
+* `pivot_across()`'s `decimals` may now be a list keyed by `row_group` values,
+  for per-group precision in one call.
+
 ## Breaking changes
 
 * `col_spec()` gained a single `indent` argument (an integer for a fixed

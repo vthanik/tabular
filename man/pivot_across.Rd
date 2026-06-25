@@ -181,16 +181,28 @@ The raw sentinel never reaches the output at any hierarchy depth.}
 overall rows entirely (per-arm only output).}
 
 \item{decimals}{\emph{Per-stat decimal precision.}
-\verb{<named integer | named list>: default }c()``. Accepts two
+\verb{<named integer | named list>: default }c()``. Accepts three
 forms:
 \itemize{
 \item \strong{named integer vector} — global per-stat overrides
 (\code{c(mean = 1, sd = 2, p = 0)}).
-\item \strong{named list} — per-variable plus \code{.default}
+\item \strong{named list keyed by variable} — per-variable plus \code{.default}
 (\code{list(AGE = c(mean = 2), .default = c(p = 1))}).
+\item \strong{named list keyed by \code{row_group} value} — per-group precision in
+one call (\code{list(SYSBP = c(mean = 0, sd = 1), WEIGHT = c(mean = 1), .default = c(mean = 1, sd = 2))}). Each entry is a per-token spec (a
+named numeric vector, or a bare scalar applied to every token).
 }
 
-Built-in defaults apply when neither sets a stat.}
+Built-in defaults apply when none sets a stat.
+
+\strong{Interaction:} a list \code{decimals} is read as per-\code{row_group} only when
+\code{row_group} is set and every key (apart from \code{.default}) is one of its
+levels; otherwise it stays per-variable. Within the matched group the
+token falls back group token, then the per-group \code{.default} token, then
+the built-in default. A group present in the data but absent from the
+list (and NA / ungrouped rows) uses \code{.default}. If \code{row_group} is \code{NULL}
+but the keys match no variable, \code{pivot_across()} errors and asks for a
+\code{row_group}.}
 
 \item{fmt}{\emph{Per-stat custom formatter functions.}
 \verb{<named list of function>: default }list()``. Each function
@@ -566,6 +578,52 @@ vitals |>
       WEIGHT = c(N = "{N}", Mean = "{mean}", SD = "{sd}", Median = "{median}")
     ),
     decimals = c(mean = 1, sd = 2, median = 1)
+  )
+
+# ---- Example 8: Per-row-group decimal precision ----
+#
+# A by-parameter vitals table where each parameter carries its own
+# value precision: systolic BP to 0 dp, weight to 1 dp, in ONE call.
+# `decimals` is keyed by the `row_group` (PARAM) value; the engine
+# selects each row's token precision by its parameter. No bundled ARD
+# carries a second grouping dimension, so build a tiny one inline.
+vital_ard <- do.call(rbind, lapply(
+  list(
+    c("SYSBP", "Placebo", "mean", "133.27"),
+    c("SYSBP", "Placebo", "sd", "15.81"),
+    c("SYSBP", "Drug", "mean", "128.94"),
+    c("SYSBP", "Drug", "sd", "14.02"),
+    c("WEIGHT", "Placebo", "mean", "71.43"),
+    c("WEIGHT", "Placebo", "sd", "12.77"),
+    c("WEIGHT", "Drug", "mean", "73.06"),
+    c("WEIGHT", "Drug", "sd", "13.19")
+  ),
+  function(r) {
+    data.frame(
+      group1 = "PARAM",
+      group1_level = r[[1]],
+      group2 = "TRTA",
+      group2_level = r[[2]],
+      variable = "AVAL",
+      variable_level = NA_character_,
+      context = "continuous",
+      stat_name = r[[3]],
+      stat_label = r[[3]],
+      stat = I(list(as.numeric(r[[4]]))),
+      stringsAsFactors = FALSE
+    )
+  }
+))
+vital_ard |>
+  pivot_across(
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(
+      SYSBP = c(mean = 0, sd = 1),
+      WEIGHT = c(mean = 1, sd = 2)
+    )
   )
 
 }

@@ -622,6 +622,198 @@ test_that(".resolve_ard_decimals parses three forms", {
   )
   expect_identical(r2$global, c(p = 1))
   expect_identical(r2$per_var, list(AGE = c(mean = 2)))
+
+  # Per-row-group: keyed by row_group levels -> per_group, never per_var.
+  r3 <- tabular:::.resolve_ard_decimals(
+    list(SYSBP = c(mean = 0), WEIGHT = c(mean = 1), .default = c(sd = 2)),
+    row_group = "PARAM",
+    rg_levels = c("SYSBP", "WEIGHT")
+  )
+  expect_null(r3$global)
+  expect_null(r3$per_var)
+  expect_identical(
+    r3$per_group$map,
+    list(SYSBP = c(mean = 0), WEIGHT = c(mean = 1))
+  )
+  expect_identical(r3$per_group$default, c(sd = 2))
+
+  # row_group set but a key is not a level -> stays per-variable (no per_group).
+  r4 <- tabular:::.resolve_ard_decimals(
+    list(SYSBP = c(mean = 0), AGE = c(mean = 1)),
+    row_group = "PARAM",
+    rg_levels = c("SYSBP", "WEIGHT")
+  )
+  expect_null(r4$per_group)
+  expect_identical(r4$per_var, list(SYSBP = c(mean = 0), AGE = c(mean = 1)))
+
+  # row_group NULL but keys match no variable -> error.
+  expect_error(
+    tabular:::.resolve_ard_decimals(
+      list(SYSBP = c(mean = 0)),
+      variables = c("AVAL", "AGE")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+# A by-PARAM continuous ARD (PARAM x TRTA, mean + sd) for per-row-group tests.
+mk_keyed_meansd <- function() {
+  spec <- list(
+    c("SYSBP", "Exp", "mean", "133.27"),
+    c("SYSBP", "Exp", "sd", "15.81"),
+    c("SYSBP", "Ctl", "mean", "128.94"),
+    c("SYSBP", "Ctl", "sd", "14.02"),
+    c("WEIGHT", "Exp", "mean", "71.43"),
+    c("WEIGHT", "Exp", "sd", "12.77"),
+    c("WEIGHT", "Ctl", "mean", "73.06"),
+    c("WEIGHT", "Ctl", "sd", "13.19")
+  )
+  do.call(
+    rbind,
+    lapply(spec, function(r) {
+      data.frame(
+        group1 = "PARAM",
+        group1_level = r[[1L]],
+        group2 = "TRTA",
+        group2_level = r[[2L]],
+        variable = "AVAL",
+        variable_level = NA_character_,
+        context = "continuous",
+        stat_name = r[[3L]],
+        stat_label = r[[3L]],
+        stat = I(list(as.numeric(r[[4L]]))),
+        stringsAsFactors = FALSE
+      )
+    })
+  )
+}
+
+test_that("pivot_across: decimals vary by row_group", {
+  out <- pivot_across(
+    mk_keyed_meansd(),
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(
+      SYSBP = c(mean = 0, sd = 1),
+      WEIGHT = c(mean = 1, sd = 2)
+    )
+  )
+  sysbp <- out[out$PARAM == "SYSBP", ]
+  weight <- out[out$PARAM == "WEIGHT", ]
+  # SYSBP: mean 0 dp, sd 1 dp -> "133 (15.8)".
+  expect_identical(sysbp$Exp[[1L]], "133 (15.8)")
+  # WEIGHT: mean 1 dp, sd 2 dp -> "71.4 (12.77)".
+  expect_identical(weight$Exp[[1L]], "71.4 (12.77)")
+})
+
+test_that("pivot_across: per-row-group .default covers an unlisted group", {
+  out <- pivot_across(
+    mk_keyed_meansd(),
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(
+      SYSBP = c(mean = 0, sd = 1),
+      .default = c(mean = 2, sd = 3)
+    )
+  )
+  # WEIGHT is unlisted -> .default: mean 2 dp, sd 3 dp.
+  weight <- out[out$PARAM == "WEIGHT", ]
+  expect_identical(weight$Exp[[1L]], "71.43 (12.770)")
+})
+
+test_that("pivot_across: per-group token falls back to group .default then built-in", {
+  out <- pivot_across(
+    mk_keyed_meansd(),
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(
+      SYSBP = c(mean = 0),
+      .default = c(sd = 4)
+    )
+  )
+  # SYSBP mean -> group token (0 dp); SYSBP sd -> group .default token (4 dp).
+  sysbp <- out[out$PARAM == "SYSBP", ]
+  expect_identical(sysbp$Exp[[1L]], "133 (15.8100)")
+})
+
+test_that("pivot_across: per-group token with no spec or .default uses built-in", {
+  out <- pivot_across(
+    mk_keyed_meansd(),
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(SYSBP = c(mean = 0))
+  )
+  # SYSBP mean -> group token (0 dp); SYSBP sd -> no token, no .default ->
+  # built-in sd default (2 dp). WEIGHT is unlisted, no .default -> built-in.
+  sysbp <- out[out$PARAM == "SYSBP", ]
+  weight <- out[out$PARAM == "WEIGHT", ]
+  expect_identical(sysbp$Exp[[1L]], "133 (15.81)")
+  expect_identical(weight$Exp[[1L]], "71.4 (12.77)")
+})
+
+test_that("pivot_across: a bare scalar per group applies to every token", {
+  out <- pivot_across(
+    mk_keyed_meansd(),
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(SYSBP = 0, WEIGHT = 3)
+  )
+  sysbp <- out[out$PARAM == "SYSBP", ]
+  weight <- out[out$PARAM == "WEIGHT", ]
+  expect_identical(sysbp$Exp[[1L]], "133 (16)")
+  expect_identical(weight$Exp[[1L]], "71.430 (12.770)")
+})
+
+test_that(".format_stat_group: NA-group rows fall back, not blanked", {
+  decimals <- list(
+    global = NULL,
+    per_var = NULL,
+    per_group = list(default = c(mean = 2), map = list(SYSBP = c(mean = 0)))
+  )
+  out <- tabular:::.format_stat_group(
+    values = c(133.27, 71.43),
+    value_chrs = c(NA_character_, NA_character_),
+    stat_name = "mean",
+    variables = c("AVAL", "AVAL"),
+    decimals = decimals,
+    fmt = NULL,
+    pct_threshold = TRUE,
+    call = rlang::caller_env(),
+    groups = c("SYSBP", NA_character_)
+  )
+  # SYSBP -> 0 dp; NA group -> per-group .default (2 dp), never blank.
+  expect_identical(out, c("133", "71.43"))
+})
+
+test_that("pivot_across: per-row-group decimals with row_group = NULL errors", {
+  expect_snapshot(
+    error = TRUE,
+    pivot_across(
+      mk_keyed_meansd(),
+      column = "TRTA",
+      statistic = list(continuous = "{mean} ({sd})"),
+      decimals = list(SYSBP = c(mean = 0), WEIGHT = c(mean = 1))
+    )
+  )
+  expect_error(
+    pivot_across(
+      mk_keyed_meansd(),
+      column = "TRTA",
+      statistic = list(continuous = "{mean} ({sd})"),
+      decimals = list(SYSBP = c(mean = 0), WEIGHT = c(mean = 1))
+    ),
+    class = "tabular_error_input"
+  )
 })
 
 # ---------------------------------------------------------------------
