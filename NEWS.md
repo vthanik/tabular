@@ -45,6 +45,10 @@
   indent.
 * `paginate()` removed the no-op `panels = "auto"`; `panels` is now a positive
   integer.
+* `pivot_across()` no longer pre-indents `stat_label` with two leading spaces;
+  indentation is applied downstream by the renderer via
+  `col_spec(usage = "group")` / `group_display`, so a `header_row` stub no
+  longer double-indents.
 
 ## Minor improvements and bug fixes
 

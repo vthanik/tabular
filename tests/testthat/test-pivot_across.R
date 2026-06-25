@@ -195,7 +195,7 @@ test_that("Named-list-by-context dispatches per context", {
     )
   )
   # Sex M cell from Placebo should include ({p}%)
-  sex_m <- out[out$stat_label == "  M", ]
+  sex_m <- out[out$stat_label == "M", ]
   expect_true(grepl("\\(", sex_m$Placebo[[1L]]))
 })
 
@@ -243,8 +243,8 @@ test_that("Multi-row continuous spec produces one display row per entry", {
   )
   age_rows <- out[out$variable == "AGE", , drop = FALSE]
   expect_identical(nrow(age_rows), 3L)
-  # stat_label is indented because it differs from variable
-  expect_setequal(age_rows$stat_label, c("  N", "  Mean (SD)", "  Median"))
+  # stat_label is flush: the renderer owns indentation, not the pivot.
+  expect_setequal(age_rows$stat_label, c("N", "Mean (SD)", "Median"))
 })
 
 # ---------------------------------------------------------------------
@@ -532,10 +532,10 @@ test_that("Empty result after filtering raises tabular_error_input", {
 })
 
 # ---------------------------------------------------------------------
-# Edge case 25: indent stat_label for non-group rows
+# Edge case 25: stat_label is never pre-indented (renderer owns indent)
 # ---------------------------------------------------------------------
 
-test_that("stat_label is indented when it differs from variable", {
+test_that("stat_label carries no leading-space indent", {
   out <- pivot_across(
     cdisc_saf_demo_ard,
     statistic = list(
@@ -543,8 +543,11 @@ test_that("stat_label is indented when it differs from variable", {
       categorical = "{n} ({p}%)"
     )
   )
-  sex_rows <- out[out$variable == "SEX", , drop = FALSE]
-  expect_true(all(startsWith(sex_rows$stat_label, "  ")))
+  # No baked-in indent: stat_label matches its trimmed form on every row.
+  # Indentation is applied downstream via col_spec(usage = "group") /
+  # group_display, never by pivot_across.
+  expect_false(any(startsWith(out$stat_label, " "), na.rm = TRUE))
+  expect_identical(out$stat_label, trimws(out$stat_label))
 })
 
 # ---------------------------------------------------------------------
@@ -930,7 +933,7 @@ test_that("Per-variable decimals fall through to built-in default for unrelated 
     decimals = list(AGE = c(mean = 3))
   )
   # median uses built-in default (1 decimal)
-  med_val <- out$A[out$stat_label == "  Median"]
+  med_val <- out$A[out$stat_label == "Median"]
   expect_match(med_val, "\\.[0-9]{1}$")
 })
 
@@ -999,7 +1002,7 @@ test_that("Cell interpolation returns empty string for arm without rows", {
   )
   out <- pivot_across(ard, statistic = "{n}", overall = NULL)
   # B has no "M" level -> cell should be NA (from match-and-fill)
-  m_row <- out[out$stat_label == "  M", ]
+  m_row <- out[out$stat_label == "M", ]
   expect_true(is.na(m_row$B) || identical(m_row$B, ""))
 })
 
@@ -1395,9 +1398,9 @@ test_that("pivot_across keeps tabulate-context categorical rows (B1)", {
   expect_true(all(c("SEX", "RACE") %in% out$variable))
   # A summary-context continuous variable also survives.
   expect_true("AGE" %in% out$variable)
-  # SEX levels appear in the output (stat_label is indented for display).
+  # SEX levels appear in the output as flush stat_label values.
   sex_rows <- out[out$variable == "SEX", , drop = FALSE]
-  expect_true(all(c("F", "M") %in% trimws(sex_rows$stat_label)))
+  expect_true(all(c("F", "M") %in% sex_rows$stat_label))
   # The by-variable's own tabulation (context "tabulate", no arm) is still
   # filtered out.
   expect_false("TRT01A" %in% out$variable)

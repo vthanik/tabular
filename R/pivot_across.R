@@ -275,14 +275,6 @@
 #' | `cardx::ard_categorical_ci()` | `proportion_ci` |
 #' | `cardx::ard_continuous_ci()` | `continuous_ci` |
 #'
-#' ## Indentation of `stat_label`
-#'
-#' Categorical levels and the multi-row continuous stat labels come
-#' back already indented with two leading spaces, ready to render as a
-#' plain display column. Do **not** also set `col_spec(indent = ...)` on
-#' `stat_label` — that stacks the engine indent on top of the string
-#' indent (a double indent). Use one or the other.
-#'
 #' ## Zero-suppression (always-on default)
 #'
 #' A row whose `n` value equals zero renders the whole cell as the
@@ -721,7 +713,6 @@ pivot_across <- function(
   fmt = NULL,
   stat_explicit = TRUE,
   warn = TRUE,
-  indent = TRUE,
   call = rlang::caller_env()
 ) {
   norm <- .normalise_ard_input(data, column = column, call = call)
@@ -877,20 +868,6 @@ pivot_across <- function(
 
   arm_levels <- unique(df$arm[!is.na(df$arm)])
 
-  # Indent BEFORE label remap so the stat_label == variable comparison
-  # uses raw variable names. After remap, "AGE" stat_label would no
-  # longer equal the remapped "Age (years)" variable and would be
-  # falsely indented.
-  if (indent && !hierarchy$is_hierarchical && "stat_label" %in% names(wide)) {
-    is_level_row <- !is.na(wide$stat_label) &
-      !is.na(wide$variable) &
-      wide$stat_label != wide$variable
-    wide$stat_label[is_level_row] <- paste0(
-      "  ",
-      wide$stat_label[is_level_row]
-    )
-  }
-
   # Always run: even with no user `label`, the map applies the registry
   # default for kept sentinels so a raw `..` name never reaches output. The
   # default keys only the sentinel string, so non-sentinel rows (and the flat
@@ -995,7 +972,6 @@ pivot_across <- function(
       fmt = fmt,
       stat_explicit = FALSE,
       warn = FALSE,
-      indent = !col_spec$stat_cols,
       call = call
     )
     val_cols <- attr(wide_v, "across_cols")
@@ -1160,7 +1136,6 @@ pivot_across <- function(
       fmt = entry[["fmt"]] %||% fmt,
       stat_explicit = TRUE,
       warn = FALSE,
-      indent = TRUE,
       call = call
     )
     levels <- attr(inner, "across_cols")

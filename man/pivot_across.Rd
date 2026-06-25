@@ -290,15 +290,6 @@ explicitly-supplied \code{statistic} matches no context at all,
 
 }
 
-\subsection{Indentation of \code{stat_label}}{
-
-Categorical levels and the multi-row continuous stat labels come
-back already indented with two leading spaces, ready to render as a
-plain display column. Do \strong{not} also set \code{col_spec(indent = ...)} on
-\code{stat_label} — that stacks the engine indent on top of the string
-indent (a double indent). Use one or the other.
-}
-
 \subsection{Zero-suppression (always-on default)}{
 
 A row whose \code{n} value equals zero renders the whole cell as the
