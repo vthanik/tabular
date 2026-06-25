@@ -759,7 +759,7 @@ preset <- function(
 #'   `tabular_error_input`.
 #'
 #' @param ... *Named preset knobs.* Same shape as [`preset()`]; see
-#'   that verb for the full list of 13 recognised knobs. Unknown
+#'   that verb for the full list of recognised knobs. Unknown
 #'   names raise `tabular_error_input`. Mutually exclusive with
 #'   a non-`NULL` `new`.
 #'

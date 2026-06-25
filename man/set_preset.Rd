@@ -20,7 +20,7 @@ passing any of those alongside a non-\code{NULL} \code{new} raises
 \code{tabular_error_input}.}
 
 \item{...}{\emph{Named preset knobs.} Same shape as \code{\link[=preset]{preset()}}; see
-that verb for the full list of 13 recognised knobs. Unknown
+that verb for the full list of recognised knobs. Unknown
 names raise \code{tabular_error_input}. Mutually exclusive with
 a non-\code{NULL} \code{new}.}
 

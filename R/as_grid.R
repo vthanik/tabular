@@ -199,7 +199,11 @@
 #'
 #' sg_grid <- as_grid(sg_spec)
 #' length(sg_grid@pages)
-#' vapply(sg_grid@pages, function(p) p$subgroup_index %||% NA_integer_, integer(1))
+#' vapply(
+#'   sg_grid@pages,
+#'   function(p) if (is.null(p$subgroup_index)) NA_integer_ else p$subgroup_index,
+#'   integer(1)
+#' )
 #'
 #' # ---- Example 4: Pre-flight inspection before emit() ----
 #' #

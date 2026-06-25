@@ -77,11 +77,11 @@ membership in the \code{tabular_location} S3 class.}
 \value{
 \emph{A \code{tabular_location} S3 list} with slots \code{surface}, \code{i},
 \code{j}, \code{where}, \code{labels}, \code{level}, \code{slot}, \code{side} (unused slots
-are \code{NULL}). Pass to \code{\link[=style]{style()}}'s \code{at} argument.
+are \code{NULL}). Pass to \code{\link[=style]{style()}}'s \code{.at} argument.
 }
 \description{
 Build a \code{tabular_location} value naming one region of the rendered
-table; pass the result to \code{\link[=style]{style()}}'s \code{at} argument. Each
+table; pass the result to \code{\link[=style]{style()}}'s \code{.at} argument. Each
 constructor targets one surface (body, headers, footnotes, ...);
 optional \code{i} / \code{j} / \code{where} / \code{level} / \code{labels} filters narrow
 the target within that surface.

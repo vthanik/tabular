@@ -21,7 +21,7 @@ is_style_template(x)
 Build a reusable, composable style template by chaining
 \code{\link[=style]{style()}} calls against a \code{tabular_style_template}. The
 template carries an ordered list of \code{\link{style_layer}} records and
-can be attached to \code{\link[=preset]{preset()}} / \code{\link[=set_preset]{set_preset()}} as a \verb{style =}
+can be attached to \code{\link[=preset]{preset()}} / \code{\link[=set_preset]{set_preset()}} as the \code{.style}
 argument — every downstream \code{\link[=tabular]{tabular()}} chain then inherits the
 template's layers via the engine cascade.
 }
@@ -32,7 +32,7 @@ to learn a second function for the multi-table use case.
 
 \strong{Submission workflow.} A submission typically renders 100–200
 tables with one visual identity. Build the template once at the
-top of the submission script, pass it to \code{set_preset(style = template)}, and every subsequent \code{tabular()} produces output that
+top of the submission script, pass it to \code{set_preset(.style = template)}, and every subsequent \code{tabular()} produces output that
 inherits the same column-header rules, group-header bolding,
 title spacing, and outer-frame borders without a single per-table
 \code{style()} call.

@@ -14,7 +14,7 @@
 #' Build a reusable, composable style template by chaining
 #' [`style()`] calls against a `tabular_style_template`. The
 #' template carries an ordered list of [`style_layer`] records and
-#' can be attached to [`preset()`] / [`set_preset()`] as a `style =`
+#' can be attached to [`preset()`] / [`set_preset()`] as the `.style`
 #' argument — every downstream [`tabular()`] chain then inherits the
 #' template's layers via the engine cascade.
 #'
@@ -27,7 +27,7 @@
 #'
 #' **Submission workflow.** A submission typically renders 100–200
 #' tables with one visual identity. Build the template once at the
-#' top of the submission script, pass it to `set_preset(style =
+#' top of the submission script, pass it to `set_preset(.style =
 #' template)`, and every subsequent `tabular()` produces output that
 #' inherits the same column-header rules, group-header bolding,
 #' title spacing, and outer-frame borders without a single per-table
