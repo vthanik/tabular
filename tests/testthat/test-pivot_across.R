@@ -1978,8 +1978,8 @@ test_that("ragged stat lists across bands stack with NA padding (#bands)", {
       PCHG = c(Mean = "{mean}")
     )
   )
-  msd <- out[out$stat_label == "Mean (SD)", , drop = FALSE]
-  expect_true(all(is.na(msd$`PCHG..Drug`)))
+  mean_sd <- out[out$stat_label == "Mean (SD)", , drop = FALSE]
+  expect_true(all(is.na(mean_sd$`PCHG..Drug`)))
   mean_row <- out[out$stat_label == "Mean", , drop = FALSE]
   expect_true(all(is.na(mean_row$`AVAL..Drug`)))
 })
