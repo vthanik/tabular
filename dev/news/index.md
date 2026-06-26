@@ -32,6 +32,23 @@
   failing page. No new package dependency: plots rasterise through base
   `grDevices` and ggplot2 (Suggests) only when a ggplot is passed.
 
+- [`pivot_across()`](https://vthanik.github.io/tabular/dev/reference/pivot_across.md)
+  gained an `aux` argument to bind auxiliary comparison columns
+  (difference, hazard ratio, p-value) from a second ARD, aligned 1:1 on
+  the `row_group` key and appended as trailing columns.
+
+- [`pivot_across()`](https://vthanik.github.io/tabular/dev/reference/pivot_across.md)’s
+  `column` argument now accepts the reserved tokens `.variable` and
+  `.stat` to make an analysis variable a column band:
+  `c(".variable", "<arm>")` lays variables side by side with statistics
+  as rows, and `c(".variable", ".stat")` spreads each statistic into its
+  own column with the arm as a row stub. Per-variable `statistic` /
+  `decimals` resolve inside each band.
+
+- [`pivot_across()`](https://vthanik.github.io/tabular/dev/reference/pivot_across.md)’s
+  `decimals` may now be a list keyed by `row_group` values, for
+  per-group precision in one call.
+
 ### Breaking changes
 
 - [`col_spec()`](https://vthanik.github.io/tabular/dev/reference/col_spec.md)
@@ -44,6 +61,11 @@
 - [`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md)
   removed the no-op `panels = "auto"`; `panels` is now a positive
   integer.
+- [`pivot_across()`](https://vthanik.github.io/tabular/dev/reference/pivot_across.md)
+  no longer pre-indents `stat_label` with two leading spaces;
+  indentation is applied downstream by the renderer via
+  `col_spec(usage = "group")` / `group_display`, so a `header_row` stub
+  no longer double-indents.
 
 ### Minor improvements and bug fixes
 

@@ -90,15 +90,15 @@ wide <- pivot_across(
   decimals = c(mean = 1, sd = 2, median = 1, min = 0, max = 0, p = 0)
 )
 head(wide, 8)
-#>   variable  stat_label      Placebo Xanomeline High Dose Xanomeline Low Dose
-#> 1      AGE           N           86                   72                  96
-#> 2      AGE   Mean (SD)  75.2 (8.59)          73.8 (7.94)         76.0 (8.11)
-#> 3      AGE      Median         76.0                 75.5                78.0
-#> 4      AGE    Min, Max       52, 89               56, 88              51, 88
-#> 5   WEIGHT           N           86                   72                  95
-#> 6   WEIGHT   Mean (SD) 62.8 (12.77)         69.5 (14.35)        68.0 (14.50)
-#> 7   WEIGHT      Median         60.6                 69.0                66.7
-#> 8   WEIGHT    Min, Max       34, 86              44, 108             42, 106
+#>   variable stat_label      Placebo Xanomeline High Dose Xanomeline Low Dose
+#> 1      AGE          N           86                   72                  96
+#> 2      AGE  Mean (SD)  75.2 (8.59)          73.8 (7.94)         76.0 (8.11)
+#> 3      AGE     Median         76.0                 75.5                78.0
+#> 4      AGE   Min, Max       52, 89               56, 88              51, 88
+#> 5   WEIGHT          N           86                   72                  95
+#> 6   WEIGHT  Mean (SD) 62.8 (12.77)         69.5 (14.35)        68.0 (14.50)
+#> 7   WEIGHT     Median         60.6                 69.0                66.7
+#> 8   WEIGHT   Min, Max       34, 86              44, 108             42, 106
 #>          Total
 #> 1          254
 #> 2  75.1 (8.25)
@@ -161,8 +161,8 @@ pivot_across(
   statistic = list(proportion_ci = "{estimate} ({conf.low}, {conf.high})"),
   decimals = c(estimate = 3, conf.low = 3, conf.high = 3)
 )
-#>   variable   stat_label              Placebo  Xanomeline Low Dose
-#> 1     RESP   Responders 0.620 (0.500, 0.730) 0.550 (0.420, 0.670)
+#>   variable stat_label              Placebo  Xanomeline Low Dose
+#> 1     RESP Responders 0.620 (0.500, 0.730) 0.550 (0.420, 0.670)
 #>   Xanomeline High Dose
 #> 1 0.480 (0.360, 0.600)
 ```
@@ -252,6 +252,130 @@ or `col_spec(usage = "group")` downstream. cards encodes a crossing
 factor and a real hierarchy identically, so the declaration is what
 disambiguates them — leave `row_group` unset for a genuine SOC/PT
 hierarchy.
+
+## Variables as column bands
+
+Two analysis variables side by side — `AVAL` (“Value”) and `PCHG`
+(“Percent Change from Baseline”) — is the canonical “value and change”
+shell. Make the **variable** a column band with the reserved `.variable`
+token in `column`. Each band keys its own `statistic` / `decimals`, so
+the bands may carry different (even different-length) stat lists; ragged
+bands pad with `NA`.
+
+``` r
+
+# AVAL + PCHG by AVISIT x TRTA, built by hand so the example runs without cards.
+valchg_ard <- tibble::tribble(
+  ~group1,  ~group1_level, ~group2, ~group2_level, ~variable, ~context,      ~stat_name, ~stat,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "AVAL",    "continuous",  "N",        20,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "AVAL",    "continuous",  "mean",     324,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "AVAL",    "continuous",  "sd",       106,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "AVAL",    "continuous",  "median",   315,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "AVAL",    "continuous",  "N",        20,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "AVAL",    "continuous",  "mean",     318,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "AVAL",    "continuous",  "sd",       98,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "AVAL",    "continuous",  "median",   310,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "PCHG",    "continuous",  "N",        20,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "PCHG",    "continuous",  "mean",     -16,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "PCHG",    "continuous",  "sd",       5,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "PCHG",    "continuous",  "N",        20,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "PCHG",    "continuous",  "mean",     -14,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "PCHG",    "continuous",  "sd",       5,
+)
+```
+
+**Stats as rows** — `column = c(".variable", "<arm>")`. Each variable
+becomes a band of arm columns; the statistics stack as rows and cells
+are combined strings. The emitted columns are named
+`"<variable>..<arm>"`:
+
+``` r
+
+pivot_across(
+  valchg_ard,
+  column = c(".variable", "TRTA"),
+  row_group = "AVISIT",
+  statistic = list(
+    AVAL = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})", Median = "{median}"),
+    PCHG = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})")
+  ),
+  decimals = list(AVAL = c(mean = 1, sd = 2, median = 1), PCHG = c(mean = 1, sd = 2))
+)
+#>   AVISIT stat_label     AVAL..Drug AVAL..Placebo   PCHG..Drug PCHG..Placebo
+#> 1  DAY 1          N             20            20           20            20
+#> 2  DAY 1  Mean (SD) 324.0 (106.00) 318.0 (98.00) -16.0 (5.00)  -14.0 (5.00)
+#> 3  DAY 1     Median          315.0         310.0         <NA>          <NA>
+```
+
+**Stats as columns** — `column = c(".variable", ".stat")`. Each
+statistic entry becomes its own column (the landscape shell) and the arm
+drops to a leading row stub. The emitted columns are named
+`"<variable>..<stat-entry>"`:
+
+``` r
+
+pivot_across(
+  valchg_ard,
+  column = c(".variable", ".stat"),
+  row_group = "AVISIT",
+  statistic = list(
+    AVAL = c(N = "{N}", Mean = "{mean}", SD = "{sd}"),
+    PCHG = c(N = "{N}", Mean = "{mean}")
+  ),
+  decimals = c(mean = 1, sd = 2)
+)
+#>   AVISIT    TRTA AVAL..N AVAL..Mean AVAL..SD PCHG..N PCHG..Mean
+#> 1  DAY 1    Drug      20      324.0   106.00      20      -16.0
+#> 2  DAY 1 Placebo      20      318.0    98.00      20      -14.0
+```
+
+You reference the emitted `"<variable>..<arm>"` / `"<variable>..<stat>"`
+names verbatim in a manual
+[`headers()`](https://vthanik.github.io/tabular/dev/reference/headers.md)
+call to draw the band spanners —
+[`pivot_across()`](https://vthanik.github.io/tabular/dev/reference/pivot_across.md)
+never builds spanners itself.
+
+## Auxiliary comparison columns
+
+A between-arm comparison (difference, hazard ratio, p-value) is **not**
+a pivot of the main ARD’s rows — it is a separate ARD (e.g. from
+`cardx`). Bind it with `aux =`, aligned 1:1 on the `row_group` key; the
+entry name becomes the column.
+
+``` r
+
+resp_main <- tibble::tribble(
+  ~group1,  ~group1_level, ~group2, ~group2_level, ~variable, ~context,     ~stat_name, ~stat,
+  "PARAM",  "ORR",         "TRTA",  "Exp",         "AVAL",    "continuous", "mean",     2.2,
+  "PARAM",  "ORR",         "TRTA",  "Ctl",         "AVAL",    "continuous", "mean",     1.9,
+  "PARAM",  "DCR",         "TRTA",  "Exp",         "AVAL",    "continuous", "mean",     2.4,
+  "PARAM",  "DCR",         "TRTA",  "Ctl",         "AVAL",    "continuous", "mean",     2.0,
+)
+diff_ard <- tibble::tribble(
+  ~group1, ~group1_level, ~variable, ~context,     ~stat_name, ~stat,
+  "PARAM", "ORR",         "d",       "continuous", "mean",     0.12,
+  "PARAM", "DCR",         "d",       "continuous", "mean",     0.20,
+)
+
+pivot_across(
+  resp_main,
+  column = "TRTA",
+  row_group = "PARAM",
+  statistic = list(continuous = "{mean}"),
+  aux = list(
+    "Difference" = list(ard = diff_ard, statistic = "{mean}", decimals = c(mean = 2))
+  )
+)
+#>   PARAM variable stat_label Exp Ctl Difference
+#> 1   ORR     AVAL       AVAL 2.2 1.9       0.12
+#> 2   DCR     AVAL       AVAL 2.4 2.0       0.20
+```
+
+One `aux` entry is one column; add more entries (estimate then p-value)
+for several comparison columns. The auxiliary ARD must reduce to one row
+per `row_group` key — a many-to-many alignment aborts rather than
+fabricate rows.
 
 ## Key `statistic` by the context
 

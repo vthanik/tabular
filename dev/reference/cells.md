@@ -3,7 +3,7 @@
 Build a `tabular_location` value naming one region of the rendered
 table; pass the result to
 [`style()`](https://vthanik.github.io/tabular/dev/reference/style.md)'s
-`at` argument. Each constructor targets one surface (body, headers,
+`.at` argument. Each constructor targets one surface (body, headers,
 footnotes, ...); optional `i` / `j` / `where` / `level` / `labels`
 filters narrow the target within that surface.
 
@@ -91,7 +91,7 @@ is_tabular_location(x)
 *A `tabular_location` S3 list* with slots `surface`, `i`, `j`, `where`,
 `labels`, `level`, `slot`, `side` (unused slots are `NULL`). Pass to
 [`style()`](https://vthanik.github.io/tabular/dev/reference/style.md)'s
-`at` argument.
+`.at` argument.
 
 ## Details
 

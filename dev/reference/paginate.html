@@ -412,10 +412,11 @@ the per-page row budget this verb depends on.</p>
 <span class="r-in"><span><span class="co"># ---- Example 3: Orphan / widow floors + continuation marker ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># Long vital-signs table with two safeguards: orphan_floor = 4</span></span></span>
-<span class="r-in"><span><span class="co"># prevents fewer than 4 rows of a group landing alone at the</span></span></span>
-<span class="r-in"><span><span class="co"># bottom of a page; widow_floor = 2 prevents fewer than 2 rows of</span></span></span>
-<span class="r-in"><span><span class="co"># a group landing alone at the top of the next page; the</span></span></span>
-<span class="r-in"><span><span class="co"># continuation marker prints on every page after the first.</span></span></span>
+<span class="r-in"><span><span class="co"># keeps at least 4 rows of a protected run on the continued-from</span></span></span>
+<span class="r-in"><span><span class="co"># page (splitting the run if fewer would fit); widow_floor = 2</span></span></span>
+<span class="r-in"><span><span class="co"># merges the final page back onto the previous one if it would</span></span></span>
+<span class="r-in"><span><span class="co"># carry fewer than 2 rows; the continuation marker prints on every</span></span></span>
+<span class="r-in"><span><span class="co"># page after the first.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="tabular.html">tabular</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">cdisc_saf_vital</span>,</span></span>
 <span class="r-in"><span>  titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Table 14.4.1"</span>, <span class="st">"Vital Signs Summary at Each Visit"</span><span class="op">)</span></span></span>

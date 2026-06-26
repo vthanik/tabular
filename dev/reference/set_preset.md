@@ -35,7 +35,7 @@ set_preset(new = NULL, ..., .template = NULL, .style = NULL, .reset = FALSE)
 
   *Named preset knobs.* Same shape as
   [`preset()`](https://vthanik.github.io/tabular/dev/reference/preset.md);
-  see that verb for the full list of 13 recognised knobs. Unknown names
+  see that verb for the full list of recognised knobs. Unknown names
   raise `tabular_error_input`. Mutually exclusive with a non-`NULL`
   `new`.
 

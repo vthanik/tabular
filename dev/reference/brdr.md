@@ -35,9 +35,9 @@ is_brdr(x)
 
 - color:
 
-  *Stroke colour.*
-  `<character(1)>: default `"currentColor"`*. Hex (`"#RRGGBB"`), CSS colour name, or `"currentColor"\`
-  to inherit the surrounding text colour.
+  *Stroke colour.* `<character(1)>: default `"ink"“. The `"ink"` token
+  (resolves to \`#212529\`), a hex (\`"#RRGGBB"\`), a CSS colour name,
+  or \`"currentColor"\` to inherit the surrounding text colour.
 
 - x:
 
