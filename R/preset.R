@@ -352,9 +352,10 @@
 #'       *   **`"content"`** *(default)* — Each column auto-sized to
 #'           `max(body, header)`. The table doesn't fill the page.
 #'           Word's "Auto-fit Contents".
-#'       *   **`"window"`** — Auto-sized columns expand to share the
-#'           residual page width equally. Pinned and percent columns
-#'           keep their pins. Word's "Auto-fit Window".
+#'       *   **`"window"`** — Auto-sized columns are scaled
+#'           proportionally to their natural width to fill the residual
+#'           page width. Pinned and percent columns keep their pins.
+#'           Word's "Auto-fit Window".
 #'       *   **`"fixed"`** — Only explicit per-column widths drive
 #'           the layout. Auto-sized columns collapse to a minimum
 #'           sliver. Word's "Fixed Column Width".

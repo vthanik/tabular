@@ -90,10 +90,12 @@
 #                         The table doesn't fill the page. Today's
 #                         behavior; equivalent to Word's "Auto-fit
 #                         Contents".
-#   "window"            — Auto-sized columns expand to fill the
-#                         residual page width equally. Pinned and
-#                         percent columns keep their pins; the rest
-#                         share what's left. Word's "Auto-fit Window".
+#   "window"            — Auto-sized columns are scaled proportionally
+#                         to their natural width to fill the residual
+#                         page width. Pinned and percent columns keep
+#                         their pins; the rest share what's left in
+#                         proportion to their content. Word's "Auto-fit
+#                         Window".
 #   "fixed"             — Use only explicit per-column widths.
 #                         Auto-sized columns collapse to the minimum
 #                         (`.min_auto_width_in`). The table doesn't
