@@ -864,22 +864,33 @@ backend_html <- function(grid, file) {
     ncols
   )
   body_lines <- character()
+  prev_subgroup <- NULL
   for (i in seq_along(panel_pages)) {
     if (i > 1L) {
       body_lines <- c(body_lines, break_row)
     }
+    pg <- panel_pages[[i]]
+    # The subgroup banner belongs once per subgroup VALUE, not once per
+    # vertical page. HTML is continuous: a tall group spans several
+    # (print-only) vertical pages that share one `subgroup_index`, so emit
+    # the banner only when the value changes. Paged backends repeat it per
+    # page by design; this gate is continuous-only.
+    show_banner <- is.null(prev_subgroup) ||
+      !identical(pg$subgroup_index, prev_subgroup)
     body_lines <- c(
       body_lines,
       .render_html_page_body_rows(
-        page = panel_pages[[i]],
+        page = pg,
         col_names_visible = col_names_visible,
         col_specs = col_specs,
         preset = preset,
         cs = cs,
         headers = meta$headers,
-        empty_text_ast = meta$empty_text_ast
+        empty_text_ast = meta$empty_text_ast,
+        show_banner = show_banner
       )
     )
+    prev_subgroup <- pg$subgroup_index
   }
   out <- c(out, "<tbody>", body_lines, "</tbody>", "</table>", "</div>")
   out
@@ -926,18 +937,25 @@ backend_html <- function(grid, file) {
   preset = NULL,
   cs = NULL,
   headers = NULL,
-  empty_text_ast = NULL
+  empty_text_ast = NULL,
+  show_banner = TRUE
 ) {
   out <- character()
-  has_bign <- !is.null(page$subgroup_bign) && length(page$subgroup_bign) > 0L
-  banner_row <- .render_html_subgroup_banner_row(
-    page$subgroup_line_ast,
-    n_cols = length(col_names_visible),
-    preset = preset,
-    cs = cs,
-    # No per-arm N row to carry the closing rule -> the banner carries it.
-    closing = !has_bign
-  )
+  has_bign <- show_banner &&
+    !is.null(page$subgroup_bign) &&
+    length(page$subgroup_bign) > 0L
+  banner_row <- if (show_banner) {
+    .render_html_subgroup_banner_row(
+      page$subgroup_line_ast,
+      n_cols = length(col_names_visible),
+      preset = preset,
+      cs = cs,
+      # No per-arm N row to carry the closing rule -> the banner carries it.
+      closing = !has_bign
+    )
+  } else {
+    character()
+  }
   if (length(banner_row) > 0L) {
     out <- c(out, banner_row)
     # Per-subgroup BigN: the continuous layout cannot vary the single
