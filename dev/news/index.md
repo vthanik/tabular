@@ -219,6 +219,9 @@
   [`figure()`](https://vthanik.github.io/tabular/dev/reference/figure.md)
   title and footnote; the Markdown table title and footnote gaps now
   follow the same knob.
+- `preset(width_mode = "window")` now sizes auto columns proportionally
+  to their content width to fill the page, instead of giving every
+  column an equal share.
 - [`subgroup()`](https://vthanik.github.io/tabular/dev/reference/subgroup.md)
   gained a `keep_empty` argument; with `keep_empty = TRUE` a zero-N
   crossing is retained and rendered as an empty-state page carrying its

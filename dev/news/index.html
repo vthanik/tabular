@@ -112,6 +112,8 @@
 <li>
 <code>preset(spacing = ...)</code> now drives the blank lines around a subgroup banner (the <code>subgroup</code> region) and around a <code><a href="../reference/figure.html">figure()</a></code> title and footnote; the Markdown table title and footnote gaps now follow the same knob.</li>
 <li>
+<code>preset(width_mode = "window")</code> now sizes auto columns proportionally to their content width to fill the page, instead of giving every column an equal share.</li>
+<li>
 <code><a href="../reference/subgroup.html">subgroup()</a></code> gained a <code>keep_empty</code> argument; with <code>keep_empty = TRUE</code> a zero-N crossing is retained and rendered as an empty-state page carrying its banner instead of being dropped.</li>
 <li>
 <code><a href="../reference/subgroup.html">subgroup()</a></code> no longer errors on a zero-row input; the table renders the empty-state placeholder once with no subgroup banner.</li>
