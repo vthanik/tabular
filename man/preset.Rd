@@ -242,9 +242,10 @@ Word's Table Layout menu. \verb{<character(1)>}. One of:
 \item \strong{\code{"content"}} \emph{(default)} — Each column auto-sized to
 \code{max(body, header)}. The table doesn't fill the page.
 Word's "Auto-fit Contents".
-\item \strong{\code{"window"}} — Auto-sized columns expand to share the
-residual page width equally. Pinned and percent columns
-keep their pins. Word's "Auto-fit Window".
+\item \strong{\code{"window"}} — Auto-sized columns are scaled
+proportionally to their natural width to fill the residual
+page width. Pinned and percent columns keep their pins.
+Word's "Auto-fit Window".
 \item \strong{\code{"fixed"}} — Only explicit per-column widths drive
 the layout. Auto-sized columns collapse to a minimum
 sliver. Word's "Fixed Column Width".

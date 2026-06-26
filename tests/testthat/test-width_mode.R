@@ -49,7 +49,7 @@ test_that(".distribute_widths() default mode='content' preserves natural-fit (no
   expect_equal(unname(out["b"]), 1.5)
 })
 
-test_that(".distribute_widths() mode='window' expands auto cols to share the residual equally", {
+test_that(".distribute_widths() mode='window' scales auto cols proportionally to fill the residual", {
   widths <- list(
     a = list(kind = "pin", value = 2.0),
     b = list(kind = "auto", value = 1.0),
@@ -61,9 +61,13 @@ test_that(".distribute_widths() mode='window' expands auto cols to share the res
     mode = "window"
   )
   expect_equal(unname(out["a"]), 2.0)
-  # Remaining = 8 - 2 = 6 in; split equally across 2 auto cols -> 3 each.
-  expect_equal(unname(out["b"]), 3.0)
-  expect_equal(unname(out["c"]), 3.0)
+  # Remaining = 8 - 2 = 6 in; scaled by natural width (sum_auto = 2.5),
+  # scale factor 6 / 2.5 = 2.4 -> b = 2.4, c = 3.6 (proportions preserved).
+  expect_equal(unname(out["b"]), 2.4)
+  expect_equal(unname(out["c"]), 3.6)
+  # Auto group fills the residual exactly and keeps the 1 : 1.5 ratio.
+  expect_equal(unname(out["b"]) + unname(out["c"]), 6.0)
+  expect_equal(unname(out["c"]) / unname(out["b"]), 1.5)
 })
 
 test_that(".distribute_widths() mode='window' with single auto col claims entire residual", {
