@@ -94,12 +94,12 @@
 #'
 #' | extension(s)       | format  | backend                              |
 #' |--------------------|---------|--------------------------------------|
-#' | `.md`, `.markdown` | `md`    | GFM pipe table (Step 15; shipped)    |
-#' | `.html`, `.htm`    | `html`  | self-contained Bootstrap 5 (planned) |
-#' | `.tex`, `.latex`   | `latex` | tabularray (planned)                 |
-#' | `.pdf`             | `pdf`   | tinytex compile of LaTeX (planned)   |
-#' | `.rtf`             | `rtf`   | RTF 1.9.1, native (shipped)          |
-#' | `.docx`            | `docx`  | OOXML native, no JVM (planned)       |
+#' | `.md`, `.markdown` | `md`    | GFM pipe table                       |
+#' | `.html`, `.htm`    | `html`  | self-contained Bootstrap 5           |
+#' | `.tex`, `.latex`   | `latex` | tabularray                           |
+#' | `.pdf`             | `pdf`   | tinytex compile of LaTeX             |
+#' | `.rtf`             | `rtf`   | RTF 1.9.1, native                    |
+#' | `.docx`            | `docx`  | OOXML native, no JVM                  |
 #'
 #' Unknown extensions, missing extensions, and formats with no
 #' registered backend all raise `tabular_error_input`. The error

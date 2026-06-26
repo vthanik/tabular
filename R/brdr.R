@@ -132,9 +132,10 @@
 #'   One of `"solid"`, `"dashed"`, `"dotted"`, `"double"`,
 #'   `"dashdot"`, `"none"`.
 #'
-#' @param color *Stroke colour.* `<character(1)>: default
-#'   `"currentColor"`*. Hex (`"#RRGGBB"`), CSS colour name, or
-#'   `"currentColor"` to inherit the surrounding text colour.
+#' @param color *Stroke colour.* `<character(1)>: default `"ink"``.
+#'   The `"ink"` token (resolves to `#212529`), a hex (`"#RRGGBB"`), a
+#'   CSS colour name, or `"currentColor"` to inherit the surrounding
+#'   text colour.
 #'
 #' @param x *Any R object* — tested by `is_brdr()` for membership
 #'   in the `tabular_brdr` S3 class.

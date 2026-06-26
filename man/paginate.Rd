@@ -221,10 +221,11 @@ tabular(
 # ---- Example 3: Orphan / widow floors + continuation marker ----
 #
 # Long vital-signs table with two safeguards: orphan_floor = 4
-# prevents fewer than 4 rows of a group landing alone at the
-# bottom of a page; widow_floor = 2 prevents fewer than 2 rows of
-# a group landing alone at the top of the next page; the
-# continuation marker prints on every page after the first.
+# keeps at least 4 rows of a protected run on the continued-from
+# page (splitting the run if fewer would fit); widow_floor = 2
+# merges the final page back onto the previous one if it would
+# carry fewer than 2 rows; the continuation marker prints on every
+# page after the first.
 tabular(
   cdisc_saf_vital,
   titles = c("Table 14.4.1", "Vital Signs Summary at Each Visit")

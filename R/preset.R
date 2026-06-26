@@ -395,6 +395,18 @@
 #'       **Note:** never affects `col_spec(align = "decimal")` padding,
 #'       which uses U+00A0 and is preserved unconditionally.
 #'
+#'   *   **`chrome_onscreen`** — whether the on-screen running header /
+#'       footer bands render in HTML output. `<character(1)>`. One of:
+#'
+#'       *   **`"auto"`** *(default)* — the `pagehead` / `pagefoot`
+#'           content renders as on-screen `<header>` / `<footer>` bands.
+#'       *   **`"off"`** — suppress the on-screen bands; the print-time
+#'           `@page` chrome still renders, so print-to-PDF output is
+#'           unchanged. Useful when the HTML is consumed only via print.
+#'
+#'       HTML-only; the paged backends (RTF / PDF / DOCX) always emit
+#'       per-page chrome regardless of this knob.
+#'
 #'   *   **`footnote_markers`** — the glyph scheme for [`footnote()`]
 #'       markers, which the engine allocates once in reading order.
 #'       `<character(1)>`. One of:
@@ -759,7 +771,7 @@ preset <- function(
 #'   `tabular_error_input`.
 #'
 #' @param ... *Named preset knobs.* Same shape as [`preset()`]; see
-#'   that verb for the full list of 13 recognised knobs. Unknown
+#'   that verb for the full list of recognised knobs. Unknown
 #'   names raise `tabular_error_input`. Mutually exclusive with
 #'   a non-`NULL` `new`.
 #'

@@ -195,7 +195,7 @@ test_that("Named-list-by-context dispatches per context", {
     )
   )
   # Sex M cell from Placebo should include ({p}%)
-  sex_m <- out[out$stat_label == "  M", ]
+  sex_m <- out[out$stat_label == "M", ]
   expect_true(grepl("\\(", sex_m$Placebo[[1L]]))
 })
 
@@ -243,8 +243,8 @@ test_that("Multi-row continuous spec produces one display row per entry", {
   )
   age_rows <- out[out$variable == "AGE", , drop = FALSE]
   expect_identical(nrow(age_rows), 3L)
-  # stat_label is indented because it differs from variable
-  expect_setequal(age_rows$stat_label, c("  N", "  Mean (SD)", "  Median"))
+  # stat_label is flush: the renderer owns indentation, not the pivot.
+  expect_setequal(age_rows$stat_label, c("N", "Mean (SD)", "Median"))
 })
 
 # ---------------------------------------------------------------------
@@ -532,10 +532,10 @@ test_that("Empty result after filtering raises tabular_error_input", {
 })
 
 # ---------------------------------------------------------------------
-# Edge case 25: indent stat_label for non-group rows
+# Edge case 25: stat_label is never pre-indented (renderer owns indent)
 # ---------------------------------------------------------------------
 
-test_that("stat_label is indented when it differs from variable", {
+test_that("stat_label carries no leading-space indent", {
   out <- pivot_across(
     cdisc_saf_demo_ard,
     statistic = list(
@@ -543,8 +543,11 @@ test_that("stat_label is indented when it differs from variable", {
       categorical = "{n} ({p}%)"
     )
   )
-  sex_rows <- out[out$variable == "SEX", , drop = FALSE]
-  expect_true(all(startsWith(sex_rows$stat_label, "  ")))
+  # No baked-in indent: stat_label matches its trimmed form on every row.
+  # Indentation is applied downstream via col_spec(usage = "group") /
+  # group_display, never by pivot_across.
+  expect_false(any(startsWith(out$stat_label, " "), na.rm = TRUE))
+  expect_identical(out$stat_label, trimws(out$stat_label))
 })
 
 # ---------------------------------------------------------------------
@@ -622,6 +625,198 @@ test_that(".resolve_ard_decimals parses three forms", {
   )
   expect_identical(r2$global, c(p = 1))
   expect_identical(r2$per_var, list(AGE = c(mean = 2)))
+
+  # Per-row-group: keyed by row_group levels -> per_group, never per_var.
+  r3 <- tabular:::.resolve_ard_decimals(
+    list(SYSBP = c(mean = 0), WEIGHT = c(mean = 1), .default = c(sd = 2)),
+    row_group = "PARAM",
+    rg_levels = c("SYSBP", "WEIGHT")
+  )
+  expect_null(r3$global)
+  expect_null(r3$per_var)
+  expect_identical(
+    r3$per_group$map,
+    list(SYSBP = c(mean = 0), WEIGHT = c(mean = 1))
+  )
+  expect_identical(r3$per_group$default, c(sd = 2))
+
+  # row_group set but a key is not a level -> stays per-variable (no per_group).
+  r4 <- tabular:::.resolve_ard_decimals(
+    list(SYSBP = c(mean = 0), AGE = c(mean = 1)),
+    row_group = "PARAM",
+    rg_levels = c("SYSBP", "WEIGHT")
+  )
+  expect_null(r4$per_group)
+  expect_identical(r4$per_var, list(SYSBP = c(mean = 0), AGE = c(mean = 1)))
+
+  # row_group NULL but keys match no variable -> error.
+  expect_error(
+    tabular:::.resolve_ard_decimals(
+      list(SYSBP = c(mean = 0)),
+      variables = c("AVAL", "AGE")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+# A by-PARAM continuous ARD (PARAM x TRTA, mean + sd) for per-row-group tests.
+mk_keyed_meansd <- function() {
+  spec <- list(
+    c("SYSBP", "Exp", "mean", "133.27"),
+    c("SYSBP", "Exp", "sd", "15.81"),
+    c("SYSBP", "Ctl", "mean", "128.94"),
+    c("SYSBP", "Ctl", "sd", "14.02"),
+    c("WEIGHT", "Exp", "mean", "71.43"),
+    c("WEIGHT", "Exp", "sd", "12.77"),
+    c("WEIGHT", "Ctl", "mean", "73.06"),
+    c("WEIGHT", "Ctl", "sd", "13.19")
+  )
+  do.call(
+    rbind,
+    lapply(spec, function(r) {
+      data.frame(
+        group1 = "PARAM",
+        group1_level = r[[1L]],
+        group2 = "TRTA",
+        group2_level = r[[2L]],
+        variable = "AVAL",
+        variable_level = NA_character_,
+        context = "continuous",
+        stat_name = r[[3L]],
+        stat_label = r[[3L]],
+        stat = I(list(as.numeric(r[[4L]]))),
+        stringsAsFactors = FALSE
+      )
+    })
+  )
+}
+
+test_that("pivot_across: decimals vary by row_group", {
+  out <- pivot_across(
+    mk_keyed_meansd(),
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(
+      SYSBP = c(mean = 0, sd = 1),
+      WEIGHT = c(mean = 1, sd = 2)
+    )
+  )
+  sysbp <- out[out$PARAM == "SYSBP", ]
+  weight <- out[out$PARAM == "WEIGHT", ]
+  # SYSBP: mean 0 dp, sd 1 dp -> "133 (15.8)".
+  expect_identical(sysbp$Exp[[1L]], "133 (15.8)")
+  # WEIGHT: mean 1 dp, sd 2 dp -> "71.4 (12.77)".
+  expect_identical(weight$Exp[[1L]], "71.4 (12.77)")
+})
+
+test_that("pivot_across: per-row-group .default covers an unlisted group", {
+  out <- pivot_across(
+    mk_keyed_meansd(),
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(
+      SYSBP = c(mean = 0, sd = 1),
+      .default = c(mean = 2, sd = 3)
+    )
+  )
+  # WEIGHT is unlisted -> .default: mean 2 dp, sd 3 dp.
+  weight <- out[out$PARAM == "WEIGHT", ]
+  expect_identical(weight$Exp[[1L]], "71.43 (12.770)")
+})
+
+test_that("pivot_across: per-group token falls back to group .default then built-in", {
+  out <- pivot_across(
+    mk_keyed_meansd(),
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(
+      SYSBP = c(mean = 0),
+      .default = c(sd = 4)
+    )
+  )
+  # SYSBP mean -> group token (0 dp); SYSBP sd -> group .default token (4 dp).
+  sysbp <- out[out$PARAM == "SYSBP", ]
+  expect_identical(sysbp$Exp[[1L]], "133 (15.8100)")
+})
+
+test_that("pivot_across: per-group token with no spec or .default uses built-in", {
+  out <- pivot_across(
+    mk_keyed_meansd(),
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(SYSBP = c(mean = 0))
+  )
+  # SYSBP mean -> group token (0 dp); SYSBP sd -> no token, no .default ->
+  # built-in sd default (2 dp). WEIGHT is unlisted, no .default -> built-in.
+  sysbp <- out[out$PARAM == "SYSBP", ]
+  weight <- out[out$PARAM == "WEIGHT", ]
+  expect_identical(sysbp$Exp[[1L]], "133 (15.81)")
+  expect_identical(weight$Exp[[1L]], "71.4 (12.77)")
+})
+
+test_that("pivot_across: a bare scalar per group applies to every token", {
+  out <- pivot_across(
+    mk_keyed_meansd(),
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(SYSBP = 0, WEIGHT = 3)
+  )
+  sysbp <- out[out$PARAM == "SYSBP", ]
+  weight <- out[out$PARAM == "WEIGHT", ]
+  expect_identical(sysbp$Exp[[1L]], "133 (16)")
+  expect_identical(weight$Exp[[1L]], "71.430 (12.770)")
+})
+
+test_that(".format_stat_group: NA-group rows fall back, not blanked", {
+  decimals <- list(
+    global = NULL,
+    per_var = NULL,
+    per_group = list(default = c(mean = 2), map = list(SYSBP = c(mean = 0)))
+  )
+  out <- tabular:::.format_stat_group(
+    values = c(133.27, 71.43),
+    value_chrs = c(NA_character_, NA_character_),
+    stat_name = "mean",
+    variables = c("AVAL", "AVAL"),
+    decimals = decimals,
+    fmt = NULL,
+    pct_threshold = TRUE,
+    call = rlang::caller_env(),
+    groups = c("SYSBP", NA_character_)
+  )
+  # SYSBP -> 0 dp; NA group -> per-group .default (2 dp), never blank.
+  expect_identical(out, c("133", "71.43"))
+})
+
+test_that("pivot_across: per-row-group decimals with row_group = NULL errors", {
+  expect_snapshot(
+    error = TRUE,
+    pivot_across(
+      mk_keyed_meansd(),
+      column = "TRTA",
+      statistic = list(continuous = "{mean} ({sd})"),
+      decimals = list(SYSBP = c(mean = 0), WEIGHT = c(mean = 1))
+    )
+  )
+  expect_error(
+    pivot_across(
+      mk_keyed_meansd(),
+      column = "TRTA",
+      statistic = list(continuous = "{mean} ({sd})"),
+      decimals = list(SYSBP = c(mean = 0), WEIGHT = c(mean = 1))
+    ),
+    class = "tabular_error_input"
+  )
 })
 
 # ---------------------------------------------------------------------
@@ -738,7 +933,7 @@ test_that("Per-variable decimals fall through to built-in default for unrelated 
     decimals = list(AGE = c(mean = 3))
   )
   # median uses built-in default (1 decimal)
-  med_val <- out$A[out$stat_label == "  Median"]
+  med_val <- out$A[out$stat_label == "Median"]
   expect_match(med_val, "\\.[0-9]{1}$")
 })
 
@@ -807,7 +1002,7 @@ test_that("Cell interpolation returns empty string for arm without rows", {
   )
   out <- pivot_across(ard, statistic = "{n}", overall = NULL)
   # B has no "M" level -> cell should be NA (from match-and-fill)
-  m_row <- out[out$stat_label == "  M", ]
+  m_row <- out[out$stat_label == "M", ]
   expect_true(is.na(m_row$B) || identical(m_row$B, ""))
 })
 
@@ -1203,9 +1398,9 @@ test_that("pivot_across keeps tabulate-context categorical rows (B1)", {
   expect_true(all(c("SEX", "RACE") %in% out$variable))
   # A summary-context continuous variable also survives.
   expect_true("AGE" %in% out$variable)
-  # SEX levels appear in the output (stat_label is indented for display).
+  # SEX levels appear in the output as flush stat_label values.
   sex_rows <- out[out$variable == "SEX", , drop = FALSE]
-  expect_true(all(c("F", "M") %in% trimws(sex_rows$stat_label)))
+  expect_true(all(c("F", "M") %in% sex_rows$stat_label))
   # The by-variable's own tabulation (context "tabulate", no arm) is still
   # filtered out.
   expect_false("TRT01A" %in% out$variable)
@@ -1606,5 +1801,354 @@ test_that("every kept sentinel has a default label (registry drift guard) (#ard-
   expect_setequal(
     names(tabular:::.tabular_ard_const$sentinel_labels),
     tabular:::.tabular_ard_const$keep_sentinels
+  )
+})
+
+# ---------------------------------------------------------------------
+# Variable bands + auxiliary columns (GAP 1 / GAP 2)
+# ---------------------------------------------------------------------
+
+# A 2-group continuous ARD: variables AVAL + PCHG by AVISIT x TRTA.
+mk_valchg_ard <- function() {
+  specs <- list(
+    AVAL = c(N = 20, mean = 320, sd = 90, median = 318),
+    PCHG = c(N = 20, mean = -15, sd = 5, median = -14)
+  )
+  rows <- list()
+  i <- 0L
+  for (v in names(specs)) {
+    sn <- names(specs[[v]])
+    for (av in c("DAY 1", "DAY 2")) {
+      for (tr in c("Drug", "Placebo")) {
+        i <- i + 1L
+        rows[[i]] <- data.frame(
+          group1 = "AVISIT",
+          group1_level = av,
+          group2 = "TRTA",
+          group2_level = tr,
+          variable = v,
+          variable_level = NA_character_,
+          context = "continuous",
+          stat_name = sn,
+          stat_label = sn,
+          stat = I(as.list(unname(specs[[v]]))),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+  }
+  do.call(rbind, rows)
+}
+
+# A continuous main ARD with one row per PARAM x TRTA (1:1 on PARAM).
+mk_keyed_main <- function() {
+  rows <- list()
+  i <- 0L
+  for (p in c("ORR", "DCR")) {
+    for (tr in c("Exp", "Ctl")) {
+      i <- i + 1L
+      rows[[i]] <- data.frame(
+        group1 = "PARAM",
+        group1_level = p,
+        group2 = "TRTA",
+        group2_level = tr,
+        variable = "AVAL",
+        variable_level = NA_character_,
+        context = "continuous",
+        stat_name = "mean",
+        stat_label = "mean",
+        stat = I(list(2.0)),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  do.call(rbind, rows)
+}
+
+# A single-group ARD keyed by PARAM only (an auxiliary comparison ARD).
+mk_keyed_single <- function(varname, vals) {
+  rows <- list()
+  i <- 0L
+  for (p in names(vals)) {
+    i <- i + 1L
+    rows[[i]] <- data.frame(
+      group1 = "PARAM",
+      group1_level = p,
+      variable = varname,
+      variable_level = NA_character_,
+      context = "continuous",
+      stat_name = "mean",
+      stat_label = "mean",
+      stat = I(list(unname(vals[[p]]))),
+      stringsAsFactors = FALSE
+    )
+  }
+  do.call(rbind, rows)
+}
+
+# Two displayed rows per PARAM (a categorical with two levels).
+mk_keyed_main_multi <- function() {
+  rows <- list()
+  i <- 0L
+  for (p in c("ORR", "DCR")) {
+    for (tr in c("Exp", "Ctl")) {
+      for (l in c("Y", "N")) {
+        i <- i + 1L
+        rows[[i]] <- data.frame(
+          group1 = "PARAM",
+          group1_level = p,
+          group2 = "TRTA",
+          group2_level = tr,
+          variable = "RESP",
+          variable_level = l,
+          context = "categorical",
+          stat_name = c("n", "p"),
+          stat_label = c("n", "p"),
+          stat = I(list(10, 0.5)),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+  }
+  do.call(rbind, rows)
+}
+
+test_that("column rejects two grouping variables with a classed error (#bands)", {
+  # Pre-fix this raised a raw `the condition has length > 1` from an
+  # unguarded `if`; it must now be a friendly tabular_error_input.
+  expect_error(
+    pivot_across(cdisc_saf_demo_ard, column = c("TRT01A", "SEX")),
+    class = "tabular_error_input"
+  )
+  expect_error(
+    pivot_across(cdisc_saf_demo_ard, column = c("TRT01A", "SEX")),
+    regexp = "single grouping variable"
+  )
+})
+
+test_that("column = .stat without .variable errors (#bands)", {
+  expect_error(
+    pivot_across(cdisc_saf_demo_ard, column = ".stat"),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("column mixing .stat with a group var errors (#bands)", {
+  expect_error(
+    pivot_across(
+      cdisc_saf_demo_ard,
+      column = c(".variable", ".stat", "TRT01A")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("duplicate column entries error (#bands)", {
+  expect_error(
+    pivot_across(cdisc_saf_demo_ard, column = c(".variable", ".variable")),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("column = c('.variable', arm) bands variables, stats as rows (#bands)", {
+  out <- pivot_across(
+    mk_valchg_ard(),
+    column = c(".variable", "TRTA"),
+    row_group = "AVISIT",
+    statistic = list(
+      AVAL = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})"),
+      PCHG = c(N = "{N}", Mean = "{mean}")
+    )
+  )
+  expect_true(all(
+    c("AVAL..Drug", "AVAL..Placebo", "PCHG..Drug", "PCHG..Placebo") %in%
+      names(out)
+  ))
+  expect_true("AVISIT" %in% names(out))
+  expect_setequal(
+    attr(out, "across_cols"),
+    c("AVAL..Drug", "AVAL..Placebo", "PCHG..Drug", "PCHG..Placebo")
+  )
+})
+
+test_that("ragged stat lists across bands stack with NA padding (#bands)", {
+  out <- pivot_across(
+    mk_valchg_ard(),
+    column = c(".variable", "TRTA"),
+    row_group = "AVISIT",
+    statistic = list(
+      AVAL = c("Mean (SD)" = "{mean} ({sd})"),
+      PCHG = c(Mean = "{mean}")
+    )
+  )
+  mean_sd <- out[out$stat_label == "Mean (SD)", , drop = FALSE]
+  expect_true(all(is.na(mean_sd$`PCHG..Drug`)))
+  mean_row <- out[out$stat_label == "Mean", , drop = FALSE]
+  expect_true(all(is.na(mean_row$`AVAL..Drug`)))
+})
+
+test_that("per-variable decimals resolve inside each band (#bands)", {
+  out <- pivot_across(
+    mk_valchg_ard(),
+    column = c(".variable", "TRTA"),
+    row_group = "AVISIT",
+    statistic = list(AVAL = c(Mean = "{mean}"), PCHG = c(Mean = "{mean}")),
+    decimals = list(AVAL = c(mean = 0), PCHG = c(mean = 2))
+  )
+  expect_true("320" %in% out$`AVAL..Drug`)
+  expect_true("-15.00" %in% out$`PCHG..Drug`)
+})
+
+test_that("column = c('.variable', '.stat') spreads stats as columns (#bands)", {
+  out <- pivot_across(
+    mk_valchg_ard(),
+    column = c(".variable", ".stat"),
+    row_group = "AVISIT",
+    statistic = list(
+      AVAL = c(N = "{N}", Mean = "{mean}", SD = "{sd}"),
+      PCHG = c(N = "{N}", Mean = "{mean}")
+    )
+  )
+  expect_true(all(
+    c("AVAL..N", "AVAL..Mean", "AVAL..SD", "PCHG..N", "PCHG..Mean") %in%
+      names(out)
+  ))
+  expect_true("TRTA" %in% names(out)) # arm drops to a leading row stub
+  expect_setequal(out$TRTA, c("Drug", "Placebo"))
+})
+
+test_that(".variable band rejects a hierarchical ARD (#bands)", {
+  expect_error(
+    pivot_across(cdisc_saf_aesocpt_ard, column = c(".variable", "TRT01A")),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("aux binds a comparison column joined on row_group (#aux)", {
+  out <- pivot_across(
+    mk_keyed_main(),
+    column = "TRTA",
+    row_group = "PARAM",
+    statistic = list(continuous = "{mean}"),
+    aux = list(
+      "Difference" = list(
+        ard = mk_keyed_single("d", c(ORR = 0.12, DCR = 0.20)),
+        statistic = "{mean}",
+        decimals = c(mean = 2)
+      )
+    )
+  )
+  expect_true("Difference" %in% names(out))
+  expect_true("Difference" %in% attr(out, "across_cols"))
+  expect_equal(out$Difference[out$PARAM == "ORR"], "0.12")
+})
+
+test_that("aux binds multiple comparison columns left to right (#aux)", {
+  out <- pivot_across(
+    mk_keyed_main(),
+    column = "TRTA",
+    row_group = "PARAM",
+    statistic = list(continuous = "{mean}"),
+    aux = list(
+      "Difference" = list(
+        ard = mk_keyed_single("d", c(ORR = 0.12, DCR = 0.20)),
+        statistic = "{mean}"
+      ),
+      "p-value" = list(
+        ard = mk_keyed_single("p", c(ORR = 0.03, DCR = 0.18)),
+        statistic = "{mean}"
+      )
+    )
+  )
+  expect_true(all(c("Difference", "p-value") %in% names(out)))
+  expect_lt(which(names(out) == "Difference"), which(names(out) == "p-value"))
+})
+
+test_that("aux errors when the main table is not 1:1 on the join key (#aux)", {
+  expect_error(
+    pivot_across(
+      mk_keyed_main_multi(),
+      column = "TRTA",
+      row_group = "PARAM",
+      statistic = list(categorical = "{n} ({p}%)"),
+      aux = list(
+        "Difference" = list(
+          ard = mk_keyed_single("d", c(ORR = 0.12, DCR = 0.20)),
+          statistic = "{mean}"
+        )
+      )
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("aux must be a named list of specs (#aux)", {
+  expect_error(
+    pivot_across(
+      cdisc_saf_demo_ard,
+      column = "TRT01A",
+      aux = list(list(ard = mk_keyed_single("d", c(ORR = 1))))
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("aux entry must carry an ard (#aux)", {
+  expect_error(
+    pivot_across(
+      cdisc_saf_demo_ard,
+      column = "TRT01A",
+      aux = list(X = list(statistic = "{n}"))
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("non-character column errors (#bands)", {
+  expect_error(
+    pivot_across(cdisc_saf_demo_ard, column = 1L),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("column = c('.variable', arm1, arm2) errors (#bands)", {
+  expect_error(
+    pivot_across(
+      cdisc_saf_demo_ard,
+      column = c(".variable", "TRT01A", "SEX")
+    ),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("a variable band needs a variable column (#bands)", {
+  nv <- data.frame(
+    group1 = "TRTA",
+    group1_level = c("A", "B"),
+    context = "continuous",
+    stat_name = "mean",
+    stat_label = "mean",
+    stat = I(list(1, 2)),
+    stringsAsFactors = FALSE
+  )
+  expect_error(
+    pivot_across(nv, column = c(".variable", "TRTA")),
+    class = "tabular_error_input"
+  )
+})
+
+test_that("aux requires a row_group (#aux)", {
+  expect_error(
+    pivot_across(
+      cdisc_saf_demo_ard,
+      column = "TRT01A",
+      aux = list(
+        "X" = list(
+          ard = mk_keyed_single("d", c(ORR = 1)),
+          statistic = "{mean}"
+        )
+      )
+    ),
+    class = "tabular_error_input"
   )
 })

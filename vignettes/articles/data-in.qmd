@@ -190,6 +190,108 @@ then composes with `subgroup()` or `col_spec(usage = "group")` downstream. cards
 encodes a crossing factor and a real hierarchy identically, so the declaration is
 what disambiguates them — leave `row_group` unset for a genuine SOC/PT hierarchy.
 
+## Variables as column bands
+
+Two analysis variables side by side — `AVAL` ("Value") and `PCHG` ("Percent
+Change from Baseline") — is the canonical "value and change" shell. Make the
+**variable** a column band with the reserved `.variable` token in `column`. Each
+band keys its own `statistic` / `decimals`, so the bands may carry different
+(even different-length) stat lists; ragged bands pad with `NA`.
+
+```{r}
+# AVAL + PCHG by AVISIT x TRTA, built by hand so the example runs without cards.
+valchg_ard <- tibble::tribble(
+  ~group1,  ~group1_level, ~group2, ~group2_level, ~variable, ~context,      ~stat_name, ~stat,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "AVAL",    "continuous",  "N",        20,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "AVAL",    "continuous",  "mean",     324,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "AVAL",    "continuous",  "sd",       106,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "AVAL",    "continuous",  "median",   315,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "AVAL",    "continuous",  "N",        20,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "AVAL",    "continuous",  "mean",     318,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "AVAL",    "continuous",  "sd",       98,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "AVAL",    "continuous",  "median",   310,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "PCHG",    "continuous",  "N",        20,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "PCHG",    "continuous",  "mean",     -16,
+  "AVISIT", "DAY 1",       "TRTA",  "Drug",        "PCHG",    "continuous",  "sd",       5,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "PCHG",    "continuous",  "N",        20,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "PCHG",    "continuous",  "mean",     -14,
+  "AVISIT", "DAY 1",       "TRTA",  "Placebo",     "PCHG",    "continuous",  "sd",       5,
+)
+```
+
+**Stats as rows** — `column = c(".variable", "<arm>")`. Each variable becomes a
+band of arm columns; the statistics stack as rows and cells are combined strings.
+The emitted columns are named `"<variable>..<arm>"`:
+
+```{r}
+pivot_across(
+  valchg_ard,
+  column = c(".variable", "TRTA"),
+  row_group = "AVISIT",
+  statistic = list(
+    AVAL = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})", Median = "{median}"),
+    PCHG = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})")
+  ),
+  decimals = list(AVAL = c(mean = 1, sd = 2, median = 1), PCHG = c(mean = 1, sd = 2))
+)
+```
+
+**Stats as columns** — `column = c(".variable", ".stat")`. Each statistic entry
+becomes its own column (the landscape shell) and the arm drops to a leading row
+stub. The emitted columns are named `"<variable>..<stat-entry>"`:
+
+```{r}
+pivot_across(
+  valchg_ard,
+  column = c(".variable", ".stat"),
+  row_group = "AVISIT",
+  statistic = list(
+    AVAL = c(N = "{N}", Mean = "{mean}", SD = "{sd}"),
+    PCHG = c(N = "{N}", Mean = "{mean}")
+  ),
+  decimals = c(mean = 1, sd = 2)
+)
+```
+
+You reference the emitted `"<variable>..<arm>"` / `"<variable>..<stat>"` names
+verbatim in a manual `headers()` call to draw the band spanners — `pivot_across()`
+never builds spanners itself.
+
+## Auxiliary comparison columns
+
+A between-arm comparison (difference, hazard ratio, p-value) is **not** a pivot of
+the main ARD's rows — it is a separate ARD (e.g. from `cardx`). Bind it with
+`aux =`, aligned 1:1 on the `row_group` key; the entry name becomes the column.
+
+```{r}
+resp_main <- tibble::tribble(
+  ~group1,  ~group1_level, ~group2, ~group2_level, ~variable, ~context,     ~stat_name, ~stat,
+  "PARAM",  "ORR",         "TRTA",  "Exp",         "AVAL",    "continuous", "mean",     2.2,
+  "PARAM",  "ORR",         "TRTA",  "Ctl",         "AVAL",    "continuous", "mean",     1.9,
+  "PARAM",  "DCR",         "TRTA",  "Exp",         "AVAL",    "continuous", "mean",     2.4,
+  "PARAM",  "DCR",         "TRTA",  "Ctl",         "AVAL",    "continuous", "mean",     2.0,
+)
+diff_ard <- tibble::tribble(
+  ~group1, ~group1_level, ~variable, ~context,     ~stat_name, ~stat,
+  "PARAM", "ORR",         "d",       "continuous", "mean",     0.12,
+  "PARAM", "DCR",         "d",       "continuous", "mean",     0.20,
+)
+
+pivot_across(
+  resp_main,
+  column = "TRTA",
+  row_group = "PARAM",
+  statistic = list(continuous = "{mean}"),
+  aux = list(
+    "Difference" = list(ard = diff_ard, statistic = "{mean}", decimals = c(mean = 2))
+  )
+)
+```
+
+One `aux` entry is one column; add more entries (estimate then p-value) for
+several comparison columns. The auxiliary ARD must reduce to one row per
+`row_group` key — a many-to-many alignment aborts rather than fabricate rows.
+
 ## Key `statistic` by the context
 
 The one thing to get right: key `statistic` by the ARD's `context`. Inspect

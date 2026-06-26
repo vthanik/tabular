@@ -14,7 +14,10 @@ is_brdr(x)
 
 \item{style}{\emph{Line style.} \verb{<character(1)>: default }"solid"\verb{*. One of }"solid"\verb{, }"dashed"\verb{, }"dotted"\verb{, }"double"\verb{, }"dashdot"\verb{, }"none"`.}
 
-\item{color}{\emph{Stroke colour.} \verb{<character(1)>: default }"currentColor"\verb{*. Hex (}"#RRGGBB"\verb{), CSS colour name, or }"currentColor"` to inherit the surrounding text colour.}
+\item{color}{\emph{Stroke colour.} \verb{<character(1)>: default }"ink"``.
+The \code{"ink"} token (resolves to `#212529`), a hex (`"#RRGGBB"`), a
+CSS colour name, or `"currentColor"` to inherit the surrounding
+text colour.}
 
 \item{x}{\emph{Any R object} — tested by \code{is_brdr()} for membership
 in the \code{tabular_brdr} S3 class.}

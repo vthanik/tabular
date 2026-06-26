@@ -12,7 +12,8 @@ pivot_across(
   label = NULL,
   overall = "Total",
   decimals = NULL,
-  fmt = NULL
+  fmt = NULL,
+  aux = NULL
 )
 }
 \arguments{
@@ -116,11 +117,31 @@ label. Use for \verb{N / Mean (SD) / Median / Min, Max}-style blocks.
 }\if{html}{\out{</div>}}
 }}
 
-\item{column}{\emph{Grouping column whose unique values become arms.}
-\verb{<character(1) | NULL>: default NULL}. \code{NULL} auto-detects
-from the ARD's \code{group1} value or — for renamed input — picks
-the single non-standard column. Pass a string when multiple
-group columns exist.}
+\item{column}{\emph{What runs across the top of the table.}
+\verb{<character | NULL>: default NULL}. A single grouping variable
+whose unique values become arm columns (\code{NULL} auto-detects from
+\code{group1}, or picks the single non-standard column of renamed
+input). Two reserved tokens turn the analysis variable into a
+\strong{column band}:
+\itemize{
+\item \code{c(".variable", "<arm>")} — each variable becomes a band of
+arm columns; the statistic entries stack as rows. The cells
+are combined strings (e.g. \code{"323.9 (106)"}). Emitted columns
+are named \code{"<variable>..<arm>"}.
+\item \code{c(".variable", ".stat")} — each variable becomes a band whose
+statistic entries become their own columns (the landscape
+"value and change" shell); the arm drops to a leading row
+stub. Emitted columns are named \code{"<variable>..<stat-entry>"}.
+}
+
+Anything present in the ARD but not named in \code{column} (and not in
+\code{row_group}) stacks as rows. Per-variable \code{statistic} / \code{decimals}
+resolve inside each band, so bands may carry different (even
+different-length) stat lists; ragged bands pad with \code{NA}.
+
+\strong{Tip:} you reference the emitted column names verbatim in a
+manual \code{\link[=headers]{headers()}} call to build the band spanners; pivot_across
+does not build spanners itself.}
 
 \item{row_group}{\emph{Second, non-column grouping dimension.}
 \verb{<character(1) | NULL>: default NULL}. Names the non-arm group
@@ -160,22 +181,54 @@ The raw sentinel never reaches the output at any hierarchy depth.}
 overall rows entirely (per-arm only output).}
 
 \item{decimals}{\emph{Per-stat decimal precision.}
-\verb{<named integer | named list>: default }c()``. Accepts two
+\verb{<named integer | named list>: default }c()``. Accepts three
 forms:
 \itemize{
 \item \strong{named integer vector} — global per-stat overrides
 (\code{c(mean = 1, sd = 2, p = 0)}).
-\item \strong{named list} — per-variable plus \code{.default}
+\item \strong{named list keyed by variable} — per-variable plus \code{.default}
 (\code{list(AGE = c(mean = 2), .default = c(p = 1))}).
+\item \strong{named list keyed by \code{row_group} value} — per-group precision in
+one call (\code{list(SYSBP = c(mean = 0, sd = 1), WEIGHT = c(mean = 1), .default = c(mean = 1, sd = 2))}). Each entry is a per-token spec (a
+named numeric vector, or a bare scalar applied to every token).
 }
 
-Built-in defaults apply when neither sets a stat.}
+Built-in defaults apply when none sets a stat.
+
+\strong{Interaction:} a list \code{decimals} is read as per-\code{row_group} only when
+\code{row_group} is set and every key (apart from \code{.default}) is one of its
+levels; otherwise it stays per-variable. Within the matched group the
+token falls back group token, then the per-group \code{.default} token, then
+the built-in default. A group present in the data but absent from the
+list (and NA / ungrouped rows) uses \code{.default}. If \code{row_group} is \code{NULL}
+but the keys match no variable, \code{pivot_across()} errors and asks for a
+\code{row_group}.}
 
 \item{fmt}{\emph{Per-stat custom formatter functions.}
 \verb{<named list of function>: default }list()``. Each function
 takes a numeric value and returns a character string;
 overrides built-ins and \code{decimals} for that stat. Useful for
-p-value styling and other domain-specific formatting.
+p-value styling and other domain-specific formatting.}
+
+\item{aux}{\emph{Auxiliary comparison columns from a second ARD.}
+\verb{<named list | NULL>: default NULL}. Each entry is a between-arm
+statistic (difference, hazard ratio, p-value, ...) computed in its
+own ARD and bound on as a trailing column, aligned 1:1 on the
+\code{row_group} key. The entry name is the column name; reference it in
+a manual \code{\link[=headers]{headers()}} call. Each entry is a list:
+\itemize{
+\item \code{ard} — the auxiliary ARD (required), one row per \code{row_group}.
+\item \code{statistic} — its format string (e.g.
+\code{"{estimate} ({conf.low}, {conf.high})"}); defaults to \code{"{n}"}.
+\item \code{decimals} / \code{fmt} — optional, as for the main pivot.
+}
+
+Entries append left to right. One entry is one column; for several
+comparison columns (estimate then p-value) pass several entries.
+
+\strong{Requirement:} needs a \code{row_group}; the auxiliary rows align to
+the main table on it, which must be unique 1:1 on both sides (a
+many-to-many key would silently fabricate rows, so it aborts).
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# p-value formatter: render below-threshold values as "<0.001".
 fmt = list(
@@ -235,15 +288,6 @@ explicitly-supplied \code{statistic} matches no context at all,
    \code{cardx::ard_continuous_ci()} \tab \code{continuous_ci} \cr
 }
 
-}
-
-\subsection{Indentation of \code{stat_label}}{
-
-Categorical levels and the multi-row continuous stat labels come
-back already indented with two leading spaces, ready to render as a
-plain display column. Do \strong{not} also set \code{col_spec(indent = ...)} on
-\code{stat_label} — that stacks the engine indent on top of the string
-indent (a double indent). Use one or the other.
 }
 
 \subsection{Zero-suppression (always-on default)}{
@@ -464,6 +508,114 @@ pivot_across(
     tabulate = "{n} ({p}\%)"
   )
 )
+
+# ---- Example 6: Analysis variables as side-by-side column bands ----
+#
+# `column = c(".variable", "<arm>")` turns each analysis variable into
+# its own band of arm columns (the "value and change side by side"
+# shape), with statistics stacked as rows. Per-variable `statistic` /
+# `decimals` resolve inside each band. Emitted columns are named
+# "<variable>..<arm>"; reference them verbatim in a manual `headers()`
+# call to draw the band spanners (pivot_across never builds spanners).
+vitals <- cdisc_saf_demo_ard[
+  cdisc_saf_demo_ard$variable \%in\% c("AGE", "WEIGHT"),
+]
+vitals |>
+  pivot_across(
+    column = c(".variable", "TRT01A"),
+    overall = NULL,
+    statistic = list(
+      AGE    = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})", Median = "{median}"),
+      WEIGHT = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})", Median = "{median}")
+    ),
+    decimals = list(
+      AGE    = c(mean = 1, sd = 2, median = 1),
+      WEIGHT = c(mean = 1, sd = 2, median = 1)
+    )
+  ) |>
+  tabular(
+    titles = c(
+      "Table 14.2.1",
+      "Summary of Continuous Parameters by Treatment",
+      "Safety Population"
+    )
+  ) |>
+  cols(stat_label = col_spec(label = "Statistic")) |>
+  headers(
+    Age = c(
+      "AGE..Placebo",
+      "AGE..Xanomeline Low Dose",
+      "AGE..Xanomeline High Dose"
+    ),
+    Weight = c(
+      "WEIGHT..Placebo",
+      "WEIGHT..Xanomeline Low Dose",
+      "WEIGHT..Xanomeline High Dose"
+    )
+  )
+
+# ---- Example 7: Statistics as columns within each band ----
+#
+# `column = c(".variable", ".stat")` spreads each statistic entry into
+# its own column (the landscape shell); the arm drops to a leading row
+# stub. Emitted columns are named "<variable>..<stat-entry>". Bands may
+# carry different stat sets, with no row-alignment needed.
+vitals |>
+  pivot_across(
+    column = c(".variable", ".stat"),
+    overall = NULL,
+    statistic = list(
+      AGE    = c(N = "{N}", Mean = "{mean}", SD = "{sd}"),
+      WEIGHT = c(N = "{N}", Mean = "{mean}", SD = "{sd}", Median = "{median}")
+    ),
+    decimals = c(mean = 1, sd = 2, median = 1)
+  )
+
+# ---- Example 8: Per-row-group decimal precision ----
+#
+# A by-parameter vitals table where each parameter carries its own
+# value precision: systolic BP to 0 dp, weight to 1 dp, in ONE call.
+# `decimals` is keyed by the `row_group` (PARAM) value; the engine
+# selects each row's token precision by its parameter. No bundled ARD
+# carries a second grouping dimension, so build a tiny one inline.
+vital_ard <- do.call(rbind, lapply(
+  list(
+    c("SYSBP", "Placebo", "mean", "133.27"),
+    c("SYSBP", "Placebo", "sd", "15.81"),
+    c("SYSBP", "Drug", "mean", "128.94"),
+    c("SYSBP", "Drug", "sd", "14.02"),
+    c("WEIGHT", "Placebo", "mean", "71.43"),
+    c("WEIGHT", "Placebo", "sd", "12.77"),
+    c("WEIGHT", "Drug", "mean", "73.06"),
+    c("WEIGHT", "Drug", "sd", "13.19")
+  ),
+  function(r) {
+    data.frame(
+      group1 = "PARAM",
+      group1_level = r[[1]],
+      group2 = "TRTA",
+      group2_level = r[[2]],
+      variable = "AVAL",
+      variable_level = NA_character_,
+      context = "continuous",
+      stat_name = r[[3]],
+      stat_label = r[[3]],
+      stat = I(list(as.numeric(r[[4]]))),
+      stringsAsFactors = FALSE
+    )
+  }
+))
+vital_ard |>
+  pivot_across(
+    column = "TRTA",
+    row_group = "PARAM",
+    overall = NULL,
+    statistic = list(continuous = "{mean} ({sd})"),
+    decimals = list(
+      SYSBP = c(mean = 0, sd = 1),
+      WEIGHT = c(mean = 1, sd = 2)
+    )
+  )
 
 }
 \seealso{

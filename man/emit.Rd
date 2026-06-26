@@ -103,12 +103,12 @@ file extension via the table below; the \code{format} argument always
 wins when both are supplied. Each backend lives in its own
 \verb{R/backend_<fmt>.R} file and self-registers at package load time.\tabular{lll}{
    extension(s) \tab format \tab backend \cr
-   \code{.md}, \code{.markdown} \tab \code{md} \tab GFM pipe table (Step 15; shipped) \cr
-   \code{.html}, \code{.htm} \tab \code{html} \tab self-contained Bootstrap 5 (planned) \cr
-   \code{.tex}, \code{.latex} \tab \code{latex} \tab tabularray (planned) \cr
-   \code{.pdf} \tab \code{pdf} \tab tinytex compile of LaTeX (planned) \cr
-   \code{.rtf} \tab \code{rtf} \tab RTF 1.9.1, native (shipped) \cr
-   \code{.docx} \tab \code{docx} \tab OOXML native, no JVM (planned) \cr
+   \code{.md}, \code{.markdown} \tab \code{md} \tab GFM pipe table \cr
+   \code{.html}, \code{.htm} \tab \code{html} \tab self-contained Bootstrap 5 \cr
+   \code{.tex}, \code{.latex} \tab \code{latex} \tab tabularray \cr
+   \code{.pdf} \tab \code{pdf} \tab tinytex compile of LaTeX \cr
+   \code{.rtf} \tab \code{rtf} \tab RTF 1.9.1, native \cr
+   \code{.docx} \tab \code{docx} \tab OOXML native, no JVM \cr
 }
 
 
