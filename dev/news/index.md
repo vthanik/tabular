@@ -104,6 +104,14 @@
   via a centred fit-content container, instead of spanning the full
   document width.
 - [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  HTML and Markdown no longer repeats a
+  [`subgroup()`](https://vthanik.github.io/tabular/dev/reference/subgroup.md)
+  banner mid-table when a group is taller than one estimated page. The
+  continuous backends draw one banner per subgroup value; the print-only
+  page-break markers within a group are unchanged, and the paged
+  backends (RTF, LaTeX, DOCX) still repeat the banner on every
+  continuation page by design.
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
   PDF / LaTeX no longer renders the table wider than the printable area:
   tabularray adds per-column separation outside each column’s `wd`, so
   the column widths are now reduced by that separation and the rendered
