@@ -234,6 +234,20 @@ auto-indent, leaving a single level. The source column is hidden from
 the visible body. Matches the canonical submission
 shape used by clinical TFL house templates (Disposition,
 Demographics, Statistical Report sections).
+
+A group with exactly \strong{one} member collapses to a single
+flush-left row: the group value becomes that row's label, its
+data cells are kept, and no separate header or indent is
+emitted (the redundant two-line "header plus lone child" is
+gone). This is the standard occurrence-table shape, where a
+single binary flag (DEATH, TEAE) sits flush among headed
+multi-level breakdowns. The collapsed row still receives any
+\code{\link[=cells_group_headers]{cells_group_headers()}} styling (preset or explicit), so its
+group identity is not lost. An empty or \code{NA} group value never
+emits a header at all; its members render flush left keeping
+their own labels. \emph{(Collapse applies to a single \code{header_row}
+band; a nested two-\code{header_row} layout keeps a header per
+value.)}
 \item \strong{\code{"column"}} — column stays visible; repeated values are
 suppressed (only the first row of each value shows the
 label). PROC REPORT's default for grouping variables.

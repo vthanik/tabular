@@ -2,6 +2,12 @@
 
 ## New features
 
+* `col_spec(group_display = "header_row")` now collapses a single-member group
+  to one flush-left row (the group value becomes the row label, still carrying
+  any `cells_group_headers()` styling) instead of emitting a redundant header
+  plus a lone indented child, and no longer emits an empty header for a blank
+  or `NA` group value. Multi-member groups are unchanged.
+
 * `figure()` renders a figure (the "F" in TFL) to every backend (RTF, LaTeX,
   PDF, HTML, DOCX, and Markdown), wrapping a ggplot, a recorded base-R plot, a
   zero-argument drawing function, or a PNG / JPG file in the same submission

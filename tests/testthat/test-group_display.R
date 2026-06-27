@@ -1628,3 +1628,292 @@ test_that("header_row section headers survive a leading hidden column (#cw3)", {
   expect_match(txt, "SOCX", fixed = TRUE)
   expect_match(txt, "SOCY", fixed = TRUE)
 })
+
+# ---------------------------------------------------------------------
+# Single-member-group collapse (header_row)
+# ---------------------------------------------------------------------
+
+# Canonical occurrence-table shape: a 3-member "Severity" breakdown plus a
+# single binary "Death" flag, both under one header_row stub.
+.collapse_df <- function() {
+  data.frame(
+    grp = c("Severity", "Severity", "Severity", "Death"),
+    label = c("MILD", "MODERATE", "SEVERE", "Death"),
+    Placebo = c("60", "28", "7", "2"),
+    Total = c("191", "136", "31", "3"),
+    stringsAsFactors = FALSE
+  )
+}
+
+.collapse_spec <- function(df = .collapse_df()) {
+  tabular(df) |>
+    cols(
+      grp = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(align = "left"),
+      Placebo = col_spec(align = "decimal"),
+      Total = col_spec(align = "decimal")
+    )
+}
+
+.collapse_host_row <- function(p, pattern) {
+  host <- match("label", p$col_names)
+  which(
+    !p$is_header_row & !p$is_blank_row & grepl(pattern, p$cells_text[, host])
+  )
+}
+
+test_that("header_row collapses a single-member group to one flush-left row", {
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(.collapse_spec(), out)
+  md <- readLines(out)
+  # Multi-member group keeps its bold header + indented members.
+  expect_true(any(grepl("**Severity**", md, fixed = TRUE)))
+  expect_true(any(grepl("&nbsp;&nbsp;MILD", md, fixed = TRUE)))
+  # Single-member group: no header, ONE flush-left row (no indent prefix).
+  expect_false(any(grepl("**Death**", md, fixed = TRUE)))
+  death <- grep("Death", md, value = TRUE)
+  expect_length(death, 1L)
+  expect_false(grepl("&nbsp;", death, fixed = TRUE))
+  expect_match(death, "| Death |", fixed = TRUE)
+  # group_skip blank still separates the two groups.
+  expect_true(any(grepl("^\\| &nbsp; \\|", md)))
+})
+
+test_that("header_row emits no header for an empty / NA group value", {
+  df <- data.frame(
+    grp = c("Severity", "Severity", NA, ""),
+    label = c("MILD", "SEVERE", "Orphan1", "Orphan2"),
+    Total = c("191", "31", "5", "9"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      grp = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(align = "left"),
+      Total = col_spec(align = "decimal")
+    )
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  md <- readLines(out)
+  expect_true(any(grepl("**Severity**", md, fixed = TRUE)))
+  # No empty bold header; members keep their OWN labels, flush-left.
+  expect_false(any(grepl("****", md, fixed = TRUE)))
+  o1 <- grep("Orphan1", md, value = TRUE)
+  expect_length(o1, 1L)
+  expect_false(grepl("&nbsp;", o1, fixed = TRUE))
+})
+
+test_that("header_row renders an all-singleton table flush-left with no headers", {
+  df <- data.frame(
+    grp = c("Death", "TEAE", "TESAE"),
+    label = c("Death", "TEAE", "TESAE"),
+    Total = c("3", "200", "40"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      grp = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(align = "left"),
+      Total = col_spec(align = "decimal")
+    )
+  out <- withr::local_tempfile(fileext = ".md")
+  expect_no_error(emit(spec, out))
+  md <- readLines(out)
+  expect_false(any(grepl("**", md, fixed = TRUE)))
+  for (v in c("Death", "TEAE", "TESAE")) {
+    row <- grep(v, md, value = TRUE)
+    expect_length(row, 1L)
+    expect_false(grepl("&nbsp;", row, fixed = TRUE))
+  }
+  # Collapse-only injection path: zero header rows synthesised.
+  p <- as_grid(spec)@pages[[1L]]
+  expect_false(any(p$is_header_row))
+})
+
+test_that("a collapsed singleton uses the GROUP value as its row label", {
+  df <- data.frame(
+    grp = c("AE", "AE", "DEATH"),
+    label = c("Headache", "Nausea", "Mortality"),
+    Total = c("10", "5", "3"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      grp = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(align = "left"),
+      Total = col_spec(align = "decimal")
+    )
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  md <- paste(readLines(out), collapse = "\n")
+  expect_true(grepl("DEATH", md, fixed = TRUE))
+  expect_false(grepl("Mortality", md, fixed = TRUE))
+})
+
+test_that("multi-band header_row leaves a single-member inner run as a header", {
+  # length(bands) == 2 -> collapse is intentionally scoped out; every run
+  # (incl. the single-member NERVOUS / PT-C) still emits its header.
+  df <- data.frame(
+    soc = c("CARDIAC", "CARDIAC", "NERVOUS"),
+    pt = c("PT-A", "PT-B", "PT-C"),
+    label = c("v1", "v2", "v3"),
+    Total = c("4", "2", "7"),
+    stringsAsFactors = FALSE
+  )
+  spec <- tabular(df) |>
+    cols(
+      soc = col_spec(usage = "group", group_display = "header_row"),
+      pt = col_spec(usage = "group", group_display = "header_row"),
+      label = col_spec(align = "left"),
+      Total = col_spec(align = "decimal")
+    )
+  p <- as_grid(spec)@pages[[1L]]
+  expect_true(any(p$is_header_row))
+  hdr_text <- p$cells_text[p$is_header_row, , drop = FALSE]
+  expect_true(any(grepl("PT-C", hdr_text, fixed = TRUE)))
+})
+
+test_that("engine: collapse reduces transitions, stamps provenance + indent", {
+  p <- as_grid(.collapse_spec())@pages[[1L]]
+  host <- match("label", p$col_names)
+  # Exactly one header row (Severity); Death is collapsed, not headed.
+  hdr_rows <- which(p$is_header_row)
+  expect_length(hdr_rows, 1L)
+  expect_match(p$cells_text[hdr_rows, host], "Severity")
+  # header_meta lands on the Severity header AND the collapsed Death row.
+  meta_rows <- which(!vapply(p$header_meta, is.null, logical(1L)))
+  expect_length(meta_rows, 2L)
+  death <- .collapse_host_row(p, "Death")
+  expect_true(!is.null(p$header_meta[[death]]))
+  expect_equal(p$header_meta[[death]]$group_col, "grp")
+  # Members indented one level; collapsed Death flush (depth 0).
+  members <- .collapse_host_row(p, "MILD|MODERATE|SEVERE")
+  expect_true(all(p$cells_indent[members, host] == 1L))
+  expect_equal(unname(p$cells_indent[death, host]), 0L)
+})
+
+test_that("cells_group_headers() cascade lands on the collapsed row (header parity)", {
+  spec <- .collapse_spec() |>
+    style(
+      background = "#EEEEEE",
+      color = "#123456",
+      bold = TRUE,
+      .at = cells_group_headers()
+    )
+  p <- as_grid(spec)@pages[[1L]]
+  host <- match("label", p$col_names)
+  hdr <- which(p$is_header_row)
+  death <- .collapse_host_row(p, "Death")
+  for (r in c(hdr, death)) {
+    sn <- p$cells_style[[r, host]]
+    expect_equal(sn@background, "#EEEEEE")
+    expect_equal(sn@color, "#123456")
+    expect_true(isTRUE(sn@bold))
+  }
+  # An ordinary member row is untouched by the group-header cascade.
+  body <- .collapse_host_row(p, "MILD")
+  expect_true(is.na(p$cells_style[[body, host]]@background))
+})
+
+test_that("cells_group_headers(where=) targets the collapsed row by source row", {
+  host <- match("label", as_grid(.collapse_spec())@pages[[1L]]$col_names)
+  hit <- as_grid(
+    .collapse_spec() |>
+      style(
+        background = "#AABBCC",
+        .at = cells_group_headers(where = grp == "Death")
+      )
+  )@pages[[1L]]
+  miss <- as_grid(
+    .collapse_spec() |>
+      style(
+        background = "#AABBCC",
+        .at = cells_group_headers(where = grp == "Severity")
+      )
+  )@pages[[1L]]
+  expect_equal(
+    hit$cells_style[[.collapse_host_row(hit, "Death"), host]]@background,
+    "#AABBCC"
+  )
+  expect_true(is.na(
+    miss$cells_style[[.collapse_host_row(miss, "Death"), host]]@background
+  ))
+})
+
+test_that("cells_group_headers(j=) scopes the cascade by group column", {
+  host <- match("label", as_grid(.collapse_spec())@pages[[1L]]$col_names)
+  ok <- as_grid(
+    .collapse_spec() |>
+      style(background = "#0F0F0F", .at = cells_group_headers(j = "grp"))
+  )@pages[[1L]]
+  no <- as_grid(
+    .collapse_spec() |>
+      style(background = "#0F0F0F", .at = cells_group_headers(j = "label"))
+  )@pages[[1L]]
+  expect_equal(
+    ok$cells_style[[.collapse_host_row(ok, "Death"), host]]@background,
+    "#0F0F0F"
+  )
+  expect_true(is.na(
+    no$cells_style[[.collapse_host_row(no, "Death"), host]]@background
+  ))
+})
+
+test_that("preset_minimal() group-header styling reaches the collapsed row", {
+  p <- as_grid(.collapse_spec() |> preset_minimal())@pages[[1L]]
+  host <- match("label", p$col_names)
+  death <- .collapse_host_row(p, "Death")
+  hdr <- which(p$is_header_row)
+  # preset_minimal sets bold = FALSE on group headers (spec-preset tier);
+  # it must land on the collapsed row too, with parity to the real header.
+  expect_equal(p$cells_style[[death, host]]@bold, FALSE)
+  expect_equal(p$cells_style[[hdr, host]]@bold, FALSE)
+})
+
+test_that("collapsed row is a data row for stripes; explicit group bg wins", {
+  spec <- .collapse_spec() |>
+    preset(stripe = "#F5F5F5") |>
+    style(background = "#0000FF", .at = cells_group_headers())
+  p <- as_grid(spec)@pages[[1L]]
+  host <- match("label", p$col_names)
+  death <- .collapse_host_row(p, "Death")
+  expect_false(p$is_header_row[[death]])
+  expect_false(p$is_blank_row[[death]])
+  # Explicit group-header background beats the stripe fill on that row.
+  expect_equal(p$cells_style[[death, host]]@background, "#0000FF")
+})
+
+test_that("collapsed-row styling renders across backends without header chrome", {
+  spec <- .collapse_spec() |>
+    style(background = "#EEEEEE", .at = cells_group_headers())
+
+  # HTML: Death cell carries the cascade background, in a plain <tr>
+  # (no group-header class, no default <strong> header bold).
+  fh <- withr::local_tempfile(fileext = ".html")
+  emit(spec, fh)
+  drow_html <- grep(">Death<", readLines(fh), value = TRUE)
+  expect_length(drow_html, 1L)
+  expect_match(drow_html, "background-color: #EEEEEE", fixed = TRUE)
+  expect_false(grepl("tabular-group-header", drow_html, fixed = TRUE))
+  expect_false(grepl("<strong>", drow_html, fixed = TRUE))
+
+  # Markdown: plain text, not a bold header. GFM cannot honour the
+  # background, so emit warns ("emulating") -- which itself confirms the
+  # group-header cascade reached the collapsed row.
+  fm <- withr::local_tempfile(fileext = ".md")
+  suppressWarnings(emit(spec, fm))
+  drow_md <- grep("Death", readLines(fm), value = TRUE)
+  expect_length(drow_md, 1L)
+  expect_false(grepl("**", drow_md, fixed = TRUE))
+
+  # DOCX: cell shading carries the fill on the collapsed row.
+  fd <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, fd)
+  xml_dir <- withr::local_tempdir()
+  utils::unzip(fd, files = "word/document.xml", exdir = xml_dir)
+  docx <- paste(
+    readLines(file.path(xml_dir, "word", "document.xml"), warn = FALSE),
+    collapse = ""
+  )
+  expect_match(docx, "EEEEEE", ignore.case = TRUE)
+})
