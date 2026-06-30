@@ -4,6 +4,11 @@
 
 ### New features
 
+- The documentation site gained an AI / Agents section linking a tabular
+  skill (for LLM coding agents), the auto-generated `llms.txt`, and a
+  concatenated `llms-full.txt`, mirroring the LLM-friendly documentation
+  pattern.
+
 - `col_spec(group_display = "header_row")` now collapses a single-member
   group to one flush-left row (the group value becomes the row label,
   still carrying any
