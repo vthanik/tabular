@@ -64,7 +64,8 @@ returns a wide display data.frame ready to pass to <code><a href="tabular.html">
 <span>  label <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  overall <span class="op">=</span> <span class="st">"Total"</span>,</span>
 <span>  decimals <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  fmt <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  fmt <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  aux <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -171,11 +172,26 @@ label. Use for <code>N / Mean (SD) / Median / Min, Max</code>-style blocks.</p>
 
 
 <dt id="arg-column">column<a class="anchor" aria-label="anchor" href="#arg-column"></a></dt>
-<dd><p><em>Grouping column whose unique values become arms.</em>
-<code>&lt;character(1) | NULL&gt;: default NULL</code>. <code>NULL</code> auto-detects
-from the ARD's <code>group1</code> value or — for renamed input — picks
-the single non-standard column. Pass a string when multiple
-group columns exist.</p></dd>
+<dd><p><em>What runs across the top of the table.</em>
+<code>&lt;character | NULL&gt;: default NULL</code>. A single grouping variable
+whose unique values become arm columns (<code>NULL</code> auto-detects from
+<code>group1</code>, or picks the single non-standard column of renamed
+input). Two reserved tokens turn the analysis variable into a
+<strong>column band</strong>:</p><ul><li><p><code>c(".variable", "&lt;arm&gt;")</code> — each variable becomes a band of
+arm columns; the statistic entries stack as rows. The cells
+are combined strings (e.g. <code>"323.9 (106)"</code>). Emitted columns
+are named <code>"&lt;variable&gt;..&lt;arm&gt;"</code>.</p></li>
+<li><p><code>c(".variable", ".stat")</code> — each variable becomes a band whose
+statistic entries become their own columns (the landscape
+"value and change" shell); the arm drops to a leading row
+stub. Emitted columns are named <code>"&lt;variable&gt;..&lt;stat-entry&gt;"</code>.</p></li>
+</ul><p>Anything present in the ARD but not named in <code>column</code> (and not in
+<code>row_group</code>) stacks as rows. Per-variable <code>statistic</code> / <code>decimals</code>
+resolve inside each band, so bands may carry different (even
+different-length) stat lists; ragged bands pad with <code>NA</code>.</p>
+<p><strong>Tip:</strong> you reference the emitted column names verbatim in a
+manual <code><a href="headers.html">headers()</a></code> call to build the band spanners; pivot_across
+does not build spanners itself.</p></dd>
 
 
 <dt id="arg-row-group">row_group<a class="anchor" aria-label="anchor" href="#arg-row-group"></a></dt>
@@ -215,17 +231,39 @@ The raw sentinel never reaches the output at any hierarchy depth.</p></dd>
 <dt id="arg-overall">overall<a class="anchor" aria-label="anchor" href="#arg-overall"></a></dt>
 <dd><p><em>Column name for <code>NA</code>-arm (overall / total) rows.</em>
 <code>&lt;character(1) | NULL&gt;: default "Total"</code>. Pass <code>NULL</code> to drop
-overall rows entirely (per-arm only output).</p></dd>
+overall rows entirely (per-arm only output).</p>
+<p><strong>Requirement:</strong> this relabels pooled rows the ARD already
+carries — the <code>NA</code>-arm rows cards emits from
+<code>cards::ard_stack_hierarchical(overall = TRUE)</code> or an
+<code>ard_*(.overall = TRUE)</code>. It does not synthesize a total: cards
+re-runs the calculation with the <code>by</code> variable removed, so the
+pooled <code>n</code> / <code>N</code> / <code>p</code> stay internally consistent. With no such
+rows in the input there is no overall column to label.</p>
+<p><strong>Note:</strong> if a study arm is literally named the same as <code>overall</code>
+(default <code>"Total"</code>), that arm and the pooled rows collide under
+one label and the pivot warns. Pass a distinct <code>overall =</code> or
+rename the arm upstream.</p></dd>
 
 
 <dt id="arg-decimals">decimals<a class="anchor" aria-label="anchor" href="#arg-decimals"></a></dt>
 <dd><p><em>Per-stat decimal precision.</em>
-<code>&lt;named integer | named list&gt;: default </code>c()“. Accepts two
+<code>&lt;named integer | named list&gt;: default </code>c()“. Accepts three
 forms:</p><ul><li><p><strong>named integer vector</strong> — global per-stat overrides
 (<code>c(mean = 1, sd = 2, p = 0)</code>).</p></li>
-<li><p><strong>named list</strong> — per-variable plus <code>.default</code>
+<li><p><strong>named list keyed by variable</strong> — per-variable plus <code>.default</code>
 (<code>list(AGE = c(mean = 2), .default = c(p = 1))</code>).</p></li>
-</ul><p>Built-in defaults apply when neither sets a stat.</p></dd>
+<li><p><strong>named list keyed by <code>row_group</code> value</strong> — per-group precision in
+one call (<code>list(SYSBP = c(mean = 0, sd = 1), WEIGHT = c(mean = 1), .default = c(mean = 1, sd = 2))</code>). Each entry is a per-token spec (a
+named numeric vector, or a bare scalar applied to every token).</p></li>
+</ul><p>Built-in defaults apply when none sets a stat.</p>
+<p><strong>Interaction:</strong> a list <code>decimals</code> is read as per-<code>row_group</code> only when
+<code>row_group</code> is set and every key (apart from <code>.default</code>) is one of its
+levels; otherwise it stays per-variable. Within the matched group the
+token falls back group token, then the per-group <code>.default</code> token, then
+the built-in default. A group present in the data but absent from the
+list (and NA / ungrouped rows) uses <code>.default</code>. If <code>row_group</code> is <code>NULL</code>
+but the keys match no variable, <code>pivot_across()</code> errors and asks for a
+<code>row_group</code>.</p></dd>
 
 
 <dt id="arg-fmt">fmt<a class="anchor" aria-label="anchor" href="#arg-fmt"></a></dt>
@@ -233,7 +271,24 @@ forms:</p><ul><li><p><strong>named integer vector</strong> — global per-stat o
 <code>&lt;named list of function&gt;: default </code>list()“. Each function
 takes a numeric value and returns a character string;
 overrides built-ins and <code>decimals</code> for that stat. Useful for
-p-value styling and other domain-specific formatting.</p>
+p-value styling and other domain-specific formatting.</p></dd>
+
+
+<dt id="arg-aux">aux<a class="anchor" aria-label="anchor" href="#arg-aux"></a></dt>
+<dd><p><em>Auxiliary comparison columns from a second ARD.</em>
+<code>&lt;named list | NULL&gt;: default NULL</code>. Each entry is a between-arm
+statistic (difference, hazard ratio, p-value, ...) computed in its
+own ARD and bound on as a trailing column, aligned 1:1 on the
+<code>row_group</code> key. The entry name is the column name; reference it in
+a manual <code><a href="headers.html">headers()</a></code> call. Each entry is a list:</p><ul><li><p><code>ard</code> — the auxiliary ARD (required), one row per <code>row_group</code>.</p></li>
+<li><p><code>statistic</code> — its format string (e.g.
+<code>"{estimate} ({conf.low}, {conf.high})"</code>); defaults to <code>"{n}"</code>.</p></li>
+<li><p><code>decimals</code> / <code>fmt</code> — optional, as for the main pivot.</p></li>
+</ul><p>Entries append left to right. One entry is one column; for several
+comparison columns (estimate then p-value) pass several entries.</p>
+<p><strong>Requirement:</strong> needs a <code>row_group</code>; the auxiliary rows align to
+the main table on it, which must be unique 1:1 on both sides (a
+many-to-many key would silently fabricate rows, so it aborts).</p>
 <p></p><div class="sourceCode r"><pre><code><span><span class="co"># p-value formatter: render below-threshold values as "&lt;0.001".</span></span>
 <span><span class="va">fmt</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  p.value <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">{</span></span>
@@ -275,17 +330,6 @@ Keying by the wrong name silently drops the format. Inspect
 format string / <code>default =</code> to cover everything). When an
 explicitly-supplied <code>statistic</code> matches no context at all,
 <code>pivot_across()</code> warns rather than silently emitting <code>{n}</code>.</p><table class="table table"><tr><td>Generating function</td><td><code>context</code> to key on</td></tr><tr><td><code>cards::ard_summary()</code></td><td><code>summary</code></td></tr><tr><td><code>cards::ard_tabulate()</code></td><td><code>tabulate</code></td></tr><tr><td><code>cards::ard_continuous()</code></td><td><code>continuous</code></td></tr><tr><td><code>cards::ard_categorical()</code></td><td><code>categorical</code></td></tr><tr><td><code>cards::ard_stack_hierarchical()</code></td><td><code>tabulate</code> + <code>hierarchical</code></td></tr><tr><td><code>cardx::ard_categorical_ci()</code></td><td><code>proportion_ci</code></td></tr><tr><td><code>cardx::ard_continuous_ci()</code></td><td><code>continuous_ci</code></td></tr></table></div>
-
-<div class="section">
-<h3 id="indentation-of-stat-label">Indentation of <code>stat_label</code><a class="anchor" aria-label="anchor" href="#indentation-of-stat-label"></a></h3>
-
-
-<p>Categorical levels and the multi-row continuous stat labels come
-back already indented with two leading spaces, ready to render as a
-plain display column. Do <strong>not</strong> also set <code>col_spec(indent = ...)</code> on
-<code>stat_label</code> — that stacks the engine indent on top of the string
-indent (a double indent). Use one or the other.</p>
-</div>
 
 <div class="section">
 <h3 id="zero-suppression-always-on-default-">Zero-suppression (always-on default)<a class="anchor" aria-label="anchor" href="#zero-suppression-always-on-default-"></a></h3>
@@ -410,61 +454,65 @@ frame this helper returns.</p>
 <span class="r-in"><span>    <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <style>
-#tabular-15bff0b949 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-15bff0b949 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-15bff0b949 p { line-height: inherit; }
-#tabular-15bff0b949 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-15bff0b949 .tabular-caption { margin: 0; padding: 0; }
-#tabular-15bff0b949 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-15bff0b949 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-15bff0b949 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-15bff0b949 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-15bff0b949 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-15bff0b949 .tabular-table th, #tabular-15bff0b949 .tabular-table td { padding: .18rem .6rem; }
-#tabular-15bff0b949 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-15bff0b949 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-15bff0b949 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-15bff0b949 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-15bff0b949 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-15bff0b949 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-15bff0b949 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-15bff0b949 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-15bff0b949 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-15bff0b949 .tabular-table tbody tr td { border-top: none; }
-#tabular-15bff0b949 .tabular-band { text-align: center; }
-#tabular-15bff0b949 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-15bff0b949 .tabular-subgroup-label { font-weight: 600; }
-#tabular-15bff0b949 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-15bff0b949 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-15bff0b949 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-15bff0b949 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-15bff0b949 .text-left { text-align: left; }
-#tabular-15bff0b949 .text-center { text-align: center; }
-#tabular-15bff0b949 .text-right { text-align: right; }
-#tabular-15bff0b949 .tabular-table thead th.text-left { text-align: left; }
-#tabular-15bff0b949 .tabular-table thead th.text-center { text-align: center; }
-#tabular-15bff0b949 .tabular-table thead th.text-right { text-align: right; }
-#tabular-15bff0b949 .valign-top { vertical-align: top; }
-#tabular-15bff0b949 .valign-middle { vertical-align: middle; }
-#tabular-15bff0b949 .valign-bottom { vertical-align: bottom; }
-#tabular-15bff0b949 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-15bff0b949 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-15bff0b949 .tabular-page-break-row { display: none; }
-#tabular-15bff0b949 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-15bff0b949 .tabular-page-header, #tabular-15bff0b949 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-15bff0b949 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-15bff0b949 .tabular-page-footer { margin-top: 1rem; }
-#tabular-15bff0b949 .tabular-page-header-left, #tabular-15bff0b949 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-15bff0b949 .tabular-page-header-center, #tabular-15bff0b949 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-15bff0b949 .tabular-page-header-right, #tabular-15bff0b949 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-15bff0b949 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-15bff0b949 .tabular-table tr { page-break-inside: avoid; } #tabular-15bff0b949 .tabular-page-header, #tabular-15bff0b949 .tabular-page-footer { display: none; } #tabular-15bff0b949 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-15bff0b949 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-15bff0b949 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
-</style><div id="tabular-15bff0b949" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+#tabular-6881ea5420 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-6881ea5420 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6881ea5420 p { line-height: inherit; }
+#tabular-6881ea5420 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-6881ea5420 .tabular-caption { margin: 0; padding: 0; }
+#tabular-6881ea5420 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-6881ea5420 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-6881ea5420 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-6881ea5420 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-6881ea5420 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-6881ea5420 .tabular-table th, #tabular-6881ea5420 .tabular-table td { padding: .18rem .6rem; }
+#tabular-6881ea5420 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-6881ea5420 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-6881ea5420 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-6881ea5420 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-6881ea5420 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6881ea5420 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6881ea5420 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6881ea5420 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6881ea5420 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-6881ea5420 .tabular-table tbody tr td { border-top: none; }
+#tabular-6881ea5420 .tabular-band { text-align: center; }
+#tabular-6881ea5420 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-6881ea5420 .tabular-subgroup-label { font-weight: 600; }
+#tabular-6881ea5420 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-6881ea5420 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-6881ea5420 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-6881ea5420 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-6881ea5420 .text-left { text-align: left; }
+#tabular-6881ea5420 .text-center { text-align: center; }
+#tabular-6881ea5420 .text-right { text-align: right; }
+#tabular-6881ea5420 .tabular-table thead th.text-left { text-align: left; }
+#tabular-6881ea5420 .tabular-table thead th.text-center { text-align: center; }
+#tabular-6881ea5420 .tabular-table thead th.text-right { text-align: right; }
+#tabular-6881ea5420 .tabular-table td.text-left { text-align: left; }
+#tabular-6881ea5420 .tabular-table td.text-center { text-align: center; }
+#tabular-6881ea5420 .tabular-table td.text-right { text-align: right; }
+#tabular-6881ea5420 .valign-top { vertical-align: top; }
+#tabular-6881ea5420 .valign-middle { vertical-align: middle; }
+#tabular-6881ea5420 .valign-bottom { vertical-align: bottom; }
+#tabular-6881ea5420 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-6881ea5420 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-6881ea5420 .tabular-page-break-row { display: none; }
+#tabular-6881ea5420 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-6881ea5420 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6881ea5420 .tabular-page-header, #tabular-6881ea5420 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-6881ea5420 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-6881ea5420 .tabular-page-footer { margin-top: 1rem; }
+#tabular-6881ea5420 .tabular-page-header-left, #tabular-6881ea5420 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-6881ea5420 .tabular-page-header-center, #tabular-6881ea5420 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-6881ea5420 .tabular-page-header-right, #tabular-6881ea5420 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-6881ea5420 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-6881ea5420 .tabular-table tr { page-break-inside: avoid; } #tabular-6881ea5420 .tabular-page-header, #tabular-6881ea5420 .tabular-page-footer { display: none; } #tabular-6881ea5420 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-6881ea5420 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-6881ea5420 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style><div id="tabular-6881ea5420" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Table 14.1.1</p>
 <p class="tabular-title">Demographics and Baseline Characteristics</p>
 <p class="tabular-title">Safety Population</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
-<table class="table tabular-table"><thead><tr><th>Statistic</th><th class="text-center">Placebo<br>N=86</th><th class="text-center">Drug 100<br>N=72</th><th class="text-center">Drug 50<br>N=96</th><th class="text-center">Total<br>N=254</th></tr></thead><tbody><tr class="tabular-group-header"><td colspan="5"><strong>Age (years)</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  N</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 96          </td><td class="text-right">254          </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Mean (SD)</td><td class="text-right"> 75.2 (8.59) </td><td class="text-right"> 73.8 (7.94) </td><td class="text-right"> 76.0 (8.11) </td><td class="text-right"> 75.1 (8.25) </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Median</td><td class="text-right"> 76.0        </td><td class="text-right"> 75.5        </td><td class="text-right"> 78.0        </td><td class="text-right"> 77.0        </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Min, Max</td><td class="text-right"> 52  , 89    </td><td class="text-right"> 56  , 88    </td><td class="text-right"> 51  , 88    </td><td class="text-right"> 51  , 89    </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>WEIGHT</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  N</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 95          </td><td class="text-right">253          </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Mean (SD)</td><td class="text-right"> 62.8 (12.77)</td><td class="text-right"> 69.5 (14.35)</td><td class="text-right"> 68.0 (14.50)</td><td class="text-right"> 66.6 (14.13)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Median</td><td class="text-right"> 60.6        </td><td class="text-right"> 69.0        </td><td class="text-right"> 66.7        </td><td class="text-right"> 66.7        </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Min, Max</td><td class="text-right"> 34  , 86    </td><td class="text-right"> 44  , 108   </td><td class="text-right"> 42  , 106   </td><td class="text-right"> 34  , 108   </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>HEIGHT</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  N</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 96          </td><td class="text-right">254          </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Mean (SD)</td><td class="text-right">162.6 (11.52)</td><td class="text-right">165.9 (10.28)</td><td class="text-right">163.7 (10.30)</td><td class="text-right">163.9 (10.76)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Median</td><td class="text-right">162.6        </td><td class="text-right">165.1        </td><td class="text-right">162.6        </td><td class="text-right">162.8        </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Min, Max</td><td class="text-right">137  , 185   </td><td class="text-right">146  , 190   </td><td class="text-right">136  , 196   </td><td class="text-right">136  , 196   </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>BMI</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  N</td><td class="text-right"> 86          </td><td class="text-right"> 72          </td><td class="text-right"> 95          </td><td class="text-right">253          </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Mean (SD)</td><td class="text-right"> 23.6 (3.67) </td><td class="text-right"> 25.2 (3.97) </td><td class="text-right"> 25.2 (4.40) </td><td class="text-right"> 24.7 (4.09) </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Median</td><td class="text-right"> 23.4        </td><td class="text-right"> 24.8        </td><td class="text-right"> 24.8        </td><td class="text-right"> 24.2        </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Min, Max</td><td class="text-right"> 15  , 33    </td><td class="text-right"> 14  , 35    </td><td class="text-right"> 15  , 40    </td><td class="text-right"> 14  , 40    </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>AGEGR1</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  18-64</td><td class="text-right"> 14 (16.3%)  </td><td class="text-right"> 11 (15.3%)  </td><td class="text-right">  8 ( 8.3%)  </td><td class="text-right"> 33 (13.0%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  &gt;64</td><td class="text-right"> 72 (83.7%)  </td><td class="text-right"> 61 (84.7%)  </td><td class="text-right"> 88 (91.7%)  </td><td class="text-right">221 (87.0%)  </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>Sex</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  F</td><td class="text-right"> 53 (61.6%)  </td><td class="text-right"> 35 (48.6%)  </td><td class="text-right"> 55 (57.3%)  </td><td class="text-right">143 (56.3%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  M</td><td class="text-right"> 33 (38.4%)  </td><td class="text-right"> 37 (51.4%)  </td><td class="text-right"> 41 (42.7%)  </td><td class="text-right">111 (43.7%)  </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>Race</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  WHITE</td><td class="text-right"> 78 (90.7%)  </td><td class="text-right"> 62 (86.1%)  </td><td class="text-right"> 90 (93.8%)  </td><td class="text-right">230 (90.6%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  BLACK OR AFRICAN AMERICAN</td><td class="text-right">  8 ( 9.3%)  </td><td class="text-right">  9 (12.5%)  </td><td class="text-right">  6 ( 6.2%)  </td><td class="text-right"> 23 ( 9.1%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  ASIAN</td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  AMERICAN INDIAN OR ALASKA NATIVE</td><td class="text-right">  0          </td><td class="text-right">  1 ( 1.4%)  </td><td class="text-right">  0          </td><td class="text-right">  1 ( 0.4%)  </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>ETHNIC</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  HISPANIC OR LATINO</td><td class="text-right">  3 ( 3.5%)  </td><td class="text-right">  3 ( 4.2%)  </td><td class="text-right">  6 ( 6.2%)  </td><td class="text-right"> 12 ( 4.7%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  NOT HISPANIC OR LATINO</td><td class="text-right"> 83 (96.5%)  </td><td class="text-right"> 69 (95.8%)  </td><td class="text-right"> 90 (93.8%)  </td><td class="text-right">242 (95.3%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  NOT REPORTED</td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td><td class="text-right">  0          </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>BMI_CAT</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Underweight (&lt;18.5)</td><td class="text-right">  3 ( 3.5%)  </td><td class="text-right">  1 ( 1.4%)  </td><td class="text-right">  4 ( 4.2%)  </td><td class="text-right">  8 ( 3.2%)  </td></tr><tr class="tabular-page-break-row" aria-hidden="true"><td colspan="5"></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Normal (18.5-24.9)</td><td class="text-right"> 57 (66.3%)  </td><td class="text-right"> 39 (54.2%)  </td><td class="text-right"> 46 (48.4%)  </td><td class="text-right">142 (56.1%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">  Overweight (25-29.9)</td><td class="text-right"> 20 (23.3%)  </td><td class="text-right"> 23 (31.9%)  </td><td class="text-right"> 32 (33.7%)  </td><td class="text-right"> 75 (29.6%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529;">  Obese (&gt;=30)</td><td class="text-right" style="border-bottom: 0.5pt solid #212529;">  6 ( 7.0%)  </td><td class="text-right" style="border-bottom: 0.5pt solid #212529;">  9 (12.5%)  </td><td class="text-right" style="border-bottom: 0.5pt solid #212529;"> 13 (13.7%)  </td><td class="text-right" style="border-bottom: 0.5pt solid #212529;"> 28 (11.1%)  </td></tr></tbody></table></div>
+<table class="table tabular-table"><thead><tr><th>Statistic</th><th class="text-center">Placebo<br>N=86</th><th class="text-center">Drug 100<br>N=72</th><th class="text-center">Drug 50<br>N=96</th><th class="text-center">Total<br>N=254</th></tr></thead><tbody><tr class="tabular-group-header"><td colspan="5"><strong>Age (years)</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">N</td><td class="text-center"> 86          </td><td class="text-center"> 72          </td><td class="text-center"> 96          </td><td class="text-center">254          </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Mean (SD)</td><td class="text-center"> 75.2 (8.59) </td><td class="text-center"> 73.8 (7.94) </td><td class="text-center"> 76.0 (8.11) </td><td class="text-center"> 75.1 (8.25) </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Median</td><td class="text-center"> 76.0        </td><td class="text-center"> 75.5        </td><td class="text-center"> 78.0        </td><td class="text-center"> 77.0        </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Min, Max</td><td class="text-center"> 52  , 89    </td><td class="text-center"> 56  , 88    </td><td class="text-center"> 51  , 88    </td><td class="text-center"> 51  , 89    </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>WEIGHT</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">N</td><td class="text-center"> 86          </td><td class="text-center"> 72          </td><td class="text-center"> 95          </td><td class="text-center">253          </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Mean (SD)</td><td class="text-center"> 62.8 (12.77)</td><td class="text-center"> 69.5 (14.35)</td><td class="text-center"> 68.0 (14.50)</td><td class="text-center"> 66.6 (14.13)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Median</td><td class="text-center"> 60.6        </td><td class="text-center"> 69.0        </td><td class="text-center"> 66.7        </td><td class="text-center"> 66.7        </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Min, Max</td><td class="text-center"> 34  , 86    </td><td class="text-center"> 44  , 108   </td><td class="text-center"> 42  , 106   </td><td class="text-center"> 34  , 108   </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>HEIGHT</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">N</td><td class="text-center"> 86          </td><td class="text-center"> 72          </td><td class="text-center"> 96          </td><td class="text-center">254          </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Mean (SD)</td><td class="text-center">162.6 (11.52)</td><td class="text-center">165.9 (10.28)</td><td class="text-center">163.7 (10.30)</td><td class="text-center">163.9 (10.76)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Median</td><td class="text-center">162.6        </td><td class="text-center">165.1        </td><td class="text-center">162.6        </td><td class="text-center">162.8        </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Min, Max</td><td class="text-center">137  , 185   </td><td class="text-center">146  , 190   </td><td class="text-center">136  , 196   </td><td class="text-center">136  , 196   </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>BMI</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">N</td><td class="text-center"> 86          </td><td class="text-center"> 72          </td><td class="text-center"> 95          </td><td class="text-center">253          </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Mean (SD)</td><td class="text-center"> 23.6 (3.67) </td><td class="text-center"> 25.2 (3.97) </td><td class="text-center"> 25.2 (4.40) </td><td class="text-center"> 24.7 (4.09) </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Median</td><td class="text-center"> 23.4        </td><td class="text-center"> 24.8        </td><td class="text-center"> 24.8        </td><td class="text-center"> 24.2        </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Min, Max</td><td class="text-center"> 15  , 33    </td><td class="text-center"> 14  , 35    </td><td class="text-center"> 15  , 40    </td><td class="text-center"> 14  , 40    </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>AGEGR1</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">18-64</td><td class="text-center"> 14 (16.3%)  </td><td class="text-center"> 11 (15.3%)  </td><td class="text-center">  8 ( 8.3%)  </td><td class="text-center"> 33 (13.0%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">&gt;64</td><td class="text-center"> 72 (83.7%)  </td><td class="text-center"> 61 (84.7%)  </td><td class="text-center"> 88 (91.7%)  </td><td class="text-center">221 (87.0%)  </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>Sex</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">F</td><td class="text-center"> 53 (61.6%)  </td><td class="text-center"> 35 (48.6%)  </td><td class="text-center"> 55 (57.3%)  </td><td class="text-center">143 (56.3%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">M</td><td class="text-center"> 33 (38.4%)  </td><td class="text-center"> 37 (51.4%)  </td><td class="text-center"> 41 (42.7%)  </td><td class="text-center">111 (43.7%)  </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>Race</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">WHITE</td><td class="text-center"> 78 (90.7%)  </td><td class="text-center"> 62 (86.1%)  </td><td class="text-center"> 90 (93.8%)  </td><td class="text-center">230 (90.6%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">BLACK OR AFRICAN AMERICAN</td><td class="text-center">  8 ( 9.3%)  </td><td class="text-center">  9 (12.5%)  </td><td class="text-center">  6 ( 6.2%)  </td><td class="text-center"> 23 ( 9.1%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ASIAN</td><td class="text-center">  0          </td><td class="text-center">  0          </td><td class="text-center">  0          </td><td class="text-center">  0          </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">AMERICAN INDIAN OR ALASKA NATIVE</td><td class="text-center">  0          </td><td class="text-center">  1 ( 1.4%)  </td><td class="text-center">  0          </td><td class="text-center">  1 ( 0.4%)  </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>ETHNIC</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">HISPANIC OR LATINO</td><td class="text-center">  3 ( 3.5%)  </td><td class="text-center">  3 ( 4.2%)  </td><td class="text-center">  6 ( 6.2%)  </td><td class="text-center"> 12 ( 4.7%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">NOT HISPANIC OR LATINO</td><td class="text-center"> 83 (96.5%)  </td><td class="text-center"> 69 (95.8%)  </td><td class="text-center"> 90 (93.8%)  </td><td class="text-center">242 (95.3%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">NOT REPORTED</td><td class="text-center">  0          </td><td class="text-center">  0          </td><td class="text-center">  0          </td><td class="text-center">  0          </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>BMI_CAT</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Underweight (&lt;18.5)</td><td class="text-center">  3 ( 3.5%)  </td><td class="text-center">  1 ( 1.4%)  </td><td class="text-center">  4 ( 4.2%)  </td><td class="text-center">  8 ( 3.2%)  </td></tr><tr class="tabular-page-break-row" aria-hidden="true"><td colspan="5"></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Normal (18.5-24.9)</td><td class="text-center"> 57 (66.3%)  </td><td class="text-center"> 39 (54.2%)  </td><td class="text-center"> 46 (48.4%)  </td><td class="text-center">142 (56.1%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Overweight (25-29.9)</td><td class="text-center"> 20 (23.3%)  </td><td class="text-center"> 23 (31.9%)  </td><td class="text-center"> 32 (33.7%)  </td><td class="text-center"> 75 (29.6%)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529;">Obese (&gt;=30)</td><td class="text-center" style="border-bottom: 0.5pt solid #212529;">  6 ( 7.0%)  </td><td class="text-center" style="border-bottom: 0.5pt solid #212529;">  9 (12.5%)  </td><td class="text-center" style="border-bottom: 0.5pt solid #212529;"> 13 (13.7%)  </td><td class="text-center" style="border-bottom: 0.5pt solid #212529;"> 28 (11.1%)  </td></tr></tbody></table></div>
 <p class="tabular-footnote">Percentages based on N per treatment group.</p>
 </figure></div><span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 2: Hierarchical SOC/PT AE table ----</span></span></span>
@@ -510,61 +558,65 @@ frame this helper returns.</p>
 <span class="r-in"><span>    <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <style>
-#tabular-541229ba62 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-541229ba62 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-541229ba62 p { line-height: inherit; }
-#tabular-541229ba62 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-541229ba62 .tabular-caption { margin: 0; padding: 0; }
-#tabular-541229ba62 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-541229ba62 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-541229ba62 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-541229ba62 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-541229ba62 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-541229ba62 .tabular-table th, #tabular-541229ba62 .tabular-table td { padding: .18rem .6rem; }
-#tabular-541229ba62 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-541229ba62 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-541229ba62 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-541229ba62 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-541229ba62 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-541229ba62 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-541229ba62 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-541229ba62 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-541229ba62 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-541229ba62 .tabular-table tbody tr td { border-top: none; }
-#tabular-541229ba62 .tabular-band { text-align: center; }
-#tabular-541229ba62 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-541229ba62 .tabular-subgroup-label { font-weight: 600; }
-#tabular-541229ba62 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-541229ba62 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-541229ba62 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-541229ba62 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-541229ba62 .text-left { text-align: left; }
-#tabular-541229ba62 .text-center { text-align: center; }
-#tabular-541229ba62 .text-right { text-align: right; }
-#tabular-541229ba62 .tabular-table thead th.text-left { text-align: left; }
-#tabular-541229ba62 .tabular-table thead th.text-center { text-align: center; }
-#tabular-541229ba62 .tabular-table thead th.text-right { text-align: right; }
-#tabular-541229ba62 .valign-top { vertical-align: top; }
-#tabular-541229ba62 .valign-middle { vertical-align: middle; }
-#tabular-541229ba62 .valign-bottom { vertical-align: bottom; }
-#tabular-541229ba62 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-541229ba62 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-541229ba62 .tabular-page-break-row { display: none; }
-#tabular-541229ba62 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-541229ba62 .tabular-page-header, #tabular-541229ba62 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-541229ba62 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-541229ba62 .tabular-page-footer { margin-top: 1rem; }
-#tabular-541229ba62 .tabular-page-header-left, #tabular-541229ba62 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-541229ba62 .tabular-page-header-center, #tabular-541229ba62 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-541229ba62 .tabular-page-header-right, #tabular-541229ba62 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-541229ba62 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-541229ba62 .tabular-table tr { page-break-inside: avoid; } #tabular-541229ba62 .tabular-page-header, #tabular-541229ba62 .tabular-page-footer { display: none; } #tabular-541229ba62 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-541229ba62 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-541229ba62 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
-</style><div id="tabular-541229ba62" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+#tabular-27514786d7 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-27514786d7 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-27514786d7 p { line-height: inherit; }
+#tabular-27514786d7 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-27514786d7 .tabular-caption { margin: 0; padding: 0; }
+#tabular-27514786d7 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-27514786d7 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-27514786d7 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-27514786d7 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-27514786d7 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-27514786d7 .tabular-table th, #tabular-27514786d7 .tabular-table td { padding: .18rem .6rem; }
+#tabular-27514786d7 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-27514786d7 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-27514786d7 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-27514786d7 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-27514786d7 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-27514786d7 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-27514786d7 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-27514786d7 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-27514786d7 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-27514786d7 .tabular-table tbody tr td { border-top: none; }
+#tabular-27514786d7 .tabular-band { text-align: center; }
+#tabular-27514786d7 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-27514786d7 .tabular-subgroup-label { font-weight: 600; }
+#tabular-27514786d7 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-27514786d7 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-27514786d7 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-27514786d7 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-27514786d7 .text-left { text-align: left; }
+#tabular-27514786d7 .text-center { text-align: center; }
+#tabular-27514786d7 .text-right { text-align: right; }
+#tabular-27514786d7 .tabular-table thead th.text-left { text-align: left; }
+#tabular-27514786d7 .tabular-table thead th.text-center { text-align: center; }
+#tabular-27514786d7 .tabular-table thead th.text-right { text-align: right; }
+#tabular-27514786d7 .tabular-table td.text-left { text-align: left; }
+#tabular-27514786d7 .tabular-table td.text-center { text-align: center; }
+#tabular-27514786d7 .tabular-table td.text-right { text-align: right; }
+#tabular-27514786d7 .valign-top { vertical-align: top; }
+#tabular-27514786d7 .valign-middle { vertical-align: middle; }
+#tabular-27514786d7 .valign-bottom { vertical-align: bottom; }
+#tabular-27514786d7 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-27514786d7 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-27514786d7 .tabular-page-break-row { display: none; }
+#tabular-27514786d7 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-27514786d7 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-27514786d7 .tabular-page-header, #tabular-27514786d7 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-27514786d7 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-27514786d7 .tabular-page-footer { margin-top: 1rem; }
+#tabular-27514786d7 .tabular-page-header-left, #tabular-27514786d7 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-27514786d7 .tabular-page-header-center, #tabular-27514786d7 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-27514786d7 .tabular-page-header-right, #tabular-27514786d7 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-27514786d7 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-27514786d7 .tabular-table tr { page-break-inside: avoid; } #tabular-27514786d7 .tabular-page-header, #tabular-27514786d7 .tabular-page-footer { display: none; } #tabular-27514786d7 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-27514786d7 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-27514786d7 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style><div id="tabular-27514786d7" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Table 14.3.1</p>
 <p class="tabular-title">Adverse Events by System Organ Class and Preferred Term</p>
 <p class="tabular-title">Safety Population</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
-<table class="table tabular-table"><thead><tr><th>SOC / PT</th><th class="text-center">Placebo<br>N=86</th><th class="text-center">Drug 100<br>N=72</th><th class="text-center">Drug 50<br>N=96</th></tr></thead><tbody><tr><td>Overall</td><td class="text-right">52 (60%)</td><td class="text-right">66 (92%)</td><td class="text-right">81 (84%)</td></tr><tr><td>SKIN AND SUBCUTANEOUS TISSUE DISORDERS</td><td class="text-right">19 (22%)</td><td class="text-right">35 (49%)</td><td class="text-right">36 (38%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">PRURITUS</td><td class="text-right"> 8 ( 9%)</td><td class="text-right">25 (35%)</td><td class="text-right">21 (22%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ERYTHEMA</td><td class="text-right"> 8 ( 9%)</td><td class="text-right">14 (19%)</td><td class="text-right">14 (15%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">RASH</td><td class="text-right"> 5 ( 6%)</td><td class="text-right"> 8 (11%)</td><td class="text-right">13 (14%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">HYPERHIDROSIS</td><td class="text-right"> 2 ( 2%)</td><td class="text-right"> 8 (11%)</td><td class="text-right"> 4 ( 4%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SKIN IRRITATION</td><td class="text-right"> 3 ( 3%)</td><td class="text-right"> 5 ( 7%)</td><td class="text-right"> 6 ( 6%)</td></tr><tr><td>GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS</td><td class="text-right">15 (17%)</td><td class="text-right">30 (42%)</td><td class="text-right">36 (38%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">APPLICATION SITE PRURITUS</td><td class="text-right"> 6 ( 7%)</td><td class="text-right">21 (29%)</td><td class="text-right">23 (24%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">APPLICATION SITE ERYTHEMA</td><td class="text-right"> 3 ( 3%)</td><td class="text-right">14 (19%)</td><td class="text-right">13 (14%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">APPLICATION SITE DERMATITIS</td><td class="text-right"> 5 ( 6%)</td><td class="text-right"> 7 (10%)</td><td class="text-right"> 9 ( 9%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">APPLICATION SITE IRRITATION</td><td class="text-right"> 3 ( 3%)</td><td class="text-right"> 9 (12%)</td><td class="text-right"> 9 ( 9%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">APPLICATION SITE VESICLES</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 5 ( 7%)</td><td class="text-right"> 5 ( 5%)</td></tr><tr><td>GASTROINTESTINAL DISORDERS</td><td class="text-right">13 (15%)</td><td class="text-right">17 (24%)</td><td class="text-right">12 (12%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">DIARRHOEA</td><td class="text-right"> 9 (10%)</td><td class="text-right"> 3 ( 4%)</td><td class="text-right"> 5 ( 5%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">VOMITING</td><td class="text-right"> 3 ( 3%)</td><td class="text-right"> 6 ( 8%)</td><td class="text-right"> 4 ( 4%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">NAUSEA</td><td class="text-right"> 3 ( 3%)</td><td class="text-right"> 6 ( 8%)</td><td class="text-right"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ABDOMINAL PAIN</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SALIVARY HYPERSECRETION</td><td class="text-right"> 0      </td><td class="text-right"> 4 ( 6%)</td><td class="text-right"> 0      </td></tr><tr><td>NERVOUS SYSTEM DISORDERS</td><td class="text-right"> 6 ( 7%)</td><td class="text-right">17 (24%)</td><td class="text-right">18 (19%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">DIZZINESS</td><td class="text-right"> 2 ( 2%)</td><td class="text-right">10 (14%)</td><td class="text-right"> 9 ( 9%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">HEADACHE</td><td class="text-right"> 3 ( 3%)</td><td class="text-right"> 5 ( 7%)</td><td class="text-right"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SYNCOPE</td><td class="text-right"> 0      </td><td class="text-right"> 2 ( 3%)</td><td class="text-right"> 5 ( 5%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SOMNOLENCE</td><td class="text-right"> 2 ( 2%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">TRANSIENT ISCHAEMIC ATTACK</td><td class="text-right"> 0      </td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 2 ( 2%)</td></tr><tr><td>CARDIAC DISORDERS</td><td class="text-right"> 7 ( 8%)</td><td class="text-right">14 (19%)</td><td class="text-right">12 (12%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SINUS BRADYCARDIA</td><td class="text-right"> 2 ( 2%)</td><td class="text-right"> 8 (11%)</td><td class="text-right"> 7 ( 7%)</td></tr><tr class="tabular-page-break-row" aria-hidden="true"><td colspan="4"></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">MYOCARDIAL INFARCTION</td><td class="text-right"> 4 ( 5%)</td><td class="text-right"> 4 ( 6%)</td><td class="text-right"> 2 ( 2%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ATRIAL FIBRILLATION</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 2 ( 3%)</td><td class="text-right"> 2 ( 2%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SUPRAVENTRICULAR EXTRASYSTOLES</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">VENTRICULAR EXTRASYSTOLES</td><td class="text-right"> 0      </td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 2 ( 2%)</td></tr><tr><td>INFECTIONS AND INFESTATIONS</td><td class="text-right">12 (14%)</td><td class="text-right">11 (15%)</td><td class="text-right"> 6 ( 6%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">NASOPHARYNGITIS</td><td class="text-right"> 2 ( 2%)</td><td class="text-right"> 6 ( 8%)</td><td class="text-right"> 4 ( 4%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">UPPER RESPIRATORY TRACT INFECTION</td><td class="text-right"> 6 ( 7%)</td><td class="text-right"> 3 ( 4%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">INFLUENZA</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">URINARY TRACT INFECTION</td><td class="text-right"> 2 ( 2%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 0      </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">CYSTITIS</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 0      </td></tr><tr><td>RESPIRATORY, THORACIC AND MEDIASTINAL DISORDERS</td><td class="text-right"> 5 ( 6%)</td><td class="text-right"> 9 (12%)</td><td class="text-right"> 8 ( 8%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">COUGH</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 5 ( 7%)</td><td class="text-right"> 5 ( 5%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">NASAL CONGESTION</td><td class="text-right"> 3 ( 3%)</td><td class="text-right"> 3 ( 4%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">DYSPNOEA</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">EPISTAXIS</td><td class="text-right"> 0      </td><td class="text-right"> 2 ( 3%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">PHARYNGOLARYNGEAL PAIN</td><td class="text-right"> 0      </td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr><td>PSYCHIATRIC DISORDERS</td><td class="text-right"> 7 ( 8%)</td><td class="text-right"> 3 ( 4%)</td><td class="text-right"> 9 ( 9%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">CONFUSIONAL STATE</td><td class="text-right"> 2 ( 2%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">AGITATION</td><td class="text-right"> 2 ( 2%)</td><td class="text-right"> 0      </td><td class="text-right"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">INSOMNIA</td><td class="text-right"> 2 ( 2%)</td><td class="text-right"> 2 ( 3%)</td><td class="text-right"> 0      </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ANXIETY</td><td class="text-right"> 0      </td><td class="text-right"> 0      </td><td class="text-right"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">DELUSION</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 0      </td></tr><tr><td>MUSCULOSKELETAL AND CONNECTIVE TISSUE DISORDERS</td><td class="text-right"> 3 ( 3%)</td><td class="text-right"> 5 ( 7%)</td><td class="text-right"> 6 ( 6%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">BACK PAIN</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 3 ( 4%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ARTHRALGIA</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 2 ( 2%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SHOULDER PAIN</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 0      </td><td class="text-right"> 2 ( 2%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">MUSCLE SPASMS</td><td class="text-right"> 0      </td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr class="tabular-page-break-row" aria-hidden="true"><td colspan="4"></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ARTHRITIS</td><td class="text-right"> 0      </td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 0      </td></tr><tr><td>INVESTIGATIONS</td><td class="text-right"> 5 ( 6%)</td><td class="text-right"> 3 ( 4%)</td><td class="text-right"> 4 ( 4%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ELECTROCARDIOGRAM ST SEGMENT DEPRESSION</td><td class="text-right"> 4 ( 5%)</td><td class="text-right"> 0      </td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ELECTROCARDIOGRAM T WAVE INVERSION</td><td class="text-right"> 2 ( 2%)</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">BLOOD GLUCOSE INCREASED</td><td class="text-right"> 0      </td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ELECTROCARDIOGRAM T WAVE AMPLITUDE DECREASED</td><td class="text-right"> 1 ( 1%)</td><td class="text-right"> 0      </td><td class="text-right"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529;">BIOPSY</td><td class="text-right" style="border-bottom: 0.5pt solid #212529;"> 0      </td><td class="text-right" style="border-bottom: 0.5pt solid #212529;"> 1 ( 1%)</td><td class="text-right" style="border-bottom: 0.5pt solid #212529;"> 0      </td></tr></tbody></table></div>
+<table class="table tabular-table"><thead><tr><th>SOC / PT</th><th class="text-center">Placebo<br>N=86</th><th class="text-center">Drug 100<br>N=72</th><th class="text-center">Drug 50<br>N=96</th></tr></thead><tbody><tr><td>Overall</td><td class="text-center">52 (60%)</td><td class="text-center">66 (92%)</td><td class="text-center">81 (84%)</td></tr><tr><td>SKIN AND SUBCUTANEOUS TISSUE DISORDERS</td><td class="text-center">19 (22%)</td><td class="text-center">35 (49%)</td><td class="text-center">36 (38%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">PRURITUS</td><td class="text-center"> 8 ( 9%)</td><td class="text-center">25 (35%)</td><td class="text-center">21 (22%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ERYTHEMA</td><td class="text-center"> 8 ( 9%)</td><td class="text-center">14 (19%)</td><td class="text-center">14 (15%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">RASH</td><td class="text-center"> 5 ( 6%)</td><td class="text-center"> 8 (11%)</td><td class="text-center">13 (14%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">HYPERHIDROSIS</td><td class="text-center"> 2 ( 2%)</td><td class="text-center"> 8 (11%)</td><td class="text-center"> 4 ( 4%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SKIN IRRITATION</td><td class="text-center"> 3 ( 3%)</td><td class="text-center"> 5 ( 7%)</td><td class="text-center"> 6 ( 6%)</td></tr><tr><td>GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS</td><td class="text-center">15 (17%)</td><td class="text-center">30 (42%)</td><td class="text-center">36 (38%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">APPLICATION SITE PRURITUS</td><td class="text-center"> 6 ( 7%)</td><td class="text-center">21 (29%)</td><td class="text-center">23 (24%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">APPLICATION SITE ERYTHEMA</td><td class="text-center"> 3 ( 3%)</td><td class="text-center">14 (19%)</td><td class="text-center">13 (14%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">APPLICATION SITE DERMATITIS</td><td class="text-center"> 5 ( 6%)</td><td class="text-center"> 7 (10%)</td><td class="text-center"> 9 ( 9%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">APPLICATION SITE IRRITATION</td><td class="text-center"> 3 ( 3%)</td><td class="text-center"> 9 (12%)</td><td class="text-center"> 9 ( 9%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">APPLICATION SITE VESICLES</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 5 ( 7%)</td><td class="text-center"> 5 ( 5%)</td></tr><tr><td>GASTROINTESTINAL DISORDERS</td><td class="text-center">13 (15%)</td><td class="text-center">17 (24%)</td><td class="text-center">12 (12%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">DIARRHOEA</td><td class="text-center"> 9 (10%)</td><td class="text-center"> 3 ( 4%)</td><td class="text-center"> 5 ( 5%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">VOMITING</td><td class="text-center"> 3 ( 3%)</td><td class="text-center"> 6 ( 8%)</td><td class="text-center"> 4 ( 4%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">NAUSEA</td><td class="text-center"> 3 ( 3%)</td><td class="text-center"> 6 ( 8%)</td><td class="text-center"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ABDOMINAL PAIN</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SALIVARY HYPERSECRETION</td><td class="text-center"> 0      </td><td class="text-center"> 4 ( 6%)</td><td class="text-center"> 0      </td></tr><tr><td>NERVOUS SYSTEM DISORDERS</td><td class="text-center"> 6 ( 7%)</td><td class="text-center">17 (24%)</td><td class="text-center">18 (19%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">DIZZINESS</td><td class="text-center"> 2 ( 2%)</td><td class="text-center">10 (14%)</td><td class="text-center"> 9 ( 9%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">HEADACHE</td><td class="text-center"> 3 ( 3%)</td><td class="text-center"> 5 ( 7%)</td><td class="text-center"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SYNCOPE</td><td class="text-center"> 0      </td><td class="text-center"> 2 ( 3%)</td><td class="text-center"> 5 ( 5%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SOMNOLENCE</td><td class="text-center"> 2 ( 2%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">TRANSIENT ISCHAEMIC ATTACK</td><td class="text-center"> 0      </td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 2 ( 2%)</td></tr><tr><td>CARDIAC DISORDERS</td><td class="text-center"> 7 ( 8%)</td><td class="text-center">14 (19%)</td><td class="text-center">12 (12%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SINUS BRADYCARDIA</td><td class="text-center"> 2 ( 2%)</td><td class="text-center"> 8 (11%)</td><td class="text-center"> 7 ( 7%)</td></tr><tr class="tabular-page-break-row" aria-hidden="true"><td colspan="4"></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">MYOCARDIAL INFARCTION</td><td class="text-center"> 4 ( 5%)</td><td class="text-center"> 4 ( 6%)</td><td class="text-center"> 2 ( 2%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ATRIAL FIBRILLATION</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 2 ( 3%)</td><td class="text-center"> 2 ( 2%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SUPRAVENTRICULAR EXTRASYSTOLES</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">VENTRICULAR EXTRASYSTOLES</td><td class="text-center"> 0      </td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 2 ( 2%)</td></tr><tr><td>INFECTIONS AND INFESTATIONS</td><td class="text-center">12 (14%)</td><td class="text-center">11 (15%)</td><td class="text-center"> 6 ( 6%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">NASOPHARYNGITIS</td><td class="text-center"> 2 ( 2%)</td><td class="text-center"> 6 ( 8%)</td><td class="text-center"> 4 ( 4%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">UPPER RESPIRATORY TRACT INFECTION</td><td class="text-center"> 6 ( 7%)</td><td class="text-center"> 3 ( 4%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">INFLUENZA</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">URINARY TRACT INFECTION</td><td class="text-center"> 2 ( 2%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 0      </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">CYSTITIS</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 0      </td></tr><tr><td>RESPIRATORY, THORACIC AND MEDIASTINAL DISORDERS</td><td class="text-center"> 5 ( 6%)</td><td class="text-center"> 9 (12%)</td><td class="text-center"> 8 ( 8%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">COUGH</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 5 ( 7%)</td><td class="text-center"> 5 ( 5%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">NASAL CONGESTION</td><td class="text-center"> 3 ( 3%)</td><td class="text-center"> 3 ( 4%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">DYSPNOEA</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">EPISTAXIS</td><td class="text-center"> 0      </td><td class="text-center"> 2 ( 3%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">PHARYNGOLARYNGEAL PAIN</td><td class="text-center"> 0      </td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr><td>PSYCHIATRIC DISORDERS</td><td class="text-center"> 7 ( 8%)</td><td class="text-center"> 3 ( 4%)</td><td class="text-center"> 9 ( 9%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">CONFUSIONAL STATE</td><td class="text-center"> 2 ( 2%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">AGITATION</td><td class="text-center"> 2 ( 2%)</td><td class="text-center"> 0      </td><td class="text-center"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">INSOMNIA</td><td class="text-center"> 2 ( 2%)</td><td class="text-center"> 2 ( 3%)</td><td class="text-center"> 0      </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ANXIETY</td><td class="text-center"> 0      </td><td class="text-center"> 0      </td><td class="text-center"> 3 ( 3%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">DELUSION</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 0      </td></tr><tr><td>MUSCULOSKELETAL AND CONNECTIVE TISSUE DISORDERS</td><td class="text-center"> 3 ( 3%)</td><td class="text-center"> 5 ( 7%)</td><td class="text-center"> 6 ( 6%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">BACK PAIN</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 3 ( 4%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ARTHRALGIA</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 2 ( 2%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">SHOULDER PAIN</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 0      </td><td class="text-center"> 2 ( 2%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">MUSCLE SPASMS</td><td class="text-center"> 0      </td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr class="tabular-page-break-row" aria-hidden="true"><td colspan="4"></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ARTHRITIS</td><td class="text-center"> 0      </td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 0      </td></tr><tr><td>INVESTIGATIONS</td><td class="text-center"> 5 ( 6%)</td><td class="text-center"> 3 ( 4%)</td><td class="text-center"> 4 ( 4%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ELECTROCARDIOGRAM ST SEGMENT DEPRESSION</td><td class="text-center"> 4 ( 5%)</td><td class="text-center"> 0      </td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ELECTROCARDIOGRAM T WAVE INVERSION</td><td class="text-center"> 2 ( 2%)</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">BLOOD GLUCOSE INCREASED</td><td class="text-center"> 0      </td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ELECTROCARDIOGRAM T WAVE AMPLITUDE DECREASED</td><td class="text-center"> 1 ( 1%)</td><td class="text-center"> 0      </td><td class="text-center"> 1 ( 1%)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em); border-bottom: 0.5pt solid #212529;">BIOPSY</td><td class="text-center" style="border-bottom: 0.5pt solid #212529;"> 0      </td><td class="text-center" style="border-bottom: 0.5pt solid #212529;"> 1 ( 1%)</td><td class="text-center" style="border-bottom: 0.5pt solid #212529;"> 0      </td></tr></tbody></table></div>
 <p class="tabular-footnote">Subjects are counted once per SOC and once per PT.</p>
 <p class="tabular-footnote">Percentages based on N per treatment group.</p>
 </figure></div><span class="r-in"><span></span></span>
@@ -626,42 +678,42 @@ frame this helper returns.</p>
 <span class="r-in"><span>      BMI    <span class="op">=</span> <span class="st">"BMI (kg/m^2)"</span></span></span>
 <span class="r-in"><span>    <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        variable                         stat_label       Placebo</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   Age (years)                                  N            86</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   Age (years)                          Mean (SD)   75.2 (8.59)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   Age (years)                             Median          76.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   Age (years)                             Q1, Q3    69.0, 82.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   Age (years)                           Min, Max    52.0, 89.0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6   Weight (kg)                                  N            86</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7   Weight (kg)                          Mean (SD)  62.8 (12.77)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8   Weight (kg)                             Median          60.6</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9   Weight (kg)                             Q1, Q3    53.5, 74.4</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10  Weight (kg)                           Min, Max    34.0, 86.2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11  Height (cm)                                  N            86</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12  Height (cm)                          Mean (SD) 162.6 (11.52)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 13  Height (cm)                             Median         162.6</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 14  Height (cm)                             Q1, Q3  153.7, 171.4</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 15  Height (cm)                           Min, Max  137.2, 185.4</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 16 BMI (kg/m^2)                                  N            86</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 17 BMI (kg/m^2)                          Mean (SD)   23.6 (3.67)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 18 BMI (kg/m^2)                             Median          23.4</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 19 BMI (kg/m^2)                             Q1, Q3    21.2, 25.7</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 20 BMI (kg/m^2)                           Min, Max    15.1, 33.3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 21       AGEGR1                              18-64      14 (16%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 22       AGEGR1                                &gt;64      72 (84%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 23          SEX                                  F      53 (62%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 24          SEX                                  M      33 (38%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 25         RACE                              WHITE      78 (91%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 26         RACE          BLACK OR AFRICAN AMERICAN        8 (9%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 27         RACE                              ASIAN             0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 28         RACE   AMERICAN INDIAN OR ALASKA NATIVE             0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 29       ETHNIC                 HISPANIC OR LATINO        3 (3%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 30       ETHNIC             NOT HISPANIC OR LATINO      83 (97%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 31       ETHNIC                       NOT REPORTED             0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 32      BMI_CAT                Underweight (&lt;18.5)        3 (3%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 33      BMI_CAT                 Normal (18.5-24.9)      57 (66%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 34      BMI_CAT               Overweight (25-29.9)      20 (23%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 35      BMI_CAT                       Obese (&gt;=30)        6 (7%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        variable                       stat_label       Placebo</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   Age (years)                                N            86</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   Age (years)                        Mean (SD)   75.2 (8.59)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   Age (years)                           Median          76.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   Age (years)                           Q1, Q3    69.0, 82.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   Age (years)                         Min, Max    52.0, 89.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   Weight (kg)                                N            86</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   Weight (kg)                        Mean (SD)  62.8 (12.77)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   Weight (kg)                           Median          60.6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   Weight (kg)                           Q1, Q3    53.5, 74.4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10  Weight (kg)                         Min, Max    34.0, 86.2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  Height (cm)                                N            86</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  Height (cm)                        Mean (SD) 162.6 (11.52)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13  Height (cm)                           Median         162.6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14  Height (cm)                           Q1, Q3  153.7, 171.4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15  Height (cm)                         Min, Max  137.2, 185.4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16 BMI (kg/m^2)                                N            86</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17 BMI (kg/m^2)                        Mean (SD)   23.6 (3.67)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18 BMI (kg/m^2)                           Median          23.4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19 BMI (kg/m^2)                           Q1, Q3    21.2, 25.7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20 BMI (kg/m^2)                         Min, Max    15.1, 33.3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21       AGEGR1                            18-64      14 (16%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22       AGEGR1                              &gt;64      72 (84%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23          SEX                                F      53 (62%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24          SEX                                M      33 (38%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25         RACE                            WHITE      78 (91%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26         RACE        BLACK OR AFRICAN AMERICAN        8 (9%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27         RACE                            ASIAN             0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28         RACE AMERICAN INDIAN OR ALASKA NATIVE             0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29       ETHNIC               HISPANIC OR LATINO        3 (3%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30       ETHNIC           NOT HISPANIC OR LATINO      83 (97%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31       ETHNIC                     NOT REPORTED             0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32      BMI_CAT              Underweight (&lt;18.5)        3 (3%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33      BMI_CAT               Normal (18.5-24.9)      57 (66%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34      BMI_CAT             Overweight (25-29.9)      20 (23%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35      BMI_CAT                     Obese (&gt;=30)        6 (7%)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    Xanomeline High Dose Xanomeline Low Dose         Total</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1                    72                  96           254</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2           73.8 (7.94)         76.0 (8.11)   75.1 (8.25)</span>
@@ -720,26 +772,26 @@ frame this helper returns.</p>
 <span class="r-in"><span>    tabulate <span class="op">=</span> <span class="st">"{n} ({p}%)"</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    variable                         stat_label       Placebo</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1       AGE                                AGE   75.2 (8.59)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2    WEIGHT                             WEIGHT  62.8 (12.77)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3    HEIGHT                             HEIGHT 162.6 (11.52)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4       BMI                                BMI   23.6 (3.67)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5    AGEGR1                              18-64      14 (16%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6    AGEGR1                                &gt;64      72 (84%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7       SEX                                  F      53 (62%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8       SEX                                  M      33 (38%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9      RACE                              WHITE      78 (91%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10     RACE          BLACK OR AFRICAN AMERICAN        8 (9%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11     RACE                              ASIAN             0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12     RACE   AMERICAN INDIAN OR ALASKA NATIVE             0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 13   ETHNIC                 HISPANIC OR LATINO        3 (3%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 14   ETHNIC             NOT HISPANIC OR LATINO      83 (97%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 15   ETHNIC                       NOT REPORTED             0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 16  BMI_CAT                Underweight (&lt;18.5)        3 (3%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 17  BMI_CAT                 Normal (18.5-24.9)      57 (66%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 18  BMI_CAT               Overweight (25-29.9)      20 (23%)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 19  BMI_CAT                       Obese (&gt;=30)        6 (7%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    variable                       stat_label       Placebo</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1       AGE                              AGE   75.2 (8.59)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    WEIGHT                           WEIGHT  62.8 (12.77)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3    HEIGHT                           HEIGHT 162.6 (11.52)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4       BMI                              BMI   23.6 (3.67)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5    AGEGR1                            18-64      14 (16%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6    AGEGR1                              &gt;64      72 (84%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7       SEX                                F      53 (62%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8       SEX                                M      33 (38%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9      RACE                            WHITE      78 (91%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10     RACE        BLACK OR AFRICAN AMERICAN        8 (9%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11     RACE                            ASIAN             0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12     RACE AMERICAN INDIAN OR ALASKA NATIVE             0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13   ETHNIC               HISPANIC OR LATINO        3 (3%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14   ETHNIC           NOT HISPANIC OR LATINO      83 (97%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15   ETHNIC                     NOT REPORTED             0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16  BMI_CAT              Underweight (&lt;18.5)        3 (3%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17  BMI_CAT               Normal (18.5-24.9)      57 (66%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18  BMI_CAT             Overweight (25-29.9)      20 (23%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19  BMI_CAT                     Obese (&gt;=30)        6 (7%)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    Xanomeline High Dose Xanomeline Low Dose         Total</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1           73.8 (7.94)         76.0 (8.11)   75.1 (8.25)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2          69.5 (14.35)        68.0 (14.50)  66.6 (14.13)</span>
@@ -760,6 +812,185 @@ frame this helper returns.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 17             39 (54%)            46 (48%)     142 (56%)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 18             23 (32%)            32 (34%)      75 (30%)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 19              9 (12%)            13 (14%)      28 (11%)</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># ---- Example 6: Analysis variables as side-by-side column bands ----</span></span></span>
+<span class="r-in"><span><span class="co">#</span></span></span>
+<span class="r-in"><span><span class="co"># `column = c(".variable", "&lt;arm&gt;")` turns each analysis variable into</span></span></span>
+<span class="r-in"><span><span class="co"># its own band of arm columns (the "value and change side by side"</span></span></span>
+<span class="r-in"><span><span class="co"># shape), with statistics stacked as rows. Per-variable `statistic` /</span></span></span>
+<span class="r-in"><span><span class="co"># `decimals` resolve inside each band. Emitted columns are named</span></span></span>
+<span class="r-in"><span><span class="co"># "&lt;variable&gt;..&lt;arm&gt;"; reference them verbatim in a manual `headers()`</span></span></span>
+<span class="r-in"><span><span class="co"># call to draw the band spanners (pivot_across never builds spanners).</span></span></span>
+<span class="r-in"><span><span class="va">vitals</span> <span class="op">&lt;-</span> <span class="va">cdisc_saf_demo_ard</span><span class="op">[</span></span></span>
+<span class="r-in"><span>  <span class="va">cdisc_saf_demo_ard</span><span class="op">$</span><span class="va">variable</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"AGE"</span>, <span class="st">"WEIGHT"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span><span class="op">]</span></span></span>
+<span class="r-in"><span><span class="va">vitals</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">pivot_across</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    column <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">".variable"</span>, <span class="st">"TRT01A"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    overall <span class="op">=</span> <span class="cn">NULL</span>,</span></span>
+<span class="r-in"><span>    statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      AGE    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>N <span class="op">=</span> <span class="st">"{N}"</span>, <span class="st">"Mean (SD)"</span> <span class="op">=</span> <span class="st">"{mean} ({sd})"</span>, Median <span class="op">=</span> <span class="st">"{median}"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>      WEIGHT <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>N <span class="op">=</span> <span class="st">"{N}"</span>, <span class="st">"Mean (SD)"</span> <span class="op">=</span> <span class="st">"{mean} ({sd})"</span>, Median <span class="op">=</span> <span class="st">"{median}"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span>,</span></span>
+<span class="r-in"><span>    decimals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      AGE    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">1</span>, sd <span class="op">=</span> <span class="fl">2</span>, median <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>      WEIGHT <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">1</span>, sd <span class="op">=</span> <span class="fl">2</span>, median <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="tabular.html">tabular</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    titles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      <span class="st">"Table 14.2.1"</span>,</span></span>
+<span class="r-in"><span>      <span class="st">"Summary of Continuous Parameters by Treatment"</span>,</span></span>
+<span class="r-in"><span>      <span class="st">"Safety Population"</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="cols.html">cols</a></span><span class="op">(</span>stat_label <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="headers.html">headers</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    Age <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      <span class="st">"AGE..Placebo"</span>,</span></span>
+<span class="r-in"><span>      <span class="st">"AGE..Xanomeline Low Dose"</span>,</span></span>
+<span class="r-in"><span>      <span class="st">"AGE..Xanomeline High Dose"</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span>,</span></span>
+<span class="r-in"><span>    Weight <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      <span class="st">"WEIGHT..Placebo"</span>,</span></span>
+<span class="r-in"><span>      <span class="st">"WEIGHT..Xanomeline Low Dose"</span>,</span></span>
+<span class="r-in"><span>      <span class="st">"WEIGHT..Xanomeline High Dose"</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<style>
+#tabular-a25cab255c { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-a25cab255c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-a25cab255c p { line-height: inherit; }
+#tabular-a25cab255c .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-a25cab255c .tabular-caption { margin: 0; padding: 0; }
+#tabular-a25cab255c .tabular-pad { margin: 0; line-height: 1; }
+#tabular-a25cab255c .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-a25cab255c .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-a25cab255c .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-a25cab255c .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-a25cab255c .tabular-table th, #tabular-a25cab255c .tabular-table td { padding: .18rem .6rem; }
+#tabular-a25cab255c .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-a25cab255c .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-a25cab255c .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-a25cab255c .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-a25cab255c .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a25cab255c .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a25cab255c .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a25cab255c .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-a25cab255c .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-a25cab255c .tabular-table tbody tr td { border-top: none; }
+#tabular-a25cab255c .tabular-band { text-align: center; }
+#tabular-a25cab255c .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-a25cab255c .tabular-subgroup-label { font-weight: 600; }
+#tabular-a25cab255c .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-a25cab255c .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-a25cab255c .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-a25cab255c .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-a25cab255c .text-left { text-align: left; }
+#tabular-a25cab255c .text-center { text-align: center; }
+#tabular-a25cab255c .text-right { text-align: right; }
+#tabular-a25cab255c .tabular-table thead th.text-left { text-align: left; }
+#tabular-a25cab255c .tabular-table thead th.text-center { text-align: center; }
+#tabular-a25cab255c .tabular-table thead th.text-right { text-align: right; }
+#tabular-a25cab255c .tabular-table td.text-left { text-align: left; }
+#tabular-a25cab255c .tabular-table td.text-center { text-align: center; }
+#tabular-a25cab255c .tabular-table td.text-right { text-align: right; }
+#tabular-a25cab255c .valign-top { vertical-align: top; }
+#tabular-a25cab255c .valign-middle { vertical-align: middle; }
+#tabular-a25cab255c .valign-bottom { vertical-align: bottom; }
+#tabular-a25cab255c .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-a25cab255c .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-a25cab255c .tabular-page-break-row { display: none; }
+#tabular-a25cab255c { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-a25cab255c .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-a25cab255c .tabular-page-header, #tabular-a25cab255c .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-a25cab255c .tabular-page-header { margin-bottom: 1rem; }
+#tabular-a25cab255c .tabular-page-footer { margin-top: 1rem; }
+#tabular-a25cab255c .tabular-page-header-left, #tabular-a25cab255c .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-a25cab255c .tabular-page-header-center, #tabular-a25cab255c .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-a25cab255c .tabular-page-header-right, #tabular-a25cab255c .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-a25cab255c .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-a25cab255c .tabular-table tr { page-break-inside: avoid; } #tabular-a25cab255c .tabular-page-header, #tabular-a25cab255c .tabular-page-footer { display: none; } #tabular-a25cab255c .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-a25cab255c .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-a25cab255c .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style><div id="tabular-a25cab255c" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<p class="tabular-title">Table 14.2.1</p>
+<p class="tabular-title">Summary of Continuous Parameters by Treatment</p>
+<p class="tabular-title">Safety Population</p>
+<p class="tabular-pad"> </p>
+</figcaption><div class="tabular-table-wrap">
+<table class="table tabular-table"><thead><tr><th colspan="1"></th><th colspan="3" class="tabular-band">Age</th><th colspan="3" class="tabular-band tabular-band-flush-right">Weight</th></tr><tr><th>Statistic</th><th>AGE..Placebo</th><th>AGE..Xanomeline High Dose</th><th>AGE..Xanomeline Low Dose</th><th>WEIGHT..Placebo</th><th>WEIGHT..Xanomeline High Dose</th><th>WEIGHT..Xanomeline Low Dose</th></tr></thead><tbody><tr><td>N</td><td>86</td><td>72</td><td>96</td><td>86</td><td>72</td><td>95</td></tr><tr><td>Mean (SD)</td><td>75.2 (8.59)</td><td>73.8 (7.94)</td><td>76.0 (8.11)</td><td>62.8 (12.77)</td><td>69.5 (14.35)</td><td>68.0 (14.50)</td></tr><tr><td style="border-bottom: 0.5pt solid #212529;">Median</td><td style="border-bottom: 0.5pt solid #212529;">76.0</td><td style="border-bottom: 0.5pt solid #212529;">75.5</td><td style="border-bottom: 0.5pt solid #212529;">78.0</td><td style="border-bottom: 0.5pt solid #212529;">60.6</td><td style="border-bottom: 0.5pt solid #212529;">69.0</td><td style="border-bottom: 0.5pt solid #212529;">66.7</td></tr></tbody></table></div>
+</figure></div><span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># ---- Example 7: Statistics as columns within each band ----</span></span></span>
+<span class="r-in"><span><span class="co">#</span></span></span>
+<span class="r-in"><span><span class="co"># `column = c(".variable", ".stat")` spreads each statistic entry into</span></span></span>
+<span class="r-in"><span><span class="co"># its own column (the landscape shell); the arm drops to a leading row</span></span></span>
+<span class="r-in"><span><span class="co"># stub. Emitted columns are named "&lt;variable&gt;..&lt;stat-entry&gt;". Bands may</span></span></span>
+<span class="r-in"><span><span class="co"># carry different stat sets, with no row-alignment needed.</span></span></span>
+<span class="r-in"><span><span class="va">vitals</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">pivot_across</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    column <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">".variable"</span>, <span class="st">".stat"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    overall <span class="op">=</span> <span class="cn">NULL</span>,</span></span>
+<span class="r-in"><span>    statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      AGE    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>N <span class="op">=</span> <span class="st">"{N}"</span>, Mean <span class="op">=</span> <span class="st">"{mean}"</span>, SD <span class="op">=</span> <span class="st">"{sd}"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>      WEIGHT <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>N <span class="op">=</span> <span class="st">"{N}"</span>, Mean <span class="op">=</span> <span class="st">"{mean}"</span>, SD <span class="op">=</span> <span class="st">"{sd}"</span>, Median <span class="op">=</span> <span class="st">"{median}"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span>,</span></span>
+<span class="r-in"><span>    decimals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">1</span>, sd <span class="op">=</span> <span class="fl">2</span>, median <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 TRT01A AGE..N AGE..Mean AGE..SD WEIGHT..N WEIGHT..Mean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1              Placebo     86      75.2    8.59        86         62.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 Xanomeline High Dose     72      73.8    7.94        72         69.5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  Xanomeline Low Dose     96      76.0    8.11        95         68.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   WEIGHT..SD WEIGHT..Median</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1      12.77           60.6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2      14.35           69.0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3      14.50           66.7</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># ---- Example 8: Per-row-group decimal precision ----</span></span></span>
+<span class="r-in"><span><span class="co">#</span></span></span>
+<span class="r-in"><span><span class="co"># A by-parameter vitals table where each parameter carries its own</span></span></span>
+<span class="r-in"><span><span class="co"># value precision: systolic BP to 0 dp, weight to 1 dp, in ONE call.</span></span></span>
+<span class="r-in"><span><span class="co"># `decimals` is keyed by the `row_group` (PARAM) value; the engine</span></span></span>
+<span class="r-in"><span><span class="co"># selects each row's token precision by its parameter. No bundled ARD</span></span></span>
+<span class="r-in"><span><span class="co"># carries a second grouping dimension, so build a tiny one inline.</span></span></span>
+<span class="r-in"><span><span class="va">vital_ard</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"SYSBP"</span>, <span class="st">"Placebo"</span>, <span class="st">"mean"</span>, <span class="st">"133.27"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"SYSBP"</span>, <span class="st">"Placebo"</span>, <span class="st">"sd"</span>, <span class="st">"15.81"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"SYSBP"</span>, <span class="st">"Drug"</span>, <span class="st">"mean"</span>, <span class="st">"128.94"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"SYSBP"</span>, <span class="st">"Drug"</span>, <span class="st">"sd"</span>, <span class="st">"14.02"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"WEIGHT"</span>, <span class="st">"Placebo"</span>, <span class="st">"mean"</span>, <span class="st">"71.43"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"WEIGHT"</span>, <span class="st">"Placebo"</span>, <span class="st">"sd"</span>, <span class="st">"12.77"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"WEIGHT"</span>, <span class="st">"Drug"</span>, <span class="st">"mean"</span>, <span class="st">"73.06"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"WEIGHT"</span>, <span class="st">"Drug"</span>, <span class="st">"sd"</span>, <span class="st">"13.19"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="kw">function</span><span class="op">(</span><span class="va">r</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      group1 <span class="op">=</span> <span class="st">"PARAM"</span>,</span></span>
+<span class="r-in"><span>      group1_level <span class="op">=</span> <span class="va">r</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>,</span></span>
+<span class="r-in"><span>      group2 <span class="op">=</span> <span class="st">"TRTA"</span>,</span></span>
+<span class="r-in"><span>      group2_level <span class="op">=</span> <span class="va">r</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span>,</span></span>
+<span class="r-in"><span>      variable <span class="op">=</span> <span class="st">"AVAL"</span>,</span></span>
+<span class="r-in"><span>      variable_level <span class="op">=</span> <span class="cn">NA_character_</span>,</span></span>
+<span class="r-in"><span>      context <span class="op">=</span> <span class="st">"continuous"</span>,</span></span>
+<span class="r-in"><span>      stat_name <span class="op">=</span> <span class="va">r</span><span class="op">[[</span><span class="fl">3</span><span class="op">]</span><span class="op">]</span>,</span></span>
+<span class="r-in"><span>      stat_label <span class="op">=</span> <span class="va">r</span><span class="op">[[</span><span class="fl">3</span><span class="op">]</span><span class="op">]</span>,</span></span>
+<span class="r-in"><span>      stat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">r</span><span class="op">[[</span><span class="fl">4</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>      stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span></span></span>
+<span class="r-in"><span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">vital_ard</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">pivot_across</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    column <span class="op">=</span> <span class="st">"TRTA"</span>,</span></span>
+<span class="r-in"><span>    row_group <span class="op">=</span> <span class="st">"PARAM"</span>,</span></span>
+<span class="r-in"><span>    overall <span class="op">=</span> <span class="cn">NULL</span>,</span></span>
+<span class="r-in"><span>    statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>continuous <span class="op">=</span> <span class="st">"{mean} ({sd})"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    decimals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      SYSBP <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">0</span>, sd <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>      WEIGHT <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">1</span>, sd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    PARAM variable stat_label      Placebo         Drug</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  SYSBP     AVAL       AVAL   133 (15.8)   129 (14.0)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 WEIGHT     AVAL       AVAL 71.4 (12.77) 73.1 (13.19)</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

@@ -8,7 +8,7 @@ of
 records and can be attached to
 [`preset()`](https://vthanik.github.io/tabular/reference/preset.md) /
 [`set_preset()`](https://vthanik.github.io/tabular/reference/set_preset.md)
-as a `style =` argument — every downstream
+as the `.style` argument — every downstream
 [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md)
 chain then inherits the template's layers via the engine cascade.
 
@@ -44,7 +44,7 @@ a per-table spec also accumulates layers onto a template. Symmetric API
 
 **Submission workflow.** A submission typically renders 100–200 tables
 with one visual identity. Build the template once at the top of the
-submission script, pass it to `set_preset(style = template)`, and every
+submission script, pass it to `set_preset(.style = template)`, and every
 subsequent
 [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md)
 produces output that inherits the same column-header rules, group-header

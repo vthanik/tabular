@@ -258,6 +258,20 @@ col_spec(
     submission shape used by clinical TFL house templates (Disposition,
     Demographics, Statistical Report sections).
 
+    A group with exactly **one** member collapses to a single flush-left
+    row: the group value becomes that row's label, its data cells are
+    kept, and no separate header or indent is emitted (the redundant
+    two-line "header plus lone child" is gone). This is the standard
+    occurrence-table shape, where a single binary flag (DEATH, TEAE)
+    sits flush among headed multi-level breakdowns. The collapsed row
+    still receives any
+    [`cells_group_headers()`](https://vthanik.github.io/tabular/reference/cells.md)
+    styling (preset or explicit), so its group identity is not lost. An
+    empty or `NA` group value never emits a header at all; its members
+    render flush left keeping their own labels. *(Collapse applies to a
+    single `header_row` band; a nested two-`header_row` layout keeps a
+    header per value.)*
+
   - **`"column"`** — column stays visible; repeated values are
     suppressed (only the first row of each value shows the label). PROC
     REPORT's default for grouping variables.
@@ -528,54 +542,58 @@ tabular(
   ) |>
   sort_rows(by = c("variable", "stat_label"))
 
-#tabular-d91471f989 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-d91471f989 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-d91471f989 p { line-height: inherit; }
-#tabular-d91471f989 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-d91471f989 .tabular-caption { margin: 0; padding: 0; }
-#tabular-d91471f989 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-d91471f989 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-d91471f989 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-d91471f989 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-d91471f989 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-d91471f989 .tabular-table th, #tabular-d91471f989 .tabular-table td { padding: .18rem .6rem; }
-#tabular-d91471f989 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-d91471f989 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-d91471f989 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-d91471f989 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-d91471f989 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-d91471f989 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-d91471f989 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-d91471f989 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-d91471f989 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-d91471f989 .tabular-table tbody tr td { border-top: none; }
-#tabular-d91471f989 .tabular-band { text-align: center; }
-#tabular-d91471f989 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-d91471f989 .tabular-subgroup-label { font-weight: 600; }
-#tabular-d91471f989 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-d91471f989 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-d91471f989 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-d91471f989 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-d91471f989 .text-left { text-align: left; }
-#tabular-d91471f989 .text-center { text-align: center; }
-#tabular-d91471f989 .text-right { text-align: right; }
-#tabular-d91471f989 .tabular-table thead th.text-left { text-align: left; }
-#tabular-d91471f989 .tabular-table thead th.text-center { text-align: center; }
-#tabular-d91471f989 .tabular-table thead th.text-right { text-align: right; }
-#tabular-d91471f989 .valign-top { vertical-align: top; }
-#tabular-d91471f989 .valign-middle { vertical-align: middle; }
-#tabular-d91471f989 .valign-bottom { vertical-align: bottom; }
-#tabular-d91471f989 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-d91471f989 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-d91471f989 .tabular-page-break-row { display: none; }
-#tabular-d91471f989 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-d91471f989 .tabular-page-header, #tabular-d91471f989 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-d91471f989 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-d91471f989 .tabular-page-footer { margin-top: 1rem; }
-#tabular-d91471f989 .tabular-page-header-left, #tabular-d91471f989 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-d91471f989 .tabular-page-header-center, #tabular-d91471f989 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-d91471f989 .tabular-page-header-right, #tabular-d91471f989 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-d91471f989 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-d91471f989 .tabular-table tr { page-break-inside: avoid; } #tabular-d91471f989 .tabular-page-header, #tabular-d91471f989 .tabular-page-footer { display: none; } #tabular-d91471f989 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-d91471f989 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-d91471f989 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-3452c76190 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-3452c76190 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-3452c76190 p { line-height: inherit; }
+#tabular-3452c76190 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-3452c76190 .tabular-caption { margin: 0; padding: 0; }
+#tabular-3452c76190 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-3452c76190 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-3452c76190 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-3452c76190 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-3452c76190 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-3452c76190 .tabular-table th, #tabular-3452c76190 .tabular-table td { padding: .18rem .6rem; }
+#tabular-3452c76190 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-3452c76190 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-3452c76190 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-3452c76190 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-3452c76190 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-3452c76190 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-3452c76190 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-3452c76190 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-3452c76190 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-3452c76190 .tabular-table tbody tr td { border-top: none; }
+#tabular-3452c76190 .tabular-band { text-align: center; }
+#tabular-3452c76190 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-3452c76190 .tabular-subgroup-label { font-weight: 600; }
+#tabular-3452c76190 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-3452c76190 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-3452c76190 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-3452c76190 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-3452c76190 .text-left { text-align: left; }
+#tabular-3452c76190 .text-center { text-align: center; }
+#tabular-3452c76190 .text-right { text-align: right; }
+#tabular-3452c76190 .tabular-table thead th.text-left { text-align: left; }
+#tabular-3452c76190 .tabular-table thead th.text-center { text-align: center; }
+#tabular-3452c76190 .tabular-table thead th.text-right { text-align: right; }
+#tabular-3452c76190 .tabular-table td.text-left { text-align: left; }
+#tabular-3452c76190 .tabular-table td.text-center { text-align: center; }
+#tabular-3452c76190 .tabular-table td.text-right { text-align: right; }
+#tabular-3452c76190 .valign-top { vertical-align: top; }
+#tabular-3452c76190 .valign-middle { vertical-align: middle; }
+#tabular-3452c76190 .valign-bottom { vertical-align: bottom; }
+#tabular-3452c76190 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-3452c76190 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-3452c76190 .tabular-page-break-row { display: none; }
+#tabular-3452c76190 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-3452c76190 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-3452c76190 .tabular-page-header, #tabular-3452c76190 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-3452c76190 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-3452c76190 .tabular-page-footer { margin-top: 1rem; }
+#tabular-3452c76190 .tabular-page-header-left, #tabular-3452c76190 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-3452c76190 .tabular-page-header-center, #tabular-3452c76190 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-3452c76190 .tabular-page-header-right, #tabular-3452c76190 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-3452c76190 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-3452c76190 .tabular-table tr { page-break-inside: avoid; } #tabular-3452c76190 .tabular-page-header, #tabular-3452c76190 .tabular-page-footer { display: none; } #tabular-3452c76190 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-3452c76190 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-3452c76190 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.1.1

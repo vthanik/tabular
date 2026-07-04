@@ -99,9 +99,8 @@ tabular(data, titles = NULL, footnotes = NULL, empty_text = NULL)
   [`html()`](https://vthanik.github.io/tabular/reference/html.md) are
   honoured, exactly like a title line.
 
-  **Interaction:** placement within the body box is cosmetic and lives
-  on the preset, `preset(empty_halign = ..., empty_valign = ...)`,
-  defaulting to centre x middle.
+  The message renders as a single horizontally centred row in the table
+  body, where the first data row would otherwise sit.
 
 ## Value
 
@@ -201,7 +200,7 @@ tabular(
   ) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 
-#tabular-4b8d16e13e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-4b8d16e13e { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-4b8d16e13e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-4b8d16e13e p { line-height: inherit; }
 #tabular-4b8d16e13e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -235,6 +234,9 @@ tabular(
 #tabular-4b8d16e13e .tabular-table thead th.text-left { text-align: left; }
 #tabular-4b8d16e13e .tabular-table thead th.text-center { text-align: center; }
 #tabular-4b8d16e13e .tabular-table thead th.text-right { text-align: right; }
+#tabular-4b8d16e13e .tabular-table td.text-left { text-align: left; }
+#tabular-4b8d16e13e .tabular-table td.text-center { text-align: center; }
+#tabular-4b8d16e13e .tabular-table td.text-right { text-align: right; }
 #tabular-4b8d16e13e .valign-top { vertical-align: top; }
 #tabular-4b8d16e13e .valign-middle { vertical-align: middle; }
 #tabular-4b8d16e13e .valign-bottom { vertical-align: bottom; }
@@ -242,7 +244,8 @@ tabular(
 #tabular-4b8d16e13e .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-4b8d16e13e .tabular-page-break-row { display: none; }
 #tabular-4b8d16e13e { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-4b8d16e13e .tabular-page-header, #tabular-4b8d16e13e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-4b8d16e13e .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-4b8d16e13e .tabular-page-header, #tabular-4b8d16e13e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
 #tabular-4b8d16e13e .tabular-page-header { margin-bottom: 1rem; }
 #tabular-4b8d16e13e .tabular-page-footer { margin-top: 1rem; }
 #tabular-4b8d16e13e .tabular-page-header-left, #tabular-4b8d16e13e .tabular-page-footer-left { flex: 1; text-align: left; }

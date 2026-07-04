@@ -66,7 +66,7 @@ tabular(cdisc_saf_n) |>
     orientation = "landscape"
   )
 
-#tabular-f3a8112265 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
+#tabular-f3a8112265 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
 #tabular-f3a8112265 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-f3a8112265 p { line-height: inherit; }
 #tabular-f3a8112265 .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -100,6 +100,9 @@ tabular(cdisc_saf_n) |>
 #tabular-f3a8112265 .tabular-table thead th.text-left { text-align: left; }
 #tabular-f3a8112265 .tabular-table thead th.text-center { text-align: center; }
 #tabular-f3a8112265 .tabular-table thead th.text-right { text-align: right; }
+#tabular-f3a8112265 .tabular-table td.text-left { text-align: left; }
+#tabular-f3a8112265 .tabular-table td.text-center { text-align: center; }
+#tabular-f3a8112265 .tabular-table td.text-right { text-align: right; }
 #tabular-f3a8112265 .valign-top { vertical-align: top; }
 #tabular-f3a8112265 .valign-middle { vertical-align: middle; }
 #tabular-f3a8112265 .valign-bottom { vertical-align: bottom; }
@@ -107,7 +110,8 @@ tabular(cdisc_saf_n) |>
 #tabular-f3a8112265 .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-f3a8112265 .tabular-page-break-row { display: none; }
 #tabular-f3a8112265 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-f3a8112265 .tabular-page-header, #tabular-f3a8112265 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 8pt; color: var(--tabular-chrome-color); }
+#tabular-f3a8112265 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-f3a8112265 .tabular-page-header, #tabular-f3a8112265 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 8pt; color: var(--tabular-chrome-color); }
 #tabular-f3a8112265 .tabular-page-header { margin-bottom: 1rem; }
 #tabular-f3a8112265 .tabular-page-footer { margin-top: 1rem; }
 #tabular-f3a8112265 .tabular-page-header-left, #tabular-f3a8112265 .tabular-page-footer-left { flex: 1; text-align: left; }

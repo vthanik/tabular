@@ -176,15 +176,15 @@
 <span>  decimals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">1</span>, sd <span class="op">=</span> <span class="fl">2</span>, median <span class="op">=</span> <span class="fl">1</span>, min <span class="op">=</span> <span class="fl">0</span>, max <span class="op">=</span> <span class="fl">0</span>, p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">wide</span>, <span class="fl">8</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   variable  stat_label      Placebo Xanomeline High Dose Xanomeline Low Dose</span></span>
-<span><span class="co">#&gt; 1      AGE           N           86                   72                  96</span></span>
-<span><span class="co">#&gt; 2      AGE   Mean (SD)  75.2 (8.59)          73.8 (7.94)         76.0 (8.11)</span></span>
-<span><span class="co">#&gt; 3      AGE      Median         76.0                 75.5                78.0</span></span>
-<span><span class="co">#&gt; 4      AGE    Min, Max       52, 89               56, 88              51, 88</span></span>
-<span><span class="co">#&gt; 5   WEIGHT           N           86                   72                  95</span></span>
-<span><span class="co">#&gt; 6   WEIGHT   Mean (SD) 62.8 (12.77)         69.5 (14.35)        68.0 (14.50)</span></span>
-<span><span class="co">#&gt; 7   WEIGHT      Median         60.6                 69.0                66.7</span></span>
-<span><span class="co">#&gt; 8   WEIGHT    Min, Max       34, 86              44, 108             42, 106</span></span>
+<span><span class="co">#&gt;   variable stat_label      Placebo Xanomeline High Dose Xanomeline Low Dose</span></span>
+<span><span class="co">#&gt; 1      AGE          N           86                   72                  96</span></span>
+<span><span class="co">#&gt; 2      AGE  Mean (SD)  75.2 (8.59)          73.8 (7.94)         76.0 (8.11)</span></span>
+<span><span class="co">#&gt; 3      AGE     Median         76.0                 75.5                78.0</span></span>
+<span><span class="co">#&gt; 4      AGE   Min, Max       52, 89               56, 88              51, 88</span></span>
+<span><span class="co">#&gt; 5   WEIGHT          N           86                   72                  95</span></span>
+<span><span class="co">#&gt; 6   WEIGHT  Mean (SD) 62.8 (12.77)         69.5 (14.35)        68.0 (14.50)</span></span>
+<span><span class="co">#&gt; 7   WEIGHT     Median         60.6                 69.0                66.7</span></span>
+<span><span class="co">#&gt; 8   WEIGHT   Min, Max       34, 86              44, 108             42, 106</span></span>
 <span><span class="co">#&gt;          Total</span></span>
 <span><span class="co">#&gt; 1          254</span></span>
 <span><span class="co">#&gt; 2  75.1 (8.25)</span></span>
@@ -233,8 +233,8 @@
 <span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>proportion_ci <span class="op">=</span> <span class="st">"{estimate} ({conf.low}, {conf.high})"</span><span class="op">)</span>,</span>
 <span>  decimals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>estimate <span class="op">=</span> <span class="fl">3</span>, conf.low <span class="op">=</span> <span class="fl">3</span>, conf.high <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt;   variable   stat_label              Placebo  Xanomeline Low Dose</span></span>
-<span><span class="co">#&gt; 1     RESP   Responders 0.620 (0.500, 0.730) 0.550 (0.420, 0.670)</span></span>
+<span><span class="co">#&gt;   variable stat_label              Placebo  Xanomeline Low Dose</span></span>
+<span><span class="co">#&gt; 1     RESP Responders 0.620 (0.500, 0.730) 0.550 (0.420, 0.670)</span></span>
 <span><span class="co">#&gt;   Xanomeline High Dose</span></span>
 <span><span class="co">#&gt; 1 0.480 (0.360, 0.600)</span></span></code></pre></div>
 </div>
@@ -304,6 +304,98 @@
 <span><span class="co">#&gt; 4   M     RACE      BLACK 10 (25%) 10 (25%)</span></span></code></pre></div>
 </div>
 <p>When a 2-variable <code>.by</code> is present you must say which variable is the arm column (<code>column =</code>) and which is the row dimension (<code>row_group =</code>); the <code>SEX</code> column then composes with <code><a href="../reference/subgroup.html">subgroup()</a></code> or <code>col_spec(usage = "group")</code> downstream. cards encodes a crossing factor and a real hierarchy identically, so the declaration is what disambiguates them — leave <code>row_group</code> unset for a genuine SOC/PT hierarchy.</p>
+</section><section class="level2"><h2 id="variables-as-column-bands">Variables as column bands<a class="anchor" aria-label="anchor" href="#variables-as-column-bands"></a>
+</h2>
+<p>Two analysis variables side by side — <code>AVAL</code> (“Value”) and <code>PCHG</code> (“Percent Change from Baseline”) — is the canonical “value and change” shell. Make the <strong>variable</strong> a column band with the reserved <code>.variable</code> token in <code>column</code>. Each band keys its own <code>statistic</code> / <code>decimals</code>, so the bands may carry different (even different-length) stat lists; ragged bands pad with <code>NA</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># AVAL + PCHG by AVISIT x TRTA, built by hand so the example runs without cards.</span></span>
+<span><span class="va">valchg_ard</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span><span class="va">group1</span>,  <span class="op">~</span><span class="va">group1_level</span>, <span class="op">~</span><span class="va">group2</span>, <span class="op">~</span><span class="va">group2_level</span>, <span class="op">~</span><span class="va">variable</span>, <span class="op">~</span><span class="va">context</span>,      <span class="op">~</span><span class="va">stat_name</span>, <span class="op">~</span><span class="va">stat</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Drug"</span>,        <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>,  <span class="st">"N"</span>,        <span class="fl">20</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Drug"</span>,        <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>,  <span class="st">"mean"</span>,     <span class="fl">324</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Drug"</span>,        <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>,  <span class="st">"sd"</span>,       <span class="fl">106</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Drug"</span>,        <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>,  <span class="st">"median"</span>,   <span class="fl">315</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Placebo"</span>,     <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>,  <span class="st">"N"</span>,        <span class="fl">20</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Placebo"</span>,     <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>,  <span class="st">"mean"</span>,     <span class="fl">318</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Placebo"</span>,     <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>,  <span class="st">"sd"</span>,       <span class="fl">98</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Placebo"</span>,     <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>,  <span class="st">"median"</span>,   <span class="fl">310</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Drug"</span>,        <span class="st">"PCHG"</span>,    <span class="st">"continuous"</span>,  <span class="st">"N"</span>,        <span class="fl">20</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Drug"</span>,        <span class="st">"PCHG"</span>,    <span class="st">"continuous"</span>,  <span class="st">"mean"</span>,     <span class="op">-</span><span class="fl">16</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Drug"</span>,        <span class="st">"PCHG"</span>,    <span class="st">"continuous"</span>,  <span class="st">"sd"</span>,       <span class="fl">5</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Placebo"</span>,     <span class="st">"PCHG"</span>,    <span class="st">"continuous"</span>,  <span class="st">"N"</span>,        <span class="fl">20</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Placebo"</span>,     <span class="st">"PCHG"</span>,    <span class="st">"continuous"</span>,  <span class="st">"mean"</span>,     <span class="op">-</span><span class="fl">14</span>,</span>
+<span>  <span class="st">"AVISIT"</span>, <span class="st">"DAY 1"</span>,       <span class="st">"TRTA"</span>,  <span class="st">"Placebo"</span>,     <span class="st">"PCHG"</span>,    <span class="st">"continuous"</span>,  <span class="st">"sd"</span>,       <span class="fl">5</span>,</span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<p><strong>Stats as rows</strong> — <code>column = c(".variable", "&lt;arm&gt;")</code>. Each variable becomes a band of arm columns; the statistics stack as rows and cells are combined strings. The emitted columns are named <code>"&lt;variable&gt;..&lt;arm&gt;"</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
+<span>  <span class="va">valchg_ard</span>,</span>
+<span>  column <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">".variable"</span>, <span class="st">"TRTA"</span><span class="op">)</span>,</span>
+<span>  row_group <span class="op">=</span> <span class="st">"AVISIT"</span>,</span>
+<span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    AVAL <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>N <span class="op">=</span> <span class="st">"{N}"</span>, <span class="st">"Mean (SD)"</span> <span class="op">=</span> <span class="st">"{mean} ({sd})"</span>, Median <span class="op">=</span> <span class="st">"{median}"</span><span class="op">)</span>,</span>
+<span>    PCHG <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>N <span class="op">=</span> <span class="st">"{N}"</span>, <span class="st">"Mean (SD)"</span> <span class="op">=</span> <span class="st">"{mean} ({sd})"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  decimals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>AVAL <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">1</span>, sd <span class="op">=</span> <span class="fl">2</span>, median <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, PCHG <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">1</span>, sd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;   AVISIT stat_label     AVAL..Drug AVAL..Placebo   PCHG..Drug PCHG..Placebo</span></span>
+<span><span class="co">#&gt; 1  DAY 1          N             20            20           20            20</span></span>
+<span><span class="co">#&gt; 2  DAY 1  Mean (SD) 324.0 (106.00) 318.0 (98.00) -16.0 (5.00)  -14.0 (5.00)</span></span>
+<span><span class="co">#&gt; 3  DAY 1     Median          315.0         310.0         &lt;NA&gt;          &lt;NA&gt;</span></span></code></pre></div>
+</div>
+<p><strong>Stats as columns</strong> — <code>column = c(".variable", ".stat")</code>. Each statistic entry becomes its own column (the landscape shell) and the arm drops to a leading row stub. The emitted columns are named <code>"&lt;variable&gt;..&lt;stat-entry&gt;"</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
+<span>  <span class="va">valchg_ard</span>,</span>
+<span>  column <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">".variable"</span>, <span class="st">".stat"</span><span class="op">)</span>,</span>
+<span>  row_group <span class="op">=</span> <span class="st">"AVISIT"</span>,</span>
+<span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    AVAL <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>N <span class="op">=</span> <span class="st">"{N}"</span>, Mean <span class="op">=</span> <span class="st">"{mean}"</span>, SD <span class="op">=</span> <span class="st">"{sd}"</span><span class="op">)</span>,</span>
+<span>    PCHG <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>N <span class="op">=</span> <span class="st">"{N}"</span>, Mean <span class="op">=</span> <span class="st">"{mean}"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  decimals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">1</span>, sd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;   AVISIT    TRTA AVAL..N AVAL..Mean AVAL..SD PCHG..N PCHG..Mean</span></span>
+<span><span class="co">#&gt; 1  DAY 1    Drug      20      324.0   106.00      20      -16.0</span></span>
+<span><span class="co">#&gt; 2  DAY 1 Placebo      20      318.0    98.00      20      -14.0</span></span></code></pre></div>
+</div>
+<p>You reference the emitted <code>"&lt;variable&gt;..&lt;arm&gt;"</code> / <code>"&lt;variable&gt;..&lt;stat&gt;"</code> names verbatim in a manual <code><a href="../reference/headers.html">headers()</a></code> call to draw the band spanners — <code><a href="../reference/pivot_across.html">pivot_across()</a></code> never builds spanners itself.</p>
+</section><section class="level2"><h2 id="auxiliary-comparison-columns">Auxiliary comparison columns<a class="anchor" aria-label="anchor" href="#auxiliary-comparison-columns"></a>
+</h2>
+<p>A between-arm comparison (difference, hazard ratio, p-value) is <strong>not</strong> a pivot of the main ARD’s rows — it is a separate ARD (e.g. from <code>cardx</code>). Bind it with <code>aux =</code>, aligned 1:1 on the <code>row_group</code> key; the entry name becomes the column.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">resp_main</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span><span class="va">group1</span>,  <span class="op">~</span><span class="va">group1_level</span>, <span class="op">~</span><span class="va">group2</span>, <span class="op">~</span><span class="va">group2_level</span>, <span class="op">~</span><span class="va">variable</span>, <span class="op">~</span><span class="va">context</span>,     <span class="op">~</span><span class="va">stat_name</span>, <span class="op">~</span><span class="va">stat</span>,</span>
+<span>  <span class="st">"PARAM"</span>,  <span class="st">"ORR"</span>,         <span class="st">"TRTA"</span>,  <span class="st">"Exp"</span>,         <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>, <span class="st">"mean"</span>,     <span class="fl">2.2</span>,</span>
+<span>  <span class="st">"PARAM"</span>,  <span class="st">"ORR"</span>,         <span class="st">"TRTA"</span>,  <span class="st">"Ctl"</span>,         <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>, <span class="st">"mean"</span>,     <span class="fl">1.9</span>,</span>
+<span>  <span class="st">"PARAM"</span>,  <span class="st">"DCR"</span>,         <span class="st">"TRTA"</span>,  <span class="st">"Exp"</span>,         <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>, <span class="st">"mean"</span>,     <span class="fl">2.4</span>,</span>
+<span>  <span class="st">"PARAM"</span>,  <span class="st">"DCR"</span>,         <span class="st">"TRTA"</span>,  <span class="st">"Ctl"</span>,         <span class="st">"AVAL"</span>,    <span class="st">"continuous"</span>, <span class="st">"mean"</span>,     <span class="fl">2.0</span>,</span>
+<span><span class="op">)</span></span>
+<span><span class="va">diff_ard</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span><span class="va">group1</span>, <span class="op">~</span><span class="va">group1_level</span>, <span class="op">~</span><span class="va">variable</span>, <span class="op">~</span><span class="va">context</span>,     <span class="op">~</span><span class="va">stat_name</span>, <span class="op">~</span><span class="va">stat</span>,</span>
+<span>  <span class="st">"PARAM"</span>, <span class="st">"ORR"</span>,         <span class="st">"d"</span>,       <span class="st">"continuous"</span>, <span class="st">"mean"</span>,     <span class="fl">0.12</span>,</span>
+<span>  <span class="st">"PARAM"</span>, <span class="st">"DCR"</span>,         <span class="st">"d"</span>,       <span class="st">"continuous"</span>, <span class="st">"mean"</span>,     <span class="fl">0.20</span>,</span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/pivot_across.html">pivot_across</a></span><span class="op">(</span></span>
+<span>  <span class="va">resp_main</span>,</span>
+<span>  column <span class="op">=</span> <span class="st">"TRTA"</span>,</span>
+<span>  row_group <span class="op">=</span> <span class="st">"PARAM"</span>,</span>
+<span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>continuous <span class="op">=</span> <span class="st">"{mean}"</span><span class="op">)</span>,</span>
+<span>  aux <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Difference"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>ard <span class="op">=</span> <span class="va">diff_ard</span>, statistic <span class="op">=</span> <span class="st">"{mean}"</span>, decimals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;   PARAM variable stat_label Exp Ctl Difference</span></span>
+<span><span class="co">#&gt; 1   ORR     AVAL       AVAL 2.2 1.9       0.12</span></span>
+<span><span class="co">#&gt; 2   DCR     AVAL       AVAL 2.4 2.0       0.20</span></span></code></pre></div>
+</div>
+<p>One <code>aux</code> entry is one column; add more entries (estimate then p-value) for several comparison columns. The auxiliary ARD must reduce to one row per <code>row_group</code> key — a many-to-many alignment aborts rather than fabricate rows.</p>
 </section><section class="level2"><h2 id="key-statistic-by-the-context">Key <code>statistic</code> by the context<a class="anchor" aria-label="anchor" href="#key-statistic-by-the-context"></a>
 </h2>
 <p>The one thing to get right: key <code>statistic</code> by the ARD’s <code>context</code>. Inspect <code>unique(ard$context)</code> and key the list to match (or pass a single string / <code>default =</code>). If an explicitly-supplied <code>statistic</code> matches <strong>no</strong> context, <code><a href="../reference/pivot_across.html">pivot_across()</a></code> warns rather than silently falling back to <code>{n}</code>.</p>

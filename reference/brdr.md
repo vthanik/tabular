@@ -35,9 +35,9 @@ is_brdr(x)
 
 - color:
 
-  *Stroke colour.*
-  `<character(1)>: default `"currentColor"`*. Hex (`"#RRGGBB"`), CSS colour name, or `"currentColor"\`
-  to inherit the surrounding text colour.
+  *Stroke colour.* `<character(1)>: default `"ink"“. The `"ink"` token
+  (resolves to \`#212529\`), a hex (\`"#RRGGBB"\`), a CSS colour name,
+  or \`"currentColor"\` to inherit the surrounding text colour.
 
 - x:
 
@@ -140,7 +140,7 @@ tabular(
     )
   )
 
-#tabular-aad4691a1e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-aad4691a1e { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-aad4691a1e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-aad4691a1e p { line-height: inherit; }
 #tabular-aad4691a1e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -170,6 +170,9 @@ tabular(
 #tabular-aad4691a1e .tabular-table thead th.text-left { text-align: left; }
 #tabular-aad4691a1e .tabular-table thead th.text-center { text-align: center; }
 #tabular-aad4691a1e .tabular-table thead th.text-right { text-align: right; }
+#tabular-aad4691a1e .tabular-table td.text-left { text-align: left; }
+#tabular-aad4691a1e .tabular-table td.text-center { text-align: center; }
+#tabular-aad4691a1e .tabular-table td.text-right { text-align: right; }
 #tabular-aad4691a1e .valign-top { vertical-align: top; }
 #tabular-aad4691a1e .valign-middle { vertical-align: middle; }
 #tabular-aad4691a1e .valign-bottom { vertical-align: bottom; }
@@ -177,7 +180,8 @@ tabular(
 #tabular-aad4691a1e .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-aad4691a1e .tabular-page-break-row { display: none; }
 #tabular-aad4691a1e { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-aad4691a1e .tabular-page-header, #tabular-aad4691a1e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-aad4691a1e .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-aad4691a1e .tabular-page-header, #tabular-aad4691a1e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
 #tabular-aad4691a1e .tabular-page-header { margin-bottom: 1rem; }
 #tabular-aad4691a1e .tabular-page-footer { margin-top: 1rem; }
 #tabular-aad4691a1e .tabular-page-header-left, #tabular-aad4691a1e .tabular-page-footer-left { flex: 1; text-align: left; }

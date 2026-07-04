@@ -4,6 +4,19 @@
 
 ### New features
 
+- The documentation site gained an AI / Agents section linking a tabular
+  skill (for LLM coding agents), the auto-generated `llms.txt`, and a
+  concatenated `llms-full.txt`, mirroring the LLM-friendly documentation
+  pattern.
+
+- `col_spec(group_display = "header_row")` now collapses a single-member
+  group to one flush-left row (the group value becomes the row label,
+  still carrying any
+  [`cells_group_headers()`](https://vthanik.github.io/tabular/reference/cells.md)
+  styling) instead of emitting a redundant header plus a lone indented
+  child, and no longer emits an empty header for a blank or `NA` group
+  value. Multi-member groups are unchanged.
+
 - [`figure()`](https://vthanik.github.io/tabular/reference/figure.md)
   renders a figure (the “F” in TFL) to every backend (RTF, LaTeX, PDF,
   HTML, DOCX, and Markdown), wrapping a ggplot, a recorded base-R plot,
@@ -32,6 +45,36 @@
   failing page. No new package dependency: plots rasterise through base
   `grDevices` and ggplot2 (Suggests) only when a ggplot is passed.
 
+- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
+  gained an `aux` argument to bind auxiliary comparison columns
+  (difference, hazard ratio, p-value) from a second ARD, aligned 1:1 on
+  the `row_group` key and appended as trailing columns.
+
+- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)’s
+  `column` argument now accepts the reserved tokens `.variable` and
+  `.stat` to make an analysis variable a column band:
+  `c(".variable", "<arm>")` lays variables side by side with statistics
+  as rows, and `c(".variable", ".stat")` spreads each statistic into its
+  own column with the arm as a row stub. Per-variable `statistic` /
+  `decimals` resolve inside each band.
+
+- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)’s
+  `decimals` may now be a list keyed by `row_group` values, for
+  per-group precision in one call.
+
+- `preset(font_family = ...)` generic chains (`"mono"` / `"sans"` /
+  `"serif"`) now lead with the ubiquitous Microsoft Office face (Courier
+  New / Arial / Times New Roman) and keep the metric-compatible
+  Liberation face as the last fallback, so Word shows a font the reader
+  actually has installed on Windows / macOS instead of a phantom
+  “Liberation Mono” in its font menu. The faces are metric-compatible,
+  so layout, line breaks, and decimal alignment are unchanged. A bare
+  `font_family = "Courier New"` now also leads with Courier New
+  (previously resolved led by Liberation Mono). The package bundles no
+  fonts; an arbitrary named face (`"IBM Plex Mono"`,
+  `"Source Code Pro"`, etc.) is emitted verbatim for the consuming
+  application to resolve.
+
 ### Breaking changes
 
 - [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
@@ -44,6 +87,11 @@
 - [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
   removed the no-op `panels = "auto"`; `panels` is now a positive
   integer.
+- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
+  no longer pre-indents `stat_label` with two leading spaces;
+  indentation is applied downstream by the renderer via
+  `col_spec(usage = "group")` / `group_display`, so a `header_row` stub
+  no longer double-indents.
 
 ### Minor improvements and bug fixes
 
@@ -60,19 +108,144 @@
   call, and merge every column attribute field-completely (previously a
   default value could not be merged back and some fields could be
   dropped).
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) now
+  centres decimal-aligned columns on every backend instead of
+  right-aligning the uniformly NBSP-padded block, so the values sit
+  under the centred column header (cross-backend parity).
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  DOCX now declares an in-class `<w:altName>` fallback for each font, so
+  a reader missing the primary face substitutes a metric-compatible face
+  in the same class (mono stays mono) instead of panose-guessing to a
+  serif. This brings DOCX in line with the RTF (`\*\falt`) and PDF /
+  LaTeX (`\IfFontExistsTF` cascade) backends, which already declared the
+  same in-class fallback chain.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  HTML now applies per-cell body alignment through a specificity-bumped
+  `.tabular-table td.text-*` rule, so decimal, centred and right-aligned
+  columns actually render aligned; previously the base
+  `.tabular-table td { text-align: left }` rule outranked the plain
+  alignment class and every body cell silently fell back to left.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  HTML now aligns the running page header and footer to the table width
+  via a centred fit-content container, instead of spanning the full
+  document width.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  HTML and Markdown no longer repeats a
+  [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
+  banner mid-table when a group is taller than one estimated page. The
+  continuous backends draw one banner per subgroup value; the print-only
+  page-break markers within a group are unchanged, and the paged
+  backends (RTF, LaTeX, DOCX) still repeat the banner on every
+  continuation page by design.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to PDF
+  / LaTeX no longer renders the table wider than the printable area:
+  tabularray adds per-column separation outside each column’s `wd`, so
+  the column widths are now reduced by that separation and the rendered
+  table total matches the resolved width (and the RTF / DOCX cell
+  widths) instead of bleeding into the right margin.
+  ([\#27](https://github.com/vthanik/tabular/issues/27))
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to PDF
+  / LaTeX now renders column headers in bold, matching the DOCX, RTF and
+  HTML backends.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to PDF
+  / LaTeX now sets the body font size after `\begin{document}` (where it
+  survives) and re-asserts it inside the running header / footer, so an
+  8pt table no longer renders its body or page chrome at the 10pt
+  document-class default.
+  ([\#27](https://github.com/vthanik/tabular/issues/27))
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to PDF
+  / LaTeX now tightens the gap between a running page header and the
+  title (and body to a running footer) to one line via `\headsep` and
+  `\footskip`, instead of the wide document-class default.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to PDF
+  / LaTeX no longer overflows a figure onto a second page: the image is
+  placed with flexible `\vfill` glue rather than a fixed-height box that
+  reconstructed to just over the page height, so a multi-page figure
+  (for example one Kaplan-Meier plot per treatment arm) now fits one
+  page per plot.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to RTF
+  and DOCX no longer emits a phantom blank page after each figure plot.
+  The figure box reserves a line for the closing paragraph every paged
+  backend appends after the exact-height image, RTF exits table context
+  with `\pard\par` before the next section break, and DOCX starts each
+  continuation page with a structural `<w:pageBreakBefore/>` instead of
+  a standalone page-break paragraph that stranded a blank page. A
+  multi-page figure driven by per-page `meta` also sizes each page’s
+  image box from that page’s interpolated footnotes, so a
+  longer-footnote page no longer overflows.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) aborts
+  with a clear `tabular_error_layout` message when a figure’s titles and
+  footnotes alone exceed the printable height, instead of failing with
+  an opaque graphics-device error.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to RTF
+  now leads the body font slot with the first face of an explicit
+  `font_family` stack instead of the Linux-first default chain, and
+  classes a mono stack `\fmodern` (fixed pitch) the same way DOCX
+  classes it `modern`. A
+  `font_family = c("Courier New", "Liberation Mono", "Courier")` request
+  now renders as Courier New mono in Word instead of substituting a
+  serif, because the named primary face leads the font table rather than
+  being demoted to a `\*\falt` alternate.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to RTF
+  now emits a section break only BETWEEN panels (n-1 breaks for n
+  panels) rather than after every panel, so a single-panel table no
+  longer ends with a trailing section break that Word renders as a
+  phantom blank page.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to RTF
+  now reserves one line per running-header row in `\headery`, so a
+  multi-row page header (for example a protocol row plus an analysis-set
+  row) no longer bleeds back into the body and tips the last table rows,
+  or the table’s trailing paragraph, onto a phantom second page.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) now
+  renders a zero-row empty-state page as a normal table whose body is a
+  single full-span, horizontally centred “no data” message row, where
+  the first data row would sit: the table chrome (titles, column header)
+  leads, the message follows in the body, and the footnote trails
+  immediately, all flowing compactly at the top of the page with blank
+  space below. The message is centred by each backend’s native cell
+  alignment on every backend (RTF, LaTeX, PDF, HTML, DOCX, Markdown); it
+  is no longer vertically centred or relocated into the page margins. A
+  natural-height message row plus trailing footnote cannot overflow, so
+  the recurring phantom-page bug stays fixed. A
+  `subgroup(keep_empty = TRUE)` empty crossing renders the same way, as
+  one message row in its own panel.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) now
+  closes a zero-row empty-state table’s data region with the body bottom
+  rule on every backend, so the “no data” page carries the same closing
+  rule a populated table does. The rule follows the `rules` preset (a
+  custom `bottomrule` width / style / colour is honoured, and
+  `bottomrule = "none"` drops it) instead of being absent (RTF / DOCX)
+  or a fixed default.
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to PDF
+  / LaTeX now wraps a table footnote to the table width rather than
+  overrunning it: the footnote minipage no longer double-counts the
+  column separation that the column widths already fold in, so on a
+  narrow table the footnote text stays within the table-width footnote
+  rule instead of spilling past it (and past the printable width).
+- [`figure()`](https://vthanik.github.io/tabular/reference/figure.md)
+  and paged-table pagination now size the body box from the number of
+  wrapped chrome lines a long title or footnote actually occupies at the
+  printable width, not the element count, so a wrapped footnote no
+  longer pushes content onto a second page on DOCX (and any paged
+  backend). Wrapping is computed by greedy word packing against the font
+  metrics. ([\#26](https://github.com/vthanik/tabular/issues/26))
 - [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
   now collapses a zero-row table to a single empty-state page;
   horizontal `panels` no longer multiply an empty table into several
   identical blank pages.
+- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
+  now resolves a keyed `statistic` (e.g.
+  `list(hierarchical = "{n} ({p}%)")`) against each row’s real ARD
+  context on the hierarchical path, so a list keyed by `hierarchical` no
+  longer falls through to the bare `{n}` default and silently drops the
+  percent.
+- [`pivot_across()`](https://vthanik.github.io/tabular/reference/pivot_across.md)
+  now warns when the `overall` label collides with an existing arm name,
+  instead of silently merging the pooled rows into that arm’s column.
 - [`preset()`](https://vthanik.github.io/tabular/reference/preset.md)’s
   `decimal_metrics` knob gained `"afm"` (now the default), making
   decimal alignment width-exact in proportional fonts via the bundled
   font metrics; Markdown output keeps character padding.
-- [`preset()`](https://vthanik.github.io/tabular/reference/preset.md)
-  gained `empty_halign` and `empty_valign` knobs that place the zero-row
-  placeholder message within the body content-box, defaulting to centred
-  horizontally and middle vertically (exact on the paged backends,
-  approximate on HTML, a no-op on Markdown).
 - [`preset()`](https://vthanik.github.io/tabular/reference/preset.md)
   gained an `empty_text` knob, a house-style default for the zero-row
   message that a per-table `tabular(empty_text = ...)` still overrides.
@@ -81,6 +254,9 @@
   [`figure()`](https://vthanik.github.io/tabular/reference/figure.md)
   title and footnote; the Markdown table title and footnote gaps now
   follow the same knob.
+- `preset(width_mode = "window")` now sizes auto columns proportionally
+  to their content width to fill the page, instead of giving every
+  column an equal share.
 - [`subgroup()`](https://vthanik.github.io/tabular/reference/subgroup.md)
   gained a `keep_empty` argument; with `keep_empty = TRUE` a zero-N
   crossing is retained and rendered as an empty-state page carrying its

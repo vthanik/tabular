@@ -46,20 +46,23 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
   - **`font_size`** — body point size. `<numeric(1)>`.
 
   - **`font_family`** — body font family. `<character | character(1)>`.
-    Default `"mono"`. Three accepted shapes:
+    Default `"mono"`. Four accepted shapes:
 
     1.  **Generic family** — `"mono"` (default), `"serif"`, `"sans"`
         (CSS aliases `"monospace"` / `"sans-serif"` also recognised).
         The resolver expands to a per-backend chain that leads with the
-        Linux-installed **Liberation** face (Posit Workbench / Domino /
-        Citrix / RStudio Server), then the Microsoft Office face
-        (Courier New / Times New Roman / Arial) for desktop Win / Mac
-        consumers, then TeX Gyre for LaTeX compile, then the CSS generic
-        for HTML. Liberation Mono / Serif / Sans are metric-compatible
-        with Courier New / TNR / Arial, so layout, line breaks, and
-        decimal alignment hold across every render context. The mono
-        default matches the dominant submission-TFL convention where
-        deterministic glyph widths drive `n (%)` cell alignment.
+        Microsoft Office face (Courier New / Times New Roman / Arial) —
+        installed on every Windows and macOS machine, where documents
+        are reviewed — then the PostScript legacy name, then the
+        metric-compatible **Liberation** face LAST as the Linux-server
+        fallback (Posit Workbench / Domino / Citrix / RStudio Server),
+        then TeX Gyre for LaTeX compile / the CSS generic for HTML.
+        Liberation Mono / Serif / Sans are metric-compatible with
+        Courier New / TNR / Arial, so layout, line breaks, and decimal
+        alignment hold across every render context regardless of which
+        end of the chain resolves. The mono default matches the dominant
+        submission-TFL convention where deterministic glyph widths drive
+        `n (%)` cell alignment.
 
     2.  **Named alias** — `"Times"`, `"Times New Roman"`, `"Arial"`,
         `"Helvetica"`, `"Courier"`, `"Courier New"`. These
@@ -69,14 +72,16 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
         want Times-like rendering") on every OS instead of hard-erroring
         on a Linux server with no TNR installed.
 
-    3.  **Named font** — `"Inter"`, `"JetBrains Mono"`,
-        `"Source Serif Pro"`, sponsor-specific face, etc. Emitted
-        verbatim with no fallback fabricated. The consuming app
-        (browser, xelatex, Word, LibreOffice) resolves the name against
-        its own font matcher. RTF and DOCX fall back to the consuming
-        app's substitution table when the name is missing; xelatex
-        hard-errors at compile time; HTML browsers fall through to the
-        browser's default font (not necessarily class-matched).
+    3.  **Arbitrary named font** — `"Inter"`, `"JetBrains Mono"`,
+        `"IBM Plex Mono"`, `"Source Code Pro"`, sponsor-specific face,
+        etc. Emitted verbatim with no fallback fabricated. The consuming
+        app (browser, xelatex, Word, LibreOffice) resolves the name
+        against its own font matcher: RTF and DOCX substitute when the
+        name is missing; **xelatex hard-errors at compile time** if the
+        face is not installed; HTML browsers fall through to the
+        browser's default font (not necessarily class-matched). For a
+        portable result, prefer a generic family (shape 1) or an
+        explicit stack (shape 4).
 
     4.  **Explicit stack** — `c("Inter", "Helvetica", "sans")`. User
         owns the chain. Returned verbatim — alias lookup is
@@ -84,38 +89,11 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
         with no chain expansion (escape hatch for users who genuinely
         want exact-name semantics).
 
-    **Note:** Adobe Source Pro is no longer the default lead. Source Pro
-    is not pre-installed on production Linux servers, so leading with it
-    walks through 2-3 missing names before resolving. Users who
-    installed Source Pro can opt in via the explicit-stack form
-    (`c("Source Serif Pro", "serif")`).
-
-    **What you see in Word's font dropdown vs. what renders.** When you
-    open a tabular-generated `.rtf` in Word on macOS or Windows, the
-    font dropdown displays the file's *requested* face —
-    `"Liberation Mono"` by default (the Linux-server-installed face).
-    The rendered text on screen is whatever Word's `\\*\\falt`
-    substitution resolved to — typically Courier New on macOS / Windows.
-    This is correct: Liberation Mono and Courier New are
-    metric-compatible by design, so the rendered layout (line breaks,
-    decimal alignment, page breaks) is identical regardless of which
-    face Word actually used to render. The same `\\*\\falt` substitution
-    model applies to serif (Liberation Serif -\> Times New Roman) and
-    sans (Liberation Sans -\> Arial).
-
-    **How to force Office names as the primary.** If reviewers will be
-    confused by seeing `"Liberation Mono"` in the Word font dropdown
-    (cosmetic concern; doesn't affect rendering), pass an explicit
-    length\>1 stack with the Office name first. The resolver returns the
-    vector verbatim — no alias lookup, no chain expansion — so the RTF
-    file then names the Office face as primary and your chosen alternate
-    as `\\*\\falt`:
-
-        preset(font_family = c("Courier New", "Courier", "Liberation Mono"))
-
-    This is the canonical escape hatch for authors who know their
-    consumer audience is Mac / Windows Word users and want the dropdown
-    to show the Office face directly.
+    **Note:** tabular bundles no fonts. Because the default chain leads
+    with the Office face, Word's font dropdown shows a face the reader
+    actually has installed on Windows / macOS (e.g. Courier New for
+    `"mono"`), not a phantom name; the metric-compatible Liberation face
+    only appears as the fallback for a headless Linux box.
 
   - **`orientation`** — page orientation. `<character(1)>`. One of
     `"landscape"` (default), `"portrait"`.
@@ -253,9 +231,9 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
       `max(body, header)`. The table doesn't fill the page. Word's
       "Auto-fit Contents".
 
-    - **`"window"`** — Auto-sized columns expand to share the residual
-      page width equally. Pinned and percent columns keep their pins.
-      Word's "Auto-fit Window".
+    - **`"window"`** — Auto-sized columns are scaled proportionally to
+      their natural width to fill the residual page width. Pinned and
+      percent columns keep their pins. Word's "Auto-fit Window".
 
     - **`"fixed"`** — Only explicit per-column widths drive the layout.
       Auto-sized columns collapse to a minimum sliver. Word's "Fixed
@@ -284,36 +262,6 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
     [`html()`](https://vthanik.github.io/tabular/reference/html.md)
     inline formatting are honoured, exactly like a title line.
 
-  - **`empty_halign`** / **`empty_valign`** — placement of the
-    empty-state message within the body content-box when a spec resolves
-    to zero data rows. The message *wording* comes from `empty_text`
-    (above); these two knobs are the cosmetic *placement*, so they ride
-    the preset and cascade with the house style. `<character(1)>` each,
-    defaulting to centre x middle:
-
-    - **`empty_halign`** — `"left"`, `"center"` *(default)*, or
-      `"right"`. Horizontal anchor of the message line.
-
-    - **`empty_valign`** — `"top"`, `"middle"` *(default)*, or
-      `"bottom"`. Vertical anchor within the content-box — the region
-      between the column-header rule and the footnote rule.
-
-    **Interaction:** valign is exact on the paged backends (RTF / PDF /
-    DOCX), which size the host cell to the content-box height; HTML
-    approximates it with a min-height flex box, and Markdown, having no
-    page geometry, treats valign as a no-op. When a column structure is
-    present the column-header band still renders above the message; with
-    every column hidden, only the page chrome and the centred message
-    remain.
-
-    **Note:** this is the symmetric `halign` / `valign` placement pair,
-    shared with
-    [`style()`](https://vthanik.github.io/tabular/reference/style.md)
-    and the other `*_halign` / `*_valign` alignment keys. It is
-    deliberately distinct from `col_spec(align = ...)`, whose extra
-    `"decimal"` mode makes it a column-content knob rather than a pure
-    two-axis anchor.
-
   - **`whitespace`** — how significant ASCII spaces in labels and cells
     render. `<character(1)>`. One of:
 
@@ -329,6 +277,19 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
 
     **Note:** never affects `col_spec(align = "decimal")` padding, which
     uses U+00A0 and is preserved unconditionally.
+
+  - **`chrome_onscreen`** — whether the on-screen running header /
+    footer bands render in HTML output. `<character(1)>`. One of:
+
+    - **`"auto"`** *(default)* — the `pagehead` / `pagefoot` content
+      renders as on-screen `<header>` / `<footer>` bands.
+
+    - **`"off"`** — suppress the on-screen bands; the print-time `@page`
+      chrome still renders, so print-to-PDF output is unchanged. Useful
+      when the HTML is consumed only via print.
+
+    HTML-only; the paged backends (RTF / PDF / DOCX) always emit
+    per-page chrome regardless of this knob.
 
   - **`footnote_markers`** — the glyph scheme for
     [`footnote()`](https://vthanik.github.io/tabular/reference/footnote.md)
@@ -540,7 +501,7 @@ tabular(
   ) |>
   paginate()
 
-#tabular-6baf110ab1 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
+#tabular-6baf110ab1 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
 #tabular-6baf110ab1 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-6baf110ab1 p { line-height: inherit; }
 #tabular-6baf110ab1 .tabular-title { font-size: 8pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -574,6 +535,9 @@ tabular(
 #tabular-6baf110ab1 .tabular-table thead th.text-left { text-align: left; }
 #tabular-6baf110ab1 .tabular-table thead th.text-center { text-align: center; }
 #tabular-6baf110ab1 .tabular-table thead th.text-right { text-align: right; }
+#tabular-6baf110ab1 .tabular-table td.text-left { text-align: left; }
+#tabular-6baf110ab1 .tabular-table td.text-center { text-align: center; }
+#tabular-6baf110ab1 .tabular-table td.text-right { text-align: right; }
 #tabular-6baf110ab1 .valign-top { vertical-align: top; }
 #tabular-6baf110ab1 .valign-middle { vertical-align: middle; }
 #tabular-6baf110ab1 .valign-bottom { vertical-align: bottom; }
@@ -581,7 +545,8 @@ tabular(
 #tabular-6baf110ab1 .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-6baf110ab1 .tabular-page-break-row { display: none; }
 #tabular-6baf110ab1 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-6baf110ab1 .tabular-page-header, #tabular-6baf110ab1 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
+#tabular-6baf110ab1 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6baf110ab1 .tabular-page-header, #tabular-6baf110ab1 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 7pt; color: var(--tabular-chrome-color); }
 #tabular-6baf110ab1 .tabular-page-header { margin-bottom: 1rem; }
 #tabular-6baf110ab1 .tabular-page-footer { margin-top: 1rem; }
 #tabular-6baf110ab1 .tabular-page-header-left, #tabular-6baf110ab1 .tabular-page-footer-left { flex: 1; text-align: left; }

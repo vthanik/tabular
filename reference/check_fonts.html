@@ -90,7 +90,14 @@ on this machine, so you can predict drift.</p>
 the consuming application.</p></li>
 <li><p><code>x</code> — font is not installed on this machine; the consuming
 app on a different machine may or may not have it.</p></li>
-</ul><p>Requires the <code>systemfonts</code> package (in <code>Suggests</code>); call
+</ul><p>Every backend only <strong>name-references</strong> its fonts; the consuming
+application (browser, LaTeX engine, Word, Adobe Reader) resolves
+those names against its own installed fonts. An <code>x</code> therefore
+means the reader needs that face installed for the render to match
+exactly. The default chains lead with the ubiquitous Office cores
+(Courier New / Arial / Times New Roman), so a <code>v</code> on the default
+is the common case on Windows and macOS.</p>
+<p>Requires the <code>systemfonts</code> package (in <code>Suggests</code>); call
 <code>install.packages("systemfonts")</code> first if it isn't installed.</p>
     </div>
     <div class="section level2">
@@ -117,20 +124,20 @@ app on a different machine may or may not have it.</p></li>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── Font resolution for `font_family = mono` </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> html</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier New (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> o monospace (generic, always available)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> latex</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier New (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x TeX Gyre Cursor (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Latin Modern Mono (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> rtf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier New (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 2: Diagnose a Courier New request ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
@@ -149,20 +156,20 @@ app on a different machine may or may not have it.</p></li>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── Font resolution for `font_family = Courier New` </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> html</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier New (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> o monospace (generic, always available)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> latex</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier New (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x TeX Gyre Cursor (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Latin Modern Mono (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> rtf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier New (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Courier (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Mono</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 3: Explicit cross-platform stack ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
@@ -212,37 +219,37 @@ app on a different machine may or may not have it.</p></li>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── Font resolution for `font_family = serif` </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> html</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Serif</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Times New Roman (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Times (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Serif</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> o serif (generic, always available)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> latex</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Serif</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Times New Roman (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Times (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Serif</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x TeX Gyre Termes (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Latin Modern Roman (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> rtf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Serif</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Times New Roman (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Times (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Serif</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── Font resolution for `font_family = sans` </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> html</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Sans</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Arial (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Helvetica (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Sans</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> o sans-serif (generic, always available)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> latex</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Sans</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Arial (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Helvetica (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Sans</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x TeX Gyre Heros (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Latin Modern Sans (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">backend:</span> rtf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Sans</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Arial (not on this machine)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> x Helvetica (not on this machine)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v Liberation Sans</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

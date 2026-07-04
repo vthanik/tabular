@@ -798,8 +798,8 @@ the place of the body. This is the correct output for a population that
 produced no records (a cohort with no subjects, a serious-AE table with
 no events), rather than an error or a blank page. The per-table message
 is `tabular(empty_text = ...)`; set a house default for every table with
-`preset(empty_text = ...)`, and place the message in the body box with
-`preset(empty_halign = ..., empty_valign = ...)`.
+`preset(empty_text = ...)`. The message renders as a single horizontally
+centred row in the table body, where the first data row would sit.
 
 ``` r
 

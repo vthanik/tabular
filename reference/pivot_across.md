@@ -17,7 +17,8 @@ pivot_across(
   label = NULL,
   overall = "Total",
   decimals = NULL,
-  fmt = NULL
+  fmt = NULL,
+  aux = NULL
 )
 ```
 
@@ -119,10 +120,31 @@ pivot_across(
 
 - column:
 
-  *Grouping column whose unique values become arms.*
-  `<character(1) | NULL>: default NULL`. `NULL` auto-detects from the
-  ARD's `group1` value or — for renamed input — picks the single
-  non-standard column. Pass a string when multiple group columns exist.
+  *What runs across the top of the table.*
+  `<character | NULL>: default NULL`. A single grouping variable whose
+  unique values become arm columns (`NULL` auto-detects from `group1`,
+  or picks the single non-standard column of renamed input). Two
+  reserved tokens turn the analysis variable into a **column band**:
+
+  - `c(".variable", "<arm>")` — each variable becomes a band of arm
+    columns; the statistic entries stack as rows. The cells are combined
+    strings (e.g. `"323.9 (106)"`). Emitted columns are named
+    `"<variable>..<arm>"`.
+
+  - `c(".variable", ".stat")` — each variable becomes a band whose
+    statistic entries become their own columns (the landscape "value and
+    change" shell); the arm drops to a leading row stub. Emitted columns
+    are named `"<variable>..<stat-entry>"`.
+
+  Anything present in the ARD but not named in `column` (and not in
+  `row_group`) stacks as rows. Per-variable `statistic` / `decimals`
+  resolve inside each band, so bands may carry different (even
+  different-length) stat lists; ragged bands pad with `NA`.
+
+  **Tip:** you reference the emitted column names verbatim in a manual
+  [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
+  call to build the band spanners; pivot_across does not build spanners
+  itself.
 
 - row_group:
 
@@ -167,18 +189,46 @@ pivot_across(
   `<character(1) | NULL>: default "Total"`. Pass `NULL` to drop overall
   rows entirely (per-arm only output).
 
+  **Requirement:** this relabels pooled rows the ARD already carries —
+  the `NA`-arm rows cards emits from
+  `cards::ard_stack_hierarchical(overall = TRUE)` or an
+  `ard_*(.overall = TRUE)`. It does not synthesize a total: cards
+  re-runs the calculation with the `by` variable removed, so the pooled
+  `n` / `N` / `p` stay internally consistent. With no such rows in the
+  input there is no overall column to label.
+
+  **Note:** if a study arm is literally named the same as `overall`
+  (default `"Total"`), that arm and the pooled rows collide under one
+  label and the pivot warns. Pass a distinct `overall =` or rename the
+  arm upstream.
+
 - decimals:
 
   *Per-stat decimal precision.*
-  `<named integer | named list>: default `c()“. Accepts two forms:
+  `<named integer | named list>: default `c()“. Accepts three forms:
 
   - **named integer vector** — global per-stat overrides
     (`c(mean = 1, sd = 2, p = 0)`).
 
-  - **named list** — per-variable plus `.default`
+  - **named list keyed by variable** — per-variable plus `.default`
     (`list(AGE = c(mean = 2), .default = c(p = 1))`).
 
-  Built-in defaults apply when neither sets a stat.
+  - **named list keyed by `row_group` value** — per-group precision in
+    one call
+    (`list(SYSBP = c(mean = 0, sd = 1), WEIGHT = c(mean = 1), .default = c(mean = 1, sd = 2))`).
+    Each entry is a per-token spec (a named numeric vector, or a bare
+    scalar applied to every token).
+
+  Built-in defaults apply when none sets a stat.
+
+  **Interaction:** a list `decimals` is read as per-`row_group` only
+  when `row_group` is set and every key (apart from `.default`) is one
+  of its levels; otherwise it stays per-variable. Within the matched
+  group the token falls back group token, then the per-group `.default`
+  token, then the built-in default. A group present in the data but
+  absent from the list (and NA / ungrouped rows) uses `.default`. If
+  `row_group` is `NULL` but the keys match no variable, `pivot_across()`
+  errors and asks for a `row_group`.
 
 - fmt:
 
@@ -187,6 +237,30 @@ pivot_across(
   numeric value and returns a character string; overrides built-ins and
   `decimals` for that stat. Useful for p-value styling and other
   domain-specific formatting.
+
+- aux:
+
+  *Auxiliary comparison columns from a second ARD.*
+  `<named list | NULL>: default NULL`. Each entry is a between-arm
+  statistic (difference, hazard ratio, p-value, ...) computed in its own
+  ARD and bound on as a trailing column, aligned 1:1 on the `row_group`
+  key. The entry name is the column name; reference it in a manual
+  [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
+  call. Each entry is a list:
+
+  - `ard` — the auxiliary ARD (required), one row per `row_group`.
+
+  - `statistic` — its format string (e.g.
+    `"{estimate} ({conf.low}, {conf.high})"`); defaults to `"{n}"`.
+
+  - `decimals` / `fmt` — optional, as for the main pivot.
+
+  Entries append left to right. One entry is one column; for several
+  comparison columns (estimate then p-value) pass several entries.
+
+  **Requirement:** needs a `row_group`; the auxiliary rows align to the
+  main table on it, which must be unique 1:1 on both sides (a
+  many-to-many key would silently fabricate rows, so it aborts).
 
       # p-value formatter: render below-threshold values as "<0.001".
       fmt = list(
@@ -249,14 +323,6 @@ context at all, `pivot_across()` warns rather than silently emitting
 | `cards::ard_stack_hierarchical()` | `tabulate` + `hierarchical` |
 | `cardx::ard_categorical_ci()`     | `proportion_ci`             |
 | `cardx::ard_continuous_ci()`      | `continuous_ci`             |
-
-### Indentation of `stat_label`
-
-Categorical levels and the multi-row continuous stat labels come back
-already indented with two leading spaces, ready to render as a plain
-display column. Do **not** also set `col_spec(indent = ...)` on
-`stat_label` — that stacks the engine indent on top of the string indent
-(a double indent). Use one or the other.
 
 ### Zero-suppression (always-on default)
 
@@ -388,54 +454,58 @@ cdisc_saf_demo_ard |>
     )
   )
 
-#tabular-15bff0b949 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-15bff0b949 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-15bff0b949 p { line-height: inherit; }
-#tabular-15bff0b949 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-15bff0b949 .tabular-caption { margin: 0; padding: 0; }
-#tabular-15bff0b949 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-15bff0b949 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-15bff0b949 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-15bff0b949 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-15bff0b949 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-15bff0b949 .tabular-table th, #tabular-15bff0b949 .tabular-table td { padding: .18rem .6rem; }
-#tabular-15bff0b949 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-15bff0b949 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-15bff0b949 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-15bff0b949 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-15bff0b949 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-15bff0b949 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-15bff0b949 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-15bff0b949 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-15bff0b949 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-15bff0b949 .tabular-table tbody tr td { border-top: none; }
-#tabular-15bff0b949 .tabular-band { text-align: center; }
-#tabular-15bff0b949 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-15bff0b949 .tabular-subgroup-label { font-weight: 600; }
-#tabular-15bff0b949 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-15bff0b949 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-15bff0b949 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-15bff0b949 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-15bff0b949 .text-left { text-align: left; }
-#tabular-15bff0b949 .text-center { text-align: center; }
-#tabular-15bff0b949 .text-right { text-align: right; }
-#tabular-15bff0b949 .tabular-table thead th.text-left { text-align: left; }
-#tabular-15bff0b949 .tabular-table thead th.text-center { text-align: center; }
-#tabular-15bff0b949 .tabular-table thead th.text-right { text-align: right; }
-#tabular-15bff0b949 .valign-top { vertical-align: top; }
-#tabular-15bff0b949 .valign-middle { vertical-align: middle; }
-#tabular-15bff0b949 .valign-bottom { vertical-align: bottom; }
-#tabular-15bff0b949 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-15bff0b949 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-15bff0b949 .tabular-page-break-row { display: none; }
-#tabular-15bff0b949 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-15bff0b949 .tabular-page-header, #tabular-15bff0b949 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-15bff0b949 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-15bff0b949 .tabular-page-footer { margin-top: 1rem; }
-#tabular-15bff0b949 .tabular-page-header-left, #tabular-15bff0b949 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-15bff0b949 .tabular-page-header-center, #tabular-15bff0b949 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-15bff0b949 .tabular-page-header-right, #tabular-15bff0b949 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-15bff0b949 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-15bff0b949 .tabular-table tr { page-break-inside: avoid; } #tabular-15bff0b949 .tabular-page-header, #tabular-15bff0b949 .tabular-page-footer { display: none; } #tabular-15bff0b949 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-15bff0b949 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-15bff0b949 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-6881ea5420 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-6881ea5420 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6881ea5420 p { line-height: inherit; }
+#tabular-6881ea5420 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-6881ea5420 .tabular-caption { margin: 0; padding: 0; }
+#tabular-6881ea5420 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-6881ea5420 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-6881ea5420 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-6881ea5420 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-6881ea5420 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-6881ea5420 .tabular-table th, #tabular-6881ea5420 .tabular-table td { padding: .18rem .6rem; }
+#tabular-6881ea5420 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-6881ea5420 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-6881ea5420 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-6881ea5420 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-6881ea5420 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6881ea5420 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6881ea5420 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6881ea5420 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-6881ea5420 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-6881ea5420 .tabular-table tbody tr td { border-top: none; }
+#tabular-6881ea5420 .tabular-band { text-align: center; }
+#tabular-6881ea5420 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-6881ea5420 .tabular-subgroup-label { font-weight: 600; }
+#tabular-6881ea5420 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-6881ea5420 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-6881ea5420 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-6881ea5420 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-6881ea5420 .text-left { text-align: left; }
+#tabular-6881ea5420 .text-center { text-align: center; }
+#tabular-6881ea5420 .text-right { text-align: right; }
+#tabular-6881ea5420 .tabular-table thead th.text-left { text-align: left; }
+#tabular-6881ea5420 .tabular-table thead th.text-center { text-align: center; }
+#tabular-6881ea5420 .tabular-table thead th.text-right { text-align: right; }
+#tabular-6881ea5420 .tabular-table td.text-left { text-align: left; }
+#tabular-6881ea5420 .tabular-table td.text-center { text-align: center; }
+#tabular-6881ea5420 .tabular-table td.text-right { text-align: right; }
+#tabular-6881ea5420 .valign-top { vertical-align: top; }
+#tabular-6881ea5420 .valign-middle { vertical-align: middle; }
+#tabular-6881ea5420 .valign-bottom { vertical-align: bottom; }
+#tabular-6881ea5420 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-6881ea5420 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-6881ea5420 .tabular-page-break-row { display: none; }
+#tabular-6881ea5420 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-6881ea5420 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-6881ea5420 .tabular-page-header, #tabular-6881ea5420 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-6881ea5420 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-6881ea5420 .tabular-page-footer { margin-top: 1rem; }
+#tabular-6881ea5420 .tabular-page-header-left, #tabular-6881ea5420 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-6881ea5420 .tabular-page-header-center, #tabular-6881ea5420 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-6881ea5420 .tabular-page-header-right, #tabular-6881ea5420 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-6881ea5420 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-6881ea5420 .tabular-table tr { page-break-inside: avoid; } #tabular-6881ea5420 .tabular-page-header, #tabular-6881ea5420 .tabular-page-footer { display: none; } #tabular-6881ea5420 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-6881ea5420 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-6881ea5420 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.1.1

@@ -83,7 +83,10 @@ without disturbing the other rules.</p>
 
 
 <dt id="arg-color">color<a class="anchor" aria-label="anchor" href="#arg-color"></a></dt>
-<dd><p><em>Stroke colour.</em> <code>&lt;character(1)&gt;: default </code>"currentColor"<code>*. Hex (</code>"#RRGGBB"<code>), CSS colour name, or </code>"currentColor"` to inherit the surrounding text colour.</p></dd>
+<dd><p><em>Stroke colour.</em> <code>&lt;character(1)&gt;: default </code>"ink"“.
+The <code>"ink"</code> token (resolves to `#212529`), a hex (`"#RRGGBB"`), a
+CSS colour name, or `"currentColor"` to inherit the surrounding
+text colour.</p></dd>
 
 
 <dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
@@ -167,7 +170,7 @@ border scalars).</p></div>
 <span class="r-in"><span>    <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <style>
-#tabular-aad4691a1e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-aad4691a1e { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-aad4691a1e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-aad4691a1e p { line-height: inherit; }
 #tabular-aad4691a1e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -197,6 +200,9 @@ border scalars).</p></div>
 #tabular-aad4691a1e .tabular-table thead th.text-left { text-align: left; }
 #tabular-aad4691a1e .tabular-table thead th.text-center { text-align: center; }
 #tabular-aad4691a1e .tabular-table thead th.text-right { text-align: right; }
+#tabular-aad4691a1e .tabular-table td.text-left { text-align: left; }
+#tabular-aad4691a1e .tabular-table td.text-center { text-align: center; }
+#tabular-aad4691a1e .tabular-table td.text-right { text-align: right; }
 #tabular-aad4691a1e .valign-top { vertical-align: top; }
 #tabular-aad4691a1e .valign-middle { vertical-align: middle; }
 #tabular-aad4691a1e .valign-bottom { vertical-align: bottom; }
@@ -204,7 +210,8 @@ border scalars).</p></div>
 #tabular-aad4691a1e .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-aad4691a1e .tabular-page-break-row { display: none; }
 #tabular-aad4691a1e { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-aad4691a1e .tabular-page-header, #tabular-aad4691a1e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-aad4691a1e .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-aad4691a1e .tabular-page-header, #tabular-aad4691a1e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
 #tabular-aad4691a1e .tabular-page-header { margin-bottom: 1rem; }
 #tabular-aad4691a1e .tabular-page-footer { margin-top: 1rem; }
 #tabular-aad4691a1e .tabular-page-header-left, #tabular-aad4691a1e .tabular-page-footer-left { flex: 1; text-align: left; }
@@ -240,7 +247,7 @@ border scalars).</p></div>
 <span class="r-in"><span>  <span class="fu">custom_style</span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="preset.html">preset</a></span><span class="op">(</span>rules <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>rowrule <span class="op">=</span> <span class="fu">brdr</span><span class="op">(</span><span class="st">"hairline"</span>, <span class="st">"dashed"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <style>
-#tabular-160367dbeb { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-160367dbeb { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-160367dbeb .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-160367dbeb p { line-height: inherit; }
 #tabular-160367dbeb .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -274,6 +281,9 @@ border scalars).</p></div>
 #tabular-160367dbeb .tabular-table thead th.text-left { text-align: left; }
 #tabular-160367dbeb .tabular-table thead th.text-center { text-align: center; }
 #tabular-160367dbeb .tabular-table thead th.text-right { text-align: right; }
+#tabular-160367dbeb .tabular-table td.text-left { text-align: left; }
+#tabular-160367dbeb .tabular-table td.text-center { text-align: center; }
+#tabular-160367dbeb .tabular-table td.text-right { text-align: right; }
 #tabular-160367dbeb .valign-top { vertical-align: top; }
 #tabular-160367dbeb .valign-middle { vertical-align: middle; }
 #tabular-160367dbeb .valign-bottom { vertical-align: bottom; }
@@ -281,7 +291,8 @@ border scalars).</p></div>
 #tabular-160367dbeb .tabular-empty { font-style: italic; color: #6c757d; }
 #tabular-160367dbeb .tabular-page-break-row { display: none; }
 #tabular-160367dbeb { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-160367dbeb .tabular-page-header, #tabular-160367dbeb .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-160367dbeb .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-160367dbeb .tabular-page-header, #tabular-160367dbeb .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
 #tabular-160367dbeb .tabular-page-header { margin-bottom: 1rem; }
 #tabular-160367dbeb .tabular-page-footer { margin-top: 1rem; }
 #tabular-160367dbeb .tabular-page-header-left, #tabular-160367dbeb .tabular-page-footer-left { flex: 1; text-align: left; }
@@ -348,61 +359,65 @@ border scalars).</p></div>
 <span class="r-in"><span>  <span class="fu"><a href="style.html">style</a></span><span class="op">(</span>border <span class="op">=</span> <span class="fu">brdr</span><span class="op">(</span>width <span class="op">=</span> <span class="st">"medium"</span><span class="op">)</span>, .at <span class="op">=</span> <span class="fu"><a href="cells.html">cells_table</a></span><span class="op">(</span>side <span class="op">=</span> <span class="st">"outer"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="style.html">style</a></span><span class="op">(</span>border_left <span class="op">=</span> <span class="fu">brdr</span><span class="op">(</span><span class="st">"hairline"</span><span class="op">)</span>, .at <span class="op">=</span> <span class="fu"><a href="cells.html">cells_table</a></span><span class="op">(</span>side <span class="op">=</span> <span class="st">"cols"</span><span class="op">)</span><span class="op">)</span></span></span>
 <style>
-#tabular-f4f8df8243 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-f4f8df8243 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-f4f8df8243 p { line-height: inherit; }
-#tabular-f4f8df8243 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-f4f8df8243 .tabular-caption { margin: 0; padding: 0; }
-#tabular-f4f8df8243 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-f4f8df8243 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-f4f8df8243 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-f4f8df8243 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-f4f8df8243 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-f4f8df8243 .tabular-table th, #tabular-f4f8df8243 .tabular-table td { padding: .18rem .6rem; }
-#tabular-f4f8df8243 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-f4f8df8243 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-f4f8df8243 .tabular-table thead tr:first-child th { border-top: 1pt solid #212529; }
-#tabular-f4f8df8243 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-f4f8df8243 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-f4f8df8243 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-f4f8df8243 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-f4f8df8243 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-f4f8df8243 .tabular-table tbody tr:last-child td { border-bottom: 1pt solid #212529; }
-#tabular-f4f8df8243 .tabular-table { border-left: 1pt solid #212529; }
-#tabular-f4f8df8243 .tabular-table { border-right: 1pt solid #212529; }
-#tabular-f4f8df8243 .tabular-table tbody tr td { border-top: none; }
-#tabular-f4f8df8243 .tabular-band { text-align: center; }
-#tabular-f4f8df8243 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-f4f8df8243 .tabular-subgroup-label { font-weight: 600; }
-#tabular-f4f8df8243 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-f4f8df8243 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-f4f8df8243 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-f4f8df8243 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-f4f8df8243 .text-left { text-align: left; }
-#tabular-f4f8df8243 .text-center { text-align: center; }
-#tabular-f4f8df8243 .text-right { text-align: right; }
-#tabular-f4f8df8243 .tabular-table thead th.text-left { text-align: left; }
-#tabular-f4f8df8243 .tabular-table thead th.text-center { text-align: center; }
-#tabular-f4f8df8243 .tabular-table thead th.text-right { text-align: right; }
-#tabular-f4f8df8243 .valign-top { vertical-align: top; }
-#tabular-f4f8df8243 .valign-middle { vertical-align: middle; }
-#tabular-f4f8df8243 .valign-bottom { vertical-align: bottom; }
-#tabular-f4f8df8243 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-f4f8df8243 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-f4f8df8243 .tabular-page-break-row { display: none; }
-#tabular-f4f8df8243 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-f4f8df8243 .tabular-page-header, #tabular-f4f8df8243 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-f4f8df8243 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-f4f8df8243 .tabular-page-footer { margin-top: 1rem; }
-#tabular-f4f8df8243 .tabular-page-header-left, #tabular-f4f8df8243 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-f4f8df8243 .tabular-page-header-center, #tabular-f4f8df8243 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-f4f8df8243 .tabular-page-header-right, #tabular-f4f8df8243 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-f4f8df8243 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-f4f8df8243 .tabular-table tr { page-break-inside: avoid; } #tabular-f4f8df8243 .tabular-page-header, #tabular-f4f8df8243 .tabular-page-footer { display: none; } #tabular-f4f8df8243 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-f4f8df8243 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-f4f8df8243 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
-</style><div id="tabular-f4f8df8243" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+#tabular-c78474e71c { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-c78474e71c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-c78474e71c p { line-height: inherit; }
+#tabular-c78474e71c .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-c78474e71c .tabular-caption { margin: 0; padding: 0; }
+#tabular-c78474e71c .tabular-pad { margin: 0; line-height: 1; }
+#tabular-c78474e71c .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-c78474e71c .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-c78474e71c .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-c78474e71c .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-c78474e71c .tabular-table th, #tabular-c78474e71c .tabular-table td { padding: .18rem .6rem; }
+#tabular-c78474e71c .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-c78474e71c .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-c78474e71c .tabular-table thead tr:first-child th { border-top: 1pt solid #212529; }
+#tabular-c78474e71c .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-c78474e71c .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-c78474e71c .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-c78474e71c .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-c78474e71c .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-c78474e71c .tabular-table tbody tr:last-child td { border-bottom: 1pt solid #212529; }
+#tabular-c78474e71c .tabular-table { border-left: 1pt solid #212529; }
+#tabular-c78474e71c .tabular-table { border-right: 1pt solid #212529; }
+#tabular-c78474e71c .tabular-table tbody tr td { border-top: none; }
+#tabular-c78474e71c .tabular-band { text-align: center; }
+#tabular-c78474e71c .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-c78474e71c .tabular-subgroup-label { font-weight: 600; }
+#tabular-c78474e71c .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-c78474e71c .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-c78474e71c .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-c78474e71c .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-c78474e71c .text-left { text-align: left; }
+#tabular-c78474e71c .text-center { text-align: center; }
+#tabular-c78474e71c .text-right { text-align: right; }
+#tabular-c78474e71c .tabular-table thead th.text-left { text-align: left; }
+#tabular-c78474e71c .tabular-table thead th.text-center { text-align: center; }
+#tabular-c78474e71c .tabular-table thead th.text-right { text-align: right; }
+#tabular-c78474e71c .tabular-table td.text-left { text-align: left; }
+#tabular-c78474e71c .tabular-table td.text-center { text-align: center; }
+#tabular-c78474e71c .tabular-table td.text-right { text-align: right; }
+#tabular-c78474e71c .valign-top { vertical-align: top; }
+#tabular-c78474e71c .valign-middle { vertical-align: middle; }
+#tabular-c78474e71c .valign-bottom { vertical-align: bottom; }
+#tabular-c78474e71c .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-c78474e71c .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-c78474e71c .tabular-page-break-row { display: none; }
+#tabular-c78474e71c { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-c78474e71c .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-c78474e71c .tabular-page-header, #tabular-c78474e71c .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-c78474e71c .tabular-page-header { margin-bottom: 1rem; }
+#tabular-c78474e71c .tabular-page-footer { margin-top: 1rem; }
+#tabular-c78474e71c .tabular-page-header-left, #tabular-c78474e71c .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-c78474e71c .tabular-page-header-center, #tabular-c78474e71c .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-c78474e71c .tabular-page-header-right, #tabular-c78474e71c .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-c78474e71c .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-c78474e71c .tabular-table tr { page-break-inside: avoid; } #tabular-c78474e71c .tabular-page-header, #tabular-c78474e71c .tabular-page-footer { display: none; } #tabular-c78474e71c .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-c78474e71c .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-c78474e71c .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style><div id="tabular-c78474e71c" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Demographics with a full grid</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
-<table class="table tabular-table"><thead><tr><th>Statistic</th><th class="text-center">Placebo</th><th class="text-center">Drug 50</th><th class="text-center">Drug 100</th><th class="text-center">Total</th></tr></thead><tbody><tr class="tabular-group-header"><td colspan="5"><strong>Age (years)</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">n</td><td class="text-right" style="border-left: 0.25pt solid #212529;">86         </td><td class="text-right" style="border-left: 0.25pt solid #212529;">96         </td><td class="text-right" style="border-left: 0.25pt solid #212529;">72         </td><td class="text-right" style="border-left: 0.25pt solid #212529;">254         </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Mean (SD)</td><td class="text-right" style="border-left: 0.25pt solid #212529;">75.2 (8.59)</td><td class="text-right" style="border-left: 0.25pt solid #212529;">76.0 (8.11)</td><td class="text-right" style="border-left: 0.25pt solid #212529;">73.8 (7.94)</td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 75.1 (8.25)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Median</td><td class="text-right" style="border-left: 0.25pt solid #212529;">76.0       </td><td class="text-right" style="border-left: 0.25pt solid #212529;">78.0       </td><td class="text-right" style="border-left: 0.25pt solid #212529;">75.5       </td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 77.0       </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Q1, Q3</td><td class="text-right" style="border-left: 0.25pt solid #212529;">69.2, 81.8 </td><td class="text-right" style="border-left: 0.25pt solid #212529;">71.0, 82.0 </td><td class="text-right" style="border-left: 0.25pt solid #212529;">70.5, 79.0 </td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 70.0, 81.0 </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Min, Max</td><td class="text-right" style="border-left: 0.25pt solid #212529;">52  , 89   </td><td class="text-right" style="border-left: 0.25pt solid #212529;">51  , 88   </td><td class="text-right" style="border-left: 0.25pt solid #212529;">56  , 88   </td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 51  , 89   </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>Sex, n (%)</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">F</td><td class="text-right" style="border-left: 0.25pt solid #212529;">53 (61.6)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;">55 (57.3)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;">35 (48.6)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;">143 (56.3)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">M</td><td class="text-right" style="border-left: 0.25pt solid #212529;">33 (38.4)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;">41 (42.7)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;">37 (51.4)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;">111 (43.7)  </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>Race, n (%)</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">WHITE</td><td class="text-right" style="border-left: 0.25pt solid #212529;">78 (90.7)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;">90 (93.8)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;">62 (86.1)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;">230 (90.6)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">BLACK OR AFRICAN AMERICAN</td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 8 ( 9.3)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 6 ( 6.2)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 9 (12.5)  </td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 23 ( 9.1)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ASIAN</td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 0         </td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 0         </td><td class="text-right" style="border-left: 0.25pt solid #212529;"> 0         </td><td class="text-right" style="border-left: 0.25pt solid #212529;">  0         </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em); border-bottom: 1pt solid #212529;">AMERICAN INDIAN OR ALASKA NATIVE</td><td class="text-right" style="border-bottom: 1pt solid #212529; border-left: 0.25pt solid #212529;"> 0         </td><td class="text-right" style="border-bottom: 1pt solid #212529; border-left: 0.25pt solid #212529;"> 0         </td><td class="text-right" style="border-bottom: 1pt solid #212529; border-left: 0.25pt solid #212529;"> 1 ( 1.4)  </td><td class="text-right" style="border-bottom: 1pt solid #212529; border-left: 0.25pt solid #212529;">  1 ( 0.4)  </td></tr></tbody></table></div>
+<table class="table tabular-table"><thead><tr><th>Statistic</th><th class="text-center">Placebo</th><th class="text-center">Drug 50</th><th class="text-center">Drug 100</th><th class="text-center">Total</th></tr></thead><tbody><tr class="tabular-group-header"><td colspan="5"><strong>Age (years)</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">n</td><td class="text-center" style="border-left: 0.25pt solid #212529;">86         </td><td class="text-center" style="border-left: 0.25pt solid #212529;">96         </td><td class="text-center" style="border-left: 0.25pt solid #212529;">72         </td><td class="text-center" style="border-left: 0.25pt solid #212529;">254         </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Mean (SD)</td><td class="text-center" style="border-left: 0.25pt solid #212529;">75.2 (8.59)</td><td class="text-center" style="border-left: 0.25pt solid #212529;">76.0 (8.11)</td><td class="text-center" style="border-left: 0.25pt solid #212529;">73.8 (7.94)</td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 75.1 (8.25)</td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Median</td><td class="text-center" style="border-left: 0.25pt solid #212529;">76.0       </td><td class="text-center" style="border-left: 0.25pt solid #212529;">78.0       </td><td class="text-center" style="border-left: 0.25pt solid #212529;">75.5       </td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 77.0       </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Q1, Q3</td><td class="text-center" style="border-left: 0.25pt solid #212529;">69.2, 81.8 </td><td class="text-center" style="border-left: 0.25pt solid #212529;">71.0, 82.0 </td><td class="text-center" style="border-left: 0.25pt solid #212529;">70.5, 79.0 </td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 70.0, 81.0 </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">Min, Max</td><td class="text-center" style="border-left: 0.25pt solid #212529;">52  , 89   </td><td class="text-center" style="border-left: 0.25pt solid #212529;">51  , 88   </td><td class="text-center" style="border-left: 0.25pt solid #212529;">56  , 88   </td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 51  , 89   </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>Sex, n (%)</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">F</td><td class="text-center" style="border-left: 0.25pt solid #212529;">53 (61.6)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;">55 (57.3)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;">35 (48.6)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;">143 (56.3)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">M</td><td class="text-center" style="border-left: 0.25pt solid #212529;">33 (38.4)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;">41 (42.7)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;">37 (51.4)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;">111 (43.7)  </td></tr><tr class="tabular-blank-row"><td colspan="5"> </td></tr><tr class="tabular-group-header"><td colspan="5"><strong>Race, n (%)</strong></td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">WHITE</td><td class="text-center" style="border-left: 0.25pt solid #212529;">78 (90.7)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;">90 (93.8)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;">62 (86.1)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;">230 (90.6)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">BLACK OR AFRICAN AMERICAN</td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 8 ( 9.3)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 6 ( 6.2)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 9 (12.5)  </td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 23 ( 9.1)  </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em);">ASIAN</td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 0         </td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 0         </td><td class="text-center" style="border-left: 0.25pt solid #212529;"> 0         </td><td class="text-center" style="border-left: 0.25pt solid #212529;">  0         </td></tr><tr><td style="padding-left: calc(.6rem + 1.2em); border-bottom: 1pt solid #212529;">AMERICAN INDIAN OR ALASKA NATIVE</td><td class="text-center" style="border-bottom: 1pt solid #212529; border-left: 0.25pt solid #212529;"> 0         </td><td class="text-center" style="border-bottom: 1pt solid #212529; border-left: 0.25pt solid #212529;"> 0         </td><td class="text-center" style="border-bottom: 1pt solid #212529; border-left: 0.25pt solid #212529;"> 1 ( 1.4)  </td><td class="text-center" style="border-bottom: 1pt solid #212529; border-left: 0.25pt solid #212529;">  1 ( 0.4)  </td></tr></tbody></table></div>
 </figure></div><span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

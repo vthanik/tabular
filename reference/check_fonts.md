@@ -46,6 +46,14 @@ can predict drift.
 - `x` — font is not installed on this machine; the consuming app on a
   different machine may or may not have it.
 
+Every backend only **name-references** its fonts; the consuming
+application (browser, LaTeX engine, Word, Adobe Reader) resolves those
+names against its own installed fonts. An `x` therefore means the reader
+needs that face installed for the render to match exactly. The default
+chains lead with the ubiquitous Office cores (Courier New / Arial /
+Times New Roman), so a `v` on the default is the common case on Windows
+and macOS.
+
 Requires the `systemfonts` package (in `Suggests`); call
 `install.packages("systemfonts")` first if it isn't installed.
 
@@ -78,20 +86,20 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> 
 #> ── Font resolution for `font_family = mono` 
 #> backend: html
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 #> x TeX Gyre Cursor (not on this machine)
 #> x Latin Modern Mono (not on this machine)
 #> backend: rtf
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 
 # ---- Example 2: Diagnose a Courier New request ----
 #
@@ -110,20 +118,20 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> 
 #> ── Font resolution for `font_family = Courier New` 
 #> backend: html
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 #> x TeX Gyre Cursor (not on this machine)
 #> x Latin Modern Mono (not on this machine)
 #> backend: rtf
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 
 # ---- Example 3: Explicit cross-platform stack ----
 #
@@ -173,35 +181,35 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> 
 #> ── Font resolution for `font_family = serif` 
 #> backend: html
-#> v Liberation Serif
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Liberation Serif
 #> o serif (generic, always available)
 #> backend: latex
-#> v Liberation Serif
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Liberation Serif
 #> x TeX Gyre Termes (not on this machine)
 #> x Latin Modern Roman (not on this machine)
 #> backend: rtf
-#> v Liberation Serif
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Liberation Serif
 #> 
 #> ── Font resolution for `font_family = sans` 
 #> backend: html
-#> v Liberation Sans
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Liberation Sans
 #> o sans-serif (generic, always available)
 #> backend: latex
-#> v Liberation Sans
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Liberation Sans
 #> x TeX Gyre Heros (not on this machine)
 #> x Latin Modern Sans (not on this machine)
 #> backend: rtf
-#> v Liberation Sans
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Liberation Sans
 ```
