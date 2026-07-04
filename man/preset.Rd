@@ -57,15 +57,56 @@ sans, Courier -> mono) and emit the same expanded chain.
 Honours the user's intent ("I want Times-like
 rendering") on every OS instead of hard-erroring on
 a Linux server with no TNR installed.
-\item \strong{Named font} — \code{"Inter"}, \code{"JetBrains Mono"},
-\code{"Source Serif Pro"}, sponsor-specific face, etc.
-Emitted verbatim with no fallback fabricated. The
-consuming app (browser, xelatex, Word, LibreOffice)
-resolves the name against its own font matcher. RTF
-and DOCX fall back to the consuming app's substitution
-table when the name is missing; xelatex hard-errors at
-compile time; HTML browsers fall through to the
-browser's default font (not necessarily class-matched).
+\item \strong{Named font.} Two cases:
+
+a. \strong{Recognised bundled family} — \code{"IBM Plex Mono"},
+\code{"IBM Plex Sans"}, \code{"IBM Plex Serif"}. The named face
+LEADS a
+metric-compatible chain (\verb{IBM Plex Mono} -> Liberation
+Mono -> Courier New -> ...), so column widths and
+decimal alignment are identical to the \code{"mono"}
+default (IBM Plex Mono has Courier's exact glyph
+advance) and it classifies as fixed-pitch mono for
+Word.
+
+\strong{The visible face differs by backend, by design:}
+\itemize{
+\item \strong{HTML preview} — the Plex face is \strong{embedded in
+the self-contained \code{.html}} (\verb{@font-face}, woff2
+data URI). It renders as IBM Plex on any machine or
+browser, even with the font not installed. This is
+the portable preview you share with a reviewer.
+\item \strong{RTF / DOCX} — the file \strong{names} IBM Plex (with
+Liberation Mono as \verb{\\\\*\\\\falt}). Word / LibreOffice
+shows IBM Plex only if it is installed on the
+opening machine; otherwise it substitutes the
+metric-compatible Liberation / Courier face. Layout,
+line breaks, and decimal alignment are identical
+either way — only the glyph shapes differ.
+\item \strong{PDF (LaTeX)} — xelatex uses IBM Plex only if
+installed on the compiling machine; otherwise the
+\verb{\\\\IfFontExistsTF} cascade falls back to Liberation
+-> Latin Modern Mono. It \strong{compiles either way}
+(unlike an unrecognised named font).
+}
+
+In one line: HTML embeds the face so the preview is
+portable; the paged backends name-reference it, so the
+visible face depends on the reader's installed fonts —
+the layout is identical regardless.
+
+b. \strong{Arbitrary named font} — \code{"Inter"},
+\code{"JetBrains Mono"}, \code{"Source Serif Pro"},
+sponsor-specific face, etc. Emitted verbatim with no
+fallback fabricated and not embedded. The consuming app
+(browser, xelatex, Word, LibreOffice) resolves the name
+against its own font matcher. RTF and DOCX fall back to
+the consuming app's substitution table when the name is
+missing; \strong{xelatex hard-errors at compile time}; HTML
+browsers fall through to the browser's default font (not
+necessarily class-matched). For a portable named face,
+prefer a recognised bundled family (case a) or an
+explicit stack (case 4).
 \item \strong{Explicit stack} — \code{c("Inter", "Helvetica", "sans")}.
 User owns the chain. Returned verbatim — alias lookup
 is \strong{bypassed}, so \code{c("Times", "Times")} honours the

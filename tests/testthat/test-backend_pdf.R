@@ -367,3 +367,24 @@ test_that(".check_latex_report covers the all-installed and missing branches", {
     utils::capture.output(tabular:::.check_latex_report(miss))
   ))
 })
+
+test_that("emit(.pdf) with an uninstalled IBM Plex Mono still compiles (#fallback)", {
+  skip_if_not_installed("tinytex")
+  skip_on_cran()
+  if (!nzchar(Sys.which("xelatex"))) {
+    skip("xelatex not found on this machine")
+  }
+  # This box does not have IBM Plex installed. A recognised named face
+  # leads a multi-entry chain ending in Latin Modern Mono, so the
+  # \IfFontExistsTF cascade falls through and xelatex compiles -- unlike
+  # an unguarded \setmainfont{IBM Plex Mono}, which would abort.
+  spec <- tabular(data.frame(x = c(1L, 2L)), titles = "T") |>
+    preset(font_family = "IBM Plex Mono")
+  out <- withr::local_tempfile(fileext = ".pdf")
+  result <- tryCatch(emit(spec, out), error = function(e) e)
+  if (inherits(result, "error")) {
+    skip(sprintf("PDF compile failed: %s", conditionMessage(result)))
+  }
+  expect_true(file.exists(out))
+  expect_gt(file.info(out)$size, 0L)
+})

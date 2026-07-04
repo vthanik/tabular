@@ -2825,3 +2825,28 @@ test_that("default cell_padding keeps the responsive rem padding in HTML (#html-
   html <- paste(readLines(f, warn = FALSE), collapse = "\n")
   expect_true(grepl("padding: .18rem .6rem;", html, fixed = TRUE))
 })
+
+test_that("HTML embeds IBM Plex via @font-face only when opted in", {
+  dat <- data.frame(
+    soc = c("Cardiac", "Vascular"),
+    n = c("12 (5.0)", "8 (3.3)"),
+    stringsAsFactors = FALSE
+  )
+  fp <- withr::local_tempfile(fileext = ".html")
+  fm <- withr::local_tempfile(fileext = ".html")
+  emit(tabular(dat) |> preset(font_family = "IBM Plex Mono"), fp)
+  emit(tabular(dat) |> preset(font_family = "mono"), fm)
+  plex <- paste(readLines(fp, warn = FALSE), collapse = "\n")
+  mono <- paste(readLines(fm, warn = FALSE), collapse = "\n")
+  expect_match(plex, "@font-face", fixed = TRUE)
+  expect_match(plex, "font-weight: 500 700", fixed = TRUE)
+  expect_match(plex, "unicode-range:", fixed = TRUE)
+  expect_match(plex, 'format("woff2")', fixed = TRUE)
+  expect_match(
+    plex,
+    'font-family: "IBM Plex Mono", "Liberation Mono"',
+    fixed = TRUE
+  )
+  # The default (Liberation) render injects no @font-face.
+  expect_false(grepl("@font-face", mono, fixed = TRUE))
+})

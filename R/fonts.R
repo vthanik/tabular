@@ -130,17 +130,28 @@
   .font_name_aliases[[name]]
 }
 
-# Compose the resolved chain for a generic family + backend. Shared
-# core + per-backend tail. Used by `.resolve_font_stack` for both
-# the generic-family path and the alias-hit path.
-.compose_generic_chain <- function(fam, backend) {
-  core <- switch(
-    fam,
-    serif = .stack_serif,
-    sans = .stack_sans,
-    mono = .stack_mono
-  )
-  tail <- switch(
+# Recognised named faces that ship a metric-compatible fallback
+# chain. Unlike the PS-era aliases above, these are NOT collapsed to
+# a generic — the named face LEADS the chain and the Liberation /
+# Office faces trail it, so a machine without the face still renders
+# a metric-compatible substitute. The fallback vector is the first
+# two entries of the matching generic core (the bare PostScript name
+# is redundant once the `_New` face is present). The family class is
+# looked up from `.font_to_family_class` (the shared SSOT in
+# font_metrics.R); every key here MUST have a class entry there
+# (drift-guard test in test-fonts.R).
+.font_named_chains <- list(
+  "IBM Plex Mono" = c("Liberation Mono", "Courier New"),
+  "IBM Plex Sans" = c("Liberation Sans", "Arial"),
+  "IBM Plex Serif" = c("Liberation Serif", "Times New Roman")
+)
+
+# Per-backend tail for a generic family. Appended after the shared
+# core (generic path) or after a recognised named face + its
+# fallback (named-face path), so the backend's native fallback layer
+# always closes the chain.
+.backend_tail <- function(fam, backend) {
+  switch(
     backend,
     latex = switch(
       fam,
@@ -159,7 +170,19 @@
     # table).
     character()
   )
-  c(core, tail)
+}
+
+# Compose the resolved chain for a generic family + backend. Shared
+# core + per-backend tail. Used by `.resolve_font_stack` for both
+# the generic-family path and the alias-hit path.
+.compose_generic_chain <- function(fam, backend) {
+  core <- switch(
+    fam,
+    serif = .stack_serif,
+    sans = .stack_sans,
+    mono = .stack_mono
+  )
+  c(core, .backend_tail(fam, backend))
 }
 
 # ---------------------------------------------------------------------
@@ -179,7 +202,11 @@
 #   4. Aliased name (Times / Arial / Helvetica / Courier and the
 #      `_New` variants) -> resolve via alias to the generic chain
 #      (same path as 3).
-#   5. Non-aliased named font (Inter / JetBrains Mono / Source Pro
+#   5. Recognised named face (IBM Plex Mono / Sans / Serif) -> the
+#      named face LEADS, trailed by its metric-compatible fallback +
+#      backend tail. Always multi-entry ending in the backend leaf,
+#      so xelatex's `\IfFontExistsTF` cascade degrades gracefully.
+#   6. Non-aliased named font (Inter / JetBrains Mono / Source Pro
 #      / sponsor-specific face) -> emit verbatim, no fallback.
 .resolve_font_stack <- function(font_family, backend) {
   if (length(font_family) == 0L) {
@@ -197,6 +224,13 @@
   alias <- .resolve_font_alias(font_family)
   if (!is.null(alias)) {
     return(.compose_generic_chain(alias, backend))
+  }
+  # Recognised named face: lead with the face, trail with its
+  # metric-compatible fallback + backend tail.
+  fallback <- .font_named_chains[[font_family]]
+  if (!is.null(fallback)) {
+    fam <- .font_to_family_class[[font_family]]
+    return(c(font_family, fallback, .backend_tail(fam, backend)))
   }
   # Named font, no alias, no fallback fabricated.
   as.character(font_family)
@@ -236,7 +270,14 @@
       if (.is_generic_family(f)) {
         return(.normalize_generic(f))
       }
-      .resolve_font_alias(f) %||% NA_character_
+      alias <- .resolve_font_alias(f)
+      if (!is.null(alias)) {
+        return(alias)
+      }
+      # Recognised named face (IBM Plex ...) -> its class from the
+      # shared SSOT, so a lone named face classifies for Word instead
+      # of falling to the unclassified default.
+      .font_to_family_class[[f]] %||% NA_character_
     },
     character(1L)
   )
@@ -308,6 +349,14 @@
 #'   the consuming application.
 #' * `x` — font is not installed on this machine; the consuming
 #'   app on a different machine may or may not have it.
+#'
+#' **HTML embeds recognised bundled faces.** The `x` marker reflects
+#' the *paged* backends (RTF / DOCX / PDF), which only name-reference
+#' the font. The HTML backend additionally **embeds** a recognised
+#' bundled family (IBM Plex Mono / Sans / Serif) via `@font-face`, so
+#' an `x` on `IBM Plex Mono` does *not* mean the HTML preview lacks it —
+#' HTML self-serves the face; only the paged backends depend on the
+#' reader's installed fonts.
 #'
 #' Requires the `systemfonts` package (in `Suggests`); call
 #' `install.packages("systemfonts")` first if it isn't installed.

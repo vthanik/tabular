@@ -1957,3 +1957,22 @@ test_that("LaTeX italicises a styled chrome surface and sizes a page band (#cov)
   expect_match(txt, "\\textit{", fixed = TRUE)
   expect_match(txt, "\\fancyhead", fixed = TRUE)
 })
+
+test_that("IBM Plex Mono LaTeX cascade degrades gracefully", {
+  dat <- data.frame(
+    soc = c("Cardiac", "Vascular"),
+    n = c("12 (5.0)", "8 (3.3)"),
+    stringsAsFactors = FALSE
+  )
+  txt <- render_tex(tabular(dat) |> preset(font_family = "IBM Plex Mono"))
+  # The named face is compile-time guarded ...
+  expect_match(
+    txt,
+    "\\IfFontExistsTF{IBM Plex Mono}{\\setmainfont{IBM Plex Mono}}",
+    fixed = TRUE
+  )
+  # ... and the unconditional leaf is Latin Modern Mono, which ships
+  # with every TeX distribution -> compile cannot fail when IBM Plex
+  # is absent.
+  expect_match(txt, "\\setmainfont{Latin Modern Mono}", fixed = TRUE)
+})
