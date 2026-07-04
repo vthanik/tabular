@@ -45,16 +45,16 @@
 * `pivot_across()`'s `decimals` may now be a list keyed by `row_group` values,
   for per-group precision in one call.
 
-* `preset(font_family = ...)` now recognises the `"IBM Plex Mono"`,
-  `"IBM Plex Sans"`, and `"IBM Plex Serif"` families as opt-in named faces:
-  each leads a metric-compatible fallback chain (so column widths are identical
-  to the `"mono"` / `"sans"` / `"serif"` default) and classifies correctly for
-  RTF / DOCX. The HTML backend embeds the bundled woff2 subset via
-  `@font-face`, so a self-contained preview renders IBM Plex even where the
-  font is not installed;
-  the paged backends (RTF / DOCX / PDF) name-reference it with a Liberation
-  fallback. `check_fonts()` reports the new chain. The package default stays
-  `"mono"` (Liberation-first), so existing output is unchanged.
+* `preset(font_family = ...)` generic chains (`"mono"` / `"sans"` / `"serif"`)
+  now lead with the ubiquitous Microsoft Office face (Courier New / Arial /
+  Times New Roman) and keep the metric-compatible Liberation face as the last
+  fallback, so Word shows a font the reader actually has installed on Windows /
+  macOS instead of a phantom "Liberation Mono" in its font menu. The faces are
+  metric-compatible, so layout, line breaks, and decimal alignment are
+  unchanged. A bare `font_family = "Courier New"` now also leads with Courier
+  New (previously resolved led by Liberation Mono). The package bundles no
+  fonts; an arbitrary named face (`"IBM Plex Mono"`, `"Source Code Pro"`, etc.)
+  is emitted verbatim for the consuming application to resolve.
 
 ## Breaking changes
 
