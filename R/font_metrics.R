@@ -31,16 +31,11 @@
 #
 # Liberation faces: metric-compatible with the Adobe Core faces
 # (Liberation Serif = Times-Roman, Sans = Helvetica, Mono = Courier),
-# so we measure with the matching Core AFM. IBM Plex Mono has the
-# identical 0.6em advance as Courier, so measuring it as Courier is
-# exact; Plex Sans as Helvetica is a close approximation.
+# so we measure with the matching Core AFM.
 .font_to_family_class <- list(
   "Liberation Serif" = "serif",
   "Liberation Sans" = "sans",
-  "Liberation Mono" = "mono",
-  "IBM Plex Mono" = "mono",
-  "IBM Plex Sans" = "sans",
-  "IBM Plex Serif" = "serif"
+  "Liberation Mono" = "mono"
 )
 
 # Pick the family class for a font_family chain. Walks top-to-bottom;

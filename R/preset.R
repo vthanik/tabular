@@ -138,22 +138,25 @@
 #'
 #'   *   **`font_size`** — body point size. `<numeric(1)>`.
 #'   *   **`font_family`** — body font family. `<character | character(1)>`.
-#'       Default `"mono"`. Three accepted shapes:
+#'       Default `"mono"`. Four accepted shapes:
 #'
 #'       1. **Generic family** — `"mono"` (default), `"serif"`,
 #'          `"sans"` (CSS aliases `"monospace"` / `"sans-serif"`
 #'          also recognised). The resolver expands to a per-backend
-#'          chain that leads with the Linux-installed
-#'          **Liberation** face (Posit Workbench / Domino / Citrix
-#'          / RStudio Server), then the Microsoft Office face
-#'          (Courier New / Times New Roman / Arial) for desktop
-#'          Win / Mac consumers, then TeX Gyre for LaTeX compile,
-#'          then the CSS generic for HTML. Liberation Mono / Serif
-#'          / Sans are metric-compatible with Courier New / TNR /
-#'          Arial, so layout, line breaks, and decimal alignment
-#'          hold across every render context. The mono default
-#'          matches the dominant submission-TFL convention where
-#'          deterministic glyph widths drive `n (%)` cell alignment.
+#'          chain that leads with the Microsoft Office face (Courier
+#'          New / Times New Roman / Arial) — installed on every
+#'          Windows and macOS machine, where documents are reviewed —
+#'          then the PostScript legacy name, then the metric-compatible
+#'          **Liberation** face LAST as the Linux-server fallback
+#'          (Posit Workbench / Domino / Citrix / RStudio Server),
+#'          then TeX Gyre for LaTeX compile / the CSS generic for
+#'          HTML. Liberation Mono / Serif / Sans are metric-compatible
+#'          with Courier New / TNR / Arial, so layout, line breaks,
+#'          and decimal alignment hold across every render context
+#'          regardless of which end of the chain resolves. The mono
+#'          default matches the dominant submission-TFL convention
+#'          where deterministic glyph widths drive `n (%)` cell
+#'          alignment.
 #'
 #'       2. **Named alias** — `"Times"`, `"Times New Roman"`,
 #'          `"Arial"`, `"Helvetica"`, `"Courier"`, `"Courier New"`.
@@ -164,55 +167,17 @@
 #'          rendering") on every OS instead of hard-erroring on
 #'          a Linux server with no TNR installed.
 #'
-#'       3. **Named font.** Two cases:
-#'
-#'          a. **Recognised bundled family** — `"IBM Plex Mono"`,
-#'             `"IBM Plex Sans"`, `"IBM Plex Serif"`. The named face
-#'             LEADS a
-#'             metric-compatible chain (`IBM Plex Mono` -> Liberation
-#'             Mono -> Courier New -> ...), so column widths and
-#'             decimal alignment are identical to the `"mono"`
-#'             default (IBM Plex Mono has Courier's exact glyph
-#'             advance) and it classifies as fixed-pitch mono for
-#'             Word.
-#'
-#'             **The visible face differs by backend, by design:**
-#'
-#'             *   **HTML preview** — the Plex face is **embedded in
-#'                 the self-contained `.html`** (`@font-face`, woff2
-#'                 data URI). It renders as IBM Plex on any machine or
-#'                 browser, even with the font not installed. This is
-#'                 the portable preview you share with a reviewer.
-#'             *   **RTF / DOCX** — the file **names** IBM Plex (with
-#'                 Liberation Mono as `\\*\\falt`). Word / LibreOffice
-#'                 shows IBM Plex only if it is installed on the
-#'                 opening machine; otherwise it substitutes the
-#'                 metric-compatible Liberation / Courier face. Layout,
-#'                 line breaks, and decimal alignment are identical
-#'                 either way — only the glyph shapes differ.
-#'             *   **PDF (LaTeX)** — xelatex uses IBM Plex only if
-#'                 installed on the compiling machine; otherwise the
-#'                 `\\IfFontExistsTF` cascade falls back to Liberation
-#'                 -> Latin Modern Mono. It **compiles either way**
-#'                 (unlike an unrecognised named font).
-#'
-#'             In one line: HTML embeds the face so the preview is
-#'             portable; the paged backends name-reference it, so the
-#'             visible face depends on the reader's installed fonts —
-#'             the layout is identical regardless.
-#'
-#'          b. **Arbitrary named font** — `"Inter"`,
-#'             `"JetBrains Mono"`, `"Source Serif Pro"`,
-#'             sponsor-specific face, etc. Emitted verbatim with no
-#'             fallback fabricated and not embedded. The consuming app
-#'             (browser, xelatex, Word, LibreOffice) resolves the name
-#'             against its own font matcher. RTF and DOCX fall back to
-#'             the consuming app's substitution table when the name is
-#'             missing; **xelatex hard-errors at compile time**; HTML
-#'             browsers fall through to the browser's default font (not
-#'             necessarily class-matched). For a portable named face,
-#'             prefer a recognised bundled family (case a) or an
-#'             explicit stack (case 4).
+#'       3. **Arbitrary named font** — `"Inter"`, `"JetBrains Mono"`,
+#'          `"IBM Plex Mono"`, `"Source Code Pro"`, sponsor-specific
+#'          face, etc. Emitted verbatim with no fallback fabricated.
+#'          The consuming app (browser, xelatex, Word, LibreOffice)
+#'          resolves the name against its own font matcher: RTF and
+#'          DOCX substitute when the name is missing; **xelatex
+#'          hard-errors at compile time** if the face is not installed;
+#'          HTML browsers fall through to the browser's default font
+#'          (not necessarily class-matched). For a portable result,
+#'          prefer a generic family (shape 1) or an explicit stack
+#'          (shape 4).
 #'
 #'       4. **Explicit stack** — `c("Inter", "Helvetica", "sans")`.
 #'          User owns the chain. Returned verbatim — alias lookup
@@ -220,44 +185,12 @@
 #'          exact name with no chain expansion (escape hatch for
 #'          users who genuinely want exact-name semantics).
 #'
-#'       **Note:** Adobe Source Pro is no longer the default lead.
-#'       Source Pro is not pre-installed on production Linux
-#'       servers, so leading with it walks through 2-3 missing
-#'       names before resolving. Users who installed Source Pro
-#'       can opt in via the explicit-stack form
-#'       (`c("Source Serif Pro", "serif")`).
-#'
-#'       **What you see in Word's font dropdown vs. what renders.**
-#'       When you open a tabular-generated `.rtf` in Word on
-#'       macOS or Windows, the font dropdown displays the file's
-#'       *requested* face — `"Liberation Mono"` by default
-#'       (the Linux-server-installed face). The rendered text on
-#'       screen is whatever Word's `\\*\\falt` substitution
-#'       resolved to — typically Courier New on macOS /
-#'       Windows. This is correct: Liberation Mono and Courier
-#'       New are metric-compatible by design, so the rendered
-#'       layout (line breaks, decimal alignment, page breaks) is
-#'       identical regardless of which face Word actually used to
-#'       render. The same `\\*\\falt` substitution model applies
-#'       to serif (Liberation Serif -> Times New Roman) and sans
-#'       (Liberation Sans -> Arial).
-#'
-#'       **How to force Office names as the primary.** If
-#'       reviewers will be confused by seeing `"Liberation Mono"`
-#'       in the Word font dropdown (cosmetic concern; doesn't
-#'       affect rendering), pass an explicit length>1 stack with
-#'       the Office name first. The resolver returns the vector
-#'       verbatim — no alias lookup, no chain expansion — so the
-#'       RTF file then names the Office face as primary and your
-#'       chosen alternate as `\\*\\falt`:
-#'
-#'       ```r
-#'       preset(font_family = c("Courier New", "Courier", "Liberation Mono"))
-#'       ```
-#'
-#'       This is the canonical escape hatch for authors who know
-#'       their consumer audience is Mac / Windows Word users and
-#'       want the dropdown to show the Office face directly.
+#'       **Note:** tabular bundles no fonts. Because the default
+#'       chain leads with the Office face, Word's font dropdown
+#'       shows a face the reader actually has installed on Windows /
+#'       macOS (e.g. Courier New for `"mono"`), not a phantom name;
+#'       the metric-compatible Liberation face only appears as the
+#'       fallback for a headless Linux box.
 #'   *   **`orientation`** — page orientation.
 #'       `<character(1)>`. One of `"landscape"` (default),
 #'       `"portrait"`.

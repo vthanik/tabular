@@ -120,59 +120,59 @@ test_that("font_family mono stack classes \\fmodern even mixed with a generic", 
 })
 
 # ---------------------------------------------------------------------
-# Font table — Liberation-first chain + \*\falt fallback for Word
+# Font table — Office-first chain + \*\falt fallback for Word
 # ---------------------------------------------------------------------
 
-test_that("default mono leads with Liberation Mono as \\f0 body", {
+test_that("default mono leads with Courier New as \\f0 body", {
   rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
   # \fprq1: a mono body declares FIXED pitch, matching the \f1 mono slot
   # and the \f2+ extras (which already derive pitch from class).
   expect_true(grepl(
-    "{\\f0\\fmodern\\fprq1 Liberation Mono",
+    "{\\f0\\fmodern\\fprq1 Courier New",
     rtf,
     fixed = TRUE
   ))
 })
 
-test_that("default mono emits {\\*\\falt Courier New} in body font definition", {
+test_that("default mono emits {\\*\\falt Courier} in body font definition", {
   rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
   expect_true(grepl(
-    "Liberation Mono{\\*\\falt Courier New}",
+    "Courier New{\\*\\falt Courier}",
     rtf,
     fixed = TRUE
   ))
 })
 
-test_that("explicit serif leads with Liberation Serif + Times New Roman fallback", {
+test_that("explicit serif leads with Times New Roman + Times fallback", {
   rtf <- .rtf_emit_text(
     tabular(data.frame(x = 1:3)) |> preset(font_family = "serif")
   )
   expect_true(grepl(
-    "{\\f0\\froman\\fprq2 Liberation Serif",
+    "{\\f0\\froman\\fprq2 Times New Roman",
     rtf,
     fixed = TRUE
   ))
   expect_true(grepl(
-    "Liberation Serif{\\*\\falt Times New Roman}",
+    "Times New Roman{\\*\\falt Times}",
     rtf,
     fixed = TRUE
   ))
 })
 
-test_that("sans family emits {\\*\\falt Arial} in body font definition", {
+test_that("sans family emits {\\*\\falt Helvetica} in body font definition", {
   spec <- tabular(data.frame(x = 1:3)) |> preset(font_family = "sans")
   rtf <- .rtf_emit_text(spec)
   expect_true(grepl(
-    "Liberation Sans{\\*\\falt Arial}",
+    "Arial{\\*\\falt Helvetica}",
     rtf,
     fixed = TRUE
   ))
 })
 
-test_that("mono \\f1 carries {\\*\\falt Courier New} on every render", {
+test_that("mono \\f1 carries {\\*\\falt Courier} on every render", {
   rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
   expect_true(grepl(
-    "{\\f1\\fmodern\\fprq1 Liberation Mono{\\*\\falt Courier New}",
+    "{\\f1\\fmodern\\fprq1 Courier New{\\*\\falt Courier}",
     rtf,
     fixed = TRUE
   ))
@@ -191,11 +191,11 @@ test_that("single-entry chain (non-aliased named font) emits NO \\*\\falt", {
   expect_false(grepl("\\*\\falt", inter_line, fixed = TRUE))
 })
 
-test_that("PS-era alias 'Times' renders as Liberation Serif body with Times fallback", {
+test_that("PS-era alias 'Times' renders as Times New Roman body with Times fallback", {
   spec <- tabular(data.frame(x = 1:3)) |> preset(font_family = "Times")
   rtf <- .rtf_emit_text(spec)
   expect_true(grepl(
-    "Liberation Serif{\\*\\falt Times New Roman}",
+    "Times New Roman{\\*\\falt Times}",
     rtf,
     fixed = TRUE
   ))
@@ -705,6 +705,35 @@ test_that("table wider than the printable area warns", {
     .rtf_emit_text(spec),
     class = "tabular_warning_layout"
   )
+})
+
+test_that("proportional %% column widths split the \\cellx grid (end-to-end)", {
+  # col_spec(width = "N%") is a documented end-user feature; verify it
+  # reaches the paged RTF output, not just HTML / LaTeX. 25% / 75% ->
+  # the second column is exactly 3x the first.
+  spec <- tabular(data.frame(a = c("x", "y"), b = c("1", "2"))) |>
+    cols(a = col_spec(width = "25%"), b = col_spec(width = "75%"))
+  rtf <- .rtf_emit_text(spec)
+  stops <- sort(unique(as.integer(unlist(
+    regmatches(rtf, gregexpr("(?<=\\\\cellx)[0-9]+", rtf, perl = TRUE))
+  ))))
+  expect_length(stops, 2L)
+  col1 <- stops[[1L]]
+  col2 <- stops[[2L]] - stops[[1L]]
+  expect_equal(col2 / col1, 3, tolerance = 0.01)
+})
+
+test_that("non-inch unit column widths convert to twips (end-to-end)", {
+  # col_spec(width = "2cm") -> engine converts to inches -> twips.
+  # 2cm = 1134 twips, 3cm = 1701 twips (fixed, page-independent).
+  spec <- tabular(data.frame(a = "x", b = "y")) |>
+    cols(a = col_spec(width = "2cm"), b = col_spec(width = "3cm"))
+  rtf <- .rtf_emit_text(spec)
+  stops <- sort(unique(as.integer(unlist(
+    regmatches(rtf, gregexpr("(?<=\\\\cellx)[0-9]+", rtf, perl = TRUE))
+  ))))
+  expect_identical(stops[[1L]], 1134L)
+  expect_identical(stops[[2L]] - stops[[1L]], 1701L)
 })
 
 test_that("split (non-native) grid concatenates into one continuous table", {
@@ -1609,28 +1638,18 @@ test_that("whitespace='collapse' collapses runs in the RTF title (#cr5)", {
   expect_match(txt_p, "\\~", fixed = TRUE)
 })
 
-test_that("IBM Plex Mono RTF names the face and keeps column geometry", {
+test_that("an arbitrary named font is named verbatim in the RTF font table", {
   dat <- data.frame(
     soc = c("Cardiac", "Vascular"),
     n = c("12 (5.0)", "8 (3.3)"),
     stringsAsFactors = FALSE
   )
   fp <- withr::local_tempfile(fileext = ".rtf")
-  fm <- withr::local_tempfile(fileext = ".rtf")
   emit(tabular(dat) |> preset(font_family = "IBM Plex Mono"), fp)
-  emit(tabular(dat) |> preset(font_family = "mono"), fm)
   plex <- readLines(fp, warn = FALSE)
-  mono <- readLines(fm, warn = FALSE)
-  # Fixed-pitch mono entry naming IBM Plex with a Liberation \*\falt.
-  expect_true(any(grepl(
-    "{\\f0\\fmodern\\fprq1 IBM Plex Mono{\\*\\falt Liberation Mono};}",
-    plex,
-    fixed = TRUE
-  )))
-  # Geometry proof: \cellx column stops are byte-identical to the mono
-  # render (IBM Plex Mono measures as Courier, exactly like default).
-  cellx_plex <- grep("\\cellx", plex, fixed = TRUE, value = TRUE)
-  cellx_mono <- grep("\\cellx", mono, fixed = TRUE, value = TRUE)
-  expect_gt(length(cellx_plex), 0L)
-  expect_identical(cellx_plex, cellx_mono)
+  # Verbatim single name in the \f0 body entry; unrecognised, so it
+  # classifies as the roman default (no \fmodern, no metric-compatible
+  # \*\falt alternate on \f0 since the chain is length 1).
+  f0 <- grep("\\f0\\froman", plex, fixed = TRUE, value = TRUE)
+  expect_true(any(grepl("IBM Plex Mono", f0, fixed = TRUE)))
 })

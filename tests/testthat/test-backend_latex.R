@@ -529,6 +529,13 @@ test_that("col_spec width percent -> resolved against available content width", 
   expect_match(txt, "Q[l,wd=4.400560in]", fixed = TRUE)
 })
 
+test_that("col_spec valign surfaces as a tabularray valign token (end-to-end)", {
+  spec <- tabular(data.frame(a = c("x", "y"))) |>
+    cols(a = col_spec(valign = "top"))
+  txt <- render_tex(spec)
+  expect_match(txt, "valign=t", fixed = TRUE)
+})
+
 test_that("col_spec width respects align letter", {
   spec <- tabular(data.frame(x = "a", y = "b")) |>
     preset(orientation = "portrait") |>
@@ -1958,21 +1965,19 @@ test_that("LaTeX italicises a styled chrome surface and sizes a page band (#cov)
   expect_match(txt, "\\fancyhead", fixed = TRUE)
 })
 
-test_that("IBM Plex Mono LaTeX cascade degrades gracefully", {
+test_that("an arbitrary named font sets the LaTeX main font verbatim", {
   dat <- data.frame(
     soc = c("Cardiac", "Vascular"),
     n = c("12 (5.0)", "8 (3.3)"),
     stringsAsFactors = FALSE
   )
   txt <- render_tex(tabular(dat) |> preset(font_family = "IBM Plex Mono"))
-  # The named face is compile-time guarded ...
-  expect_match(
-    txt,
-    "\\IfFontExistsTF{IBM Plex Mono}{\\setmainfont{IBM Plex Mono}}",
-    fixed = TRUE
-  )
-  # ... and the unconditional leaf is Latin Modern Mono, which ships
-  # with every TeX distribution -> compile cannot fail when IBM Plex
-  # is absent.
-  expect_match(txt, "\\setmainfont{Latin Modern Mono}", fixed = TRUE)
+  # No bundling, no fallback chain: the face is set directly. If it is
+  # not installed on the compiling machine xelatex errors -- the
+  # documented trade-off of naming a specific face over a generic.
+  expect_match(txt, "\\setmainfont{IBM Plex Mono}", fixed = TRUE)
+  # A generic family still gets the guarded cascade with a guaranteed
+  # Latin Modern leaf.
+  gtxt <- render_tex(tabular(dat) |> preset(font_family = "mono"))
+  expect_match(gtxt, "\\setmainfont{Latin Modern Mono}", fixed = TRUE)
 })

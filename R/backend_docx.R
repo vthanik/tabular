@@ -43,7 +43,7 @@
 #   italic   -> <w:r><w:rPr><w:i/></w:rPr>...</w:r>
 #   sup      -> <w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr>...
 #   sub      -> <w:r><w:rPr><w:vertAlign w:val="subscript"/></w:rPr>...
-#   code     -> <w:r><w:rPr><w:rFonts w:ascii="Liberation Mono".../>...
+#   code     -> <w:r><w:rPr><w:rFonts w:ascii="Courier New".../>...
 #   link     -> <w:hyperlink r:id="rIdN">...</w:hyperlink> + rels entry
 #   span     -> children only
 #   newline  -> <w:r><w:br/></w:r>
@@ -2720,7 +2720,7 @@ backend_docx <- function(grid, file) {
 
 # `word/styles.xml` — style definitions, pandoc-shaped. The default
 # run font is the resolved `preset@font_family` primary face (e.g.
-# `Liberation Mono` for the `"mono"` default), pinned directly into
+# `Courier New` for the `"mono"` default), pinned directly into
 # `<w:rFonts w:ascii=>` and declared in `word/fontTable.xml` with a
 # metric-compatible substitute (RTF's `\*\falt` discipline). This is
 # the SSOT principle: the body font comes from the preset, not from
@@ -2968,10 +2968,10 @@ backend_docx <- function(grid, file) {
 # decision in `.rtf_font_table()`.
 .docx_primary_font <- function(font_family) {
   if (length(font_family) == 0L) {
-    return("Liberation Serif")
+    return("Times New Roman")
   }
   family <- font_family[[1L]]
-  if (is.na(family) || !nzchar(family)) "Liberation Serif" else family
+  if (is.na(family) || !nzchar(family)) "Times New Roman" else family
 }
 
 # ---------------------------------------------------------------------
@@ -3493,7 +3493,7 @@ backend_docx <- function(grid, file) {
     code = .docx_run_wrap(
       run$children,
       hyperlinks,
-      "<w:rFonts w:ascii=\"Liberation Mono\" w:hAnsi=\"Liberation Mono\" w:cs=\"Liberation Mono\"/>",
+      "<w:rFonts w:ascii=\"Courier New\" w:hAnsi=\"Courier New\" w:cs=\"Courier New\"/>",
       default_rpr,
       rid_map
     ),
