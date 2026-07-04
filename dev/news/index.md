@@ -62,6 +62,19 @@
   `decimals` may now be a list keyed by `row_group` values, for
   per-group precision in one call.
 
+- `preset(font_family = ...)` now recognises the `"IBM Plex Mono"`,
+  `"IBM Plex Sans"`, and `"IBM Plex Serif"` families as opt-in named
+  faces: each leads a metric-compatible fallback chain (so column widths
+  are identical to the `"mono"` / `"sans"` / `"serif"` default) and
+  classifies correctly for RTF / DOCX. The HTML backend embeds the
+  bundled woff2 subset via `@font-face`, so a self-contained preview
+  renders IBM Plex even where the font is not installed; the paged
+  backends (RTF / DOCX / PDF) name-reference it with a Liberation
+  fallback.
+  [`check_fonts()`](https://vthanik.github.io/tabular/dev/reference/check_fonts.md)
+  reports the new chain. The package default stays `"mono"`
+  (Liberation-first), so existing output is unchanged.
+
 ### Breaking changes
 
 - [`col_spec()`](https://vthanik.github.io/tabular/dev/reference/col_spec.md)

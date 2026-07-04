@@ -46,6 +46,14 @@ can predict drift.
 - `x` — font is not installed on this machine; the consuming app on a
   different machine may or may not have it.
 
+**HTML embeds recognised bundled faces.** The `x` marker reflects the
+*paged* backends (RTF / DOCX / PDF), which only name-reference the font.
+The HTML backend additionally **embeds** a recognised bundled family
+(IBM Plex Mono / Sans / Serif) via `@font-face`, so an `x` on
+`IBM Plex Mono` does *not* mean the HTML preview lacks it — HTML
+self-serves the face; only the paged backends depend on the reader's
+installed fonts.
+
 Requires the `systemfonts` package (in `Suggests`); call
 `install.packages("systemfonts")` first if it isn't installed.
 

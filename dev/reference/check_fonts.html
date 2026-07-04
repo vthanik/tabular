@@ -90,7 +90,14 @@ on this machine, so you can predict drift.</p>
 the consuming application.</p></li>
 <li><p><code>x</code> — font is not installed on this machine; the consuming
 app on a different machine may or may not have it.</p></li>
-</ul><p>Requires the <code>systemfonts</code> package (in <code>Suggests</code>); call
+</ul><p><strong>HTML embeds recognised bundled faces.</strong> The <code>x</code> marker reflects
+the <em>paged</em> backends (RTF / DOCX / PDF), which only name-reference
+the font. The HTML backend additionally <strong>embeds</strong> a recognised
+bundled family (IBM Plex Mono / Sans / Serif) via <code>@font-face</code>, so
+an <code>x</code> on <code>IBM Plex Mono</code> does <em>not</em> mean the HTML preview lacks it —
+HTML self-serves the face; only the paged backends depend on the
+reader's installed fonts.</p>
+<p>Requires the <code>systemfonts</code> package (in <code>Suggests</code>); call
 <code>install.packages("systemfonts")</code> first if it isn't installed.</p>
     </div>
     <div class="section level2">
