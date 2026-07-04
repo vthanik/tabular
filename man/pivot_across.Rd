@@ -178,7 +178,20 @@ The raw sentinel never reaches the output at any hierarchy depth.}
 
 \item{overall}{\emph{Column name for \code{NA}-arm (overall / total) rows.}
 \verb{<character(1) | NULL>: default "Total"}. Pass \code{NULL} to drop
-overall rows entirely (per-arm only output).}
+overall rows entirely (per-arm only output).
+
+\strong{Requirement:} this relabels pooled rows the ARD already
+carries — the \code{NA}-arm rows cards emits from
+\code{cards::ard_stack_hierarchical(overall = TRUE)} or an
+\code{ard_*(.overall = TRUE)}. It does not synthesize a total: cards
+re-runs the calculation with the \code{by} variable removed, so the
+pooled \code{n} / \code{N} / \code{p} stay internally consistent. With no such
+rows in the input there is no overall column to label.
+
+\strong{Note:} if a study arm is literally named the same as \code{overall}
+(default \code{"Total"}), that arm and the pooled rows collide under
+one label and the pivot warns. Pass a distinct \verb{overall =} or
+rename the arm upstream.}
 
 \item{decimals}{\emph{Per-stat decimal precision.}
 \verb{<named integer | named list>: default }c()``. Accepts three

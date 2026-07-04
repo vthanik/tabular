@@ -145,6 +145,23 @@ test_that("Hierarchical ARD keeps the ..ard_hierarchical_overall.. sentinel as a
   expect_true(any(out$row_type == "overall"))
 })
 
+test_that("keyed `hierarchical` statistic interpolates {p} on the hierarchical path", {
+  # Regression: the hierarchical builder hardcoded context "categorical"
+  # when resolving the format string, so a list keyed by the ARD's actual
+  # `hierarchical` context fell through to the bare "{n}" default and
+  # silently dropped the percent. A bare string still worked because it is
+  # mirrored onto the `default` key. Both forms must now produce n (p%).
+  keyed <- pivot_across(
+    cdisc_saf_aesocpt_ard,
+    statistic = list(hierarchical = "{n} ({p}%)")
+  )
+  bare <- pivot_across(cdisc_saf_aesocpt_ard, statistic = "{n} ({p}%)")
+  col <- grep("[Pp]lacebo", names(keyed), value = TRUE)[1L]
+  pruritus <- which(keyed$label == "PRURITUS")[1L]
+  expect_match(keyed[[col]][pruritus], "^[0-9]+ \\([0-9.]+%\\)$")
+  expect_identical(keyed[[col]], bare[[col]])
+})
+
 # ---------------------------------------------------------------------
 # Edge case 9: ^\.\. sentinels other than the overall are filtered
 # ---------------------------------------------------------------------
@@ -1793,6 +1810,24 @@ test_that("overall = NULL still relabels the hierarchical overall row (#ard-over
   ov <- wide[wide$row_type == "overall", , drop = FALSE]
   expect_equal(ov$label, "Overall")
   expect_false(any(grepl("..", wide$label, fixed = TRUE)))
+})
+
+test_that("`overall` colliding with a real arm warns (collision guard) (#ard-overall)", {
+  # A study arm literally named the same as `overall` collides with the
+  # relabeled NA-arm pooled rows: both land in one column. Warn so the
+  # silent merge is visible.
+  df <- data.frame(
+    arm = c("Drug", "Total", NA),
+    stat = c(1, 2, 3),
+    stringsAsFactors = FALSE
+  )
+  expect_warning(
+    tabular:::.apply_overall_label(df, overall = "Total"),
+    class = "tabular_warning_input"
+  )
+  # No NA rows -> nothing relabeled -> no collision, no warning.
+  clean <- data.frame(arm = c("Drug", "Total"), stat = c(1, 2))
+  expect_no_warning(tabular:::.apply_overall_label(clean, overall = "Total"))
 })
 
 test_that("every kept sentinel has a default label (registry drift guard) (#ard-overall)", {

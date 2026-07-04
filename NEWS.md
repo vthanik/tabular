@@ -178,6 +178,12 @@
 * `paginate()` now collapses a zero-row table to a single empty-state page;
   horizontal `panels` no longer multiply an empty table into several identical
   blank pages.
+* `pivot_across()` now resolves a keyed `statistic` (e.g.
+  `list(hierarchical = "{n} ({p}%)")`) against each row's real ARD context on
+  the hierarchical path, so a list keyed by `hierarchical` no longer falls
+  through to the bare `{n}` default and silently drops the percent.
+* `pivot_across()` now warns when the `overall` label collides with an existing
+  arm name, instead of silently merging the pooled rows into that arm's column.
 * `preset()`'s `decimal_metrics` knob gained `"afm"` (now the default), making
   decimal alignment width-exact in proportional fonts via the bundled font
   metrics; Markdown output keeps character padding.
