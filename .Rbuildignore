@@ -23,6 +23,7 @@
 ^README\.qmd$
 ^vignettes/\.quarto$
 ^vignettes/.*_files$
+^vignettes/.*\.html$
 ^doc$
 ^Meta$
 ^cran-comments\.md$
