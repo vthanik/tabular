@@ -23,15 +23,24 @@
 # Family-class -> AFM family mapping
 # ---------------------------------------------------------------------
 
-# Liberation faces aren't in the alias table (R/fonts.R) because
-# the resolver treats them as "explicit named font, emit verbatim".
-# For metric measurement we still need the family class — Liberation
-# Serif is metric-compatible with Times-Roman, so we measure with
-# Times-Roman AFM.
+# Named faces that carry a family class but aren't in the PS-era
+# alias table (R/fonts.R). This is the shared SSOT consulted by both
+# `.font_chain_family_class` (AFM measurement, below) and
+# `.font_generic_class` (RTF/DOCX class, R/fonts.R) — extend it here,
+# never by touching the generic `.stack_*` cores.
+#
+# Liberation faces: metric-compatible with the Adobe Core faces
+# (Liberation Serif = Times-Roman, Sans = Helvetica, Mono = Courier),
+# so we measure with the matching Core AFM. IBM Plex Mono has the
+# identical 0.6em advance as Courier, so measuring it as Courier is
+# exact; Plex Sans as Helvetica is a close approximation.
 .font_to_family_class <- list(
   "Liberation Serif" = "serif",
   "Liberation Sans" = "sans",
-  "Liberation Mono" = "mono"
+  "Liberation Mono" = "mono",
+  "IBM Plex Mono" = "mono",
+  "IBM Plex Sans" = "sans",
+  "IBM Plex Serif" = "serif"
 )
 
 # Pick the family class for a font_family chain. Walks top-to-bottom;

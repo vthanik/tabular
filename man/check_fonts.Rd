@@ -41,6 +41,14 @@ the consuming application.
 app on a different machine may or may not have it.
 }
 
+\strong{HTML embeds recognised bundled faces.} The \code{x} marker reflects
+the \emph{paged} backends (RTF / DOCX / PDF), which only name-reference
+the font. The HTML backend additionally \strong{embeds} a recognised
+bundled family (IBM Plex Mono / Sans / Serif) via \verb{@font-face}, so
+an \code{x} on \verb{IBM Plex Mono} does \emph{not} mean the HTML preview lacks it —
+HTML self-serves the face; only the paged backends depend on the
+reader's installed fonts.
+
 Requires the \code{systemfonts} package (in \code{Suggests}); call
 \code{install.packages("systemfonts")} first if it isn't installed.
 }

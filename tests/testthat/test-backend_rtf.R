@@ -1608,3 +1608,29 @@ test_that("whitespace='collapse' collapses runs in the RTF title (#cr5)", {
   txt_p <- paste(readLines(fp, warn = FALSE), collapse = "\n")
   expect_match(txt_p, "\\~", fixed = TRUE)
 })
+
+test_that("IBM Plex Mono RTF names the face and keeps column geometry", {
+  dat <- data.frame(
+    soc = c("Cardiac", "Vascular"),
+    n = c("12 (5.0)", "8 (3.3)"),
+    stringsAsFactors = FALSE
+  )
+  fp <- withr::local_tempfile(fileext = ".rtf")
+  fm <- withr::local_tempfile(fileext = ".rtf")
+  emit(tabular(dat) |> preset(font_family = "IBM Plex Mono"), fp)
+  emit(tabular(dat) |> preset(font_family = "mono"), fm)
+  plex <- readLines(fp, warn = FALSE)
+  mono <- readLines(fm, warn = FALSE)
+  # Fixed-pitch mono entry naming IBM Plex with a Liberation \*\falt.
+  expect_true(any(grepl(
+    "{\\f0\\fmodern\\fprq1 IBM Plex Mono{\\*\\falt Liberation Mono};}",
+    plex,
+    fixed = TRUE
+  )))
+  # Geometry proof: \cellx column stops are byte-identical to the mono
+  # render (IBM Plex Mono measures as Courier, exactly like default).
+  cellx_plex <- grep("\\cellx", plex, fixed = TRUE, value = TRUE)
+  cellx_mono <- grep("\\cellx", mono, fixed = TRUE, value = TRUE)
+  expect_gt(length(cellx_plex), 0L)
+  expect_identical(cellx_plex, cellx_mono)
+})

@@ -2524,7 +2524,14 @@ backend_html <- function(grid, file) {
   # `style="..."` attributes on each `<td>` via `.html_cell_style_attr()`,
   # so the table-wide CSS block has nothing to emit on their behalf —
   # the per-cell stamps already carry the visual.
-  c("<style>", body_css, page_rules, "</style>")
+  # @font-face rules for a bundled IBM Plex face, if the resolved
+  # chain names one. Prepended AFTER `.scope_selectors` so the at-rule
+  # is NOT `#<id>`-prefixed (a scoped @font-face is invalid). Empty for
+  # every non-IBM render, so the default output is byte-identical.
+  font_faces <- .html_font_face_block(
+    .resolve_font_stack(.effective_font_family(preset), "html")
+  )
+  c("<style>", font_faces, body_css, page_rules, "</style>")
 }
 
 # Prefix every CSS selector in `lines` with `#<id>` so the stylesheet is
@@ -2788,6 +2795,81 @@ backend_html <- function(grid, file) {
   fam <- .effective_font_family(preset)
   chain <- .resolve_font_stack(fam, "html")
   paste(vapply(chain, .html_quote_font, character(1L)), collapse = ", ")
+}
+
+# Bundled IBM Plex faces (inst/fonts) served via @font-face so a
+# self-contained .html previews the face even where it isn't
+# installed. Weight ranges cover the weights the HTML actually
+# requests (400 body, 600 headers, 700 explicit/`<strong>` bold) with
+# a real face -- the heaviest bundled weight spans the bold demand so
+# nothing faux-bolds.
+.ibm_plex_faces <- list(
+  "IBM Plex Mono" = list(
+    c(weight = "400", file = "IBMPlexMono-Regular-Latin1.woff2"),
+    c(weight = "500 700", file = "IBMPlexMono-Medium-Latin1.woff2")
+  ),
+  "IBM Plex Sans" = list(
+    c(weight = "400", file = "IBMPlexSans-Regular-Latin1.woff2"),
+    c(weight = "500", file = "IBMPlexSans-Medium-Latin1.woff2"),
+    c(weight = "600 700", file = "IBMPlexSans-SemiBold-Latin1.woff2")
+  ),
+  "IBM Plex Serif" = list(
+    c(weight = "400", file = "IBMPlexSerif-Regular-Latin1.woff2"),
+    c(weight = "600 700", file = "IBMPlexSerif-SemiBold-Latin1.woff2")
+  )
+)
+
+# Codepoints covered by the bundled Latin-1 woff2 subsets (verified
+# against the actual font cmap). Restricting each @font-face to this
+# range means an out-of-subset glyph (e.g. the absent U+2264 `<=` /
+# U+2265 `>=`) falls through to the next family in the CSS stack
+# (Liberation Mono / monospace) instead of rendering as tofu.
+.ibm_plex_unicode_range <- paste0(
+  "U+0020-007E,U+00A0-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,",
+  "U+2013-2014,U+2018-201A,U+201C-201E,U+2020-2022,U+2026,U+2030,",
+  "U+2039-203A,U+2044,U+20AC,U+2122,U+2212,U+FB01-FB02"
+)
+
+# One @font-face rule. `local()` first so a full local install (all
+# glyphs) is preferred; the embedded subset is the fallback. Skips
+# gracefully when the file isn't installed (dev tree before install).
+.html_font_face_rule <- function(family, weight, file) {
+  path <- system.file("fonts", file, package = "tabular")
+  if (!nzchar(path)) {
+    return(character())
+  }
+  bytes <- readBin(path, "raw", n = file.info(path)$size)
+  b64 <- .base64_encode_raw(bytes)
+  sprintf(
+    paste0(
+      "@font-face { font-family: \"%s\"; font-style: normal; ",
+      "font-weight: %s; font-display: swap; ",
+      "src: local(\"%s\"), url(data:font/woff2;base64,%s) format(\"woff2\"); ",
+      "unicode-range: %s; }"
+    ),
+    family,
+    weight,
+    family,
+    b64,
+    .ibm_plex_unicode_range
+  )
+}
+
+# @font-face rules for whichever IBM Plex faces the resolved chain
+# names -- empty for every non-IBM render, so nothing is injected
+# into the default (Liberation) output.
+.html_font_face_block <- function(chain) {
+  faces <- intersect(names(.ibm_plex_faces), chain)
+  rules <- character()
+  for (face in faces) {
+    for (spec in .ibm_plex_faces[[face]]) {
+      rules <- c(
+        rules,
+        .html_font_face_rule(face, spec[["weight"]], spec[["file"]])
+      )
+    }
+  }
+  rules
 }
 
 # ---------------------------------------------------------------------

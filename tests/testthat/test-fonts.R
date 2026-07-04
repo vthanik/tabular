@@ -238,6 +238,18 @@ test_that("check_fonts accepts preset_spec input directly", {
   expect_match(paste(msgs, collapse = ""), "mono", fixed = TRUE)
 })
 
+test_that("check_fonts reports the full IBM Plex chain", {
+  skip_if_not_installed("systemfonts")
+  spec <- tabular(data.frame(x = 1L)) |> preset(font_family = "IBM Plex Mono")
+  joined <- paste(
+    testthat::capture_messages(check_fonts(spec)),
+    collapse = ""
+  )
+  expect_match(joined, "IBM Plex Mono", fixed = TRUE)
+  expect_match(joined, "Liberation Mono", fixed = TRUE)
+  expect_match(joined, "Latin Modern Mono", fixed = TRUE)
+})
+
 test_that("check_fonts errors on non-spec input", {
   expect_error(check_fonts(data.frame()), class = "tabular_error_input")
   expect_error(check_fonts("string"), class = "tabular_error_input")
@@ -297,4 +309,105 @@ test_that(".font_generic_class classifies stacks the same way for both Word back
   expect_identical(tabular:::.docx_font_class("Times New Roman"), "roman")
   expect_identical(tabular:::.docx_font_class("Arial"), "swiss")
   expect_identical(tabular:::.docx_font_class("Wingdings 9000"), "swiss")
+})
+
+# ---------------------------------------------------------------------
+# IBM Plex — recognised opt-in named family
+# ---------------------------------------------------------------------
+
+test_that("IBM Plex leads a metric-compatible chain per backend", {
+  # HTML: lead + Liberation/Courier fallback + CSS generic tail.
+  expect_identical(
+    tabular:::.resolve_font_stack("IBM Plex Mono", "html"),
+    c("IBM Plex Mono", "Liberation Mono", "Courier New", "monospace")
+  )
+  # LaTeX: ends in Latin Modern Mono so the \IfFontExistsTF cascade
+  # cannot fail when IBM Plex is absent.
+  expect_identical(
+    tabular:::.resolve_font_stack("IBM Plex Mono", "latex"),
+    c(
+      "IBM Plex Mono",
+      "Liberation Mono",
+      "Courier New",
+      "TeX Gyre Cursor",
+      "Latin Modern Mono"
+    )
+  )
+  # RTF: shared lead + fallback only (no tail; \*\falt handles it).
+  expect_identical(
+    tabular:::.resolve_font_stack("IBM Plex Mono", "rtf"),
+    c("IBM Plex Mono", "Liberation Mono", "Courier New")
+  )
+  # Sans lead + Liberation Sans / Arial fallback.
+  expect_identical(
+    tabular:::.resolve_font_stack("IBM Plex Sans", "html"),
+    c("IBM Plex Sans", "Liberation Sans", "Arial", "sans-serif")
+  )
+})
+
+test_that("IBM Plex does not perturb the plain generic chains", {
+  # The named family must never leak into the generic cores.
+  expect_identical(
+    tabular:::.resolve_font_stack("mono", "html"),
+    c("Liberation Mono", "Courier New", "Courier", "monospace")
+  )
+  expect_identical(
+    tabular:::.resolve_font_stack("sans", "html"),
+    c("Liberation Sans", "Arial", "Helvetica", "sans-serif")
+  )
+})
+
+test_that("every .font_named_chains key has a class in the shared SSOT", {
+  # Drift guard: a named face with no .font_to_family_class entry would
+  # resolve fam = NULL and drop its backend tail / mis-measure.
+  named <- names(tabular:::.font_named_chains)
+  classes <- vapply(
+    named,
+    function(nm) tabular:::.font_to_family_class[[nm]] %||% NA_character_,
+    character(1L)
+  )
+  expect_false(anyNA(classes))
+  expect_true(all(classes %in% c("mono", "sans", "serif")))
+})
+
+test_that("IBM Plex classifies for both Word backends via the SSOT", {
+  expect_identical(tabular:::.font_generic_class("IBM Plex Mono"), "mono")
+  expect_identical(tabular:::.font_generic_class("IBM Plex Sans"), "sans")
+  expect_identical(tabular:::.rtf_family_class("IBM Plex Mono"), "fmodern")
+  expect_identical(tabular:::.docx_font_class("IBM Plex Mono"), "modern")
+  expect_identical(tabular:::.rtf_family_class("IBM Plex Sans"), "fswiss")
+  expect_identical(tabular:::.docx_font_class("IBM Plex Sans"), "swiss")
+})
+
+test_that(".html_font_face_block emits only for a named IBM Plex face", {
+  mono <- tabular:::.html_font_face_block(
+    tabular:::.resolve_font_stack("IBM Plex Mono", "html")
+  )
+  expect_length(mono, 2L) # Regular + Medium
+  expect_true(all(grepl("@font-face", mono, fixed = TRUE)))
+  expect_true(any(grepl("font-weight: 500 700", mono, fixed = TRUE)))
+  expect_true(all(grepl("unicode-range:", mono, fixed = TRUE)))
+  expect_true(all(grepl('format("woff2")', mono, fixed = TRUE)))
+  expect_true(all(grepl('local("IBM Plex Mono")', mono, fixed = TRUE)))
+
+  sans <- tabular:::.html_font_face_block(
+    tabular:::.resolve_font_stack("IBM Plex Sans", "html")
+  )
+  expect_length(sans, 3L) # Regular + Medium + SemiBold
+  expect_true(any(grepl("font-weight: 600 700", sans, fixed = TRUE)))
+
+  serif <- tabular:::.html_font_face_block(
+    tabular:::.resolve_font_stack("IBM Plex Serif", "html")
+  )
+  expect_length(serif, 2L) # Regular + SemiBold
+  expect_true(all(grepl('local("IBM Plex Serif")', serif, fixed = TRUE)))
+  expect_true(any(grepl("font-weight: 600 700", serif, fixed = TRUE)))
+
+  # The default (Liberation) chain injects nothing.
+  expect_identical(
+    tabular:::.html_font_face_block(
+      tabular:::.resolve_font_stack("mono", "html")
+    ),
+    character()
+  )
 })
