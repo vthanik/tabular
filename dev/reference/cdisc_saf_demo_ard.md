@@ -76,7 +76,7 @@ cdisc_saf_demo_ard |>
     )
   )
 
-#tabular-d70f21365e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-d70f21365e { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-d70f21365e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-d70f21365e p { line-height: inherit; }
 #tabular-d70f21365e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }

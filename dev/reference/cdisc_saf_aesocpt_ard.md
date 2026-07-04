@@ -67,7 +67,7 @@ cdisc_saf_aesocpt_ard |>
     `Xanomeline High Dose` = col_spec(align = "decimal")
   )
 
-#tabular-dbeb4956f1 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-dbeb4956f1 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-dbeb4956f1 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-dbeb4956f1 p { line-height: inherit; }
 #tabular-dbeb4956f1 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }

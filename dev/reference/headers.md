@@ -149,7 +149,7 @@ tabular(
   ) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 
-#tabular-fcbe777680 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-fcbe777680 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-fcbe777680 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-fcbe777680 p { line-height: inherit; }
 #tabular-fcbe777680 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }

@@ -191,7 +191,7 @@ fig <- figure(
 )
 fig
 
-#tabular-e1ec284fbf { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-e1ec284fbf { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-e1ec284fbf .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-e1ec284fbf p { line-height: inherit; }
 #tabular-e1ec284fbf .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -274,7 +274,7 @@ per_arm <- figure(
 )
 per_arm
 
-#tabular-95d6e44e72 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-95d6e44e72 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-95d6e44e72 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-95d6e44e72 p { line-height: inherit; }
 #tabular-95d6e44e72 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }

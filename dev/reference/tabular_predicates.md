@@ -113,7 +113,7 @@ is_tabular_spec("not a spec") # FALSE — does not raise
 #> [1] FALSE
 add_safety_footnote(demo)
 
-#tabular-30edc9b813 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-30edc9b813 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-30edc9b813 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-30edc9b813 p { line-height: inherit; }
 #tabular-30edc9b813 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }

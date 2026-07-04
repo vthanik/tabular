@@ -2654,18 +2654,18 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   `decimals` may now be a list keyed by `row_group` values, for
   per-group precision in one call.
 
-- `preset(font_family = ...)` now recognises the `"IBM Plex Mono"`,
-  `"IBM Plex Sans"`, and `"IBM Plex Serif"` families as opt-in named
-  faces: each leads a metric-compatible fallback chain (so column widths
-  are identical to the `"mono"` / `"sans"` / `"serif"` default) and
-  classifies correctly for RTF / DOCX. The HTML backend embeds the
-  bundled woff2 subset via `@font-face`, so a self-contained preview
-  renders IBM Plex even where the font is not installed; the paged
-  backends (RTF / DOCX / PDF) name-reference it with a Liberation
-  fallback.
-  [`check_fonts()`](https://vthanik.github.io/tabular/dev/reference/check_fonts.md)
-  reports the new chain. The package default stays `"mono"`
-  (Liberation-first), so existing output is unchanged.
+- `preset(font_family = ...)` generic chains (`"mono"` / `"sans"` /
+  `"serif"`) now lead with the ubiquitous Microsoft Office face (Courier
+  New / Arial / Times New Roman) and keep the metric-compatible
+  Liberation face as the last fallback, so Word shows a font the reader
+  actually has installed on Windows / macOS instead of a phantom
+  “Liberation Mono” in its font menu. The faces are metric-compatible,
+  so layout, line breaks, and decimal alignment are unchanged. A bare
+  `font_family = "Courier New"` now also leads with Courier New
+  (previously resolved led by Liberation Mono). The package bundles no
+  fonts; an arbitrary named face (`"IBM Plex Mono"`,
+  `"Source Code Pro"`, etc.) is emitted verbatim for the consuming
+  application to resolve.
 
 ### Breaking changes
 
@@ -3306,7 +3306,7 @@ tables <- htmltools::tagList(
 # launches a browser.
 s1
 
-#tabular-30edc9b813 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-30edc9b813 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-30edc9b813 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-30edc9b813 p { line-height: inherit; }
 #tabular-30edc9b813 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -3509,7 +3509,7 @@ tabular(
     )
   )
 
-#tabular-aad4691a1e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-aad4691a1e { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-aad4691a1e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-aad4691a1e p { line-height: inherit; }
 #tabular-aad4691a1e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -3634,7 +3634,7 @@ tabular(cdisc_eff_estimates, titles = "Treatment-effect estimates by model") |>
                         format = "%.4f")
   )
 
-#tabular-601a82b748 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-601a82b748 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-601a82b748 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-601a82b748 p { line-height: inherit; }
 #tabular-601a82b748 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -3835,7 +3835,7 @@ tabular(
     )
   )
 
-#tabular-abcb597746 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-abcb597746 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-abcb597746 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-abcb597746 p { line-height: inherit; }
 #tabular-abcb597746 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -3985,7 +3985,7 @@ tabular(
     )
   )
 
-#tabular-7813587a48 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-7813587a48 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-7813587a48 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-7813587a48 p { line-height: inherit; }
 #tabular-7813587a48 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4115,7 +4115,7 @@ cdisc_saf_aesocpt_ard |>
     `Xanomeline High Dose` = col_spec(align = "decimal")
   )
 
-#tabular-dbeb4956f1 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-dbeb4956f1 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-dbeb4956f1 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-dbeb4956f1 p { line-height: inherit; }
 #tabular-dbeb4956f1 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4318,7 +4318,7 @@ tabular(
     descending = c(TRUE, TRUE)
   )
 
-#tabular-c0db510a8c { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-c0db510a8c { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-c0db510a8c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-c0db510a8c p { line-height: inherit; }
 #tabular-c0db510a8c .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4459,7 +4459,7 @@ cdisc_saf_demo_ard |>
     )
   )
 
-#tabular-d70f21365e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-d70f21365e { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-d70f21365e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-d70f21365e p { line-height: inherit; }
 #tabular-d70f21365e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4623,7 +4623,7 @@ tabular(
     )
   )
 
-#tabular-0214264e37 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-0214264e37 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-0214264e37 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-0214264e37 p { line-height: inherit; }
 #tabular-0214264e37 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4848,7 +4848,7 @@ tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
   ) |>
   subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
 
-#tabular-c959fb1525 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-c959fb1525 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-c959fb1525 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-c959fb1525 p { line-height: inherit; }
 #tabular-c959fb1525 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4992,7 +4992,7 @@ tabular(
     )
   )
 
-#tabular-74bc2ab995 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-74bc2ab995 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-74bc2ab995 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-74bc2ab995 p { line-height: inherit; }
 #tabular-74bc2ab995 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -5304,13 +5304,13 @@ can predict drift.
 - `x` — font is not installed on this machine; the consuming app on a
   different machine may or may not have it.
 
-**HTML embeds recognised bundled faces.** The `x` marker reflects the
-*paged* backends (RTF / DOCX / PDF), which only name-reference the font.
-The HTML backend additionally **embeds** a recognised bundled family
-(IBM Plex Mono / Sans / Serif) via `@font-face`, so an `x` on
-`IBM Plex Mono` does *not* mean the HTML preview lacks it — HTML
-self-serves the face; only the paged backends depend on the reader's
-installed fonts.
+Every backend only **name-references** its fonts; the consuming
+application (browser, LaTeX engine, Word, Adobe Reader) resolves those
+names against its own installed fonts. An `x` therefore means the reader
+needs that face installed for the render to match exactly. The default
+chains lead with the ubiquitous Office cores (Courier New / Arial /
+Times New Roman), so a `v` on the default is the common case on Windows
+and macOS.
 
 Requires the `systemfonts` package (in `Suggests`); call
 `install.packages("systemfonts")` first if it isn't installed.
@@ -5344,20 +5344,20 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> 
 #> ── Font resolution for `font_family = mono` 
 #> backend: html
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 #> x TeX Gyre Cursor (not on this machine)
 #> x Latin Modern Mono (not on this machine)
 #> backend: rtf
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 
 # ---- Example 2: Diagnose a Courier New request ----
 #
@@ -5376,20 +5376,20 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> 
 #> ── Font resolution for `font_family = Courier New` 
 #> backend: html
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 #> x TeX Gyre Cursor (not on this machine)
 #> x Latin Modern Mono (not on this machine)
 #> backend: rtf
-#> v Liberation Mono
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Liberation Mono
 
 # ---- Example 3: Explicit cross-platform stack ----
 #
@@ -5439,37 +5439,37 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> 
 #> ── Font resolution for `font_family = serif` 
 #> backend: html
-#> v Liberation Serif
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Liberation Serif
 #> o serif (generic, always available)
 #> backend: latex
-#> v Liberation Serif
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Liberation Serif
 #> x TeX Gyre Termes (not on this machine)
 #> x Latin Modern Roman (not on this machine)
 #> backend: rtf
-#> v Liberation Serif
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Liberation Serif
 #> 
 #> ── Font resolution for `font_family = sans` 
 #> backend: html
-#> v Liberation Sans
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Liberation Sans
 #> o sans-serif (generic, always available)
 #> backend: latex
-#> v Liberation Sans
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Liberation Sans
 #> x TeX Gyre Heros (not on this machine)
 #> x Latin Modern Sans (not on this machine)
 #> backend: rtf
-#> v Liberation Sans
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Liberation Sans
 ```
 # Check LaTeX-package availability for PDF output
 
@@ -6139,7 +6139,7 @@ tabular(
   ) |>
   sort_rows(by = c("variable", "stat_label"))
 
-#tabular-3452c76190 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-3452c76190 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-3452c76190 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-3452c76190 p { line-height: inherit; }
 #tabular-3452c76190 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -6335,7 +6335,7 @@ tabular(
   cols_apply(arm_cols, col_spec(align = "decimal")) |>
   sort_rows(by = c("variable", "stat_label"))
 
-#tabular-60741b642b { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-60741b642b { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-60741b642b .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-60741b642b p { line-height: inherit; }
 #tabular-60741b642b .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -6578,7 +6578,7 @@ tabular(
   ) |>
   sort_rows(by = c("variable", "stat_label"))
 
-#tabular-212d34e159 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-212d34e159 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-212d34e159 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-212d34e159 p { line-height: inherit; }
 #tabular-212d34e159 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -7151,7 +7151,7 @@ fig <- figure(
 )
 fig
 
-#tabular-e1ec284fbf { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-e1ec284fbf { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-e1ec284fbf .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-e1ec284fbf p { line-height: inherit; }
 #tabular-e1ec284fbf .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -7234,7 +7234,7 @@ per_arm <- figure(
 )
 per_arm
 
-#tabular-95d6e44e72 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-95d6e44e72 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-95d6e44e72 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-95d6e44e72 p { line-height: inherit; }
 #tabular-95d6e44e72 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -7433,7 +7433,7 @@ tabular(cdisc_saf_aesocpt) |>
     .at = cells_headers(j = "Total")
   )
 
-#tabular-63b28d89ab { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-63b28d89ab { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-63b28d89ab .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-63b28d89ab p { line-height: inherit; }
 #tabular-63b28d89ab .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -7559,7 +7559,7 @@ tabular(cdisc_saf_n) |>
     orientation = "landscape"
   )
 
-#tabular-f3a8112265 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
+#tabular-f3a8112265 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
 #tabular-f3a8112265 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-f3a8112265 p { line-height: inherit; }
 #tabular-f3a8112265 .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -7768,7 +7768,7 @@ tabular(
   ) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 
-#tabular-fcbe777680 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-fcbe777680 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-fcbe777680 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-fcbe777680 p { line-height: inherit; }
 #tabular-fcbe777680 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -7922,7 +7922,7 @@ tabular(
   )
 )
 
-#tabular-52b89081ca { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-52b89081ca { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-52b89081ca .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-52b89081ca p { line-height: inherit; }
 #tabular-52b89081ca .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -8335,7 +8335,7 @@ tabular(
     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   )
 
-#tabular-7c5f6951e9 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-7c5f6951e9 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-7c5f6951e9 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-7c5f6951e9 p { line-height: inherit; }
 #tabular-7c5f6951e9 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -8620,7 +8620,7 @@ tabular(
     continuation = "(continued)"
   )
 
-#tabular-11fb8f5e9f { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-11fb8f5e9f { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-11fb8f5e9f .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-11fb8f5e9f p { line-height: inherit; }
 #tabular-11fb8f5e9f .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -9125,7 +9125,7 @@ cdisc_saf_demo_ard |>
     )
   )
 
-#tabular-6881ea5420 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-6881ea5420 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-6881ea5420 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-6881ea5420 p { line-height: inherit; }
 #tabular-6881ea5420 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -9310,7 +9310,7 @@ tabular(
   ) |>
   preset_minimal()
 
-#tabular-e0179cf22d { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-e0179cf22d { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-e0179cf22d .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-e0179cf22d p { line-height: inherit; }
 #tabular-e0179cf22d .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -9419,20 +9419,23 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
   - **`font_size`** — body point size. `<numeric(1)>`.
 
   - **`font_family`** — body font family. `<character | character(1)>`.
-    Default `"mono"`. Three accepted shapes:
+    Default `"mono"`. Four accepted shapes:
 
     1.  **Generic family** — `"mono"` (default), `"serif"`, `"sans"`
         (CSS aliases `"monospace"` / `"sans-serif"` also recognised).
         The resolver expands to a per-backend chain that leads with the
-        Linux-installed **Liberation** face (Posit Workbench / Domino /
-        Citrix / RStudio Server), then the Microsoft Office face
-        (Courier New / Times New Roman / Arial) for desktop Win / Mac
-        consumers, then TeX Gyre for LaTeX compile, then the CSS generic
-        for HTML. Liberation Mono / Serif / Sans are metric-compatible
-        with Courier New / TNR / Arial, so layout, line breaks, and
-        decimal alignment hold across every render context. The mono
-        default matches the dominant submission-TFL convention where
-        deterministic glyph widths drive `n (%)` cell alignment.
+        Microsoft Office face (Courier New / Times New Roman / Arial) —
+        installed on every Windows and macOS machine, where documents
+        are reviewed — then the PostScript legacy name, then the
+        metric-compatible **Liberation** face LAST as the Linux-server
+        fallback (Posit Workbench / Domino / Citrix / RStudio Server),
+        then TeX Gyre for LaTeX compile / the CSS generic for HTML.
+        Liberation Mono / Serif / Sans are metric-compatible with
+        Courier New / TNR / Arial, so layout, line breaks, and decimal
+        alignment hold across every render context regardless of which
+        end of the chain resolves. The mono default matches the dominant
+        submission-TFL convention where deterministic glyph widths drive
+        `n (%)` cell alignment.
 
     2.  **Named alias** — `"Times"`, `"Times New Roman"`, `"Arial"`,
         `"Helvetica"`, `"Courier"`, `"Courier New"`. These
@@ -9442,51 +9445,16 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
         want Times-like rendering") on every OS instead of hard-erroring
         on a Linux server with no TNR installed.
 
-    3.  **Named font.** Two cases:
-
-        a\. **Recognised bundled family** — `"IBM Plex Mono"`,
-        `"IBM Plex Sans"`, `"IBM Plex Serif"`. The named face LEADS a
-        metric-compatible chain (`IBM Plex Mono` -\> Liberation Mono -\>
-        Courier New -\> ...), so column widths and decimal alignment are
-        identical to the `"mono"` default (IBM Plex Mono has Courier's
-        exact glyph advance) and it classifies as fixed-pitch mono for
-        Word.
-
-        **The visible face differs by backend, by design:**
-
-        - **HTML preview** — the Plex face is **embedded in the
-          self-contained `.html`** (`@font-face`, woff2 data URI). It
-          renders as IBM Plex on any machine or browser, even with the
-          font not installed. This is the portable preview you share
-          with a reviewer.
-
-        - **RTF / DOCX** — the file **names** IBM Plex (with Liberation
-          Mono as `\\*\\falt`). Word / LibreOffice shows IBM Plex only
-          if it is installed on the opening machine; otherwise it
-          substitutes the metric-compatible Liberation / Courier face.
-          Layout, line breaks, and decimal alignment are identical
-          either way — only the glyph shapes differ.
-
-        - **PDF (LaTeX)** — xelatex uses IBM Plex only if installed on
-          the compiling machine; otherwise the `\\IfFontExistsTF`
-          cascade falls back to Liberation -\> Latin Modern Mono. It
-          **compiles either way** (unlike an unrecognised named font).
-
-        In one line: HTML embeds the face so the preview is portable;
-        the paged backends name-reference it, so the visible face
-        depends on the reader's installed fonts — the layout is
-        identical regardless.
-
-        b\. **Arbitrary named font** — `"Inter"`, `"JetBrains Mono"`,
-        `"Source Serif Pro"`, sponsor-specific face, etc. Emitted
-        verbatim with no fallback fabricated and not embedded. The
-        consuming app (browser, xelatex, Word, LibreOffice) resolves the
-        name against its own font matcher. RTF and DOCX fall back to the
-        consuming app's substitution table when the name is missing;
-        **xelatex hard-errors at compile time**; HTML browsers fall
-        through to the browser's default font (not necessarily
-        class-matched). For a portable named face, prefer a recognised
-        bundled family (case a) or an explicit stack (case 4).
+    3.  **Arbitrary named font** — `"Inter"`, `"JetBrains Mono"`,
+        `"IBM Plex Mono"`, `"Source Code Pro"`, sponsor-specific face,
+        etc. Emitted verbatim with no fallback fabricated. The consuming
+        app (browser, xelatex, Word, LibreOffice) resolves the name
+        against its own font matcher: RTF and DOCX substitute when the
+        name is missing; **xelatex hard-errors at compile time** if the
+        face is not installed; HTML browsers fall through to the
+        browser's default font (not necessarily class-matched). For a
+        portable result, prefer a generic family (shape 1) or an
+        explicit stack (shape 4).
 
     4.  **Explicit stack** — `c("Inter", "Helvetica", "sans")`. User
         owns the chain. Returned verbatim — alias lookup is
@@ -9494,38 +9462,11 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
         with no chain expansion (escape hatch for users who genuinely
         want exact-name semantics).
 
-    **Note:** Adobe Source Pro is no longer the default lead. Source Pro
-    is not pre-installed on production Linux servers, so leading with it
-    walks through 2-3 missing names before resolving. Users who
-    installed Source Pro can opt in via the explicit-stack form
-    (`c("Source Serif Pro", "serif")`).
-
-    **What you see in Word's font dropdown vs. what renders.** When you
-    open a tabular-generated `.rtf` in Word on macOS or Windows, the
-    font dropdown displays the file's *requested* face —
-    `"Liberation Mono"` by default (the Linux-server-installed face).
-    The rendered text on screen is whatever Word's `\\*\\falt`
-    substitution resolved to — typically Courier New on macOS / Windows.
-    This is correct: Liberation Mono and Courier New are
-    metric-compatible by design, so the rendered layout (line breaks,
-    decimal alignment, page breaks) is identical regardless of which
-    face Word actually used to render. The same `\\*\\falt` substitution
-    model applies to serif (Liberation Serif -\> Times New Roman) and
-    sans (Liberation Sans -\> Arial).
-
-    **How to force Office names as the primary.** If reviewers will be
-    confused by seeing `"Liberation Mono"` in the Word font dropdown
-    (cosmetic concern; doesn't affect rendering), pass an explicit
-    length\>1 stack with the Office name first. The resolver returns the
-    vector verbatim — no alias lookup, no chain expansion — so the RTF
-    file then names the Office face as primary and your chosen alternate
-    as `\\*\\falt`:
-
-        preset(font_family = c("Courier New", "Courier", "Liberation Mono"))
-
-    This is the canonical escape hatch for authors who know their
-    consumer audience is Mac / Windows Word users and want the dropdown
-    to show the Office face directly.
+    **Note:** tabular bundles no fonts. Because the default chain leads
+    with the Office face, Word's font dropdown shows a face the reader
+    actually has installed on Windows / macOS (e.g. Courier New for
+    `"mono"`), not a phantom name; the metric-compatible Liberation face
+    only appears as the fallback for a headless Linux box.
 
   - **`orientation`** — page orientation. `<character(1)>`. One of
     `"landscape"` (default), `"portrait"`.
@@ -9935,7 +9876,7 @@ tabular(
   ) |>
   paginate()
 
-#tabular-6baf110ab1 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
+#tabular-6baf110ab1 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
 #tabular-6baf110ab1 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-6baf110ab1 p { line-height: inherit; }
 #tabular-6baf110ab1 .tabular-title { font-size: 8pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -10128,7 +10069,7 @@ tabular(
   footnotes = "Safety Population."
 )
 
-#tabular-e65ff1c855 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-e65ff1c855 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-e65ff1c855 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-e65ff1c855 p { line-height: inherit; }
 #tabular-e65ff1c855 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -10355,7 +10296,7 @@ tabular(
     Total      = col_spec(label = "Total\nN={demo_n['Total']}")
   )
 
-#tabular-f5008f6aa4 { font-family: "Liberation Serif", "Times New Roman", Times, serif; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
+#tabular-f5008f6aa4 { font-family: "Times New Roman", Times, "Liberation Serif", serif; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
 #tabular-f5008f6aa4 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-f5008f6aa4 p { line-height: inherit; }
 #tabular-f5008f6aa4 .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -10544,7 +10485,7 @@ tabular(
   ) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 
-#tabular-a5be29b229 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-a5be29b229 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-a5be29b229 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-a5be29b229 p { line-height: inherit; }
 #tabular-a5be29b229 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -10885,7 +10826,7 @@ tabular(cdisc_saf_aesocpt, titles = "Adverse Events by SOC / PT",
   style(background = "#f0f0f0",
         .at = cells_body(where = row_type == "overall"))
 
-#tabular-7c16651af3 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-7c16651af3 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-7c16651af3 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-7c16651af3 p { line-height: inherit; }
 #tabular-7c16651af3 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -11165,7 +11106,7 @@ tabular(
   ) |>
   subgroup(by = "sex")
 
-#tabular-d908d21329 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-d908d21329 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-d908d21329 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-d908d21329 p { line-height: inherit; }
 #tabular-d908d21329 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -11403,7 +11344,7 @@ is_tabular_spec("not a spec") # FALSE — does not raise
 #> [1] FALSE
 add_safety_footnote(demo)
 
-#tabular-30edc9b813 { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-30edc9b813 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-30edc9b813 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-30edc9b813 p { line-height: inherit; }
 #tabular-30edc9b813 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -11696,7 +11637,7 @@ tabular(
   ) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 
-#tabular-4b8d16e13e { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-4b8d16e13e { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-4b8d16e13e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-4b8d16e13e p { line-height: inherit; }
 #tabular-4b8d16e13e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }

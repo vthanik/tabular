@@ -120,7 +120,7 @@ tabular(
   ) |>
   preset_minimal()
 
-#tabular-e0179cf22d { font-family: "Liberation Mono", "Courier New", Courier, monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-e0179cf22d { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-e0179cf22d .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-e0179cf22d p { line-height: inherit; }
 #tabular-e0179cf22d .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
