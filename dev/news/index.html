@@ -109,6 +109,10 @@
 <li>
 <code><a href="../reference/paginate.html">paginate()</a></code> now collapses a zero-row table to a single empty-state page; horizontal <code>panels</code> no longer multiply an empty table into several identical blank pages.</li>
 <li>
+<code><a href="../reference/pivot_across.html">pivot_across()</a></code> now resolves a keyed <code>statistic</code> (e.g. <code>list(hierarchical = "{n} ({p}%)")</code>) against each row’s real ARD context on the hierarchical path, so a list keyed by <code>hierarchical</code> no longer falls through to the bare <code>{n}</code> default and silently drops the percent.</li>
+<li>
+<code><a href="../reference/pivot_across.html">pivot_across()</a></code> now warns when the <code>overall</code> label collides with an existing arm name, instead of silently merging the pooled rows into that arm’s column.</li>
+<li>
 <code><a href="../reference/preset.html">preset()</a></code>’s <code>decimal_metrics</code> knob gained <code>"afm"</code> (now the default), making decimal alignment width-exact in proportional fonts via the bundled font metrics; Markdown output keeps character padding.</li>
 <li>
 <code><a href="../reference/preset.html">preset()</a></code> gained an <code>empty_text</code> knob, a house-style default for the zero-row message that a per-table <code>tabular(empty_text = ...)</code> still overrides.</li>

@@ -231,7 +231,18 @@ The raw sentinel never reaches the output at any hierarchy depth.</p></dd>
 <dt id="arg-overall">overall<a class="anchor" aria-label="anchor" href="#arg-overall"></a></dt>
 <dd><p><em>Column name for <code>NA</code>-arm (overall / total) rows.</em>
 <code>&lt;character(1) | NULL&gt;: default "Total"</code>. Pass <code>NULL</code> to drop
-overall rows entirely (per-arm only output).</p></dd>
+overall rows entirely (per-arm only output).</p>
+<p><strong>Requirement:</strong> this relabels pooled rows the ARD already
+carries — the <code>NA</code>-arm rows cards emits from
+<code>cards::ard_stack_hierarchical(overall = TRUE)</code> or an
+<code>ard_*(.overall = TRUE)</code>. It does not synthesize a total: cards
+re-runs the calculation with the <code>by</code> variable removed, so the
+pooled <code>n</code> / <code>N</code> / <code>p</code> stay internally consistent. With no such
+rows in the input there is no overall column to label.</p>
+<p><strong>Note:</strong> if a study arm is literally named the same as <code>overall</code>
+(default <code>"Total"</code>), that arm and the pooled rows collide under
+one label and the pivot warns. Pass a distinct <code>overall =</code> or
+rename the arm upstream.</p></dd>
 
 
 <dt id="arg-decimals">decimals<a class="anchor" aria-label="anchor" href="#arg-decimals"></a></dt>

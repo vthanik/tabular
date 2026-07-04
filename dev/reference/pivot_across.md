@@ -189,6 +189,19 @@ pivot_across(
   `<character(1) | NULL>: default "Total"`. Pass `NULL` to drop overall
   rows entirely (per-arm only output).
 
+  **Requirement:** this relabels pooled rows the ARD already carries —
+  the `NA`-arm rows cards emits from
+  `cards::ard_stack_hierarchical(overall = TRUE)` or an
+  `ard_*(.overall = TRUE)`. It does not synthesize a total: cards
+  re-runs the calculation with the `by` variable removed, so the pooled
+  `n` / `N` / `p` stay internally consistent. With no such rows in the
+  input there is no overall column to label.
+
+  **Note:** if a study arm is literally named the same as `overall`
+  (default `"Total"`), that arm and the pooled rows collide under one
+  label and the pivot warns. Pass a distinct `overall =` or rename the
+  arm upstream.
+
 - decimals:
 
   *Per-stat decimal precision.*
