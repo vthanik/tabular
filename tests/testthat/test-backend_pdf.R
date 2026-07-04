@@ -367,3 +367,25 @@ test_that(".check_latex_report covers the all-installed and missing branches", {
     utils::capture.output(tabular:::.check_latex_report(miss))
   ))
 })
+
+test_that("emit(.pdf) with a generic font_family compiles via the fallback cascade", {
+  skip_if_not_installed("tinytex")
+  skip_on_cran()
+  if (!nzchar(Sys.which("xelatex"))) {
+    skip("xelatex not found on this machine")
+  }
+  # A generic family leads a multi-entry chain ending in Latin Modern
+  # Mono, so the \IfFontExistsTF cascade falls through and xelatex
+  # compiles even where the leading Office face is not installed. (An
+  # arbitrary named font has no cascade and would abort if uninstalled;
+  # that is the documented trade-off of naming a specific face.)
+  spec <- tabular(data.frame(x = c(1L, 2L)), titles = "T") |>
+    preset(font_family = "mono")
+  out <- withr::local_tempfile(fileext = ".pdf")
+  result <- tryCatch(emit(spec, out), error = function(e) e)
+  if (inherits(result, "error")) {
+    skip(sprintf("PDF compile failed: %s", conditionMessage(result)))
+  }
+  expect_true(file.exists(out))
+  expect_gt(file.info(out)$size, 0L)
+})

@@ -34,6 +34,17 @@ navbar:
     right: [search, github]
 
 home:
+  sidebar:
+    structure: [links, ai_agents, license, community, citation, authors, dev]
+    components:
+      ai_agents:
+        title: AI / Agents
+        text: |
+          [Skill](https://github.com/vthanik/tabular/blob/main/pkgdown/assets/skills/tabular/SKILL.md)
+
+          [llms.txt](llms.txt)
+
+          [llms-full.txt](llms-full.txt)
   title: Clinical TFL rendering for R
   description: >
     Native emission of clinical submission tables to RTF, LaTeX, HTML,

@@ -2,6 +2,16 @@
 
 ## New features
 
+* The documentation site gained an AI / Agents section linking a tabular skill
+  (for LLM coding agents), the auto-generated `llms.txt`, and a concatenated
+  `llms-full.txt`, mirroring the LLM-friendly documentation pattern.
+
+* `col_spec(group_display = "header_row")` now collapses a single-member group
+  to one flush-left row (the group value becomes the row label, still carrying
+  any `cells_group_headers()` styling) instead of emitting a redundant header
+  plus a lone indented child, and no longer emits an empty header for a blank
+  or `NA` group value. Multi-member groups are unchanged.
+
 * `figure()` renders a figure (the "F" in TFL) to every backend (RTF, LaTeX,
   PDF, HTML, DOCX, and Markdown), wrapping a ggplot, a recorded base-R plot, a
   zero-argument drawing function, or a PNG / JPG file in the same submission
@@ -21,6 +31,31 @@
   failing page. No new package dependency: plots rasterise through base
   `grDevices` and ggplot2 (Suggests) only when a ggplot is passed.
 
+* `pivot_across()` gained an `aux` argument to bind auxiliary comparison
+  columns (difference, hazard ratio, p-value) from a second ARD, aligned 1:1 on
+  the `row_group` key and appended as trailing columns.
+
+* `pivot_across()`'s `column` argument now accepts the reserved tokens
+  `.variable` and `.stat` to make an analysis variable a column band:
+  `c(".variable", "<arm>")` lays variables side by side with statistics as rows,
+  and `c(".variable", ".stat")` spreads each statistic into its own column with
+  the arm as a row stub. Per-variable `statistic` / `decimals` resolve inside
+  each band.
+
+* `pivot_across()`'s `decimals` may now be a list keyed by `row_group` values,
+  for per-group precision in one call.
+
+* `preset(font_family = ...)` generic chains (`"mono"` / `"sans"` / `"serif"`)
+  now lead with the ubiquitous Microsoft Office face (Courier New / Arial /
+  Times New Roman) and keep the metric-compatible Liberation face as the last
+  fallback, so Word shows a font the reader actually has installed on Windows /
+  macOS instead of a phantom "Liberation Mono" in its font menu. The faces are
+  metric-compatible, so layout, line breaks, and decimal alignment are
+  unchanged. A bare `font_family = "Courier New"` now also leads with Courier
+  New (previously resolved led by Liberation Mono). The package bundles no
+  fonts; an arbitrary named face (`"IBM Plex Mono"`, `"Source Code Pro"`, etc.)
+  is emitted verbatim for the consuming application to resolve.
+
 ## Breaking changes
 
 * `col_spec()` gained a single `indent` argument (an integer for a fixed
@@ -31,6 +66,10 @@
   indent.
 * `paginate()` removed the no-op `panels = "auto"`; `panels` is now a positive
   integer.
+* `pivot_across()` no longer pre-indents `stat_label` with two leading spaces;
+  indentation is applied downstream by the renderer via
+  `col_spec(usage = "group")` / `group_display`, so a `header_row` stub no
+  longer double-indents.
 
 ## Minor improvements and bug fixes
 
@@ -61,6 +100,11 @@
 * `emit()` to HTML now aligns the running page header and footer to the table
   width via a centred fit-content container, instead of spanning the full
   document width.
+* `emit()` to HTML and Markdown no longer repeats a `subgroup()` banner
+  mid-table when a group is taller than one estimated page. The continuous
+  backends draw one banner per subgroup value; the print-only page-break
+  markers within a group are unchanged, and the paged backends (RTF, LaTeX,
+  DOCX) still repeat the banner on every continuation page by design.
 * `emit()` to PDF / LaTeX no longer renders the table wider than the printable
   area: tabularray adds per-column separation outside each column's `wd`, so
   the column widths are now reduced by that separation and the rendered table
@@ -148,6 +192,9 @@
 * `preset(spacing = ...)` now drives the blank lines around a subgroup banner
   (the `subgroup` region) and around a `figure()` title and footnote; the
   Markdown table title and footnote gaps now follow the same knob.
+* `preset(width_mode = "window")` now sizes auto columns proportionally to
+  their content width to fill the page, instead of giving every column an
+  equal share.
 * `subgroup()` gained a `keep_empty` argument; with `keep_empty = TRUE` a
   zero-N crossing is retained and rendered as an empty-state page carrying its
   banner instead of being dropped.

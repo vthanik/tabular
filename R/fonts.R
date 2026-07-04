@@ -53,21 +53,24 @@
 }
 
 # ---------------------------------------------------------------------
-# Shared per-generic chains (production-Linux-first)
+# Shared per-generic chains (consumer-desktop-first)
 # ---------------------------------------------------------------------
 
-# Chain priority for every generic family: lead with the Liberation
-# face (the Red Hat metric-compatible set that ships on Linux
-# servers — Posit Workbench, Domino, Citrix, RStudio Server, every
-# major Linux distro), then the Microsoft Office face for desktop
-# Win / Mac consumers, then the bundled macOS-only legacy face.
-# Liberation Serif / Sans / Mono are metric-compatible with Times
-# New Roman / Arial / Courier New by design, so a document rendered
-# with the Liberation face has the same layout (line breaks, decimal
-# alignment, page breaks) as the same document rendered with the
-# Office face. This is the right default for cross-OS regulatory-
-# submission output where the server emits on Linux and the
-# consumer opens on Windows / macOS.
+# Chain priority for every generic family: lead with the Microsoft
+# Office face (Times New Roman / Arial / Courier New) — installed on
+# every Windows and macOS machine, i.e. wherever an RTF / DOCX / PDF
+# is actually opened and reviewed — then the PostScript legacy name,
+# then the Liberation face LAST as the Linux-server fallback. The
+# Liberation set (Red Hat's metric-compatible faces, shipped on Posit
+# Workbench, Domino, Citrix, RStudio Server, every major Linux distro)
+# is metric-compatible with the Office face by design (Liberation
+# Serif / Sans / Mono match Times New Roman / Arial / Courier New), so
+# whichever end of the chain resolves, the layout (line breaks,
+# decimal alignment, page breaks) is identical. Leading with the
+# Office face means Word shows a font the reviewer actually has in its
+# font menu instead of a phantom "Liberation Mono"; on a headless
+# Linux box without the Office fonts the chain falls through to
+# Liberation with the same metrics.
 #
 # Per-backend tails are appended in `.resolve_font_stack`:
 #   * HTML adds the CSS generic family (`serif` / `sans-serif` /
@@ -80,9 +83,9 @@
 #   * RTF appends nothing — the consuming app handles substitution
 #     when the named face is missing (and we emit `\*\falt` so it
 #     can pick the next chain entry explicitly).
-.stack_serif <- c("Liberation Serif", "Times New Roman", "Times")
-.stack_sans <- c("Liberation Sans", "Arial", "Helvetica")
-.stack_mono <- c("Liberation Mono", "Courier New", "Courier")
+.stack_serif <- c("Times New Roman", "Times", "Liberation Serif")
+.stack_sans <- c("Arial", "Helvetica", "Liberation Sans")
+.stack_mono <- c("Courier New", "Courier", "Liberation Mono")
 
 # Backend tails — appended after the shared chain so the backend's
 # native fallback layer always closes the chain. The LaTeX tail
@@ -130,17 +133,12 @@
   .font_name_aliases[[name]]
 }
 
-# Compose the resolved chain for a generic family + backend. Shared
-# core + per-backend tail. Used by `.resolve_font_stack` for both
-# the generic-family path and the alias-hit path.
-.compose_generic_chain <- function(fam, backend) {
-  core <- switch(
-    fam,
-    serif = .stack_serif,
-    sans = .stack_sans,
-    mono = .stack_mono
-  )
-  tail <- switch(
+# Per-backend tail for a generic family. Appended after the shared
+# core (generic path) or after a recognised named face + its
+# fallback (named-face path), so the backend's native fallback layer
+# always closes the chain.
+.backend_tail <- function(fam, backend) {
+  switch(
     backend,
     latex = switch(
       fam,
@@ -159,7 +157,19 @@
     # table).
     character()
   )
-  c(core, tail)
+}
+
+# Compose the resolved chain for a generic family + backend. Shared
+# core + per-backend tail. Used by `.resolve_font_stack` for both
+# the generic-family path and the alias-hit path.
+.compose_generic_chain <- function(fam, backend) {
+  core <- switch(
+    fam,
+    serif = .stack_serif,
+    sans = .stack_sans,
+    mono = .stack_mono
+  )
+  c(core, .backend_tail(fam, backend))
 }
 
 # ---------------------------------------------------------------------
@@ -179,8 +189,9 @@
 #   4. Aliased name (Times / Arial / Helvetica / Courier and the
 #      `_New` variants) -> resolve via alias to the generic chain
 #      (same path as 3).
-#   5. Non-aliased named font (Inter / JetBrains Mono / Source Pro
-#      / sponsor-specific face) -> emit verbatim, no fallback.
+#   5. Any other named font (Inter / IBM Plex Mono / Source Code Pro
+#      / sponsor-specific face) -> emit verbatim, no fallback. The
+#      consuming app substitutes if the name is not installed.
 .resolve_font_stack <- function(font_family, backend) {
   if (length(font_family) == 0L) {
     font_family <- "mono"
@@ -214,12 +225,13 @@
 # and DOCX to its OOXML class (`modern` / `roman` / `swiss`).
 #
 # Resolution: membership in the shared metric-compatible cores wins
-# first (mono before serif before sans, matching the package default),
-# then a literal generic keyword or PS-era alias appearing anywhere in
-# the stack. A spec with no recognisable signal returns NA so each
-# backend applies its own unclassified default (RTF -> `\froman`, the
-# serif fallback; DOCX -> `swiss`) without this helper having to pick a
-# class it cannot justify.
+# first (mono before serif before sans, matching the package default) --
+# and since every PS-era alias name is itself a core member, an aliased
+# face classifies here too. A literal generic keyword anywhere in the
+# stack is the next signal. A spec with no recognisable signal returns
+# NA so each backend applies its own unclassified default (RTF ->
+# `\froman`, the serif fallback; DOCX -> `swiss`) without this helper
+# having to pick a class it cannot justify.
 .font_generic_class <- function(stack) {
   if (any(stack %in% .stack_mono)) {
     return("mono")
@@ -236,7 +248,12 @@
       if (.is_generic_family(f)) {
         return(.normalize_generic(f))
       }
-      .resolve_font_alias(f) %||% NA_character_
+      # A PS-era alias (Times / Arial / Courier and _New variants) is
+      # already a member of a metric-compatible core above, so it is
+      # caught by the membership checks and never reaches here. Anything
+      # else is an arbitrary named font with no class signal -> NA, so
+      # each backend applies its own unclassified default.
+      NA_character_
     },
     character(1L)
   )
@@ -308,6 +325,14 @@
 #'   the consuming application.
 #' * `x` — font is not installed on this machine; the consuming
 #'   app on a different machine may or may not have it.
+#'
+#' Every backend only **name-references** its fonts; the consuming
+#' application (browser, LaTeX engine, Word, Adobe Reader) resolves
+#' those names against its own installed fonts. An `x` therefore
+#' means the reader needs that face installed for the render to match
+#' exactly. The default chains lead with the ubiquitous Office cores
+#' (Courier New / Arial / Times New Roman), so a `v` on the default
+#' is the common case on Windows and macOS.
 #'
 #' Requires the `systemfonts` package (in `Suggests`); call
 #' `install.packages("systemfonts")` first if it isn't installed.

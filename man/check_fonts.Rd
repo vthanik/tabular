@@ -41,6 +41,14 @@ the consuming application.
 app on a different machine may or may not have it.
 }
 
+Every backend only \strong{name-references} its fonts; the consuming
+application (browser, LaTeX engine, Word, Adobe Reader) resolves
+those names against its own installed fonts. An \code{x} therefore
+means the reader needs that face installed for the render to match
+exactly. The default chains lead with the ubiquitous Office cores
+(Courier New / Arial / Times New Roman), so a \code{v} on the default
+is the common case on Windows and macOS.
+
 Requires the \code{systemfonts} package (in \code{Suggests}); call
 \code{install.packages("systemfonts")} first if it isn't installed.
 }

@@ -134,11 +134,30 @@
 #'     )
 #'   )
 #'   ```
-#' @param column *Grouping column whose unique values become arms.*
-#'   `<character(1) | NULL>: default NULL`. `NULL` auto-detects
-#'   from the ARD's `group1` value or — for renamed input — picks
-#'   the single non-standard column. Pass a string when multiple
-#'   group columns exist.
+#' @param column *What runs across the top of the table.*
+#'   `<character | NULL>: default NULL`. A single grouping variable
+#'   whose unique values become arm columns (`NULL` auto-detects from
+#'   `group1`, or picks the single non-standard column of renamed
+#'   input). Two reserved tokens turn the analysis variable into a
+#'   **column band**:
+#'
+#'   *   `c(".variable", "<arm>")` — each variable becomes a band of
+#'       arm columns; the statistic entries stack as rows. The cells
+#'       are combined strings (e.g. `"323.9 (106)"`). Emitted columns
+#'       are named `"<variable>..<arm>"`.
+#'   *   `c(".variable", ".stat")` — each variable becomes a band whose
+#'       statistic entries become their own columns (the landscape
+#'       "value and change" shell); the arm drops to a leading row
+#'       stub. Emitted columns are named `"<variable>..<stat-entry>"`.
+#'
+#'   Anything present in the ARD but not named in `column` (and not in
+#'   `row_group`) stacks as rows. Per-variable `statistic` / `decimals`
+#'   resolve inside each band, so bands may carry different (even
+#'   different-length) stat lists; ragged bands pad with `NA`.
+#'
+#'   **Tip:** you reference the emitted column names verbatim in a
+#'   manual [`headers()`] call to build the band spanners; pivot_across
+#'   does not build spanners itself.
 #'
 #' @param row_group *Second, non-column grouping dimension.*
 #'   `<character(1) | NULL>: default NULL`. Names the non-arm group
@@ -191,21 +210,53 @@
 #'   rename the arm upstream.
 #'
 #' @param decimals *Per-stat decimal precision.*
-#'   `<named integer | named list>: default `c()``. Accepts two
+#'   `<named integer | named list>: default `c()``. Accepts three
 #'   forms:
 #'
 #'   *   **named integer vector** — global per-stat overrides
 #'       (`c(mean = 1, sd = 2, p = 0)`).
-#'   *   **named list** — per-variable plus `.default`
+#'   *   **named list keyed by variable** — per-variable plus `.default`
 #'       (`list(AGE = c(mean = 2), .default = c(p = 1))`).
+#'   *   **named list keyed by `row_group` value** — per-group precision in
+#'       one call (`list(SYSBP = c(mean = 0, sd = 1), WEIGHT = c(mean = 1),
+#'       .default = c(mean = 1, sd = 2))`). Each entry is a per-token spec (a
+#'       named numeric vector, or a bare scalar applied to every token).
 #'
-#'   Built-in defaults apply when neither sets a stat.
+#'   Built-in defaults apply when none sets a stat.
+#'
+#'   **Interaction:** a list `decimals` is read as per-`row_group` only when
+#'   `row_group` is set and every key (apart from `.default`) is one of its
+#'   levels; otherwise it stays per-variable. Within the matched group the
+#'   token falls back group token, then the per-group `.default` token, then
+#'   the built-in default. A group present in the data but absent from the
+#'   list (and NA / ungrouped rows) uses `.default`. If `row_group` is `NULL`
+#'   but the keys match no variable, `pivot_across()` errors and asks for a
+#'   `row_group`.
 #'
 #' @param fmt *Per-stat custom formatter functions.*
 #'   `<named list of function>: default `list()``. Each function
 #'   takes a numeric value and returns a character string;
 #'   overrides built-ins and `decimals` for that stat. Useful for
 #'   p-value styling and other domain-specific formatting.
+#'
+#' @param aux *Auxiliary comparison columns from a second ARD.*
+#'   `<named list | NULL>: default NULL`. Each entry is a between-arm
+#'   statistic (difference, hazard ratio, p-value, ...) computed in its
+#'   own ARD and bound on as a trailing column, aligned 1:1 on the
+#'   `row_group` key. The entry name is the column name; reference it in
+#'   a manual [`headers()`] call. Each entry is a list:
+#'
+#'   *   `ard` — the auxiliary ARD (required), one row per `row_group`.
+#'   *   `statistic` — its format string (e.g.
+#'       `"{estimate} ({conf.low}, {conf.high})"`); defaults to `"{n}"`.
+#'   *   `decimals` / `fmt` — optional, as for the main pivot.
+#'
+#'   Entries append left to right. One entry is one column; for several
+#'   comparison columns (estimate then p-value) pass several entries.
+#'
+#'   **Requirement:** needs a `row_group`; the auxiliary rows align to
+#'   the main table on it, which must be unique 1:1 on both sides (a
+#'   many-to-many key would silently fabricate rows, so it aborts).
 #'
 #'   ```r
 #'   # p-value formatter: render below-threshold values as "<0.001".
@@ -236,14 +287,6 @@
 #' | `cards::ard_stack_hierarchical()` | `tabulate` + `hierarchical` |
 #' | `cardx::ard_categorical_ci()` | `proportion_ci` |
 #' | `cardx::ard_continuous_ci()` | `continuous_ci` |
-#'
-#' ## Indentation of `stat_label`
-#'
-#' Categorical levels and the multi-row continuous stat labels come
-#' back already indented with two leading spaces, ready to render as a
-#' plain display column. Do **not** also set `col_spec(indent = ...)` on
-#' `stat_label` — that stacks the engine indent on top of the string
-#' indent (a double indent). Use one or the other.
 #'
 #' ## Zero-suppression (always-on default)
 #'
@@ -478,6 +521,114 @@
 #'   )
 #' )
 #'
+#' # ---- Example 6: Analysis variables as side-by-side column bands ----
+#' #
+#' # `column = c(".variable", "<arm>")` turns each analysis variable into
+#' # its own band of arm columns (the "value and change side by side"
+#' # shape), with statistics stacked as rows. Per-variable `statistic` /
+#' # `decimals` resolve inside each band. Emitted columns are named
+#' # "<variable>..<arm>"; reference them verbatim in a manual `headers()`
+#' # call to draw the band spanners (pivot_across never builds spanners).
+#' vitals <- cdisc_saf_demo_ard[
+#'   cdisc_saf_demo_ard$variable %in% c("AGE", "WEIGHT"),
+#' ]
+#' vitals |>
+#'   pivot_across(
+#'     column = c(".variable", "TRT01A"),
+#'     overall = NULL,
+#'     statistic = list(
+#'       AGE    = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})", Median = "{median}"),
+#'       WEIGHT = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})", Median = "{median}")
+#'     ),
+#'     decimals = list(
+#'       AGE    = c(mean = 1, sd = 2, median = 1),
+#'       WEIGHT = c(mean = 1, sd = 2, median = 1)
+#'     )
+#'   ) |>
+#'   tabular(
+#'     titles = c(
+#'       "Table 14.2.1",
+#'       "Summary of Continuous Parameters by Treatment",
+#'       "Safety Population"
+#'     )
+#'   ) |>
+#'   cols(stat_label = col_spec(label = "Statistic")) |>
+#'   headers(
+#'     Age = c(
+#'       "AGE..Placebo",
+#'       "AGE..Xanomeline Low Dose",
+#'       "AGE..Xanomeline High Dose"
+#'     ),
+#'     Weight = c(
+#'       "WEIGHT..Placebo",
+#'       "WEIGHT..Xanomeline Low Dose",
+#'       "WEIGHT..Xanomeline High Dose"
+#'     )
+#'   )
+#'
+#' # ---- Example 7: Statistics as columns within each band ----
+#' #
+#' # `column = c(".variable", ".stat")` spreads each statistic entry into
+#' # its own column (the landscape shell); the arm drops to a leading row
+#' # stub. Emitted columns are named "<variable>..<stat-entry>". Bands may
+#' # carry different stat sets, with no row-alignment needed.
+#' vitals |>
+#'   pivot_across(
+#'     column = c(".variable", ".stat"),
+#'     overall = NULL,
+#'     statistic = list(
+#'       AGE    = c(N = "{N}", Mean = "{mean}", SD = "{sd}"),
+#'       WEIGHT = c(N = "{N}", Mean = "{mean}", SD = "{sd}", Median = "{median}")
+#'     ),
+#'     decimals = c(mean = 1, sd = 2, median = 1)
+#'   )
+#'
+#' # ---- Example 8: Per-row-group decimal precision ----
+#' #
+#' # A by-parameter vitals table where each parameter carries its own
+#' # value precision: systolic BP to 0 dp, weight to 1 dp, in ONE call.
+#' # `decimals` is keyed by the `row_group` (PARAM) value; the engine
+#' # selects each row's token precision by its parameter. No bundled ARD
+#' # carries a second grouping dimension, so build a tiny one inline.
+#' vital_ard <- do.call(rbind, lapply(
+#'   list(
+#'     c("SYSBP", "Placebo", "mean", "133.27"),
+#'     c("SYSBP", "Placebo", "sd", "15.81"),
+#'     c("SYSBP", "Drug", "mean", "128.94"),
+#'     c("SYSBP", "Drug", "sd", "14.02"),
+#'     c("WEIGHT", "Placebo", "mean", "71.43"),
+#'     c("WEIGHT", "Placebo", "sd", "12.77"),
+#'     c("WEIGHT", "Drug", "mean", "73.06"),
+#'     c("WEIGHT", "Drug", "sd", "13.19")
+#'   ),
+#'   function(r) {
+#'     data.frame(
+#'       group1 = "PARAM",
+#'       group1_level = r[[1]],
+#'       group2 = "TRTA",
+#'       group2_level = r[[2]],
+#'       variable = "AVAL",
+#'       variable_level = NA_character_,
+#'       context = "continuous",
+#'       stat_name = r[[3]],
+#'       stat_label = r[[3]],
+#'       stat = I(list(as.numeric(r[[4]]))),
+#'       stringsAsFactors = FALSE
+#'     )
+#'   }
+#' ))
+#' vital_ard |>
+#'   pivot_across(
+#'     column = "TRTA",
+#'     row_group = "PARAM",
+#'     overall = NULL,
+#'     statistic = list(continuous = "{mean} ({sd})"),
+#'     decimals = list(
+#'       SYSBP = c(mean = 0, sd = 1),
+#'       WEIGHT = c(mean = 1, sd = 2)
+#'     )
+#'   )
+#'
 #' @seealso
 #' **Pipeline entry consumer:** [`tabular()`] — wraps the wide data
 #' frame this helper returns.
@@ -500,7 +651,8 @@ pivot_across <- function(
   label = NULL,
   overall = "Total",
   decimals = NULL,
-  fmt = NULL
+  fmt = NULL,
+  aux = NULL
 ) {
   call <- rlang::caller_env()
   # Captured before `statistic` is reassigned: the unmatched-context
@@ -512,7 +664,70 @@ pivot_across <- function(
   data <- .check_ard_data(data, call = call)
   statistic <- .resolve_statistic_arg(statistic, call = call)
   .check_fmt_arg(fmt, call = call)
+  col_spec <- .parse_column_spec(column, call = call)
+  aux <- .check_aux_arg(aux, call = call)
 
+  if (col_spec$variable_band) {
+    wide <- .build_variable_band(
+      data,
+      col_spec = col_spec,
+      statistic = statistic,
+      row_group = row_group,
+      label = label,
+      overall = overall,
+      decimals = decimals,
+      fmt = fmt,
+      stat_explicit = stat_explicit,
+      call = call
+    )
+  } else {
+    wide <- .pivot_core(
+      data,
+      statistic = statistic,
+      column = col_spec$arm,
+      row_group = row_group,
+      label = label,
+      overall = overall,
+      decimals = decimals,
+      fmt = fmt,
+      stat_explicit = stat_explicit,
+      warn = TRUE,
+      call = call
+    )
+  }
+
+  if (!is.null(aux)) {
+    wide <- .bind_aux(
+      wide,
+      aux = aux,
+      row_group = row_group,
+      fmt = fmt,
+      call = call
+    )
+  }
+  wide
+}
+
+# ---------------------------------------------------------------------
+# Core single-variable / simple pivot: data -> wide display frame.
+# Factored out of pivot_across so the variable-band and aux paths reuse
+# it per variable / per aux ARD. `column` is the resolved arm group var
+# (or NULL). `warn` gates the unmatched-context warning so band / aux
+# sub-calls do not fire it repeatedly.
+# ---------------------------------------------------------------------
+.pivot_core <- function(
+  data,
+  statistic,
+  column = NULL,
+  row_group = NULL,
+  label = NULL,
+  overall = "Total",
+  decimals = NULL,
+  fmt = NULL,
+  stat_explicit = TRUE,
+  warn = TRUE,
+  call = rlang::caller_env()
+) {
   norm <- .normalise_ard_input(data, column = column, call = call)
   df <- norm$df
   column <- norm$column
@@ -593,13 +808,15 @@ pivot_across <- function(
   # most common way to get silently wrong output (the canonical
   # `summary`-vs-`continuous` mis-key). Skipped on the hierarchical path,
   # which formats counts directly regardless of the statistic keys.
-  .warn_unmatched_context(
-    df,
-    statistic,
-    stat_explicit = stat_explicit,
-    is_hierarchical = hierarchy$is_hierarchical,
-    call = call
-  )
+  if (warn) {
+    .warn_unmatched_context(
+      df,
+      statistic,
+      stat_explicit = stat_explicit,
+      is_hierarchical = hierarchy$is_hierarchical,
+      call = call
+    )
+  }
 
   # nocov start — defensive: .filter_to_column_group only narrows, and
   # the earlier post-internal-filter check at L286 catches the realistic
@@ -616,13 +833,26 @@ pivot_across <- function(
   }
   # nocov end
 
-  decimals_resolved <- .resolve_ard_decimals(decimals)
+  rg_levels <- if (!is.null(row_group) && row_group %in% names(df)) {
+    lv <- .normalise_ard_chr(df[[row_group]])
+    unique(lv[!is.na(lv)])
+  } else {
+    NULL
+  }
+  decimals_resolved <- .resolve_ard_decimals(
+    decimals,
+    row_group = row_group,
+    rg_levels = rg_levels,
+    variables = unique(df$variable),
+    call = call
+  )
   df$stat_fmt <- .format_stat_vectorised(
     df,
     decimals = decimals_resolved,
     fmt = fmt,
     pct_threshold = TRUE,
-    call = call
+    call = call,
+    row_group = row_group
   )
 
   # Zero-suppression default: show "0" for n=0 rows. A user-supplied
@@ -651,20 +881,6 @@ pivot_across <- function(
 
   arm_levels <- unique(df$arm[!is.na(df$arm)])
 
-  # Indent BEFORE label remap so the stat_label == variable comparison
-  # uses raw variable names. After remap, "AGE" stat_label would no
-  # longer equal the remapped "Age (years)" variable and would be
-  # falsely indented.
-  if (!hierarchy$is_hierarchical && "stat_label" %in% names(wide)) {
-    is_level_row <- !is.na(wide$stat_label) &
-      !is.na(wide$variable) &
-      wide$stat_label != wide$variable
-    wide$stat_label[is_level_row] <- paste0(
-      "  ",
-      wide$stat_label[is_level_row]
-    )
-  }
-
   # Always run: even with no user `label`, the map applies the registry
   # default for kept sentinels so a raw `..` name never reaches output. The
   # default keys only the sentinel string, so non-sentinel rows (and the flat
@@ -681,6 +897,316 @@ pivot_across <- function(
     names(wide)
   )
   wide
+}
+
+# Separator between a variable band and its arm / stat sub-column in the
+# emitted column name (e.g. "AVAL..Mean (SD)"). User references these names
+# verbatim in a manual headers() call, so it is part of the wire contract.
+.tabular_band_sep <- ".."
+
+# ---------------------------------------------------------------------
+# Variable-band assembly (column = c(".variable", arm) or c(".variable",
+# ".stat")). Pivots each variable independently via .pivot_core and binds
+# the blocks side by side, aligned on the shared row keys.
+# ---------------------------------------------------------------------
+
+.build_variable_band <- function(
+  data,
+  col_spec,
+  statistic,
+  row_group,
+  label,
+  overall,
+  decimals,
+  fmt,
+  stat_explicit,
+  call
+) {
+  if (!("variable" %in% names(data))) {
+    cli::cli_abort(
+      c(
+        "A {.val .variable} band needs a {.val variable} column in {.arg data}.",
+        "i" = "Renamed ARDs without a {.val variable} column are not supported here."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  if (any(data$context == "hierarchical", na.rm = TRUE)) {
+    cli::cli_abort(
+      c(
+        "A {.val .variable} band cannot be combined with a hierarchical (SOC/PT) ARD.",
+        "i" = "Render the hierarchy on its own; it already nests as section + indent."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+
+  var_chr <- .normalise_ard_chr(data$variable)
+  vars <- unique(var_chr[!is.na(var_chr)])
+  vars <- setdiff(vars, .tabular_ard_const$keep_sentinels)
+  # nocov start — defensive: .check_ard_data + the variable-column check
+  # above guarantee at least one real variable by this point.
+  if (length(vars) == 0L) {
+    cli::cli_abort(
+      "No analysis variables found for the {.val .variable} band.",
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # nocov end
+
+  if (col_spec$stat_cols) {
+    # Detect the arm var = a grouping variable that is not the row_group.
+    probe <- .normalise_ard_input(data, column = NULL, call = call)
+    candidates <- c(probe$column, probe$extra_groups)
+    candidates <- candidates[!is.na(candidates)]
+    arm_var <- setdiff(candidates, row_group)
+    arm_var <- if (length(arm_var) >= 1L) arm_var[[1L]] else NULL
+    id_keys <- c(row_group, arm_var)
+  } else {
+    arm_var <- col_spec$arm
+    id_keys <- c(row_group, "stat_label")
+  }
+
+  blocks <- vector("list", length(vars))
+  names(blocks) <- vars
+  for (v in vars) {
+    data_v <- data[!is.na(var_chr) & var_chr == v, , drop = FALSE]
+    wide_v <- .pivot_core(
+      data_v,
+      statistic = statistic,
+      column = arm_var,
+      row_group = row_group,
+      label = label,
+      overall = overall,
+      decimals = decimals,
+      fmt = fmt,
+      stat_explicit = FALSE,
+      warn = FALSE,
+      call = call
+    )
+    val_cols <- attr(wide_v, "across_cols")
+
+    if (col_spec$stat_cols) {
+      block <- .transpose_stats(wide_v, row_group, val_cols, arm_var)
+      stat_cols <- setdiff(names(block), id_keys)
+      names(block)[match(stat_cols, names(block))] <- paste0(
+        v,
+        .tabular_band_sep,
+        stat_cols
+      )
+    } else {
+      keep <- c(intersect(id_keys, names(wide_v)), val_cols)
+      block <- wide_v[, keep, drop = FALSE]
+      is_val <- names(block) %in% val_cols
+      names(block)[is_val] <- paste0(
+        v,
+        .tabular_band_sep,
+        names(block)[is_val]
+      )
+    }
+    blocks[[v]] <- block
+  }
+
+  present_keys <- intersect(id_keys, names(blocks[[1L]]))
+  out <- .bind_band_blocks(blocks, present_keys, call = call)
+  attr(out, "across_cols") <- setdiff(names(out), present_keys)
+  out
+}
+
+# Transpose one variable's rows-mode wide block so each statistic becomes
+# its own column and the arm drops to a leading row stub. Reuses the
+# already-formatted cells in `wide_v`; pure reshape, no re-formatting.
+.transpose_stats <- function(wide_v, row_group, arm_levels, arm_var) {
+  stat_order <- unique(wide_v$stat_label)
+  has_rg <- !is.null(row_group) && row_group %in% names(wide_v)
+  arm_col <- arm_var %||% ".arm"
+
+  pieces <- lapply(arm_levels, function(a) {
+    piece <- data.frame(
+      .stat_label = wide_v$stat_label,
+      stringsAsFactors = FALSE
+    )
+    if (has_rg) {
+      piece[[row_group]] <- wide_v[[row_group]]
+    }
+    piece[[arm_col]] <- a
+    piece$.value <- wide_v[[a]]
+    piece
+  })
+  long <- do.call(rbind, pieces)
+
+  id_keys <- c(if (has_rg) row_group, arm_col)
+  ikey <- do.call(paste, c(long[id_keys], list(sep = "\x1f")))
+  first <- !duplicated(ikey)
+  out <- long[first, id_keys, drop = FALSE]
+  okey <- ikey[first]
+  for (s in stat_order) {
+    sub <- long[long$.stat_label == s, , drop = FALSE]
+    skey <- do.call(paste, c(sub[id_keys], list(sep = "\x1f")))
+    out[[s]] <- sub$.value[match(okey, skey)]
+  }
+  rownames(out) <- NULL
+  out
+}
+
+# Full-outer union of band blocks on the shared id keys, preserving
+# first-appearance row order. Differing stat labels across bands stack;
+# absent cells stay NA (the engine renders na_text). Value columns are
+# uniquely named per band, so there is never a column collision.
+.bind_band_blocks <- function(blocks, id_keys, call) {
+  key_frames <- lapply(blocks, function(b) b[, id_keys, drop = FALSE])
+  all_keys <- unique(do.call(rbind, key_frames))
+  rownames(all_keys) <- NULL
+  okey <- do.call(paste, c(all_keys[id_keys], list(sep = "\x1f")))
+
+  out <- all_keys
+  for (b in blocks) {
+    bkey <- do.call(paste, c(b[id_keys], list(sep = "\x1f")))
+    for (cn in setdiff(names(b), id_keys)) {
+      out[[cn]] <- b[[cn]][match(okey, bkey)]
+    }
+  }
+  rownames(out) <- NULL
+  out
+}
+
+# ---------------------------------------------------------------------
+# Auxiliary column binding (aux = list(<band> = list(ard, statistic, ...)))
+# ---------------------------------------------------------------------
+
+.check_aux_arg <- function(aux, call) {
+  if (is.null(aux)) {
+    return(NULL)
+  }
+  nms <- names(aux)
+  if (
+    !is.list(aux) ||
+      length(aux) == 0L ||
+      is.null(nms) ||
+      anyNA(nms) ||
+      any(nms == "")
+  ) {
+    cli::cli_abort(
+      c(
+        "{.arg aux} must be a named list of auxiliary column specs.",
+        "x" = "You supplied {.obj_type_friendly {aux}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  for (nm in nms) {
+    entry <- aux[[nm]]
+    if (!is.list(entry) || is.null(entry[["ard"]])) {
+      cli::cli_abort(
+        c(
+          "Each {.arg aux} entry must be a list with an {.field ard}.",
+          "x" = "Entry {.val {nm}} has no {.field ard}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+  }
+  aux
+}
+
+.bind_aux <- function(wide, aux, row_group, fmt, call) {
+  if (is.null(row_group)) {
+    cli::cli_abort(
+      c(
+        "{.arg aux} columns require a {.arg row_group}.",
+        "i" = "Auxiliary columns align to the main table on the {.arg row_group} key.",
+        "i" = "Pass {.arg row_group} so the comparison rows line up."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  across <- attr(wide, "across_cols")
+  for (nm in names(aux)) {
+    entry <- aux[[nm]]
+    ard <- .check_ard_data(entry[["ard"]], call = call)
+    stat <- .resolve_statistic_arg(
+      entry[["statistic"]] %||% "{n}",
+      call = call
+    )
+
+    # The comparison is keyed by the row_group dimension with no arm of its
+    # own. Pivot it ON the row_group (levels become columns), then melt
+    # those level-columns back into one keyed `nm` column so it joins onto
+    # the main table's row_group rows.
+    inner <- .pivot_core(
+      ard,
+      statistic = stat,
+      column = row_group,
+      row_group = NULL,
+      overall = nm,
+      decimals = entry[["decimals"]],
+      fmt = entry[["fmt"]] %||% fmt,
+      stat_explicit = TRUE,
+      warn = FALSE,
+      call = call
+    )
+    levels <- attr(inner, "across_cols")
+    add <- do.call(
+      rbind,
+      lapply(seq_len(nrow(inner)), function(i) {
+        data.frame(
+          .rg = levels,
+          .val = as.character(unlist(inner[i, levels, drop = TRUE])),
+          stringsAsFactors = FALSE
+        )
+      })
+    )
+    names(add) <- c(row_group, nm)
+
+    wide <- .bind_on_keys(wide, add, keys = row_group, what = nm, call = call)
+    across <- c(across, nm)
+  }
+  attr(wide, "across_cols") <- across
+  wide
+}
+
+# Strict 1:1 left join of `add`'s non-key columns onto `base`, aligned on
+# `keys`. Aborts on duplicate keys on either side: a many-to-many join
+# silently fabricates rows, the worst failure mode for a display frame.
+.bind_on_keys <- function(base, add, keys, what, call) {
+  # nocov start — defensive: aux binding always passes a non-empty
+  # row_group key that is present in both frames.
+  if (length(keys) == 0L) {
+    cli::cli_abort(
+      c(
+        "No shared row key to align the {.val {what}} columns on.",
+        "i" = "The auxiliary ARD shares no key column with the main table.",
+        "i" = "Pass {.arg row_group} so both pivot on the same keys."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  # nocov end
+  bkey <- do.call(paste, c(base[keys], list(sep = "\x1f")))
+  akey <- do.call(paste, c(add[keys], list(sep = "\x1f")))
+  if (anyDuplicated(bkey) || anyDuplicated(akey)) {
+    cli::cli_abort(
+      c(
+        "Cannot bind {.val {what}} columns: row keys are not unique 1:1.",
+        "i" = "Aligned on {.val {keys}}; duplicate combinations would fabricate rows.",
+        "i" = "Aggregate or align the auxiliary ARD to one row per key."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  m <- match(bkey, akey)
+  for (cn in setdiff(names(add), keys)) {
+    base[[cn]] <- add[[cn]][m]
+  }
+  base
 }
 
 # ---------------------------------------------------------------------
@@ -710,6 +1236,102 @@ pivot_across <- function(
     )
   }
   data
+}
+
+# Reserved column tokens. `.variable` makes the analysis variable a column
+# band; `.stat` spreads each statistic entry across its own column (the
+# landscape "value & change" shell). Both are illegal as real ARD group
+# names, so they cannot collide with a user column.
+.tabular_col_tokens <- c(".variable", ".stat")
+
+# Parse the `column` argument into a structured pivot spec. Supports:
+#   NULL / "TRTA"               simple: arm pivots to columns (today)
+#   c(".variable", "TRTA")      variable band x arm; stat entries are ROWS
+#   c(".variable", ".stat")     variable band x stat columns; arm -> row stub
+# Anything else aborts with a friendly tabular_error_input (replaces the
+# raw `the condition has length > 1` crash on a length>1 `column`).
+.parse_column_spec <- function(column, call) {
+  if (is.null(column)) {
+    return(list(arm = NULL, variable_band = FALSE, stat_cols = FALSE))
+  }
+  if (!is.character(column) || anyNA(column) || length(column) == 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg column} must be a non-empty character vector or {.code NULL}.",
+        "x" = "You supplied {.obj_type_friendly {column}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  toks <- intersect(column, .tabular_col_tokens)
+  vars <- setdiff(column, .tabular_col_tokens)
+
+  if (length(toks) == 0L) {
+    if (length(column) == 1L) {
+      return(list(arm = column, variable_band = FALSE, stat_cols = FALSE))
+    }
+    cli::cli_abort(
+      c(
+        "{.arg column} must name a single grouping variable.",
+        "x" = "You supplied {length(column)} names: {.val {column}}.",
+        "i" = "For a variable band, use {.code column = c(\".variable\", \"<arm>\")}.",
+        "i" = "For one column per statistic, use {.code column = c(\".variable\", \".stat\")}.",
+        "i" = "A second grouping variable goes in {.arg row_group}, or page it with {.fn subgroup}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+
+  if (anyDuplicated(column)) {
+    cli::cli_abort(
+      c(
+        "{.arg column} has a repeated entry.",
+        "x" = "You supplied {.val {column}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  if (!(".variable" %in% toks)) {
+    cli::cli_abort(
+      c(
+        "{.arg column} uses {.val .stat} without {.val .variable}.",
+        "i" = "Stat columns need a variable band: {.code column = c(\".variable\", \".stat\")}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+
+  if (".stat" %in% toks) {
+    if (length(vars) > 0L) {
+      cli::cli_abort(
+        c(
+          "{.arg column} cannot mix {.val .stat} with a grouping variable.",
+          "x" = "You also named {.val {vars}}.",
+          "i" = "In stat-column mode the arm becomes a leading row stub, not a column band."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    return(list(arm = NULL, variable_band = TRUE, stat_cols = TRUE))
+  }
+
+  if (length(vars) != 1L) {
+    cli::cli_abort(
+      c(
+        "{.arg column} with {.val .variable} needs exactly one arm variable.",
+        "x" = "Found {length(vars)} non-token name{?s}: {.val {vars}}.",
+        "i" = "Use {.code column = c(\".variable\", \"<arm>\")}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+  list(arm = vars, variable_band = TRUE, stat_cols = FALSE)
 }
 
 .resolve_statistic_arg <- function(statistic, call) {
@@ -1408,7 +2030,13 @@ pivot_across <- function(
 # Decimals + per-stat formatting (vectorised by stat_name group)
 # ---------------------------------------------------------------------
 
-.resolve_ard_decimals <- function(decimals) {
+.resolve_ard_decimals <- function(
+  decimals,
+  row_group = NULL,
+  rg_levels = NULL,
+  variables = NULL,
+  call = rlang::caller_env()
+) {
   if (is.null(decimals)) {
     return(list(global = NULL, per_var = NULL))
   }
@@ -1416,15 +2044,77 @@ pivot_across <- function(
     return(list(global = decimals, per_var = NULL))
   }
   if (is.list(decimals)) {
+    keys <- setdiff(names(decimals), ".default")
+    # Per-row-group: a list keyed by row_group values. Engages only when a
+    # row_group is declared AND every non-.default key is one of its levels,
+    # so a per-variable list (keyed by variable names) is never reinterpreted.
+    if (
+      !is.null(row_group) && length(keys) > 0L && all(keys %in% rg_levels)
+    ) {
+      return(list(
+        global = NULL,
+        per_var = NULL,
+        per_group = list(
+          default = decimals[[".default"]],
+          map = decimals[keys]
+        )
+      ))
+    }
+    # A list whose keys look like group values but no row_group was passed:
+    # the keys match nothing in the data, so the user almost certainly meant
+    # per-row-group. Fail loud rather than silently format nothing.
+    if (
+      is.null(row_group) &&
+        length(keys) > 0L &&
+        !is.null(variables) &&
+        !any(keys %in% variables)
+    ) {
+      cli::cli_abort(
+        c(
+          "{.arg decimals} keys match no variable in {.arg data}.",
+          "x" = "Names {.val {keys}} look like {.arg row_group} values.",
+          "i" = "Pass {.arg row_group} to format decimals per row group."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
     return(list(
       global = decimals[[".default"]],
-      per_var = decimals[setdiff(names(decimals), ".default")]
+      per_var = decimals[keys]
     ))
   }
   list(global = NULL, per_var = NULL)
 }
 
-.format_stat_vectorised <- function(df, decimals, fmt, pct_threshold, call) {
+# Resolve a per-row-group token spec to a decimal count for one stat.
+# Token fallback mirrors the per-variable path: the matched group's token, then
+# the per-group .default token, then NULL (built-in). A bare unnamed scalar
+# applies to every token in the group.
+.group_decimals_for_stat <- function(spec_map, spec_def, stat_name) {
+  pick <- function(spec) {
+    if (is.null(spec)) {
+      return(NULL)
+    }
+    if (is.null(names(spec)) && length(spec) == 1L) {
+      return(spec[[1L]])
+    }
+    if (stat_name %in% names(spec)) {
+      return(spec[[stat_name]])
+    }
+    NULL
+  }
+  pick(spec_map) %||% pick(spec_def)
+}
+
+.format_stat_vectorised <- function(
+  df,
+  decimals,
+  fmt,
+  pct_threshold,
+  call,
+  row_group = NULL
+) {
   # Vectorised by stat_name group (fixes galley B1: per-row vapply).
   out <- character(nrow(df))
   if (nrow(df) == 0L) {
@@ -1433,6 +2123,11 @@ pivot_across <- function(
 
   stat_names <- df$stat_name
   unique_stats <- unique(stat_names)
+  groups <- if (!is.null(row_group) && row_group %in% names(df)) {
+    .normalise_ard_chr(df[[row_group]])
+  } else {
+    NULL
+  }
 
   for (sn in unique_stats) {
     idx <- which(stat_names == sn)
@@ -1448,7 +2143,8 @@ pivot_across <- function(
       decimals = decimals,
       fmt = fmt,
       pct_threshold = pct_threshold,
-      call = call
+      call = call,
+      groups = if (is.null(groups)) NULL else groups[idx]
     )
   }
   out
@@ -1462,7 +2158,8 @@ pivot_across <- function(
   decimals,
   fmt,
   pct_threshold,
-  call
+  call,
+  groups = NULL
 ) {
   n <- length(values)
   out <- character(n)
@@ -1491,6 +2188,35 @@ pivot_across <- function(
       function(v) as.character(fn(v)),
       character(1L)
     )
+    return(out)
+  }
+
+  # Per-row-group decimals: select the token precision by each row's row_group
+  # value. Sits after the fmt override (fmt still wins) and before per_var /
+  # global. `groups` is aligned 1:1 with `values`.
+  per_group <- decimals[["per_group"]]
+  if (!is.null(per_group) && !is.null(groups)) {
+    # split() drops NA-group rows (overall-arm / ungrouped rows reach format
+    # time with NA row_group), which would blank them. Bucket NA to a sentinel
+    # that never matches a real level, so it falls to .default then built-in.
+    gv <- groups[todo]
+    gv[is.na(gv)] <- "\x01"
+    by_grp <- split(which(todo), gv)
+    for (g in names(by_grp)) {
+      sel <- by_grp[[g]]
+      grp_dec <- if (identical(g, "\x01")) NULL else per_group$map[[g]]
+      d <- .group_decimals_for_stat(grp_dec, per_group$default, stat_name)
+      if (!is.null(d)) {
+        out[sel] <- .format_stat_with_decimals(
+          values[sel],
+          stat_name,
+          as.integer(d),
+          pct_threshold
+        )
+      } else {
+        out[sel] <- .format_stat_default(values[sel], stat_name)
+      }
+    }
     return(out)
   }
 

@@ -441,16 +441,21 @@
   }
 
   # Table-level width_mode dispatch. "content" (default) keeps the
-  # natural-fit shrink behavior; "window" promotes auto cols to share
-  # the residual equally (Word's Auto-fit Window); "fixed" collapses
-  # auto cols to the minimum sliver so only pinned + percent drive
-  # the layout (Word's Fixed Column Width).
+  # natural-fit shrink behavior; "window" scales auto cols proportionally
+  # to their natural width to fill the residual (Word's Auto-fit Window);
+  # "fixed" collapses auto cols to the minimum sliver so only pinned +
+  # percent drive the layout (Word's Fixed Column Width).
   if (identical(mode, "fixed")) {
     resolved[is_auto] <- .min_auto_width_in
     return(resolved)
   }
   if (identical(mode, "window")) {
-    resolved[is_auto] <- remaining / sum(is_auto)
+    # Scale each auto column by its natural width so the group fills the
+    # residual page width while preserving content proportions (Word
+    # AutoFit Window). sum(values[is_auto]) is always > 0 here: every
+    # auto width is floored at .min_auto_width_in in measurement, and the
+    # remaining <= 0 overflow case already returned above.
+    resolved[is_auto] <- values[is_auto] * (remaining / sum(values[is_auto]))
     return(resolved)
   }
 

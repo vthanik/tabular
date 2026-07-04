@@ -163,7 +163,7 @@
 #' Cell-location constructors for `style()`
 #'
 #' Build a `tabular_location` value naming one region of the rendered
-#' table; pass the result to [`style()`]'s `at` argument. Each
+#' table; pass the result to [`style()`]'s `.at` argument. Each
 #' constructor targets one surface (body, headers, footnotes, ...);
 #' optional `i` / `j` / `where` / `level` / `labels` filters narrow
 #' the target within that surface.
@@ -251,7 +251,7 @@
 #'
 #' @return *A `tabular_location` S3 list* with slots `surface`, `i`,
 #'   `j`, `where`, `labels`, `level`, `slot`, `side` (unused slots
-#'   are `NULL`). Pass to [`style()`]'s `at` argument.
+#'   are `NULL`). Pass to [`style()`]'s `.at` argument.
 #'
 #' @examples
 #' # Whole body cells (the default for style())

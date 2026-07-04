@@ -33,22 +33,25 @@ Recognised knobs:
 \itemize{
 \item \strong{\code{font_size}} — body point size. \verb{<numeric(1)>}.
 \item \strong{\code{font_family}} — body font family. \verb{<character | character(1)>}.
-Default \code{"mono"}. Three accepted shapes:
+Default \code{"mono"}. Four accepted shapes:
 \enumerate{
 \item \strong{Generic family} — \code{"mono"} (default), \code{"serif"},
 \code{"sans"} (CSS aliases \code{"monospace"} / \code{"sans-serif"}
 also recognised). The resolver expands to a per-backend
-chain that leads with the Linux-installed
-\strong{Liberation} face (Posit Workbench / Domino / Citrix
-/ RStudio Server), then the Microsoft Office face
-(Courier New / Times New Roman / Arial) for desktop
-Win / Mac consumers, then TeX Gyre for LaTeX compile,
-then the CSS generic for HTML. Liberation Mono / Serif
-/ Sans are metric-compatible with Courier New / TNR /
-Arial, so layout, line breaks, and decimal alignment
-hold across every render context. The mono default
-matches the dominant submission-TFL convention where
-deterministic glyph widths drive \verb{n (\%)} cell alignment.
+chain that leads with the Microsoft Office face (Courier
+New / Times New Roman / Arial) — installed on every
+Windows and macOS machine, where documents are reviewed —
+then the PostScript legacy name, then the metric-compatible
+\strong{Liberation} face LAST as the Linux-server fallback
+(Posit Workbench / Domino / Citrix / RStudio Server),
+then TeX Gyre for LaTeX compile / the CSS generic for
+HTML. Liberation Mono / Serif / Sans are metric-compatible
+with Courier New / TNR / Arial, so layout, line breaks,
+and decimal alignment hold across every render context
+regardless of which end of the chain resolves. The mono
+default matches the dominant submission-TFL convention
+where deterministic glyph widths drive \verb{n (\%)} cell
+alignment.
 \item \strong{Named alias} — \code{"Times"}, \code{"Times New Roman"},
 \code{"Arial"}, \code{"Helvetica"}, \code{"Courier"}, \code{"Courier New"}.
 These PostScript-era names alias to the appropriate
@@ -57,15 +60,17 @@ sans, Courier -> mono) and emit the same expanded chain.
 Honours the user's intent ("I want Times-like
 rendering") on every OS instead of hard-erroring on
 a Linux server with no TNR installed.
-\item \strong{Named font} — \code{"Inter"}, \code{"JetBrains Mono"},
-\code{"Source Serif Pro"}, sponsor-specific face, etc.
-Emitted verbatim with no fallback fabricated. The
-consuming app (browser, xelatex, Word, LibreOffice)
-resolves the name against its own font matcher. RTF
-and DOCX fall back to the consuming app's substitution
-table when the name is missing; xelatex hard-errors at
-compile time; HTML browsers fall through to the
-browser's default font (not necessarily class-matched).
+\item \strong{Arbitrary named font} — \code{"Inter"}, \code{"JetBrains Mono"},
+\code{"IBM Plex Mono"}, \code{"Source Code Pro"}, sponsor-specific
+face, etc. Emitted verbatim with no fallback fabricated.
+The consuming app (browser, xelatex, Word, LibreOffice)
+resolves the name against its own font matcher: RTF and
+DOCX substitute when the name is missing; \strong{xelatex
+hard-errors at compile time} if the face is not installed;
+HTML browsers fall through to the browser's default font
+(not necessarily class-matched). For a portable result,
+prefer a generic family (shape 1) or an explicit stack
+(shape 4).
 \item \strong{Explicit stack} — \code{c("Inter", "Helvetica", "sans")}.
 User owns the chain. Returned verbatim — alias lookup
 is \strong{bypassed}, so \code{c("Times", "Times")} honours the
@@ -73,43 +78,12 @@ exact name with no chain expansion (escape hatch for
 users who genuinely want exact-name semantics).
 }
 
-\strong{Note:} Adobe Source Pro is no longer the default lead.
-Source Pro is not pre-installed on production Linux
-servers, so leading with it walks through 2-3 missing
-names before resolving. Users who installed Source Pro
-can opt in via the explicit-stack form
-(\code{c("Source Serif Pro", "serif")}).
-
-\strong{What you see in Word's font dropdown vs. what renders.}
-When you open a tabular-generated \code{.rtf} in Word on
-macOS or Windows, the font dropdown displays the file's
-\emph{requested} face — \code{"Liberation Mono"} by default
-(the Linux-server-installed face). The rendered text on
-screen is whatever Word's \verb{\\\\*\\\\falt} substitution
-resolved to — typically Courier New on macOS /
-Windows. This is correct: Liberation Mono and Courier
-New are metric-compatible by design, so the rendered
-layout (line breaks, decimal alignment, page breaks) is
-identical regardless of which face Word actually used to
-render. The same \verb{\\\\*\\\\falt} substitution model applies
-to serif (Liberation Serif -> Times New Roman) and sans
-(Liberation Sans -> Arial).
-
-\strong{How to force Office names as the primary.} If
-reviewers will be confused by seeing \code{"Liberation Mono"}
-in the Word font dropdown (cosmetic concern; doesn't
-affect rendering), pass an explicit length>1 stack with
-the Office name first. The resolver returns the vector
-verbatim — no alias lookup, no chain expansion — so the
-RTF file then names the Office face as primary and your
-chosen alternate as \verb{\\\\*\\\\falt}:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{preset(font_family = c("Courier New", "Courier", "Liberation Mono"))
-}\if{html}{\out{</div>}}
-
-This is the canonical escape hatch for authors who know
-their consumer audience is Mac / Windows Word users and
-want the dropdown to show the Office face directly.
+\strong{Note:} tabular bundles no fonts. Because the default
+chain leads with the Office face, Word's font dropdown
+shows a face the reader actually has installed on Windows /
+macOS (e.g. Courier New for \code{"mono"}), not a phantom name;
+the metric-compatible Liberation face only appears as the
+fallback for a headless Linux box.
 \item \strong{\code{orientation}} — page orientation.
 \verb{<character(1)>}. One of \code{"landscape"} (default),
 \code{"portrait"}.
@@ -242,9 +216,10 @@ Word's Table Layout menu. \verb{<character(1)>}. One of:
 \item \strong{\code{"content"}} \emph{(default)} — Each column auto-sized to
 \code{max(body, header)}. The table doesn't fill the page.
 Word's "Auto-fit Contents".
-\item \strong{\code{"window"}} — Auto-sized columns expand to share the
-residual page width equally. Pinned and percent columns
-keep their pins. Word's "Auto-fit Window".
+\item \strong{\code{"window"}} — Auto-sized columns are scaled
+proportionally to their natural width to fill the residual
+page width. Pinned and percent columns keep their pins.
+Word's "Auto-fit Window".
 \item \strong{\code{"fixed"}} — Only explicit per-column widths drive
 the layout. Auto-sized columns collapse to a minimum
 sliver. Word's "Fixed Column Width".
@@ -284,6 +259,18 @@ in place (HTML / md / LaTeX collapse runs to one space).
 
 \strong{Note:} never affects \code{col_spec(align = "decimal")} padding,
 which uses U+00A0 and is preserved unconditionally.
+\item \strong{\code{chrome_onscreen}} — whether the on-screen running header /
+footer bands render in HTML output. \verb{<character(1)>}. One of:
+\itemize{
+\item \strong{\code{"auto"}} \emph{(default)} — the \code{pagehead} / \code{pagefoot}
+content renders as on-screen \verb{<header>} / \verb{<footer>} bands.
+\item \strong{\code{"off"}} — suppress the on-screen bands; the print-time
+\verb{@page} chrome still renders, so print-to-PDF output is
+unchanged. Useful when the HTML is consumed only via print.
+}
+
+HTML-only; the paged backends (RTF / PDF / DOCX) always emit
+per-page chrome regardless of this knob.
 \item \strong{\code{footnote_markers}} — the glyph scheme for \code{\link[=footnote]{footnote()}}
 markers, which the engine allocates once in reading order.
 \verb{<character(1)>}. One of:

@@ -328,7 +328,15 @@ backend_md <- function(grid, file) {
           cells_style = panel_pages[[1L]]$cells_style
         )
       )
+      prev_subgroup <- NULL
+      first_page <- TRUE
       for (page in panel_pages) {
+        # The subgroup banner belongs once per subgroup VALUE: a tall group
+        # spans several vertical pages sharing one `subgroup_index`, so emit
+        # the banner only when the value changes (continuous-only; paged
+        # backends repeat it per page by design).
+        show_banner <- first_page ||
+          !identical(page$subgroup_index, prev_subgroup)
         panel_lines <- c(
           panel_lines,
           .render_md_page_body_rows(
@@ -336,9 +344,12 @@ backend_md <- function(grid, file) {
             preset = meta$preset,
             cs = cs,
             headers = meta$headers,
-            col_names = col_names
+            col_names = col_names,
+            show_banner = show_banner
           )
         )
+        prev_subgroup <- page$subgroup_index
+        first_page <- FALSE
       }
       if (isTRUE(panel_pages[[1L]]$is_empty_page)) {
         # Zero-row page: header above is intact; the body is the empty
@@ -402,9 +413,14 @@ backend_md <- function(grid, file) {
   preset = NULL,
   cs = NULL,
   headers = NULL,
-  col_names = NULL
+  col_names = NULL,
+  show_banner = TRUE
 ) {
-  banner <- .render_md_subgroup_banner(page, cs)
+  banner <- if (show_banner) {
+    .render_md_subgroup_banner(page, cs)
+  } else {
+    character()
+  }
   # Per-subgroup BigN: emit the per-arm N row only alongside the banner
   # (gated on the banner being present and the page carrying records).
   bign <- if (length(banner) > 0L) {

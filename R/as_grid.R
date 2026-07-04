@@ -199,7 +199,11 @@
 #'
 #' sg_grid <- as_grid(sg_spec)
 #' length(sg_grid@pages)
-#' vapply(sg_grid@pages, function(p) p$subgroup_index %||% NA_integer_, integer(1))
+#' vapply(
+#'   sg_grid@pages,
+#'   function(p) if (is.null(p$subgroup_index)) NA_integer_ else p$subgroup_index,
+#'   integer(1)
+#' )
 #'
 #' # ---- Example 4: Pre-flight inspection before emit() ----
 #' #
@@ -1188,10 +1192,14 @@ as_grid <- function(.spec) {
     is_hdr <- pages[[pi]]$is_header_row %||% rep(FALSE, nrow(mat))
     meta <- pages[[pi]]$header_meta %||% vector("list", nrow(mat))
     for (r in seq_len(nrow(mat))) {
-      if (!isTRUE(is_hdr[[r]])) {
+      m <- meta[[r]]
+      # Injected header rows (`is_header_row`) AND collapsed-singleton data
+      # rows both carry list `header_meta`; stamp the group-header cascade on
+      # either. A collapsed singleton stays `is_header_row = FALSE` so it gets
+      # no default header chrome, but the explicit cascade still lands.
+      if (!isTRUE(is_hdr[[r]]) && !is.list(m)) {
         next
       }
-      m <- meta[[r]]
       for (res in resolved) {
         if (
           !is.null(res$cols_mask) &&

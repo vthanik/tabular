@@ -27,6 +27,16 @@ test_that(".resolve_afm_name picks the right family per chain shape", {
     tabular:::.resolve_afm_name("Liberation Sans"),
     "Helvetica"
   )
+  # An unrecognised named font (tabular special-cases none) falls to
+  # the default serif class and is measured with the Times-Roman AFM.
+  expect_identical(
+    tabular:::.font_chain_family_class("IBM Plex Mono"),
+    "serif"
+  )
+  expect_identical(
+    tabular:::.resolve_afm_name("IBM Plex Mono"),
+    "Times-Roman"
+  )
   expect_identical(
     tabular:::.resolve_afm_name("Liberation Mono"),
     "Courier"

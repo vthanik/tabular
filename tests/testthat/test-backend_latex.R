@@ -529,6 +529,13 @@ test_that("col_spec width percent -> resolved against available content width", 
   expect_match(txt, "Q[l,wd=4.400560in]", fixed = TRUE)
 })
 
+test_that("col_spec valign surfaces as a tabularray valign token (end-to-end)", {
+  spec <- tabular(data.frame(a = c("x", "y"))) |>
+    cols(a = col_spec(valign = "top"))
+  txt <- render_tex(spec)
+  expect_match(txt, "valign=t", fixed = TRUE)
+})
+
 test_that("col_spec width respects align letter", {
   spec <- tabular(data.frame(x = "a", y = "b")) |>
     preset(orientation = "portrait") |>
@@ -1956,4 +1963,21 @@ test_that("LaTeX italicises a styled chrome surface and sizes a page band (#cov)
   txt <- render_tex(spec)
   expect_match(txt, "\\textit{", fixed = TRUE)
   expect_match(txt, "\\fancyhead", fixed = TRUE)
+})
+
+test_that("an arbitrary named font sets the LaTeX main font verbatim", {
+  dat <- data.frame(
+    soc = c("Cardiac", "Vascular"),
+    n = c("12 (5.0)", "8 (3.3)"),
+    stringsAsFactors = FALSE
+  )
+  txt <- render_tex(tabular(dat) |> preset(font_family = "IBM Plex Mono"))
+  # No bundling, no fallback chain: the face is set directly. If it is
+  # not installed on the compiling machine xelatex errors -- the
+  # documented trade-off of naming a specific face over a generic.
+  expect_match(txt, "\\setmainfont{IBM Plex Mono}", fixed = TRUE)
+  # A generic family still gets the guarded cascade with a guaranteed
+  # Latin Modern leaf.
+  gtxt <- render_tex(tabular(dat) |> preset(font_family = "mono"))
+  expect_match(gtxt, "\\setmainfont{Latin Modern Mono}", fixed = TRUE)
 })

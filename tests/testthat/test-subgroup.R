@@ -1183,11 +1183,13 @@ test_that("big_n band-keyed: HTML colspans the band; Markdown repeats the N", {
   )))
 })
 
-test_that("big_n: the per-arm N row repeats with the banner across vertical page splits", {
-  # A large font shrinks the per-page row budget so each subgroup splits
-  # across vertical pages. The N row is gated on the banner being
-  # present, so it must repeat in lockstep with the banner after each
-  # break, never drifting.
+test_that("big_n: the per-arm N row rides once with each subgroup banner (continuous)", {
+  # A large font shrinks the per-page row budget so each subgroup spans
+  # several print-only vertical pages (the `tabular-page-break-row` markers
+  # survive for `@media print`). HTML is continuous, so the banner appears
+  # once per subgroup VALUE, not once per page; the per-arm N row is gated
+  # on the banner, so it rides with it in lockstep and never drifts onto a
+  # continuation page.
   spec <- .bign_base() |>
     subgroup("sex", label = "Sex: {sex}", big_n = .bign_arms()) |>
     preset(font_size = 24L, width_mode = "fixed")
@@ -1201,8 +1203,8 @@ test_that("big_n: the per-arm N row repeats with the banner across vertical page
     lines,
     fixed = TRUE
   ))
-  expect_gt(break_ct, 0L) # a split actually happened
-  expect_gt(banner_ct, 2L) # banner repeated beyond the two subgroups
+  expect_gt(break_ct, 0L) # a print-only vertical split actually happened
+  expect_identical(banner_ct, 2L) # one banner per subgroup value (sex F/M)
   expect_identical(bign_ct, banner_ct) # N row tracks the banner exactly
 })
 
@@ -1366,5 +1368,43 @@ test_that("keep_empty=TRUE composes with big_n without index misalignment", {
     )
   for (ext in c(".html", ".md", ".rtf", ".docx")) {
     expect_no_error(emit(spec, withr::local_tempfile(fileext = ext)))
+  }
+})
+
+test_that("continuous backends emit one subgroup banner per group, never repeated", {
+  # `cdisc_saf_subgroup` F/M each exceed the auto rows-per-page, so the group
+  # used to split into a first page + a continuation page and the banner was
+  # re-emitted on the continuation (a duplicate mid-table). Continuous media
+  # (HTML / Markdown) have no pages: exactly one banner per group value.
+  spec <- tabular(
+    cdisc_saf_subgroup,
+    titles = c("Table 14.2.1", "Vital Signs by Visit", "Safety Population"),
+    footnotes = "Descriptive statistics by treatment arm."
+  ) |>
+    cols(
+      sex_n = col_spec(visible = FALSE),
+      paramcd = col_spec(visible = FALSE),
+      param = col_spec(usage = "group", label = "Parameter"),
+      visit = col_spec(usage = "group", label = "Visit"),
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo", align = "decimal"),
+      drug_50 = col_spec(label = "Drug 50", align = "decimal"),
+      drug_100 = col_spec(label = "Drug 100", align = "decimal"),
+      Total = col_spec(label = "Total", align = "decimal")
+    ) |>
+    # Large font shrinks the estimated rows-per-page so each sex group spans
+    # more than one page under the old vertical split (deterministic repro).
+    preset(font_size = 14) |>
+    subgroup(by = "sex", label = "Sex: {sex}")
+
+  count <- function(txt, pat) {
+    length(regmatches(txt, gregexpr(pat, txt, fixed = TRUE))[[1L]])
+  }
+  for (ext in c(".html", ".md")) {
+    f <- withr::local_tempfile(fileext = ext)
+    emit(spec, f)
+    txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+    expect_identical(count(txt, "Sex: F"), 1L)
+    expect_identical(count(txt, "Sex: M"), 1L)
   }
 })

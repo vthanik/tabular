@@ -23,11 +23,15 @@
 # Family-class -> AFM family mapping
 # ---------------------------------------------------------------------
 
-# Liberation faces aren't in the alias table (R/fonts.R) because
-# the resolver treats them as "explicit named font, emit verbatim".
-# For metric measurement we still need the family class — Liberation
-# Serif is metric-compatible with Times-Roman, so we measure with
-# Times-Roman AFM.
+# Named faces that carry a family class but aren't in the PS-era
+# alias table (R/fonts.R). This is the shared SSOT consulted by both
+# `.font_chain_family_class` (AFM measurement, below) and
+# `.font_generic_class` (RTF/DOCX class, R/fonts.R) — extend it here,
+# never by touching the generic `.stack_*` cores.
+#
+# Liberation faces: metric-compatible with the Adobe Core faces
+# (Liberation Serif = Times-Roman, Sans = Helvetica, Mono = Courier),
+# so we measure with the matching Core AFM.
 .font_to_family_class <- list(
   "Liberation Serif" = "serif",
   "Liberation Sans" = "sans",

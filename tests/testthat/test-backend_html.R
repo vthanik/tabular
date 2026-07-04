@@ -472,6 +472,27 @@ test_that(".html_table_open_tag emits a width-less table (content-fitted, centre
   }
 })
 
+test_that("non-inch unit column widths pass through as CSS (end-to-end)", {
+  # HTML is unconditionally responsive: a CSS unit width (cm / pt / px)
+  # rides straight into <col style="width:..."> without inch conversion.
+  spec <- tabular(data.frame(a = "x", b = "y")) |>
+    cols(a = col_spec(width = "2cm"), b = col_spec(width = "3cm"))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(html, "<col style=\"width:2cm\"/>", fixed = TRUE)
+  expect_match(html, "<col style=\"width:3cm\"/>", fixed = TRUE)
+})
+
+test_that("col_spec valign surfaces as CSS vertical-align (end-to-end)", {
+  spec <- tabular(data.frame(a = c("x", "y"))) |>
+    cols(a = col_spec(valign = "top"))
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(html, "vertical-align: top", fixed = TRUE)
+})
+
 test_that("each <table> is wrapped in <div class=\"tabular-table-wrap\">", {
   spec <- tabular(data.frame(x = c(1L, 2L), y = c("a", "b")))
   out <- withr::local_tempfile(fileext = ".html")
@@ -2824,4 +2845,25 @@ test_that("default cell_padding keeps the responsive rem padding in HTML (#html-
   emit(spec, f)
   html <- paste(readLines(f, warn = FALSE), collapse = "\n")
   expect_true(grepl("padding: .18rem .6rem;", html, fixed = TRUE))
+})
+
+test_that("HTML names a font verbatim and never embeds @font-face", {
+  dat <- data.frame(
+    soc = c("Cardiac", "Vascular"),
+    n = c("12 (5.0)", "8 (3.3)"),
+    stringsAsFactors = FALSE
+  )
+  fp <- withr::local_tempfile(fileext = ".html")
+  fm <- withr::local_tempfile(fileext = ".html")
+  emit(tabular(dat) |> preset(font_family = "IBM Plex Mono"), fp)
+  emit(tabular(dat) |> preset(font_family = "mono"), fm)
+  plex <- paste(readLines(fp, warn = FALSE), collapse = "\n")
+  mono <- paste(readLines(fm, warn = FALSE), collapse = "\n")
+  # tabular bundles no fonts: never an @font-face in any render.
+  expect_false(grepl("@font-face", plex, fixed = TRUE))
+  expect_false(grepl("@font-face", mono, fixed = TRUE))
+  # A named face is emitted verbatim (quoted, no fabricated fallback).
+  expect_match(plex, 'font-family: "IBM Plex Mono"', fixed = TRUE)
+  # The default mono chain leads with the Office face.
+  expect_match(mono, '"Courier New"', fixed = TRUE)
 })

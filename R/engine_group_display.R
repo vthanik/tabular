@@ -288,11 +288,52 @@ engine_group_display <- function(
         depth = b - 1L
       )
     }
+    # Single-member-group collapse (single `header_row` band only). A run
+    # of length 1 needs no section header: the lone member renders as one
+    # flush-left row whose host label IS the group value (no injected
+    # header, no auto-indent), still carrying any `cells_group_headers()`
+    # styling via the provenance stamped into `collapse_meta`. An empty /
+    # NA group value (a blank that would otherwise print an empty bold
+    # header) is treated the same way EXCEPT its host label is left as the
+    # member's own text (overwriting with the blank value would erase it),
+    # and it carries no provenance (nothing to style).
+    #
+    # ponytail: single-band only; extend to per-band masks if a real
+    # nested two-`header_row` case appears.
+    indent_rows <- rep(TRUE, nrow_data)
+    collapse_meta <- vector("list", nrow_data)
+    if (length(bands) == 1L) {
+      band <- bands[[1L]]
+      gv <- as.character(band$group_values)
+      run_ids <- .runs_grouping(gv)
+      run_len <- tabulate(run_ids)[run_ids]
+      is_start <- c(TRUE, diff(run_ids) != 0L)
+      empty_val <- is.na(gv) | !nzchar(trimws(gv))
+
+      header_start <- is_start & run_len >= 2L & !empty_val
+      indent_rows <- run_len >= 2L & !empty_val
+      collapse_rows <- run_len == 1L & !empty_val
+
+      bands[[1L]]$transitions <- which(header_start)
+
+      if (any(collapse_rows) && !is.na(host_col)) {
+        cells_text[collapse_rows, host_col] <- gv[collapse_rows]
+        host_ast <- cells_ast[, host_col]
+        host_ast[collapse_rows] <- band$group_asts[collapse_rows]
+        cells_ast[, host_col] <- host_ast
+        gcol <- band$group_col
+        for (i in which(collapse_rows)) {
+          collapse_meta[[i]] <- list(group_col = gcol, data_idx = i)
+        }
+      }
+    }
+
     data_depth <- length(bands)
     header_row_plan <- list(
       bands = bands,
       host_col = host_col,
-      data_depth = data_depth
+      data_depth = data_depth,
+      collapse_meta = collapse_meta
     )
 
     # Conditional auto-indent on the host column's body cells:
@@ -318,16 +359,22 @@ engine_group_display <- function(
         length(host_col_spec@indent) == 1L &&
         !is.na(host_col_spec@indent)
       if (!host_has_indent) {
-        cells_indent[, host_col] <- cells_indent[, host_col] + data_depth
+        # Per-row: collapsed singletons + empty/NA-group members carry no
+        # auto-indent (`indent_rows` FALSE -> +0 and a "" prefix, which
+        # `.indent_host_asts_per_row` no-ops). Multi-band keeps all-rows
+        # behaviour (`indent_rows` defaults all-TRUE).
+        cells_indent[, host_col] <-
+          cells_indent[, host_col] + data_depth * indent_rows
         if (nzchar(indent_unit)) {
           data_prefix <- strrep(indent_unit, data_depth)
+          prefixes <- ifelse(indent_rows, data_prefix, "")
           cells_text[, host_col] <- paste0(
-            data_prefix,
+            prefixes,
             cells_text[, host_col]
           )
           cells_ast[, host_col] <- .indent_host_asts_per_row(
             cells_ast[, host_col],
-            rep(data_prefix, nrow_data)
+            prefixes
           )
         }
       }
@@ -761,7 +808,22 @@ engine_group_display <- function(
     length(header_transitions) > 0L
   has_blank_plan <- length(blank_transitions) > 0L
 
-  if (length(row_indices) == 0L || (!has_header_plan && !has_blank_plan)) {
+  # Collapsed-singleton provenance: stamped onto its DATA row (not a header
+  # row) so `.stamp_group_headers()` can land the group-header cascade. A
+  # page with ONLY collapsed rows (no headers, no blanks) must still run
+  # the copy loop below to carry that provenance into `header_meta`.
+  collapse_meta <- if (is.null(header_row_plan)) {
+    NULL
+  } else {
+    header_row_plan$collapse_meta
+  }
+  has_collapse <- !is.null(collapse_meta) &&
+    any(!vapply(collapse_meta[row_indices], is.null, logical(1L)))
+
+  if (
+    length(row_indices) == 0L ||
+      (!has_header_plan && !has_blank_plan && !has_collapse)
+  ) {
     return(list(
       cells_text = cells_text,
       cells_ast = cells_ast,
@@ -881,6 +943,15 @@ engine_group_display <- function(
     }
     is_header_row[[out_pos]] <- FALSE
     is_blank_row[[out_pos]] <- FALSE
+    # A collapsed singleton stays a plain data row (`is_header_row` FALSE),
+    # but carries the group's provenance so the group-header style cascade
+    # lands on it in `.stamp_group_headers()`.
+    if (!is.null(collapse_meta)) {
+      cm <- collapse_meta[[data_idx]]
+      if (!is.null(cm)) {
+        header_meta[[out_pos]] <- cm
+      }
+    }
     first_emit <- FALSE
   }
 

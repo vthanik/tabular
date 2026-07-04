@@ -444,7 +444,7 @@ test_that(".docx_styles_xml pins the resolved preset font and emits named styles
   styles <- tabular:::.docx_styles_xml(preset)
   expect_match(
     styles,
-    "<w:rFonts w:ascii=\"Liberation Sans\" w:hAnsi=\"Liberation Sans\" w:cs=\"Liberation Sans\"/>",
+    "<w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\" w:cs=\"Arial\"/>",
     fixed = TRUE
   )
   expect_false(grepl("asciiTheme", styles, fixed = TRUE))
@@ -456,38 +456,38 @@ test_that(".docx_styles_xml pins the resolved preset font and emits named styles
   expect_match(styles, "w:styleId=\"Hyperlink\"", fixed = TRUE)
 })
 
-test_that(".docx_styles_xml defaults to Liberation Mono and fontTable declares the stack", {
+test_that(".docx_styles_xml defaults to Courier New and fontTable declares the stack", {
   preset <- preset_spec()
   styles <- tabular:::.docx_styles_xml(preset)
   fonts <- tabular:::.docx_font_table(preset)
-  # Default font_family is "mono" -> Liberation Mono primary face.
+  # Default font_family is "mono" -> Courier New primary face (Office-first).
   expect_match(
     styles,
-    "<w:rFonts w:ascii=\"Liberation Mono\" w:hAnsi=\"Liberation Mono\" w:cs=\"Liberation Mono\"/>",
+    "<w:rFonts w:ascii=\"Courier New\" w:hAnsi=\"Courier New\" w:cs=\"Courier New\"/>",
     fixed = TRUE
   )
   # fontTable declares the primary face + its metric-compatible
   # substitutes (the OOXML form of RTF's \*\falt), all modern/fixed.
-  expect_match(fonts, "<w:font w:name=\"Liberation Mono\">", fixed = TRUE)
   expect_match(fonts, "<w:font w:name=\"Courier New\">", fixed = TRUE)
+  expect_match(fonts, "<w:font w:name=\"Liberation Mono\">", fixed = TRUE)
   expect_match(fonts, "w:family w:val=\"modern\"", fixed = TRUE)
   # Each face names its in-class successor via <w:altName> (first child of
   # CT_Font), so Word keeps the substitution in class instead of panose
   # guessing to a serif face when the primary is absent.
   expect_match(
     fonts,
-    "<w:font w:name=\"Liberation Mono\"><w:altName w:val=\"Courier New\"/>",
+    "<w:font w:name=\"Courier New\"><w:altName w:val=\"Courier\"/>",
     fixed = TRUE
   )
   expect_match(
     fonts,
-    "<w:font w:name=\"Courier New\"><w:altName w:val=\"Courier\"/>",
+    "<w:font w:name=\"Courier\"><w:altName w:val=\"Liberation Mono\"/>",
     fixed = TRUE
   )
   # The last face in the stack has no successor, so no altName.
   expect_no_match(
     fonts,
-    "<w:font w:name=\"Courier\"><w:altName",
+    "<w:font w:name=\"Liberation Mono\"><w:altName",
     fixed = TRUE
   )
   # fontTable is well-formed XML (altName placed per the CT_Font sequence).
@@ -749,16 +749,16 @@ test_that(".docx_resolve_page_tokens does nothing when no tokens present", {
 # Font + escape edge cases
 # ---------------------------------------------------------------------
 
-test_that(".docx_primary_font falls back to Liberation Serif on empty / NA / NULL", {
+test_that(".docx_primary_font falls back to Times New Roman on empty / NA / NULL", {
   expect_identical(
     tabular:::.docx_primary_font(character()),
-    "Liberation Serif"
+    "Times New Roman"
   )
   expect_identical(
     tabular:::.docx_primary_font(NA_character_),
-    "Liberation Serif"
+    "Times New Roman"
   )
-  expect_identical(tabular:::.docx_primary_font(""), "Liberation Serif")
+  expect_identical(tabular:::.docx_primary_font(""), "Times New Roman")
   expect_identical(
     tabular:::.docx_primary_font(c("Helvetica", "Arial")),
     "Helvetica"
@@ -845,6 +845,46 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
   )[[1L]])
   expect_identical(widths_twips, c(1438L, 4026L, 1216L, 1216L, 1216L, 1316L))
   expect_identical(sum(widths_twips), 10428L)
+})
+
+test_that("proportional %% column widths split the grid proportionally (end-to-end)", {
+  # col_spec(width = "N%") is a documented end-user feature; verify it
+  # reaches the paged DOCX output, not just HTML / LaTeX. 25% / 75% ->
+  # the second <w:gridCol> is exactly 3x the first.
+  spec <- tabular(data.frame(a = c("x", "y"), b = c("1", "2"))) |>
+    cols(a = col_spec(width = "25%"), b = col_spec(width = "75%"))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  w <- as.integer(regmatches(
+    doc,
+    gregexpr("(?<=<w:gridCol w:w=\")[0-9]+(?=\"/>)", doc, perl = TRUE)
+  )[[1L]])
+  expect_length(w, 2L)
+  expect_equal(w[[2L]] / w[[1L]], 3, tolerance = 0.01)
+})
+
+test_that("non-inch unit column widths convert to twips (end-to-end)", {
+  # col_spec(width = "2cm") -> engine converts to inches -> twips.
+  # 2cm = 1134 twips, 3cm = 1701 twips (fixed, page-independent).
+  spec <- tabular(data.frame(a = "x", b = "y")) |>
+    cols(a = col_spec(width = "2cm"), b = col_spec(width = "3cm"))
+  out <- withr::local_tempfile(fileext = ".docx")
+  emit(spec, out)
+  unzipped <- .unzip_docx(out)
+  doc <- paste(
+    readLines(file.path(unzipped, "word/document.xml")),
+    collapse = ""
+  )
+  w <- as.integer(regmatches(
+    doc,
+    gregexpr("(?<=<w:gridCol w:w=\")[0-9]+(?=\"/>)", doc, perl = TRUE)
+  )[[1L]])
+  expect_identical(w, c(1134L, 1701L))
 })
 
 test_that("col_spec@align surfaces as <w:jc> on data cells", {
@@ -1169,7 +1209,7 @@ test_that("bold / italic / code marks render as <w:b/> / <w:i/> / <w:rFonts mono
   expect_match(doc, "italic title", fixed = TRUE)
   expect_match(doc, "<w:i/>", fixed = TRUE)
   expect_match(doc, "code title", fixed = TRUE)
-  expect_match(doc, "w:ascii=\"Liberation Mono\"", fixed = TRUE)
+  expect_match(doc, "w:ascii=\"Courier New\"", fixed = TRUE)
 })
 
 test_that("superscript / subscript render as <w:vertAlign>", {

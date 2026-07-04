@@ -253,6 +253,20 @@
 #'       the visible body. Matches the canonical submission
 #'       shape used by clinical TFL house templates (Disposition,
 #'       Demographics, Statistical Report sections).
+#'
+#'       A group with exactly **one** member collapses to a single
+#'       flush-left row: the group value becomes that row's label, its
+#'       data cells are kept, and no separate header or indent is
+#'       emitted (the redundant two-line "header plus lone child" is
+#'       gone). This is the standard occurrence-table shape, where a
+#'       single binary flag (DEATH, TEAE) sits flush among headed
+#'       multi-level breakdowns. The collapsed row still receives any
+#'       [`cells_group_headers()`] styling (preset or explicit), so its
+#'       group identity is not lost. An empty or `NA` group value never
+#'       emits a header at all; its members render flush left keeping
+#'       their own labels. *(Collapse applies to a single `header_row`
+#'       band; a nested two-`header_row` layout keeps a header per
+#'       value.)*
 #'   *   **`"column"`** — column stays visible; repeated values are
 #'       suppressed (only the first row of each value shows the
 #'       label). PROC REPORT's default for grouping variables.

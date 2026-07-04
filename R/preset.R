@@ -138,22 +138,25 @@
 #'
 #'   *   **`font_size`** — body point size. `<numeric(1)>`.
 #'   *   **`font_family`** — body font family. `<character | character(1)>`.
-#'       Default `"mono"`. Three accepted shapes:
+#'       Default `"mono"`. Four accepted shapes:
 #'
 #'       1. **Generic family** — `"mono"` (default), `"serif"`,
 #'          `"sans"` (CSS aliases `"monospace"` / `"sans-serif"`
 #'          also recognised). The resolver expands to a per-backend
-#'          chain that leads with the Linux-installed
-#'          **Liberation** face (Posit Workbench / Domino / Citrix
-#'          / RStudio Server), then the Microsoft Office face
-#'          (Courier New / Times New Roman / Arial) for desktop
-#'          Win / Mac consumers, then TeX Gyre for LaTeX compile,
-#'          then the CSS generic for HTML. Liberation Mono / Serif
-#'          / Sans are metric-compatible with Courier New / TNR /
-#'          Arial, so layout, line breaks, and decimal alignment
-#'          hold across every render context. The mono default
-#'          matches the dominant submission-TFL convention where
-#'          deterministic glyph widths drive `n (%)` cell alignment.
+#'          chain that leads with the Microsoft Office face (Courier
+#'          New / Times New Roman / Arial) — installed on every
+#'          Windows and macOS machine, where documents are reviewed —
+#'          then the PostScript legacy name, then the metric-compatible
+#'          **Liberation** face LAST as the Linux-server fallback
+#'          (Posit Workbench / Domino / Citrix / RStudio Server),
+#'          then TeX Gyre for LaTeX compile / the CSS generic for
+#'          HTML. Liberation Mono / Serif / Sans are metric-compatible
+#'          with Courier New / TNR / Arial, so layout, line breaks,
+#'          and decimal alignment hold across every render context
+#'          regardless of which end of the chain resolves. The mono
+#'          default matches the dominant submission-TFL convention
+#'          where deterministic glyph widths drive `n (%)` cell
+#'          alignment.
 #'
 #'       2. **Named alias** — `"Times"`, `"Times New Roman"`,
 #'          `"Arial"`, `"Helvetica"`, `"Courier"`, `"Courier New"`.
@@ -164,15 +167,17 @@
 #'          rendering") on every OS instead of hard-erroring on
 #'          a Linux server with no TNR installed.
 #'
-#'       3. **Named font** — `"Inter"`, `"JetBrains Mono"`,
-#'          `"Source Serif Pro"`, sponsor-specific face, etc.
-#'          Emitted verbatim with no fallback fabricated. The
-#'          consuming app (browser, xelatex, Word, LibreOffice)
-#'          resolves the name against its own font matcher. RTF
-#'          and DOCX fall back to the consuming app's substitution
-#'          table when the name is missing; xelatex hard-errors at
-#'          compile time; HTML browsers fall through to the
-#'          browser's default font (not necessarily class-matched).
+#'       3. **Arbitrary named font** — `"Inter"`, `"JetBrains Mono"`,
+#'          `"IBM Plex Mono"`, `"Source Code Pro"`, sponsor-specific
+#'          face, etc. Emitted verbatim with no fallback fabricated.
+#'          The consuming app (browser, xelatex, Word, LibreOffice)
+#'          resolves the name against its own font matcher: RTF and
+#'          DOCX substitute when the name is missing; **xelatex
+#'          hard-errors at compile time** if the face is not installed;
+#'          HTML browsers fall through to the browser's default font
+#'          (not necessarily class-matched). For a portable result,
+#'          prefer a generic family (shape 1) or an explicit stack
+#'          (shape 4).
 #'
 #'       4. **Explicit stack** — `c("Inter", "Helvetica", "sans")`.
 #'          User owns the chain. Returned verbatim — alias lookup
@@ -180,44 +185,12 @@
 #'          exact name with no chain expansion (escape hatch for
 #'          users who genuinely want exact-name semantics).
 #'
-#'       **Note:** Adobe Source Pro is no longer the default lead.
-#'       Source Pro is not pre-installed on production Linux
-#'       servers, so leading with it walks through 2-3 missing
-#'       names before resolving. Users who installed Source Pro
-#'       can opt in via the explicit-stack form
-#'       (`c("Source Serif Pro", "serif")`).
-#'
-#'       **What you see in Word's font dropdown vs. what renders.**
-#'       When you open a tabular-generated `.rtf` in Word on
-#'       macOS or Windows, the font dropdown displays the file's
-#'       *requested* face — `"Liberation Mono"` by default
-#'       (the Linux-server-installed face). The rendered text on
-#'       screen is whatever Word's `\\*\\falt` substitution
-#'       resolved to — typically Courier New on macOS /
-#'       Windows. This is correct: Liberation Mono and Courier
-#'       New are metric-compatible by design, so the rendered
-#'       layout (line breaks, decimal alignment, page breaks) is
-#'       identical regardless of which face Word actually used to
-#'       render. The same `\\*\\falt` substitution model applies
-#'       to serif (Liberation Serif -> Times New Roman) and sans
-#'       (Liberation Sans -> Arial).
-#'
-#'       **How to force Office names as the primary.** If
-#'       reviewers will be confused by seeing `"Liberation Mono"`
-#'       in the Word font dropdown (cosmetic concern; doesn't
-#'       affect rendering), pass an explicit length>1 stack with
-#'       the Office name first. The resolver returns the vector
-#'       verbatim — no alias lookup, no chain expansion — so the
-#'       RTF file then names the Office face as primary and your
-#'       chosen alternate as `\\*\\falt`:
-#'
-#'       ```r
-#'       preset(font_family = c("Courier New", "Courier", "Liberation Mono"))
-#'       ```
-#'
-#'       This is the canonical escape hatch for authors who know
-#'       their consumer audience is Mac / Windows Word users and
-#'       want the dropdown to show the Office face directly.
+#'       **Note:** tabular bundles no fonts. Because the default
+#'       chain leads with the Office face, Word's font dropdown
+#'       shows a face the reader actually has installed on Windows /
+#'       macOS (e.g. Courier New for `"mono"`), not a phantom name;
+#'       the metric-compatible Liberation face only appears as the
+#'       fallback for a headless Linux box.
 #'   *   **`orientation`** — page orientation.
 #'       `<character(1)>`. One of `"landscape"` (default),
 #'       `"portrait"`.
@@ -352,9 +325,10 @@
 #'       *   **`"content"`** *(default)* — Each column auto-sized to
 #'           `max(body, header)`. The table doesn't fill the page.
 #'           Word's "Auto-fit Contents".
-#'       *   **`"window"`** — Auto-sized columns expand to share the
-#'           residual page width equally. Pinned and percent columns
-#'           keep their pins. Word's "Auto-fit Window".
+#'       *   **`"window"`** — Auto-sized columns are scaled
+#'           proportionally to their natural width to fill the residual
+#'           page width. Pinned and percent columns keep their pins.
+#'           Word's "Auto-fit Window".
 #'       *   **`"fixed"`** — Only explicit per-column widths drive
 #'           the layout. Auto-sized columns collapse to a minimum
 #'           sliver. Word's "Fixed Column Width".
@@ -394,6 +368,18 @@
 #'
 #'       **Note:** never affects `col_spec(align = "decimal")` padding,
 #'       which uses U+00A0 and is preserved unconditionally.
+#'
+#'   *   **`chrome_onscreen`** — whether the on-screen running header /
+#'       footer bands render in HTML output. `<character(1)>`. One of:
+#'
+#'       *   **`"auto"`** *(default)* — the `pagehead` / `pagefoot`
+#'           content renders as on-screen `<header>` / `<footer>` bands.
+#'       *   **`"off"`** — suppress the on-screen bands; the print-time
+#'           `@page` chrome still renders, so print-to-PDF output is
+#'           unchanged. Useful when the HTML is consumed only via print.
+#'
+#'       HTML-only; the paged backends (RTF / PDF / DOCX) always emit
+#'       per-page chrome regardless of this knob.
 #'
 #'   *   **`footnote_markers`** — the glyph scheme for [`footnote()`]
 #'       markers, which the engine allocates once in reading order.
@@ -759,7 +745,7 @@ preset <- function(
 #'   `tabular_error_input`.
 #'
 #' @param ... *Named preset knobs.* Same shape as [`preset()`]; see
-#'   that verb for the full list of 13 recognised knobs. Unknown
+#'   that verb for the full list of recognised knobs. Unknown
 #'   names raise `tabular_error_input`. Mutually exclusive with
 #'   a non-`NULL` `new`.
 #'
