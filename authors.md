@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/vthanik/tabular/blob/main/inst/CITATION)
+[`inst/CITATION`](https://github.com/vthanik/tabular/blob/v0.2.0/inst/CITATION)
 
 Thanikachalam V (2026). *tabular: Render Tables and Listings for
 Clinical Submissions*. R package version 0.2.0,
