@@ -1328,7 +1328,20 @@ test_that("cdisc_saf_demo golden pipeline matches the pinned .html snapshot", {
     )
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
-  expect_snapshot_file(out, "saf_demo_golden.html")
+  # The CSS scope id is substr(rlang::hash(body), 1, 10); rlang::hash embeds
+  # R's serialization metadata, so the value drifts across R versions and
+  # platforms while the body stays byte-identical. Normalize it so the
+  # snapshot pins the output, not the volatile hash.
+  norm <- withr::local_tempfile(fileext = ".html")
+  writeLines(
+    gsub(
+      "tabular-[0-9a-f]{10}",
+      "tabular-SCOPEID",
+      readLines(out, warn = FALSE)
+    ),
+    norm
+  )
+  expect_snapshot_file(norm, "saf_demo_golden.html")
 })
 
 # ---------------------------------------------------------------------
