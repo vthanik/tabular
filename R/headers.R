@@ -170,9 +170,9 @@
 #' vit <- cdisc_saf_vital
 #' tabular(vit, titles = c("Table 14.4.1", "Vital Signs Summary")) |>
 #'   cols(
-#'     param      = col_spec(usage = "group", label = "Parameter"),
+#'     param      = col_spec(label = "Parameter"),
 #'     paramcd    = col_spec(visible = FALSE),
-#'     visit      = col_spec(usage = "group", label = "Visit"),
+#'     visit      = col_spec(label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
@@ -193,7 +193,7 @@
 #' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' tabular(cdisc_saf_demo, titles = "Demographics, hierarchical headers") |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     variable   = col_spec(label = "Characteristic"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "N={n['placebo']}"),
 #'     drug_50    = col_spec(label = "N={n['drug_50']}"),

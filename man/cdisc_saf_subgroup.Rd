@@ -56,8 +56,8 @@ for a multi-variable partition.
 tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
   cols(
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group", label = "Parameter"),
-    visit      = col_spec(usage = "group", label = "Visit"),
+    param      = col_spec(label = "Parameter"),
+    visit      = col_spec(label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),

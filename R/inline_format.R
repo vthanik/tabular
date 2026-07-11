@@ -192,7 +192,7 @@
 #'   )
 #' ) |>
 #'   cols(
-#'     stat_label  = col_spec(usage = "id", label = "Response"),
+#'     stat_label  = col_spec(label = "Response"),
 #'     row_type    = col_spec(visible = FALSE),
 #'     groupid     = col_spec(visible = FALSE),
 #'     group_label = col_spec(visible = FALSE),

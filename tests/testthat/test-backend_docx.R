@@ -148,13 +148,14 @@ test_that("DOCX header-band underline is the SSOT spanrule (override + 'none' ho
   # chrome_style `header_between` region.
   base <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "C"),
+      variable = col_spec(label = "C"),
       stat_label = col_spec(label = "S"),
       placebo = col_spec(label = "PBO"),
       drug_50 = col_spec(label = "D50"),
       drug_100 = col_spec(label = "D100"),
       Total = col_spec(label = "Tot")
     ) |>
+    group_rows(by = "variable") |>
     headers("Active" = c("drug_50", "drug_100"))
   band_xml <- function(spec) {
     out <- withr::local_tempfile(
@@ -211,13 +212,14 @@ test_that("DOCX footnoterule (opt-in) draws a table-width rule above the footnot
   # spans the full page text column).
   base <- tabular(cdisc_saf_demo, footnotes = "Source: ADSL.") |>
     cols(
-      variable = col_spec(usage = "group", label = "C"),
+      variable = col_spec(label = "C"),
       stat_label = col_spec(label = "S"),
       placebo = col_spec(label = "PBO"),
       drug_50 = col_spec(label = "D50"),
       drug_100 = col_spec(label = "D100"),
       Total = col_spec(label = "Tot")
-    )
+    ) |>
+    group_rows(by = "variable")
   docxml <- function(spec) {
     out <- withr::local_tempfile(
       fileext = ".docx",
@@ -822,16 +824,15 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
     preset(orientation = "portrait", font_family = "serif") |>
     cols(
       variable = col_spec(
-        usage = "group",
-        label = "Characteristic",
-        group_display = "column"
+        label = "Characteristic"
       ),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable", display = "column")
   out <- withr::local_tempfile(fileext = ".docx")
   suppressWarnings(emit(spec, out))
   unzipped <- .unzip_docx(out)
@@ -931,13 +932,14 @@ test_that("toprule + midrule bracket the column-label band from the SSOT chrome 
   # bracketing the headers per the submission layout (TL-RTF-101).
   flat <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "C"),
+      variable = col_spec(label = "C"),
       stat_label = col_spec(label = "S"),
       placebo = col_spec(label = "PBO"),
       drug_50 = col_spec(label = "D50"),
       drug_100 = col_spec(label = "D100"),
       Total = col_spec(label = "Tot")
-    )
+    ) |>
+    group_rows(by = "variable")
   out <- withr::local_tempfile(fileext = ".docx")
   emit(flat, out)
   doc <- paste(
@@ -965,13 +967,14 @@ test_that("toprule + midrule bracket the column-label band from the SSOT chrome 
 test_that("toprule rides the first band row (not the label row) when bands exist", {
   banded <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "C"),
+      variable = col_spec(label = "C"),
       stat_label = col_spec(label = "S"),
       placebo = col_spec(label = "PBO"),
       drug_50 = col_spec(label = "D50"),
       drug_100 = col_spec(label = "D100"),
       Total = col_spec(label = "Tot")
     ) |>
+    group_rows(by = "variable") |>
     headers("Active" = c("drug_50", "drug_100"))
   out <- withr::local_tempfile(fileext = ".docx")
   emit(banded, out)
@@ -1007,13 +1010,14 @@ test_that("toprule rides the first band row (not the label row) when bands exist
 test_that("rules = list(toprule/midrule = 'none') suppress the bracket rules", {
   base <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "C"),
+      variable = col_spec(label = "C"),
       stat_label = col_spec(label = "S"),
       placebo = col_spec(label = "PBO"),
       drug_50 = col_spec(label = "D50"),
       drug_100 = col_spec(label = "D100"),
       Total = col_spec(label = "Tot")
-    )
+    ) |>
+    group_rows(by = "variable")
   doc_for <- function(spec) {
     out <- withr::local_tempfile(
       fileext = ".docx",
@@ -1534,13 +1538,14 @@ test_that("cdisc_saf_demo golden pipeline matches the pinned word/document.xml s
     footnotes = "Source: ADSL."
   ) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   unzipped <- .unzip_docx(out)
@@ -1573,13 +1578,12 @@ test_that("DOCX panels = 2 emit one self-contained <w:tbl> per panel", {
   spec <- tabular(d) |>
     cols(
       grp = col_spec(
-        usage = "group",
-        group_display = "column",
         label = "Char"
       ),
-      rl = col_spec(usage = "id", label = "Stat")
+      rl = col_spec(label = "Stat")
     ) |>
-    paginate(panels = 2L)
+    group_rows(by = "grp", display = "column") |>
+    paginate(panels = 2L, repeat_cols = c("grp", "rl"))
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   xml <- paste(
@@ -1612,14 +1616,15 @@ test_that("DOCX panels = 2 emit one self-contained <w:tbl> per panel", {
   )
   expect_identical(unname(gridcols), c(4L, 3L))
 
-  # The `usage = "id"` stub label repeats in BOTH panel tables.
+  # The repeat_cols stub label repeats in BOTH panel tables.
   expect_identical(length(gregexpr(">Stat<", xml, fixed = TRUE)[[1L]]), 2L)
 })
 
 test_that("DOCX panels = 1 emit a single <w:tbl> with no inter-panel break", {
   d <- data.frame(grp = c("a", "b"), c1 = 1:2, c2 = 3:4)
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(panels = 1L)
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
@@ -1642,7 +1647,8 @@ test_that("DOCX repeats the title block on every panel", {
   # page must carry the table number, not just panel 1.
   d <- data.frame(grp = c("a", "b"), c1 = 1:2, c2 = 3:4, c3 = 5:6)
   spec <- tabular(d, titles = c("RepeatTitleZ", "Demographics")) |>
-    cols(grp = col_spec(usage = "group", group_display = "column")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp", display = "column") |>
     paginate(panels = 2L)
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
@@ -1745,7 +1751,7 @@ test_that("DOCX emits <w:ind w:left=...> on data rows but NOT on header rows (Ch
   )
   spec <- tabular(df, titles = "AE") |>
     cols(
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       label = col_spec(
         label = "Category",
         indent = "indent_level",
@@ -1754,7 +1760,8 @@ test_that("DOCX emits <w:ind w:left=...> on data rows but NOT on header rows (Ch
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = "soc")
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   td <- withr::local_tempdir()
@@ -1794,11 +1801,12 @@ test_that("DOCX emits <w:gridSpan> + <w:b/> on synthesised header rows (Change D
   )
   spec <- tabular(df, titles = "Eff") |>
     cols(
-      group_label = col_spec(usage = "group", group_display = "header_row"),
+      group_label = col_spec(),
       stat_label = col_spec(indent = 1, label = "Response"),
       placebo = col_spec(label = "Placebo"),
       drug_50 = col_spec(label = "Drug 50")
-    )
+    ) |>
+    group_rows(by = "group_label")
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   td <- withr::local_tempdir()
@@ -1834,11 +1842,12 @@ test_that("DOCX nested bands: band-1 header no <w:ind>, band-2 header <w:ind w:l
   )
   spec <- tabular(df, titles = "Nested") |>
     cols(
-      section = col_spec(usage = "group", group_display = "header_row"),
-      subsection = col_spec(usage = "group", group_display = "header_row"),
+      section = col_spec(),
+      subsection = col_spec(),
       label = col_spec(label = "Item"),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = c("section", "subsection"))
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
   td <- withr::local_tempdir()
@@ -1932,9 +1941,10 @@ test_that("cell_padding emits per-side w:tcMar (padding SSOT)", {
   tabular(d) |>
     cols(
       label = col_spec(label = "PT"),
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       x = col_spec()
-    )
+    ) |>
+    group_rows(by = "soc")
 }
 
 .docx_doc_xml <- function(spec) {
@@ -2123,13 +2133,14 @@ test_that("preset(padding=list(header=...)) emits header <w:tcMar> (#thread-C)",
 test_that("rules='frame' draws <w:left/right> on table-proper rows incl. blank/group (#thread-D)", {
   spec <- tabular(cdisc_saf_demo, titles = "T", footnotes = "F") |>
     cols(
-      variable = col_spec(usage = "group", group_display = "header_row"),
+      variable = col_spec(),
       stat_label = col_spec(align = "left"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     headers("Active" = c("drug_50", "drug_100")) |>
     preset(rules = "frame")
   out <- withr::local_tempfile(fileext = ".docx")
@@ -2169,13 +2180,14 @@ test_that("rules='frame' draws <w:left/right> on table-proper rows incl. blank/g
 test_that("stripe + header background reach special rows in DOCX (#thread-B)", {
   spec <- tabular(cdisc_saf_demo, titles = "T", footnotes = "F") |>
     cols(
-      variable = col_spec(usage = "group", group_display = "header_row"),
+      variable = col_spec(),
       stat_label = col_spec(align = "left"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     headers("Active" = c("drug_50", "drug_100")) |>
     preset(
       stripe = c(odd = "#f5f5f5", even = "#ffffff"),
@@ -2234,13 +2246,11 @@ test_that("DOCX title / footnote / header honor style() text overrides (#docx-ch
   spec <- tabular(d, titles = "MYTITLE", footnotes = "MYFOOT") |>
     cols(
       grp = col_spec(
-        usage = "group",
-        group_display = "column",
-        group_skip = TRUE,
         label = "G"
       ),
       x = col_spec(label = "MYHEADER")
     ) |>
+    group_rows(by = "grp", display = "column", skip = TRUE) |>
     style(color = "#FF0000", italic = TRUE, .at = cells_title()) |>
     style(color = "#00FF00", .at = cells_footnotes()) |>
     style(color = "#0000FF", .at = cells_headers())
@@ -2301,11 +2311,12 @@ test_that("DOCX group-header rows honor the halign cascade (#PAR2)", {
   )
   spec <- tabular(df, titles = "Eff") |>
     cols(
-      group_label = col_spec(usage = "group", group_display = "header_row"),
+      group_label = col_spec(),
       stat_label = col_spec(indent = 1, label = "Response"),
       placebo = col_spec(label = "Placebo"),
       drug_50 = col_spec(label = "Drug 50")
     ) |>
+    group_rows(by = "group_label") |>
     style(halign = "center", .at = cells_group_headers())
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
@@ -2500,10 +2511,11 @@ test_that("keep_together glues group runs consistently across docx / rtf / latex
   )
   spec <- tabular(df, titles = "T") |>
     cols(
-      grp = col_spec(usage = "group", label = "Group"),
+      grp = col_spec(label = "Group"),
       lab = col_spec(label = "L"),
       a = col_spec(label = "A")
     ) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp")
 
   docx <- withr::local_tempfile(fileext = ".docx")

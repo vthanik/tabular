@@ -38,13 +38,14 @@ test_that("emit(.md) renders cdisc_saf_demo golden pipeline end to end", {
     footnotes = "Source: ADSL."
   ) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   lines <- readLines(out)
@@ -136,11 +137,12 @@ test_that("two footnotes on one body cell render as a single ^a,b^ superscript",
   # header path differs by design: it stacks native sup runs (^a^^b^).
   spec <- tabular(cdisc_saf_aesocpt) |>
     cols(
-      soc = col_spec(usage = "group"),
+      soc = col_spec(),
       label = col_spec(label = "PT"),
       n_total = col_spec(visible = FALSE),
       Total = col_spec(label = "Total")
     ) |>
+    group_rows(by = "soc") |>
     footnote(
       "First.",
       .at = cells_body(where = n_total >= 50, j = "Total"),
@@ -243,7 +245,8 @@ test_that("multi-page emit produces a single continuous pipe table", {
     x = seq_len(24L)
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp") |>
     preset(font_size = 24L)
   out <- withr::local_tempfile(fileext = ".md")
@@ -260,7 +263,7 @@ test_that("multi-page emit produces a single continuous pipe table", {
   expect_identical(length(grep("^\\| :", lines)), 1L)
   # Every numeric data row from the input appears in the body. The
   # body cell may carry leading whitespace from auto group-band
-  # indent (data_depth = 1 under the single `usage = "group"`
+  # indent (data_depth = 1 under the single grouping key
   # column), so match the numeric followed by `|` rather than the
   # cell-aligned literal.
   for (n in seq_len(24L)) {
@@ -323,7 +326,8 @@ test_that("continuation marker is a no-op for MD output", {
     x = seq_len(24L)
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp", continuation = "(continued)") |>
     preset(font_size = 24L)
   out <- withr::local_tempfile(fileext = ".md")
@@ -341,7 +345,8 @@ test_that("horizontal panels collapse to one pipe table with a Panel note row (c
     c4 = 7:8
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(panels = 2L)
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
@@ -399,9 +404,10 @@ test_that("Markdown warns once per render when a group-header carries colour (#e
   spec <- tabular(d) |>
     cols(
       label = col_spec(label = "PT"),
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       x = col_spec()
     ) |>
+    group_rows(by = "soc") |>
     style(color = "#FF0000", .at = cells_group_headers())
   out <- withr::local_tempfile(fileext = ".md")
   warns <- character()
@@ -560,13 +566,14 @@ test_that("cdisc_saf_demo golden pipeline matches the pinned .md snapshot", {
     footnotes = "Source: ADSL."
   ) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   expect_snapshot_file(out, "saf_demo_golden.md")
@@ -615,12 +622,13 @@ test_that("Markdown preserves leading-space prefix on indented data rows (Change
   )
   spec <- tabular(df, titles = "AE") |>
     cols(
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       label = col_spec(label = "Category", indent = "indent_level"),
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = "soc")
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   md <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -653,11 +661,12 @@ test_that("Markdown emits bold cell-1 + &nbsp; trailing for header rows (Change 
   )
   spec <- tabular(df, titles = "Eff") |>
     cols(
-      group_label = col_spec(usage = "group", group_display = "header_row"),
+      group_label = col_spec(),
       stat_label = col_spec(indent = 1, label = "Response"),
       placebo = col_spec(label = "Placebo"),
       drug_50 = col_spec(label = "Drug 50")
-    )
+    ) |>
+    group_rows(by = "group_label")
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   md <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -688,11 +697,12 @@ test_that("Markdown nested bands: band-1 header bold flush, band-2 header bold +
   )
   spec <- tabular(df, titles = "Nested") |>
     cols(
-      section = col_spec(usage = "group", group_display = "header_row"),
-      subsection = col_spec(usage = "group", group_display = "header_row"),
+      section = col_spec(),
+      subsection = col_spec(),
       label = col_spec(label = "Item"),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = c("section", "subsection"))
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
   md <- paste(readLines(out, warn = FALSE), collapse = "\n")

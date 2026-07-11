@@ -222,13 +222,14 @@
 #'   footnotes = "Source: ADSL."
 #' ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     variable   = col_spec(label = "Characteristic"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo  = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
 #'     drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
 #'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
 #'     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
 #'   ) |>
+#'   group_rows(by = "variable") |>
 #'   sort_rows(by = c("variable", "stat_label"))
 #'
 #' demo_md <- tempfile(fileext = ".md")
@@ -282,7 +283,7 @@
 #' # CSR appendix).
 #' eff_spec <- tabular(cdisc_eff_resp, titles = "Best Overall Response") |>
 #'   cols(
-#'     stat_label  = col_spec(usage = "id", label = "Response"),
+#'     stat_label  = col_spec(label = "Response"),
 #'     row_type    = col_spec(visible = FALSE),
 #'     groupid     = col_spec(visible = FALSE),
 #'     group_label = col_spec(visible = FALSE),
@@ -655,9 +656,9 @@ emit <- function(
 # the cosmetic mutations the resolve engine performs to drive
 # display:
 #
-#   * No synthesised section-header rows (group_display = "header_row").
-#   * No blank-row separators (group_skip).
-#   * No suppressed repeats (group_display = "column" blanks
+#   * No synthesised section-header rows (display = "header_row").
+#   * No blank-row separators (skip).
+#   * No suppressed repeats (display = "column" blanks
 #     adjacent duplicates for display; QC sees the originals).
 #   * No NBSP decimal-alignment padding.
 #   * No inline HTML markup escapes.

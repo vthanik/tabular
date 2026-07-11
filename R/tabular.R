@@ -198,7 +198,7 @@
 #' #
 #' # The canonical by-visit vitals shape: each `param` nests its
 #' # `visit` blocks, and each visit nests the statistic rows. Two
-#' # columns carry `usage = "group"` (`param` then `visit`), so the
+#' # columns are grouping keys (`param` then `visit`), so the
 #' # engine renders two levels of nested section headers above the
 #' # `stat_label` stub. The CDISC `paramcd` rides along as the natural
 #' # sort key but hides at render via `col_spec(visible = FALSE)`.
@@ -217,8 +217,8 @@
 #' ) |>
 #'   cols(
 #'     paramcd    = col_spec(visible = FALSE),
-#'     param      = col_spec(usage = "group", label = "Parameter"),
-#'     visit      = col_spec(usage = "group", label = "Visit"),
+#'     param      = col_spec(label = "Parameter"),
+#'     visit      = col_spec(label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(
 #'       label = "Placebo\nN={n['placebo']}",
@@ -232,7 +232,8 @@
 #'       label = "Drug 100\nN={n['drug_100']}",
 #'       align = "decimal"
 #'     )
-#'   )
+#'   ) |>
+#'   group_rows(by = c("param", "visit"))
 #'
 #' # ---- Example 5: Empty-data placeholder with a custom message ----
 #' #
@@ -248,7 +249,7 @@
 #'   empty_text = "No subjects met the inclusion criteria for this subgroup."
 #' ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     variable   = col_spec(label = "Characteristic"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "Placebo"),
 #'     drug_50    = col_spec(label = "Drug 50"),

@@ -11,13 +11,10 @@ N <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 arms <- c("placebo", "drug_50", "drug_100", "Total")
 base <- tabular(cdisc_saf_demo) |>
   cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
+    variable = col_spec(label = ""),
     stat_label = col_spec(label = "")
   ) |>
+  group_rows(by = "variable") |>
   cols_apply(arms, col_spec(align = "decimal"))
 ```
 
@@ -44,13 +41,10 @@ tabular(
   )
 ) |>
   cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
+    variable = col_spec(label = ""),
     stat_label = col_spec(label = "")
   ) |>
+  group_rows(by = "variable") |>
   cols_apply(arms, col_spec(align = "decimal"))
 ```
 
@@ -152,13 +146,10 @@ tabular(
   )
 ) |>
   cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
+    variable = col_spec(label = ""),
     stat_label = col_spec(label = "")
   ) |>
+  group_rows(by = "variable") |>
   cols_apply(arms, col_spec(align = "decimal"))
 ```
 

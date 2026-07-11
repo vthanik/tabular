@@ -37,7 +37,7 @@ row (\code{MMRM}) carries \code{NA} CI bounds to demonstrate \code{na_text}.
 # na_text = "--" renders the MMRM row's NA bounds as dashes.
 tabular(cdisc_eff_estimates, titles = "Treatment-effect estimates by model") |>
   cols(
-    model    = col_spec(usage = "group",  label = "Model", valign = "top"),
+    model    = col_spec(label = "Model", valign = "top"),
     estimate = col_spec(label = "Estimate", align = "decimal",
                         format = "\%.2f"),
     lower_ci = col_spec(label = "Lower\n95\% CI", align = "decimal",

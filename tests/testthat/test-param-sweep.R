@@ -11,11 +11,11 @@
 # col_spec() — every accepted parameter value
 # ---------------------------------------------------------------------
 
-test_that("col_spec() accepts every documented usage value", {
-  for (u in c("display", "group")) {
-    expect_silent(col_spec(usage = u))
+test_that("group_rows() accepts every documented display value", {
+  df <- data.frame(g = c("a", "a", "b"), x = c("1", "2", "3"))
+  for (d in c("header_row", "column", "column_repeat", "none")) {
+    expect_silent(tabular(df) |> group_rows(by = "g", display = d))
   }
-  expect_silent(col_spec(usage = NULL))
 })
 
 test_that("col_spec() accepts every documented align value", {

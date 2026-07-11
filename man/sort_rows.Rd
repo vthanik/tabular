@@ -143,7 +143,7 @@ demo$display_order <- match(demo$variable, unique(demo$variable))
 
 tabular(demo, titles = "Demographics, ranked within section") |>
   cols(
-    variable      = col_spec(usage = "group", label = "Characteristic"),
+    variable      = col_spec(label = "Characteristic"),
     stat_label    = col_spec(label = "Statistic"),
     display_order = col_spec(visible = FALSE),
     placebo       = col_spec(label = "Placebo",  align = "decimal"),

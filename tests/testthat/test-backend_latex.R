@@ -44,13 +44,14 @@ test_that("emit(.tex) renders cdisc_saf_demo golden pipeline end to end", {
     footnotes = "Source: ADSL."
   ) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   txt <- render_tex(spec)
   expect_match(txt, "Demographics", fixed = TRUE)
   # `\n` in col labels becomes ` \\ ` (LaTeX in-cell line break).
@@ -672,7 +673,8 @@ test_that("multi-page emit is ONE longtblr (native pagination, no \\newpage)", {
     x = seq_len(24L)
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp") |>
     preset(font_size = 24L)
   txt <- render_tex(spec)
@@ -691,7 +693,8 @@ test_that("continuation marker renders as italic noindent on pages 2+", {
     x = seq_len(24L)
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp", continuation = "(continued)") |>
     preset(font_size = 24L)
   txt <- render_tex(spec)
@@ -854,13 +857,14 @@ test_that("cdisc_saf_demo golden pipeline matches the pinned .tex snapshot", {
     footnotes = "Source: ADSL."
   ) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   expect_snapshot_file(out, "saf_demo_golden.tex")
@@ -1043,7 +1047,7 @@ test_that("LaTeX emits leftsep+= on data rows but NOT on header rows (Change C)"
   )
   spec <- tabular(df, titles = "AE") |>
     cols(
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       label = col_spec(
         label = "Category",
         indent = "indent_level",
@@ -1052,7 +1056,8 @@ test_that("LaTeX emits leftsep+= on data rows but NOT on header rows (Change C)"
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = "soc")
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -1091,11 +1096,12 @@ test_that("LaTeX emits \\SetCell[c=N]{l} \\textbf{...} for synthesised header ro
   )
   spec <- tabular(df, titles = "Eff") |>
     cols(
-      group_label = col_spec(usage = "group", group_display = "header_row"),
+      group_label = col_spec(),
       stat_label = col_spec(indent = 1, label = "Response"),
       placebo = col_spec(label = "Placebo"),
       drug_50 = col_spec(label = "Drug 50")
-    )
+    ) |>
+    group_rows(by = "group_label")
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -1127,11 +1133,12 @@ test_that("LaTeX nested bands: band-1 header bare {l}, band-2 header gets leftse
   )
   spec <- tabular(df, titles = "Nested") |>
     cols(
-      section = col_spec(usage = "group", group_display = "header_row"),
-      subsection = col_spec(usage = "group", group_display = "header_row"),
+      section = col_spec(),
+      subsection = col_spec(),
       label = col_spec(label = "Item"),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = c("section", "subsection"))
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -1602,7 +1609,8 @@ test_that("long table emit() warns about tabularray compile cost", {
 test_that("keep_together drives \\* glue inside ONE longtblr (native)", {
   d <- data.frame(grp = rep(letters[1:6], each = 4L), x = seq_len(24L))
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp")
   tex <- render_tex(spec)
   expect_match(tex, "\\\\*", fixed = TRUE) # at least one glued row
@@ -1619,7 +1627,8 @@ test_that("subgroup emits one longtblr per group separated by \\clearpage", {
     val = c("10", "5.1", "1.2", "12", "5.4", "1.0")
   )
   spec <- tabular(d) |>
-    cols(g = col_spec(usage = "group")) |>
+    cols(g = col_spec()) |>
+    group_rows(by = "g") |>
     subgroup(by = "g")
   tex <- render_tex(spec)
   expect_match(tex, "\\clearpage", fixed = TRUE)
@@ -1657,7 +1666,8 @@ test_that("subgroup + panel spec compiles to PDF with template lines", {
     titles = c("Table X", "Demographics"),
     footnotes = "Note: x."
   ) |>
-    cols(g = col_spec(usage = "group")) |>
+    cols(g = col_spec()) |>
+    group_rows(by = "g") |>
     subgroup(by = "g")
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
@@ -1733,14 +1743,13 @@ test_that("multi-line cell whose next line starts with '[' is bracket-safe (#lat
   spec <- tabular(df, titles = "T", footnotes = "F") |>
     cols(
       g = col_spec(
-        usage = "group",
-        group_display = "column",
         label = "Char",
         align = "left"
       ),
       stat = col_spec(label = "Statistic", align = "left"),
       x = col_spec(label = "p-value\n[1]", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "g", display = "column")
   f <- withr::local_tempfile(fileext = ".tex")
   emit(spec, f)
   tex <- paste(readLines(f), collapse = "\n")
@@ -1763,14 +1772,13 @@ test_that("multi-line header with bracket footnote marker compiles to PDF (#late
   spec <- tabular(df, titles = "T", footnotes = "F") |>
     cols(
       g = col_spec(
-        usage = "group",
-        group_display = "column",
         label = "Char",
         align = "left"
       ),
       stat = col_spec(label = "Statistic", align = "left"),
       x = col_spec(label = "p-value\n[1]", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "g", display = "column")
   f <- withr::local_tempfile(fileext = ".tex")
   emit(spec, f)
   pdf <- tinytex::xelatex(f)

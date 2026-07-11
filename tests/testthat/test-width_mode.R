@@ -167,13 +167,12 @@ test_that("as_grid() under preset(width_mode='fixed') collapses auto cols to the
   spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
-        usage = "group",
-        label = "Characteristic",
-        group_display = "column"
+        label = "Characteristic"
       ),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo", width = 1.5)
     ) |>
+    group_rows(by = "variable", display = "column") |>
     preset(width_mode = "fixed")
   grid <- as_grid(spec)
   cols_resolved <- grid@metadata$cols
@@ -193,23 +192,21 @@ test_that("as_grid() under default preset(width_mode='content') matches today's 
   spec_default <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
-        usage = "group",
-        label = "Characteristic",
-        group_display = "column"
-      ),
-      stat_label = col_spec(label = "Statistic"),
-      placebo = col_spec(label = "Placebo")
-    )
-  spec_explicit <- tabular(cdisc_saf_demo) |>
-    cols(
-      variable = col_spec(
-        usage = "group",
-        label = "Characteristic",
-        group_display = "column"
+        label = "Characteristic"
       ),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
+    group_rows(by = "variable", display = "column")
+  spec_explicit <- tabular(cdisc_saf_demo) |>
+    cols(
+      variable = col_spec(
+        label = "Characteristic"
+      ),
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo")
+    ) |>
+    group_rows(by = "variable", display = "column") |>
     preset(width_mode = "content")
   # suppress the incidental overflow warning (content mode, wide demo).
   g1 <- suppressWarnings(as_grid(spec_default))

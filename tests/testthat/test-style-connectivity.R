@@ -18,7 +18,8 @@ mk_one <- function(group = FALSE, sub = FALSE) {
   )
   spec <- tabular(df, titles = "Solo title", footnotes = "Solo footnote.")
   if (group) {
-    spec <- cols(spec, grp = col_spec(usage = "group", label = "Group"))
+    spec <- cols(spec, grp = col_spec(label = "Group")) |>
+      group_rows(by = "grp")
   } else {
     spec <- cols(spec, grp = col_spec(label = "Group"))
   }

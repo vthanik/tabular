@@ -36,13 +36,14 @@ test_that("print(tabular_spec) renders the HTML preview, not the S7 fallback", {
   # behaviour the fix protects when installed.)
   spec <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group"),
+      variable = col_spec(),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   out <- paste(capture.output(print(spec)), collapse = "\n")
   expect_no_match(out, "<tabular::tabular_spec>", fixed = TRUE)
   expect_match(out, "tabular-table")

@@ -11,7 +11,8 @@ make_spec <- function(n = 10L, with_group = TRUE) {
   )
   spec <- tabular(df)
   if (with_group) {
-    spec <- cols(spec, soc = col_spec(usage = "group", label = "SOC"))
+    spec <- cols(spec, soc = col_spec(label = "SOC")) |>
+      group_rows(by = "soc")
   }
   spec
 }
@@ -191,4 +192,37 @@ test_that("paginate() snapshot errors", {
     error = TRUE,
     paginate(spec, continuation = c("a", "b"))
   )
+})
+
+# repeat_cols — the explicit panel stub -------------------------------
+
+test_that("paginate() stores validated repeat_cols and derives the default stub", {
+  spec <- make_spec(10L) |> group_rows(by = "soc", display = "column")
+  # NULL default: stub derives from the group_rows keys.
+  p_default <- paginate(spec, panels = 2L)
+  expect_null(p_default@pagination@repeat_cols)
+  expect_identical(tabular:::.stub_col_names(p_default), "soc")
+  # Explicit vector REPLACES the default (deduplicated).
+  p_explicit <- paginate(spec, panels = 2L, repeat_cols = c("val", "val"))
+  expect_identical(p_explicit@pagination@repeat_cols, "val")
+  expect_identical(tabular:::.stub_col_names(p_explicit), "val")
+  # character() = no stub at all.
+  p_none <- paginate(spec, panels = 2L, repeat_cols = character())
+  expect_identical(tabular:::.stub_col_names(p_none), character())
+})
+
+test_that("paginate() default stub excludes display = 'none' break-only keys", {
+  spec <- make_spec(10L) |>
+    group_rows(by = c("soc", "val"), display = c("none", "column")) |>
+    paginate(panels = 2L)
+  expect_identical(tabular:::.stub_col_names(spec), "val")
+})
+
+test_that("paginate() rejects repeat_cols not in data", {
+  spec <- make_spec(10L)
+  expect_error(
+    paginate(spec, repeat_cols = "nope"),
+    class = "tabular_error_input"
+  )
+  expect_snapshot(error = TRUE, paginate(spec, repeat_cols = "nope"))
 })

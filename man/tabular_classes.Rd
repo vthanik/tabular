@@ -5,6 +5,7 @@
 \alias{.col_spec_class}
 \alias{header_node}
 \alias{sort_spec}
+\alias{row_group_spec}
 \alias{subgroup_spec}
 \alias{style_node}
 \alias{style_layer}
@@ -29,9 +30,10 @@ The class set is intentionally small (~11 concepts) so the IR
 fits in one mental model:\tabular{lll}{
    class \tab role \tab constructor \cr
    \code{tabular_spec} \tab root container; carries data + every other spec slot \tab \code{\link[=tabular]{tabular()}} \cr
-   \code{col_spec} \tab per-column DSL (usage, label, format, align, ...) \tab \code{\link[=col_spec]{col_spec()}} \cr
+   \code{col_spec} \tab per-column DSL (label, format, align, width, ...) \tab \code{\link[=col_spec]{col_spec()}} \cr
    \code{header_node} \tab one node in the multi-level header tree \tab internal — built by \code{\link[=headers]{headers()}} \cr
    \code{sort_spec} \tab sort keys + per-key direction \tab internal — built by \code{\link[=sort_rows]{sort_rows()}} \cr
+   \code{row_group_spec} \tab row-grouping plan (keys + per-key display / skip) \tab internal — built by \code{\link[=group_rows]{group_rows()}} \cr
    \code{style_node} \tab one resolved style attribute set (per-cell) \tab internal — built by \code{\link[=style]{style()}} \cr
    \code{style_layer} \tab one \code{tabular_location} + style_node \tab internal — built by \code{\link[=style]{style()}} \cr
    \code{style_spec} \tab the cascade root (defaults + cols + headers + layers) \tab internal — built by \code{\link[=style]{style()}} \cr

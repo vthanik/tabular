@@ -114,7 +114,7 @@ engine_format <- function(spec) {
 #
 # Finalize boundary (B): the synthesized default `col_spec()` for an
 # unlisted column carries the NA "unset" sentinels (visible /
-# group_display / usage), which never pass through `as_grid()`'s
+# visible), which never pass through `as_grid()`'s
 # spec@cols finalize (boundary A). Resolve every returned entry to
 # concrete defaults here so downstream readers (engine_format /
 # engine_group_display / col_width) never see NA. Idempotent on the

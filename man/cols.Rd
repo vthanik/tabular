@@ -4,7 +4,7 @@
 \alias{cols}
 \title{Attach per-column specifications}
 \usage{
-cols(.spec, ..., .default = NULL)
+cols(.spec, ..., .default = NULL, .hide = character())
 }
 \arguments{
 \item{.spec}{\emph{The \code{tabular_spec} to extend.}
@@ -14,10 +14,14 @@ matching cannot accidentally bind a short user-supplied name
 (\code{tabular(...) |> cols(...)}) works the normal way — the spec
 is supplied positionally.}
 
-\item{...}{\emph{Named \code{col_spec} objects, one per column.} Each name
-is the input column name in \code{.spec@data}. Names must match an
-existing column — pre-compute derived columns upstream with
-\code{dplyr::mutate()} (or equivalent) before \code{\link[=tabular]{tabular()}}.
+\item{...}{\emph{Named \code{col_spec} objects or label strings, one per
+column.} Each name is the input column name in \code{.spec@data}.
+Names must match an existing column — pre-compute derived columns
+upstream with \code{dplyr::mutate()} (or equivalent) before
+\code{\link[=tabular]{tabular()}}. A \code{character(1)} value is label shorthand:
+\code{soc = "SOC / PT"} is exactly \code{soc = col_spec(label = "SOC / PT")},
+including glue-style \code{{expr}} interpolation and the deferred
+\code{{.name}} / \code{{.col}} token.
 
 \strong{Restriction:} Names must be unique within a single \code{cols()}
 call (duplicates warn; "last value wins").
@@ -39,11 +43,21 @@ call is treated as already specified and is left untouched.
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{# Decimal-align every arm column without listing each by name.
 tabular(cdisc_saf_demo) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Parameter"),
-    stat_label = col_spec(label = "Statistic"),
+    variable   = "Parameter",
+    stat_label = "Statistic",
     .default   = col_spec(align = "decimal")
   )
 }\if{html}{\out{</div>}}}
+
+\item{.hide}{\emph{Columns to hide, by name.}
+\verb{<character>: default character()}. Sugar for
+\code{nm = col_spec(visible = FALSE)} entries — one flat vector for
+the hidden sort keys and helper columns every clinical table
+carries. Field-merged like any other entry, so a later
+\code{cols(nm = col_spec(visible = TRUE))} can re-show the column.
+
+\strong{Interaction:} A column named in both \code{...} and \code{.hide} ends
+up with its \code{...} attributes plus \code{visible = FALSE}.}
 }
 \value{
 \emph{The updated \code{tabular_spec}.} Continue chaining with
@@ -52,10 +66,11 @@ tabular(cdisc_saf_demo) |>
 \description{
 Add \code{\link[=col_spec]{col_spec()}} entries to a \code{tabular_spec}. Each named argument
 is one column: the name is the input column in \code{.spec@data} and the
-value is the \code{col_spec} carrying that column's display attributes
-(usage, label, format, alignment, width, visibility, NA text).
-Columns not mentioned get a default \code{col_spec()} (usage = display)
-at engine-validate time.
+value is either the \code{col_spec} carrying that column's display
+attributes (label, format, alignment, width, visibility, NA text)
+or a bare label string — \code{x = "Label"} is shorthand for
+\code{x = col_spec(label = "Label")}. Columns not mentioned get a
+default \code{col_spec()} at engine-validate time.
 }
 \details{
 \strong{Sparse declaration.} Declare only the columns whose attributes
@@ -84,8 +99,8 @@ field. A field set to a non-default value on the new spec overrides;
 a field left at its "unset" sentinel leaves the existing value
 intact. Every mergeable field has a genuine unset sentinel, so a
 later call can also \emph{restore} a default (e.g. \code{visible = TRUE}
-re-shows a hidden column, \code{group_display = "header_row"} resets a
-prior \code{"column"}). This lets you build a column's spec in stages —
+re-shows a hidden column). This lets you build a column's spec in
+stages —
 declare the label-and-alignment block up front, add the width once
 you know it fits, then attach a sort key, all without re-stating
 earlier attributes. Essential when generating specs programmatically
@@ -95,13 +110,10 @@ Unset sentinels — a field left at this value does NOT override the
 existing field (every other value, including a default like
 \code{visible = TRUE}, overrides):\tabular{ll}{
    field \tab unset sentinel \cr
-   \code{usage} \tab \code{NA} \cr
    \code{label} \tab \code{NA_character_} \cr
    \code{format} \tab \code{NULL} \cr
    \code{visible} \tab \code{NA} \cr
    \code{width} \tab \code{"auto"} \cr
-   \code{group_display} \tab \code{NA} \cr
-   \code{group_skip} \tab \code{NA} \cr
    \code{align} \tab \code{NA_character_} \cr
    \code{valign} \tab \code{NA_character_} \cr
    \code{na_text} \tab \code{NA_character_} (inherit preset) \cr
@@ -109,14 +121,14 @@ existing field (every other value, including a default like
 }
 
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Three-stage build: label/usage first, alignment second, width
-# third. Each stage leaves earlier fields intact.
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Three-stage build: label first, alignment second, width third.
+# Each stage leaves earlier fields intact.
 tabular(cdisc_saf_demo) |>
-  cols(variable = col_spec(usage = "group", label = "Parameter")) |>
+  cols(variable = "Parameter") |>
   cols(variable = col_spec(align = "left")) |>
   cols(variable = col_spec(width = 2.0))
-# Result: variable has usage="group", label="Parameter",
-#         align="left", width=2.0 — all four fields set.
+# Result: variable has label="Parameter", align="left",
+#         width=2.0 — all three fields set.
 }\if{html}{\out{</div>}}
 }
 
@@ -140,21 +152,22 @@ tabular(
   footnotes = "Percentages based on N per treatment group."
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Parameter"),
-    stat_label = col_spec(label = "Statistic"),
+    variable   = "Parameter",
+    stat_label = "Statistic",
     placebo    = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
     Total      = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
+  group_rows(by = "variable") |>
   sort_rows(by = c("variable", "stat_label"))
 
-# ---- Example 2: BOR table with CDISC factor ordering and hidden helper ----
+# ---- Example 2: BOR table with CDISC factor ordering and hidden helpers ----
 #
 # Best Overall Response table where `stat_label` carries the
-# canonical CDISC factor levels (driving the sort) and `row_type`
-# is hidden — present in the data for the sort, absent from the
-# rendered output via `col_spec(visible = FALSE)`.
+# canonical CDISC factor levels (driving the sort) and the three
+# helper columns are hidden with `.hide` — present in the data for
+# the sort, absent from the rendered output.
 bor_levels <- c(
   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
   "ORR (CR + PR)", "CBR (CR + PR + SD)",
@@ -174,13 +187,11 @@ tabular(
   footnotes = "Response per RECIST 1.1, investigator assessment."
 ) |>
   cols(
-    stat_label  = col_spec(label = "Response"),
-    row_type    = col_spec(visible = FALSE),
-    groupid     = col_spec(visible = FALSE),
-    group_label = col_spec(visible = FALSE),
+    stat_label = "Response",
     placebo    = col_spec(label = "Placebo\nN={ne['placebo']}",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50\nN={ne['drug_50']}",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100\nN={ne['drug_100']}", align = "decimal")
+    drug_100   = col_spec(label = "Drug 100\nN={ne['drug_100']}", align = "decimal"),
+    .hide      = c("row_type", "groupid", "group_label")
   ) |>
   sort_rows(by = c("groupid", "stat_label"))
 
@@ -188,11 +199,11 @@ tabular(
 #
 # `label` carries SOC text on SOC rows and PT text on PT rows;
 # `indent = "indent_level"` indents the PT rows one level under
-# their SOC. `soc`, `row_type`, and `n_total` ride along as hidden
-# sort keys. A second `cols()` call later in the chain adds widths
-# once the user knows the page geometry; the repeat-call merge
-# preserves prior attributes (label, indent, align, visible)
-# without restating them.
+# their SOC. `soc`, `row_type`, `soc_n`, and `n_total` ride along
+# as hidden sort keys via `.hide`. A second `cols()` call later in
+# the chain adds widths once the user knows the page geometry; the
+# repeat-call merge preserves prior attributes (label, indent,
+# align, visible) without restating them.
 
 tabular(
   cdisc_saf_aesocpt,
@@ -200,14 +211,11 @@ tabular(
 ) |>
   cols(
     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
-    soc      = col_spec(visible = FALSE),
-    row_type = col_spec(visible = FALSE),
-    soc_n    = col_spec(visible = FALSE),
-    n_total  = col_spec(visible = FALSE),
     placebo  = col_spec(label = "Placebo",  align = "decimal"),
     drug_50  = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100 = col_spec(label = "Drug 100", align = "decimal"),
-    Total    = col_spec(label = "Total",    align = "decimal")
+    Total    = col_spec(label = "Total",    align = "decimal"),
+    .hide    = c("soc", "row_type", "soc_n", "n_total")
   ) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE)) |>
   # Second `cols()` call: add widths after the rest of the spec

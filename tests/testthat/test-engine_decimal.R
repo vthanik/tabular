@@ -1164,13 +1164,14 @@ test_that("engine_decimal in afm mode keeps uniform column widths in proportiona
 test_that("as_grid threads preset@decimal_metrics='chars' end-to-end", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo", align = "decimal"),
       drug_50 = col_spec(label = "Drug 50", align = "decimal"),
       drug_100 = col_spec(label = "Drug 100", align = "decimal"),
       Total = col_spec(label = "Total", align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     preset(decimal_metrics = "chars")
   grid <- as_grid(spec)
   expect_true(is.matrix(grid@pages[[1]]$cells_text))

@@ -15,11 +15,12 @@ mk_spec <- function() {
 test_that("cols() attaches col_specs keyed by input name", {
   s <- mk_spec() |>
     cols(
-      param = col_spec(usage = "group", label = "Parameter"),
+      param = col_spec(label = "Parameter"),
       drug_a = col_spec(label = "Drug A", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "param")
   expect_named(s@cols, c("param", "drug_a"))
-  expect_identical(s@cols$param@usage, "group")
+  expect_identical(s@row_groups@by, "param")
   expect_identical(s@cols$param@name, "param")
   expect_identical(s@cols$drug_a@align, "decimal")
   expect_identical(s@cols$drug_a@name, "drug_a")
@@ -29,7 +30,7 @@ test_that("cols() attaches col_specs keyed by input name", {
 
 test_that("cols() rejects a name not in data", {
   expect_error(
-    mk_spec() |> cols(missing_col = col_spec(usage = "display")),
+    mk_spec() |> cols(missing_col = col_spec()),
     class = "tabular_error_input"
   )
 })
@@ -61,7 +62,7 @@ test_that("cols() warns on duplicate names and keeps the last", {
 # Edge case 4: missing column gets no entry (engine_validate later) ----
 
 test_that("cols() leaves un-mentioned columns out of @cols", {
-  s <- mk_spec() |> cols(param = col_spec(usage = "group"))
+  s <- mk_spec() |> cols(param = col_spec()) |> group_rows(by = "param")
   expect_named(s@cols, "param")
   expect_false("drug_a" %in% names(s@cols))
 })
@@ -70,9 +71,10 @@ test_that("cols() leaves un-mentioned columns out of @cols", {
 
 test_that("cols() merges across two calls (non-default wins)", {
   s <- mk_spec() |>
-    cols(param = col_spec(usage = "group", label = "Parameter")) |>
+    cols(param = col_spec(label = "Parameter")) |>
+    group_rows(by = "param") |>
     cols(param = col_spec(width = 1.5))
-  expect_identical(s@cols$param@usage, "group")
+  expect_identical(s@row_groups@by, "param")
   expect_identical(s@cols$param@label, "Parameter")
   expect_identical(s@cols$param@width, 1.5)
 })
@@ -90,9 +92,10 @@ test_that("a later default width = \"auto\" leaves a pinned width intact (#width
 test_that("cols() second-call default does not erase first-call non-default", {
   s <- mk_spec() |>
     cols(param = col_spec(label = "Parameter")) |>
-    cols(param = col_spec(usage = "group"))
+    cols(param = col_spec()) |>
+    group_rows(by = "param")
   expect_identical(s@cols$param@label, "Parameter")
-  expect_identical(s@cols$param@usage, "group")
+  expect_identical(s@row_groups@by, "param")
 })
 
 test_that("cols() second-call non-default overrides first-call", {
@@ -122,7 +125,7 @@ test_that("cols() rejects non-spec first argument", {
 
 test_that("cols() rejects unnamed entries", {
   expect_error(
-    mk_spec() |> cols(col_spec(usage = "group")),
+    mk_spec() |> cols(col_spec()),
     class = "tabular_error_input"
   )
 })
@@ -134,11 +137,73 @@ test_that("cols() rejects partially named entries", {
   )
 })
 
-test_that("cols() rejects non-col_spec values", {
+test_that("cols() rejects values that are neither col_spec nor a label string", {
   expect_error(
-    mk_spec() |> cols(param = "not a spec"),
+    mk_spec() |> cols(param = 1L),
     class = "tabular_error_input"
   )
+  expect_error(
+    mk_spec() |> cols(param = list(label = "x")),
+    class = "tabular_error_input"
+  )
+  expect_snapshot(error = TRUE, mk_spec() |> cols(param = 1L))
+})
+
+# Label shorthand + .hide sugar ----------------------------------------
+
+test_that("cols() string value is label shorthand", {
+  s <- mk_spec() |> cols(param = "Parameter")
+  expect_identical(s@cols$param@label, "Parameter")
+  expect_identical(s@cols$param@name, "param")
+  expect_false(s@cols$param@label_deferred)
+})
+
+test_that("cols() shorthand interpolates {expr} in the caller env", {
+  n_total <- 91L
+  s <- mk_spec() |> cols(drug_a = "Drug A (N={n_total})")
+  expect_identical(s@cols$drug_a@label, "Drug A (N=91)")
+})
+
+test_that("cols() shorthand resolves the deferred {.name} token", {
+  s <- mk_spec() |> cols(drug_a = "col:{.name}")
+  expect_identical(s@cols$drug_a@label, "col:drug_a")
+  expect_false(s@cols$drug_a@label_deferred)
+})
+
+test_that("cols() shorthand composes with a later col_spec merge", {
+  s <- mk_spec() |>
+    cols(drug_a = "Drug A") |>
+    cols(drug_a = col_spec(align = "decimal"))
+  expect_identical(s@cols$drug_a@label, "Drug A")
+  expect_identical(s@cols$drug_a@align, "decimal")
+})
+
+test_that("cols(.hide=) hides the named columns", {
+  s <- mk_spec() |> cols(.hide = c("drug_a", "drug_b"))
+  expect_false(s@cols$drug_a@visible)
+  expect_false(s@cols$drug_b@visible)
+})
+
+test_that("cols(.hide=) merges with ... attributes for the same column", {
+  s <- mk_spec() |>
+    cols(drug_a = col_spec(label = "Drug A"), .hide = "drug_a")
+  expect_identical(s@cols$drug_a@label, "Drug A")
+  expect_false(s@cols$drug_a@visible)
+})
+
+test_that("cols(.hide=) errors on a missing column", {
+  expect_error(
+    mk_spec() |> cols(.hide = "nope"),
+    class = "tabular_error_input"
+  )
+  expect_snapshot(error = TRUE, mk_spec() |> cols(.hide = "nope"))
+})
+
+test_that("a .hide-hidden column can be re-shown later", {
+  s <- mk_spec() |>
+    cols(.hide = "drug_a") |>
+    cols(drug_a = col_spec(visible = TRUE))
+  expect_true(s@cols$drug_a@visible)
 })
 
 # Merge: format / visible / align / na_text ----------------------------
@@ -192,43 +257,21 @@ test_that("cols() can RE-SHOW a hidden column on a later call (#F2)", {
   expect_true(s@cols$drug_a@visible)
 })
 
-test_that("cols() can RESET group_display to header_row on a later call (#F2)", {
+test_that("cols() default visible does NOT clobber a prior value (#F2)", {
+  # A later call carrying the unset (NA) default leaves the prior
+  # explicit value intact.
   s <- mk_spec() |>
-    cols(drug_a = col_spec(usage = "group", group_display = "column")) |>
-    cols(drug_a = col_spec(group_display = "header_row"))
-  expect_identical(s@cols$drug_a@group_display, "header_row")
-})
-
-test_that("cols() default visible/group_display do NOT clobber prior values (#F2)", {
-  # A later call carrying the unset (NA) defaults leaves prior explicit
-  # values intact.
-  s <- mk_spec() |>
-    cols(
-      drug_a = col_spec(
-        visible = FALSE,
-        group_display = "column",
-        usage = "group"
-      )
-    ) |>
+    cols(drug_a = col_spec(visible = FALSE)) |>
     cols(drug_a = col_spec(label = "Drug A"))
   expect_false(s@cols$drug_a@visible)
-  expect_identical(s@cols$drug_a@group_display, "column")
+  expect_identical(s@cols$drug_a@label, "Drug A")
 })
 
-# F4 — one encoding of "display" --------------------------------------
+# F4 — one encoding of "visible" ---------------------------------------
 
-test_that("a bare col_spec() finalizes to display / visible / header_row (#F4)", {
+test_that("a bare col_spec() finalizes to visible (#F4)", {
   fin <- tabular:::.finalize_col_spec(col_spec())
-  expect_identical(fin@usage, "display")
   expect_true(fin@visible)
-  expect_identical(fin@group_display, "header_row")
-})
-
-test_that("explicit usage = 'display' overrides a prior usage = 'group' on merge (#F4)", {
-  s <- mk_spec() |>
-    cols(drug_a = col_spec(usage = "group")) |>
-    cols(drug_a = col_spec(usage = "display"))
-  expect_identical(s@cols$drug_a@usage, "display")
 })
 
 test_that("a default col_spec() and the explicit concrete spec render identically (#F2)", {
@@ -241,8 +284,7 @@ test_that("a default col_spec() and the explicit concrete spec render identicall
     cols(
       drug_a = col_spec(
         label = "Drug A",
-        visible = TRUE,
-        usage = "display"
+        visible = TRUE
       )
     )
   f1 <- withr::local_tempfile(fileext = ".md")
@@ -260,13 +302,10 @@ test_that("a default col_spec() and the explicit concrete spec render identicall
 test_that("every mergeable col_spec property round-trips through merge (#F8)", {
   # One non-default value per mergeable property.
   non_default <- list(
-    usage = "group",
     label = "X",
     format = function(x) x,
     visible = FALSE,
     width = 2.0,
-    group_display = "column",
-    group_skip = TRUE,
     align = "decimal",
     valign = "top",
     na_text = "-",
@@ -307,18 +346,18 @@ test_that("cols() accepts a dynamic name via :=", {
 
 test_that("cols() accepts a named list spliced with !!!", {
   specs <- list(
-    param = col_spec(usage = "group"),
+    param = col_spec(label = "P"),
     drug_a = col_spec(label = "A")
   )
   s <- mk_spec() |> cols(!!!specs)
   expect_named(s@cols, c("param", "drug_a"))
-  expect_identical(s@cols$param@usage, "group")
+  expect_identical(s@cols$param@label, "P")
   expect_identical(s@cols$drug_a@label, "A")
 })
 
 test_that("cols() still rejects an unnamed !!! splice", {
   expect_error(
-    mk_spec() |> cols(!!!list(col_spec(usage = "group"))),
+    mk_spec() |> cols(!!!list(col_spec())),
     class = "tabular_error_input"
   )
 })
@@ -400,19 +439,18 @@ test_that("cols_apply() rejects a predicate returning wrong length (#E1)", {
   )
 })
 
-test_that("cols_apply() merges valign/group_display/width onto an existing spec (#review)", {
-  # .merge_col_spec previously copied only 9 of col_spec's fields, silently
-  # dropping valign / group_display / group_skip / width_user on merge, so
-  # cols_apply()'s 'non-default field overrides' contract failed for them.
+test_that("cols_apply() merges valign/width onto an existing spec (#review)", {
+  # .merge_col_spec previously copied only a subset of col_spec's fields,
+  # silently dropping valign / width_user on merge, so cols_apply()'s
+  # 'non-default field overrides' contract failed for them.
   s <- mk_arms_spec() |>
     cols(ARM_A = col_spec(label = "Arm A")) |>
     cols_apply(
       "ARM_A",
-      col_spec(valign = "top", group_display = "column", width = "40%")
+      col_spec(valign = "top", width = "40%")
     )
   expect_identical(s@cols$ARM_A@label, "Arm A") # existing kept
   expect_identical(s@cols$ARM_A@valign, "top") # override applied
-  expect_identical(s@cols$ARM_A@group_display, "column")
   expect_identical(s@cols$ARM_A@width, "40%")
   # width_user must track width so the HTML percent-width path stays right.
   expect_identical(s@cols$ARM_A@width_user, "40%")
@@ -433,11 +471,12 @@ test_that("cols_apply() warns and no-ops when a predicate matches nothing (#revi
 test_that("cols(.default=) applies to unmentioned columns (#E2)", {
   s <- mk_arms_spec() |>
     cols(
-      param = col_spec(usage = "group", label = "Parameter"),
+      param = col_spec(label = "Parameter"),
       .default = col_spec(align = "decimal")
-    )
+    ) |>
+    group_rows(by = "param")
   # Explicit spec wins for `param`.
-  expect_identical(s@cols$param@usage, "group")
+  expect_identical(s@cols$param@label, "Parameter")
   expect_true(is.na(s@cols$param@align))
   # Default applies to every unmentioned data column.
   for (nm in c("ARM_A", "ARM_B", "ARM_C")) {
@@ -468,7 +507,8 @@ test_that("cols(.default=) rejects a non-col_spec (#E2)", {
 
 test_that("cols(.default = NULL) is the current behaviour (#E2)", {
   s <- mk_arms_spec() |>
-    cols(param = col_spec(usage = "group"), .default = NULL)
+    cols(param = col_spec(), .default = NULL) |>
+    group_rows(by = "param")
   expect_named(s@cols, "param")
 })
 
@@ -507,9 +547,10 @@ test_that("the token resolves through a plain cols() named arg too (#token)", {
 test_that("the token resolves through cols(.default=) (#token)", {
   s <- mk_arms_spec() |>
     cols(
-      param = col_spec(usage = "group"),
+      param = col_spec(),
       .default = col_spec(label = "col:{.name}")
-    )
+    ) |>
+    group_rows(by = "param")
   expect_identical(s@cols$ARM_A@label, "col:ARM_A")
   expect_identical(s@cols$ARM_C@label, "col:ARM_C")
 })
@@ -572,7 +613,8 @@ test_that("an unmatched cols_apply() selection still warns with a deferred label
 test_that("a resolved {.name} label reaches every backend (HTML and RTF) (#token)", {
   n <- c(ARM_A = 30L, ARM_B = 28L, ARM_C = 31L)
   spec <- mk_arms_spec() |>
-    cols(param = col_spec(usage = "group", label = "Parameter")) |>
+    cols(param = col_spec(label = "Parameter")) |>
+    group_rows(by = "param") |>
     cols_apply(
       c("ARM_A", "ARM_B", "ARM_C"),
       col_spec(label = "{.name} (N={n[.name]})", align = "decimal")

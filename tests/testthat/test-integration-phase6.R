@@ -21,14 +21,15 @@ combined_spec <- function() {
     footnotes = "All knobs flow through."
   ) |>
     cols(
-      arm = col_spec(label = "Arm", usage = "group"),
-      cohort = col_spec(label = "Cohort", usage = "group"),
+      arm = col_spec(label = "Arm"),
+      cohort = col_spec(label = "Cohort"),
       n = col_spec(label = "N"),
       placebo = col_spec(label = "Placebo", align = "decimal"),
       drug_50 = col_spec(label = "Drug 50", align = "decimal"),
       drug_100 = col_spec(label = "Drug 100", align = "decimal"),
       helper_sort = col_spec(visible = FALSE)
     ) |>
+    group_rows(by = c("arm", "cohort")) |>
     headers("Arms" = c("placebo", "drug_50", "drug_100")) |>
     sort_rows(by = c("arm", "helper_sort")) |>
     style(bold = TRUE, .at = cells_body(where = n > 50)) |>
@@ -133,13 +134,14 @@ test_that("demographics frame + stripe + group + page-band styling renders on al
     footnotes = md("Source: **ADSL**.")
   ) |>
     cols(
-      variable = col_spec(usage = "group", group_display = "header_row"),
+      variable = col_spec(),
       stat_label = col_spec(align = "left"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     headers("Active" = c("drug_50", "drug_100")) |>
     preset(
       rules = "frame",

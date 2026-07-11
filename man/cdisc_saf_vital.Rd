@@ -9,7 +9,7 @@ A data frame with 64 rows and 7 columns:
 \describe{
 \item{\code{paramcd}}{CDISC parameter code (\code{SYSBP} / \code{DIABP} /
 \code{PULSE} / \code{TEMP}). Repeats across visit and statistic; use
-\code{col_spec(usage = "group")} to collapse.}
+\code{\link[=group_rows]{group_rows()}} to collapse.}
 \item{\code{param}}{Decoded parameter name.}
 \item{\code{visit}}{Analysis visit label (\code{"Baseline"} / \code{"Week 8"} /
 \code{"Week 16"} / \code{"End of Treatment"}).}
@@ -44,8 +44,8 @@ tabular(
 ) |>
   cols(
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group", label = "Parameter"),
-    visit      = col_spec(usage = "group", label = "Visit"),
+    param      = col_spec(label = "Parameter"),
+    visit      = col_spec(label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(
       label = "Placebo\nN={n['placebo']}",

@@ -113,7 +113,7 @@ engine_group_display <- function(
   # `strrep(indent_unit, depth)` where `indent_unit` is
   # `strrep(" ", indent_size)`.
   #
-  # Independent of `group_display = "header_row"` — works in plain
+  # Independent of `group_rows(display = "header_row")` — works in plain
   # listings (no group cols) just as well as in SOC/PT tables. An
   # explicit `indent` on a header_row host suppresses the section
   # auto-indent below (the host carries the depth itself).
@@ -502,7 +502,7 @@ engine_group_display <- function(
 # NA / NULL / non-inline_ast entries pass through unchanged — the
 # user might have hand-attached a wrapper that doesn't carry runs,
 # and the host column may contain entries from rows the
-# group_display engine doesn't manage.
+# group-display engine doesn't manage.
 .indent_host_asts <- function(asts, indent_size) {
   indent_unit <- .indent_text_unit(indent_size)
   if (length(asts) == 0L || !nzchar(indent_unit)) {
@@ -763,7 +763,7 @@ engine_group_display <- function(
   # `header_row_plan$bands`; the union across bands is used only for
   # the early-return short-circuit and output sizing. Blank
   # transitions come from every group column whose effective
-  # `group_skip` resolves TRUE.
+  # skip resolves TRUE.
   bands <- if (is.null(header_row_plan)) NULL else header_row_plan$bands
   band_transitions_on_page <- if (is.null(bands)) {
     list()

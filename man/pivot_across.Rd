@@ -149,7 +149,7 @@ variable of a two-variable \code{.by} (e.g. \code{SEX} in
 \code{ard_stack(.by = c(ARM, SEX))}). It widens into a leading row
 column (not a pivoted arm column), so the result composes with
 \code{\link[=subgroup]{subgroup(by = ...)}} or
-\code{col_spec(usage = "group")} downstream.
+\code{\link[=group_rows]{group_rows()}} downstream.
 
 \strong{Why it is required.} cards encodes a crossing factor and a
 SOC/PT hierarchy identically (the second group variable appears
@@ -398,7 +398,7 @@ cdisc_saf_demo_ard |>
     footnotes = "Percentages based on N per treatment group."
   ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Parameter"),
+    variable   = col_spec(label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
     Placebo    = col_spec(
       label = "Placebo\nN={n['placebo']}",

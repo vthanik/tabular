@@ -8,6 +8,7 @@ paginate(
   .spec,
   keep_together = character(),
   panels = 1,
+  repeat_cols = NULL,
   orphan_floor = 3,
   widow_floor = 2,
   repeat_content = c("titles", "headers", "footnotes"),
@@ -21,9 +22,9 @@ paginate(
 \item{keep_together}{\emph{Columns whose runs of identical values
 must not be split across a page break.}
 \verb{<character>: default character()}. Every entry must be a column
-of \code{data} — typically a \code{usage = "group"} column, or a hidden
-block-key column (\code{col_spec(visible = FALSE)}) when the block
-structure lives in the row text rather than a group column (the
+of \code{data} — typically a \code{\link[=group_rows]{group_rows()}} key, or a hidden
+block-key column (\code{.hide} in \code{\link[=cols]{cols()}}) when the block
+structure lives in the row text rather than a grouping key (the
 AE SOC/PT idiom).
 
 \strong{Interaction:} A run too tall to fit in the computed row
@@ -36,9 +37,20 @@ paginate(keep_together = "soc")
 
 \item{panels}{\emph{Number of horizontal panels for wide tables.}
 \verb{<integer(1)>: default 1}. With \code{1}, every column is on every page
-(single vertical scroll). With \code{N > 1}, the engine splits non-group
-columns into \code{N} chunks and repeats every group column on every
-panel.}
+(single vertical scroll). With \code{N > 1}, the engine splits non-stub
+columns into \code{N} chunks and repeats the stub on every panel.}
+
+\item{repeat_cols}{\emph{Stub columns repeated on every horizontal
+panel.} \verb{<character | NULL>: default NULL}. \code{NULL} derives the
+stub from the \code{\link[=group_rows]{group_rows()}} keys, excluding \code{display = "none"}
+break-only keys (hidden columns never repeat). An explicit
+character vector REPLACES that default — name every column the
+stub should carry (e.g. the grouping key plus a per-row
+statistic label). \code{character()} repeats nothing.
+
+\strong{Interaction:} Only meaningful with \code{panels > 1} (or the
+column-fit horizontal split); a single-panel table renders every
+column anyway.}
 
 \item{orphan_floor}{\emph{Minimum rows on a continued-from page.}
 \verb{<integer(1)>: default 3}. When \code{keep_together} would move a
@@ -147,10 +159,10 @@ a break inside a run leaves at least \code{orphan_floor} rows behind
 and carries at least \code{widow_floor} rows forward; runs short
 enough for the two edges to meet ride as one block.
 
-\strong{\code{panels} and group stickiness.} With \code{panels > 1}, the engine
-splits the NON-group columns into approximately equal slices and
-repeats every \code{usage = "group"} column on every panel for row
-context.
+\strong{\code{panels} and the stub.} With \code{panels > 1}, the engine splits
+the non-stub columns into approximately equal slices and repeats
+the stub — \code{repeat_cols} when set, otherwise the visible
+\code{\link[=group_rows]{group_rows()}} keys — on every panel for row context.
 }
 \examples{
 # ---- Example 1: AE table paginated by SOC ----
@@ -174,15 +186,11 @@ tabular(
 ) |>
   cols(
     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
-    soc      = col_spec(usage = "group", visible = FALSE,
-                        group_display = "column_repeat"),
-    row_type = col_spec(visible = FALSE),
-    soc_n    = col_spec(visible = FALSE),
-    n_total  = col_spec(visible = FALSE),
-    placebo  = col_spec(label = "Placebo\nN={n['placebo']}"),
-    drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}"),
-    drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}"),
-    Total    = col_spec(label = "Total\nN={n['Total']}")
+    placebo  = "Placebo\nN={n['placebo']}",
+    drug_50  = "Drug 50\nN={n['drug_50']}",
+    drug_100 = "Drug 100\nN={n['drug_100']}",
+    Total    = "Total\nN={n['Total']}",
+    .hide    = c("soc", "row_type", "soc_n", "n_total")
   ) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE)) |>
@@ -218,16 +226,18 @@ tabular(
   footnotes = "Response per RECIST 1.1, investigator assessment."
 ) |>
   cols(
-    stat_label  = col_spec(usage = "id", label = "Response"),
-    row_type    = col_spec(visible = FALSE),
-    groupid     = col_spec(visible = FALSE),
-    group_label = col_spec(visible = FALSE),
-    placebo    = col_spec(label = "Placebo\nN={ne['placebo']}"),
-    drug_50    = col_spec(label = "Drug 50\nN={ne['drug_50']}"),
-    drug_100   = col_spec(label = "Drug 100\nN={ne['drug_100']}")
+    stat_label = "Response",
+    placebo    = "Placebo\nN={ne['placebo']}",
+    drug_50    = "Drug 50\nN={ne['drug_50']}",
+    drug_100   = "Drug 100\nN={ne['drug_100']}",
+    .hide      = c("row_type", "groupid", "group_label")
   ) |>
   sort_rows(by = c("groupid", "stat_label")) |>
-  paginate(panels = 2, repeat_content = c("titles", "headers", "footnotes"))
+  paginate(
+    panels = 2,
+    repeat_cols = "stat_label",
+    repeat_content = c("titles", "headers", "footnotes")
+  )
 
 # ---- Example 3: Orphan / widow floors + continuation marker ----
 #
@@ -242,14 +252,15 @@ tabular(
   titles = c("Table 14.4.1", "Vital Signs Summary at Each Visit")
 ) |>
   cols(
-    param      = col_spec(usage = "group", label = "Parameter"),
-    paramcd    = col_spec(visible = FALSE),
-    visit      = col_spec(usage = "group", label = "Visit"),
-    stat_label = col_spec(label = "Statistic"),
+    param      = "Parameter",
+    visit      = "Visit",
+    stat_label = "Statistic",
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-    drug_100   = col_spec(label = "Drug 100", align = "decimal")
+    drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+    .hide      = "paramcd"
   ) |>
+  group_rows(by = c("param", "visit")) |>
   paginate(
     keep_together = "param",
     orphan_floor  = 4L,
@@ -261,8 +272,8 @@ tabular(
 #
 # Wide AE-by-SOC/PT table where the column strip itself does not
 # fit on a single page. The engine slices columns into groups
-# (each group keeping the `usage = "group"` columns repeated on
-# every horizontal page) so the SOC / PT label band re-appears
+# (each group keeping the stub columns repeated on every
+# horizontal page) so the SOC / PT label band re-appears
 # alongside whichever arm columns land on each panel.
 tabular(
   cdisc_saf_aesocpt,
@@ -271,11 +282,7 @@ tabular(
   cols(
     label    = col_spec(label = "SOC / PT", indent = "indent_level",
                         width = "2.5in"),
-    soc      = col_spec(usage = "group", visible = FALSE,
-                        group_display = "column_repeat"),
-    soc_n    = col_spec(visible = FALSE),
-    n_total  = col_spec(visible = FALSE),
-    row_type = col_spec(visible = FALSE),
+    .hide    = c("soc", "soc_n", "n_total", "row_type"),
     placebo  = col_spec(label = "Placebo",  align = "decimal",
                         width = "2.0in"),
     drug_50  = col_spec(label = "Drug 50",  align = "decimal",

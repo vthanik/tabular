@@ -393,12 +393,11 @@ test_that("emit() data_file carries raw values, never column-mode suppression", 
   spec <- tabular(df) |>
     cols(
       grp = col_spec(
-        usage = "group",
-        group_display = "column",
         label = "Group"
       ),
       v = col_spec(label = "Value")
-    )
+    ) |>
+    group_rows(by = "grp", display = "column")
   render_path <- tempfile(fileext = ".md")
   qc_path <- tempfile(fileext = ".csv")
   emit(spec, render_path, data_file = qc_path)
@@ -421,9 +420,10 @@ test_that("emit() data_file carries raw values under group_skip + header_row", {
   )
   spec <- tabular(df) |>
     cols(
-      grp = col_spec(usage = "group", label = "Group"),
+      grp = col_spec(label = "Group"),
       v = col_spec(label = "Value")
-    )
+    ) |>
+    group_rows(by = "grp")
   render_path <- tempfile(fileext = ".md")
   qc_path <- tempfile(fileext = ".csv")
   emit(spec, render_path, data_file = qc_path)
@@ -451,9 +451,10 @@ test_that("emit() data_file handles header_row group injection without dim misma
   )
   spec <- tabular(df) |>
     cols(
-      grp = col_spec(usage = "group", label = "Group"),
+      grp = col_spec(label = "Group"),
       v = col_spec(label = "Value")
-    )
+    ) |>
+    group_rows(by = "grp")
   render_path <- tempfile(fileext = ".md")
   qc_path <- tempfile(fileext = ".csv")
   expect_no_error(emit(spec, render_path, data_file = qc_path))

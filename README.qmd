@@ -124,8 +124,8 @@ tab <- tabular(
   footnotes = "Percentages are based on the number of subjects per treatment group."
 ) |>
   cols(
-    variable = col_spec(usage = "group", label = "Characteristic"),
-    stat_label = col_spec(label = "Statistic"),
+    variable = "Characteristic",
+    stat_label = "Statistic",
     placebo = col_spec(
       label = "Placebo (N={n['placebo']})",
       align = "decimal"
@@ -139,7 +139,8 @@ tab <- tabular(
       align = "decimal"
     ),
     Total = col_spec(label = "Total (N={n['Total']})", align = "decimal")
-  )
+  ) |>
+  group_rows(by = "variable")
 
 # render to any backend by file extension (or format = "...")
 path <- emit(tab, tempfile(fileext = ".rtf")) # submission deliverable

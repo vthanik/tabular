@@ -165,7 +165,7 @@
 #'   `ard_stack(.by = c(ARM, SEX))`). It widens into a leading row
 #'   column (not a pivoted arm column), so the result composes with
 #'   [`subgroup(by = ...)`][subgroup()] or
-#'   `col_spec(usage = "group")` downstream.
+#'   [`group_rows()`] downstream.
 #'
 #'   **Why it is required.** cards encodes a crossing factor and a
 #'   SOC/PT hierarchy identically (the second group variable appears
@@ -397,7 +397,7 @@
 #'     footnotes = "Percentages based on N per treatment group."
 #'   ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Parameter"),
+#'     variable   = col_spec(label = "Parameter"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     Placebo    = col_spec(
 #'       label = "Placebo\nN={n['placebo']}",

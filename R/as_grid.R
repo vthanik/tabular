@@ -128,13 +128,14 @@
 #'   footnotes = "Source: ADSL."
 #' ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     variable   = col_spec(label = "Characteristic"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo  = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
 #'     drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
 #'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
 #'     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
 #'   ) |>
+#'   group_rows(by = "variable") |>
 #'   sort_rows(by = c("variable", "stat_label"))
 #'
 #' demo_grid <- as_grid(demo)
@@ -162,11 +163,7 @@
 #' ) |>
 #'   cols(
 #'     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
-#'     soc      = col_spec(usage = "group", visible = FALSE,
-#'                         group_display = "column_repeat"),
-#'     row_type = col_spec(visible = FALSE),
-#'     soc_n    = col_spec(visible = FALSE),
-#'     n_total  = col_spec(visible = FALSE),
+#'     .hide    = c("soc", "row_type", "soc_n", "n_total"),
 #'     placebo  = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
 #'     drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
 #'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
@@ -191,10 +188,11 @@
 #'   cols(
 #'     sex_n      = col_spec(visible = FALSE),
 #'     paramcd    = col_spec(visible = FALSE),
-#'     param      = col_spec(usage = "group", label = "Parameter"),
-#'     visit      = col_spec(usage = "group", label = "Visit"),
+#'     param      = col_spec(label = "Parameter"),
+#'     visit      = col_spec(label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic")
 #'   ) |>
+#'   group_rows(by = c("param", "visit")) |>
 #'   subgroup("sex")
 #'
 #' sg_grid <- as_grid(sg_spec)
@@ -217,7 +215,7 @@
 #'   titles = "Demographics"
 #' ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     variable   = col_spec(label = "Characteristic"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(
 #'       label = "Placebo\nN={n['placebo']}",

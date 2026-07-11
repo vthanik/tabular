@@ -3,10 +3,11 @@
 mk_fn_spec <- function() {
   tabular(cdisc_saf_aesocpt) |>
     cols(
-      soc = col_spec(usage = "group"),
+      soc = col_spec(),
       label = col_spec(label = "PT"),
       Total = col_spec(label = "Total")
-    )
+    ) |>
+    group_rows(by = "soc")
 }
 
 test_that("footnote() appends a record to @footnote_refs", {

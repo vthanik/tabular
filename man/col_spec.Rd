@@ -5,13 +5,10 @@
 \title{Per-column display specification}
 \usage{
 col_spec(
-  usage = NULL,
   label = NA_character_,
   format = NULL,
   visible = NA,
   width = "auto",
-  group_display = NA,
-  group_skip = NA,
   align = NULL,
   valign = NULL,
   na_text = NA_character_,
@@ -19,77 +16,6 @@ col_spec(
 )
 }
 \arguments{
-\item{usage}{\emph{Engine role.}
-\verb{<character(1) | NULL>: default NULL}. One of:
-\itemize{
-\item \strong{\code{"display"}} (default in \code{\link[=cols]{cols()}}) — pass-through.
-\item \strong{\code{"group"}} — row-label with repeat-suppression and
-continuation-page repeat keys. Use for \code{variable}, \code{soc},
-\code{stat_label}. (Cosmetic indent depth is the separate \code{indent}
-argument, not a usage role.)
-\item \strong{\code{"id"}} — a row-identifier column. Renders like \code{"display"}
-(one value per row, never collapses) but joins the \emph{stub}: it
-repeats on every horizontal panel (\code{paginate(panels = N)}) and
-shows once on the left when a continuous backend (HTML /
-Markdown) collapses the panels into one table. The PROC REPORT
-\code{ID} role, orthogonal to grouping. Use for a per-row statistic
-label (\code{"n"}, \code{"Mean"}, \code{"SD"}) that must stay legible on every
-panel of a wide demographics or efficacy table.
-\item \strong{\code{NULL} / \code{NA}} — the unset sentinel; resolves to \code{"display"}
-at render. \code{NA} is mergeable, so an explicit \code{"display"} on a
-later \code{\link[=cols]{cols()}} call can override a prior \code{"group"} / \code{"id"}.
-}
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Two row-label columns and four arm columns.
-cols(
-  variable   = col_spec(usage = "group"),
-  stat_label = col_spec(usage = "group"),
-  placebo    = col_spec(),
-  drug_50    = col_spec()
-)
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Section-band table: the `group_label` column drives section
-# headers; `stat_label` body rows auto-indent under each header
-# without an explicit depth column.
-cols(
-  group_label = col_spec(usage = "group", group_display = "header_row"),
-  stat_label  = col_spec(label = "Response"),
-  placebo     = col_spec(align = "decimal")
-)
-}\if{html}{\out{</div>}}
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# End-to-end ARD → wide → tabular pipeline. The cards ARD
-# `cdisc_saf_demo_ard` is the long upstream input; `pivot_across()`
-# widens to one column per arm and stamps an internal marker
-# so [`sort_rows()`] can reject sort keys on those arm columns.
-# `cols()` then attaches per-column display rules.
-wide <- pivot_across(
-  cdisc_saf_demo_ard,
-  statistic = list(
-    continuous  = c(N = "\{N\}", "Mean (SD)" = "\{mean\} (\{sd\})"),
-    categorical = "\{n\} (\{p\}\%)"
-  )
-)
-tabular(wide, titles = "Demographics") |>
-  cols(
-    variable                 = col_spec(
-      usage = "group", label = "Characteristic"
-    ),
-    stat_label               = col_spec(
-      usage = "group", label = "Statistic"
-    ),
-    Placebo                  = col_spec(align = "decimal"),
-    `Xanomeline High Dose`   = col_spec(
-      label = "High Dose", align = "decimal"
-    ),
-    `Xanomeline Low Dose`    = col_spec(
-      label = "Low Dose", align = "decimal"
-    ),
-    Total                    = col_spec(align = "decimal")
-  )
-}\if{html}{\out{</div>}}}
-
 \item{label}{\emph{Display label for the column header.}
 \verb{<character(1)>: default NA_character_}. Embed \verb{\\n} for
 multi-line headers (arm name on row 1, BigN denominator on
@@ -154,13 +80,12 @@ via a \code{{col}} placeholder in the subgroup banner template are
 flipped to \code{visible = FALSE} automatically at engine time —
 restating it here is redundant.
 
-\strong{Break-only group column.} A hidden \code{usage = "group"} column
-emits no header rows and no in-column text; it contributes only
-its \code{group_skip} transitions, so \code{group_display} is ignored while
-hidden. This is the canonical "spacer" that drops a blank line
-wherever a marker value changes (e.g. continuous stats vs.
-categorical groups inside one characteristic):
-\code{col_spec(usage = "group", group_skip = TRUE, visible = FALSE)}.}
+\strong{Break-only grouping key.} To drop a blank line wherever a
+hidden marker column changes (e.g. continuous stats vs.
+categorical groups inside one characteristic), do not hide the
+column here — declare it as a break-only key with
+\code{\link[=group_rows]{group_rows()}}\verb{(by = "marker", display = "none")}, which hides
+it and contributes only its group transitions.}
 
 \item{width}{\emph{Column width — auto-sized, pinned, or proportional.}
 \verb{<character(1) | numeric(1)>: default "auto"}.
@@ -215,100 +140,6 @@ default, which produces identical widths across RTF / LaTeX
 / \code{\link[=cols_apply]{cols_apply()}} calls, \code{"auto"} is treated as the default: a
 later call carrying \code{width = "auto"} leaves a previously pinned
 width intact, and only an explicit non-\code{"auto"} width overrides.}
-
-\item{group_display}{\emph{How \code{usage = "group"} values render in the body.}
-\verb{<character(1)>: default NA}. Active only when \code{usage = "group"} —
-setting it on a non-group column is ignored and warns.
-\code{NA} (default) is the merge "unset" sentinel and resolves to
-\code{"header_row"} at render; an explicit value is mergeable, so a later
-\code{\link[=cols]{cols()}} call can reset it back to \code{"header_row"}.
-\itemize{
-\item \strong{\code{"header_row"}} \emph{(default)} — each unique value emits as
-a section header row above its block of data rows, and \strong{the
-body rows beneath are automatically indented one level}. The
-section header itself sits flush left at depth 0; its child
-rows render one indent level in. Because the section already
-supplies that indent, the stub column needs \strong{no} \code{indent} —
-adding \code{indent = 1} there overrides (does not stack) the
-auto-indent, leaving a single level. The source column is hidden from
-the visible body. Matches the canonical submission
-shape used by clinical TFL house templates (Disposition,
-Demographics, Statistical Report sections).
-
-A group with exactly \strong{one} member collapses to a single
-flush-left row: the group value becomes that row's label, its
-data cells are kept, and no separate header or indent is
-emitted (the redundant two-line "header plus lone child" is
-gone). This is the standard occurrence-table shape, where a
-single binary flag (DEATH, TEAE) sits flush among headed
-multi-level breakdowns. The collapsed row still receives any
-\code{\link[=cells_group_headers]{cells_group_headers()}} styling (preset or explicit), so its
-group identity is not lost. An empty or \code{NA} group value never
-emits a header at all; its members render flush left keeping
-their own labels. \emph{(Collapse applies to a single \code{header_row}
-band; a nested two-\code{header_row} layout keeps a header per
-value.)}
-\item \strong{\code{"column"}} — column stays visible; repeated values are
-suppressed (only the first row of each value shows the
-label). PROC REPORT's default for grouping variables.
-\item \strong{\code{"column_repeat"}} — column stays visible; every row
-repeats the value (no suppression). The shape \code{R}'s
-\code{print.data.frame} produces.
-}
-
-\strong{Composition under multiple group columns.} When more than
-one \code{usage = "group"} column is declared, the FIRST one
-encountered in \code{cols()} order is the outer group; subsequent
-group columns nest inside it. Each column's \code{group_display}
-choice is independent — a common clinical pattern is the outer
-\code{variable} as \code{"header_row"} plus the inner \code{stat_label} as
-\code{"column"} (visible row labels under each section header).
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Demographics layout: variable as section header, stat_label
-# as visible suppressed column.
-cols(
-  variable   = col_spec(usage = "group", group_display = "header_row"),
-  stat_label = col_spec(usage = "group", group_display = "column"),
-  placebo    = col_spec(label = "Placebo", align = "decimal")
-)
-}\if{html}{\out{</div>}}}
-
-\item{group_skip}{\emph{Insert a blank row between consecutive groups.}
-\verb{<logical(1)>: default NA}. Active only when \code{usage = "group"} —
-setting it on a non-group column is ignored and warns. Three values:
-\itemize{
-\item \strong{\code{TRUE}} — engine injects one blank row immediately before
-each value transition on this column (PROC REPORT's \verb{BREAK AFTER var / SKIP} semantics, lifted to per-column control).
-Never trails the final group.
-\item \strong{\code{FALSE}} — never insert a blank row for this column.
-\item \strong{\code{NA}} \emph{(default)} — follow \code{group_display}: \code{TRUE} when
-\code{group_display = "header_row"}, \code{FALSE} when \code{"column"} or
-\code{"column_repeat"}. Picks the canonical shape
-without an extra knob to set.
-}
-
-\strong{Interaction:} When two or more columns have an effective
-\code{group_skip = TRUE} and their value transitions coincide on the
-same row, the engine emits ONE blank row at that boundary, not
-one per column. Transition row indices are unioned across all
-contributing group columns.
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Default: header_row mode auto-injects blanks between sections.
-col_spec(usage = "group", group_display = "header_row")
-
-# Override: keep the column visible (suppressed-value mode) but
-# still insert blank-row separators between value changes.
-col_spec(usage = "group", group_display = "column", group_skip = TRUE)
-
-# Override: section headers without the blank-row separator
-# (denser layout, used when vertical space is tight).
-col_spec(usage = "group", group_display = "header_row", group_skip = FALSE)
-
-# Break-only "spacer": pairs with visible = FALSE to drop a blank
-# line wherever a hidden marker changes, without rendering the
-# column or any header row. group_display is ignored when hidden.
-col_spec(usage = "group", group_skip = TRUE, visible = FALSE)
-}\if{html}{\out{</div>}}}
 
 \item{align}{\emph{Horizontal alignment within the column.}
 \verb{<character(1) | NULL>: default NULL}. One of:
@@ -388,11 +219,12 @@ wrapped continuation lines align with the indented baseline;
 Markdown carries the literal space-prefix. Synthesised group-header
 rows are never indented — they are the parent at depth 0.
 
-\strong{Interaction:} an explicit \code{indent} on a
-\code{group_display = "header_row"} host \strong{suppresses} that section's
-automatic one-level child indent (you take control of the depth) —
-so a stub under a section needs no \code{indent} at all, and adding
-\code{indent = 1} there yields a single, not double, indent.
+\strong{Interaction:} an explicit \code{indent} on the host column of a
+\code{\link[=group_rows]{group_rows()}}\code{(display = "header_row")} section \strong{suppresses}
+that section's automatic one-level child indent (you take control
+of the depth) — so a stub under a section needs no \code{indent} at
+all, and adding \code{indent = 1} there yields a single, not double,
+indent.
 
 Per-row SOC / PT pattern (the bundled \code{cdisc_saf_aesocpt} ships the
 canonical depth column, so no upstream construction is needed):
@@ -407,7 +239,7 @@ canonical depth column, so no upstream construction is needed):
 Depth-column values \verb{c(0L, 1L, 2L, …)} produce \code{0}, \code{1}, \code{2}, …
 levels. Negative values clamp to 0 (warn); fractional numerics
 floor (warn); NA → 0 (silent). Works in flat listings too — a
-character \code{indent} does not require any \code{usage = "group"} columns.}
+character \code{indent} does not require any \code{\link[=group_rows]{group_rows()}} keys.}
 }
 \value{
 \emph{A \code{col_spec} S7 object.} Pass it to \code{\link[=cols]{cols()}} keyed by
@@ -415,10 +247,13 @@ the input column name; the constructor itself does not stamp
 a name.
 }
 \description{
-Build a single column's display attributes — usage, label, format,
-visibility, width, alignment, NA text. The result feeds \code{\link[=cols]{cols()}},
-which stamps the input column name onto the spec from its named-
-argument position and attaches it to the parent \code{tabular_spec}.
+Build a single column's display attributes — label, format,
+visibility, width, alignment, NA text, indent. The result feeds
+\code{\link[=cols]{cols()}}, which stamps the input column name onto the spec from
+its named-argument position and attaches it to the parent
+\code{tabular_spec}. Row structure (section headers, repeat
+suppression, blank spacers) is not a column attribute — declare it
+once with \code{\link[=group_rows]{group_rows()}}.
 }
 \details{
 \strong{Constructor-only.} \code{col_spec()} does not know which input
@@ -462,8 +297,8 @@ tabular(
 ) |>
   cols(
     variable   = col_spec(
-      usage = "group", label = "Parameter",
-      width = 2.0,     align = "left"
+      label = "Parameter",
+      width = 2.0, align = "left"
     ),
     stat_label = col_spec(label = "Statistic", align = "left"),
     placebo  = col_spec(
@@ -483,6 +318,7 @@ tabular(
       align = "decimal", na_text = "-"
     )
   ) |>
+  group_rows(by = "variable") |>
   sort_rows(by = c("variable", "stat_label"))
 
 # ---- Example 2: AE table with indented label + hidden helpers ----
@@ -531,8 +367,9 @@ tabular(
 # rather than a literal "NA". `valign = "top"` keeps the multi-
 # line cell text aligned to the top.
 tabular(cdisc_eff_estimates, titles = "Treatment-effect estimates by model") |>
+  group_rows(by = "model") |>
   cols(
-    model    = col_spec(usage = "group",  label = "Model",   valign = "top"),
+    model    = col_spec(label = "Model", valign = "top"),
     estimate = col_spec(label = "Estimate", align = "decimal", format = "\%.2f"),
     lower_ci = col_spec(
       label   = "Lower\n95\% CI",
@@ -567,10 +404,9 @@ tabular(
 ) |>
   cols(
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group", label = "Parameter",
-                          width = "1.6in"),
-    visit      = col_spec(usage = "group", label = "Visit",
-                          width = "1.2in", align = "center"),
+    param      = col_spec(label = "Parameter", width = "1.6in"),
+    visit      = col_spec(label = "Visit", width = "1.2in",
+                          align = "center"),
     stat_label = col_spec(label = "Statistic", width = "1.0in"),
     placebo    = col_spec(
       label = "Placebo\nN={n['placebo']}",
@@ -584,37 +420,41 @@ tabular(
       label = "Drug 100\nN={n['drug_100']}",
       align = "decimal", width = "0.9in"
     )
-  )
+  ) |>
+  group_rows(by = c("param", "visit"))
 
-# ---- Example 5: Non-collapsing `id` stub for a panelled table ----
+# ---- Example 5: Repeating stub columns on a panelled table ----
 #
-# `usage = "id"` marks `stat_label` ("n", "Mean", "SD", ...) as a
-# row identifier: like `display` it shows on every row, but it also
-# joins the stub, so it repeats on each horizontal panel created by
-# `paginate(panels = 2)`. On HTML / Markdown (no page width) the
-# panels collapse into one scrollable table with a "Panel 1 / Panel
-# 2" header note; on RTF / Word each panel is its own page with the
-# `variable` + `stat_label` stub repeated.
+# `paginate(repeat_cols = )` names the stub that repeats on each
+# horizontal panel created by `paginate(panels = 2)` — here the
+# grouping key `variable` plus the per-row statistic label
+# `stat_label`, so both stay legible on every panel. On HTML /
+# Markdown (no page width) the panels collapse into one scrollable
+# table with a "Panel 1 / Panel 2" header note; on RTF / Word each
+# panel is its own page with the stub repeated.
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 tabular(
   cdisc_saf_demo,
   titles = c("Table 14.1.1", "Demographics", "Safety Population")
 ) |>
   cols(
-    variable   = col_spec(usage = "group", group_display = "column",
-                          label = "Parameter"),
-    stat_label = col_spec(usage = "id", label = "Statistic"),
+    variable   = col_spec(label = "Parameter"),
+    stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
     Total      = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
-  paginate(panels = 2)
+  group_rows(by = "variable", display = "column") |>
+  paginate(panels = 2, repeat_cols = c("variable", "stat_label"))
 
 }
 \seealso{
 \strong{Companion verb:} \code{\link[=cols]{cols()}} attaches \code{col_spec} entries to a
 \code{tabular_spec} keyed by input column name.
+
+\strong{Row structure:} \code{\link[=group_rows]{group_rows()}} declares the grouping keys and
+section rendering at table level.
 
 \strong{Sibling build verbs:} \code{\link[=headers]{headers()}}, \code{\link[=sort_rows]{sort_rows()}},
 \code{\link[=style]{style()}}, \code{\link[=paginate]{paginate()}}, \code{\link[=preset]{preset()}}.

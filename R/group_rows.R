@@ -37,9 +37,9 @@
 #'   `<character(>= 1)>: required`. Every entry must be a column of
 #'   `data`; duplicates are rejected.
 #'
-#'   **Interaction:** `by` must not overlap [`subgroup()`]`(by = )` —
-#'   a column cannot both partition the report and group rows within
-#'   a partition.
+#'   **Interaction:** A [`subgroup()`]`(by = )` partition column may
+#'   also be a grouping key; within each partition the key is
+#'   constant and auto-hidden, so the combination composes.
 #'
 #' @param display *How each key's values render in the body.*
 #'   `<character>: default "header_row"`. Length 1 (applied to every
@@ -164,21 +164,6 @@ group_rows <- function(.spec, by, display = "header_row", skip = NA) {
       call = call
     )
   }
-  if (!is.null(.spec@subgroup)) {
-    overlap <- intersect(by, .spec@subgroup@by)
-    if (length(overlap) > 0L) {
-      cli::cli_abort(
-        c(
-          "{.arg by} must not overlap the {.fn subgroup} partition columns.",
-          "x" = "In both: {.val {overlap}}.",
-          "i" = "A column either partitions the report or groups rows within a partition, not both."
-        ),
-        class = "tabular_error_input",
-        call = call
-      )
-    }
-  }
-
   check_chr(display, call = call)
   modes <- .col_group_display_values
   bad_display <- setdiff(display, modes)

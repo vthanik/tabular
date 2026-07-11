@@ -185,14 +185,15 @@ tabular(
   cols(
     sex_n      = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group", label = "Parameter"),
-    visit      = col_spec(usage = "group", label = "Visit"),
+    param      = col_spec(label = "Parameter"),
+    visit      = col_spec(label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
     Total      = col_spec(label = "Total",    align = "decimal")
   ) |>
+  group_rows(by = c("param", "visit")) |>
   subgroup(by = "sex")
 
 # ---- Example 2: Partition by Sex with inline BigN via template ----
@@ -206,14 +207,15 @@ tabular(
 tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
   cols(
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group", label = "Parameter"),
-    visit      = col_spec(usage = "group", label = "Visit"),
+    param      = col_spec(label = "Parameter"),
+    visit      = col_spec(label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
     Total      = col_spec(label = "Total",    align = "decimal")
   ) |>
+  group_rows(by = c("param", "visit")) |>
   subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
 
 # ---- Example 3: Multi-variable crossing (Sex x Visit) ----
@@ -228,13 +230,14 @@ tabular(cdisc_saf_subgroup, titles = "Vital Signs by Sex and Visit") |>
   cols(
     sex_n      = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group", label = "Parameter"),
+    param      = col_spec(label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
     Total      = col_spec(label = "Total",    align = "decimal")
   ) |>
+  group_rows(by = "param") |>
   subgroup(
     by    = c("sex", "visit"),
     label = "Sex: {sex} / Visit: {visit}"
@@ -261,14 +264,15 @@ tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
   cols(
     sex_n      = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group", label = "Parameter"),
-    visit      = col_spec(usage = "group", label = "Visit"),
+    param      = col_spec(label = "Parameter"),
+    visit      = col_spec(label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
     Total      = col_spec(label = "Total",    align = "decimal")
   ) |>
+  group_rows(by = c("param", "visit")) |>
   subgroup(by = "sex", label = "Sex: {sex}", big_n = big_n)
 
 # ---- Example 5: Clear a partition with subgroup(character()) ----
@@ -276,7 +280,7 @@ tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
 # `subgroup(by = character())` (or `subgroup(by = NULL)`) explicitly
 # clears any prior partition — useful in programmatically-built
 # pipelines where a downstream branch decides not to paginate by
-# group after all. Give `sex` a `usage = "group"` role up front:
+# group after all. Make `sex` a grouping key up front:
 # while the sex partition is active it overrides that role (sex
 # becomes the per-page banner); once cleared, sex falls back to a
 # group level, so the pooled single-page render nests sex, parameter,
@@ -285,15 +289,16 @@ tabular(cdisc_saf_subgroup, titles = "Pooled (no sex partition)") |>
   cols(
     sex_n      = col_spec(visible = FALSE),
     paramcd    = col_spec(visible = FALSE),
-    sex        = col_spec(usage = "group", label = "Sex"),
-    param      = col_spec(usage = "group", label = "Parameter"),
-    visit      = col_spec(usage = "group", label = "Visit"),
+    sex        = col_spec(label = "Sex"),
+    param      = col_spec(label = "Parameter"),
+    visit      = col_spec(label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
     Total      = col_spec(label = "Total",    align = "decimal")
   ) |>
+  group_rows(by = c("sex", "param", "visit")) |>
   subgroup("sex", label = "Sex: {sex}") |>
   # Decide later that the sex split was the wrong default —
   # clear it before rendering.

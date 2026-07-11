@@ -226,7 +226,7 @@ test_that("multi-panel table emits one \\sect SEPARATOR between panels", {
     wide[[paste0("col", k)]] <- sprintf("%0.1f", (1:3) * k)
   }
   spec <- tabular(wide) |>
-    cols(id = col_spec(usage = "id", width = "1in")) |>
+    cols(id = col_spec(width = "1in")) |>
     paginate(panels = 2L)
   rtf <- .rtf_emit_text(spec)
   lines <- strsplit(rtf, "\n")[[1L]]
@@ -445,13 +445,14 @@ test_that("RTF blank spacer rows re-stamp preset font size, not RTF 12pt default
   # 12 in the size box on the blank line). It must carry the body \fsN.
   spec <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group"),
+      variable = col_spec(),
       stat_label = col_spec(),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     preset(font_size = 8)
   rtf <- .rtf_emit_text(spec)
   # Buggy blank-row first cell was "\pard\plain\intbl\ql\cell" (no \fsN).
@@ -471,13 +472,14 @@ test_that("RTF footnote + non-repeating-title spacers re-stamp font size", {
     footnotes = "Note: a footnote."
   ) |>
     cols(
-      variable = col_spec(usage = "group"),
+      variable = col_spec(),
       stat_label = col_spec(),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     paginate(repeat_content = "footnotes") |>
     preset(font_size = 8, spacing = list(footnote = c(above = 1L)))
   rtf <- .rtf_emit_text(spec)
@@ -682,7 +684,8 @@ test_that("group-aware keep: \\trkeep follows keep_with_next, not every row", {
     stringsAsFactors = FALSE
   )
   spec <- tabular(df) |>
-    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    cols(soc = col_spec(label = "SOC")) |>
+    group_rows(by = "soc") |>
     paginate(keep_together = "soc")
   g <- tabular:::.resolve_spec_to_grid(
     spec,
@@ -746,7 +749,8 @@ test_that("split (non-native) grid concatenates into one continuous table", {
     val = as.character(1:40)
   )
   spec <- tabular(df) |>
-    cols(grp = col_spec(usage = "group", label = "SOC")) |>
+    cols(grp = col_spec(label = "SOC")) |>
+    group_rows(by = "grp") |>
     preset(orientation = "portrait", font_size = 24) |>
     paginate()
   grid <- as_grid(spec) # non-native split: > 1 page
@@ -829,13 +833,14 @@ test_that("cdisc_saf_demo golden pipeline matches the pinned .rtf snapshot", {
     footnotes = "Source: ADSL."
   ) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   expect_snapshot_file(out, "saf_demo_golden.rtf")
@@ -968,7 +973,7 @@ test_that("RTF emits \\li on data rows but NOT on header rows (Change C)", {
   )
   spec <- tabular(df, titles = "AE") |>
     cols(
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       label = col_spec(
         label = "Category",
         indent = "indent_level",
@@ -977,7 +982,8 @@ test_that("RTF emits \\li on data rows but NOT on header rows (Change C)", {
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = "soc")
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -1007,11 +1013,12 @@ test_that("RTF emits single-\\cellx merged-cell row for section headers (Change 
   )
   spec <- tabular(df, titles = "Eff") |>
     cols(
-      group_label = col_spec(usage = "group", group_display = "header_row"),
+      group_label = col_spec(),
       stat_label = col_spec(indent = 1, label = "Response"),
       placebo = col_spec(label = "Placebo"),
       drug_50 = col_spec(label = "Drug 50")
-    )
+    ) |>
+    group_rows(by = "group_label")
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -1041,11 +1048,12 @@ test_that("RTF nested bands: band-1 header has no \\li, band-2 header has \\liN 
   )
   spec <- tabular(df, titles = "Nested") |>
     cols(
-      section = col_spec(usage = "group", group_display = "header_row"),
-      subsection = col_spec(usage = "group", group_display = "header_row"),
+      section = col_spec(),
+      subsection = col_spec(),
       label = col_spec(label = "Item"),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = c("section", "subsection"))
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   rtf <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -1148,7 +1156,8 @@ test_that("repeat_content drops title + header repeat on continuation pages", {
     val = as.character(seq_len(40L))
   )
   spec <- tabular(df, titles = "Tbl X") |>
-    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    cols(soc = col_spec(label = "SOC")) |>
+    group_rows(by = "soc") |>
     preset(orientation = "portrait", font_size = 24) |>
     paginate(repeat_content = character())
   txt <- .rtf_emit_text(spec)
@@ -1162,7 +1171,8 @@ test_that("default repeat_content emits the title as a repeating \\trhdr row", {
     val = as.character(seq_len(40L))
   )
   spec <- tabular(df, titles = "Tbl Y") |>
-    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    cols(soc = col_spec(label = "SOC")) |>
+    group_rows(by = "soc") |>
     preset(orientation = "portrait", font_size = 24)
   txt <- .rtf_emit_text(spec)
   # Native pagination: the title is emitted ONCE as a \trhdr merged row;
@@ -1182,7 +1192,8 @@ test_that("footnotes are page-anchored in the {\\footer} group, not the body", {
     data.frame(soc = rep(c("A", "B"), each = 20L), val = as.character(1:40)),
     footnotes = "Source: ADSL."
   ) |>
-    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    cols(soc = col_spec(label = "SOC")) |>
+    group_rows(by = "soc") |>
     preset(orientation = "portrait", font_size = 24)
   txt <- .rtf_emit_text(spec)
   # Footnote text appears inside a {\footer} group.
@@ -1200,7 +1211,8 @@ test_that("repeat_content without footnotes shows them on the last page only", {
     data.frame(soc = rep(c("A", "B"), each = 20L), val = as.character(1:40)),
     footnotes = "Source: ADSL."
   ) |>
-    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    cols(soc = col_spec(label = "SOC")) |>
+    group_rows(by = "soc") |>
     preset(orientation = "portrait", font_size = 24) |>
     paginate(repeat_content = c("titles", "headers"))
   txt <- .rtf_emit_text(spec)
@@ -1437,13 +1449,14 @@ test_that("preset(padding=list(header=...)) emits header cell padding (#thread-C
 test_that("rules='frame' draws \\trbrdrl/r on every table-proper row, not titles (#thread-D)", {
   spec <- tabular(cdisc_saf_demo, titles = "T", footnotes = "F") |>
     cols(
-      variable = col_spec(usage = "group", group_display = "header_row"),
+      variable = col_spec(),
       stat_label = col_spec(align = "left"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     headers("Active" = c("drug_50", "drug_100")) |>
     preset(rules = "frame")
   out <- withr::local_tempfile(fileext = ".rtf")
@@ -1474,13 +1487,14 @@ test_that("rules='frame' draws \\trbrdrl/r on every table-proper row, not titles
 test_that("stripe fills merged blank / group rows in RTF (#thread-B)", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", group_display = "header_row"),
+      variable = col_spec(),
       stat_label = col_spec(align = "left"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     preset(stripe = c(odd = "#f5f5f5", even = "#ffffff"))
   out <- withr::local_tempfile(fileext = ".rtf")
   suppressWarnings(emit(spec, out))

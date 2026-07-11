@@ -17,10 +17,11 @@
 bold_red_spec <- function() {
   tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
+    group_rows(by = "variable") |>
     style(
       bold = TRUE,
       italic = TRUE,
@@ -56,10 +57,11 @@ test_that("HTML body cells consume bold/italic/underline/color/background/font_f
 test_that("HTML body cells with no style overrides emit no inline style attribute", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
-    )
+    ) |>
+    group_rows(by = "variable")
   out_one <- paste(
     tabular:::.render_html_grid(as_grid(spec)),
     collapse = "\n"

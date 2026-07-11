@@ -9,7 +9,7 @@ A data frame with 11 rows and 6 columns:
 \describe{
 \item{\code{variable}}{Display-block label (\code{"Age (years)"},
 \code{"Sex, n (\%)"}, \code{"Race, n (\%)"}). Driven by
-\code{cols(usage = "group")} to collapse repeat values at render.}
+\code{\link[=group_rows]{group_rows()}} to collapse repeat values at render.}
 \item{\code{stat_label}}{Statistic or level label
 (\code{"n"}, \code{"Mean (SD)"}, \code{"Median"}, \code{"M"}, \code{"WHITE"}, ...).}
 \item{\code{placebo}}{Placebo arm cell text.}
@@ -55,7 +55,7 @@ tabular(
   )
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Parameter"),
+    variable   = col_spec(label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(
       label = "Placebo\nN={n['placebo']}",

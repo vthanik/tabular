@@ -21,7 +21,8 @@ make_paginated_spec <- function(
     val = seq_len(n_rows)
   )
   spec <- tabular(df, titles = titles, footnotes = footnotes) |>
-    cols(soc = col_spec(usage = "group", label = "SOC"))
+    cols(soc = col_spec(label = "SOC")) |>
+    group_rows(by = "soc")
   preset <- preset_spec(
     font_size = font_size,
     paper_size = paper_size,
@@ -154,7 +155,8 @@ test_that("engine_paginate() honours orphan_floor escape on tall groups", {
     val = 1:7
   )
   spec <- tabular(df) |>
-    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    cols(soc = col_spec(label = "SOC")) |>
+    group_rows(by = "soc") |>
     paginate(keep_together = "soc", orphan_floor = 3L)
   preset <- preset_spec(font_size = 60)
   spec <- S7::set_props(spec, preset = preset)
@@ -175,7 +177,8 @@ test_that("engine_paginate() merges last page back when below widow_floor", {
     val = 1:13
   )
   spec <- tabular(df) |>
-    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    cols(soc = col_spec(label = "SOC")) |>
+    group_rows(by = "soc") |>
     paginate(widow_floor = 2L)
   preset <- preset_spec(font_size = 72, orientation = "portrait")
   spec <- S7::set_props(spec, preset = preset)
@@ -190,7 +193,8 @@ test_that("engine_paginate() merges last page back when below widow_floor", {
 test_that("engine_paginate() splits columns into panels", {
   df <- data.frame(a = 1:3, b = 4:6, c = 7:9, d = 10:12, e = 13:15)
   spec <- tabular(df) |>
-    cols(a = col_spec(usage = "group", label = "A")) |>
+    cols(a = col_spec(label = "A")) |>
+    group_rows(by = "a") |>
     paginate(panels = 2L)
   plan <- tabular:::engine_paginate(spec)
   expect_identical(plan$total_panels, 2L)
@@ -203,7 +207,8 @@ test_that("engine_paginate() splits columns into panels", {
 test_that("engine_paginate() caps panels at non-group column count", {
   df <- data.frame(g = 1:3, x = 4:6)
   spec <- tabular(df) |>
-    cols(g = col_spec(usage = "group", label = "G")) |>
+    cols(g = col_spec(label = "G")) |>
+    group_rows(by = "g") |>
     paginate(panels = 4L)
   plan <- tabular:::engine_paginate(spec)
   expect_identical(plan$total_panels, 1L)
@@ -212,7 +217,8 @@ test_that("engine_paginate() caps panels at non-group column count", {
 test_that("engine_paginate() default (panels = 1) is a single panel", {
   df <- data.frame(g = 1:3, x = 4:6, y = 7:9)
   spec <- tabular(df) |>
-    cols(g = col_spec(usage = "group", label = "G")) |>
+    cols(g = col_spec(label = "G")) |>
+    group_rows(by = "g") |>
     paginate(panels = 1)
   plan <- tabular:::engine_paginate(spec)
   expect_identical(plan$total_panels, 1L)
@@ -226,7 +232,8 @@ test_that("engine_paginate() cross-product vertical x horizontal", {
     z = 21:29
   )
   spec <- tabular(df) |>
-    cols(soc = col_spec(usage = "group", label = "SOC")) |>
+    cols(soc = col_spec(label = "SOC")) |>
+    group_rows(by = "soc") |>
     paginate(panels = 2L)
   preset <- preset_spec(font_size = 36)
   spec <- S7::set_props(spec, preset = preset)
@@ -237,7 +244,7 @@ test_that("engine_paginate() cross-product vertical x horizontal", {
   expect_gte(plan$total_pages, 2L)
 })
 
-test_that("engine_paginate() repeats usage = 'id' columns on every panel", {
+test_that("engine_paginate() repeats paginate(repeat_cols=) columns on every panel", {
   # A non-group stub (the "Statistic" column) must repeat per panel
   # like a group column, but it never collapses in the body.
   df <- data.frame(
@@ -250,10 +257,11 @@ test_that("engine_paginate() repeats usage = 'id' columns on every panel", {
   )
   spec <- tabular(df) |>
     cols(
-      g = col_spec(usage = "group", group_display = "column"),
-      stat = col_spec(usage = "id")
+      g = col_spec(),
+      stat = col_spec()
     ) |>
-    paginate(panels = 2L)
+    group_rows(by = "g", display = "column") |>
+    paginate(panels = 2L, repeat_cols = c("g", "stat"))
   plan <- tabular:::engine_paginate(spec)
   expect_identical(plan$total_panels, 2L)
   # Stub = g (1) + stat (2) repeats on both panels; data 3..6 split.
@@ -272,10 +280,11 @@ test_that("engine_paginate() records panel_spans excluding the stub", {
   )
   spec <- tabular(df) |>
     cols(
-      g = col_spec(usage = "group", group_display = "column"),
-      stat = col_spec(usage = "id")
+      g = col_spec(),
+      stat = col_spec()
     ) |>
-    paginate(panels = 2L)
+    group_rows(by = "g", display = "column") |>
+    paginate(panels = 2L, repeat_cols = c("g", "stat"))
   plan <- tabular:::engine_paginate(spec)
   expect_length(plan$panel_spans, 2L)
   expect_identical(plan$panel_spans[[1L]]$label, "Panel 1")
@@ -295,9 +304,10 @@ test_that("engine_paginate(continuous = TRUE) collapses to one all-columns page"
   )
   spec <- tabular(df) |>
     cols(
-      g = col_spec(usage = "group", group_display = "column"),
-      stat = col_spec(usage = "id")
+      g = col_spec(),
+      stat = col_spec()
     ) |>
+    group_rows(by = "g", display = "column") |>
     paginate(panels = 2L)
   plan <- tabular:::engine_paginate(spec, continuous = TRUE)
   # One panel page, full column set in original order.
@@ -313,7 +323,8 @@ test_that("engine_paginate(continuous = TRUE) collapses to one all-columns page"
 test_that("engine_paginate() reports panel_spans = NULL for a single panel", {
   df <- data.frame(g = 1:3, x = 4:6, y = 7:9)
   spec <- tabular(df) |>
-    cols(g = col_spec(usage = "group")) |>
+    cols(g = col_spec()) |>
+    group_rows(by = "g") |>
     paginate(panels = 1L)
   plan <- tabular:::engine_paginate(spec, continuous = TRUE)
   expect_null(plan$panel_spans)
@@ -387,9 +398,10 @@ test_that("engine_paginate() with panels > 1 and no non-group cols is single pan
   df <- data.frame(g = 1:3, h = c("x", "y", "z"))
   spec <- tabular(df) |>
     cols(
-      g = col_spec(usage = "group", label = "G"),
-      h = col_spec(usage = "group", label = "H")
+      g = col_spec(label = "G"),
+      h = col_spec(label = "H")
     ) |>
+    group_rows(by = c("g", "h")) |>
     paginate(panels = 3L)
   plan <- tabular:::engine_paginate(spec)
   expect_identical(plan$total_panels, 1L)
@@ -471,7 +483,8 @@ test_that("emit() does not render col_spec(visible = FALSE) columns across backe
 test_that("engine_paginate() emits keep_with_next FALSE when keep_together is unset", {
   df <- data.frame(grp = c("A", "A", "B", "B", "B"), val = 1:5)
   spec <- tabular(df) |>
-    cols(grp = col_spec(usage = "group", label = "Group"))
+    cols(grp = col_spec(label = "Group")) |>
+    group_rows(by = "grp")
   plan <- tabular:::engine_paginate(spec)
   expect_type(plan$keep_with_next, "logical")
   expect_length(plan$keep_with_next, 5L)
@@ -484,7 +497,8 @@ test_that("engine_paginate() glues a small group fully via keep_with_next", {
   # row 5 (last of B; nothing to glue forward to).
   df <- data.frame(grp = c("A", "A", "A", "B", "B"), val = 1:5)
   spec <- tabular(df) |>
-    cols(grp = col_spec(usage = "group", label = "Group")) |>
+    cols(grp = col_spec(label = "Group")) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp")
   plan <- tabular:::engine_paginate(spec)
   expect_equal(plan$keep_with_next, c(TRUE, TRUE, FALSE, TRUE, FALSE))
@@ -496,7 +510,8 @@ test_that("engine_paginate() applies edge protection on an oversized group", {
   # = 1 row glue; middle rows free to split.
   df <- data.frame(grp = rep("A", 12L), val = 1:12)
   spec <- tabular(df) |>
-    cols(grp = col_spec(usage = "group", label = "Group")) |>
+    cols(grp = col_spec(label = "Group")) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp", orphan_floor = 3L, widow_floor = 2L)
   spec <- S7::set_props(spec, preset = preset_spec(font_size = 72))
   plan <- tabular:::engine_paginate(spec)
@@ -519,7 +534,8 @@ test_that("engine_paginate(native = TRUE) emits one vertical page per panel", {
   # (Word paginates the body).
   df <- data.frame(grp = rep(c("A", "B"), each = 20L), val = 1:40)
   spec <- tabular(df) |>
-    cols(grp = col_spec(usage = "group", label = "Group")) |>
+    cols(grp = col_spec(label = "Group")) |>
+    group_rows(by = "grp") |>
     preset(orientation = "portrait", font_size = 24)
 
   split <- tabular:::engine_paginate(spec, native = FALSE)
@@ -536,7 +552,8 @@ test_that("engine_paginate(native = TRUE) emits one vertical page per panel", {
 test_that("engine_paginate() returns repeat_titles/headers/footnotes flags", {
   df <- data.frame(grp = c("A", "B"), val = 1:2)
   spec <- tabular(df) |>
-    cols(grp = col_spec(usage = "group", label = "Group")) |>
+    cols(grp = col_spec(label = "Group")) |>
+    group_rows(by = "grp") |>
     paginate(repeat_content = c("titles", "headers"))
   plan <- tabular:::engine_paginate(spec)
   expect_true(plan$repeat_titles)
@@ -590,9 +607,10 @@ test_that("RTF backend emits \\trkeep + \\keepn on non-last body rows", {
   df <- data.frame(grp = c("A", "A", "B"), val = c("1", "2", "3"))
   spec <- tabular(df) |>
     cols(
-      grp = col_spec(usage = "group", label = "Group"),
+      grp = col_spec(label = "Group"),
       val = col_spec(label = "Value")
-    )
+    ) |>
+    group_rows(by = "grp")
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -606,9 +624,10 @@ test_that("LaTeX backend emits \\\\* (no-page-break terminator) on non-last rows
   df <- data.frame(grp = c("A", "A", "B"), val = c("1", "2", "3"))
   spec <- tabular(df) |>
     cols(
-      grp = col_spec(usage = "group", label = "Group"),
+      grp = col_spec(label = "Group"),
       val = col_spec(label = "Value")
-    )
+    ) |>
+    group_rows(by = "grp")
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")

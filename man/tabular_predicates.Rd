@@ -8,6 +8,7 @@
 \alias{is_col_spec}
 \alias{is_header_node}
 \alias{is_sort_spec}
+\alias{is_row_group_spec}
 \alias{is_style_node}
 \alias{is_style_layer}
 \alias{is_style_spec}
@@ -28,6 +29,8 @@ is_col_spec(x)
 is_header_node(x)
 
 is_sort_spec(x)
+
+is_row_group_spec(x)
 
 is_style_node(x)
 
@@ -116,13 +119,14 @@ spec <- tabular(
              "Safety Population")
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Characteristic"),
+    variable   = col_spec(label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
     placebo  = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
     drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
+  group_rows(by = "variable", display = "column") |>
   sort_rows(by = c("variable", "stat_label"))
 
 stopifnot(

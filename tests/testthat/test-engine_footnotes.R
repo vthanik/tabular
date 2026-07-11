@@ -3,10 +3,11 @@
 mk_fn_spec <- function() {
   tabular(cdisc_saf_aesocpt) |>
     cols(
-      soc = col_spec(usage = "group"),
+      soc = col_spec(),
       label = col_spec(label = "PT"),
       Total = col_spec(label = "Total")
-    )
+    ) |>
+    group_rows(by = "soc")
 }
 
 # ---------------------------------------------------------------------
@@ -160,11 +161,12 @@ test_that("a header anchor on an unknown column is dropped (assign returns NULL)
 mk_hidden_fn_spec <- function() {
   tabular(cdisc_saf_aesocpt) |>
     cols(
-      soc = col_spec(usage = "group"),
+      soc = col_spec(),
       label = col_spec(label = "PT"),
       n_total = col_spec(visible = FALSE),
       Total = col_spec(label = "Total")
-    )
+    ) |>
+    group_rows(by = "soc")
 }
 
 test_that("a body footnote on a hidden column warns and is dropped (no orphan)", {
@@ -316,10 +318,11 @@ test_that("an anchor that matches nothing warns and is dropped", {
 test_that("a title-anchored footnote marks the last title line", {
   spec <- tabular(cdisc_saf_aesocpt, titles = c("Table 1", "AE Table")) |>
     cols(
-      soc = col_spec(usage = "group"),
+      soc = col_spec(),
       label = col_spec(label = "PT"),
       Total = col_spec(label = "Total")
     ) |>
+    group_rows(by = "soc") |>
     footnote("Source: ADAE.", .at = cells_title())
   out <- withr::local_tempfile(fileext = ".html")
   suppressWarnings(emit(spec, out))
@@ -367,10 +370,11 @@ test_that("the marker is identical across subgroups and the block emits once", {
   spec <- tabular(cdisc_saf_vital) |>
     cols(
       paramcd = col_spec(visible = FALSE),
-      visit = col_spec(usage = "group"),
+      visit = col_spec(),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
+    group_rows(by = "visit") |>
     subgroup("param") |>
     footnote(
       "Across groups.",

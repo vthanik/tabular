@@ -287,7 +287,8 @@ test_that("cells_group_headers() border reaches HTML + DOCX (#issue5)", {
         stringsAsFactors = FALSE
       )
     ) |>
-      cols(grp = col_spec(usage = "group", label = "Group")) |>
+      cols(grp = col_spec(label = "Group")) |>
+      group_rows(by = "grp") |>
       style(
         border_bottom = brdr("thick", "dashed", "#ff1133"),
         .at = cells_group_headers()
@@ -362,16 +363,14 @@ mk_thick_outer_spec <- function() {
   tabular(d, titles = "T") |>
     cols(
       grp = col_spec(
-        usage = "group",
-        group_display = "column",
-        group_skip = TRUE,
         label = "C",
         align = "left"
       ),
-      stat = col_spec(usage = "id", label = "Stat", align = "left"),
+      stat = col_spec(label = "Stat", align = "left"),
       a = col_spec(label = "A", align = "right"),
       b = col_spec(label = "B", align = "right")
     ) |>
+    group_rows(by = "grp", display = "column", skip = TRUE) |>
     headers("Grp" = c("a", "b")) |>
     style(border = brdr(width = "thick"), .at = cells_table(side = "outer"))
 }

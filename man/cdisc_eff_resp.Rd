@@ -26,8 +26,7 @@ used as the section sort / partition key.}
 \item{\code{group_label}}{Character section label, repeating across
 every row of its groupid block ("Best Overall Response" x7,
 "Objective Response Rate" x2, ...). Drives the engine's
-\code{usage = "group"} header_row synthesis when paired with
-\code{group_display = "header_row"}.}
+\code{\link[=group_rows]{group_rows()}} header_row synthesis.}
 }
 }
 \source{
@@ -43,8 +42,8 @@ response (BOR) per CDISC category, plus derived ORR, CBR, and DCR
 rate rows each followed by an exact (Clopper-Pearson) 95\% CI row.
 Four sections (Best Overall Response, Objective Response Rate,
 Clinical Benefit Rate, Disease Control Rate) are encoded via the
-\code{groupid} + \code{group_label} pair so a single \code{usage = "group"} /
-\code{group_display = "header_row"} on \code{group_label} synthesises one
+\code{groupid} + \code{group_label} pair so a single
+\code{group_rows(by = "group_label")} synthesises one
 bold section band per groupid block; the body rows render below
 each band, auto-indented one level by the \code{"header_row"} section
 itself (the stub needs no \code{indent} — the section supplies it).
@@ -67,7 +66,6 @@ tabular(
   )
 ) |>
   cols(
-    group_label = col_spec(usage = "group", group_display = "header_row"),
     stat_label  = col_spec(label = "Response"),
     groupid     = col_spec(visible = FALSE),
     row_type    = col_spec(visible = FALSE),
@@ -83,7 +81,8 @@ tabular(
       label = "Drug 100\nN={ne['drug_100']}",
       align = "decimal"
     )
-  )
+  ) |>
+  group_rows(by = "group_label")
 }
 \seealso{
 \link{cdisc_eff_n} for BigN denominators.

@@ -59,13 +59,14 @@ test_that("emit(.html) renders cdisc_saf_demo golden pipeline end to end", {
     footnotes = "Source: ADSL."
   ) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   lines <- readLines(out)
@@ -528,7 +529,8 @@ test_that("horizontal panels collapse to one scroll wrapper on HTML (continuous)
     c4 = 7:8
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(panels = 2L)
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
@@ -551,13 +553,14 @@ test_that("default preset emits a width-less content-fitted <table> end-to-end",
     footnotes = "Source: ADSL."
   ) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out), collapse = "\n")
@@ -796,13 +799,14 @@ test_that("LaTeX / RTF / DOCX widths agree byte-for-byte; HTML is responsive (no
   ) |>
     preset(orientation = "portrait") |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   html_file <- withr::local_tempfile(fileext = ".html")
   tex_file <- withr::local_tempfile(fileext = ".tex")
   rtf_file <- withr::local_tempfile(fileext = ".rtf")
@@ -930,7 +934,8 @@ test_that("multi-page emit produces a single continuous table with print-only pa
     x = seq_len(24L)
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp") |>
     preset(font_size = 24L)
   out <- withr::local_tempfile(fileext = ".html")
@@ -977,7 +982,8 @@ test_that("continuation marker is a no-op for HTML output", {
     x = seq_len(24L)
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp", continuation = "(continued)") |>
     preset(font_size = 24L)
   out <- withr::local_tempfile(fileext = ".html")
@@ -996,7 +1002,8 @@ test_that("horizontal panels collapse to one <table> with a panel-spanner note (
     c4 = 7:8
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group", group_display = "column")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp", display = "column") |>
     paginate(panels = 2L)
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
@@ -1016,7 +1023,7 @@ test_that("horizontal panels collapse to one <table> with a panel-spanner note (
 })
 
 test_that("panel note spans the chunks when there is no stub column", {
-  # No `usage = "group"` (or "id") column: panels split all columns,
+  # No grouping keys and no repeat_cols: panels split all columns,
   # so the note spans each chunk with no leading blank stub cell.
   d <- data.frame(c1 = 1:2, c2 = 3:4, c3 = 5:6, c4 = 7:8)
   spec <- tabular(d) |> paginate(panels = 2L)
@@ -1319,13 +1326,14 @@ test_that("cdisc_saf_demo golden pipeline matches the pinned .html snapshot", {
     footnotes = "Source: ADSL."
   ) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo\nN=86", align = "decimal"),
       drug_50 = col_spec(label = "Low Dose\nN=96", align = "decimal"),
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   # The CSS scope id is substr(rlang::hash(body), 1, 10); rlang::hash embeds
@@ -1672,12 +1680,13 @@ test_that("HTML indent cells emit padding-left and strip engine prefix", {
   )
   spec <- tabular(df, titles = "AE") |>
     cols(
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       label = col_spec(label = "Category", indent = "indent_level"),
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = "soc")
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -1776,12 +1785,13 @@ test_that("indent padding-left is AFM-derived per preset font", {
     tabular(df, titles = "AE") |>
       preset(font_family = font_family) |>
       cols(
-        soc = col_spec(usage = "group", group_display = "header_row"),
+        soc = col_spec(),
         label = col_spec(label = "Category", indent = "indent_level"),
         indent_level = col_spec(visible = FALSE),
         row_type = col_spec(visible = FALSE),
         n = col_spec(label = "N")
-      )
+      ) |>
+      group_rows(by = "soc")
   }
 
   # Courier: "  " is 1200/1000-em -> 1.2em at depth 1, additive
@@ -1903,12 +1913,13 @@ test_that("indent padding-left is additive via calc + uses %g format", {
   spec <- tabular(df, titles = "AE") |>
     preset(font_family = "Courier") |>
     cols(
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       label = col_spec(label = "Category", indent = "indent_level"),
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = "soc")
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -1948,12 +1959,13 @@ test_that("indent calc trims trailing zeros for proportional fonts too", {
   spec <- tabular(df, titles = "AE") |>
     preset(font_family = "Helvetica") |>
     cols(
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       label = col_spec(label = "Category", indent = "indent_level"),
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = "soc")
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -2324,7 +2336,7 @@ mk_wrap_indent_spec <- function() {
   )
   tabular(df, titles = "AE") |>
     cols(
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       label = col_spec(
         label = "Category",
         indent = "indent_level",
@@ -2333,7 +2345,8 @@ mk_wrap_indent_spec <- function() {
       indent_level = col_spec(visible = FALSE),
       row_type = col_spec(visible = FALSE),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = "soc")
 }
 
 test_that("HTML emits padding-left on data rows but NOT on header rows (Change C)", {
@@ -2371,11 +2384,12 @@ test_that("HTML emits <tr class='tabular-group-header'> with bold spanning cell 
   )
   spec <- tabular(df, titles = "Eff") |>
     cols(
-      group_label = col_spec(usage = "group", group_display = "header_row"),
+      group_label = col_spec(),
       stat_label = col_spec(indent = 1, label = "Response"),
       placebo = col_spec(label = "Placebo", align = "decimal"),
       drug_50 = col_spec(label = "Drug 50", align = "decimal")
-    )
+    ) |>
+    group_rows(by = "group_label")
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -2418,11 +2432,12 @@ test_that("HTML nested bands: band-1 header flush, band-2 header indented (Chang
   )
   spec <- tabular(df, titles = "Nested") |>
     cols(
-      section = col_spec(usage = "group", group_display = "header_row"),
-      subsection = col_spec(usage = "group", group_display = "header_row"),
+      section = col_spec(),
+      subsection = col_spec(),
       label = col_spec(label = "Item"),
       n = col_spec(label = "N")
-    )
+    ) |>
+    group_rows(by = c("section", "subsection"))
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
   html <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -2502,13 +2517,14 @@ test_that("HTML structural rules are SSOT-driven: overrides and the 'none' clear
   # resolved chrome_style + body bottomrule manifest.
   base <- tabular(cdisc_saf_demo, footnotes = "Source: ADSL.") |>
     cols(
-      variable = col_spec(usage = "group", label = "Char"),
+      variable = col_spec(label = "Char"),
       stat_label = col_spec(label = "Stat"),
       placebo = col_spec(label = "PBO"),
       drug_50 = col_spec(label = "D50"),
       drug_100 = col_spec(label = "D100"),
       Total = col_spec(label = "Tot")
-    )
+    ) |>
+    group_rows(by = "variable")
 
   # Default: bottomrule present at the SSOT width.
   f0 <- withr::local_tempfile(fileext = ".html")
@@ -2555,13 +2571,14 @@ test_that("HTML folds footnoterule into the bottomrule (continuous format, no fo
   # an inline `border-bottom: none` defeats the folded CSS rule).
   base <- tabular(cdisc_saf_demo, footnotes = "Source: ADSL.") |>
     cols(
-      variable = col_spec(usage = "group", label = "Char"),
+      variable = col_spec(label = "Char"),
       stat_label = col_spec(label = "Stat"),
       placebo = col_spec(label = "PBO"),
       drug_50 = col_spec(label = "D50"),
       drug_100 = col_spec(label = "D100"),
       Total = col_spec(label = "Tot")
-    )
+    ) |>
+    group_rows(by = "variable")
   f <- withr::local_tempfile(fileext = ".html")
   emit(
     base |>
@@ -2591,13 +2608,14 @@ test_that("HTML bold follows the user option: bold = FALSE renders normal, not t
   # overrides the class. (Unset bold inherits the 600 class default.)
   base <- tabular(cdisc_saf_demo, titles = "My Title") |>
     cols(
-      variable = col_spec(usage = "group", label = "Char"),
+      variable = col_spec(label = "Char"),
       stat_label = col_spec(label = "Stat"),
       placebo = col_spec(label = "PBO"),
       drug_50 = col_spec(label = "D50"),
       drug_100 = col_spec(label = "D100"),
       Total = col_spec(label = "Tot")
-    )
+    ) |>
+    group_rows(by = "variable")
   emit_str <- function(spec) {
     f <- withr::local_tempfile(
       fileext = ".html",
@@ -2630,13 +2648,14 @@ test_that("HTML bold follows the user option: bold = FALSE renders normal, not t
 test_that("rules='frame' draws L/R as table-level CSS borders spanning all rows in HTML (#frame-left)", {
   spec <- tabular(cdisc_saf_demo, titles = "t", footnotes = "f") |>
     cols(
-      variable = col_spec(usage = "group", group_display = "header_row"),
+      variable = col_spec(),
       stat_label = col_spec(align = "left"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     preset(rules = "frame")
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
@@ -2691,13 +2710,14 @@ test_that("preset(padding=list(header=...)) emits header-surface padding (#threa
 test_that("stripe + header background reach special rows in HTML (#thread-B)", {
   spec <- tabular(cdisc_saf_demo, titles = "T", footnotes = "F") |>
     cols(
-      variable = col_spec(usage = "group", group_display = "header_row"),
+      variable = col_spec(),
       stat_label = col_spec(align = "left"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     headers("Active" = c("drug_50", "drug_100")) |>
     preset(
       stripe = c(odd = "#f5f5f5", even = "#ffffff"),

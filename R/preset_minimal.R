@@ -2,7 +2,7 @@
 # `preset()` that applies the stripped-down "minimal" look: the
 # column-label divider (`midrule`) is the only rule drawn, and every
 # bold-by-default surface (title, column headers, subgroup banner, and
-# the `usage = "group"` section-header rows) renders in normal weight.
+# the group_rows() section-header rows) renders in normal weight.
 # Deliberately the ONLY `preset_*()` theme constructor: the rule presets
 # already ship as `rules = "booktabs" / "grid" / "frame" / "none"` string
 # sugar, so there is no `preset_booktabs()` / `preset_grid()` /
@@ -14,7 +14,7 @@
 #' divider (`midrule`) becomes the only rule drawn, and every
 #' bold-by-default surface renders in normal weight: the title block,
 #' the column-header band, the subgroup banner, and the section-header
-#' rows synthesized for `usage = "group"` columns. The analogue of
+#' rows synthesized for [`group_rows()`] keys. The analogue of
 #' ggplot2's `theme_minimal()`, composable on the pipe between the build
 #' verbs and the terminal [`emit()`] / [`as_grid()`].
 #'

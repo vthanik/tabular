@@ -30,7 +30,7 @@ Apply the stripped-down table look in one verb. The column-label
 divider (\code{midrule}) becomes the only rule drawn, and every
 bold-by-default surface renders in normal weight: the title block,
 the column-header band, the subgroup banner, and the section-header
-rows synthesized for \code{usage = "group"} columns. The analogue of
+rows synthesized for \code{\link[=group_rows]{group_rows()}} keys. The analogue of
 ggplot2's \code{theme_minimal()}, composable on the pipe between the build
 verbs and the terminal \code{\link[=emit]{emit()}} / \code{\link[=as_grid]{as_grid()}}.
 }

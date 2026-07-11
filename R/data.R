@@ -22,7 +22,7 @@
 #' \describe{
 #'   \item{`variable`}{Display-block label (`"Age (years)"`,
 #'     `"Sex, n (%)"`, `"Race, n (%)"`). Driven by
-#'     `cols(usage = "group")` to collapse repeat values at render.}
+#'     [`group_rows()`] to collapse repeat values at render.}
 #'   \item{`stat_label`}{Statistic or level label
 #'     (`"n"`, `"Mean (SD)"`, `"Median"`, `"M"`, `"WHITE"`, ...).}
 #'   \item{`placebo`}{Placebo arm cell text.}
@@ -51,7 +51,7 @@
 #'   )
 #' ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Parameter"),
+#'     variable   = col_spec(label = "Parameter"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(
 #'       label = "Placebo\nN={n['placebo']}",
@@ -251,7 +251,7 @@
 #' \describe{
 #'   \item{`paramcd`}{CDISC parameter code (`SYSBP` / `DIABP` /
 #'     `PULSE` / `TEMP`). Repeats across visit and statistic; use
-#'     `col_spec(usage = "group")` to collapse.}
+#'     [`group_rows()`] to collapse.}
 #'   \item{`param`}{Decoded parameter name.}
 #'   \item{`visit`}{Analysis visit label (`"Baseline"` / `"Week 8"` /
 #'     `"Week 16"` / `"End of Treatment"`).}
@@ -276,8 +276,8 @@
 #' ) |>
 #'   cols(
 #'     paramcd    = col_spec(visible = FALSE),
-#'     param      = col_spec(usage = "group", label = "Parameter"),
-#'     visit      = col_spec(usage = "group", label = "Visit"),
+#'     param      = col_spec(label = "Parameter"),
+#'     visit      = col_spec(label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(
 #'       label = "Placebo\nN={n['placebo']}",
@@ -344,8 +344,8 @@
 #' tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
 #'   cols(
 #'     paramcd    = col_spec(visible = FALSE),
-#'     param      = col_spec(usage = "group", label = "Parameter"),
-#'     visit      = col_spec(usage = "group", label = "Visit"),
+#'     param      = col_spec(label = "Parameter"),
+#'     visit      = col_spec(label = "Visit"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
@@ -362,8 +362,8 @@
 #' rate rows each followed by an exact (Clopper-Pearson) 95% CI row.
 #' Four sections (Best Overall Response, Objective Response Rate,
 #' Clinical Benefit Rate, Disease Control Rate) are encoded via the
-#' `groupid` + `group_label` pair so a single `usage = "group"` /
-#' `group_display = "header_row"` on `group_label` synthesises one
+#' `groupid` + `group_label` pair so a single
+#' `group_rows(by = "group_label")` synthesises one
 #' bold section band per groupid block; the body rows render below
 #' each band, auto-indented one level by the `"header_row"` section
 #' itself (the stub needs no `indent` — the section supplies it).
@@ -389,8 +389,7 @@
 #'   \item{`group_label`}{Character section label, repeating across
 #'     every row of its groupid block ("Best Overall Response" x7,
 #'     "Objective Response Rate" x2, ...). Drives the engine's
-#'     `usage = "group"` header_row synthesis when paired with
-#'     `group_display = "header_row"`.}
+#'     [`group_rows()`] header_row synthesis.}
 #' }
 #'
 #' @source Derived in `data-raw/bundle-demo.R` from
@@ -416,7 +415,6 @@
 #'   )
 #' ) |>
 #'   cols(
-#'     group_label = col_spec(usage = "group", group_display = "header_row"),
 #'     stat_label  = col_spec(label = "Response"),
 #'     groupid     = col_spec(visible = FALSE),
 #'     row_type    = col_spec(visible = FALSE),
@@ -432,7 +430,8 @@
 #'       label = "Drug 100\nN={ne['drug_100']}",
 #'       align = "decimal"
 #'     )
-#'   )
+#'   ) |>
+#'   group_rows(by = "group_label")
 "cdisc_eff_resp"
 
 #' Treatment-effect estimates by model
@@ -467,7 +466,7 @@
 #' # na_text = "--" renders the MMRM row's NA bounds as dashes.
 #' tabular(cdisc_eff_estimates, titles = "Treatment-effect estimates by model") |>
 #'   cols(
-#'     model    = col_spec(usage = "group",  label = "Model", valign = "top"),
+#'     model    = col_spec(label = "Model", valign = "top"),
 #'     estimate = col_spec(label = "Estimate", align = "decimal",
 #'                         format = "%.2f"),
 #'     lower_ci = col_spec(label = "Lower\n95% CI", align = "decimal",

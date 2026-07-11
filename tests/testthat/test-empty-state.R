@@ -18,7 +18,8 @@ mk_empty <- function(...) {
     footnotes = "F",
     empty_text = "No data."
   ) |>
-    cols(grp = col_spec(usage = "group", group_display = "header_row"))
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp")
   if (...length() > 0L) {
     spec <- preset(spec, ...)
   }
@@ -36,13 +37,14 @@ mk_empty_subgroup <- function() {
     cols(
       sex_n = col_spec(visible = FALSE),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group"),
+      param = col_spec(),
       stat_label = col_spec(),
       placebo = col_spec(),
       drug_50 = col_spec(),
       drug_100 = col_spec(),
       Total = col_spec()
     ) |>
+    group_rows(by = "param") |>
     subgroup(
       by = c("sex", "visit"),
       label = "Sex: {sex} / Visit: {visit}",
@@ -326,9 +328,10 @@ test_that("empty-state default message (no empty_text) renders on every backend 
     titles = "T"
   ) |>
     cols(
-      grp = col_spec(usage = "group", group_display = "header_row"),
+      grp = col_spec(),
       x = col_spec()
-    )
+    ) |>
+    group_rows(by = "grp")
   msg <- tabular:::.tabular_empty_text_default
   for (ext in c(".rtf", ".tex", ".html", ".md")) {
     expect_match(emit_read(spec, ext), msg, fixed = TRUE)

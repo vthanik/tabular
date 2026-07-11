@@ -561,7 +561,7 @@ test_that("stat_label carries no leading-space indent", {
     )
   )
   # No baked-in indent: stat_label matches its trimmed form on every row.
-  # Indentation is applied downstream via col_spec(usage = "group") /
+  # Indentation is applied downstream via group_rows() /
   # group_display, never by pivot_across.
   expect_false(any(startsWith(out$stat_label, " "), na.rm = TRUE))
   expect_identical(out$stat_label, trimws(out$stat_label))

@@ -149,13 +149,14 @@ lapply(
 # plus hairline column separators on a demographics table.
 tabular(cdisc_saf_demo, titles = "Demographics with a full grid") |>
   cols(
-    variable   = col_spec(usage = "group", label = "Characteristic"),
+    variable   = col_spec(label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
     Total      = col_spec(label = "Total",    align = "decimal")
   ) |>
+  group_rows(by = "variable") |>
   style(border = brdr(width = "medium"), .at = cells_table(side = "outer")) |>
   style(border_left = brdr("hairline"), .at = cells_table(side = "cols"))
 

@@ -113,13 +113,14 @@ test_that("rules='frame' draws L/R structurally via the manifest, not per-cell (
   # reach data rows. So no per-cell L/R stamp lands at all.
   spec <- tabular(cdisc_saf_demo, titles = "t", footnotes = "f") |>
     cols(
-      variable = col_spec(usage = "group", group_display = "header_row"),
+      variable = col_spec(),
       stat_label = col_spec(align = "left"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     preset(rules = "frame")
   cs <- tabular:::engine_borders(spec, tabular:::engine_style(spec))
   expect_true(is.na(cs[[1L, "stat_label"]]@border_left_style))

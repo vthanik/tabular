@@ -99,7 +99,8 @@ tabular(
 # debugging spec composition without paying the HTML render
 # cost.
 spec <- tabular(cdisc_saf_demo, titles = "Demographics") |>
-  cols(variable = col_spec(usage = "group", label = "Characteristic"))
+  cols(variable = "Characteristic") |>
+  group_rows(by = "variable")
 
 print(spec, output = "cli")
 

@@ -137,10 +137,11 @@ test_that("as_grid() sections decimal columns on group_skip so n_pct stays tight
   )
   spec <- tabular(d) |>
     cols(
-      variable = col_spec(usage = "group"),
+      variable = col_spec(),
       stat = col_spec(),
       arm = col_spec(align = "decimal")
-    )
+    ) |>
+    group_rows(by = "variable")
   g <- as_grid(spec)
   out <- g@pages[[1L]]$cells_text[, "arm"]
   sex_rows <- out[grepl("16\\.3|83\\.7", out)]
@@ -199,7 +200,8 @@ test_that("as_grid() splits across pages when pagination forces it", {
     x = seq_len(24L)
   )
   spec <- tabular(d) |>
-    cols(grp = col_spec(usage = "group")) |>
+    cols(grp = col_spec()) |>
+    group_rows(by = "grp") |>
     paginate(keep_together = "grp") |>
     preset(font_size = 24L, paper_size = "letter", orientation = "portrait")
   g <- as_grid(spec)
@@ -246,13 +248,14 @@ test_that("stripe never overwrites an explicit per-cell background", {
 test_that("stripe fills synthesised group-header + blank rows (look-ahead parity)", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", group_display = "header_row"),
+      variable = col_spec(),
       stat_label = col_spec(align = "left"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     preset(stripe = c(odd = "#f5f5f5", even = "#ffffff"))
   page <- as_grid(spec)@pages[[1L]]
   st <- page$cells_style
@@ -281,13 +284,14 @@ test_that("stripe fills synthesised group-header + blank rows (look-ahead parity
 test_that("explicit cells_group_headers(background=) beats the stripe fill", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", group_display = "header_row"),
+      variable = col_spec(),
       stat_label = col_spec(align = "left"),
       placebo = col_spec(align = "decimal"),
       drug_50 = col_spec(align = "decimal"),
       drug_100 = col_spec(align = "decimal"),
       Total = col_spec(align = "decimal")
     ) |>
+    group_rows(by = "variable") |>
     preset(stripe = c(odd = "#f5f5f5", even = "#ffffff")) |>
     style(background = "#abcdef", .at = cells_group_headers())
   page <- as_grid(spec)@pages[[1L]]
@@ -365,9 +369,10 @@ mk_band_spec <- function() {
   tabular(d) |>
     cols(
       label = col_spec(label = "PT"),
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       placebo = col_spec(label = "Placebo")
-    )
+    ) |>
+    group_rows(by = "soc")
 }
 
 test_that("header_meta carries group_col + data_idx on header rows, NULL elsewhere", {
@@ -492,15 +497,13 @@ mk_affix_spec <- function() {
   tabular(d) |>
     cols(
       grp = col_spec(
-        usage = "group",
-        group_display = "column",
-        group_skip = TRUE,
         label = "C",
         align = "left"
       ),
-      stat = col_spec(usage = "id", label = "Stat", align = "left"),
+      stat = col_spec(label = "Stat", align = "left"),
       a = col_spec(label = "A", align = "right")
     ) |>
+    group_rows(by = "grp", display = "column", skip = TRUE) |>
     style(pretext = "PFX ", .at = cells_body(j = "stat")) |>
     style(posttext = " SFX", .at = cells_body(j = "a"))
 }
@@ -563,10 +566,11 @@ test_that("subgroup merge keeps every subgroup's QC rows (#cw2)", {
   )
   spec <- tabular(df) |>
     cols(
-      grp = col_spec(usage = "group"),
+      grp = col_spec(),
       stat = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
+    group_rows(by = "grp") |>
     subgroup("grp")
   g <- as_grid(spec)
   # the data_file QC snapshot must span ALL subgroups, not just the first
@@ -583,10 +587,11 @@ test_that("subgroup merge widens a column to the widest subgroup (#cw2)", {
   mk <- function(sub) {
     s <- tabular(df) |>
       cols(
-        grp = col_spec(usage = "group"),
+        grp = col_spec(),
         stat = col_spec(label = "Statistic"),
         val = col_spec(label = "Value")
-      )
+      ) |>
+      group_rows(by = "grp")
     if (sub) {
       s <- subgroup(s, "grp")
     }

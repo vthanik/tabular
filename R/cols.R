@@ -40,8 +40,8 @@
 #' a field left at its "unset" sentinel leaves the existing value
 #' intact. Every mergeable field has a genuine unset sentinel, so a
 #' later call can also *restore* a default (e.g. `visible = TRUE`
-#' re-shows a hidden column, `group_display = "header_row"` resets a
-#' prior `"column"`). This lets you build a column's spec in stages —
+#' re-shows a hidden column). This lets you build a column's spec in
+#' stages —
 #' declare the label-and-alignment block up front, add the width once
 #' you know it fits, then attach a sort key, all without re-stating
 #' earlier attributes. Essential when generating specs programmatically

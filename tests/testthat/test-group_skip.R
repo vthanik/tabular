@@ -1,69 +1,13 @@
-# col_spec@group_skip + blank-row injection. PROC REPORT
-# `BREAK AFTER var / SKIP` semantics, lifted to per-column control.
+# group_rows() skip + blank-row injection. PROC REPORT
+# `BREAK AFTER var / SKIP` semantics, lifted to per-key control.
 #
-# Per-column `group_skip`:
+# Per-key `skip`:
 #   TRUE  — insert a blank row before each value transition.
 #   FALSE — never insert a blank.
-#   NA (default) — follow `group_display`: TRUE for header_row,
+#   NA (default) — follow `display`: TRUE for header_row / none,
 #                  FALSE for column / column_repeat.
-
-# ---------------------------------------------------------------------
-# col_spec validator + default semantics
-# ---------------------------------------------------------------------
-
-test_that("col_spec defaults group_skip to NA (follow group_display)", {
-  expect_true(is.na(col_spec()@group_skip))
-})
-
-test_that("col_spec accepts TRUE / FALSE / NA explicitly", {
-  expect_true(col_spec(group_skip = TRUE)@group_skip)
-  expect_false(col_spec(group_skip = FALSE)@group_skip)
-  expect_true(is.na(col_spec(group_skip = NA)@group_skip))
-})
-
-test_that("col_spec rejects non-logical / length>1 group_skip", {
-  expect_error(col_spec(group_skip = "yes"), class = "tabular_error_input")
-  expect_error(
-    col_spec(group_skip = c(TRUE, FALSE)),
-    class = "tabular_error_input"
-  )
-  expect_error(col_spec(group_skip = 1), class = "tabular_error_input")
-})
-
-test_that(".effective_group_skip() follows group_display when group_skip is NA", {
-  expect_true(
-    tabular:::.effective_group_skip(
-      col_spec(usage = "group", group_display = "header_row")
-    )
-  )
-  expect_false(
-    tabular:::.effective_group_skip(
-      col_spec(usage = "group", group_display = "column")
-    )
-  )
-  expect_false(
-    tabular:::.effective_group_skip(
-      col_spec(usage = "group", group_display = "column_repeat")
-    )
-  )
-})
-
-test_that(".effective_group_skip() honours explicit TRUE / FALSE", {
-  expect_true(
-    tabular:::.effective_group_skip(
-      col_spec(usage = "group", group_display = "column", group_skip = TRUE)
-    )
-  )
-  expect_false(
-    tabular:::.effective_group_skip(
-      col_spec(
-        usage = "group",
-        group_display = "header_row",
-        group_skip = FALSE
-      )
-    )
-  )
-})
+# The NA-resolution unit tests live in test-aaa_class.R
+# (.effective_row_group_skip).
 
 # ---------------------------------------------------------------------
 # End-to-end: default behavior matches header_row mode
@@ -72,10 +16,11 @@ test_that(".effective_group_skip() honours explicit TRUE / FALSE", {
 test_that("as_grid() default header_row group injects blanks between sections", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
-    )
+    ) |>
+    group_rows(by = "variable")
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
   expect_equal(sum(page1$is_blank_row), sum(page1$is_header_row) - 1L)
@@ -84,18 +29,16 @@ test_that("as_grid() default header_row group injects blanks between sections", 
   expect_false(page1$is_blank_row[[last]])
 })
 
-test_that("explicit group_skip = FALSE on a header_row column suppresses blanks", {
+test_that("explicit skip = FALSE on a header_row key suppresses blanks", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
-        usage = "group",
-        group_display = "header_row",
-        group_skip = FALSE,
         label = "Characteristic"
       ),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
-    )
+    ) |>
+    group_rows(by = "variable", skip = FALSE)
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
   expect_false(any(page1$is_blank_row))
@@ -103,18 +46,16 @@ test_that("explicit group_skip = FALSE on a header_row column suppresses blanks"
   expect_true(any(page1$is_header_row))
 })
 
-test_that("explicit group_skip = TRUE on a 'column' group injects blanks too", {
+test_that("explicit skip = TRUE on a 'column' key injects blanks too", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
-        usage = "group",
-        group_display = "column",
-        group_skip = TRUE,
         label = "Characteristic"
       ),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
-    )
+    ) |>
+    group_rows(by = "variable", display = "column", skip = TRUE)
   g <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   page1 <- g@pages[[1L]]
   # Variable visible (column mode); blanks between variable transitions.
@@ -131,10 +72,11 @@ test_that("explicit group_skip = TRUE on a 'column' group injects blanks too", {
 test_that("blank row sits BEFORE the header row of the next group", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
-      variable = col_spec(usage = "group", label = "Characteristic"),
+      variable = col_spec(label = "Characteristic"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
-    )
+    ) |>
+    group_rows(by = "variable")
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
   blank_idx <- which(page1$is_blank_row)
@@ -160,11 +102,12 @@ test_that("two group columns ending on the same row produce ONE blank, not two",
   )
   spec <- tabular(df) |>
     cols(
-      outer = col_spec(usage = "group", label = "Outer"),
-      inner = col_spec(usage = "group", label = "Inner"),
+      outer = col_spec(label = "Outer"),
+      inner = col_spec(label = "Inner"),
       stat = col_spec(label = "Statistic"),
       val = col_spec(label = "Value")
-    )
+    ) |>
+    group_rows(by = c("outer", "inner"))
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
 
@@ -190,11 +133,12 @@ test_that("non-coincident transitions across two group columns each emit a blank
   )
   spec <- tabular(df) |>
     cols(
-      outer = col_spec(usage = "group", label = "Outer"),
-      inner = col_spec(usage = "group", label = "Inner"),
+      outer = col_spec(label = "Outer"),
+      inner = col_spec(label = "Inner"),
       stat = col_spec(label = "Statistic"),
       val = col_spec(label = "Value")
-    )
+    ) |>
+    group_rows(by = c("outer", "inner"))
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
 
@@ -222,14 +166,12 @@ test_that("column-mode group_skip blanks between groups, not after first row", {
   spec <- tabular(df) |>
     cols(
       grp = col_spec(
-        usage = "group",
-        group_display = "column",
-        group_skip = TRUE,
         label = "Group"
       ),
       stat = col_spec(label = "Statistic"),
       val = col_spec(label = "Value")
-    )
+    ) |>
+    group_rows(by = "grp", display = "column", skip = TRUE)
   page1 <- as_grid(spec)@pages[[1L]]
 
   # n_groups - 1 = 1 blank (between A and B). The bug produced 3.
@@ -241,7 +183,7 @@ test_that("column-mode group_skip blanks between groups, not after first row", {
 })
 
 # ---------------------------------------------------------------------
-# A user-hidden usage = "group" column is break-only: no header rows,
+# A display = "none" key is break-only: no header rows,
 # no in-column text, only its group_skip breaks.
 # ---------------------------------------------------------------------
 
@@ -260,14 +202,16 @@ test_that("hidden group column injects breaks but no header rows", {
   spec <- tabular(df) |>
     cols(
       grp = col_spec(
-        usage = "group",
-        group_display = "column",
-        group_skip = TRUE,
         label = "Characteristic"
       ),
-      blk = col_spec(usage = "group", group_skip = TRUE, visible = FALSE),
+      blk = col_spec(),
       stat = col_spec(label = "Statistic"),
       val = col_spec(label = "Value")
+    ) |>
+    group_rows(
+      by = c("grp", "blk"),
+      display = c("column", "none"),
+      skip = TRUE
     )
   page1 <- as_grid(spec)@pages[[1L]]
 
@@ -283,10 +227,10 @@ test_that("hidden group column injects breaks but no header rows", {
   expect_equal(sum(page1$cells_text[, "grp"] == "Age"), 1L)
 })
 
-test_that("hidden group spacer renders identically to the column_repeat idiom", {
-  # Backward compatibility: the pre-existing 4-property idiom
-  # (column_repeat + visible = FALSE + group_skip) and the new
-  # 3-property form must produce byte-identical grids.
+test_that("a display = \"none\" break key renders identically to a hidden column key", {
+  # The break-only "none" key and an equivalent visible-column key
+  # hidden by cols(.hide=) must produce the same blank-row plan; only
+  # the none key stays out of the body either way.
   df <- data.frame(
     grp = c("Age", "Age", "Age", "Age"),
     blk = c("c", "c", "g", "g"),
@@ -294,34 +238,21 @@ test_that("hidden group spacer renders identically to the column_repeat idiom", 
     val = c("10", "5.2", "4 (40%)", "6 (60%)"),
     stringsAsFactors = FALSE
   )
-  mk <- function(blk_spec) {
-    tabular(df) |>
-      cols(
-        grp = col_spec(
-          usage = "group",
-          group_display = "column",
-          group_skip = TRUE,
-          label = "Characteristic"
-        ),
-        blk = blk_spec,
-        stat = col_spec(label = "Statistic"),
-        val = col_spec(label = "Value")
-      ) |>
-      as_grid()
-  }
-  new_form <- mk(col_spec(
-    usage = "group",
-    group_skip = TRUE,
-    visible = FALSE
-  ))@pages[[1L]]
-  old_form <- mk(col_spec(
-    usage = "group",
-    group_display = "column_repeat",
-    group_skip = TRUE,
-    visible = FALSE
-  ))@pages[[1L]]
-
-  expect_equal(new_form$cells_text, old_form$cells_text)
-  expect_equal(new_form$is_blank_row, old_form$is_blank_row)
-  expect_equal(new_form$is_header_row, old_form$is_header_row)
+  none_form <- tabular(df) |>
+    cols(
+      grp = col_spec(label = "Characteristic"),
+      stat = col_spec(label = "Statistic"),
+      val = col_spec(label = "Value")
+    ) |>
+    group_rows(
+      by = c("grp", "blk"),
+      display = c("column", "none"),
+      skip = TRUE
+    ) |>
+    as_grid()
+  page <- none_form@pages[[1L]]
+  expect_false("blk" %in% page$col_names)
+  # One blank row where blk transitions c -> g (row 3 of the data).
+  expect_true(any(page$is_blank_row))
+  expect_false(any(page$is_header_row))
 })

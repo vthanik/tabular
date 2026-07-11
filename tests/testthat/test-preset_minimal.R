@@ -2,7 +2,7 @@
 # normal weight on every bold-by-default surface (title, headers,
 # subgroup banner, group-header section rows).
 
-# A two-band table with `usage = "group"` section-header rows on every
+# A two-band table with group_rows() section-header rows on every
 # backend-facing surface (title, column headers, group headers).
 mk_group_spec <- function() {
   d <- data.frame(
@@ -13,9 +13,10 @@ mk_group_spec <- function() {
   tabular(d, titles = "Adverse Events", footnotes = "Note 1.") |>
     cols(
       label = col_spec(label = "PT"),
-      soc = col_spec(usage = "group", group_display = "header_row"),
+      soc = col_spec(),
       placebo = col_spec(label = "Placebo")
-    )
+    ) |>
+    group_rows(by = "soc")
 }
 
 render_str <- function(spec, ext) {

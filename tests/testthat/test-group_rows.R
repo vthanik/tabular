@@ -1,7 +1,7 @@
 # group_rows() — verb that attaches the table-level row-grouping plan
 # (a row_group_spec) to a tabular_spec. Tests cover argument
-# validation, per-key display/skip recycling, replacement semantics,
-# and the subgroup(by =) overlap guard. Display semantics themselves
+# validation, per-key display/skip recycling, and replacement
+# semantics. Display semantics themselves
 # (header rows, repeat suppression, skip spacers) are engine concerns
 # tested in test-engine and test-group_display files.
 
@@ -119,20 +119,6 @@ test_that("group_rows() rejects bad skip values and lengths", {
   )
   expect_error(
     group_rows(spec, by = "variable", skip = "yes"),
-    class = "tabular_error_input"
-  )
-})
-
-test_that("group_rows() rejects keys that overlap subgroup(by =)  ", {
-  df <- data.frame(
-    param = rep(c("SBP", "DBP"), each = 2L),
-    visit = rep(c("Baseline", "Week 4"), 2L),
-    val = as.character(1:4),
-    stringsAsFactors = FALSE
-  )
-  spec <- tabular(df) |> subgroup(by = "param")
-  expect_error(
-    group_rows(spec, by = "param"),
     class = "tabular_error_input"
   )
 })

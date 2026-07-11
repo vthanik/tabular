@@ -91,10 +91,11 @@ tabular(
   )
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Parameter"),
-    stat_label = col_spec(label = "Statistic")
+    variable   = "Parameter",
+    stat_label = "Statistic"
   ) |>
   cols_apply(arm_cols, col_spec(align = "decimal")) |>
+  group_rows(by = "variable") |>
   sort_rows(by = c("variable", "stat_label"))
 
 # ---- Example 2: Select arm columns with a predicate ----

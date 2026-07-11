@@ -30,13 +30,10 @@ scripted batch runs. One spec, any backend:
 data(cdisc_saf_demo, package = "tabular")
 spec <- tabular(cdisc_saf_demo, titles = "Demographics") |>
   cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
+    variable = col_spec(label = ""),
     stat_label = col_spec(label = "")
-  )
+  ) |>
+  group_rows(by = "variable")
 
 path <- emit(spec, tempfile(fileext = ".rtf"))
 file.exists(path)

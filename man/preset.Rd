@@ -455,8 +455,7 @@ tabular(
 ) |>
   cols(
     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
-    soc      = col_spec(usage = "group", visible = FALSE,
-                        group_display = "column_repeat"),
+    .hide    = "soc",
     row_type = col_spec(visible = FALSE),
     soc_n    = col_spec(visible = FALSE),
     n_total  = col_spec(visible = FALSE),

@@ -147,7 +147,7 @@ cells_headers(level = -1)
 # A specific spanner by label
 cells_headers(labels = "Treatment Group")
 
-# Section-header rows for col_spec(group_display = "header_row")
+# Section-header rows for group_rows(display = "header_row")
 cells_group_headers()
 
 # Title / footnotes blocks

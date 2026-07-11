@@ -8,10 +8,9 @@ test_that("col_spec() with no args returns an S7 col_spec", {
   expect_true(is_col_spec(c1))
 })
 
-test_that("col_spec() sets all 7 properties via named args", {
+test_that("col_spec() sets all 6 properties via named args", {
   fn <- function(x) format(x)
   c1 <- col_spec(
-    usage = "group",
     label = "Parameter",
     format = fn,
     visible = TRUE,
@@ -19,7 +18,6 @@ test_that("col_spec() sets all 7 properties via named args", {
     align = "decimal",
     na_text = "-"
   )
-  expect_identical(c1@usage, "group")
   expect_identical(c1@label, "Parameter")
   expect_identical(c1@format, fn)
   expect_true(c1@visible)
@@ -32,35 +30,7 @@ test_that("col_spec() leaves @name as NA (set by cols())", {
   expect_true(is.na(col_spec()@name))
 })
 
-# Edge case 1: usage = NULL --------------------------------------------
-
-test_that("col_spec(usage = NULL) is allowed and stored as NA_character_", {
-  c1 <- col_spec(usage = NULL)
-  expect_true(is.na(c1@usage))
-})
-
-# Edge case 2: bad usage -----------------------------------------------
-
-test_that("col_spec(usage = bad) raises tabular_error_input", {
-  expect_error(
-    col_spec(usage = "analysis"),
-    class = "tabular_error_input"
-  )
-  expect_error(col_spec(usage = "analysis"), "must be one of")
-})
-
-test_that("col_spec(usage = c('display', 'group')) rejects vectors", {
-  expect_error(
-    col_spec(usage = c("display", "group")),
-    class = "tabular_error_input"
-  )
-})
-
-test_that("col_spec(usage = NA_character_) is rejected", {
-  expect_error(col_spec(usage = NA_character_), class = "tabular_error_input")
-})
-
-# Edge case 3: format is character or function -------------------------
+# Edge case: format is character or function -------------------------
 
 test_that("col_spec(format = sprintf string) accepts valid templates", {
   expect_silent(col_spec(format = "%.2f"))
@@ -248,20 +218,6 @@ test_that("col_spec(na_text = c('a','b')) is rejected (must be length 1)", {
   expect_error(col_spec(na_text = c("a", "b")), class = "tabular_error_input")
 })
 
-test_that("col_spec(group_display = 'bogus') is rejected", {
-  expect_error(
-    col_spec(group_display = "bogus"),
-    class = "tabular_error_input"
-  )
-})
-
-test_that("col_spec(group_skip = c(TRUE, FALSE)) is rejected (length 1)", {
-  expect_error(
-    col_spec(group_skip = c(TRUE, FALSE)),
-    class = "tabular_error_input"
-  )
-})
-
 # ---------------------------------------------------------------------
 # `indent` — polymorphic depth (fixed count or per-row column)
 # ---------------------------------------------------------------------
@@ -289,13 +245,4 @@ test_that("col_spec(indent = ...) rejects malformed values", {
   expect_error(col_spec(indent = ""), class = "tabular_error_input")
   expect_error(col_spec(indent = c(1, 2)), class = "tabular_error_input")
   expect_error(col_spec(indent = TRUE), class = "tabular_error_input")
-})
-
-# ---------------------------------------------------------------------
-# `usage = "id"` — fourth enum value, non-collapsing panel stub
-# ---------------------------------------------------------------------
-
-test_that("col_spec(usage = 'id') stores the new enum value", {
-  cs <- col_spec(usage = "id")
-  expect_identical(cs@usage, "id")
 })

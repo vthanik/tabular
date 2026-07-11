@@ -67,7 +67,7 @@ test_that("cli tree shows footnote count", {
 })
 
 test_that("cli tree shows config when cols / pivots / derives configured", {
-  c1 <- col_spec(usage = "display")
+  c1 <- col_spec(label = "X")
   s <- S7::set_props(
     tabular_spec(data = data.frame(x = 1L)),
     cols = list(x = c1)

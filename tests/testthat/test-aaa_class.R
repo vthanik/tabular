@@ -8,19 +8,6 @@
 # the S7 validator still catches bad input from set_props() in
 # engine code).
 
-test_that(".col_spec_class accepts the 2 valid usage values", {
-  for (u in c("display", "group")) {
-    expect_true(is_col_spec(tabular:::.col_spec_class(usage = u)))
-  }
-})
-
-test_that(".col_spec_class rejects unknown usage", {
-  expect_error(
-    tabular:::.col_spec_class(usage = "analysis"),
-    "must be one of"
-  )
-})
-
 test_that(".col_spec_class rejects unknown align", {
   expect_error(tabular:::.col_spec_class(align = "justify"), "must be one of")
 })
@@ -205,14 +192,6 @@ test_that(".col_spec_class validator rejects malformed scalar props", {
     "@na_text must be length 1"
   )
   expect_error(
-    tabular:::.col_spec_class(group_display = "bogus"),
-    "@group_display must be one of"
-  )
-  expect_error(
-    tabular:::.col_spec_class(group_skip = c(TRUE, FALSE)),
-    "@group_skip must be length 1"
-  )
-  expect_error(
     tabular:::.col_spec_class(indent = c("a", "b")),
     "@indent must be length 1"
   )
@@ -258,4 +237,81 @@ test_that("preset_spec() rejects an empty or multi-element empty_text", {
 test_that("preset_spec() accepts NA (unset) and a string empty_text", {
   expect_identical(preset_spec()@empty_text, NA_character_)
   expect_identical(preset_spec(empty_text = "x")@empty_text, "x")
+})
+
+
+# ---------------------------------------------------------------------
+# row_group_spec — the group_rows() plan (S7 validator last-line checks)
+# ---------------------------------------------------------------------
+
+test_that("row_group_spec stores by/display/skip and satisfies its predicate", {
+  rg <- tabular:::row_group_spec(
+    by = c("soc", "pt"),
+    display = c("header_row", "column"),
+    skip = c(NA, FALSE)
+  )
+  expect_true(is_row_group_spec(rg))
+  expect_identical(rg@by, c("soc", "pt"))
+  expect_false(is_row_group_spec(list()))
+})
+
+test_that("row_group_spec validator rejects malformed plans", {
+  expect_error(
+    tabular:::row_group_spec(by = "a", display = character(), skip = NA),
+    "one value per"
+  )
+  expect_error(
+    tabular:::row_group_spec(by = "a", display = "banner", skip = NA),
+    "must be one of"
+  )
+  expect_error(
+    tabular:::row_group_spec(
+      by = c("a", "a"),
+      display = rep("column", 2L),
+      skip = rep(NA, 2L)
+    ),
+    "duplicated"
+  )
+  expect_error(
+    tabular:::row_group_spec(by = "a", display = "column", skip = logical()),
+    "one value per"
+  )
+  expect_error(
+    tabular:::row_group_spec(
+      by = c("a", ""),
+      display = rep("column", 2L),
+      skip = rep(NA, 2L)
+    ),
+    "empty"
+  )
+})
+
+test_that(".effective_row_group_skip resolves the NA follow-display sentinel", {
+  rg <- tabular:::row_group_spec(
+    by = c("a", "b", "c", "d"),
+    display = c("header_row", "column", "column_repeat", "none"),
+    skip = rep(NA, 4L)
+  )
+  expect_identical(
+    tabular:::.effective_row_group_skip(rg),
+    c(TRUE, FALSE, FALSE, TRUE)
+  )
+  rg2 <- tabular:::row_group_spec(
+    by = c("a", "b"),
+    display = c("header_row", "none"),
+    skip = c(FALSE, FALSE)
+  )
+  expect_identical(tabular:::.effective_row_group_skip(rg2), c(FALSE, FALSE))
+})
+
+test_that(".row_group_hidden_keys and .row_group_stub_keys split the plan", {
+  rg <- tabular:::row_group_spec(
+    by = c("a", "b", "c", "d"),
+    display = c("header_row", "column", "column_repeat", "none"),
+    skip = rep(NA, 4L)
+  )
+  expect_identical(tabular:::.row_group_hidden_keys(rg), c("a", "d"))
+  expect_identical(tabular:::.row_group_stub_keys(rg), c("a", "b", "c"))
+  expect_identical(tabular:::.row_group_hidden_keys(NULL), character())
+  expect_identical(tabular:::.row_group_stub_keys(NULL), character())
 })

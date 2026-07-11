@@ -282,15 +282,16 @@ test_that(".subgroup_auto_hide_cols covers multi-var partition + multi-ref label
 test_that("subgroup auto-hide flips partition + template-ref cols from the body", {
   spec <- tabular(cdisc_saf_subgroup) |>
     cols(
-      visit = col_spec(usage = "group", label = "Visit"),
+      visit = col_spec(label = "Visit"),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group", label = "Parameter"),
+      param = col_spec(label = "Parameter"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo", align = "decimal"),
       drug_50 = col_spec(label = "Drug 50", align = "decimal"),
       drug_100 = col_spec(label = "Drug 100", align = "decimal"),
       Total = col_spec(label = "Total", align = "decimal")
     ) |>
+    group_rows(by = c("visit", "param")) |>
     subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
 
   g <- as_grid(spec)
@@ -308,10 +309,11 @@ test_that("subgroup auto-hide is a no-op when no subgroup is attached", {
   # be auto-hidden (the user might want them visible in that case).
   spec <- tabular(cdisc_saf_subgroup) |>
     cols(
-      visit = col_spec(usage = "group", label = "Visit"),
+      visit = col_spec(label = "Visit"),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group", label = "Parameter")
-    )
+      param = col_spec(label = "Parameter")
+    ) |>
+    group_rows(by = c("visit", "param"))
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
   # `sex` and `sex_n` are visible by default when no subgroup is set:
@@ -334,15 +336,16 @@ test_that("subgroup auto-hide is a no-op when no subgroup is attached", {
 .bign_base <- function(data = cdisc_saf_subgroup) {
   tabular(data, titles = "Vital Signs") |>
     cols(
-      visit = col_spec(usage = "group", label = "Visit"),
+      visit = col_spec(label = "Visit"),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group", label = "Parameter"),
+      param = col_spec(label = "Parameter"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo", align = "decimal"),
       drug_50 = col_spec(label = "Drug 50", align = "decimal"),
       drug_100 = col_spec(label = "Drug 100", align = "decimal"),
       Total = col_spec(label = "Total", align = "decimal")
-    )
+    ) |>
+    group_rows(by = c("visit", "param"))
 }
 
 .bign_arms <- function() {
@@ -401,9 +404,9 @@ test_that("big_n keyed by a spanner band label suffixes the band", {
   d$placebo_pct <- d$placebo
   spec <- tabular(d, titles = "t") |>
     cols(
-      visit = col_spec(usage = "group", label = "Visit"),
+      visit = col_spec(label = "Visit"),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group", label = "Param"),
+      param = col_spec(label = "Param"),
       stat_label = col_spec(label = "Stat"),
       placebo = col_spec(label = "n"),
       placebo_pct = col_spec(label = "n(%)"),
@@ -411,6 +414,7 @@ test_that("big_n keyed by a spanner band label suffixes the band", {
       drug_100 = col_spec(visible = FALSE),
       Total = col_spec(visible = FALSE)
     ) |>
+    group_rows(by = c("visit", "param")) |>
     headers("Placebo" = c("placebo", "placebo_pct")) |>
     subgroup(
       "sex",
@@ -709,14 +713,15 @@ test_that("big_n applies to a leaf with no explicit col_spec", {
   # `Total` has no col_spec here; big_n still suffixes its default label.
   spec <- tabular(cdisc_saf_subgroup, titles = "t") |>
     cols(
-      visit = col_spec(usage = "group", label = "Visit"),
+      visit = col_spec(label = "Visit"),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group", label = "Param"),
+      param = col_spec(label = "Param"),
       stat_label = col_spec(label = "Stat"),
       placebo = col_spec(label = "Placebo"),
       drug_50 = col_spec(visible = FALSE),
       drug_100 = col_spec(visible = FALSE)
     ) |>
+    group_rows(by = c("visit", "param")) |>
     subgroup(
       "sex",
       big_n = data.frame(
@@ -870,9 +875,9 @@ test_that("big_n ambiguous target (data col and band label collide) errors", {
   d$placebo_pct <- d$placebo
   spec <- tabular(d, titles = "t") |>
     cols(
-      visit = col_spec(usage = "group", label = "Visit"),
+      visit = col_spec(label = "Visit"),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group", label = "Param"),
+      param = col_spec(label = "Param"),
       stat_label = col_spec(label = "Stat"),
       placebo = col_spec(label = "n"),
       placebo_pct = col_spec(label = "n(%)"),
@@ -880,6 +885,7 @@ test_that("big_n ambiguous target (data col and band label collide) errors", {
       drug_100 = col_spec(visible = FALSE),
       Total = col_spec(visible = FALSE)
     ) |>
+    group_rows(by = c("visit", "param")) |>
     headers("placebo" = c("placebo", "placebo_pct")) # band label == data col
   expect_error(
     spec |>
@@ -1056,12 +1062,13 @@ test_that("non-contiguous band + big_n names the ORIGINAL band label", {
       sex = col_spec(visible = FALSE),
       sex_n = col_spec(visible = FALSE),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group", label = "P"),
+      param = col_spec(label = "P"),
       stat_label = col_spec(label = "S"),
       placebo = col_spec(label = "n"),
       drug_50 = col_spec(label = "d"),
       placebo_pct = col_spec(label = "%")
     ) |>
+    group_rows(by = "param") |>
     headers("Placebo" = c("placebo", "placebo_pct")) |>
     subgroup(
       "sex",
@@ -1279,13 +1286,14 @@ test_that("subgroup gap leaves continuous HTML byte-identical (by design)", {
     cols(
       sex_n = col_spec(visible = FALSE),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group"),
+      param = col_spec(),
       stat_label = col_spec(),
       placebo = col_spec(),
       drug_50 = col_spec(),
       drug_100 = col_spec(),
       Total = col_spec()
     ) |>
+    group_rows(by = "param") |>
     subgroup(
       by = c("sex", "visit"),
       label = "Sex: {sex} / Visit: {visit}",
@@ -1353,13 +1361,14 @@ test_that("keep_empty=TRUE composes with big_n without index misalignment", {
     cols(
       sex_n = col_spec(visible = FALSE),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group"),
+      param = col_spec(),
       stat_label = col_spec(),
       placebo = col_spec(),
       drug_50 = col_spec(),
       drug_100 = col_spec(),
       Total = col_spec()
     ) |>
+    group_rows(by = "param") |>
     subgroup(
       by = c("sex", "visit"),
       label = "Sex: {sex} / Visit: {visit}",
@@ -1384,14 +1393,15 @@ test_that("continuous backends emit one subgroup banner per group, never repeate
     cols(
       sex_n = col_spec(visible = FALSE),
       paramcd = col_spec(visible = FALSE),
-      param = col_spec(usage = "group", label = "Parameter"),
-      visit = col_spec(usage = "group", label = "Visit"),
+      param = col_spec(label = "Parameter"),
+      visit = col_spec(label = "Visit"),
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo", align = "decimal"),
       drug_50 = col_spec(label = "Drug 50", align = "decimal"),
       drug_100 = col_spec(label = "Drug 100", align = "decimal"),
       Total = col_spec(label = "Total", align = "decimal")
     ) |>
+    group_rows(by = c("param", "visit")) |>
     # Large font shrinks the estimated rows-per-page so each sex group spans
     # more than one page under the old vertical split (deterministic repro).
     preset(font_size = 14) |>
