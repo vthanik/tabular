@@ -18,10 +18,13 @@ paginate(
 \item{.spec}{\emph{The \code{tabular_spec} to attach pagination to.}
 \verb{<tabular_spec>: required}.}
 
-\item{keep_together}{\emph{Group columns whose runs of identical values
+\item{keep_together}{\emph{Columns whose runs of identical values
 must not be split across a page break.}
-\verb{<character>: default character()}. Every entry must be a
-\code{usage = "group"} column declared in \code{\link[=cols]{cols()}}.
+\verb{<character>: default character()}. Every entry must be a column
+of \code{data} — typically a \code{usage = "group"} column, or a hidden
+block-key column (\code{col_spec(visible = FALSE)}) when the block
+structure lives in the row text rather than a group column (the
+AE SOC/PT idiom).
 
 \strong{Interaction:} A run too tall to fit in the computed row
 budget less \code{orphan_floor} is split anyway; pagination is
@@ -127,14 +130,22 @@ gives the body-row budget per page. Landscape pages naturally
 carry fewer rows than portrait at the same paper size; smaller
 fonts carry more.
 
-\strong{\code{keep_together} protects group runs.} When a page break would
+\strong{\code{keep_together} protects block runs.} When a page break would
 fall in the middle of a contiguous run of identical values in a
-\code{usage = "group"} column listed in \code{keep_together}, the engine
+column listed in \code{keep_together}, the engine
 moves the break BACK to the start of the run so the whole run
 rides on the next page. Single rule of escape: if moving the
 break back would leave fewer than \code{orphan_floor} rows on the
 current page, the engine splits the run anyway (a single group
 too tall to fit on one page cannot be kept together).
+
+On the natively-paginating backends (RTF, DOCX) the consumer
+(Word) picks the break against the space remaining on its
+current page, which the engine cannot see — so protection is
+emitted as row-glue hints encoding the floor contract instead:
+a break inside a run leaves at least \code{orphan_floor} rows behind
+and carries at least \code{widow_floor} rows forward; runs short
+enough for the two edges to meet ride as one block.
 
 \strong{\code{panels} and group stickiness.} With \code{panels > 1}, the engine
 splits the NON-group columns into approximately equal slices and

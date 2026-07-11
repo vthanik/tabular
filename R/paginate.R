@@ -41,14 +41,22 @@
 #' carry fewer rows than portrait at the same paper size; smaller
 #' fonts carry more.
 #'
-#' **`keep_together` protects group runs.** When a page break would
+#' **`keep_together` protects block runs.** When a page break would
 #' fall in the middle of a contiguous run of identical values in a
-#' `usage = "group"` column listed in `keep_together`, the engine
+#' column listed in `keep_together`, the engine
 #' moves the break BACK to the start of the run so the whole run
 #' rides on the next page. Single rule of escape: if moving the
 #' break back would leave fewer than `orphan_floor` rows on the
 #' current page, the engine splits the run anyway (a single group
 #' too tall to fit on one page cannot be kept together).
+#'
+#' On the natively-paginating backends (RTF, DOCX) the consumer
+#' (Word) picks the break against the space remaining on its
+#' current page, which the engine cannot see — so protection is
+#' emitted as row-glue hints encoding the floor contract instead:
+#' a break inside a run leaves at least `orphan_floor` rows behind
+#' and carries at least `widow_floor` rows forward; runs short
+#' enough for the two edges to meet ride as one block.
 #'
 #' **`panels` and group stickiness.** With `panels > 1`, the engine
 #' splits the NON-group columns into approximately equal slices and
@@ -58,10 +66,13 @@
 #' @param .spec *The `tabular_spec` to attach pagination to.*
 #'   `<tabular_spec>: required`.
 #'
-#' @param keep_together *Group columns whose runs of identical values
+#' @param keep_together *Columns whose runs of identical values
 #'   must not be split across a page break.*
-#'   `<character>: default character()`. Every entry must be a
-#'   `usage = "group"` column declared in [`cols()`].
+#'   `<character>: default character()`. Every entry must be a column
+#'   of `data` — typically a `usage = "group"` column, or a hidden
+#'   block-key column (`col_spec(visible = FALSE)`) when the block
+#'   structure lives in the row text rather than a group column (the
+#'   AE SOC/PT idiom).
 #'
 #'   **Interaction:** A run too tall to fit in the computed row
 #'   budget less `orphan_floor` is split anyway; pagination is
@@ -318,19 +329,6 @@ paginate <- function(
         call = call
       )
     }
-    group_cols <- .group_col_names(.spec@cols)
-    not_group <- setdiff(keep_together, group_cols)
-    if (length(not_group) > 0L) {
-      cli::cli_abort(
-        c(
-          "{.arg keep_together} entries must be {.code usage = \"group\"} columns.",
-          "x" = "Not declared as group: {.val {not_group}}.",
-          "i" = "Set {.code usage = \"group\"} in {.fn cols} for the protected column(s)."
-        ),
-        class = "tabular_error_input",
-        call = call
-      )
-    }
   }
 
   new_pag <- pagination_spec(
@@ -430,25 +428,10 @@ paginate <- function(
   unique(x)
 }
 
-# Return the names of `usage = "group"` columns from a cols list.
-.group_col_names <- function(cols) {
-  if (length(cols) == 0L) {
-    return(character())
-  }
-  is_group <- vapply(
-    cols,
-    function(c) !is.na(c@usage) && c@usage == "group",
-    logical(1)
-  )
-  names(cols)[is_group]
-}
-
 # Stub columns: the columns that repeat on every horizontal panel and
 # show once on the left of a collapsed continuous table. This is the
 # `usage = "group"` set widened to include `usage = "id"` (the
-# non-collapsing row-identifier). Distinct from `.group_col_names()`,
-# which stays group-only for collapse / keep_together / group_skip /
-# decimal sectioning. Used only on the panel-repeat path
+# non-collapsing row-identifier). Used only on the panel-repeat path
 # (`engine_paginate` -> `.compute_horizontal_panels` /
 # `.panel_spans_from_panels`).
 .stub_col_names <- function(cols) {

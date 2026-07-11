@@ -1,6 +1,6 @@
 # paginate() — verb that attaches a pagination_spec to a tabular_spec.
-# Tests cover argument validation, replacement semantics, group-column
-# enforcement on keep_together, and edge cases on the floors / scalars.
+# Tests cover argument validation, replacement semantics, keep_together
+# column checks, and edge cases on the floors / scalars.
 # The verb does NOT take a rows_per_page argument; the engine computes
 # the row budget from preset + chrome lines.
 
@@ -51,12 +51,20 @@ test_that("paginate() rejects keep_together referencing missing columns", {
   )
 })
 
-test_that("paginate() rejects keep_together referencing non-group columns", {
-  spec <- make_spec(10L)
-  expect_error(
-    paginate(spec, keep_together = "val"),
-    class = "tabular_error_input"
-  )
+test_that("paginate() accepts keep_together on a non-group column", {
+  # A block key often rides along hidden (col_spec(visible = FALSE)) —
+  # e.g. an AE table whose SOC lives in the label text, keyed by a
+  # hidden soc column. The engine only needs runs of values in data.
+  spec <- make_spec(10L, with_group = FALSE)
+  out <- paginate(spec, keep_together = "soc")
+  expect_identical(out@pagination@keep_together, "soc")
+})
+
+test_that("paginate() accepts keep_together on a hidden column", {
+  spec <- make_spec(10L, with_group = FALSE) |>
+    cols(soc = col_spec(visible = FALSE))
+  out <- paginate(spec, keep_together = "soc")
+  expect_identical(out@pagination@keep_together, "soc")
 })
 
 test_that("paginate() accepts keep_together referencing a group column", {
@@ -173,7 +181,7 @@ test_that("paginate() snapshot errors", {
   spec <- make_spec(10L)
   expect_snapshot(
     error = TRUE,
-    paginate(spec, keep_together = "val")
+    paginate(spec, keep_together = "nope")
   )
   expect_snapshot(
     error = TRUE,

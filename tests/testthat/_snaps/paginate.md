@@ -1,12 +1,12 @@
 # paginate() snapshot errors
 
     Code
-      paginate(spec, keep_together = "val")
+      paginate(spec, keep_together = "nope")
     Condition
       Error:
-      ! `keep_together` entries must be `usage = "group"` columns.
-      x Not declared as group: "val".
-      i Set `usage = "group"` in `cols()` for the protected column(s).
+      ! `keep_together` references 1 column not in `data`.
+      x Missing: "nope".
+      i Available: "soc" and "val".
 
 ---
 

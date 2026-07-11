@@ -1,5 +1,9 @@
 # tabular (development version)
 
+* `paginate()` keep-together protection on the natively-paginating backends (RTF, DOCX) now emits edge-only row glue instead of gluing a whole fitting block, so a block that fits a fresh page but not the space left on the current one no longer bumps wholesale and strands a near-empty page; widow/orphan floors count content rows only, with trailing blank spacer rows still riding with their block.
+
+* `paginate(keep_together = )` now accepts any column of `data` (including hidden block-key columns), not only `usage = "group"` columns.
+
 # tabular 0.2.0
 
 ## New features

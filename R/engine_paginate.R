@@ -138,19 +138,11 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   # Keep-with-next mask drives the RTF and LaTeX backend's native
   # pagination hints (`\trkeep` + `\keepn` in RTF, `\nopagebreak[4]`
   # after each row in LaTeX). Each entry says "render row i glued
-  # to row i+1 — do not break between them". For keep_together
-  # groups that fit on one page the entire group glues. For
-  # oversized groups only the top (`orphan_floor - 1`) and bottom
-  # (`widow_floor - 1`) edges glue so the middle stays free to
-  # split.
-  keep_with_next <- .build_keep_mask(
-    data = data,
-    kt_idx = kt_idx,
-    rpp = rpp,
-    orphan_floor = orphan,
-    widow_floor = widow
-  )
-
+  # to row i+1 — do not break between them". Every keep_together
+  # run glues only its top (`orphan_floor - 1`) and bottom
+  # (`widow_floor - 1`) edges so the middle stays free to split
+  # against whatever space remains on the consumer's current page;
+  # runs short enough for the edges to meet ride as one.
   # Stub columns repeat on every panel: the `usage = "group"` set
   # widened to include `usage = "id"` (the non-collapsing row
   # identifier). keep_together is driven independently by `kt_idx`
@@ -162,6 +154,14 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   # remain in spec@data for upstream phases (sort_rows / subgroup)
   # but never reach the backend renderer.
   visible_col_names <- .visible_col_names(spec, col_names)
+
+  keep_with_next <- .build_keep_mask(
+    data = data,
+    kt_idx = kt_idx,
+    orphan_floor = orphan,
+    widow_floor = widow,
+    is_blank = .blank_rows(data, visible_col_names)
+  )
   col_panels <- .compute_horizontal_panels(
     col_names = visible_col_names,
     stub_col_names = stub_cols,
@@ -562,7 +562,13 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
 # Returns a length-`nrow(data)` logical vector. `TRUE` at position
 # i means "render row i glued to row i+1 (do not break between
 # them)". Falls back to all-`FALSE` when `kt_idx` is empty.
-.build_keep_mask <- function(data, kt_idx, rpp, orphan_floor, widow_floor) {
+.build_keep_mask <- function(
+  data,
+  kt_idx,
+  orphan_floor,
+  widow_floor,
+  is_blank = rep(FALSE, nrow(data))
+) {
   nr <- nrow(data)
   if (nr <= 1L || length(kt_idx) == 0L) {
     return(rep(FALSE, nr))
@@ -582,27 +588,34 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
     while (end < nr && keys[[end + 1L]] == keys[[start]]) {
       end <- end + 1L
     }
-    group_size <- end - start + 1L
-    if (group_size > 1L) {
-      if (group_size <= rpp) {
-        # Group fits on one page: full keepn chain (every row but
-        # the last in the group glues to the next).
-        mask[start:(end - 1L)] <- TRUE
-      } else {
-        # Oversized group: only edge protection. Top
-        # `orphan_floor - 1` rows glue downward; bottom
-        # `widow_floor - 1` rows glue downward (everything but the
-        # very last row in the group).
-        top_n <- max(0L, orphan_floor - 1L)
+    if (end > start) {
+      # Edge protection ONLY — never a full-run glue. The consumer
+      # (Word / a LaTeX engine) breaks against the REMAINING space on
+      # the current page, which the mask cannot see: a fully-glued run
+      # that fits a fresh page but not the space left would bump
+      # wholesale and strand a near-empty page. Edge glue encodes the
+      # floor contract exactly: a break inside the run leaves at least
+      # `orphan_floor` rows behind and carries at least `widow_floor`
+      # rows forward. Short runs glue fully because the edges meet.
+      #
+      # Floors count CONTENT rows only. A run's trailing blank spacer
+      # (a group-skip separator sharing the run's key) must not satisfy
+      # the widow floor — "last visible row + a blank" reads as a lone
+      # orphan on the continuation page. The blank rows themselves
+      # still glue to the run's last content row so a page never opens
+      # on a stray blank line.
+      content <- (start:end)[!is_blank[start:end]]
+      if (length(content) > 0L) {
+        top_n <- min(orphan_floor - 1L, length(content) - 1L)
         if (top_n > 0L) {
-          mask[start:(start + top_n - 1L)] <- TRUE
+          mask[content[seq_len(top_n)]] <- TRUE
         }
-        bottom_n <- max(0L, widow_floor - 1L)
-        if (bottom_n > 0L) {
-          bottom_start <- end - bottom_n
-          if (bottom_start < end) {
-            mask[bottom_start:(end - 1L)] <- TRUE
-          }
+        # Glue from the widow_floor-th-from-last content row through the
+        # run's end so the floor is met in content rows AND trailing
+        # blanks ride with the block.
+        wf_from <- content[[max(1L, length(content) - widow_floor + 1L)]]
+        if (wf_from < end) {
+          mask[wf_from:(end - 1L)] <- TRUE
         }
       }
     }
@@ -615,6 +628,22 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
     mask[nr] <- FALSE
   }
   mask
+}
+
+# Rows whose every VISIBLE cell is empty (blank/NA/whitespace) — the
+# group-skip spacer rows. Used to exclude spacers from the keep-mask
+# floor counts.
+.blank_rows <- function(data, visible_col_names) {
+  cols <- intersect(visible_col_names, names(data))
+  if (nrow(data) == 0L || length(cols) == 0L) {
+    return(rep(FALSE, nrow(data)))
+  }
+  blank <- rep(TRUE, nrow(data))
+  for (cn in cols) {
+    v <- as.character(data[[cn]])
+    blank <- blank & (is.na(v) | !nzchar(trimws(v)))
+  }
+  blank
 }
 
 # Move the tentative page break back if it would split a contiguous

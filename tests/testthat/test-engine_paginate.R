@@ -658,3 +658,40 @@ test_that(".wrapped_line_count counts an empty spacer element as one line (#fig-
   # counts as one physical row (the inner all-whitespace branch).
   expect_equal(tabular:::.wrapped_line_count("a\n\nb", preset, 6), 3L)
 })
+
+test_that(".build_keep_mask: widow floor counts CONTENT rows, not a trailing blank spacer", {
+  # Regression (AE table, 2026-07-11): the group-skip spacer shares its
+  # block's keep key, so the bottom edge glued [last PT, blank spacer] and
+  # Word carried "one PT + a blank" forward — a visual orphan that
+  # technically met widow_floor = 2. The floor must be met in content
+  # rows; the spacer still rides with the block.
+  df <- data.frame(
+    key = rep("A", 7L),
+    lab = c("hdr", "p1", "p2", "p3", "p4", "p5", ""),
+    stringsAsFactors = FALSE
+  )
+  m <- tabular:::.build_keep_mask(
+    df,
+    kt_idx = 1L,
+    orphan_floor = 3L,
+    widow_floor = 2L,
+    is_blank = c(rep(FALSE, 6L), TRUE)
+  )
+  # Top edge: hdr + p1 glue forward. Bottom edge: p4 -> p5 -> spacer all
+  # glue, so a break carries at least TWO content rows plus the spacer.
+  expect_identical(m, c(TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE))
+})
+
+test_that(".blank_rows flags all-empty visible rows only", {
+  df <- data.frame(
+    label = c("SOC", "  PT", "", " "),
+    a = c("1 (2.0)", "0", "", ""),
+    .soc = c("1", "1", "1", "2"),
+    stringsAsFactors = FALSE
+  )
+  # `.soc` is hidden: rows 3 and 4 are blank even though the key has text.
+  expect_identical(
+    tabular:::.blank_rows(df, c("label", "a")),
+    c(FALSE, FALSE, TRUE, TRUE)
+  )
+})
