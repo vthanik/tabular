@@ -16,6 +16,12 @@
 
 * `paginate(keep_together = )` now accepts any column of `data` (including hidden block-key columns), not only `usage = "group"` columns.
 
+## Minor improvements and bug fixes
+
+* `check_latex()` now probes package availability through `kpsewhich` (the resolver xelatex itself uses) instead of the tlmgr package database, fixing all-missing false negatives on apt-installed TeX Live and frozen TinyTeX images, no longer requires the tinytex R package, and reports a new `bundled` column.
+
+* `emit()` PDF output now works on TeX installations that lack `tabularray` / `ninecolors` and cannot run `tlmgr install` (locked-down Domino / Posit Workbench images): tabular ships verbatim CTAN copies of both single-file packages in `inst/tex/` and stages them next to the generated `.tex` at compile time whenever the local TeX cannot resolve them.
+
 # tabular 0.2.0
 
 ## New features
