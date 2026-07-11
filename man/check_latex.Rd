@@ -14,18 +14,19 @@ that branch on the return value.}
 }
 \value{
 \emph{Invisibly returns a data frame} with one row per
-required package and columns \code{package} (\verb{<character>}) and
-\code{installed} (\verb{<logical>}, \code{NA} when undeterminable). Side
-effect: prints a cli report with a per-package status marker
-and, when anything is missing, the exact \code{tlmgr_install()}
-remedy.
+required package and columns \code{package} (\verb{<character>}),
+\code{installed} (\verb{<logical>}, \code{NA} when undeterminable), and
+\code{bundled} (\verb{<logical>}, \code{TRUE} for packages tabular ships a
+fallback copy of). Side effect: prints a cli report with a
+per-package status marker and, when anything is missing, the
+exact \code{tlmgr_install()} remedy.
 }
 \description{
 Reports, for every TeX package the LaTeX / PDF backend can emit,
-whether it is present in the local TeX tree, and prints the exact
-\code{\link[tinytex:tlmgr_install]{tinytex::tlmgr_install()}} call that installs any that are
-missing. Run this before \code{emit(spec, "out.pdf")} on a fresh
-machine to turn a cryptic mid-compile \verb{File 'tabularray.sty' not found} into an up-front, actionable checklist.
+whether the local TeX installation can resolve it, and prints the
+exact \code{\link[tinytex:tlmgr_install]{tinytex::tlmgr_install()}} call that installs any that are
+genuinely missing. Run this before \code{emit(spec, "out.pdf")} on a
+fresh machine to turn a cryptic mid-compile \verb{File 'tabularray.sty' not found} into an up-front, actionable checklist.
 }
 \details{
 The required set is a superset of every \verb{\\\\usepackage\{\}} /
@@ -35,13 +36,36 @@ conditional branches (running headers / footers pull \code{fancyhdr} +
 classic font bundles). The check is informational, it does not
 install anything.
 
+\strong{How availability is probed.} Each package is resolved through
+\code{kpsewhich}, the same file resolver \code{xelatex} uses at compile time,
+so the report reflects what a compile will actually find. This works
+on every TeX layout — TinyTeX, a full TeX Live, or an OS-managed
+install (Debian/apt, RHEL/dnf) where the \code{tlmgr} package database is
+absent and database-backed checks report everything as missing.
+
+\strong{Bundled fallback packages.} tabular ships verbatim copies of
+\code{tabularray} and \code{ninecolors} (the only requirements not included in
+any TinyTeX flavor) and stages them next to the generated \code{.tex}
+at compile time whenever the local TeX cannot resolve them. A
+bundled package therefore always passes the check — no
+\code{tlmgr_install()} is ever needed for those two. On the community
+TinyTeX bundle (\code{tinytex::install_tinytex(bundle = "TinyTeX")}) or
+any larger installation, everything else is already present, so PDF
+emission needs no package installs at all — including on restricted
+servers where \code{tlmgr} is locked.
+
 \strong{OS-managed TeX Live gotcha.} On Linux distributions that ship
 TeX Live through the system package manager (RHEL / Fedora via
 \code{dnf}, Debian / Ubuntu via \code{apt}), \code{tlmgr} is locked against
 user installs and \code{tlmgr_install()} will fail. The fix is to
-install a user-space TinyTeX with \code{\link[tinytex:install_tinytex]{tinytex::install_tinytex()}}
-and let that tree own the packages. Never force a locked \code{tlmgr}
-with \code{--ignore-warning}: it leaves the system tree half-written.
+install a user-space TinyTeX with
+\code{\link[tinytex:install_tinytex]{tinytex::install_tinytex()}}\code{(bundle = "TinyTeX")} and let that
+tree own the packages. Never force a locked \code{tlmgr} with
+\code{--ignore-warning}: it leaves the system tree half-written. Where no
+TeX install is possible at all, a missing single-file macro package
+can be sideloaded without \code{tlmgr}: download its \code{.sty} from CTAN
+into \verb{~/texmf/tex/latex/<package>/} and set the \code{TEXMFHOME}
+environment variable to \verb{~/texmf}.
 
 \strong{Slow / stuck install (often Windows).} The default CTAN
 repository \code{mirror.ctan.org} redirects to a random mirror on
@@ -52,15 +76,14 @@ single time and remembers the result), then retry the install.
 
 \strong{Status markers:}
 \itemize{
-\item \code{v} — package is installed in the local TeX tree.
+\item \code{v} — package resolves in the local TeX tree, or is missing but
+covered by a bundled copy (marked \verb{bundled copy used}).
 \item \code{x} — package is missing; the \code{tlmgr_install()} line at the
 bottom of the report installs every missing package at once.
-\item \verb{?} — availability could not be determined (no \code{tinytex}, or
-\code{tlmgr} not reachable); treated as missing for remediation.
+\item \verb{?} — availability could not be determined (\code{kpsewhich} not on
+the \code{PATH}, i.e. no TeX installation); treated as missing for
+remediation.
 }
-
-Requires the \code{tinytex} package (in \code{Suggests}); call
-\code{install.packages("tinytex")} first if it isn't installed.
 }
 \examples{
 # ---- Example 1: Audit the PDF toolchain before emitting ----
@@ -68,11 +91,10 @@ Requires the \code{tinytex} package (in \code{Suggests}); call
 # Run check_latex() on a fresh machine to confirm every LaTeX
 # package the PDF backend needs is present. The call prints a
 # status line per package and, if any are missing, the exact
-# tinytex::tlmgr_install() command to fix them in one shot. It is
-# guarded on tinytex so it is a no-op where TeX is unavailable.
-if (requireNamespace("tinytex", quietly = TRUE)) {
-  check_latex()
-}
+# tinytex::tlmgr_install() command to fix them in one shot. Where
+# no TeX is installed every row reports `?` and the remedy lines
+# print; the call never errors.
+check_latex()
 
 }
 \seealso{

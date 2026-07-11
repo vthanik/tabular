@@ -1,0 +1,25 @@
+Bundled third-party LaTeX packages
+==================================
+
+The files under inst/tex/ are verbatim, unmodified copies of LaTeX
+macro packages from CTAN. They are staged next to the generated .tex
+source at PDF compile time only when the local TeX installation cannot
+resolve them (see ?check_latex). Both are distributed under the LaTeX
+Project Public License (LPPL); unmodified redistribution is permitted
+by LPPL section 2.
+
+tabularray.sty
+  Package   : tabularray, version 2025C (2025-11-27)
+  Author    : Jianrui Lyu <tolvjr@163.com>
+  Source    : https://ctan.org/pkg/tabularray
+  License   : LaTeX Project Public License 1.3c
+
+ninecolors.sty
+  Package   : ninecolors, version v2022D (2022-02-13)
+  Authors   : Jianrui Lyu <tolvjr@163.com>, Nan Geng <nangeng@nwafu.edu.cn>
+  Source    : https://ctan.org/pkg/ninecolors
+  License   : LaTeX Project Public License 1.3
+
+Refresh procedure: tools/update-latex-sty.R (development-only script,
+not shipped) downloads the current CTAN copies and reports their
+versions; update the entries above when bumping.

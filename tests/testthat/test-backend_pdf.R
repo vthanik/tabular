@@ -167,21 +167,24 @@ test_that(".tabular_required_tex_packages is a superset of every emitted directi
 })
 
 test_that("check_latex() runs and returns the required set invisibly (#B3)", {
-  skip_if_not_installed("tinytex")
   out <- withr::with_options(
     list(cli.default_handler = function(...) invisible()),
     check_latex(quiet = TRUE)
   )
   expect_s3_class(out, "data.frame")
-  expect_named(out, c("package", "installed"))
+  expect_named(out, c("package", "installed", "bundled"))
   expect_identical(out$package, tabular:::.tabular_required_tex_packages)
   expect_type(out$installed, "logical")
+  expect_type(out$bundled, "logical")
+  expect_identical(
+    out$package[out$bundled],
+    names(tabular:::.tabular_bundled_sty)
+  )
   # Invisible return: capturing autoprint yields nothing.
   expect_output(invisible(check_latex(quiet = TRUE)), regexp = NA)
 })
 
 test_that("check_latex() rejects a non-scalar quiet (#B3)", {
-  skip_if_not_installed("tinytex")
   expect_error(
     check_latex(quiet = c(TRUE, FALSE)),
     class = "tabular_error_input"
@@ -205,6 +208,9 @@ test_that(".pdf_compile_abort names missing packages with remediation hints", {
   expect_match(msg, "tabularray", fixed = TRUE)
   expect_match(msg, "tlmgr_install", fixed = TRUE)
   expect_match(msg, "Domino", fixed = TRUE)
+  # No-tlmgr remedies: the community TinyTeX bundle + TEXMFHOME sideload.
+  expect_match(msg, 'bundle = "TinyTeX"', fixed = TRUE)
+  expect_match(msg, "TEXMFHOME", fixed = TRUE)
 })
 
 test_that(".pdf_compile_abort falls back to verbose-log hint for unknown errors", {
@@ -356,7 +362,7 @@ test_that(".check_latex_report covers the all-installed and missing branches", {
     stringsAsFactors = FALSE
   )
   miss <- data.frame(
-    package = c("base", "tabularray"),
+    package = c("base", "fancyhdr"),
     installed = c(TRUE, NA),
     stringsAsFactors = FALSE
   )
@@ -366,6 +372,104 @@ test_that(".check_latex_report covers the all-installed and missing branches", {
   expect_no_error(suppressMessages(
     utils::capture.output(tabular:::.check_latex_report(miss))
   ))
+})
+
+test_that(".check_latex_report passes a missing-but-bundled package", {
+  # tabularray is not resolvable here, but the bundled copy covers it:
+  # the report must show a `v ... bundled copy used` row and the
+  # all-available success line, with NO tlmgr_install remedy.
+  out <- data.frame(
+    package = c("base", "tabularray", "ninecolors"),
+    installed = c(TRUE, FALSE, NA),
+    bundled = c(FALSE, TRUE, TRUE),
+    stringsAsFactors = FALSE
+  )
+  expect_snapshot(tabular:::.check_latex_report(out))
+})
+
+test_that(".check_latex_report remedies name the TinyTeX bundle and TEXMFHOME", {
+  out <- data.frame(
+    package = c("tabularray", "fancyhdr"),
+    installed = c(FALSE, FALSE),
+    bundled = c(TRUE, FALSE),
+    stringsAsFactors = FALSE
+  )
+  expect_snapshot(tabular:::.check_latex_report(out))
+})
+
+# ---------------------------------------------------------------------
+# Bundled .sty staging — kpsewhich probe + inst/tex fallback copies
+# ---------------------------------------------------------------------
+
+test_that(".tabular_bundled_sty is a shipped subset of the required set", {
+  bundled <- tabular:::.tabular_bundled_sty
+  expect_true(all(
+    names(bundled) %in% tabular:::.tabular_required_tex_packages
+  ))
+  # Every bundled entry ships in inst/tex/ (drift guard).
+  for (f in bundled) {
+    src <- system.file("tex", f, package = "tabular")
+    expect_true(nzchar(src), info = f)
+    expect_gt(file.info(src)$size, 0L)
+  }
+})
+
+test_that(".tabular_pkg_probe_sty covers the required set exactly", {
+  expect_setequal(
+    names(tabular:::.tabular_pkg_probe_sty),
+    tabular:::.tabular_required_tex_packages
+  )
+})
+
+test_that(".latex_sty_available returns NA when kpsewhich is absent", {
+  withr::local_envvar(PATH = "")
+  out <- tabular:::.latex_sty_available(c("geometry.sty", "nope.sty"))
+  expect_identical(out, rep(NA, 2L))
+})
+
+test_that(".latex_sty_available matches found paths by basename", {
+  skip_if(!nzchar(Sys.which("kpsewhich")), "kpsewhich not on PATH")
+  # A mixed query: kpsewhich prints only the found paths and exits
+  # non-zero, so a positional read would misalign; the basename match
+  # must keep each result on its own query.
+  out <- tabular:::.latex_sty_available(
+    c("tabular-no-such-package.sty", "geometry.sty")
+  )
+  expect_identical(out[[1L]], FALSE)
+  expect_identical(out[[2L]], TRUE)
+})
+
+test_that(".pdf_stage_bundled_sty stages exactly the unresolved files", {
+  dir <- withr::local_tempdir()
+  staged <- tabular:::.pdf_stage_bundled_sty(
+    dir,
+    .available = function(files) c(FALSE, TRUE)
+  )
+  expect_identical(staged, "tabularray.sty")
+  expect_true(file.exists(file.path(dir, "tabularray.sty")))
+  expect_false(file.exists(file.path(dir, "ninecolors.sty")))
+})
+
+test_that(".pdf_stage_bundled_sty stages nothing when all resolve", {
+  dir <- withr::local_tempdir()
+  staged <- tabular:::.pdf_stage_bundled_sty(
+    dir,
+    .available = function(files) rep(TRUE, length(files))
+  )
+  expect_identical(staged, character())
+  expect_identical(list.files(dir), character())
+})
+
+test_that(".pdf_stage_bundled_sty treats undeterminable availability as missing", {
+  # kpsewhich absent -> NA per file -> stage every bundled copy
+  # (harmless shadowing for the one compile).
+  dir <- withr::local_tempdir()
+  staged <- tabular:::.pdf_stage_bundled_sty(
+    dir,
+    .available = function(files) rep(NA, length(files))
+  )
+  expect_setequal(staged, unname(tabular:::.tabular_bundled_sty))
+  expect_setequal(list.files(dir), unname(tabular:::.tabular_bundled_sty))
 })
 
 test_that("emit(.pdf) with a generic font_family compiles via the fallback cascade", {
