@@ -1,12 +1,12 @@
-# engine_group_display.R — apply `col_spec@group_display` semantics.
+# engine_group_display.R — apply the `group_rows()` plan.
 #
 # Runs AFTER engine_format (cells_text + cells_ast carry their final
-# per-cell values) and BEFORE engine_decimal. Three behaviours, one
-# per `group_display` value:
+# per-cell values) and BEFORE engine_decimal. Four behaviours, one
+# per `row_group_spec@display` value:
 #
-#   "header_row" (default) — for each transition on the group
-#     column, signal that a section header row should render above
-#     the data row. Hide the source column from the visible body via
+#   "header_row" (default) — for each transition on the grouping
+#     key, signal that a section header row should render above
+#     the data row. Hide the key column from the visible body via
 #     `col_spec@visible = FALSE`. The actual row INJECTION happens
 #     per-page inside `.slice_one_page()`; this phase only sets up
 #     the visibility flip and the per-row "transition" sidecar so
@@ -19,16 +19,19 @@
 #
 #   "column_repeat" — no-op. Every row carries the value verbatim.
 #
+#   "none" — break-only key: no header rows, column hidden, only its
+#     skip transitions contribute.
+#
 # Output is the same triple of matrices (cells_text, cells_ast,
 # cells_style) — possibly with blanked cells under "column" mode —
 # plus a possibly-updated col_spec map (visibility flipped for
-# "header_row" columns) and a `header_row_plan` sidecar that
+# "header_row" / "none" keys) and a `header_row_plan` sidecar that
 # `.slice_one_page()` consumes at render time to inject header
 # rows into each page's slice.
 #
 # Pure function. No I/O.
 
-#' Apply `col_spec@group_display` semantics in the resolve pipeline
+#' Apply the `group_rows()` row-grouping plan in the resolve pipeline
 #'
 #' @param cells_text Character matrix of formatted cell strings
 #'   (one row per data row, one column per data column).
@@ -37,17 +40,17 @@
 #' @param cells_style List-matrix of `style_node` overrides parallel
 #'   to `cells_text`.
 #' @param cols Named list of `col_spec` objects keyed by data column
-#'   name. Columns with `usage = "group"` drive the per-group
-#'   behaviour selected by `col_spec@group_display`.
+#'   name (cosmetics only — indent, visibility).
+#' @param row_groups A `row_group_spec` from `group_rows()`, or NULL
+#'   for an ungrouped table. `@by` order is outer -> inner.
 #' @return A list with six named slots: `cells_text`, `cells_ast`,
 #'   `cells_style` (the possibly-blanked matrices), `cols` (the
-#'   possibly-visibility-flipped col_spec map for header_row
-#'   columns), `header_row_plan` (per-row injection sidecar consumed
+#'   possibly-visibility-flipped col_spec map for header_row / none
+#'   keys), `header_row_plan` (per-row injection sidecar consumed
 #'   by `.slice_one_page()`), and `skip_transitions` (sorted integer
-#'   vector of transition row indices unioned across every group
-#'   column whose effective `group_skip` is `TRUE` — coincident
-#'   transitions collapse to a single index so only one blank row is
-#'   injected).
+#'   vector of transition row indices unioned across every grouping
+#'   key whose effective `skip` is `TRUE` — coincident transitions
+#'   collapse to a single index so only one blank row is injected).
 #' @keywords internal
 #' @noRd
 engine_group_display <- function(
@@ -55,15 +58,15 @@ engine_group_display <- function(
   cells_ast,
   cells_style,
   cols,
+  row_groups = NULL,
   data = NULL,
   indent_size = 0L,
   subgroup_hide_cols = character(0L)
 ) {
-  # Finalize NA "unset" sentinels (visible / group_display / usage) so
-  # every read below is concrete, even when this phase is exercised
-  # directly on a raw col_spec map (production feeds finalized cols via
-  # .cols_by_name; idempotent here). Single resolver, no duplicated
-  # defaults.
+  # Finalize the NA "unset" visible sentinel so every read below is
+  # concrete, even when this phase is exercised directly on a raw
+  # col_spec map (production feeds finalized cols via .cols_by_name;
+  # idempotent here). Single resolver, no duplicated defaults.
   cols <- .finalize_col_specs(cols)
   indent_unit <- .indent_text_unit(indent_size)
   nrow_data <- nrow(cells_text)
@@ -72,21 +75,6 @@ engine_group_display <- function(
   if (is.null(col_names)) {
     col_names <- character(0L)
   }
-
-  # Snapshot the user's DECLARED visibility before the auto-hide block
-  # below mutates it. A `usage = "group"` column the user hid is
-  # break-only (contributes group_skip transitions but no header rows),
-  # so `.header_row_columns()` must gate on user intent, not on the
-  # post-auto-hide flag (indent / subgroup columns are flipped to
-  # FALSE below, and header_row's own auto-hide happens later still).
-  user_visible <- vapply(
-    col_names,
-    function(nm) {
-      cs <- cols[[nm]]
-      !is_col_spec(cs) || isTRUE(cs@visible)
-    },
-    logical(1L)
-  )
 
   # Sidecar matrix carrying per-cell indent depth in integer levels.
   # `col_spec@indent` (a fixed count or a per-row column) and the
@@ -167,8 +155,13 @@ engine_group_display <- function(
     }
   }
 
-  # Identify group columns in declaration order. Outer = first.
-  group_names <- .group_display_columns(cols, col_names)
+  # The row-grouping plan. Keys come from `group_rows(by = )`, ordered
+  # outer -> inner; per-key display / skip ride on the same spec. Keys
+  # absent from the matrices (defensive; verb-time validation checks
+  # `data`) are dropped with their plan entries.
+  group_names <- if (is.null(row_groups)) character(0L) else row_groups@by
+  in_matrix <- group_names %in% col_names
+  group_names <- group_names[in_matrix]
   if (length(group_names) == 0L) {
     return(list(
       cells_text = cells_text,
@@ -179,11 +172,19 @@ engine_group_display <- function(
       header_row_plan = NULL
     ))
   }
+  display_by <- stats::setNames(
+    row_groups@display[in_matrix],
+    group_names
+  )
+  skip_by <- stats::setNames(
+    .effective_row_group_skip(row_groups)[in_matrix],
+    group_names
+  )
 
-  # Per-column group_skip plan. A blank row is inserted BEFORE any
-  # row that is a transition (on the data row scale) for any group
-  # column whose effective `group_skip` resolves TRUE. The first
-  # transition on the page never gets a leading blank.
+  # Per-key skip plan. A blank row is inserted BEFORE any row that is
+  # a transition (on the data row scale) for any grouping key whose
+  # effective `skip` resolves TRUE. The first transition on the page
+  # never gets a leading blank.
   #
   # Computed HERE, before Phase 1 column-mode suppression, so the
   # run grouping sees the LOGICAL group values. Reading post-
@@ -191,8 +192,7 @@ engine_group_display <- function(
   # at row 2 and injects a stray blank after each group's first row.
   skip_transitions <- integer(0L)
   for (nm in group_names) {
-    cs <- cols[[nm]]
-    if (.effective_group_skip(cs)) {
+    if (isTRUE(skip_by[[nm]])) {
       run_ids <- .runs_grouping(cells_text[, nm])
       col_trans <- which(c(TRUE, diff(run_ids) != 0L))
       skip_transitions <- union(skip_transitions, col_trans)
@@ -200,19 +200,12 @@ engine_group_display <- function(
   }
   skip_transitions <- sort(as.integer(skip_transitions))
 
-  # Identify every group column declaring `header_row` mode, in
-  # declaration order. Outer = index 1. Each becomes one band in the
-  # header-row plan below.
-  header_cols <- .header_row_columns(cols, group_names)
-  # A group column the user hid is break-only: drop it from the
-  # header-row plan so its values never render as section headers.
-  # It stays in `group_names`, so its `group_skip` transitions (above)
-  # still fire; its body is filtered by `.visible_col_names()`.
-  header_cols <- header_cols[vapply(
-    header_cols,
-    function(nm) isTRUE(user_visible[[nm]]),
-    logical(1L)
-  )]
+  # Every key declaring `header_row` mode, in plan order. Outer =
+  # index 1. Each becomes one band in the header-row plan below.
+  # `"none"` keys are break-only: they contributed skip transitions
+  # above, render nothing, and are hidden at the end of this phase.
+  header_cols <- group_names[display_by[group_names] == "header_row"]
+  none_cols <- group_names[display_by[group_names] == "none"]
   header_col <- if (length(header_cols) > 0L) header_cols[[1L]] else NULL
 
   # Outer-group run ids — drives column-mode suppression reset. Use
@@ -226,8 +219,7 @@ engine_group_display <- function(
 
   # Phase 1: apply "column"-mode suppression.
   for (nm in group_names) {
-    cs <- cols[[nm]]
-    if (identical(cs@group_display, "column")) {
+    if (identical(display_by[[nm]], "column")) {
       cells_text[, nm] <- .suppress_column_repeats(
         cells_text[, nm],
         outer_run_ids
@@ -241,8 +233,8 @@ engine_group_display <- function(
   }
 
   # Phase 2: build the multi-band header-row plan + the blank-skip
-  # plan + hide source columns. EVERY `header_row` group column
-  # contributes a band; bands nest by declaration order (outer first).
+  # plan + hide source columns. EVERY `header_row` key contributes a
+  # band; bands nest by plan order (outer first).
   # Per-band transitions are computed from a composite-key run
   # grouping over bands 1..b joined with the ASCII unit separator
   # `\x1F`, so an inner band re-emits whenever its OWN value changes
@@ -255,16 +247,16 @@ engine_group_display <- function(
   # auto-contribution is suppressed (preserves cdisc_saf_aesocpt's SOC/PT
   # rendering exactly).
   #
-  # Per-column `group_skip` (TRUE / FALSE / NA-defaulting-via-
-  # `group_display`) drives the blank-row plan independently — every
-  # group column whose `.effective_group_skip()` resolves TRUE
-  # contributes its transition row indices.
+  # Per-key `skip` (TRUE / FALSE / NA-defaulting-via-`display`)
+  # drives the blank-row plan independently — every grouping key
+  # whose effective skip resolves TRUE contributes its transition
+  # row indices.
   header_row_plan <- NULL
   if (length(header_cols) > 0L) {
     host_col <- .header_row_host_column(
       col_names,
-      group_names,
-      cols,
+      hidden_keys = c(header_cols, none_cols),
+      cols = cols,
       hidden_extra = hide_union
     )
     bands <- vector("list", length(header_cols))
@@ -385,6 +377,18 @@ engine_group_display <- function(
     }
   }
 
+  # Break-only keys never render: hide them regardless of whether a
+  # header-row plan exists (their skip transitions already fired). A
+  # key with no col_spec (possible on a direct engine call; production
+  # feeds a complete map via .cols_by_name) gets a hidden default.
+  for (nm in none_cols) {
+    cols[[nm]] <- if (is_col_spec(cols[[nm]])) {
+      S7::set_props(cols[[nm]], visible = FALSE)
+    } else {
+      S7::set_props(col_spec(visible = FALSE), name = nm)
+    }
+  }
+
   list(
     cells_text = cells_text,
     cells_ast = cells_ast,
@@ -394,32 +398,6 @@ engine_group_display <- function(
     header_row_plan = header_row_plan,
     skip_transitions = skip_transitions
   )
-}
-
-# Group columns in declaration order. Returns a character vector
-# of column names whose `col_spec@usage == "group"`.
-.group_display_columns <- function(cols, col_names) {
-  keep <- vapply(
-    col_names,
-    function(nm) {
-      cs <- cols[[nm]]
-      is_col_spec(cs) && !is.na(cs@usage) && cs@usage == "group"
-    },
-    logical(1L)
-  )
-  col_names[keep]
-}
-
-# Group columns whose `group_display == "header_row"`, in declaration
-# order. Returns a character vector (possibly empty). Index 1 is the
-# OUTERMOST band; later entries nest inside.
-.header_row_columns <- function(cols, group_names) {
-  keep <- vapply(
-    group_names,
-    function(nm) identical(cols[[nm]]@group_display, "header_row"),
-    logical(1L)
-  )
-  group_names[keep]
 }
 
 # Run-length grouping. Returns an integer vector the same length
@@ -488,22 +466,16 @@ engine_group_display <- function(
 }
 
 # Pick the column that hosts the header-row text. Skip every
-# `usage = "group"` column whose `group_display = "header_row"`
-# (those are hidden). Falls back to NA when nothing visible
-# remains.
+# grouping key the plan hides (`display = "header_row"` sources and
+# `"none"` break-only keys, passed as `hidden_keys`). Falls back to
+# NA when nothing visible remains.
 .header_row_host_column <- function(
   col_names,
-  group_names,
+  hidden_keys,
   cols,
   hidden_extra = character(0L)
 ) {
-  hidden <- hidden_extra
-  for (nm in group_names) {
-    cs <- cols[[nm]]
-    if (identical(cs@group_display, "header_row")) {
-      hidden <- c(hidden, nm)
-    }
-  }
+  hidden <- c(hidden_extra, hidden_keys)
   # A host column must actually render. Skip explicitly-hidden columns
   # (visible = FALSE) and any caller-supplied hidden set (indent-by
   # targets, subgroup auto-hidden cols); otherwise the host resolves to

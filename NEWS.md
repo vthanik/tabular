@@ -1,5 +1,17 @@
 # tabular (development version)
 
+## Breaking changes
+
+* `col_spec()` no longer has `usage`, `group_display`, or `group_skip` arguments; row grouping is a table-level fact and is now declared once with the new `group_rows()` verb. The inert-knob warning for `group_display`/`group_skip` on non-group columns is gone with them.
+
+* `group_rows()` is the new structural verb: `group_rows(by, display, skip)` names the grouping key columns outer to inner with per-key display (`"header_row"`, `"column"`, `"column_repeat"`, or the new break-only `"none"`) and per-key blank-spacer control; it replaces a prior declaration wholesale, and its keys may not overlap `subgroup(by = )`.
+
+* `paginate()` gained `repeat_cols`, replacing the `usage = "id"` role: the horizontal-panel stub defaults to the visible `group_rows()` keys, and an explicit `repeat_cols` vector replaces that default.
+
+## New features
+
+* `cols()` accepts a bare string as label shorthand (`soc = "SOC / PT"` is `soc = col_spec(label = "SOC / PT")`, including glue interpolation and the deferred `{.name}` token) and a `.hide` argument that hides the named columns in one flat vector.
+
 * `paginate()` keep-together protection on the natively-paginating backends (RTF, DOCX) now emits edge-only row glue instead of gluing a whole fitting block, so a block that fits a fresh page but not the space left on the current one no longer bumps wholesale and strands a near-empty page; widow/orphan floors count content rows only, with trailing blank spacer rows still riding with their block.
 
 * `paginate(keep_together = )` now accepts any column of `data` (including hidden block-key columns), not only `usage = "group"` columns.

@@ -58,10 +58,10 @@
 #' and carries at least `widow_floor` rows forward; runs short
 #' enough for the two edges to meet ride as one block.
 #'
-#' **`panels` and group stickiness.** With `panels > 1`, the engine
-#' splits the NON-group columns into approximately equal slices and
-#' repeats every `usage = "group"` column on every panel for row
-#' context.
+#' **`panels` and the stub.** With `panels > 1`, the engine splits
+#' the non-stub columns into approximately equal slices and repeats
+#' the stub — `repeat_cols` when set, otherwise the visible
+#' [`group_rows()`] keys — on every panel for row context.
 #'
 #' @param .spec *The `tabular_spec` to attach pagination to.*
 #'   `<tabular_spec>: required`.
@@ -69,9 +69,9 @@
 #' @param keep_together *Columns whose runs of identical values
 #'   must not be split across a page break.*
 #'   `<character>: default character()`. Every entry must be a column
-#'   of `data` — typically a `usage = "group"` column, or a hidden
-#'   block-key column (`col_spec(visible = FALSE)`) when the block
-#'   structure lives in the row text rather than a group column (the
+#'   of `data` — typically a [`group_rows()`] key, or a hidden
+#'   block-key column (`.hide` in [`cols()`]) when the block
+#'   structure lives in the row text rather than a grouping key (the
 #'   AE SOC/PT idiom).
 #'
 #'   **Interaction:** A run too tall to fit in the computed row
@@ -85,9 +85,20 @@
 #'
 #' @param panels *Number of horizontal panels for wide tables.*
 #'   `<integer(1)>: default 1`. With `1`, every column is on every page
-#'   (single vertical scroll). With `N > 1`, the engine splits non-group
-#'   columns into `N` chunks and repeats every group column on every
-#'   panel.
+#'   (single vertical scroll). With `N > 1`, the engine splits non-stub
+#'   columns into `N` chunks and repeats the stub on every panel.
+#'
+#' @param repeat_cols *Stub columns repeated on every horizontal
+#'   panel.* `<character | NULL>: default NULL`. `NULL` derives the
+#'   stub from the [`group_rows()`] keys, excluding `display = "none"`
+#'   break-only keys (hidden columns never repeat). An explicit
+#'   character vector REPLACES that default — name every column the
+#'   stub should carry (e.g. the grouping key plus a per-row
+#'   statistic label). `character()` repeats nothing.
+#'
+#'   **Interaction:** Only meaningful with `panels > 1` (or the
+#'   column-fit horizontal split); a single-panel table renders every
+#'   column anyway.
 #'
 #' @param orphan_floor *Minimum rows on a continued-from page.*
 #'   `<integer(1)>: default 3`. When `keep_together` would move a
@@ -171,15 +182,11 @@
 #' ) |>
 #'   cols(
 #'     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
-#'     soc      = col_spec(usage = "group", visible = FALSE,
-#'                         group_display = "column_repeat"),
-#'     row_type = col_spec(visible = FALSE),
-#'     soc_n    = col_spec(visible = FALSE),
-#'     n_total  = col_spec(visible = FALSE),
-#'     placebo  = col_spec(label = "Placebo\nN={n['placebo']}"),
-#'     drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}"),
-#'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}"),
-#'     Total    = col_spec(label = "Total\nN={n['Total']}")
+#'     placebo  = "Placebo\nN={n['placebo']}",
+#'     drug_50  = "Drug 50\nN={n['drug_50']}",
+#'     drug_100 = "Drug 100\nN={n['drug_100']}",
+#'     Total    = "Total\nN={n['Total']}",
+#'     .hide    = c("soc", "row_type", "soc_n", "n_total")
 #'   ) |>
 #'   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
 #'   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE)) |>
@@ -215,16 +222,18 @@
 #'   footnotes = "Response per RECIST 1.1, investigator assessment."
 #' ) |>
 #'   cols(
-#'     stat_label  = col_spec(usage = "id", label = "Response"),
-#'     row_type    = col_spec(visible = FALSE),
-#'     groupid     = col_spec(visible = FALSE),
-#'     group_label = col_spec(visible = FALSE),
-#'     placebo    = col_spec(label = "Placebo\nN={ne['placebo']}"),
-#'     drug_50    = col_spec(label = "Drug 50\nN={ne['drug_50']}"),
-#'     drug_100   = col_spec(label = "Drug 100\nN={ne['drug_100']}")
+#'     stat_label = "Response",
+#'     placebo    = "Placebo\nN={ne['placebo']}",
+#'     drug_50    = "Drug 50\nN={ne['drug_50']}",
+#'     drug_100   = "Drug 100\nN={ne['drug_100']}",
+#'     .hide      = c("row_type", "groupid", "group_label")
 #'   ) |>
 #'   sort_rows(by = c("groupid", "stat_label")) |>
-#'   paginate(panels = 2, repeat_content = c("titles", "headers", "footnotes"))
+#'   paginate(
+#'     panels = 2,
+#'     repeat_cols = "stat_label",
+#'     repeat_content = c("titles", "headers", "footnotes")
+#'   )
 #'
 #' # ---- Example 3: Orphan / widow floors + continuation marker ----
 #' #
@@ -239,14 +248,15 @@
 #'   titles = c("Table 14.4.1", "Vital Signs Summary at Each Visit")
 #' ) |>
 #'   cols(
-#'     param      = col_spec(usage = "group", label = "Parameter"),
-#'     paramcd    = col_spec(visible = FALSE),
-#'     visit      = col_spec(usage = "group", label = "Visit"),
-#'     stat_label = col_spec(label = "Statistic"),
+#'     param      = "Parameter",
+#'     visit      = "Visit",
+#'     stat_label = "Statistic",
 #'     placebo    = col_spec(label = "Placebo",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
-#'     drug_100   = col_spec(label = "Drug 100", align = "decimal")
+#'     drug_100   = col_spec(label = "Drug 100", align = "decimal"),
+#'     .hide      = "paramcd"
 #'   ) |>
+#'   group_rows(by = c("param", "visit")) |>
 #'   paginate(
 #'     keep_together = "param",
 #'     orphan_floor  = 4L,
@@ -258,8 +268,8 @@
 #' #
 #' # Wide AE-by-SOC/PT table where the column strip itself does not
 #' # fit on a single page. The engine slices columns into groups
-#' # (each group keeping the `usage = "group"` columns repeated on
-#' # every horizontal page) so the SOC / PT label band re-appears
+#' # (each group keeping the stub columns repeated on every
+#' # horizontal page) so the SOC / PT label band re-appears
 #' # alongside whichever arm columns land on each panel.
 #' tabular(
 #'   cdisc_saf_aesocpt,
@@ -268,11 +278,7 @@
 #'   cols(
 #'     label    = col_spec(label = "SOC / PT", indent = "indent_level",
 #'                         width = "2.5in"),
-#'     soc      = col_spec(usage = "group", visible = FALSE,
-#'                         group_display = "column_repeat"),
-#'     soc_n    = col_spec(visible = FALSE),
-#'     n_total  = col_spec(visible = FALSE),
-#'     row_type = col_spec(visible = FALSE),
+#'     .hide    = c("soc", "soc_n", "n_total", "row_type"),
 #'     placebo  = col_spec(label = "Placebo",  align = "decimal",
 #'                         width = "2.0in"),
 #'     drug_50  = col_spec(label = "Drug 50",  align = "decimal",
@@ -300,6 +306,7 @@ paginate <- function(
   .spec,
   keep_together = character(),
   panels = 1,
+  repeat_cols = NULL,
   orphan_floor = 3,
   widow_floor = 2,
   repeat_content = c("titles", "headers", "footnotes"),
@@ -310,6 +317,22 @@ paginate <- function(
 
   check_chr(keep_together, arg = "keep_together", call = call)
   panels_val <- .check_panels(panels, call = call)
+  if (!is.null(repeat_cols)) {
+    check_chr(repeat_cols, arg = "repeat_cols", call = call)
+    rc_missing <- setdiff(repeat_cols, names(.spec@data))
+    if (length(rc_missing) > 0L) {
+      cli::cli_abort(
+        c(
+          "{.arg repeat_cols} references {length(rc_missing)} column{?s} not in {.arg data}.",
+          "x" = "Missing: {.val {rc_missing}}.",
+          "i" = "Available: {.val {names(.spec@data)}}."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+    repeat_cols <- unique(repeat_cols)
+  }
   of <- check_pos_int(orphan_floor, arg = "orphan_floor", call = call)
   wf <- check_pos_int(widow_floor, arg = "widow_floor", call = call)
   rc <- .check_repeat_content(repeat_content, call = call)
@@ -334,6 +357,7 @@ paginate <- function(
   new_pag <- pagination_spec(
     keep_together = keep_together,
     panels = panels_val,
+    repeat_cols = repeat_cols,
     orphan_floor = of,
     widow_floor = wf,
     repeat_content = rc,
@@ -429,19 +453,16 @@ paginate <- function(
 }
 
 # Stub columns: the columns that repeat on every horizontal panel and
-# show once on the left of a collapsed continuous table. This is the
-# `usage = "group"` set widened to include `usage = "id"` (the
-# non-collapsing row-identifier). Used only on the panel-repeat path
-# (`engine_paginate` -> `.compute_horizontal_panels` /
-# `.panel_spans_from_panels`).
-.stub_col_names <- function(cols) {
-  if (length(cols) == 0L) {
-    return(character())
+# show once on the left of a collapsed continuous table. An explicit
+# `paginate(repeat_cols = )` REPLACES the default (character() = no
+# stub); the default derives from the `group_rows()` keys, excluding
+# "none" break-only keys (hidden, so they never repeat). Used only on
+# the panel-repeat path (`engine_paginate` ->
+# `.compute_horizontal_panels` / `.panel_spans_from_panels`).
+.stub_col_names <- function(spec) {
+  pag <- spec@pagination
+  if (is_pagination_spec(pag) && !is.null(pag@repeat_cols)) {
+    return(pag@repeat_cols)
   }
-  is_stub <- vapply(
-    cols,
-    function(c) !is.na(c@usage) && c@usage %in% c("group", "id"),
-    logical(1)
-  )
-  names(cols)[is_stub]
+  .row_group_stub_keys(spec@row_groups)
 }

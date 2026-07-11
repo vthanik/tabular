@@ -143,11 +143,11 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   # (`widow_floor - 1`) edges so the middle stays free to split
   # against whatever space remains on the consumer's current page;
   # runs short enough for the edges to meet ride as one.
-  # Stub columns repeat on every panel: the `usage = "group"` set
-  # widened to include `usage = "id"` (the non-collapsing row
-  # identifier). keep_together is driven independently by `kt_idx`
-  # above, so this is the only consumer here.
-  stub_cols <- .stub_col_names(spec@cols)
+  # Stub columns repeat on every panel: `paginate(repeat_cols = )`
+  # when set, otherwise the visible `group_rows()` keys.
+  # keep_together is driven independently by `kt_idx` above, so this
+  # is the only consumer here.
+  stub_cols <- .stub_col_names(spec)
   # Filter visible columns BEFORE pagination so the slice phase
   # (`.slice_one_page`) and every backend see only the columns the
   # user wants rendered. Hidden columns (col_spec@visible = FALSE)
@@ -706,8 +706,9 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
 
 # Horizontal pagination: split non-stub columns into approximately
 # equal slices; repeat stub columns on every panel. The stub set is
-# `usage in {group, id}` (see `.stub_col_names`). Returns a list of
-# integer column-index vectors — one per panel.
+# `paginate(repeat_cols = )` or the visible `group_rows()` keys (see
+# `.stub_col_names`). Returns a list of integer column-index vectors
+# — one per panel.
 .compute_horizontal_panels <- function(col_names, stub_col_names, panels) {
   ncol_data <- length(col_names)
   if (ncol_data == 0L) {

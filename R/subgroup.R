@@ -395,6 +395,23 @@ subgroup <- function(
     )
   }
 
+  # The mirror of group_rows()'s overlap guard: a column either
+  # partitions the report or groups rows within a partition, not both.
+  if (!is.null(.spec@row_groups)) {
+    overlap <- intersect(by, .spec@row_groups@by)
+    if (length(overlap) > 0L) {
+      cli::cli_abort(
+        c(
+          "{.arg by} must not overlap the {.fn group_rows} grouping keys.",
+          "x" = "In both: {.val {overlap}}.",
+          "i" = "A column either partitions the report or groups rows within a partition, not both."
+        ),
+        class = "tabular_error_input",
+        call = call
+      )
+    }
+  }
+
   if (!is.null(label)) {
     if (!is.character(label) || length(label) != 1L || is.na(label)) {
       cli::cli_abort(

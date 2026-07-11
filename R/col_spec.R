@@ -7,10 +7,13 @@
 
 #' Per-column display specification
 #'
-#' Build a single column's display attributes — usage, label, format,
-#' visibility, width, alignment, NA text. The result feeds [`cols()`],
-#' which stamps the input column name onto the spec from its named-
-#' argument position and attaches it to the parent `tabular_spec`.
+#' Build a single column's display attributes — label, format,
+#' visibility, width, alignment, NA text, indent. The result feeds
+#' [`cols()`], which stamps the input column name onto the spec from
+#' its named-argument position and attaches it to the parent
+#' `tabular_spec`. Row structure (section headers, repeat
+#' suppression, blank spacers) is not a column attribute — declare it
+#' once with [`group_rows()`].
 #'
 #' @details
 #'
@@ -34,79 +37,6 @@
 #' a malformed `sprintf` template is probed at construction
 #' (`sprintf(format, 0)`) and fails fast at write time, not at
 #' render time.
-#'
-#' @param usage *Engine role.*
-#'   `<character(1) | NULL>: default NULL`. One of:
-#'
-#'   *   **`"display"`** (default in [`cols()`]) — pass-through.
-#'   *   **`"group"`** — row-label with repeat-suppression and
-#'       continuation-page repeat keys. Use for `variable`, `soc`,
-#'       `stat_label`. (Cosmetic indent depth is the separate `indent`
-#'       argument, not a usage role.)
-#'   *   **`"id"`** — a row-identifier column. Renders like `"display"`
-#'       (one value per row, never collapses) but joins the *stub*: it
-#'       repeats on every horizontal panel (`paginate(panels = N)`) and
-#'       shows once on the left when a continuous backend (HTML /
-#'       Markdown) collapses the panels into one table. The PROC REPORT
-#'       `ID` role, orthogonal to grouping. Use for a per-row statistic
-#'       label (`"n"`, `"Mean"`, `"SD"`) that must stay legible on every
-#'       panel of a wide demographics or efficacy table.
-#'   *   **`NULL` / `NA`** — the unset sentinel; resolves to `"display"`
-#'       at render. `NA` is mergeable, so an explicit `"display"` on a
-#'       later [`cols()`] call can override a prior `"group"` / `"id"`.
-#'
-#'   ```r
-#'   # Two row-label columns and four arm columns.
-#'   cols(
-#'     variable   = col_spec(usage = "group"),
-#'     stat_label = col_spec(usage = "group"),
-#'     placebo    = col_spec(),
-#'     drug_50    = col_spec()
-#'   )
-#'   ```
-#'
-#'   ```r
-#'   # Section-band table: the `group_label` column drives section
-#'   # headers; `stat_label` body rows auto-indent under each header
-#'   # without an explicit depth column.
-#'   cols(
-#'     group_label = col_spec(usage = "group", group_display = "header_row"),
-#'     stat_label  = col_spec(label = "Response"),
-#'     placebo     = col_spec(align = "decimal")
-#'   )
-#'   ```
-#'
-#'   ```r
-#'   # End-to-end ARD → wide → tabular pipeline. The cards ARD
-#'   # `cdisc_saf_demo_ard` is the long upstream input; `pivot_across()`
-#'   # widens to one column per arm and stamps an internal marker
-#'   # so [`sort_rows()`] can reject sort keys on those arm columns.
-#'   # `cols()` then attaches per-column display rules.
-#'   wide <- pivot_across(
-#'     cdisc_saf_demo_ard,
-#'     statistic = list(
-#'       continuous  = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})"),
-#'       categorical = "{n} ({p}%)"
-#'     )
-#'   )
-#'   tabular(wide, titles = "Demographics") |>
-#'     cols(
-#'       variable                 = col_spec(
-#'         usage = "group", label = "Characteristic"
-#'       ),
-#'       stat_label               = col_spec(
-#'         usage = "group", label = "Statistic"
-#'       ),
-#'       Placebo                  = col_spec(align = "decimal"),
-#'       `Xanomeline High Dose`   = col_spec(
-#'         label = "High Dose", align = "decimal"
-#'       ),
-#'       `Xanomeline Low Dose`    = col_spec(
-#'         label = "Low Dose", align = "decimal"
-#'       ),
-#'       Total                    = col_spec(align = "decimal")
-#'     )
-#'   ```
 #'
 #' @param label *Display label for the column header.*
 #'   `<character(1)>: default NA_character_`. Embed `\n` for
@@ -174,13 +104,12 @@
 #'   flipped to `visible = FALSE` automatically at engine time —
 #'   restating it here is redundant.
 #'
-#'   **Break-only group column.** A hidden `usage = "group"` column
-#'   emits no header rows and no in-column text; it contributes only
-#'   its `group_skip` transitions, so `group_display` is ignored while
-#'   hidden. This is the canonical "spacer" that drops a blank line
-#'   wherever a marker value changes (e.g. continuous stats vs.
-#'   categorical groups inside one characteristic):
-#'   `col_spec(usage = "group", group_skip = TRUE, visible = FALSE)`.
+#'   **Break-only grouping key.** To drop a blank line wherever a
+#'   hidden marker column changes (e.g. continuous stats vs.
+#'   categorical groups inside one characteristic), do not hide the
+#'   column here — declare it as a break-only key with
+#'   [`group_rows()`]`(by = "marker", display = "none")`, which hides
+#'   it and contributes only its group transitions.
 #'
 #' @param width *Column width — auto-sized, pinned, or proportional.*
 #'   `<character(1) | numeric(1)>: default "auto"`.
@@ -234,101 +163,6 @@
 #'   / [`cols_apply()`] calls, `"auto"` is treated as the default: a
 #'   later call carrying `width = "auto"` leaves a previously pinned
 #'   width intact, and only an explicit non-`"auto"` width overrides.
-#'
-#' @param group_display *How `usage = "group"` values render in the body.*
-#'   `<character(1)>: default NA`. Active only when `usage = "group"` —
-#'   setting it on a non-group column is ignored and warns.
-#'   `NA` (default) is the merge "unset" sentinel and resolves to
-#'   `"header_row"` at render; an explicit value is mergeable, so a later
-#'   [`cols()`] call can reset it back to `"header_row"`.
-#'
-#'   *   **`"header_row"`** *(default)* — each unique value emits as
-#'       a section header row above its block of data rows, and **the
-#'       body rows beneath are automatically indented one level**. The
-#'       section header itself sits flush left at depth 0; its child
-#'       rows render one indent level in. Because the section already
-#'       supplies that indent, the stub column needs **no** `indent` —
-#'       adding `indent = 1` there overrides (does not stack) the
-#'       auto-indent, leaving a single level. The source column is hidden from
-#'       the visible body. Matches the canonical submission
-#'       shape used by clinical TFL house templates (Disposition,
-#'       Demographics, Statistical Report sections).
-#'
-#'       A group with exactly **one** member collapses to a single
-#'       flush-left row: the group value becomes that row's label, its
-#'       data cells are kept, and no separate header or indent is
-#'       emitted (the redundant two-line "header plus lone child" is
-#'       gone). This is the standard occurrence-table shape, where a
-#'       single binary flag (DEATH, TEAE) sits flush among headed
-#'       multi-level breakdowns. The collapsed row still receives any
-#'       [`cells_group_headers()`] styling (preset or explicit), so its
-#'       group identity is not lost. An empty or `NA` group value never
-#'       emits a header at all; its members render flush left keeping
-#'       their own labels. *(Collapse applies to a single `header_row`
-#'       band; a nested two-`header_row` layout keeps a header per
-#'       value.)*
-#'   *   **`"column"`** — column stays visible; repeated values are
-#'       suppressed (only the first row of each value shows the
-#'       label). PROC REPORT's default for grouping variables.
-#'   *   **`"column_repeat"`** — column stays visible; every row
-#'       repeats the value (no suppression). The shape `R`'s
-#'       `print.data.frame` produces.
-#'
-#'   **Composition under multiple group columns.** When more than
-#'   one `usage = "group"` column is declared, the FIRST one
-#'   encountered in `cols()` order is the outer group; subsequent
-#'   group columns nest inside it. Each column's `group_display`
-#'   choice is independent — a common clinical pattern is the outer
-#'   `variable` as `"header_row"` plus the inner `stat_label` as
-#'   `"column"` (visible row labels under each section header).
-#'
-#'   ```r
-#'   # Demographics layout: variable as section header, stat_label
-#'   # as visible suppressed column.
-#'   cols(
-#'     variable   = col_spec(usage = "group", group_display = "header_row"),
-#'     stat_label = col_spec(usage = "group", group_display = "column"),
-#'     placebo    = col_spec(label = "Placebo", align = "decimal")
-#'   )
-#'   ```
-#'
-#' @param group_skip *Insert a blank row between consecutive groups.*
-#'   `<logical(1)>: default NA`. Active only when `usage = "group"` —
-#'   setting it on a non-group column is ignored and warns. Three values:
-#'
-#'   *   **`TRUE`** — engine injects one blank row immediately before
-#'       each value transition on this column (PROC REPORT's `BREAK
-#'       AFTER var / SKIP` semantics, lifted to per-column control).
-#'       Never trails the final group.
-#'   *   **`FALSE`** — never insert a blank row for this column.
-#'   *   **`NA`** *(default)* — follow `group_display`: `TRUE` when
-#'       `group_display = "header_row"`, `FALSE` when `"column"` or
-#'       `"column_repeat"`. Picks the canonical shape
-#'       without an extra knob to set.
-#'
-#'   **Interaction:** When two or more columns have an effective
-#'   `group_skip = TRUE` and their value transitions coincide on the
-#'   same row, the engine emits ONE blank row at that boundary, not
-#'   one per column. Transition row indices are unioned across all
-#'   contributing group columns.
-#'
-#'   ```r
-#'   # Default: header_row mode auto-injects blanks between sections.
-#'   col_spec(usage = "group", group_display = "header_row")
-#'
-#'   # Override: keep the column visible (suppressed-value mode) but
-#'   # still insert blank-row separators between value changes.
-#'   col_spec(usage = "group", group_display = "column", group_skip = TRUE)
-#'
-#'   # Override: section headers without the blank-row separator
-#'   # (denser layout, used when vertical space is tight).
-#'   col_spec(usage = "group", group_display = "header_row", group_skip = FALSE)
-#'
-#'   # Break-only "spacer": pairs with visible = FALSE to drop a blank
-#'   # line wherever a hidden marker changes, without rendering the
-#'   # column or any header row. group_display is ignored when hidden.
-#'   col_spec(usage = "group", group_skip = TRUE, visible = FALSE)
-#'   ```
 #'
 #' @param align *Horizontal alignment within the column.*
 #'   `<character(1) | NULL>: default NULL`. One of:
@@ -407,11 +241,12 @@
 #'   Markdown carries the literal space-prefix. Synthesised group-header
 #'   rows are never indented — they are the parent at depth 0.
 #'
-#'   **Interaction:** an explicit `indent` on a
-#'   `group_display = "header_row"` host **suppresses** that section's
-#'   automatic one-level child indent (you take control of the depth) —
-#'   so a stub under a section needs no `indent` at all, and adding
-#'   `indent = 1` there yields a single, not double, indent.
+#'   **Interaction:** an explicit `indent` on the host column of a
+#'   [`group_rows()`]`(display = "header_row")` section **suppresses**
+#'   that section's automatic one-level child indent (you take control
+#'   of the depth) — so a stub under a section needs no `indent` at
+#'   all, and adding `indent = 1` there yields a single, not double,
+#'   indent.
 #'
 #'   Per-row SOC / PT pattern (the bundled `cdisc_saf_aesocpt` ships the
 #'   canonical depth column, so no upstream construction is needed):
@@ -427,7 +262,7 @@
 #'   Depth-column values `c(0L, 1L, 2L, …)` produce `0`, `1`, `2`, …
 #'   levels. Negative values clamp to 0 (warn); fractional numerics
 #'   floor (warn); NA → 0 (silent). Works in flat listings too — a
-#'   character `indent` does not require any `usage = "group"` columns.
+#'   character `indent` does not require any [`group_rows()`] keys.
 #'
 #' @return *A `col_spec` S7 object.* Pass it to [`cols()`] keyed by
 #'   the input column name; the constructor itself does not stamp
@@ -453,8 +288,8 @@
 #' ) |>
 #'   cols(
 #'     variable   = col_spec(
-#'       usage = "group", label = "Parameter",
-#'       width = 2.0,     align = "left"
+#'       label = "Parameter",
+#'       width = 2.0, align = "left"
 #'     ),
 #'     stat_label = col_spec(label = "Statistic", align = "left"),
 #'     placebo  = col_spec(
@@ -474,6 +309,7 @@
 #'       align = "decimal", na_text = "-"
 #'     )
 #'   ) |>
+#'   group_rows(by = "variable") |>
 #'   sort_rows(by = c("variable", "stat_label"))
 #'
 #' # ---- Example 2: AE table with indented label + hidden helpers ----
@@ -522,8 +358,9 @@
 #' # rather than a literal "NA". `valign = "top"` keeps the multi-
 #' # line cell text aligned to the top.
 #' tabular(cdisc_eff_estimates, titles = "Treatment-effect estimates by model") |>
+#'   group_rows(by = "model") |>
 #'   cols(
-#'     model    = col_spec(usage = "group",  label = "Model",   valign = "top"),
+#'     model    = col_spec(label = "Model", valign = "top"),
 #'     estimate = col_spec(label = "Estimate", align = "decimal", format = "%.2f"),
 #'     lower_ci = col_spec(
 #'       label   = "Lower\n95% CI",
@@ -558,10 +395,9 @@
 #' ) |>
 #'   cols(
 #'     paramcd    = col_spec(visible = FALSE),
-#'     param      = col_spec(usage = "group", label = "Parameter",
-#'                           width = "1.6in"),
-#'     visit      = col_spec(usage = "group", label = "Visit",
-#'                           width = "1.2in", align = "center"),
+#'     param      = col_spec(label = "Parameter", width = "1.6in"),
+#'     visit      = col_spec(label = "Visit", width = "1.2in",
+#'                           align = "center"),
 #'     stat_label = col_spec(label = "Statistic", width = "1.0in"),
 #'     placebo    = col_spec(
 #'       label = "Placebo\nN={n['placebo']}",
@@ -575,36 +411,40 @@
 #'       label = "Drug 100\nN={n['drug_100']}",
 #'       align = "decimal", width = "0.9in"
 #'     )
-#'   )
+#'   ) |>
+#'   group_rows(by = c("param", "visit"))
 #'
-#' # ---- Example 5: Non-collapsing `id` stub for a panelled table ----
+#' # ---- Example 5: Repeating stub columns on a panelled table ----
 #' #
-#' # `usage = "id"` marks `stat_label` ("n", "Mean", "SD", ...) as a
-#' # row identifier: like `display` it shows on every row, but it also
-#' # joins the stub, so it repeats on each horizontal panel created by
-#' # `paginate(panels = 2)`. On HTML / Markdown (no page width) the
-#' # panels collapse into one scrollable table with a "Panel 1 / Panel
-#' # 2" header note; on RTF / Word each panel is its own page with the
-#' # `variable` + `stat_label` stub repeated.
+#' # `paginate(repeat_cols = )` names the stub that repeats on each
+#' # horizontal panel created by `paginate(panels = 2)` — here the
+#' # grouping key `variable` plus the per-row statistic label
+#' # `stat_label`, so both stay legible on every panel. On HTML /
+#' # Markdown (no page width) the panels collapse into one scrollable
+#' # table with a "Panel 1 / Panel 2" header note; on RTF / Word each
+#' # panel is its own page with the stub repeated.
 #' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #' tabular(
 #'   cdisc_saf_demo,
 #'   titles = c("Table 14.1.1", "Demographics", "Safety Population")
 #' ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", group_display = "column",
-#'                           label = "Parameter"),
-#'     stat_label = col_spec(usage = "id", label = "Statistic"),
+#'     variable   = col_spec(label = "Parameter"),
+#'     stat_label = col_spec(label = "Statistic"),
 #'     placebo    = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
 #'     drug_100   = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
 #'     Total      = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
 #'   ) |>
-#'   paginate(panels = 2)
+#'   group_rows(by = "variable", display = "column") |>
+#'   paginate(panels = 2, repeat_cols = c("variable", "stat_label"))
 #'
 #' @seealso
 #' **Companion verb:** [`cols()`] attaches `col_spec` entries to a
 #' `tabular_spec` keyed by input column name.
+#'
+#' **Row structure:** [`group_rows()`] declares the grouping keys and
+#' section rendering at table level.
 #'
 #' **Sibling build verbs:** [`headers()`], [`sort_rows()`],
 #' [`style()`], [`paginate()`], [`preset()`].
@@ -616,13 +456,10 @@
 #'
 #' @export
 col_spec <- function(
-  usage = NULL,
   label = NA_character_,
   format = NULL,
   visible = NA,
   width = "auto",
-  group_display = NA,
-  group_skip = NA,
   align = NULL,
   valign = NULL,
   na_text = NA_character_,
@@ -630,7 +467,6 @@ col_spec <- function(
 ) {
   call <- rlang::caller_env()
 
-  usage_val <- .check_col_usage(usage, call = call)
   align_val <- .check_col_align(align, call = call)
   valign_val <- .check_col_valign(valign, call = call)
   .check_col_label(label, call = call)
@@ -645,8 +481,6 @@ col_spec <- function(
   }
   visible_val <- .check_col_visible(visible, call = call)
   .check_col_width(width, call = call)
-  group_display_val <- .check_col_group_display(group_display, call = call)
-  group_skip_val <- .check_col_group_skip(group_skip, call = call)
   .check_col_na_text(na_text, call = call)
   .check_col_format(format, call = call)
   indent_val <- .check_col_indent(indent, call = call)
@@ -655,7 +489,6 @@ col_spec <- function(
     name = NA_character_,
     label = label,
     label_deferred = label_deferred,
-    usage = usage_val,
     format = format,
     visible = visible_val,
     width = width,
@@ -665,8 +498,6 @@ col_spec <- function(
     # stays as the original string ("40%", "2.5in", "auto", ...)
     # so the HTML backend can detect percent intent at emit time.
     width_user = width,
-    group_display = group_display_val,
-    group_skip = group_skip_val,
     align = align_val,
     valign = valign_val,
     na_text = na_text,
@@ -771,85 +602,9 @@ col_spec <- function(
   )
 }
 
-.check_col_group_skip <- function(x, call) {
-  if (length(x) == 1L && (is.logical(x) || is.na(x))) {
-    return(as.logical(x))
-  }
-  cli::cli_abort(
-    c(
-      "Bad {.arg group_skip}.",
-      "x" = "Got {.obj_type_friendly {x}}.",
-      "i" = "Use TRUE, FALSE, or NA (default: follow {.arg group_display})."
-    ),
-    class = "tabular_error_input",
-    call = call
-  )
-}
-
-# Resolve the effective group_skip for a col_spec. NA means "follow
-# group_display": TRUE for header_row mode (visible section
-# separator), FALSE for column / column_repeat (no separator
-# between rows of a column-mode group).
-.effective_group_skip <- function(cs) {
-  if (!is_col_spec(cs)) {
-    return(FALSE)
-  }
-  if (is.na(cs@group_skip)) {
-    return(identical(cs@group_display, "header_row"))
-  }
-  isTRUE(cs@group_skip)
-}
-
-.check_col_group_display <- function(x, call) {
-  # NA / NULL is the "unset" merge sentinel (resolved to "header_row" at
-  # engine finalize). A length-1 character in the allowed set is explicit.
-  if (is.null(x) || (length(x) == 1L && is.na(x))) {
-    return(NA_character_)
-  }
-  if (
-    is.character(x) &&
-      length(x) == 1L &&
-      x %in% .col_group_display_values
-  ) {
-    return(x)
-  }
-  modes <- .col_group_display_values
-  cli::cli_abort(
-    c(
-      "Bad {.arg group_display}.",
-      "x" = "Got {.obj_type_friendly {x}}.",
-      "i" = "Use one of {.val {modes}}."
-    ),
-    class = "tabular_error_input",
-    call = call
-  )
-}
-
 # ---------------------------------------------------------------------
 # Per-argument validators (internal)
 # ---------------------------------------------------------------------
-
-.check_col_usage <- function(x, call) {
-  if (is.null(x)) {
-    return(NA_character_)
-  }
-  if (
-    is.character(x) &&
-      length(x) == 1L &&
-      !is.na(x) &&
-      x %in% .col_usage_values
-  ) {
-    return(x)
-  }
-  cli::cli_abort(
-    c(
-      "{.arg usage} must be one of {.val {(.col_usage_values)}} or {.code NULL}.",
-      "x" = "You supplied {.obj_type_friendly {x}}."
-    ),
-    class = "tabular_error_input",
-    call = call
-  )
-}
 
 .check_col_align <- function(x, call) {
   if (is.null(x)) {

@@ -300,19 +300,14 @@ as_grid <- function(.spec) {
 # group; a hard page break between groups falls out naturally from
 # the per-spec pagination plans.
 .resolve_spec_to_grid <- function(spec, format, call) {
-  # Finalize boundary (A): resolve the NA "unset" col_spec sentinels
-  # (visible / group_display / usage) to concrete defaults on spec@cols
-  # before any engine phase or backend reads it. engine_borders and
-  # engine_paginate read spec@cols directly (with isTRUE / identical),
-  # and engine_borders runs before the visibility merge-back, so a raw
-  # default col_spec (visible = NA) must already read as TRUE here.
-  # Boundary (B) is inside `.cols_by_name()` for the synthesized defaults
-  # of unlisted columns, which never appear in spec@cols.
-  #
-  # F3: warn (once per render) about inert group_display / group_skip on
-  # non-group columns BEFORE finalize, while the "was it set" signal
-  # (group_display NA = unset) still survives.
-  .warn_inert_group_knobs(spec@cols, call)
+  # Finalize boundary (A): resolve the NA "unset" col_spec visible
+  # sentinel to its concrete default on spec@cols before any engine
+  # phase or backend reads it. engine_borders and engine_paginate read
+  # spec@cols directly (with isTRUE / identical), and engine_borders
+  # runs before the visibility merge-back, so a raw default col_spec
+  # (visible = NA) must already read as TRUE here. Boundary (B) is
+  # inside `.cols_by_name()` for the synthesized defaults of unlisted
+  # columns, which never appear in spec@cols.
   spec <- S7::set_props(spec, cols = .finalize_col_specs(spec@cols))
   groups <- engine_subgroup_split(spec)
   # Assign footnote markers ONCE, at the spec level, in reading order
@@ -439,11 +434,11 @@ as_grid <- function(.spec) {
   # injection and is measured by engine_decimal + column widths).
   fmt <- .apply_affixes(fmt, style_mat, call = call)
 
-  # Apply col_spec@group_display semantics. Header_row mode
-  # splices section-header rows above each group-variable
-  # transition; column mode suppresses repeats; column_repeat is a
-  # no-op. The phase may augment the cells matrices with new
-  # synthesised rows + hide source group columns from the visible
+  # Apply the group_rows() plan. Header_row mode splices
+  # section-header rows above each grouping-key transition; column
+  # mode suppresses repeats; column_repeat is a no-op; none is a
+  # break-only key. The phase may augment the cells matrices with new
+  # synthesised rows + hide grouping-key columns from the visible
   # body. When `header_row` mode is active, every data row's
   # host-column text is prefixed with `strrep(" ", preset@indent_size)`
   # so the data rows visually nest under their synthetic section
@@ -454,6 +449,7 @@ as_grid <- function(.spec) {
     cells_ast = fmt$cells_ast,
     cells_style = style_mat,
     cols = .cols_by_name(spec@cols, names(spec@data)),
+    row_groups = spec@row_groups,
     data = spec@data,
     indent_size = if (is_preset_spec(gd_preset)) {
       gd_preset@indent_size

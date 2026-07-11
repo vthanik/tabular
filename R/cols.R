@@ -7,10 +7,11 @@
 #'
 #' Add [`col_spec()`] entries to a `tabular_spec`. Each named argument
 #' is one column: the name is the input column in `.spec@data` and the
-#' value is the `col_spec` carrying that column's display attributes
-#' (usage, label, format, alignment, width, visibility, NA text).
-#' Columns not mentioned get a default `col_spec()` (usage = display)
-#' at engine-validate time.
+#' value is either the `col_spec` carrying that column's display
+#' attributes (label, format, alignment, width, visibility, NA text)
+#' or a bare label string — `x = "Label"` is shorthand for
+#' `x = col_spec(label = "Label")`. Columns not mentioned get a
+#' default `col_spec()` at engine-validate time.
 #'
 #' @details
 #'
@@ -52,27 +53,24 @@
 #'
 #' | field | unset sentinel |
 #' |---|---|
-#' | `usage`         | `NA` |
 #' | `label`         | `NA_character_` |
 #' | `format`        | `NULL` |
 #' | `visible`       | `NA` |
 #' | `width`         | `"auto"` |
-#' | `group_display` | `NA` |
-#' | `group_skip`    | `NA` |
 #' | `align`         | `NA_character_` |
 #' | `valign`        | `NA_character_` |
 #' | `na_text`       | `NA_character_` (inherit preset) |
 #' | `indent`        | `NA` |
 #'
 #' ```r
-#' # Three-stage build: label/usage first, alignment second, width
-#' # third. Each stage leaves earlier fields intact.
+#' # Three-stage build: label first, alignment second, width third.
+#' # Each stage leaves earlier fields intact.
 #' tabular(cdisc_saf_demo) |>
-#'   cols(variable = col_spec(usage = "group", label = "Parameter")) |>
+#'   cols(variable = "Parameter") |>
 #'   cols(variable = col_spec(align = "left")) |>
 #'   cols(variable = col_spec(width = 2.0))
-#' # Result: variable has usage="group", label="Parameter",
-#' #         align="left", width=2.0 — all four fields set.
+#' # Result: variable has label="Parameter", align="left",
+#' #         width=2.0 — all three fields set.
 #' ```
 #'
 #' @param .spec *The `tabular_spec` to extend.*
@@ -82,10 +80,14 @@
 #'   (`tabular(...) |> cols(...)`) works the normal way — the spec
 #'   is supplied positionally.
 #'
-#' @param ... *Named `col_spec` objects, one per column.* Each name
-#'   is the input column name in `.spec@data`. Names must match an
-#'   existing column — pre-compute derived columns upstream with
-#'   `dplyr::mutate()` (or equivalent) before [`tabular()`].
+#' @param ... *Named `col_spec` objects or label strings, one per
+#'   column.* Each name is the input column name in `.spec@data`.
+#'   Names must match an existing column — pre-compute derived columns
+#'   upstream with `dplyr::mutate()` (or equivalent) before
+#'   [`tabular()`]. A `character(1)` value is label shorthand:
+#'   `soc = "SOC / PT"` is exactly `soc = col_spec(label = "SOC / PT")`,
+#'   including glue-style `{expr}` interpolation and the deferred
+#'   `{.name}` / `{.col}` token.
 #'
 #'   **Restriction:** Names must be unique within a single `cols()`
 #'   call (duplicates warn; "last value wins").
@@ -108,11 +110,21 @@
 #'   # Decimal-align every arm column without listing each by name.
 #'   tabular(cdisc_saf_demo) |>
 #'     cols(
-#'       variable   = col_spec(usage = "group", label = "Parameter"),
-#'       stat_label = col_spec(label = "Statistic"),
+#'       variable   = "Parameter",
+#'       stat_label = "Statistic",
 #'       .default   = col_spec(align = "decimal")
 #'     )
 #'   ```
+#'
+#' @param .hide *Columns to hide, by name.*
+#'   `<character>: default character()`. Sugar for
+#'   `nm = col_spec(visible = FALSE)` entries — one flat vector for
+#'   the hidden sort keys and helper columns every clinical table
+#'   carries. Field-merged like any other entry, so a later
+#'   `cols(nm = col_spec(visible = TRUE))` can re-show the column.
+#'
+#'   **Interaction:** A column named in both `...` and `.hide` ends
+#'   up with its `...` attributes plus `visible = FALSE`.
 #'
 #' @return *The updated `tabular_spec`.* Continue chaining with
 #'   [`headers()`], [`sort_rows()`], [`style()`].
@@ -137,21 +149,22 @@
 #'   footnotes = "Percentages based on N per treatment group."
 #' ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Parameter"),
-#'     stat_label = col_spec(label = "Statistic"),
+#'     variable   = "Parameter",
+#'     stat_label = "Statistic",
 #'     placebo    = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
 #'     drug_100   = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
 #'     Total      = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
 #'   ) |>
+#'   group_rows(by = "variable") |>
 #'   sort_rows(by = c("variable", "stat_label"))
 #'
-#' # ---- Example 2: BOR table with CDISC factor ordering and hidden helper ----
+#' # ---- Example 2: BOR table with CDISC factor ordering and hidden helpers ----
 #' #
 #' # Best Overall Response table where `stat_label` carries the
-#' # canonical CDISC factor levels (driving the sort) and `row_type`
-#' # is hidden — present in the data for the sort, absent from the
-#' # rendered output via `col_spec(visible = FALSE)`.
+#' # canonical CDISC factor levels (driving the sort) and the three
+#' # helper columns are hidden with `.hide` — present in the data for
+#' # the sort, absent from the rendered output.
 #' bor_levels <- c(
 #'   "CR", "PR", "SD", "NON-CR/NON-PD", "PD", "NE", "MISSING",
 #'   "ORR (CR + PR)", "CBR (CR + PR + SD)",
@@ -171,13 +184,11 @@
 #'   footnotes = "Response per RECIST 1.1, investigator assessment."
 #' ) |>
 #'   cols(
-#'     stat_label  = col_spec(label = "Response"),
-#'     row_type    = col_spec(visible = FALSE),
-#'     groupid     = col_spec(visible = FALSE),
-#'     group_label = col_spec(visible = FALSE),
+#'     stat_label = "Response",
 #'     placebo    = col_spec(label = "Placebo\nN={ne['placebo']}",  align = "decimal"),
 #'     drug_50    = col_spec(label = "Drug 50\nN={ne['drug_50']}",  align = "decimal"),
-#'     drug_100   = col_spec(label = "Drug 100\nN={ne['drug_100']}", align = "decimal")
+#'     drug_100   = col_spec(label = "Drug 100\nN={ne['drug_100']}", align = "decimal"),
+#'     .hide      = c("row_type", "groupid", "group_label")
 #'   ) |>
 #'   sort_rows(by = c("groupid", "stat_label"))
 #'
@@ -185,11 +196,11 @@
 #' #
 #' # `label` carries SOC text on SOC rows and PT text on PT rows;
 #' # `indent = "indent_level"` indents the PT rows one level under
-#' # their SOC. `soc`, `row_type`, and `n_total` ride along as hidden
-#' # sort keys. A second `cols()` call later in the chain adds widths
-#' # once the user knows the page geometry; the repeat-call merge
-#' # preserves prior attributes (label, indent, align, visible)
-#' # without restating them.
+#' # their SOC. `soc`, `row_type`, `soc_n`, and `n_total` ride along
+#' # as hidden sort keys via `.hide`. A second `cols()` call later in
+#' # the chain adds widths once the user knows the page geometry; the
+#' # repeat-call merge preserves prior attributes (label, indent,
+#' # align, visible) without restating them.
 #'
 #' tabular(
 #'   cdisc_saf_aesocpt,
@@ -197,14 +208,11 @@
 #' ) |>
 #'   cols(
 #'     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
-#'     soc      = col_spec(visible = FALSE),
-#'     row_type = col_spec(visible = FALSE),
-#'     soc_n    = col_spec(visible = FALSE),
-#'     n_total  = col_spec(visible = FALSE),
 #'     placebo  = col_spec(label = "Placebo",  align = "decimal"),
 #'     drug_50  = col_spec(label = "Drug 50",  align = "decimal"),
 #'     drug_100 = col_spec(label = "Drug 100", align = "decimal"),
-#'     Total    = col_spec(label = "Total",    align = "decimal")
+#'     Total    = col_spec(label = "Total",    align = "decimal"),
+#'     .hide    = c("soc", "row_type", "soc_n", "n_total")
 #'   ) |>
 #'   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE)) |>
 #'   # Second `cols()` call: add widths after the rest of the spec
@@ -259,7 +267,7 @@
 #' [`as_grid()`].
 #'
 #' @export
-cols <- function(.spec, ..., .default = NULL) {
+cols <- function(.spec, ..., .default = NULL, .hide = character()) {
   call <- rlang::caller_env()
   check_tabular_spec(.spec, call = call)
 
@@ -275,9 +283,10 @@ cols <- function(.spec, ..., .default = NULL) {
       call = call
     )
   }
+  check_chr(.hide, call = call)
 
   args <- rlang::list2(...)
-  if (length(args) == 0L && is.null(default_spec)) {
+  if (length(args) == 0L && is.null(default_spec) && length(.hide) == 0L) {
     return(.spec)
   }
 
@@ -294,17 +303,27 @@ cols <- function(.spec, ..., .default = NULL) {
   }
 
   for (i in seq_along(args)) {
-    if (!is_col_spec(args[[i]])) {
-      cli::cli_abort(
-        c(
-          "Each entry in {.fn cols} must be a {.cls col_spec}.",
-          "x" = "{.arg {arg_names[[i]]}} is {.obj_type_friendly {args[[i]]}}.",
-          "i" = "Use {.fn col_spec} to build one."
-        ),
-        class = "tabular_error_input",
-        call = call
-      )
+    a <- args[[i]]
+    if (is_col_spec(a)) {
+      next
     }
+    if (is.character(a) && length(a) == 1L && !is.na(a)) {
+      # Label shorthand: `x = "Label"` is sugar for
+      # `x = col_spec(label = "Label")`, including the deferred
+      # `{.name}` / `{.col}` token and `{expr}` interpolation in the
+      # caller environment.
+      args[[i]] <- .shorthand_col_spec(a, call)
+      next
+    }
+    cli::cli_abort(
+      c(
+        "Each entry in {.fn cols} must be a {.cls col_spec} or a label string.",
+        "x" = "{.arg {arg_names[[i]]}} is {.obj_type_friendly {args[[i]]}}.",
+        "i" = "Use {.fn col_spec} for attributes beyond the label."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
   }
 
   dup_idx <- duplicated(arg_names)
@@ -339,10 +358,29 @@ cols <- function(.spec, ..., .default = NULL) {
     }
   }
 
+  # `.hide` is sugar: merge `visible = FALSE` onto each named column,
+  # exactly as `nm = col_spec(visible = FALSE)` entries would.
+  hide_missing <- setdiff(.hide, data_cols)
+  if (length(hide_missing) > 0L) {
+    cli::cli_abort(
+      c(
+        "{.arg .hide} references {length(hide_missing)} column{?s} not in {.arg data}.",
+        "x" = "Missing: {.val {hide_missing}}.",
+        "i" = "Available columns: {.val {data_cols}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
+  }
+
   new_cols <- .spec@cols
   for (i in seq_along(args)) {
     nm <- arg_names[[i]]
     incoming <- S7::set_props(args[[i]], name = nm)
+    new_cols <- .set_col_spec(new_cols, nm, incoming, call)
+  }
+  for (nm in unique(.hide)) {
+    incoming <- S7::set_props(col_spec(visible = FALSE), name = nm)
     new_cols <- .set_col_spec(new_cols, nm, incoming, call)
   }
 
@@ -449,10 +487,11 @@ cols <- function(.spec, ..., .default = NULL) {
 #'   )
 #' ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Parameter"),
-#'     stat_label = col_spec(label = "Statistic")
+#'     variable   = "Parameter",
+#'     stat_label = "Statistic"
 #'   ) |>
 #'   cols_apply(arm_cols, col_spec(align = "decimal")) |>
+#'   group_rows(by = "variable") |>
 #'   sort_rows(by = c("variable", "stat_label"))
 #'
 #' # ---- Example 2: Select arm columns with a predicate ----
@@ -589,6 +628,22 @@ cols_apply <- function(.spec, .cols, .col_spec) {
   )
 }
 
+# Build the col_spec behind the `x = "Label"` shorthand in cols().
+# Mirrors col_spec(label = x) exactly, except the `{expr}`
+# interpolation environment is the cols() CALLER's environment
+# (`call`), not col_spec()'s — the user wrote the string at the
+# cols() call site.
+.shorthand_col_spec <- function(x, call) {
+  .check_col_label(x, call = call)
+  label_deferred <- .label_defers_to_column(x)
+  label <- if (label_deferred) x else .interp_one(x, env = call, call = call)
+  .col_spec_class(
+    name = NA_character_,
+    label = label,
+    label_deferred = label_deferred
+  )
+}
+
 # Field-merge `incoming` onto the spec already stored under `nm`, or
 # assign it fresh when `nm` has none. Shared by `cols()` and
 # `cols_apply()` so the merge / assign rule lives in one place. `env` is
@@ -637,8 +692,8 @@ cols_apply <- function(.spec, .cols, .col_spec) {
 #
 #   width  — sentinel is the literal "auto" (the constructor default).
 #   format — sentinel is NULL (and a function is never NA-testable).
-#   others — sentinel is NA (length-1 scalars: usage, label, visible,
-#            group_display, group_skip, align, valign, na_text, indent).
+#   others — sentinel is NA (length-1 scalars: label, visible, align,
+#            valign, na_text, indent).
 .prop_is_set <- function(p, v) {
   if (p == "width") {
     return(!identical(v, "auto"))
@@ -681,21 +736,15 @@ cols_apply <- function(.spec, .cols, .col_spec) {
 # concrete engine defaults. Idempotent: re-running is a no-op. Called at
 # engine entry (`as_grid()` top, and inside `.cols_by_name()` for the
 # synthesized defaults of unlisted columns) so EVERY downstream reader
-# sees concrete `usage` / `visible` / `group_display` and never the NA
-# sentinel — keeping output identical to the pre-sentinel defaults while
-# making those fields mergeable. See aaa_class.R property comments.
+# sees a concrete `visible` and never the NA sentinel — keeping output
+# identical to the pre-sentinel defaults while making the field
+# mergeable. See aaa_class.R property comments.
 .finalize_col_spec <- function(cs) {
   if (!is_col_spec(cs)) {
     return(cs)
   }
-  if (length(cs@usage) != 1L || is.na(cs@usage)) {
-    cs <- S7::set_props(cs, usage = "display")
-  }
   if (length(cs@visible) != 1L || is.na(cs@visible)) {
     cs <- S7::set_props(cs, visible = TRUE)
-  }
-  if (length(cs@group_display) != 1L || is.na(cs@group_display)) {
-    cs <- S7::set_props(cs, group_display = "header_row")
   }
   cs
 }
@@ -709,39 +758,4 @@ cols_apply <- function(.spec, .cols, .col_spec) {
   out <- lapply(cols, .finalize_col_spec)
   names(out) <- names(cols)
   out
-}
-
-# F3: warn once per render when a non-group column carries an explicit
-# `group_display` / `group_skip`. Those knobs are inert unless
-# `usage = "group"`, so a forgotten `usage = "group"` would silently
-# no-op. Checked on the MERGED spec@cols BEFORE the finalize pass (which
-# resolves `group_display` NA -> "header_row" and would erase the
-# "was it set" signal). Render-time, not construction-time, so the
-# staged-build pattern -- `cols(x = col_spec(group_display = ...))` after
-# an earlier `usage = "group"` -- merges to the right role and never
-# spuriously warns.
-.warn_inert_group_knobs <- function(cols, call) {
-  for (nm in names(cols)) {
-    cs <- cols[[nm]]
-    if (!is_col_spec(cs) || identical(cs@usage, "group")) {
-      next
-    }
-    set_gd <- length(cs@group_display) == 1L && !is.na(cs@group_display)
-    set_gs <- length(cs@group_skip) == 1L && !is.na(cs@group_skip)
-    if (set_gd || set_gs) {
-      ignored <- c(
-        if (set_gd) "group_display",
-        if (set_gs) "group_skip"
-      )
-      cli::cli_warn(
-        c(
-          "{.arg {ignored}} on column {.val {nm}} {?is/are} ignored when {.arg usage} is not {.val group}.",
-          "i" = "Set {.code usage = \"group\"} on {.val {nm}} to use {?it/them}."
-        ),
-        class = "tabular_warning_input",
-        call = call
-      )
-    }
-  }
-  invisible(NULL)
 }

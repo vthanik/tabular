@@ -73,13 +73,14 @@ reference:
   - figure
 
 - title: Spec building
-  desc: Configure per-column display, header bands, sort order, and
-        subgrouping. Each verb attaches one slot onto the spec
-        and returns the updated spec for chaining.
+  desc: Configure per-column display, row grouping, header bands, sort
+        order, and subgrouping. Each verb attaches one slot onto the
+        spec and returns the updated spec for chaining.
   contents:
   - cols
   - cols_apply
   - col_spec
+  - group_rows
   - headers
   - sort_rows
   - subgroup

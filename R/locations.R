@@ -10,7 +10,7 @@
 #   headers         — column header band(s) built by `headers()`,
 #                     including the leaf band built from `col_spec@label`
 #   group_headers   — section-header rows injected for any column with
-#                     `col_spec@group_display = "header_row"`
+#                     `group_rows(display = "header_row")`
 #   title           — title block
 #   subgroup_labels — banner row between subgroup partitions
 #   footnotes       — footnote block
@@ -272,7 +272,7 @@
 #' # A specific spanner by label
 #' cells_headers(labels = "Treatment Group")
 #'
-#' # Section-header rows for col_spec(group_display = "header_row")
+#' # Section-header rows for group_rows(display = "header_row")
 #' cells_group_headers()
 #'
 #' # Title / footnotes blocks

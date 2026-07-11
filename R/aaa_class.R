@@ -24,29 +24,9 @@
 # every validator emits stable single-quoted output regardless of OS.
 .sh_quote <- function(x) shQuote(x, type = "sh")
 
-# Recognised values for `col_spec@usage`.
-#
-#   "display" (default) — a data column: shows every value, never
-#                         repeats across a horizontal panel split.
-#   "group"             — a row-grouping column: collapses repeated
-#                         values (or emits section-header rows), drives
-#                         keep_together / group_skip, and repeats on
-#                         every panel as part of the stub.
-#   "id"                — a row-identifier column. Renders like
-#                         "display" (one value per row, never
-#                         collapses) but joins the stub: it repeats on
-#                         every horizontal panel and shows once on the
-#                         left. The PROC REPORT `ID` role, orthogonal
-#                         to grouping. See `.stub_col_names()`.
-#
-# `usage` holds structural ROLES only. Cosmetic indent depth is the
-# separate `indent` property (a fixed level or a per-row column), not a
-# usage value.
-.col_usage_values <- c("display", "group", "id")
-
-# Recognised values for `col_spec@group_display`. Active only when
-# `col_spec@usage = "group"`; ignored otherwise. Controls how the
-# group-variable's unique values render in the body:
+# Recognised values for `row_group_spec@display` (set per key via
+# `group_rows(display = )`). Controls how each grouping key's unique
+# values render in the body:
 #
 #   "header_row" (default) — each unique value emits as a section
 #                            header row spanning the visible
@@ -59,7 +39,16 @@
 #                            each value shows the label).
 #   "column_repeat"        — column stays visible; every row repeats
 #                            the value (no suppression).
-.col_group_display_values <- c("header_row", "column", "column_repeat")
+#   "none"                 — break-only key: no header row, the column
+#                            is hidden, and the key contributes only
+#                            group transitions (skip spacers, decimal
+#                            sections, panel-stub exclusion).
+.col_group_display_values <- c(
+  "header_row",
+  "column",
+  "column_repeat",
+  "none"
+)
 .align_values <- c("left", "center", "right", "decimal")
 
 # Predicate for the "auto" width sentinel. `col_spec@width` is
@@ -220,9 +209,10 @@
 #' | class               | role                                                  | constructor                       |
 #' |---------------------|-------------------------------------------------------|-----------------------------------|
 #' | `tabular_spec`      | root container; carries data + every other spec slot  | [`tabular()`]                     |
-#' | `col_spec`          | per-column DSL (usage, label, format, align, ...)     | [`col_spec()`]                    |
+#' | `col_spec`          | per-column DSL (label, format, align, width, ...)     | [`col_spec()`]                    |
 #' | `header_node`       | one node in the multi-level header tree               | internal — built by [`headers()`] |
 #' | `sort_spec`         | sort keys + per-key direction                         | internal — built by [`sort_rows()`]|
+#' | `row_group_spec`    | row-grouping plan (keys + per-key display / skip)     | internal — built by [`group_rows()`]|
 #' | `style_node`        | one resolved style attribute set (per-cell)           | internal — built by [`style()`]   |
 #' | `style_layer`       | one `tabular_location` + style_node                   | internal — built by [`style()`]   |
 #' | `style_spec`        | the cascade root (defaults + cols + headers + layers) | internal — built by [`style()`]   |
@@ -274,10 +264,6 @@ NULL
       S7::class_logical,
       default = FALSE
     ),
-    usage = S7::new_property(
-      S7::class_character,
-      default = NA_character_
-    ),
     format = S7::class_any,
     # @visible — NA (default) is the merge "unset" sentinel; the engine
     # finalize pass (.finalize_cols / .finalize_one) resolves it to TRUE
@@ -300,17 +286,6 @@ NULL
     width_user = S7::new_property(
       S7::class_any,
       default = "auto"
-    ),
-    # @group_display — NA (default) is the merge "unset" sentinel; the
-    # finalize pass resolves it to "header_row" before any reader runs.
-    # An explicit value is mergeable, so a later cols() call can reset it.
-    group_display = S7::new_property(
-      S7::class_character,
-      default = NA_character_
-    ),
-    group_skip = S7::new_property(
-      S7::class_logical,
-      default = NA
     ),
     align = S7::new_property(
       S7::class_character,
@@ -337,23 +312,16 @@ NULL
     #     non-negative integer, and prefixes that row's text + AST with
     #     `strrep(" ", preset@indent_size * depth)`. The referenced
     #     column is auto-hidden unless the user set `visible = TRUE`.
-    # `NA` (the default) means no indent. An explicit `indent` on a
-    # `group_display = "header_row"` host suppresses the section
-    # auto-indent (the user takes control of depth).
+    # `NA` (the default) means no indent. An explicit `indent` on the
+    # host column of a `group_rows(display = "header_row")` section
+    # suppresses the section auto-indent (the user takes control of
+    # depth).
     indent = S7::new_property(
       S7::class_any,
       default = NA
     )
   ),
   validator = function(self) {
-    if (!is.na(self@usage) && !(self@usage %in% .col_usage_values)) {
-      return(paste0(
-        "@usage must be one of ",
-        paste(.sh_quote(.col_usage_values), collapse = ", "),
-        "; got ",
-        .sh_quote(self@usage)
-      ))
-    }
     if (!is.na(self@align) && !(self@align %in% .align_values)) {
       return(paste0(
         "@align must be one of ",
@@ -401,23 +369,6 @@ NULL
     }
     if (length(self@na_text) != 1L) {
       return("@na_text must be length 1")
-    }
-    if (
-      length(self@group_display) != 1L ||
-        # NA is the "unset" sentinel (resolved to "header_row" at engine
-        # finalize); only a non-NA value off the allowed set is invalid.
-        (!is.na(self@group_display) &&
-          !(self@group_display %in% .col_group_display_values))
-    ) {
-      return(paste0(
-        "@group_display must be one of ",
-        paste(.sh_quote(.col_group_display_values), collapse = ", "),
-        "; got ",
-        .sh_quote(self@group_display)
-      ))
-    }
-    if (length(self@group_skip) != 1L) {
-      return("@group_skip must be length 1 (TRUE / FALSE / NA)")
     }
     if (length(self@indent) != 1L) {
       return("@indent must be length 1 (a count, a column name, or NA)")
@@ -475,6 +426,58 @@ sort_spec <- S7::new_class(
     by = S7::new_property(S7::class_character, default = character()),
     descending = S7::new_property(S7::class_logical, default = FALSE)
   )
+)
+
+# ---------------------------------------------------------------------
+# row_group_spec — the table-level row-grouping plan
+# ---------------------------------------------------------------------
+#
+# Built by group_rows() and stored on tabular_spec@row_groups. `by` is
+# the ordered (outer -> inner) set of grouping key columns; `display`
+# and `skip` are parallel per-key vectors, already recycled to
+# length(by) by the verb. Row grouping is a table-level row-structure
+# fact, not a per-column cosmetic — this class replaces the former
+# col_spec usage / group_display / group_skip trio.
+
+#' @rdname tabular_classes
+#' @format NULL
+#' @usage NULL
+row_group_spec <- S7::new_class(
+  "row_group_spec",
+  package = "tabular",
+  properties = list(
+    by = S7::new_property(S7::class_character, default = character()),
+    display = S7::new_property(S7::class_character, default = character()),
+    # skip — NA per key means "follow display": TRUE for "header_row"
+    # and "none", FALSE for the column modes. Resolved by
+    # .effective_row_group_skip() at engine time, kept raw here so a later
+    # group_rows() replacement sees what the user actually asked for.
+    skip = S7::new_property(S7::class_logical, default = logical())
+  ),
+  validator = function(self) {
+    if (anyNA(self@by) || any(!nzchar(self@by))) {
+      return("@by must not contain NA or empty strings")
+    }
+    if (anyDuplicated(self@by) > 0L) {
+      return("@by must not contain duplicated column names")
+    }
+    if (length(self@display) != length(self@by)) {
+      return("@display must have one value per @by key")
+    }
+    if (
+      anyNA(self@display) ||
+        !all(self@display %in% .col_group_display_values)
+    ) {
+      return(paste0(
+        "@display values must be one of ",
+        paste(.sh_quote(.col_group_display_values), collapse = ", ")
+      ))
+    }
+    if (length(self@skip) != length(self@by)) {
+      return("@skip must have one value per @by key (TRUE / FALSE / NA)")
+    }
+    NULL
+  }
 )
 
 # ---------------------------------------------------------------------
@@ -761,6 +764,12 @@ pagination_spec <- S7::new_class(
     # Number of horizontal panels; a positive integer (default 1 = no
     # split). Validated by `.check_panels()` at `paginate()` call time.
     panels = S7::new_property(S7::class_any, default = 1L),
+    # Stub columns repeated on every horizontal panel. NULL (default)
+    # derives the stub from the group_rows() keys (excluding "none"
+    # break-only keys); an explicit character vector REPLACES that
+    # default (character() = no stub). Validated at paginate() call
+    # time.
+    repeat_cols = S7::class_any,
     orphan_floor = S7::new_property(S7::class_integer, default = 3L),
     widow_floor = S7::new_property(S7::class_integer, default = 2L),
     # Which page chrome repeats on every page. Subset of
@@ -1066,6 +1075,11 @@ tabular_spec <- S7::new_class(
     data = S7::class_data.frame,
     cols = S7::new_property(S7::class_list, default = list()),
     headers = S7::new_property(S7::class_list, default = list()),
+    # row_groups — NULL (no grouping) or a row_group_spec built by
+    # group_rows(). The single source of truth for row structure:
+    # section headers, repeat suppression, skip spacers, decimal
+    # sections, and the default panel stub all derive from it.
+    row_groups = S7::class_any,
     sort = S7::class_any,
     styles = S7::class_any,
     preset = S7::class_any,
@@ -1358,13 +1372,14 @@ tabular_grid <- S7::new_class(
 #'              "Safety Population")
 #' ) |>
 #'   cols(
-#'     variable   = col_spec(usage = "group", label = "Characteristic"),
+#'     variable   = col_spec(label = "Characteristic"),
 #'     stat_label = col_spec(label = "Statistic"),
 #'     placebo  = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
 #'     drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
 #'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
 #'     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
 #'   ) |>
+#'   group_rows(by = "variable", display = "column") |>
 #'   sort_rows(by = c("variable", "stat_label"))
 #'
 #' stopifnot(
@@ -1415,6 +1430,10 @@ is_header_node <- function(x) S7::S7_inherits(x, header_node)
 #' @rdname tabular_predicates
 #' @export
 is_sort_spec <- function(x) S7::S7_inherits(x, sort_spec)
+
+#' @rdname tabular_predicates
+#' @export
+is_row_group_spec <- function(x) S7::S7_inherits(x, row_group_spec)
 
 #' @rdname tabular_predicates
 #' @export

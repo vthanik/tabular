@@ -610,27 +610,29 @@ engine_chrome_borders <- function(spec) {
 # `body_cols` doesn't stamp a vertical separator on, e.g., a
 # `visible = FALSE` sort-key helper.
 .visible_col_indices <- function(spec, col_names) {
-  # Finalize the NA "unset" sentinels so visibility / header_row reads are
+  # Finalize the NA "unset" visible sentinel so visibility reads are
   # correct even when this phase is exercised on a raw spec (the production
   # path finalizes upstream; this keeps the read self-sufficient). Idempotent.
   cols <- .finalize_col_specs(spec@cols)
-  # header_row group columns are pulled OUT of the body into synthesised
-  # section-header rows by engine_group_display(); since engine_borders
-  # runs BEFORE that drop, their per-cell border stamps would land on a
-  # column that never renders. Exclude them so outer_left / cols /
-  # outer_right target the first/last true BODY column. (LaTeX is
-  # unaffected: it reads the per-side triple via .body_border_manifest(),
-  # not these stamps.)
-  group_names <- .group_display_columns(cols, col_names)
-  header_row_names <- .header_row_columns(cols, group_names)
+  # header_row grouping keys are pulled OUT of the body into synthesised
+  # section-header rows by engine_group_display(), and "none" keys are
+  # break-only; since engine_borders runs BEFORE that drop, their
+  # per-cell border stamps would land on a column that never renders.
+  # Exclude them so outer_left / cols / outer_right target the
+  # first/last true BODY column. (LaTeX is unaffected: it reads the
+  # per-side triple via .body_border_manifest(), not these stamps.)
+  hidden_keys <- .row_group_hidden_keys(spec@row_groups)
   vis <- vapply(
     col_names,
     function(nm) {
+      if (nm %in% hidden_keys) {
+        return(FALSE)
+      }
       cs <- cols[[nm]]
       if (!is_col_spec(cs)) {
         return(TRUE)
       }
-      isTRUE(cs@visible) && !(nm %in% header_row_names)
+      isTRUE(cs@visible)
     },
     logical(1L)
   )
