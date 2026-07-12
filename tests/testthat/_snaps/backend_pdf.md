@@ -5,6 +5,8 @@
     Message
       
       -- LaTeX packages for PDF output 
+      ? TeX Live version (xelatex missing, or a non-TeX-Live distribution such as
+      MiKTeX)
       v base
       v tabularray (not found, bundled copy used)
       v ninecolors (not found, bundled copy used)
@@ -17,6 +19,8 @@
     Message
       
       -- LaTeX packages for PDF output 
+      ? TeX Live version (xelatex missing, or a non-TeX-Live distribution such as
+      MiKTeX)
       v tabularray (not found, bundled copy used)
       x fancyhdr
       ! Missing 1 LaTeX package: "fancyhdr".
@@ -31,4 +35,35 @@
       Where no TeX install is possible at all: download each missing `.sty` from CTAN
       into '~/texmf/tex/latex/<package>/' and set `TEXMFHOME` to '~/texmf'; xelatex
       resolves it from there without tlmgr.
+
+# .check_latex_report flags a too-old TeX Live kernel
+
+    Code
+      tabular:::.check_latex_report(out, texlive_year = 2018L)
+    Message
+      
+      -- LaTeX packages for PDF output 
+      x TeX Live 2018 (LaTeX kernel too old; tabularray needs the 2022-11-01 kernel,
+      TeX Live 2023 or newer)
+      v base
+      v tabularray (not found, bundled copy used)
+      ! TeX Live 2018 cannot compile tabular's PDF output: the bundled tabularray requires the 2022-11-01 LaTeX kernel (TeX Live 2023 or newer).
+      Update the TeX installation, or install a user-space TinyTeX with
+      `tinytex::install_tinytex(bundle = "TinyTeX")` and put its bin directory
+      (usually '~/bin') first on the `PATH`.
+      In a containerised workspace (Domino / Posit Workbench / Databricks): ask the
+      image admin to update TeX Live, or render to RTF / HTML / DOCX instead via
+      `emit(spec, "out.rtf")`.
+
+# .check_latex_report passes a current TeX Live year
+
+    Code
+      tabular:::.check_latex_report(out, texlive_year = 2026L)
+    Message
+      
+      -- LaTeX packages for PDF output 
+      v TeX Live 2026
+      v base
+      v tabularray
+      v All required LaTeX packages are available.
 

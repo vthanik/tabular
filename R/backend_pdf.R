@@ -195,6 +195,46 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
   sty_files %in% basename(as.character(found))
 }
 
+# Minimum TeX Live release year whose LaTeX format is new enough for
+# the bundled tabularray: the 2025C release hard-requires the
+# 2022-11-01 LaTeX kernel, which TeX Live ships from the 2023 release
+# onward. Older kernels die at `\ProvidesExplPackage` (pre-2020, where
+# expl3 is not preloaded into the format) or at tabularray's own
+# "latex-too-old" guard (2020-2022) — no bundled `.sty` can fix a
+# kernel, so check_latex() must surface the age up front.
+.tabular_min_texlive_year <- 2023L
+
+# TeX Live release year of the active xelatex, parsed from the first
+# `xelatex --version` banner line ("XeTeX 3.14...-0.999998 (TeX Live
+# 2026)"). Returns NA_integer_ when xelatex is absent, the call fails,
+# or the banner names a different distribution — MiKTeX is
+# rolling-release and always current, so "undetermined" is the honest
+# report there, not a failure. `.version_line` is an injected seam for
+# tests, same style as backend_pdf()'s `.compile`.
+.latex_texlive_year <- function(.version_line = NULL) {
+  line <- .version_line
+  if (is.null(line)) {
+    xelatex <- Sys.which("xelatex")
+    if (!nzchar(xelatex)) {
+      return(NA_integer_)
+    }
+    line <- tryCatch(
+      suppressWarnings(
+        system2(xelatex, "--version", stdout = TRUE, stderr = FALSE)
+      )[1L],
+      error = function(e) NA_character_
+    )
+  }
+  if (length(line) == 0L || is.na(line)) {
+    return(NA_integer_)
+  }
+  m <- regmatches(line, regexec("TeX Live (\\d{4})", line))[[1L]]
+  if (length(m) < 2L) {
+    return(NA_integer_)
+  }
+  as.integer(m[[2L]])
+}
+
 # Stage the bundled `.sty` copies (inst/tex/) into the compile
 # directory for every bundled package the local TeX cannot resolve.
 # kpathsea searches the compile cwd first, so a staged copy is picked
@@ -235,7 +275,22 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
     character(1L)
   ))
 
-  hints <- if (length(missing_pkg) > 0L) {
+  # A pre-2023 LaTeX kernel dies at tabularray's `\ProvidesExplPackage`
+  # (pre-2020 formats, where expl3 is not preloaded) or at tabularray's
+  # own "latex-too-old" guard (2020-2022 formats). Either way the fix is
+  # a newer TeX, not a package install, so this branch wins over the
+  # missing-package heuristic.
+  kernel_too_old <- grepl("ProvidesExplPackage", msg, fixed = TRUE) ||
+    grepl("release is too old", msg, fixed = TRUE)
+
+  hints <- if (kernel_too_old) {
+    c(
+      "x" = "The LaTeX kernel is too old for tabularray: it requires the 2022-11-01 kernel, shipped from TeX Live 2023 onward.",
+      "i" = "Run {.run tabular::check_latex()} to see the TeX Live year of the active installation.",
+      "i" = "Update the TeX installation, or install a user-space TinyTeX with {.run tinytex::install_tinytex(bundle = \"TinyTeX\")} and put its bin directory (usually {.path ~/bin}) first on the {.envvar PATH}.",
+      "i" = "In a containerised workspace (Domino / Posit Workbench / Databricks): ask the image admin to update TeX Live; 2018-era images fail exactly this way."
+    )
+  } else if (length(missing_pkg) > 0L) {
     c(
       "x" = "Missing LaTeX package{?s}: {.val {missing_pkg}}.",
       "i" = "On a local machine: install via {.run tinytex::tlmgr_install(c({paste(.sh_quote(install_pkg), collapse = ', ')}))}.",
@@ -329,6 +384,20 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
 #' classic font bundles). The check is informational, it does not
 #' install anything.
 #'
+#' **Minimum TeX Live version.** Package availability alone is not
+#' sufficient: the bundled `tabularray` requires the 2022-11-01 LaTeX
+#' kernel, shipped from **TeX Live 2023** onward. The report therefore
+#' opens with the TeX Live year of the active `xelatex` and fails the
+#' check when the kernel predates it — the classic symptom is an
+#' OS-managed or containerised image (Domino, Posit Workbench) frozen
+#' on TeX Live 2018, where every package resolves but the compile dies
+#' at `\\ProvidesExplPackage`. The remedy is a newer TeX, not a package
+#' install: update the image, or install a user-space TinyTeX with
+#' [`tinytex::install_tinytex()`]`(bundle = "TinyTeX")` and put its bin
+#' directory first on the `PATH`. MiKTeX is rolling-release (always
+#' current), so its version reports as undetermined (`?`) rather than
+#' failing.
+#'
 #' **How availability is probed.** Each package is resolved through
 #' `kpsewhich`, the same file resolver `xelatex` uses at compile time,
 #' so the report reflects what a compile will actually find. This works
@@ -386,9 +455,11 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
 #'   required package and columns `package` (`<character>`),
 #'   `installed` (`<logical>`, `NA` when undeterminable), and
 #'   `bundled` (`<logical>`, `TRUE` for packages tabular ships a
-#'   fallback copy of). Side effect: prints a cli report with a
-#'   per-package status marker and, when anything is missing, the
-#'   exact `tlmgr_install()` remedy.
+#'   fallback copy of), plus a `texlive_year` attribute
+#'   (`<integer(1) | NA_integer_>`, the TeX Live release year of the
+#'   active `xelatex`). Side effect: prints a cli report with a
+#'   per-package status marker and, when anything is missing or the
+#'   TeX Live release is older than 2023, the exact remedy.
 #'
 #' @examples
 #' # ---- Example 1: Audit the PDF toolchain before emitting ----
@@ -426,9 +497,10 @@ check_latex <- function(quiet = FALSE) {
     row.names = NULL,
     stringsAsFactors = FALSE
   )
+  attr(out, "texlive_year") <- .latex_texlive_year()
 
   if (!quiet) {
-    .check_latex_report(out)
+    .check_latex_report(out, texlive_year = attr(out, "texlive_year"))
   }
   invisible(out)
 }
@@ -448,13 +520,23 @@ check_latex <- function(quiet = FALSE) {
 # `bundled` package that the local TeX cannot resolve still passes: the
 # shipped copy in inst/tex/ is staged next to the .tex at compile
 # time, so it never needs a tlmgr install.
-.check_latex_report <- function(out) {
+.check_latex_report <- function(out, texlive_year = NA_integer_) {
   bundled <- if ("bundled" %in% names(out)) {
     out$bundled
   } else {
     logical(nrow(out))
   }
+  min_year <- .tabular_min_texlive_year
+  kernel_old <- !is.na(texlive_year) && texlive_year < min_year
   cli::cli_h3("LaTeX packages for PDF output")
+  dist_line <- if (kernel_old) {
+    "x TeX Live {texlive_year} (LaTeX kernel too old; tabularray needs the 2022-11-01 kernel, TeX Live {min_year} or newer)"
+  } else if (!is.na(texlive_year)) {
+    "v TeX Live {texlive_year}"
+  } else {
+    "? TeX Live version (xelatex missing, or a non-TeX-Live distribution such as MiKTeX)"
+  }
+  cli::cli_text(paste0("  ", dist_line))
   for (i in seq_len(nrow(out))) {
     pkg <- out$package[[i]]
     ok <- out$installed[[i]]
@@ -471,9 +553,23 @@ check_latex <- function(quiet = FALSE) {
   }
 
   missing <- out$package[!.is_true_vec(out$installed) & !bundled]
-  if (length(missing) == 0L) {
+  if (length(missing) == 0L && !kernel_old) {
     cli::cli_alert_success("All required LaTeX packages are available.")
     return(invisible(NULL))
+  }
+  if (kernel_old) {
+    cli::cli_alert_warning(
+      "TeX Live {texlive_year} cannot compile tabular's PDF output: the bundled tabularray requires the 2022-11-01 LaTeX kernel (TeX Live {min_year} or newer)."
+    )
+    cli::cli_text(
+      "Update the TeX installation, or install a user-space TinyTeX with {.run tinytex::install_tinytex(bundle = \"TinyTeX\")} and put its bin directory (usually {.path ~/bin}) first on the {.envvar PATH}."
+    )
+    cli::cli_text(
+      "In a containerised workspace (Domino / Posit Workbench / Databricks): ask the image admin to update TeX Live, or render to RTF / HTML / DOCX instead via {.code emit(spec, \"out.rtf\")}."
+    )
+    if (length(missing) == 0L) {
+      return(invisible(NULL))
+    }
   }
   cli::cli_alert_warning(
     "Missing {length(missing)} LaTeX package{?s}: {.val {missing}}."
