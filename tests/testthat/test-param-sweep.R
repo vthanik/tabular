@@ -13,7 +13,7 @@
 
 test_that("group_rows() accepts every documented display value", {
   df <- data.frame(g = c("a", "a", "b"), x = c("1", "2", "3"))
-  for (d in c("header_row", "column", "column_repeat", "none")) {
+  for (d in c("header_row", "column", "column_repeat")) {
     expect_silent(tabular(df) |> group_rows(by = "g", display = d))
   }
 })

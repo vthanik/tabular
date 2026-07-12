@@ -106,10 +106,11 @@
 #'
 #'   **Break-only grouping key.** To drop a blank line wherever a
 #'   hidden marker column changes (e.g. continuous stats vs.
-#'   categorical groups inside one characteristic), do not hide the
-#'   column here — declare it as a break-only key with
-#'   [`group_rows()`]`(by = "marker", display = "none")`, which hides
-#'   it and contributes only its group transitions.
+#'   categorical groups inside one characteristic), set `visible =
+#'   FALSE` here AND name the column in [`group_rows()`]`(by = )`. A
+#'   hidden grouping key is break-only: it renders nothing and
+#'   contributes only its group transitions (the blank spacer and the
+#'   decimal-section reset).
 #'
 #' @param width *Column width — auto-sized, pinned, or proportional.*
 #'   `<character(1) | numeric(1)>: default "auto"`.

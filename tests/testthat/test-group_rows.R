@@ -1,9 +1,9 @@
 # group_rows() — verb that attaches the table-level row-grouping plan
 # (a row_group_spec) to a tabular_spec. Tests cover argument
-# validation, per-key display/skip recycling, and replacement
-# semantics. Display semantics themselves
-# (header rows, repeat suppression, skip spacers) are engine concerns
-# tested in test-engine and test-group_display files.
+# validation, scalar-display broadcast, character-skip resolution, and
+# replacement semantics. Display semantics themselves (header rows,
+# repeat suppression, skip spacers, break-only via visible = FALSE) are
+# engine concerns tested in test-group_display / test-group_skip.
 
 make_gr_spec <- function() {
   df <- data.frame(
@@ -15,7 +15,7 @@ make_gr_spec <- function() {
   tabular(df)
 }
 
-test_that("group_rows() attaches a row_group_spec with recycled display and skip", {
+test_that("group_rows() attaches a row_group_spec, broadcasting display", {
   spec <- make_gr_spec() |> group_rows(by = "variable")
   rg <- spec@row_groups
   expect_true(is_row_group_spec(rg))
@@ -24,35 +24,23 @@ test_that("group_rows() attaches a row_group_spec with recycled display and skip
   expect_identical(rg@skip, NA)
 
   spec2 <- make_gr_spec() |>
-    group_rows(
-      by = c("variable", "stat_label"),
-      display = "column",
-      skip = FALSE
-    )
+    group_rows(by = c("variable", "stat_label"), display = "column")
   rg2 <- spec2@row_groups
+  # Scalar display is broadcast to one value per key.
   expect_identical(rg2@display, c("column", "column"))
-  expect_identical(rg2@skip, c(FALSE, FALSE))
+  expect_identical(rg2@skip, c(NA, NA))
 })
 
-test_that("group_rows() accepts per-key display and skip vectors", {
+test_that("group_rows() skip names the keys that break; unnamed keys do not", {
   spec <- make_gr_spec() |>
-    group_rows(
-      by = c("variable", "stat_label"),
-      display = c("header_row", "column"),
-      skip = c(TRUE, FALSE)
-    )
-  rg <- spec@row_groups
-  expect_identical(rg@display, c("header_row", "column"))
-  expect_identical(rg@skip, c(TRUE, FALSE))
-})
+    group_rows(by = c("variable", "stat_label"), skip = "variable")
+  # "variable" breaks (TRUE), unnamed "stat_label" does not (FALSE) --
+  # an explicit character set, no NA-derive for the unnamed key.
+  expect_identical(spec@row_groups@skip, c(TRUE, FALSE))
 
-test_that("group_rows() accepts the break-only display value \"none\"", {
-  spec <- make_gr_spec() |>
-    group_rows(
-      by = c("variable", "stat_label"),
-      display = c("none", "column")
-    )
-  expect_identical(spec@row_groups@display, c("none", "column"))
+  none <- make_gr_spec() |>
+    group_rows(by = c("variable", "stat_label"), skip = character())
+  expect_identical(none@row_groups@skip, c(FALSE, FALSE))
 })
 
 test_that("group_rows() replaces a prior declaration wholesale", {
@@ -73,10 +61,7 @@ test_that("group_rows() rejects a non-spec first argument", {
 
 test_that("group_rows() rejects missing, duplicated, and empty by keys", {
   spec <- make_gr_spec()
-  expect_error(
-    group_rows(spec, by = "nope"),
-    class = "tabular_error_input"
-  )
+  expect_error(group_rows(spec, by = "nope"), class = "tabular_error_input")
   expect_error(
     group_rows(spec, by = c("variable", "variable")),
     class = "tabular_error_input"
@@ -85,40 +70,42 @@ test_that("group_rows() rejects missing, duplicated, and empty by keys", {
     group_rows(spec, by = character()),
     class = "tabular_error_input"
   )
-  expect_error(
-    group_rows(spec, by = 1L),
-    class = "tabular_error_input"
-  )
+  expect_error(group_rows(spec, by = 1L), class = "tabular_error_input")
 })
 
-test_that("group_rows() rejects bad display values and lengths", {
+test_that("group_rows() rejects a non-scalar or unknown display", {
   spec <- make_gr_spec()
+  # Unknown value.
   expect_error(
     group_rows(spec, by = "variable", display = "banner"),
     class = "tabular_error_input"
   )
+  # display is scalar now -- a per-key vector is rejected.
   expect_error(
-    group_rows(
-      spec,
-      by = "variable",
-      display = c("header_row", "column")
-    ),
+    group_rows(spec, by = "variable", display = c("header_row", "column")),
     class = "tabular_error_input"
   )
   expect_error(
     group_rows(spec, by = "variable", display = NA_character_),
     class = "tabular_error_input"
   )
-})
-
-test_that("group_rows() rejects bad skip values and lengths", {
-  spec <- make_gr_spec()
+  # The former "none" mode is gone (use visible = FALSE instead).
   expect_error(
-    group_rows(spec, by = "variable", skip = c(TRUE, FALSE)),
+    group_rows(spec, by = "variable", display = "none"),
     class = "tabular_error_input"
   )
+})
+
+test_that("group_rows() rejects a non-character skip or an unknown key", {
+  spec <- make_gr_spec()
+  # skip is a character set of by keys now, not a logical.
   expect_error(
-    group_rows(spec, by = "variable", skip = "yes"),
+    group_rows(spec, by = "variable", skip = TRUE),
+    class = "tabular_error_input"
+  )
+  # Naming a column that is not a grouping key.
+  expect_error(
+    group_rows(spec, by = "variable", skip = "stat_label"),
     class = "tabular_error_input"
   )
 })
@@ -128,10 +115,10 @@ test_that("group_rows() snapshot errors", {
   expect_snapshot(error = TRUE, group_rows(spec, by = "nope"))
   expect_snapshot(
     error = TRUE,
-    group_rows(spec, by = "variable", display = "banner")
+    group_rows(spec, by = "variable", display = "none")
   )
   expect_snapshot(
     error = TRUE,
-    group_rows(spec, by = "variable", skip = c(TRUE, FALSE))
+    group_rows(spec, by = "variable", skip = "stat_label")
   )
 })

@@ -286,32 +286,48 @@ test_that("row_group_spec validator rejects malformed plans", {
   )
 })
 
-test_that(".effective_row_group_skip resolves the NA follow-display sentinel", {
+test_that(".effective_row_group_skip resolves the NA derive sentinel", {
+  # A "header_row" key or a break-only key (in break_keys, from
+  # visible = FALSE) derives TRUE; visible column modes derive FALSE.
   rg <- tabular:::row_group_spec(
     by = c("a", "b", "c", "d"),
-    display = c("header_row", "column", "column_repeat", "none"),
+    display = c("header_row", "column", "column_repeat", "column"),
     skip = rep(NA, 4L)
   )
   expect_identical(
-    tabular:::.effective_row_group_skip(rg),
+    tabular:::.effective_row_group_skip(rg, break_keys = "d"),
     c(TRUE, FALSE, FALSE, TRUE)
   )
+  # No break keys, all explicit FALSE -> stays FALSE.
   rg2 <- tabular:::row_group_spec(
     by = c("a", "b"),
-    display = c("header_row", "none"),
+    display = c("header_row", "column"),
     skip = c(FALSE, FALSE)
   )
   expect_identical(tabular:::.effective_row_group_skip(rg2), c(FALSE, FALSE))
 })
 
-test_that(".row_group_hidden_keys and .row_group_stub_keys split the plan", {
+test_that(".row_group_hidden_keys / break_keys / stub_keys split the plan", {
   rg <- tabular:::row_group_spec(
     by = c("a", "b", "c", "d"),
-    display = c("header_row", "column", "column_repeat", "none"),
+    display = c("header_row", "column", "column_repeat", "column"),
     skip = rep(NA, 4L)
   )
-  expect_identical(tabular:::.row_group_hidden_keys(rg), c("a", "d"))
-  expect_identical(tabular:::.row_group_stub_keys(rg), c("a", "b", "c"))
+  # `d` is a visible-column key marked col_spec(visible = FALSE):
+  # break-only.
+  cols <- list(
+    a = col_spec(),
+    b = col_spec(),
+    c = col_spec(),
+    d = col_spec(visible = FALSE)
+  )
+  # Hidden (pulled into section headers) = the header_row keys only.
+  expect_identical(tabular:::.row_group_hidden_keys(rg), "a")
+  # Break-only = the visible = FALSE grouping keys.
+  expect_identical(tabular:::.row_group_break_keys(rg, cols), "d")
+  # Stub (default panel repeat) = every key that is not break-only.
+  expect_identical(tabular:::.row_group_stub_keys(rg, cols), c("a", "b", "c"))
   expect_identical(tabular:::.row_group_hidden_keys(NULL), character())
-  expect_identical(tabular:::.row_group_stub_keys(NULL), character())
+  expect_identical(tabular:::.row_group_break_keys(NULL, cols), character())
+  expect_identical(tabular:::.row_group_stub_keys(NULL, cols), character())
 })

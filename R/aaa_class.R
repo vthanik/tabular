@@ -24,9 +24,9 @@
 # every validator emits stable single-quoted output regardless of OS.
 .sh_quote <- function(x) shQuote(x, type = "sh")
 
-# Recognised values for `row_group_spec@display` (set per key via
-# `group_rows(display = )`). Controls how each grouping key's unique
-# values render in the body:
+# Recognised values for `row_group_spec@display` (set table-wide via
+# `group_rows(display = )`, a single value). Controls how the grouping
+# keys' unique values render in the body:
 #
 #   "header_row" (default) — each unique value emits as a section
 #                            header row spanning the visible
@@ -39,15 +39,15 @@
 #                            each value shows the label).
 #   "column_repeat"        — column stays visible; every row repeats
 #                            the value (no suppression).
-#   "none"                 — break-only key: no header row, the column
-#                            is hidden, and the key contributes only
-#                            group transitions (skip spacers, decimal
-#                            sections, panel-stub exclusion).
+#
+# A break-only key (no header, hidden, contributes only group
+# transitions -- skip spacers, decimal sections, panel-stub exclusion)
+# is expressed by `col_spec(visible = FALSE)` on the key, NOT a display
+# mode. This replaced the former "none" display value.
 .col_group_display_values <- c(
   "header_row",
   "column",
-  "column_repeat",
-  "none"
+  "column_repeat"
 )
 .align_values <- c("left", "center", "right", "decimal")
 
@@ -433,11 +433,13 @@ sort_spec <- S7::new_class(
 # ---------------------------------------------------------------------
 #
 # Built by group_rows() and stored on tabular_spec@row_groups. `by` is
-# the ordered (outer -> inner) set of grouping key columns; `display`
-# and `skip` are parallel per-key vectors, already recycled to
-# length(by) by the verb. Row grouping is a table-level row-structure
-# fact, not a per-column cosmetic — this class replaces the former
-# col_spec usage / group_display / group_skip trio.
+# the ordered (outer -> inner) set of structural grouping key columns.
+# `display` is one mode recycled across every key (the verb takes a
+# single value). `skip` is a parallel per-key logical, recycled to
+# length(by) by the verb from the user's key-name input (NA = "derive
+# from display / break-only"). Row grouping is a table-level
+# row-structure fact, not a per-column cosmetic — this class replaces
+# the former col_spec usage / group_display / group_skip trio.
 
 #' @rdname tabular_classes
 #' @format NULL
@@ -448,9 +450,10 @@ row_group_spec <- S7::new_class(
   properties = list(
     by = S7::new_property(S7::class_character, default = character()),
     display = S7::new_property(S7::class_character, default = character()),
-    # skip — NA per key means "follow display": TRUE for "header_row"
-    # and "none", FALSE for the column modes. Resolved by
-    # .effective_row_group_skip() at engine time, kept raw here so a later
+    # skip — NA per key means "derive": TRUE for a "header_row" key or a
+    # break-only (visible = FALSE) key, FALSE for the visible column
+    # modes. Resolved by .effective_row_group_skip() at engine time
+    # (where column visibility is known), kept raw here so a later
     # group_rows() replacement sees what the user actually asked for.
     skip = S7::new_property(S7::class_logical, default = logical())
   ),

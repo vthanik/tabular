@@ -2250,7 +2250,7 @@ test_that("DOCX title / footnote / header honor style() text overrides (#docx-ch
       ),
       x = col_spec(label = "MYHEADER")
     ) |>
-    group_rows(by = "grp", display = "column", skip = TRUE) |>
+    group_rows(by = "grp", display = "column", skip = "grp") |>
     style(color = "#FF0000", italic = TRUE, .at = cells_title()) |>
     style(color = "#00FF00", .at = cells_footnotes()) |>
     style(color = "#0000FF", .at = cells_headers())

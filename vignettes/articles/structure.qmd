@@ -15,15 +15,21 @@ cosmetics (see [Presentation](presentation.html)).
 ## Row grouping: `group_rows()`
 
 Row structure is a fact about the whole table, so it is declared once with
-`group_rows()` — not per column. `by` names the grouping key columns, ordered
-outer to inner; `display` picks how each level renders:
+`group_rows()` — not per column. `by` names only the **structural** grouping
+key columns (section headers and hidden break keys), ordered outer to inner.
+The visible row-label column (the statistic stub) is an ordinary `cols()`
+column, not a grouping key — it is indented automatically. `display` (a single
+value) picks how the keys render:
 
 | `display` | Use it for | Behaviour |
 |---|---|---|
 | `"header_row"` *(default)* | section variable (e.g. parameter) | each value becomes a **section-header row**; the key column is hidden |
 | `"column"` | a visible row label | column stays; repeated values are suppressed |
 | `"column_repeat"` | a visible row label | column stays; every row repeats the value |
-| `"none"` | a hidden block key | break-only: no header, no column — just group transitions |
+
+A **break-only key** — hidden, contributing only group transitions (the blank
+spacer and decimal-section reset) — is not a `display` mode: mark the key
+`col_spec(visible = FALSE)` and list it in `by`.
 
 `cols()` handles the per-column cosmetics — labels (`x = "Label"` is shorthand
 for `col_spec(label = )`), alignment, widths, and `.hide =` for helper columns.

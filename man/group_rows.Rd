@@ -4,23 +4,24 @@
 \alias{group_rows}
 \title{Declare the row-grouping structure of the table}
 \usage{
-group_rows(.spec, by, display = "header_row", skip = NA)
+group_rows(.spec, by, display = "header_row", skip = NULL)
 }
 \arguments{
 \item{.spec}{\emph{The \code{tabular_spec} to attach the grouping plan to.}
 \verb{<tabular_spec>: required}.}
 
-\item{by}{\emph{Grouping key columns, ordered outer to inner.}
-\verb{<character(>= 1)>: required}. Every entry must be a column of
-\code{data}; duplicates are rejected.
+\item{by}{\emph{Structural grouping key columns, ordered outer to inner.}
+\verb{<character>: required}. Names at least one column of \code{data};
+duplicates are rejected. List only the section-header and
+break-only keys, not the visible label column.
 
 \strong{Interaction:} A \code{\link[=subgroup]{subgroup()}}\verb{(by = )} partition column may
 also be a grouping key; within each partition the key is
 constant and auto-hidden, so the combination composes.}
 
-\item{display}{\emph{How each key's values render in the body.}
-\verb{<character>: default "header_row"}. Length 1 (applied to every
-key) or \code{length(by)} (one mode per key):
+\item{display}{\emph{How the keys' values render in the body.}
+\verb{<character(1)>: default "header_row"}. One value, applied to
+every key:
 \itemize{
 \item \code{"header_row"} (default) — each unique value emits a section
 header row spanning the visible columns; the key column is
@@ -29,27 +30,29 @@ hidden from the body. The canonical submission shape.
 suppressed so only the first row of each run shows the label.
 \item \code{"column_repeat"} — the key column stays visible and every row
 repeats the value.
-\item \code{"none"} — break-only key: no header row, the column is
-hidden, and the key contributes only group transitions (skip
-spacers, decimal sections). Use for a hidden block key, e.g.
-an AE table whose SOC lives in the row text.
-}}
+}
 
-\item{skip}{\emph{Whether a blank spacer row separates consecutive
-groups of each key.} \verb{<logical>: default NA}. Length 1 or
-\code{length(by)}. \code{NA} follows \code{display}: \code{TRUE} for \code{"header_row"}
-and \code{"none"}, \code{FALSE} for the column modes.}
+\strong{Tip:} for a hidden break-only key, set \code{col_spec(visible = FALSE)} on it rather than a display mode.}
+
+\item{skip}{\emph{Which keys get a blank spacer row between their
+groups.} \verb{<character> | NULL: default NULL}. Name the \code{by}
+key(s) that break with a blank line, e.g. \code{skip = "param"}
+(blank line between params, none between visits). \code{NULL} derives
+it: a \code{"header_row"} key or a break-only (\code{visible = FALSE}) key
+breaks, a visible column key does not. \code{character(0)} inserts no
+spacers at all.}
 }
 \value{
 \emph{\verb{<tabular_spec>}.} A new spec with \verb{@row_groups} replaced;
 pipe into the remaining build verbs or \code{\link[=emit]{emit()}}.
 }
 \description{
-\code{group_rows()} names the columns whose runs of identical values
-define the table's row hierarchy, ordered outer to inner, and how
-each level renders — as a section header row, as a
-repeat-suppressed column, as a fully repeated column, or as an
-invisible break-only key. It is the row-structure counterpart of
+\code{group_rows()} names the \strong{structural} columns whose runs of
+identical values define the table's row hierarchy, ordered outer to
+inner. List only the keys that drive the structure — the section
+headers and any hidden break keys; the visible row-label column
+(e.g. the statistic stub) stays an ordinary \code{\link[=cols]{cols()}} column and is
+indented automatically. It is the row-structure counterpart of
 \code{\link[=sort_rows]{sort_rows()}}: one declaration per table, replaced wholesale on
 a repeat call.
 }
@@ -58,20 +61,25 @@ a repeat call.
 first (the \code{\link[=sort_rows]{sort_rows()}} contract); levels never accumulate
 across calls.
 
-\strong{Grouping drives more than display.} The keys feed the section
-header synthesis and repeat suppression in the body, the blank
-spacer rows between groups (\code{skip}), the decimal-alignment
-sections (each skip block aligns in isolation), and the default
-column stub repeated on every horizontal panel from
-\code{\link[=paginate]{paginate()}}\verb{(panels = )}.
+\strong{Structural keys only.} Nesting is just listing the header keys:
+\code{by = c("param", "visit")} renders \code{param} as the outer section
+header and \code{visit} as the indented sub-header, and the first visible
+column beneath (the label stub) is auto-indented one level per
+header. You do not put the label column in \code{by}.
+
+\strong{Break-only keys use \code{visible = FALSE}.} A key you mark
+\code{col_spec(visible = FALSE)} renders nothing and contributes only
+group transitions — the blank spacer between blocks (\code{skip}) and the
+decimal-alignment reset — exactly what a hidden sort/break key needs.
+There is no separate display mode for it.
 }
 \examples{
 # ---- Example 1: Demographics with section headers and a stat column ----
 #
-# The canonical demographics shape: `variable` renders as a section
-# header row per parameter (Age, Sex, ...), and `stat_label` stays
-# visible as a repeat-suppressed statistic column. The outer key is
-# declared first.
+# The canonical demographics shape: `variable` is the one structural
+# key, rendering as a section header row per parameter (Age, Sex,
+# ...). `stat_label` is NOT a grouping key -- it stays an ordinary
+# column and is auto-indented one level under each section header.
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
@@ -90,16 +98,19 @@ tabular(
     c("placebo", "drug_50", "drug_100", "Total"),
     col_spec(align = "decimal")
   ) |>
-  group_rows(by = c("variable", "stat_label"), display = c("header_row", "column"))
+  group_rows(by = "variable")
 
-# ---- Example 2: Vitals with a break-only key and visible parameter ----
+# ---- Example 2: Nested parameter / visit with a hidden break key ----
 #
-# `paramcd` never renders — display = "none" makes it a break-only
-# key whose transitions insert the blank spacer between parameter
-# blocks and reset the decimal-alignment sections. The visible
-# `param` column shows each parameter once per block.
+# `param` and `visit` nest as section headers (outer then indented
+# sub-header) just by listing both -- no per-key modes. `paramcd`
+# never renders: col_spec(visible = FALSE) makes it a break-only key
+# whose transitions reset the decimal-alignment sections. `skip =
+# "param"` puts a blank line between parameters but not between
+# visits within a parameter.
 tabular(cdisc_saf_vital, titles = "Vital Signs by Parameter and Visit") |>
   cols(
+    paramcd = col_spec(visible = FALSE),
     param = "Parameter",
     visit = "Visit",
     stat_label = "Statistic",
@@ -111,7 +122,7 @@ tabular(cdisc_saf_vital, titles = "Vital Signs by Parameter and Visit") |>
     c("placebo", "drug_50", "drug_100"),
     col_spec(align = "decimal")
   ) |>
-  group_rows(by = c("paramcd", "param"), display = c("none", "column"))
+  group_rows(by = c("param", "visit"), skip = "param")
 
 }
 \seealso{

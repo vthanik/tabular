@@ -176,8 +176,15 @@ engine_group_display <- function(
     row_groups@display[in_matrix],
     group_names
   )
+  # Break-only keys are the grouping keys marked col_spec(visible =
+  # FALSE): they render nothing and drive only group transitions
+  # (this replaced the former display = "none" mode).
+  break_cols <- intersect(
+    .row_group_break_keys(row_groups, cols),
+    group_names
+  )
   skip_by <- stats::setNames(
-    .effective_row_group_skip(row_groups)[in_matrix],
+    .effective_row_group_skip(row_groups, break_cols)[in_matrix],
     group_names
   )
 
@@ -201,11 +208,14 @@ engine_group_display <- function(
   skip_transitions <- sort(as.integer(skip_transitions))
 
   # Every key declaring `header_row` mode, in plan order. Outer =
-  # index 1. Each becomes one band in the header-row plan below.
-  # `"none"` keys are break-only: they contributed skip transitions
-  # above, render nothing, and are hidden at the end of this phase.
-  header_cols <- group_names[display_by[group_names] == "header_row"]
-  none_cols <- group_names[display_by[group_names] == "none"]
+  # index 1. Each becomes one band in the header-row plan below. A
+  # break-only key (visible = FALSE) is never a header even if its
+  # display says so: it contributed skip transitions above, renders
+  # nothing, and is hidden at the end of this phase.
+  header_cols <- setdiff(
+    group_names[display_by[group_names] == "header_row"],
+    break_cols
+  )
   header_col <- if (length(header_cols) > 0L) header_cols[[1L]] else NULL
 
   # Outer-group run ids — drives column-mode suppression reset. Use
@@ -217,8 +227,9 @@ engine_group_display <- function(
     .runs_grouping(cells_text[, group_names[[1L]]])
   }
 
-  # Phase 1: apply "column"-mode suppression.
-  for (nm in group_names) {
+  # Phase 1: apply "column"-mode suppression. Break-only keys are
+  # hidden, so they are never suppressed as visible columns.
+  for (nm in setdiff(group_names, break_cols)) {
     if (identical(display_by[[nm]], "column")) {
       cells_text[, nm] <- .suppress_column_repeats(
         cells_text[, nm],
@@ -255,7 +266,7 @@ engine_group_display <- function(
   if (length(header_cols) > 0L) {
     host_col <- .header_row_host_column(
       col_names,
-      hidden_keys = c(header_cols, none_cols),
+      hidden_keys = c(header_cols, break_cols),
       cols = cols,
       hidden_extra = hide_union
     )
@@ -377,11 +388,10 @@ engine_group_display <- function(
     }
   }
 
-  # Break-only keys never render: hide them regardless of whether a
-  # header-row plan exists (their skip transitions already fired). A
-  # key with no col_spec (possible on a direct engine call; production
-  # feeds a complete map via .cols_by_name) gets a hidden default.
-  for (nm in none_cols) {
+  # Break-only keys are already col_spec(visible = FALSE); this keeps
+  # the read self-sufficient (a direct engine call may feed a key with
+  # no col_spec) and their skip transitions have already fired.
+  for (nm in break_cols) {
     cols[[nm]] <- if (is_col_spec(cols[[nm]])) {
       S7::set_props(cols[[nm]], visible = FALSE)
     } else {

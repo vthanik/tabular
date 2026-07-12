@@ -11,18 +11,20 @@
 ---
 
     Code
-      group_rows(spec, by = "variable", display = "banner")
+      group_rows(spec, by = "variable", display = "none")
     Condition
       Error:
-      ! `display` values must be one of "header_row", "column", "column_repeat", and "none".
-      x You supplied: "banner".
+      ! `display` must be one of "header_row", "column", and "column_repeat".
+      x You supplied "none".
+      i For a hidden break-only key use `col_spec(visible = FALSE)`.
 
 ---
 
     Code
-      group_rows(spec, by = "variable", skip = c(TRUE, FALSE))
+      group_rows(spec, by = "variable", skip = "stat_label")
     Condition
       Error:
-      ! `skip` must be length 1 or length 1 (= length of `by`).
-      x You supplied length 2.
+      ! `skip` must name columns listed in `by`.
+      x Not in `by`: "stat_label".
+      i Grouping keys: "variable".
 

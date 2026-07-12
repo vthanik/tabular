@@ -1,11 +1,11 @@
 # group_rows() skip + blank-row injection. PROC REPORT
 # `BREAK AFTER var / SKIP` semantics, lifted to per-key control.
 #
-# Per-key `skip`:
-#   TRUE  — insert a blank row before each value transition.
-#   FALSE — never insert a blank.
-#   NA (default) — follow `display`: TRUE for header_row / none,
-#                  FALSE for column / column_repeat.
+# `skip` names the by keys that get a blank spacer between groups:
+#   skip = "grp"      — blank before each transition of `grp`.
+#   skip = character() — never insert a blank.
+#   skip = NULL (default) — derive: a "header_row" key or a break-only
+#                  (visible = FALSE) key breaks, a visible column does not.
 # The NA-resolution unit tests live in test-aaa_class.R
 # (.effective_row_group_skip).
 
@@ -29,7 +29,7 @@ test_that("as_grid() default header_row group injects blanks between sections", 
   expect_false(page1$is_blank_row[[last]])
 })
 
-test_that("explicit skip = FALSE on a header_row key suppresses blanks", {
+test_that("empty skip on a header_row key suppresses blanks", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
@@ -38,7 +38,7 @@ test_that("explicit skip = FALSE on a header_row key suppresses blanks", {
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
-    group_rows(by = "variable", skip = FALSE)
+    group_rows(by = "variable", skip = character())
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
   expect_false(any(page1$is_blank_row))
@@ -46,7 +46,7 @@ test_that("explicit skip = FALSE on a header_row key suppresses blanks", {
   expect_true(any(page1$is_header_row))
 })
 
-test_that("explicit skip = TRUE on a 'column' key injects blanks too", {
+test_that("naming a 'column' key in skip injects blanks too", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
@@ -55,7 +55,7 @@ test_that("explicit skip = TRUE on a 'column' key injects blanks too", {
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
-    group_rows(by = "variable", display = "column", skip = TRUE)
+    group_rows(by = "variable", display = "column", skip = "variable")
   g <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   page1 <- g@pages[[1L]]
   # Variable visible (column mode); blanks between variable transitions.
@@ -171,7 +171,7 @@ test_that("column-mode group_skip blanks between groups, not after first row", {
       stat = col_spec(label = "Statistic"),
       val = col_spec(label = "Value")
     ) |>
-    group_rows(by = "grp", display = "column", skip = TRUE)
+    group_rows(by = "grp", display = "column", skip = "grp")
   page1 <- as_grid(spec)@pages[[1L]]
 
   # n_groups - 1 = 1 blank (between A and B). The bug produced 3.
@@ -183,15 +183,15 @@ test_that("column-mode group_skip blanks between groups, not after first row", {
 })
 
 # ---------------------------------------------------------------------
-# A display = "none" key is break-only: no header rows,
-# no in-column text, only its group_skip breaks.
+# A break-only key -- col_spec(visible = FALSE) on a grouping key --
+# renders no header rows and no in-column text; only its skip breaks.
 # ---------------------------------------------------------------------
 
-test_that("hidden group column injects breaks but no header rows", {
+test_that("break-only (visible = FALSE) group key injects breaks but no headers", {
   # `blk` flips c -> g inside the single "Age" characteristic. It is
-  # the clinical "spacer between sub-blocks" marker. With the default
-  # group_display ("header_row"), the bug surfaced "c"/"g" as section
-  # headers; the fix makes a user-hidden group column break-only.
+  # the clinical "spacer between sub-blocks" marker. Marking it
+  # col_spec(visible = FALSE) makes it a break-only key: hidden, no
+  # section headers, only its transitions inject a spacer.
   df <- data.frame(
     grp = c("Age", "Age", "Age", "Age"),
     blk = c("c", "c", "g", "g"),
@@ -204,15 +204,11 @@ test_that("hidden group column injects breaks but no header rows", {
       grp = col_spec(
         label = "Characteristic"
       ),
-      blk = col_spec(),
+      blk = col_spec(visible = FALSE),
       stat = col_spec(label = "Statistic"),
       val = col_spec(label = "Value")
     ) |>
-    group_rows(
-      by = c("grp", "blk"),
-      display = c("column", "none"),
-      skip = TRUE
-    )
+    group_rows(by = c("grp", "blk"), display = "column")
   page1 <- as_grid(spec)@pages[[1L]]
 
   # No section-header rows; the marker column is hidden and its values
@@ -220,17 +216,18 @@ test_that("hidden group column injects breaks but no header rows", {
   expect_false(any(page1$is_header_row))
   expect_false("blk" %in% page1$col_names)
   expect_false(any(page1$cells_text %in% c("c", "g")))
-  # Exactly one blank at the c -> g flip (grp is constant -> no break).
+  # Exactly one blank at the c -> g flip; the break-only blk skips by
+  # default (derive), the visible column grp does not, and grp is
+  # constant "Age" so it contributes no transition anyway.
   expect_equal(sum(page1$is_blank_row), 1L)
   # Outer label printed once (column-mode suppression resets on the
   # real group column, not on the now-hidden marker).
   expect_equal(sum(page1$cells_text[, "grp"] == "Age"), 1L)
 })
 
-test_that("a display = \"none\" break key renders identically to a hidden column key", {
-  # The break-only "none" key and an equivalent visible-column key
-  # hidden by cols(.hide=) must produce the same blank-row plan; only
-  # the none key stays out of the body either way.
+test_that("a break-only key stays out of the body and drives only its breaks", {
+  # A grouping key marked visible = FALSE contributes its skip plan but
+  # never renders -- no column, no header row.
   df <- data.frame(
     grp = c("Age", "Age", "Age", "Age"),
     blk = c("c", "c", "g", "g"),
@@ -238,19 +235,16 @@ test_that("a display = \"none\" break key renders identically to a hidden column
     val = c("10", "5.2", "4 (40%)", "6 (60%)"),
     stringsAsFactors = FALSE
   )
-  none_form <- tabular(df) |>
+  break_form <- tabular(df) |>
     cols(
       grp = col_spec(label = "Characteristic"),
+      blk = col_spec(visible = FALSE),
       stat = col_spec(label = "Statistic"),
       val = col_spec(label = "Value")
     ) |>
-    group_rows(
-      by = c("grp", "blk"),
-      display = c("column", "none"),
-      skip = TRUE
-    ) |>
+    group_rows(by = c("grp", "blk"), display = "column") |>
     as_grid()
-  page <- none_form@pages[[1L]]
+  page <- break_form@pages[[1L]]
   expect_false("blk" %in% page$col_names)
   # One blank row where blk transitions c -> g (row 3 of the data).
   expect_true(any(page$is_blank_row))

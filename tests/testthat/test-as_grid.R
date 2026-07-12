@@ -503,7 +503,7 @@ mk_affix_spec <- function() {
       stat = col_spec(label = "Stat", align = "left"),
       a = col_spec(label = "A", align = "right")
     ) |>
-    group_rows(by = "grp", display = "column", skip = TRUE) |>
+    group_rows(by = "grp", display = "column", skip = "grp") |>
     style(pretext = "PFX ", .at = cells_body(j = "stat")) |>
     style(posttext = " SFX", .at = cells_body(j = "a"))
 }

@@ -201,6 +201,35 @@ test_that("as_grid() with default usage='group' promotes the variable column to 
   expect_equal(unname(page1$cells_text[1L, "placebo"]), "")
 })
 
+test_that("as_grid() nests two header keys and hides a break-only (visible=FALSE) key", {
+  # The user's canonical nested case: `param` + `visit` nest as section
+  # headers (listing both is the nest), `paramcd` is break-only via
+  # col_spec(visible = FALSE), and the label stub is auto-indented two
+  # levels. No per-key display vector, no "none".
+  spec <- tabular(cdisc_saf_vital) |>
+    cols(
+      paramcd = col_spec(visible = FALSE),
+      param = col_spec(label = "Parameter"),
+      visit = col_spec(label = "Visit"),
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo")
+    ) |>
+    group_rows(by = c("param", "visit"))
+  g <- suppressWarnings(as_grid(spec))
+  page1 <- g@pages[[1L]]
+  # Break-only key never renders.
+  expect_false("paramcd" %in% page1$col_names)
+  expect_false(any(page1$cells_text == "DIABP"))
+  # param + visit both hidden (header_row); stat_label is the visible
+  # first column hosting the section headers.
+  expect_false("param" %in% page1$col_names)
+  expect_false("visit" %in% page1$col_names)
+  expect_true("stat_label" %in% page1$col_names)
+  # First two visible rows are the nested section headers.
+  expect_true(page1$is_header_row[[1L]])
+  expect_true(page1$is_header_row[[2L]])
+})
+
 test_that("as_grid() with explicit group_display='column_repeat' keeps the variable column visible", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(

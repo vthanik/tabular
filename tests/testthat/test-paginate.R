@@ -211,9 +211,10 @@ test_that("paginate() stores validated repeat_cols and derives the default stub"
   expect_identical(tabular:::.stub_col_names(p_none), character())
 })
 
-test_that("paginate() default stub excludes display = 'none' break-only keys", {
+test_that("paginate() default stub excludes break-only (visible = FALSE) keys", {
   spec <- make_spec(10L) |>
-    group_rows(by = c("soc", "val"), display = c("none", "column")) |>
+    cols(soc = col_spec(visible = FALSE)) |>
+    group_rows(by = c("soc", "val"), display = "column") |>
     paginate(panels = 2L)
   expect_identical(tabular:::.stub_col_names(spec), "val")
 })

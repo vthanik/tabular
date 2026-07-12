@@ -464,5 +464,5 @@ paginate <- function(
   if (is_pagination_spec(pag) && !is.null(pag@repeat_cols)) {
     return(pag@repeat_cols)
   }
-  .row_group_stub_keys(spec@row_groups)
+  .row_group_stub_keys(spec@row_groups, spec@cols)
 }
