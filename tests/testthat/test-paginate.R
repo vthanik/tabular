@@ -197,7 +197,7 @@ test_that("paginate() snapshot errors", {
 # repeat_cols — the explicit panel stub -------------------------------
 
 test_that("paginate() stores validated repeat_cols and derives the default stub", {
-  spec <- make_spec(10L) |> group_rows(by = "soc", display = "column")
+  spec <- make_spec(10L) |> group_rows(by = "soc", display = "collapse")
   # NULL default: stub derives from the group_rows keys.
   p_default <- paginate(spec, panels = 2L)
   expect_null(p_default@pagination@repeat_cols)
@@ -214,7 +214,7 @@ test_that("paginate() stores validated repeat_cols and derives the default stub"
 test_that("paginate() default stub excludes break-only (visible = FALSE) keys", {
   spec <- make_spec(10L) |>
     cols(soc = col_spec(visible = FALSE)) |>
-    group_rows(by = c("soc", "val"), display = "column") |>
+    group_rows(by = c("soc", "val"), display = "collapse") |>
     paginate(panels = 2L)
   expect_identical(tabular:::.stub_col_names(spec), "val")
 })

@@ -121,7 +121,7 @@ test_that("integration spec composes through all Phase 6 surfaces (Markdown)", {
 # ---------------------------------------------------------------------
 # Cross-backend integration: the reported demographics scenario that
 # kicked off the special-rows / frame / knob-shape work. A real wide
-# table with a header_row group (-> group-header + blank separator
+# table with a section group (-> group-header + blank separator
 # rows), a spanner band, frame rules, zebra striping, a coloured +
 # padded header, and styled page bands must render to a VALID artefact
 # on every backend (Threads A-G + I together).

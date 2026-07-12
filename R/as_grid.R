@@ -432,12 +432,13 @@ as_grid <- function(.spec) {
   # injection and is measured by engine_decimal + column widths).
   fmt <- .apply_affixes(fmt, style_mat, call = call)
 
-  # Apply the group_rows() plan. Header_row mode splices
-  # section-header rows above each grouping-key transition; column
-  # mode suppresses repeats; column_repeat is a no-op; none is a
-  # break-only key. The phase may augment the cells matrices with new
-  # synthesised rows + hide grouping-key columns from the visible
-  # body. When `header_row` mode is active, every data row's
+  # Apply the group_rows() plan. "section" mode splices
+  # section-header rows above each grouping-key transition; "collapse"
+  # mode suppresses repeats; "repeat" is a no-op; a break-only key
+  # (visible = FALSE) contributes only its skip transitions. The phase
+  # may augment the cells matrices with new synthesised rows + hide
+  # grouping-key columns from the visible
+  # body. When `section` mode is active, every data row's
   # host-column text is prefixed with `strrep(" ", preset@indent_size)`
   # so the data rows visually nest under their synthetic section
   # header.
@@ -464,7 +465,7 @@ as_grid <- function(.spec) {
   # Merge visibility updates back onto spec@cols so downstream
   # `engine_paginate()` (which filters via `.visible_col_names()`)
   # and every backend that consults `spec@cols` directly see the
-  # hidden header_row columns.
+  # hidden section columns.
   spec <- S7::set_props(spec, cols = spec_cols_post)
 
   cols_named <- spec_cols_post

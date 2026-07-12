@@ -105,7 +105,7 @@ test_that("session preset(.style = template) flows through engine_borders", {
 })
 
 test_that("rules='frame' draws L/R structurally via the manifest, not per-cell (#frame-left)", {
-  # `variable` is a header_row group host: engine_group_display() pulls it
+  # `variable` is a section group host: engine_group_display() pulls it
   # out of the body into synthesised section rows AFTER engine_borders()
   # runs. The frame's vertical edges are drawn structurally by each
   # backend from the manifest (so they span the synthesised spanner /

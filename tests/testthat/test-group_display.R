@@ -1,9 +1,9 @@
 # group_rows() display semantics + engine_group_display + per-page
 # header row injection. Four modes:
 #
-#   "header_row" (default) — promote group values to section headers
-#   "column"               — keep column visible; suppress repeats
-#   "column_repeat"        — keep column visible; every row repeats
+#   "section" (default) — promote group values to section headers
+#   "collapse"               — keep column visible; suppress repeats
+#   "repeat"        — keep column visible; every row repeats
 #   "none"                 — break-only key: hidden, transitions only
 
 # ---------------------------------------------------------------------
@@ -75,8 +75,8 @@ mk_grid_input <- function(modes) {
   )
 }
 
-test_that("engine_group_display 'header_row' on outer group flips visibility + builds header_row_plan", {
-  inp <- mk_grid_input(c("header_row", "column"))
+test_that("engine_group_display 'section' on outer group flips visibility + builds header_row_plan", {
+  inp <- mk_grid_input(c("section", "collapse"))
   out <- engine_group_display(
     inp$cells_text,
     inp$cells_ast,
@@ -88,7 +88,7 @@ test_that("engine_group_display 'header_row' on outer group flips visibility + b
   expect_true(isTRUE(out$cols$stat@visible))
   expect_false(is.null(out$header_row_plan))
   # Multi-band shape: `bands` is a list, outer at index 1. Single
-  # header_row column -> one band at depth 0.
+  # section column -> one band at depth 0.
   expect_length(out$header_row_plan$bands, 1L)
   expect_equal(out$header_row_plan$bands[[1L]]$group_col, "var")
   expect_equal(out$header_row_plan$bands[[1L]]$transitions, c(1L, 4L))
@@ -96,8 +96,8 @@ test_that("engine_group_display 'header_row' on outer group flips visibility + b
   expect_identical(out$header_row_plan$data_depth, 1L)
 })
 
-test_that("engine_group_display 'column' mode suppresses repeats within outer-group block", {
-  inp <- mk_grid_input(c("header_row", "column"))
+test_that("engine_group_display 'collapse' mode suppresses repeats within outer-group block", {
+  inp <- mk_grid_input(c("section", "collapse"))
   out <- engine_group_display(
     inp$cells_text,
     inp$cells_ast,
@@ -115,8 +115,8 @@ test_that("engine_group_display 'column' mode suppresses repeats within outer-gr
   )
 })
 
-test_that("engine_group_display 'column_repeat' mode is a no-op", {
-  inp <- mk_grid_input(c("column_repeat", "column_repeat"))
+test_that("engine_group_display 'repeat' mode is a no-op", {
+  inp <- mk_grid_input(c("repeat", "repeat"))
   out <- engine_group_display(
     inp$cells_text,
     inp$cells_ast,
@@ -131,7 +131,7 @@ test_that("engine_group_display 'column_repeat' mode is a no-op", {
   expect_null(out$header_row_plan)
 })
 
-test_that("engine_group_display 'column' mode actually suppresses when values repeat", {
+test_that("engine_group_display 'collapse' mode actually suppresses when values repeat", {
   # Two-block "var" with stat values repeating.
   text <- matrix(
     c(
@@ -166,7 +166,7 @@ test_that("engine_group_display 'column' mode actually suppresses when values re
   }
   rg <- tabular:::row_group_spec(
     by = c("var", "stat"),
-    display = c("column_repeat", "column"),
+    display = c("repeat", "collapse"),
     skip = rep(NA, 2L)
   )
   out <- engine_group_display(text, ast, style, cols, row_groups = rg)
@@ -177,7 +177,7 @@ test_that("engine_group_display 'column' mode actually suppresses when values re
 })
 
 # ---------------------------------------------------------------------
-# End-to-end: as_grid() default header_row promotes variable
+# End-to-end: as_grid() default section promotes variable
 # ---------------------------------------------------------------------
 
 test_that("as_grid() with default usage='group' promotes the variable column to header rows", {
@@ -220,7 +220,7 @@ test_that("as_grid() nests two header keys and hides a break-only (visible=FALSE
   # Break-only key never renders.
   expect_false("paramcd" %in% page1$col_names)
   expect_false(any(page1$cells_text == "DIABP"))
-  # param + visit both hidden (header_row); stat_label is the visible
+  # param + visit both hidden (section); stat_label is the visible
   # first column hosting the section headers.
   expect_false("param" %in% page1$col_names)
   expect_false("visit" %in% page1$col_names)
@@ -230,7 +230,7 @@ test_that("as_grid() nests two header keys and hides a break-only (visible=FALSE
   expect_true(page1$is_header_row[[2L]])
 })
 
-test_that("as_grid() with explicit group_display='column_repeat' keeps the variable column visible", {
+test_that("as_grid() with explicit display='repeat' keeps the variable column visible", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
@@ -239,7 +239,7 @@ test_that("as_grid() with explicit group_display='column_repeat' keeps the varia
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
-    group_rows(by = "variable", display = "column_repeat")
+    group_rows(by = "variable", display = "repeat")
   g <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   page1 <- g@pages[[1L]]
   # Variable column visible; every row repeats the value.
@@ -250,7 +250,7 @@ test_that("as_grid() with explicit group_display='column_repeat' keeps the varia
   expect_false(any(page1$is_header_row))
 })
 
-test_that("as_grid() with explicit group_display='column' keeps column + suppresses repeats", {
+test_that("as_grid() with explicit display='collapse' keeps column + suppresses repeats", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
@@ -259,14 +259,14 @@ test_that("as_grid() with explicit group_display='column' keeps column + suppres
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
-    group_rows(by = "variable", display = "column")
+    group_rows(by = "variable", display = "collapse")
   g <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   page1 <- g@pages[[1L]]
   expect_true("variable" %in% page1$col_names)
   # Row 1 shows the value; row 2+ in the same block is blank.
   expect_equal(unname(page1$cells_text[1L, "variable"]), "Age (years)")
   expect_equal(unname(page1$cells_text[2L, "variable"]), "")
-  # No header rows injected under "column" mode.
+  # No header rows injected under "collapse" mode.
   expect_false(any(page1$is_header_row))
 })
 
@@ -279,7 +279,7 @@ test_that("as_grid() with explicit group_display='column' keeps column + suppres
 # prefixes the target column's text + AST with
 # `strrep(" ", preset@indent_size * depth)`. Depth 0 rows stay flush;
 # depth N rows carry N indents. Synthetic header rows (from
-# `display = "header_row"`) are NEVER indented — they're the
+# `display = "section"`) are NEVER indented — they're the
 # parent at depth 0.
 
 mk_soc_pt_spec <- function(indent = NULL) {
@@ -414,13 +414,13 @@ test_that("preset(indent_size = 3L) honours an odd indent width on PT rows", {
   expect_equal(ast@runs[[1L]]$text, "   ")
 })
 
-test_that("no indent applied when no column declares group_display='header_row'", {
+test_that("no indent applied when no column declares display='section'", {
   df <- data.frame(
     soc = c("CARDIAC", "GI"),
     n = c(5L, 10L),
     stringsAsFactors = FALSE
   )
-  # Without usage="group", no header_row plan -> no indent.
+  # Without usage="group", no section plan -> no indent.
   spec <- tabular(df, titles = "AE", footnotes = "") |>
     cols(soc = col_spec(label = "SOC"), n = col_spec(label = "N"))
   g <- as_grid(spec)
@@ -429,7 +429,7 @@ test_that("no indent applied when no column declares group_display='header_row'"
   expect_equal(unname(page1$cells_text[1L, "soc"]), "CARDIAC")
 })
 
-test_that("no indent applied under group_display='column' mode", {
+test_that("no indent applied under display='collapse' mode", {
   df <- data.frame(
     soc = c("CARDIAC", "CARDIAC", "GI"),
     label = c("Atrial fib", "Tachycardia", "Nausea"),
@@ -442,11 +442,11 @@ test_that("no indent applied under group_display='column' mode", {
       label = col_spec(label = "PT"),
       n = col_spec(label = "N")
     ) |>
-    group_rows(by = "soc", display = "column")
+    group_rows(by = "soc", display = "collapse")
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
   expect_false(any(page1$is_header_row))
-  # No header_row plan active -> label column emits text verbatim
+  # No section plan active -> label column emits text verbatim
   # without the indent prefix.
   expect_false(any(startsWith(page1$cells_text[, "label"], "  ")))
 })
@@ -456,7 +456,7 @@ test_that("no indent applied under group_display='column' mode", {
 # indent on data-row host-col text.
 # ---------------------------------------------------------------------
 
-test_that("HTML emit indents data-row host-col cells under header_row mode", {
+test_that("HTML emit indents data-row host-col cells under section mode", {
   spec <- mk_soc_pt_spec()
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)
@@ -484,7 +484,7 @@ test_that("HTML emit indents data-row host-col cells under header_row mode", {
   expect_true(grepl("<td>GI</td>", txt, fixed = TRUE))
 })
 
-test_that("LaTeX emit indents data-row host-col cells under header_row mode", {
+test_that("LaTeX emit indents data-row host-col cells under section mode", {
   # The engine bakes a leading-space prefix into cells_text AND ships
   # an integer depth on `page$cells_indent`. The LaTeX backend reads
   # the sidecar, strips the prefix, and emits the indent as a per-cell
@@ -505,7 +505,7 @@ test_that("LaTeX emit indents data-row host-col cells under header_row mode", {
   expect_false(grepl("  Nausea", txt, fixed = TRUE))
 })
 
-test_that("RTF emit indents data-row host-col cells under header_row mode", {
+test_that("RTF emit indents data-row host-col cells under section mode", {
   spec <- mk_soc_pt_spec()
   out <- withr::local_tempfile(fileext = ".rtf")
   emit(spec, out)
@@ -517,7 +517,7 @@ test_that("RTF emit indents data-row host-col cells under header_row mode", {
   expect_false(grepl("  Nausea", txt, fixed = TRUE))
 })
 
-test_that("DOCX emit indents data-row host-col cells under header_row mode", {
+test_that("DOCX emit indents data-row host-col cells under section mode", {
   spec <- mk_soc_pt_spec()
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
@@ -547,7 +547,7 @@ test_that("DOCX emit indents data-row host-col cells under header_row mode", {
   ))
 })
 
-test_that("MD emit indents data-row host-col cells under header_row mode", {
+test_that("MD emit indents data-row host-col cells under section mode", {
   spec <- mk_soc_pt_spec()
   out <- withr::local_tempfile(fileext = ".md")
   emit(spec, out)
@@ -844,7 +844,7 @@ test_that(".indent_host_asts_per_row is a no-op on empty input", {
 })
 
 # ---------------------------------------------------------------------
-# Composability — indent + display = "header_row" + sort_rows
+# Composability — indent + display = "section" + sort_rows
 # ---------------------------------------------------------------------
 
 test_that("indent composes with sort_rows() — depths follow their rows", {
@@ -872,7 +872,7 @@ test_that("indent composes with sort_rows() — depths follow their rows", {
   expect_equal(unname(page1$cells_text[3L, "label"]), "CARDIAC")
 })
 
-test_that("indent composes with group_display='header_row'", {
+test_that("indent composes with display='section'", {
   spec <- mk_soc_pt_spec()
   g <- as_grid(spec)
   page1 <- g@pages[[1L]]
@@ -912,11 +912,11 @@ test_that("indent referencing a character column raises a tabular_error_input", 
 })
 
 # ---------------------------------------------------------------------
-# Listing without `display = "header_row"` — indent works
+# Listing without `display = "section"` — indent works
 # in a plain flat listing too.
 # ---------------------------------------------------------------------
 
-test_that("indent works without group_display='header_row' (flat listing)", {
+test_that("indent works without display='section' (flat listing)", {
   df <- data.frame(
     usubjid = c("01", "02", "03"),
     aedecod = c("Headache", "Dizziness", "Nausea"),
@@ -987,7 +987,7 @@ test_that("engine_group_display() skips indent when indent_size is non-positive"
   )
   rg <- tabular:::row_group_spec(
     by = "soc",
-    display = "header_row",
+    display = "section",
     skip = NA
   )
   # Zero indent — text passes through verbatim, no leading whitespace.
@@ -1076,8 +1076,8 @@ test_that("engine_group_display() short-circuits when no group columns are decla
   expect_identical(unname(out$cells_text[, "x"]), c("a", "b"))
 })
 
-test_that("engine_group_display() with group_display='column' only takes the no-header branch", {
-  # Group col exists but none declare `header_row` — header_col is NULL,
+test_that("engine_group_display() with display='collapse' only takes the no-header branch", {
+  # Group col exists but none declare `section` — header_col is NULL,
   # outer_run_ids fall back to the first group column.
   cells_text <- matrix(
     c("A", "A", "B", "x", "y", "z"),
@@ -1115,7 +1115,7 @@ test_that("engine_group_display() with group_display='column' only takes the no-
     cols = cols,
     row_groups = tabular:::row_group_spec(
       by = "g",
-      display = "column",
+      display = "collapse",
       skip = NA
     ),
     indent_size = 2L
@@ -1123,7 +1123,7 @@ test_that("engine_group_display() with group_display='column' only takes the no-
   expect_null(out$header_row_plan)
   # Column-mode suppression — second "A" cell blanked.
   expect_identical(unname(out$cells_text[, "g"]), c("A", "", "B"))
-  # `v` column not indented (no header_row plan).
+  # `v` column not indented (no section plan).
   expect_identical(unname(out$cells_text[, "v"]), c("x", "y", "z"))
 })
 
@@ -1227,7 +1227,7 @@ test_that(".inject_header_rows_for_page() disables header plan when host_col mis
 })
 
 test_that("engine_group_display() handles host_col == NA without indenting", {
-  # When every visible column is hidden by group_display="header_row",
+  # When every visible column is hidden by group_display="section",
   # `.header_row_host_column()` returns NA. The indent guard checks
   # for that and the data rows fall through untouched.
   cells_text <- matrix(
@@ -1258,7 +1258,7 @@ test_that("engine_group_display() handles host_col == NA without indenting", {
     cols = cols,
     row_groups = tabular:::row_group_spec(
       by = "soc",
-      display = "header_row",
+      display = "section",
       skip = NA
     ),
     indent_size = 2L
@@ -1377,7 +1377,7 @@ test_that("a fixed indent = <n> resolves with no data (engine called without `da
 })
 
 # ---------------------------------------------------------------------
-# Change D: multi-level nested `display = "header_row"` keys
+# Change D: multi-level nested `display = "section"` keys
 # auto-indent. Outer band at depth 0, inner band at depth 1, etc. Body
 # rows under N bands get N levels added to cells_indent[, host_col]
 # UNLESS the host column declares `indent` (cdisc_saf_aesocpt regression).
@@ -1429,14 +1429,14 @@ mk_nested_band_spec <- function(host_indent = FALSE) {
     group_rows(by = c("section", "subsection"))
 }
 
-test_that("nested header_row bands: header_row_plan$bands has correct depth + transitions", {
+test_that("nested section bands: header_row_plan$bands has correct depth + transitions", {
   g <- as_grid(mk_nested_band_spec())
   plan <- g@metadata$header_row_plan
   # When user-facing `as_grid` doesn't surface header_row_plan we read
   # off the engine directly via a fixture call (cleaner: introspect
   # the page).
   p1 <- g@pages[[1L]]
-  # Two header_row cols -> two bands.
+  # Two section cols -> two bands.
   expect_true(any(p1$is_header_row))
   # Count band-1 rows (depth 0 on host_col) vs band-2 rows (depth 1).
   host_idx <- match("label", p1$col_names)
@@ -1486,7 +1486,7 @@ test_that("nested bands: indent on host SUPPRESSES data_depth (cdisc_saf_aesocpt
   expect_true(all(body_depths == 0L))
 })
 
-test_that("a fixed indent = 1 on a header_row host gives a SINGLE indent, not double", {
+test_that("a fixed indent = 1 on a section host gives a SINGLE indent, not double", {
   # Footgun-fixed-by-construction: a scalar indent on the section host
   # suppresses the auto-indent, so the body lands at exactly the scalar
   # depth (1), never scalar + data_depth (2).
@@ -1537,10 +1537,10 @@ test_that("nested bands inject in OUTER->INNER order at stacked transitions", {
   )
 })
 
-test_that("the plan's header_row keys stay in outer->inner order", {
+test_that("the plan's section keys stay in outer->inner order", {
   rg <- tabular:::row_group_spec(
     by = c("b", "c", "d"),
-    display = c("column", "header_row", "header_row"),
+    display = c("collapse", "section", "section"),
     skip = rep(NA, 3L)
   )
   expect_identical(tabular:::.row_group_hidden_keys(rg), c("c", "d"))
@@ -1575,7 +1575,7 @@ test_that("a single-row grouped table renders without crashing (#cw1)", {
   expect_no_error(suppressWarnings(emit(spec, out)))
 })
 
-test_that("header_row section headers survive a leading hidden column (#cw3)", {
+test_that("section section headers survive a leading hidden column (#cw3)", {
   # A visible=FALSE column declared first must not become the host: if it
   # does, match(host_col, visible_col_names) is NA and every section
   # header silently vanishes.
@@ -1598,18 +1598,18 @@ test_that("header_row section headers survive a leading hidden column (#cw3)", {
   suppressWarnings(emit(spec, out))
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   # The group values appear ONLY via the section-header rows (the grp
-  # column is hidden in header_row mode), so their presence proves the
+  # column is hidden in section mode), so their presence proves the
   # header plan was not dropped.
   expect_match(txt, "SOCX", fixed = TRUE)
   expect_match(txt, "SOCY", fixed = TRUE)
 })
 
 # ---------------------------------------------------------------------
-# Single-member-group collapse (header_row)
+# Single-member-group collapse (section)
 # ---------------------------------------------------------------------
 
 # Canonical occurrence-table shape: a 3-member "Severity" breakdown plus a
-# single binary "Death" flag, both under one header_row stub.
+# single binary "Death" flag, both under one section stub.
 .collapse_df <- function() {
   data.frame(
     grp = c("Severity", "Severity", "Severity", "Death"),
@@ -1638,7 +1638,7 @@ test_that("header_row section headers survive a leading hidden column (#cw3)", {
   )
 }
 
-test_that("header_row collapses a single-member group to one flush-left row", {
+test_that("section collapses a single-member group to one flush-left row", {
   out <- withr::local_tempfile(fileext = ".md")
   emit(.collapse_spec(), out)
   md <- readLines(out)
@@ -1655,7 +1655,7 @@ test_that("header_row collapses a single-member group to one flush-left row", {
   expect_true(any(grepl("^\\| &nbsp; \\|", md)))
 })
 
-test_that("header_row emits no header for an empty / NA group value", {
+test_that("section emits no header for an empty / NA group value", {
   df <- data.frame(
     grp = c("Severity", "Severity", NA, ""),
     label = c("MILD", "SEVERE", "Orphan1", "Orphan2"),
@@ -1680,7 +1680,7 @@ test_that("header_row emits no header for an empty / NA group value", {
   expect_false(grepl("&nbsp;", o1, fixed = TRUE))
 })
 
-test_that("header_row renders an all-singleton table flush-left with no headers", {
+test_that("section renders an all-singleton table flush-left with no headers", {
   df <- data.frame(
     grp = c("Death", "TEAE", "TESAE"),
     label = c("Death", "TEAE", "TESAE"),
@@ -1729,7 +1729,7 @@ test_that("a collapsed singleton uses the GROUP value as its row label", {
   expect_false(grepl("Mortality", md, fixed = TRUE))
 })
 
-test_that("multi-band header_row leaves a single-member inner run as a header", {
+test_that("multi-band section leaves a single-member inner run as a header", {
   # length(bands) == 2 -> collapse is intentionally scoped out; every run
   # (incl. the single-member NERVOUS / PT-C) still emits its header.
   df <- data.frame(

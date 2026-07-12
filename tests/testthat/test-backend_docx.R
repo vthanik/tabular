@@ -832,7 +832,7 @@ test_that("<w:gridCol> widths match engine-resolved meta$cols inches in twips (b
       drug_100 = col_spec(label = "High Dose\nN=72", align = "decimal"),
       Total = col_spec(label = "Total\nN=254", align = "decimal")
     ) |>
-    group_rows(by = "variable", display = "column")
+    group_rows(by = "variable", display = "collapse")
   out <- withr::local_tempfile(fileext = ".docx")
   suppressWarnings(emit(spec, out))
   unzipped <- .unzip_docx(out)
@@ -1582,7 +1582,7 @@ test_that("DOCX panels = 2 emit one self-contained <w:tbl> per panel", {
       ),
       rl = col_spec(label = "Stat")
     ) |>
-    group_rows(by = "grp", display = "column") |>
+    group_rows(by = "grp", display = "collapse") |>
     paginate(panels = 2L, repeat_cols = c("grp", "rl"))
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
@@ -1648,7 +1648,7 @@ test_that("DOCX repeats the title block on every panel", {
   d <- data.frame(grp = c("a", "b"), c1 = 1:2, c2 = 3:4, c3 = 5:6)
   spec <- tabular(d, titles = c("RepeatTitleZ", "Demographics")) |>
     cols(grp = col_spec()) |>
-    group_rows(by = "grp", display = "column") |>
+    group_rows(by = "grp", display = "collapse") |>
     paginate(panels = 2L)
   out <- withr::local_tempfile(fileext = ".docx")
   emit(spec, out)
@@ -2250,7 +2250,7 @@ test_that("DOCX title / footnote / header honor style() text overrides (#docx-ch
       ),
       x = col_spec(label = "MYHEADER")
     ) |>
-    group_rows(by = "grp", display = "column", skip = "grp") |>
+    group_rows(by = "grp", display = "collapse", skip = "grp") |>
     style(color = "#FF0000", italic = TRUE, .at = cells_title()) |>
     style(color = "#00FF00", .at = cells_footnotes()) |>
     style(color = "#0000FF", .at = cells_headers())

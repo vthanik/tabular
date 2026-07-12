@@ -229,7 +229,7 @@
 #'       is indented that many levels (each level is
 #'       `preset@indent_size` space-widths). `indent = 1` is the common
 #'       "nudge this stub in one level" case; `indent = 0` is a real
-#'       value that flattens children under a `"header_row"` section.
+#'       value that flattens children under a `"section"` header.
 #'   *   **A column name (character)** — per-row depth: the engine reads
 #'       `spec@data[[indent]]`, coerces each row to a non-negative
 #'       integer, and prefixes that row's text + AST with
@@ -243,7 +243,7 @@
 #'   rows are never indented — they are the parent at depth 0.
 #'
 #'   **Interaction:** an explicit `indent` on the host column of a
-#'   [`group_rows()`]`(display = "header_row")` section **suppresses**
+#'   [`group_rows()`]`(display = "section")` section **suppresses**
 #'   that section's automatic one-level child indent (you take control
 #'   of the depth) — so a stub under a section needs no `indent` at
 #'   all, and adding `indent = 1` there yields a single, not double,
@@ -437,7 +437,7 @@
 #'     drug_100   = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
 #'     Total      = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
 #'   ) |>
-#'   group_rows(by = "variable", display = "column") |>
+#'   group_rows(by = "variable", display = "collapse") |>
 #'   paginate(panels = 2, repeat_cols = c("variable", "stat_label"))
 #'
 #' @seealso

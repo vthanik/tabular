@@ -161,8 +161,8 @@ test_that("as_grid() under preset(width_mode='window') expands auto columns to f
 })
 
 test_that("as_grid() under preset(width_mode='fixed') collapses auto cols to the minimum", {
-  # Use group_display='column' so the variable column stays visible;
-  # otherwise header_row mode hides it and the test's expectation
+  # Use display='collapse' so the variable column stays visible;
+  # otherwise section mode hides it and the test's expectation
   # about variable@width going to .min_auto_width_in is moot.
   spec <- tabular(cdisc_saf_demo) |>
     cols(
@@ -172,7 +172,7 @@ test_that("as_grid() under preset(width_mode='fixed') collapses auto cols to the
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo", width = 1.5)
     ) |>
-    group_rows(by = "variable", display = "column") |>
+    group_rows(by = "variable", display = "collapse") |>
     preset(width_mode = "fixed")
   grid <- as_grid(spec)
   cols_resolved <- grid@metadata$cols
@@ -197,7 +197,7 @@ test_that("as_grid() under default preset(width_mode='content') matches today's 
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
-    group_rows(by = "variable", display = "column")
+    group_rows(by = "variable", display = "collapse")
   spec_explicit <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
@@ -206,7 +206,7 @@ test_that("as_grid() under default preset(width_mode='content') matches today's 
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
-    group_rows(by = "variable", display = "column") |>
+    group_rows(by = "variable", display = "collapse") |>
     preset(width_mode = "content")
   # suppress the incidental overflow warning (content mode, wide demo).
   g1 <- suppressWarnings(as_grid(spec_default))

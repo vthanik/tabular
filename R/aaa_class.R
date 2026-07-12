@@ -28,26 +28,25 @@
 # `group_rows(display = )`, a single value). Controls how the grouping
 # keys' unique values render in the body:
 #
-#   "header_row" (default) — each unique value emits as a section
-#                            header row spanning the visible
-#                            columns; the source column is hidden
-#                            from the body. Matches the canonical
-#                            submission shape used by
-#                            every clinical-TFL house template.
-#   "column"               — column stays visible; repeated values
-#                            are suppressed (only the first row of
-#                            each value shows the label).
-#   "column_repeat"        — column stays visible; every row repeats
-#                            the value (no suppression).
+#   "section" (default) — each unique value emits as a section
+#                         header row spanning the visible columns;
+#                         the source column is hidden from the body.
+#                         Matches the canonical submission shape
+#                         used by every clinical-TFL house template.
+#   "collapse"          — column stays visible; repeated values are
+#                         suppressed (only the first row of each
+#                         value shows the label).
+#   "repeat"            — column stays visible; every row repeats
+#                         the value (no suppression).
 #
 # A break-only key (no header, hidden, contributes only group
 # transitions -- skip spacers, decimal sections, panel-stub exclusion)
 # is expressed by `col_spec(visible = FALSE)` on the key, NOT a display
 # mode. This replaced the former "none" display value.
 .col_group_display_values <- c(
-  "header_row",
-  "column",
-  "column_repeat"
+  "section",
+  "collapse",
+  "repeat"
 )
 .align_values <- c("left", "center", "right", "decimal")
 
@@ -313,7 +312,7 @@ NULL
     #     `strrep(" ", preset@indent_size * depth)`. The referenced
     #     column is auto-hidden unless the user set `visible = TRUE`.
     # `NA` (the default) means no indent. An explicit `indent` on the
-    # host column of a `group_rows(display = "header_row")` section
+    # host column of a `group_rows(display = "section")` section
     # suppresses the section auto-indent (the user takes control of
     # depth).
     indent = S7::new_property(
@@ -450,7 +449,7 @@ row_group_spec <- S7::new_class(
   properties = list(
     by = S7::new_property(S7::class_character, default = character()),
     display = S7::new_property(S7::class_character, default = character()),
-    # skip — NA per key means "derive": TRUE for a "header_row" key or a
+    # skip — NA per key means "derive": TRUE for a "section" key or a
     # break-only (visible = FALSE) key, FALSE for the visible column
     # modes. Resolved by .effective_row_group_skip() at engine time
     # (where column visibility is known), kept raw here so a later
@@ -768,8 +767,9 @@ pagination_spec <- S7::new_class(
     # split). Validated by `.check_panels()` at `paginate()` call time.
     panels = S7::new_property(S7::class_any, default = 1L),
     # Stub columns repeated on every horizontal panel. NULL (default)
-    # derives the stub from the group_rows() keys (excluding "none"
-    # break-only keys); an explicit character vector REPLACES that
+    # derives the stub from the group_rows() keys (excluding
+    # break-only visible = FALSE keys); an explicit character vector
+    # REPLACES that
     # default (character() = no stub). Validated at paginate() call
     # time.
     repeat_cols = S7::class_any,
@@ -1382,7 +1382,7 @@ tabular_grid <- S7::new_class(
 #'     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
 #'     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
 #'   ) |>
-#'   group_rows(by = "variable", display = "column") |>
+#'   group_rows(by = "variable", display = "collapse") |>
 #'   sort_rows(by = c("variable", "stat_label"))
 #'
 #' stopifnot(

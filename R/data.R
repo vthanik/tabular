@@ -365,7 +365,7 @@
 #' `groupid` + `group_label` pair so a single
 #' `group_rows(by = "group_label")` synthesises one
 #' bold section band per groupid block; the body rows render below
-#' each band, auto-indented one level by the `"header_row"` section
+#' each band, auto-indented one level by the `"section"` display
 #' itself (the stub needs no `indent` — the section supplies it).
 #'
 #' @format A data frame with 13 rows and 7 columns:
@@ -389,7 +389,7 @@
 #'   \item{`group_label`}{Character section label, repeating across
 #'     every row of its groupid block ("Best Overall Response" x7,
 #'     "Objective Response Rate" x2, ...). Drives the engine's
-#'     [`group_rows()`] header_row synthesis.}
+#'     [`group_rows()`] section-header synthesis.}
 #' }
 #'
 #' @source Derived in `data-raw/bundle-demo.R` from
@@ -403,7 +403,7 @@
 #' # Disease Control Rate), each followed by indented stat rows. The
 #' # source already ships in the right display order, so no sort step
 #' # is needed; `group_label` repeats across every row of its section
-#' # so the engine's `header_row` mode emits exactly one band per
+#' # so the engine's `section` mode emits exactly one band per
 #' # section.
 #' ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 #' tabular(

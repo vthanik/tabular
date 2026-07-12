@@ -278,7 +278,7 @@ test_that("a default col_spec() and the explicit concrete spec render identicall
   # Finalize parity: NA-unset resolves to exactly the old concrete
   # defaults, so the two specs produce byte-identical output.
   bare <- mk_spec() |> cols(drug_a = col_spec(label = "Drug A"))
-  # group_display is inert on a display column, so the concrete spec only
+  # grouping display is table-level (group_rows), so the concrete spec only
   # needs the visible / usage resolutions to match the finalized bare one.
   explicit <- mk_spec() |>
     cols(

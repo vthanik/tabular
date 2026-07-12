@@ -42,8 +42,8 @@ columns into \code{N} chunks and repeats the stub on every panel.}
 
 \item{repeat_cols}{\emph{Stub columns repeated on every horizontal
 panel.} \verb{<character | NULL>: default NULL}. \code{NULL} derives the
-stub from the \code{\link[=group_rows]{group_rows()}} keys, excluding \code{display = "none"}
-break-only keys (hidden columns never repeat). An explicit
+stub from the \code{\link[=group_rows]{group_rows()}} keys, excluding break-only
+\code{col_spec(visible = FALSE)} keys (hidden columns never repeat). An explicit
 character vector REPLACES that default — name every column the
 stub should carry (e.g. the grouping key plus a per-row
 statistic label). \code{character()} repeats nothing.

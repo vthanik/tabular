@@ -126,7 +126,7 @@ spec <- tabular(
     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
-  group_rows(by = "variable", display = "column") |>
+  group_rows(by = "variable", display = "collapse") |>
   sort_rows(by = c("variable", "stat_label"))
 
 stopifnot(

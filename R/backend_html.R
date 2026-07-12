@@ -995,7 +995,7 @@ backend_html <- function(grid, file) {
     return(out)
   }
   # Per-cell indent depth comes from the engine sidecar (`col_spec@indent`
-  # plus any `display = "header_row"` auto-indent). Default to a
+  # plus any `display = "section"` auto-indent). Default to a
   # zero matrix so fixtures that bypass the engine (older tests, ad-hoc
   # page synthesis) still work.
   cells_indent <- page$cells_indent %||%
@@ -1014,7 +1014,7 @@ backend_html <- function(grid, file) {
   indent_em_per_level <- .indent_em_per_level(preset)
   ws_preserve <- .preset_ws_preserve(preset)
   # Synthesised section-header rows + blank-gap rows from the engine
-  # `display = "header_row"` plan. The host column carries the
+  # `display = "section"` plan. The host column carries the
   # group value; other cells are blank. Render as a single colspan'd
   # cell so the header band reads as a unit, not a row of empty cells.
   is_header_row <- page$is_header_row %||% rep(FALSE, nrow_data)
@@ -2443,7 +2443,7 @@ backend_html <- function(grid, file) {
     # itself so it stays separated from the data block.
     ".tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }",
     # Synthesised section-header rows (group_rows(display =
-    # "header_row")) — bold, flush-left, slight extra
+    # "section")) — bold, flush-left, slight extra
     # padding above so each band reads as a unit. Blank-gap rows: a
     # thin spacer (no borders) between consecutive sections.
     ".tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }",

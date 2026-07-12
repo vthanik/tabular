@@ -205,7 +205,7 @@ reported" both render blank.}
 is indented that many levels (each level is
 \code{preset@indent_size} space-widths). \code{indent = 1} is the common
 "nudge this stub in one level" case; \code{indent = 0} is a real
-value that flattens children under a \code{"header_row"} section.
+value that flattens children under a \code{"section"} header.
 \item \strong{A column name (character)} — per-row depth: the engine reads
 \code{spec@data[[indent]]}, coerces each row to a non-negative
 integer, and prefixes that row's text + AST with
@@ -220,7 +220,7 @@ Markdown carries the literal space-prefix. Synthesised group-header
 rows are never indented — they are the parent at depth 0.
 
 \strong{Interaction:} an explicit \code{indent} on the host column of a
-\code{\link[=group_rows]{group_rows()}}\code{(display = "header_row")} section \strong{suppresses}
+\code{\link[=group_rows]{group_rows()}}\code{(display = "section")} section \strong{suppresses}
 that section's automatic one-level child indent (you take control
 of the depth) — so a stub under a section needs no \code{indent} at
 all, and adding \code{indent = 1} there yields a single, not double,
@@ -445,7 +445,7 @@ tabular(
     drug_100   = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
     Total      = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
-  group_rows(by = "variable", display = "column") |>
+  group_rows(by = "variable", display = "collapse") |>
   paginate(panels = 2, repeat_cols = c("variable", "stat_label"))
 
 }

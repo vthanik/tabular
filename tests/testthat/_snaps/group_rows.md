@@ -14,7 +14,7 @@
       group_rows(spec, by = "variable", display = "none")
     Condition
       Error:
-      ! `display` must be one of "header_row", "column", and "column_repeat".
+      ! `display` must be one of "section", "collapse", and "repeat".
       x You supplied "none".
       i For a hidden break-only key use `col_spec(visible = FALSE)`.
 
@@ -27,4 +27,13 @@
       ! `skip` must name columns listed in `by`.
       x Not in `by`: "stat_label".
       i Grouping keys: "variable".
+
+---
+
+    Code
+      group_rows(spec, by = "variable", skip = NA)
+    Condition
+      Error:
+      ! `skip` must be TRUE, FALSE, or a character vector of `by` keys.
+      x You supplied `NA`.
 

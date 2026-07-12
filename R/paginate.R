@@ -90,8 +90,8 @@
 #'
 #' @param repeat_cols *Stub columns repeated on every horizontal
 #'   panel.* `<character | NULL>: default NULL`. `NULL` derives the
-#'   stub from the [`group_rows()`] keys, excluding `display = "none"`
-#'   break-only keys (hidden columns never repeat). An explicit
+#'   stub from the [`group_rows()`] keys, excluding break-only
+#'   `col_spec(visible = FALSE)` keys (hidden columns never repeat). An explicit
 #'   character vector REPLACES that default — name every column the
 #'   stub should carry (e.g. the grouping key plus a per-row
 #'   statistic label). `character()` repeats nothing.
@@ -456,7 +456,8 @@ paginate <- function(
 # show once on the left of a collapsed continuous table. An explicit
 # `paginate(repeat_cols = )` REPLACES the default (character() = no
 # stub); the default derives from the `group_rows()` keys, excluding
-# "none" break-only keys (hidden, so they never repeat). Used only on
+# break-only (visible = FALSE) keys (hidden, so they never repeat).
+# Used only on
 # the panel-repeat path (`engine_paginate` ->
 # `.compute_horizontal_panels` / `.panel_spans_from_panels`).
 .stub_col_names <- function(spec) {

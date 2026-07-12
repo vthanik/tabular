@@ -1749,7 +1749,7 @@ test_that("multi-line cell whose next line starts with '[' is bracket-safe (#lat
       stat = col_spec(label = "Statistic", align = "left"),
       x = col_spec(label = "p-value\n[1]", align = "decimal")
     ) |>
-    group_rows(by = "g", display = "column")
+    group_rows(by = "g", display = "collapse")
   f <- withr::local_tempfile(fileext = ".tex")
   emit(spec, f)
   tex <- paste(readLines(f), collapse = "\n")
@@ -1778,7 +1778,7 @@ test_that("multi-line header with bracket footnote marker compiles to PDF (#late
       stat = col_spec(label = "Statistic", align = "left"),
       x = col_spec(label = "p-value\n[1]", align = "decimal")
     ) |>
-    group_rows(by = "g", display = "column")
+    group_rows(by = "g", display = "collapse")
   f <- withr::local_tempfile(fileext = ".tex")
   emit(spec, f)
   pdf <- tinytex::xelatex(f)

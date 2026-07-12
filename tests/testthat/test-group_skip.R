@@ -1,19 +1,20 @@
 # group_rows() skip + blank-row injection. PROC REPORT
 # `BREAK AFTER var / SKIP` semantics, lifted to per-key control.
 #
-# `skip` names the by keys that get a blank spacer between groups:
-#   skip = "grp"      — blank before each transition of `grp`.
-#   skip = character() — never insert a blank.
-#   skip = NULL (default) — derive: a "header_row" key or a break-only
+# `skip` is TRUE / FALSE / a character subset of `by` (the readr
+# `col_names` pattern):
+#   skip = "grp"          — blank before each transition of `grp`.
+#   skip = FALSE          — never insert a blank (character() ditto).
+#   skip = TRUE (default) — derive: a "section" key or a break-only
 #                  (visible = FALSE) key breaks, a visible column does not.
 # The NA-resolution unit tests live in test-aaa_class.R
 # (.effective_row_group_skip).
 
 # ---------------------------------------------------------------------
-# End-to-end: default behavior matches header_row mode
+# End-to-end: default behavior matches section mode
 # ---------------------------------------------------------------------
 
-test_that("as_grid() default header_row group injects blanks between sections", {
+test_that("as_grid() default section group injects blanks between sections", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(label = "Characteristic"),
@@ -29,7 +30,7 @@ test_that("as_grid() default header_row group injects blanks between sections", 
   expect_false(page1$is_blank_row[[last]])
 })
 
-test_that("empty skip on a header_row key suppresses blanks", {
+test_that("empty skip on a section key suppresses blanks", {
   spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(
@@ -55,7 +56,7 @@ test_that("naming a 'column' key in skip injects blanks too", {
       stat_label = col_spec(label = "Statistic"),
       placebo = col_spec(label = "Placebo")
     ) |>
-    group_rows(by = "variable", display = "column", skip = "variable")
+    group_rows(by = "variable", display = "collapse", skip = "variable")
   g <- suppressWarnings(as_grid(spec)) # incidental overflow warn
   page1 <- g@pages[[1L]]
   # Variable visible (column mode); blanks between variable transitions.
@@ -171,7 +172,7 @@ test_that("column-mode group_skip blanks between groups, not after first row", {
       stat = col_spec(label = "Statistic"),
       val = col_spec(label = "Value")
     ) |>
-    group_rows(by = "grp", display = "column", skip = "grp")
+    group_rows(by = "grp", display = "collapse", skip = "grp")
   page1 <- as_grid(spec)@pages[[1L]]
 
   # n_groups - 1 = 1 blank (between A and B). The bug produced 3.
@@ -208,7 +209,7 @@ test_that("break-only (visible = FALSE) group key injects breaks but no headers"
       stat = col_spec(label = "Statistic"),
       val = col_spec(label = "Value")
     ) |>
-    group_rows(by = c("grp", "blk"), display = "column")
+    group_rows(by = c("grp", "blk"), display = "collapse")
   page1 <- as_grid(spec)@pages[[1L]]
 
   # No section-header rows; the marker column is hidden and its values
@@ -242,7 +243,7 @@ test_that("a break-only key stays out of the body and drives only its breaks", {
       stat = col_spec(label = "Statistic"),
       val = col_spec(label = "Value")
     ) |>
-    group_rows(by = c("grp", "blk"), display = "column") |>
+    group_rows(by = c("grp", "blk"), display = "collapse") |>
     as_grid()
   page <- break_form@pages[[1L]]
   expect_false("blk" %in% page$col_names)

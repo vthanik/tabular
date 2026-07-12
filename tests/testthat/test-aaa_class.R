@@ -247,7 +247,7 @@ test_that("preset_spec() accepts NA (unset) and a string empty_text", {
 test_that("row_group_spec stores by/display/skip and satisfies its predicate", {
   rg <- tabular:::row_group_spec(
     by = c("soc", "pt"),
-    display = c("header_row", "column"),
+    display = c("section", "collapse"),
     skip = c(NA, FALSE)
   )
   expect_true(is_row_group_spec(rg))
@@ -267,19 +267,23 @@ test_that("row_group_spec validator rejects malformed plans", {
   expect_error(
     tabular:::row_group_spec(
       by = c("a", "a"),
-      display = rep("column", 2L),
+      display = rep("collapse", 2L),
       skip = rep(NA, 2L)
     ),
     "duplicated"
   )
   expect_error(
-    tabular:::row_group_spec(by = "a", display = "column", skip = logical()),
+    tabular:::row_group_spec(
+      by = "a",
+      display = "collapse",
+      skip = logical()
+    ),
     "one value per"
   )
   expect_error(
     tabular:::row_group_spec(
       by = c("a", ""),
-      display = rep("column", 2L),
+      display = rep("collapse", 2L),
       skip = rep(NA, 2L)
     ),
     "empty"
@@ -287,11 +291,11 @@ test_that("row_group_spec validator rejects malformed plans", {
 })
 
 test_that(".effective_row_group_skip resolves the NA derive sentinel", {
-  # A "header_row" key or a break-only key (in break_keys, from
+  # A "section" key or a break-only key (in break_keys, from
   # visible = FALSE) derives TRUE; visible column modes derive FALSE.
   rg <- tabular:::row_group_spec(
     by = c("a", "b", "c", "d"),
-    display = c("header_row", "column", "column_repeat", "column"),
+    display = c("section", "collapse", "repeat", "collapse"),
     skip = rep(NA, 4L)
   )
   expect_identical(
@@ -301,7 +305,7 @@ test_that(".effective_row_group_skip resolves the NA derive sentinel", {
   # No break keys, all explicit FALSE -> stays FALSE.
   rg2 <- tabular:::row_group_spec(
     by = c("a", "b"),
-    display = c("header_row", "column"),
+    display = c("section", "collapse"),
     skip = c(FALSE, FALSE)
   )
   expect_identical(tabular:::.effective_row_group_skip(rg2), c(FALSE, FALSE))
@@ -310,7 +314,7 @@ test_that(".effective_row_group_skip resolves the NA derive sentinel", {
 test_that(".row_group_hidden_keys / break_keys / stub_keys split the plan", {
   rg <- tabular:::row_group_spec(
     by = c("a", "b", "c", "d"),
-    display = c("header_row", "column", "column_repeat", "column"),
+    display = c("section", "collapse", "repeat", "collapse"),
     skip = rep(NA, 4L)
   )
   # `d` is a visible-column key marked col_spec(visible = FALSE):
@@ -321,7 +325,7 @@ test_that(".row_group_hidden_keys / break_keys / stub_keys split the plan", {
     c = col_spec(),
     d = col_spec(visible = FALSE)
   )
-  # Hidden (pulled into section headers) = the header_row keys only.
+  # Hidden (pulled into section headers) = the section keys only.
   expect_identical(tabular:::.row_group_hidden_keys(rg), "a")
   # Break-only = the visible = FALSE grouping keys.
   expect_identical(tabular:::.row_group_break_keys(rg, cols), "d")

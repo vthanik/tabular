@@ -4,7 +4,7 @@
 \alias{group_rows}
 \title{Declare the row-grouping structure of the table}
 \usage{
-group_rows(.spec, by, display = "header_row", skip = NULL)
+group_rows(.spec, by, display = "section", skip = TRUE)
 }
 \arguments{
 \item{.spec}{\emph{The \code{tabular_spec} to attach the grouping plan to.}
@@ -20,27 +20,34 @@ also be a grouping key; within each partition the key is
 constant and auto-hidden, so the combination composes.}
 
 \item{display}{\emph{How the keys' values render in the body.}
-\verb{<character(1)>: default "header_row"}. One value, applied to
+\verb{<character(1)>: default "section"}. One value, applied to
 every key:
 \itemize{
-\item \code{"header_row"} (default) — each unique value emits a section
+\item \code{"section"} (default) — each unique value emits a section
 header row spanning the visible columns; the key column is
 hidden from the body. The canonical submission shape.
-\item \code{"column"} — the key column stays visible; repeated values are
-suppressed so only the first row of each run shows the label.
-\item \code{"column_repeat"} — the key column stays visible and every row
-repeats the value.
+\item \code{"collapse"} — the key column stays visible; repeated values
+are suppressed so only the first row of each run shows the
+label. The classic listing shape.
+\item \code{"repeat"} — the key column stays visible and every row
+repeats the value. The export / QC shape, where every row must
+be self-describing.
 }
 
 \strong{Tip:} for a hidden break-only key, set \code{col_spec(visible = FALSE)} on it rather than a display mode.}
 
 \item{skip}{\emph{Which keys get a blank spacer row between their
-groups.} \verb{<character> | NULL: default NULL}. Name the \code{by}
-key(s) that break with a blank line, e.g. \code{skip = "param"}
-(blank line between params, none between visits). \code{NULL} derives
-it: a \code{"header_row"} key or a break-only (\code{visible = FALSE}) key
-breaks, a visible column key does not. \code{character(0)} inserts no
-spacers at all.}
+groups.} \verb{<TRUE | FALSE | character>: default TRUE}. A logical
+flag or an explicit character set (the \code{readr::read_csv(col_names = )} pattern):
+\itemize{
+\item \code{TRUE} (default) — derive: a \code{"section"} key or a break-only
+(\code{visible = FALSE}) key breaks with a blank line; a visible
+\code{"collapse"} / \code{"repeat"} key runs continuous.
+\item \code{FALSE} — no spacer rows anywhere.
+\item \verb{<character>} — exactly these \code{by} keys break, e.g. \code{skip = "param"} (blank line between params, none between visits).
+Every name must be in \code{by}; \code{character(0)} is equivalent to
+\code{FALSE}.
+}}
 }
 \value{
 \emph{\verb{<tabular_spec>}.} A new spec with \verb{@row_groups} replaced;
@@ -77,9 +84,11 @@ There is no separate display mode for it.
 # ---- Example 1: Demographics with section headers and a stat column ----
 #
 # The canonical demographics shape: `variable` is the one structural
-# key, rendering as a section header row per parameter (Age, Sex,
-# ...). `stat_label` is NOT a grouping key -- it stays an ordinary
-# column and is auto-indented one level under each section header.
+# key. The defaults do all the work -- `display = "section"` renders
+# one section header row per parameter (Age, Sex, ...) and hides the
+# key column; `skip = TRUE` derives a blank spacer between sections.
+# `stat_label` is NOT a grouping key -- it stays an ordinary column
+# and is auto-indented one level under each section header.
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
@@ -123,6 +132,29 @@ tabular(cdisc_saf_vital, titles = "Vital Signs by Parameter and Visit") |>
     col_spec(align = "decimal")
   ) |>
   group_rows(by = c("param", "visit"), skip = "param")
+
+# ---- Example 3: Listing shape with a visible, collapsed key column ----
+#
+# The same vitals data as a continuous listing: `display = "collapse"`
+# keeps `param` and `visit` as visible columns and suppresses repeated
+# values, so only the first row of each run shows the label; `skip =
+# FALSE` removes every blank spacer. Use `display = "repeat"` instead
+# to print the value on every row -- the export / QC shape.
+tabular(cdisc_saf_vital, titles = "Vital Signs Listing") |>
+  cols(
+    paramcd = col_spec(visible = FALSE),
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic",
+    placebo = "Placebo\nN={n['placebo']}",
+    drug_50 = "Drug 50\nN={n['drug_50']}",
+    drug_100 = "Drug 100\nN={n['drug_100']}"
+  ) |>
+  cols_apply(
+    c("placebo", "drug_50", "drug_100"),
+    col_spec(align = "decimal")
+  ) |>
+  group_rows(by = c("param", "visit"), display = "collapse", skip = FALSE)
 
 }
 \seealso{

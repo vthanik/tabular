@@ -41,7 +41,7 @@ engine_headers <- function(spec) {
   call <- rlang::caller_env()
   col_order <- names(spec@data)
   # Columns that actually render. A band whose two visible leaves are
-  # separated only by a hidden (visible = FALSE / header_row) column is
+  # separated only by a hidden (visible = FALSE / section) column is
   # contiguous on the page, so the contiguity check below tolerates a
   # hidden intruder and rejects only a VISIBLE column splitting a band.
   visible_cols <- col_order[.visible_col_indices(spec, col_order)]

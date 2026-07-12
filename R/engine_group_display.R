@@ -4,7 +4,7 @@
 # per-cell values) and BEFORE engine_decimal. Four behaviours, one
 # per `row_group_spec@display` value:
 #
-#   "header_row" (default) — for each transition on the grouping
+#   "section" (default) — for each transition on the grouping
 #     key, signal that a section header row should render above
 #     the data row. Hide the key column from the visible body via
 #     `col_spec@visible = FALSE`. The actual row INJECTION happens
@@ -13,19 +13,19 @@
 #     pagination + decimal alignment + width math operate on the
 #     un-augmented matrices.
 #
-#   "column" — column stays visible; cells whose value matches the
+#   "collapse" — column stays visible; cells whose value matches the
 #     previous row's value (within the same outer-group block) are
 #     blanked. First row of each value still shows the label.
 #
-#   "column_repeat" — no-op. Every row carries the value verbatim.
+#   "repeat" — no-op. Every row carries the value verbatim.
 #
-#   "none" — break-only key: no header rows, column hidden, only its
-#     skip transitions contribute.
+# A break-only key (col_spec(visible = FALSE)) renders no header and
+# no column; only its skip transitions contribute.
 #
 # Output is the same triple of matrices (cells_text, cells_ast,
-# cells_style) — possibly with blanked cells under "column" mode —
+# cells_style) — possibly with blanked cells under "collapse" mode —
 # plus a possibly-updated col_spec map (visibility flipped for
-# "header_row" / "none" keys) and a `header_row_plan` sidecar that
+# "section" / break-only keys) and a `header_row_plan` sidecar that
 # `.slice_one_page()` consumes at render time to inject header
 # rows into each page's slice.
 #
@@ -45,7 +45,7 @@
 #'   for an ungrouped table. `@by` order is outer -> inner.
 #' @return A list with six named slots: `cells_text`, `cells_ast`,
 #'   `cells_style` (the possibly-blanked matrices), `cols` (the
-#'   possibly-visibility-flipped col_spec map for header_row / none
+#'   possibly-visibility-flipped col_spec map for section / break-only
 #'   keys), `header_row_plan` (per-row injection sidecar consumed
 #'   by `.slice_one_page()`), and `skip_transitions` (sorted integer
 #'   vector of transition row indices unioned across every grouping
@@ -78,7 +78,7 @@ engine_group_display <- function(
 
   # Sidecar matrix carrying per-cell indent depth in integer levels.
   # `col_spec@indent` (a fixed count or a per-row column) and the
-  # `header_row` auto-indent write to it additively. Header / blank rows
+  # `section` auto-indent write to it additively. Header / blank rows
   # injected later by `.inject_header_rows_for_page()` carry depth 0L
   # on every column (the parent at depth 0 — never indented). Each
   # backend reads this matrix and emits native padding-left in its
@@ -113,9 +113,9 @@ engine_group_display <- function(
   # `strrep(indent_unit, depth)` where `indent_unit` is
   # `strrep(" ", indent_size)`.
   #
-  # Independent of `group_rows(display = "header_row")` — works in plain
+  # Independent of `group_rows(display = "section")` — works in plain
   # listings (no group cols) just as well as in SOC/PT tables. An
-  # explicit `indent` on a header_row host suppresses the section
+  # explicit `indent` on a section host suppresses the section
   # auto-indent below (the host carries the depth itself).
   indent_apply <- .resolve_indent_targets(
     cols = cols,
@@ -207,19 +207,19 @@ engine_group_display <- function(
   }
   skip_transitions <- sort(as.integer(skip_transitions))
 
-  # Every key declaring `header_row` mode, in plan order. Outer =
+  # Every key declaring `section` mode, in plan order. Outer =
   # index 1. Each becomes one band in the header-row plan below. A
   # break-only key (visible = FALSE) is never a header even if its
   # display says so: it contributed skip transitions above, renders
   # nothing, and is hidden at the end of this phase.
   header_cols <- setdiff(
-    group_names[display_by[group_names] == "header_row"],
+    group_names[display_by[group_names] == "section"],
     break_cols
   )
   header_col <- if (length(header_cols) > 0L) header_cols[[1L]] else NULL
 
   # Outer-group run ids — drives column-mode suppression reset. Use
-  # the OUTERMOST header_row column when one exists; otherwise fall
+  # the OUTERMOST section column when one exists; otherwise fall
   # back to the first group column.
   outer_run_ids <- if (!is.null(header_col)) {
     .runs_grouping(cells_text[, header_col])
@@ -227,10 +227,10 @@ engine_group_display <- function(
     .runs_grouping(cells_text[, group_names[[1L]]])
   }
 
-  # Phase 1: apply "column"-mode suppression. Break-only keys are
+  # Phase 1: apply "collapse"-mode suppression. Break-only keys are
   # hidden, so they are never suppressed as visible columns.
   for (nm in setdiff(group_names, break_cols)) {
-    if (identical(display_by[[nm]], "column")) {
+    if (identical(display_by[[nm]], "collapse")) {
       cells_text[, nm] <- .suppress_column_repeats(
         cells_text[, nm],
         outer_run_ids
@@ -244,7 +244,7 @@ engine_group_display <- function(
   }
 
   # Phase 2: build the multi-band header-row plan + the blank-skip
-  # plan + hide source columns. EVERY `header_row` key contributes a
+  # plan + hide source columns. EVERY `section` key contributes a
   # band; bands nest by plan order (outer first).
   # Per-band transitions are computed from a composite-key run
   # grouping over bands 1..b joined with the ASCII unit separator
@@ -291,20 +291,20 @@ engine_group_display <- function(
         depth = b - 1L
       )
     }
-    # Single-member-group collapse (single `header_row` band only). A run
-    # of length 1 needs no section header: the lone member renders as one
+    # Single-member singleton (single `section` band only). A run of
+    # length 1 needs no section header: the lone member renders as one
     # flush-left row whose host label IS the group value (no injected
     # header, no auto-indent), still carrying any `cells_group_headers()`
-    # styling via the provenance stamped into `collapse_meta`. An empty /
+    # styling via the provenance stamped into `singleton_meta`. An empty /
     # NA group value (a blank that would otherwise print an empty bold
     # header) is treated the same way EXCEPT its host label is left as the
     # member's own text (overwriting with the blank value would erase it),
     # and it carries no provenance (nothing to style).
     #
     # ponytail: single-band only; extend to per-band masks if a real
-    # nested two-`header_row` case appears.
+    # nested two-`section` case appears.
     indent_rows <- rep(TRUE, nrow_data)
-    collapse_meta <- vector("list", nrow_data)
+    singleton_meta <- vector("list", nrow_data)
     if (length(bands) == 1L) {
       band <- bands[[1L]]
       gv <- as.character(band$group_values)
@@ -315,18 +315,18 @@ engine_group_display <- function(
 
       header_start <- is_start & run_len >= 2L & !empty_val
       indent_rows <- run_len >= 2L & !empty_val
-      collapse_rows <- run_len == 1L & !empty_val
+      singleton_rows <- run_len == 1L & !empty_val
 
       bands[[1L]]$transitions <- which(header_start)
 
-      if (any(collapse_rows) && !is.na(host_col)) {
-        cells_text[collapse_rows, host_col] <- gv[collapse_rows]
+      if (any(singleton_rows) && !is.na(host_col)) {
+        cells_text[singleton_rows, host_col] <- gv[singleton_rows]
         host_ast <- cells_ast[, host_col]
-        host_ast[collapse_rows] <- band$group_asts[collapse_rows]
+        host_ast[singleton_rows] <- band$group_asts[singleton_rows]
         cells_ast[, host_col] <- host_ast
         gcol <- band$group_col
-        for (i in which(collapse_rows)) {
-          collapse_meta[[i]] <- list(group_col = gcol, data_idx = i)
+        for (i in which(singleton_rows)) {
+          singleton_meta[[i]] <- list(group_col = gcol, data_idx = i)
         }
       }
     }
@@ -336,7 +336,7 @@ engine_group_display <- function(
       bands = bands,
       host_col = host_col,
       data_depth = data_depth,
-      collapse_meta = collapse_meta
+      singleton_meta = singleton_meta
     )
 
     # Conditional auto-indent on the host column's body cells:
@@ -476,8 +476,8 @@ engine_group_display <- function(
 }
 
 # Pick the column that hosts the header-row text. Skip every
-# grouping key the plan hides (`display = "header_row"` sources and
-# `"none"` break-only keys, passed as `hidden_keys`). Falls back to
+# grouping key the plan hides (`display = "section"` sources and
+# break-only `visible = FALSE` keys, passed as `hidden_keys`). Falls back to
 # NA when nothing visible remains.
 .header_row_host_column <- function(
   col_names,
@@ -794,17 +794,17 @@ engine_group_display <- function(
   # row) so `.stamp_group_headers()` can land the group-header cascade. A
   # page with ONLY collapsed rows (no headers, no blanks) must still run
   # the copy loop below to carry that provenance into `header_meta`.
-  collapse_meta <- if (is.null(header_row_plan)) {
+  singleton_meta <- if (is.null(header_row_plan)) {
     NULL
   } else {
-    header_row_plan$collapse_meta
+    header_row_plan$singleton_meta
   }
-  has_collapse <- !is.null(collapse_meta) &&
-    any(!vapply(collapse_meta[row_indices], is.null, logical(1L)))
+  has_singleton <- !is.null(singleton_meta) &&
+    any(!vapply(singleton_meta[row_indices], is.null, logical(1L)))
 
   if (
     length(row_indices) == 0L ||
-      (!has_header_plan && !has_blank_plan && !has_collapse)
+      (!has_header_plan && !has_blank_plan && !has_singleton)
   ) {
     return(list(
       cells_text = cells_text,
@@ -928,8 +928,8 @@ engine_group_display <- function(
     # A collapsed singleton stays a plain data row (`is_header_row` FALSE),
     # but carries the group's provenance so the group-header style cascade
     # lands on it in `.stamp_group_headers()`.
-    if (!is.null(collapse_meta)) {
-      cm <- collapse_meta[[data_idx]]
+    if (!is.null(singleton_meta)) {
+      cm <- singleton_meta[[data_idx]]
       if (!is.null(cm)) {
         header_meta[[out_pos]] <- cm
       }

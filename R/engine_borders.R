@@ -614,7 +614,7 @@ engine_chrome_borders <- function(spec) {
   # correct even when this phase is exercised on a raw spec (the production
   # path finalizes upstream; this keeps the read self-sufficient). Idempotent.
   cols <- .finalize_col_specs(spec@cols)
-  # header_row grouping keys are pulled OUT of the body into synthesised
+  # section grouping keys are pulled OUT of the body into synthesised
   # section-header rows by engine_group_display(), and "none" keys are
   # break-only; since engine_borders runs BEFORE that drop, their
   # per-cell border stamps would land on a column that never renders.

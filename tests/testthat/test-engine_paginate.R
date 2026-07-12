@@ -260,7 +260,7 @@ test_that("engine_paginate() repeats paginate(repeat_cols=) columns on every pan
       g = col_spec(),
       stat = col_spec()
     ) |>
-    group_rows(by = "g", display = "column") |>
+    group_rows(by = "g", display = "collapse") |>
     paginate(panels = 2L, repeat_cols = c("g", "stat"))
   plan <- tabular:::engine_paginate(spec)
   expect_identical(plan$total_panels, 2L)
@@ -283,7 +283,7 @@ test_that("engine_paginate() records panel_spans excluding the stub", {
       g = col_spec(),
       stat = col_spec()
     ) |>
-    group_rows(by = "g", display = "column") |>
+    group_rows(by = "g", display = "collapse") |>
     paginate(panels = 2L, repeat_cols = c("g", "stat"))
   plan <- tabular:::engine_paginate(spec)
   expect_length(plan$panel_spans, 2L)
@@ -307,7 +307,7 @@ test_that("engine_paginate(continuous = TRUE) collapses to one all-columns page"
       g = col_spec(),
       stat = col_spec()
     ) |>
-    group_rows(by = "g", display = "column") |>
+    group_rows(by = "g", display = "collapse") |>
     paginate(panels = 2L)
   plan <- tabular:::engine_paginate(spec, continuous = TRUE)
   # One panel page, full column set in original order.

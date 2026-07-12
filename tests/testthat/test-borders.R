@@ -370,7 +370,7 @@ mk_thick_outer_spec <- function() {
       a = col_spec(label = "A", align = "right"),
       b = col_spec(label = "B", align = "right")
     ) |>
-    group_rows(by = "grp", display = "column", skip = "grp") |>
+    group_rows(by = "grp", display = "collapse", skip = "grp") |>
     headers("Grp" = c("a", "b")) |>
     style(border = brdr(width = "thick"), .at = cells_table(side = "outer"))
 }

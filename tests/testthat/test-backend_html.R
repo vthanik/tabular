@@ -1003,7 +1003,7 @@ test_that("horizontal panels collapse to one <table> with a panel-spanner note (
   )
   spec <- tabular(d) |>
     cols(grp = col_spec()) |>
-    group_rows(by = "grp", display = "column") |>
+    group_rows(by = "grp", display = "collapse") |>
     paginate(panels = 2L)
   out <- withr::local_tempfile(fileext = ".html")
   emit(spec, out)

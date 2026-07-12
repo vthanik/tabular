@@ -23,9 +23,9 @@ value) picks how the keys render:
 
 | `display` | Use it for | Behaviour |
 |---|---|---|
-| `"header_row"` *(default)* | section variable (e.g. parameter) | each value becomes a **section-header row**; the key column is hidden |
-| `"column"` | a visible row label | column stays; repeated values are suppressed |
-| `"column_repeat"` | a visible row label | column stays; every row repeats the value |
+| `"section"` *(default)* | section variable (e.g. parameter) | each value becomes a **section-header row**; the key column is hidden |
+| `"collapse"` | a visible row label | column stays; repeated values are suppressed |
+| `"repeat"` | a visible row label | column stays; every row repeats the value |
 
 A **break-only key** — hidden, contributing only group transitions (the blank
 spacer and decimal-section reset) — is not a `display` mode: mark the key
@@ -50,13 +50,59 @@ tabular(cdisc_saf_demo, titles = "Demographics") |>
 use it instead of repeating `cols(placebo = …, drug_50 = …)` for a variable
 number of arms.
 
-> **Indent from exactly one source.** `display = "header_row"` already
+> **Indent from exactly one source.** `display = "section"` already
 > indents its child rows one level, so the stub column (here `stat_label`) needs
 > **no** `indent` — the section supplies it. (An explicit `indent` on the host
 > *overrides* that auto-indent rather than stacking, so `indent = 1` there still
 > yields a single level.) The same care applies to labels from `pivot_across()`,
 > which come out with a leading indent baked into the string: keep them as-is or
 > `trimws()` them and set `indent` yourself — don't double up.
+
+### Display modes and spacing
+
+The default `display = "section"` is the submission shape. For a listing,
+`display = "collapse"` keeps the keys as visible columns and suppresses the
+repeats, so only the first row of each run carries the label — swap in
+`"repeat"` when every row must be self-describing (an export or QC view):
+
+```{r}
+data(cdisc_saf_vital, package = "tabular")
+
+tabular(cdisc_saf_vital, titles = "Vital Signs Listing") |>
+  cols(
+    paramcd = col_spec(visible = FALSE),
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic"
+  ) |>
+  cols_apply(
+    c("placebo", "drug_50", "drug_100"),
+    col_spec(align = "decimal")
+  ) |>
+  group_rows(by = c("param", "visit"), display = "collapse", skip = FALSE)
+```
+
+`skip` places the blank spacer rows between groups and follows the
+`readr::read_csv(col_names = )` pattern: `TRUE` (the default) derives it — a
+`"section"` key or a hidden break-only key breaks, a visible column key runs
+continuous; `FALSE` inserts none (as in the listing above); a character
+subset of `by` breaks on exactly those keys. Here a blank line separates
+parameters but not the visits within one:
+
+```{r}
+tabular(cdisc_saf_vital, titles = "Vital Signs by Parameter and Visit") |>
+  cols(
+    paramcd = col_spec(visible = FALSE),
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic"
+  ) |>
+  cols_apply(
+    c("placebo", "drug_50", "drug_100"),
+    col_spec(align = "decimal")
+  ) |>
+  group_rows(by = c("param", "visit"), skip = "param")
+```
 
 ## BigN in the column headers
 

@@ -656,9 +656,9 @@ emit <- function(
 # the cosmetic mutations the resolve engine performs to drive
 # display:
 #
-#   * No synthesised section-header rows (display = "header_row").
+#   * No synthesised section-header rows (display = "section").
 #   * No blank-row separators (skip).
-#   * No suppressed repeats (display = "column" blanks
+#   * No suppressed repeats (display = "collapse" blanks
 #     adjacent duplicates for display; QC sees the originals).
 #   * No NBSP decimal-alignment padding.
 #   * No inline HTML markup escapes.

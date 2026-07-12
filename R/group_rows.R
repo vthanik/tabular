@@ -49,27 +49,35 @@
 #'   constant and auto-hidden, so the combination composes.
 #'
 #' @param display *How the keys' values render in the body.*
-#'   `<character(1)>: default "header_row"`. One value, applied to
+#'   `<character(1)>: default "section"`. One value, applied to
 #'   every key:
 #'
-#'   * `"header_row"` (default) — each unique value emits a section
+#'   * `"section"` (default) — each unique value emits a section
 #'     header row spanning the visible columns; the key column is
 #'     hidden from the body. The canonical submission shape.
-#'   * `"column"` — the key column stays visible; repeated values are
-#'     suppressed so only the first row of each run shows the label.
-#'   * `"column_repeat"` — the key column stays visible and every row
-#'     repeats the value.
+#'   * `"collapse"` — the key column stays visible; repeated values
+#'     are suppressed so only the first row of each run shows the
+#'     label. The classic listing shape.
+#'   * `"repeat"` — the key column stays visible and every row
+#'     repeats the value. The export / QC shape, where every row must
+#'     be self-describing.
 #'
 #'   **Tip:** for a hidden break-only key, set `col_spec(visible =
 #'   FALSE)` on it rather than a display mode.
 #'
 #' @param skip *Which keys get a blank spacer row between their
-#'   groups.* `<character> | NULL: default NULL`. Name the `by`
-#'   key(s) that break with a blank line, e.g. `skip = "param"`
-#'   (blank line between params, none between visits). `NULL` derives
-#'   it: a `"header_row"` key or a break-only (`visible = FALSE`) key
-#'   breaks, a visible column key does not. `character(0)` inserts no
-#'   spacers at all.
+#'   groups.* `<TRUE | FALSE | character>: default TRUE`. A logical
+#'   flag or an explicit character set (the `readr::read_csv(col_names
+#'   = )` pattern):
+#'
+#'   * `TRUE` (default) — derive: a `"section"` key or a break-only
+#'     (`visible = FALSE`) key breaks with a blank line; a visible
+#'     `"collapse"` / `"repeat"` key runs continuous.
+#'   * `FALSE` — no spacer rows anywhere.
+#'   * `<character>` — exactly these `by` keys break, e.g. `skip =
+#'     "param"` (blank line between params, none between visits).
+#'     Every name must be in `by`; `character(0)` is equivalent to
+#'     `FALSE`.
 #'
 #' @return *`<tabular_spec>`.* A new spec with `@row_groups` replaced;
 #'   pipe into the remaining build verbs or [`emit()`].
@@ -78,9 +86,11 @@
 #' # ---- Example 1: Demographics with section headers and a stat column ----
 #' #
 #' # The canonical demographics shape: `variable` is the one structural
-#' # key, rendering as a section header row per parameter (Age, Sex,
-#' # ...). `stat_label` is NOT a grouping key -- it stays an ordinary
-#' # column and is auto-indented one level under each section header.
+#' # key. The defaults do all the work -- `display = "section"` renders
+#' # one section header row per parameter (Age, Sex, ...) and hides the
+#' # key column; `skip = TRUE` derives a blank spacer between sections.
+#' # `stat_label` is NOT a grouping key -- it stays an ordinary column
+#' # and is auto-indented one level under each section header.
 #' n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 #'
 #' tabular(
@@ -125,6 +135,29 @@
 #'   ) |>
 #'   group_rows(by = c("param", "visit"), skip = "param")
 #'
+#' # ---- Example 3: Listing shape with a visible, collapsed key column ----
+#' #
+#' # The same vitals data as a continuous listing: `display = "collapse"`
+#' # keeps `param` and `visit` as visible columns and suppresses repeated
+#' # values, so only the first row of each run shows the label; `skip =
+#' # FALSE` removes every blank spacer. Use `display = "repeat"` instead
+#' # to print the value on every row -- the export / QC shape.
+#' tabular(cdisc_saf_vital, titles = "Vital Signs Listing") |>
+#'   cols(
+#'     paramcd = col_spec(visible = FALSE),
+#'     param = "Parameter",
+#'     visit = "Visit",
+#'     stat_label = "Statistic",
+#'     placebo = "Placebo\nN={n['placebo']}",
+#'     drug_50 = "Drug 50\nN={n['drug_50']}",
+#'     drug_100 = "Drug 100\nN={n['drug_100']}"
+#'   ) |>
+#'   cols_apply(
+#'     c("placebo", "drug_50", "drug_100"),
+#'     col_spec(align = "decimal")
+#'   ) |>
+#'   group_rows(by = c("param", "visit"), display = "collapse", skip = FALSE)
+#'
 #' @seealso
 #' **Column display:** [`cols()`] / [`col_spec()`] for labels,
 #' alignment, and visibility of the key columns.
@@ -137,7 +170,7 @@
 #' breaks independently of grouping.
 #'
 #' @export
-group_rows <- function(.spec, by, display = "header_row", skip = NULL) {
+group_rows <- function(.spec, by, display = "section", skip = TRUE) {
   call <- rlang::caller_env()
   check_tabular_spec(.spec, call = call)
   check_chr(by, call = call)
@@ -205,13 +238,15 @@ group_rows <- function(.spec, by, display = "header_row", skip = NULL) {
   }
   display <- rep(display, length(by))
 
-  # `skip` names the by keys that get a blank spacer between groups.
-  # NULL derives it (resolved at engine time from display + column
-  # visibility); a character vector is the explicit set of skipping
-  # keys, so unnamed keys do NOT skip.
-  if (is.null(skip)) {
-    skip_vec <- rep(NA, length(by))
-  } else {
+  # `skip` follows the readr `col_names` pattern: TRUE derives (the NA
+  # sentinel per key, resolved at engine time from display + column
+  # visibility -- break-only status is not knowable here because
+  # cols(visible = FALSE) may be declared after this verb); FALSE
+  # inserts no spacers; a character vector is the explicit set of
+  # skipping keys, so unnamed keys do NOT skip.
+  if (rlang::is_bool(skip)) {
+    skip_vec <- if (skip) rep(NA, length(by)) else rep(FALSE, length(by))
+  } else if (is.character(skip)) {
     check_chr(skip, call = call)
     bad_skip <- setdiff(skip, by)
     if (length(bad_skip) > 0L) {
@@ -226,6 +261,15 @@ group_rows <- function(.spec, by, display = "header_row", skip = NULL) {
       )
     }
     skip_vec <- by %in% skip
+  } else {
+    cli::cli_abort(
+      c(
+        "{.arg skip} must be TRUE, FALSE, or a character vector of {.arg by} keys.",
+        "x" = "You supplied {.obj_type_friendly {skip}}."
+      ),
+      class = "tabular_error_input",
+      call = call
+    )
   }
 
   new_groups <- row_group_spec(by = by, display = display, skip = skip_vec)
@@ -237,14 +281,14 @@ group_rows <- function(.spec, by, display = "header_row", skip = NULL) {
 # ---------------------------------------------------------------------
 
 # Effective per-key skip: resolve the NA "derive" sentinel. A
-# "header_row" key or a break-only (visible = FALSE) key reads with a
+# "section" key or a break-only (visible = FALSE) key reads with a
 # blank line between blocks by default; the visible column modes run
 # continuous. `break_keys` is the set of break-only grouping keys
 # (resolved from column visibility by the caller, which knows @cols).
 .effective_row_group_skip <- function(row_groups, break_keys = character()) {
   skip <- row_groups@skip
   follows <- is.na(skip)
-  derived <- row_groups@display == "header_row" |
+  derived <- row_groups@display == "section" |
     row_groups@by %in% break_keys
   skip[follows] <- derived[follows]
   skip
@@ -271,14 +315,14 @@ group_rows <- function(.spec, by, display = "header_row", skip = NULL) {
 }
 
 # The grouping keys the plan pulls out of the body into synthesised
-# section-header rows: the "header_row" keys. Break-only (visible =
+# section-header rows: the "section" keys. Break-only (visible =
 # FALSE) keys are already excluded by the normal visibility check at
 # the call site, so they need no entry here.
 .row_group_hidden_keys <- function(row_groups) {
   if (is.null(row_groups)) {
     return(character())
   }
-  row_groups@by[row_groups@display == "header_row"]
+  row_groups@by[row_groups@display == "section"]
 }
 
 # The grouping keys that join the default panel stub: every key that is

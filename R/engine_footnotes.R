@@ -187,7 +187,7 @@
 # Compute the reading-order key for one anchor. `matched = FALSE` when
 # the anchor resolves to no cells (the caller warns and drops it).
 # `visible_cols` is the set of column names that actually render (hidden
-# and header_row group columns excluded); an anchor whose every target
+# and section group columns excluded); an anchor whose every target
 # column is invisible is dropped with `hidden = TRUE` so the caller can
 # name the offending column. This prevents an orphaned block line: a
 # marker allocated for a column that is dropped before render.

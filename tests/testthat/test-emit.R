@@ -380,8 +380,8 @@ test_that("emit() aborts when data_file parent dir does not exist", {
 })
 
 test_that("emit() data_file carries raw values, never column-mode suppression", {
-  # The data_file QC artefact must never reflect col_spec@group_display
-  # = "column" repeat-suppression. The display blanks the repeated
+  # The data_file QC artefact must never reflect display = "collapse"
+  # repeat-suppression. The display blanks the repeated
   # group value for layout reasons; the QC reader still wants the
   # source value on every row.
   .register_stub("md")
@@ -397,7 +397,7 @@ test_that("emit() data_file carries raw values, never column-mode suppression", 
       ),
       v = col_spec(label = "Value")
     ) |>
-    group_rows(by = "grp", display = "column")
+    group_rows(by = "grp", display = "collapse")
   render_path <- tempfile(fileext = ".md")
   qc_path <- tempfile(fileext = ".csv")
   emit(spec, render_path, data_file = qc_path)
@@ -408,8 +408,8 @@ test_that("emit() data_file carries raw values, never column-mode suppression", 
   expect_equal(nrow(qc), 4L)
 })
 
-test_that("emit() data_file carries raw values under group_skip + header_row", {
-  # Default header_row mode injects synthesised section headers AND
+test_that("emit() data_file carries raw values under group_skip + section", {
+  # Default section mode injects synthesised section headers AND
   # blank-row separators. Neither belongs in the QC artefact, which
   # must mirror source rows one-for-one.
   .register_stub("md")
@@ -436,7 +436,7 @@ test_that("emit() data_file carries raw values under group_skip + header_row", {
   expect_false(any(qc$grp == ""))
 })
 
-test_that("emit() data_file handles header_row group injection without dim mismatch", {
+test_that("emit() data_file handles section group injection without dim mismatch", {
   # Regression: before this fix, .data_file_frame wrote the
   # synthesised section-header + blank rows from
   # engine_group_display into the QC frame using page$row_indices,

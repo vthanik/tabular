@@ -26,7 +26,7 @@ used as the section sort / partition key.}
 \item{\code{group_label}}{Character section label, repeating across
 every row of its groupid block ("Best Overall Response" x7,
 "Objective Response Rate" x2, ...). Drives the engine's
-\code{\link[=group_rows]{group_rows()}} header_row synthesis.}
+\code{\link[=group_rows]{group_rows()}} section-header synthesis.}
 }
 }
 \source{
@@ -45,7 +45,7 @@ Clinical Benefit Rate, Disease Control Rate) are encoded via the
 \code{groupid} + \code{group_label} pair so a single
 \code{group_rows(by = "group_label")} synthesises one
 bold section band per groupid block; the body rows render below
-each band, auto-indented one level by the \code{"header_row"} section
+each band, auto-indented one level by the \code{"section"} display
 itself (the stub needs no \code{indent} — the section supplies it).
 }
 \examples{
@@ -54,7 +54,7 @@ itself (the stub needs no \code{indent} — the section supplies it).
 # Disease Control Rate), each followed by indented stat rows. The
 # source already ships in the right display order, so no sort step
 # is needed; `group_label` repeats across every row of its section
-# so the engine's `header_row` mode emits exactly one band per
+# so the engine's `section` mode emits exactly one band per
 # section.
 ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 tabular(
