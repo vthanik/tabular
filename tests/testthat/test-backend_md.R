@@ -708,9 +708,10 @@ test_that("Markdown nested bands: band-1 header bold flush, band-2 header bold +
   md <- paste(readLines(out, warn = FALSE), collapse = "\n")
   # Band 1 ("Safety", depth 0) -> `| **Safety** | &nbsp; |`.
   expect_match(md, "| **Safety** | &nbsp; |", fixed = TRUE)
-  # Band 2 ("AE", depth 1) -> `| **  AE** | &nbsp; |` (2-space prefix
-  # inside the bold span).
-  expect_match(md, "| **  AE** | &nbsp; |", fixed = TRUE)
+  # Band 2 ("AE", depth 1) -> `| &nbsp;&nbsp;**AE** | &nbsp; |` (the
+  # indent rides OUTSIDE the bold span as `&nbsp;`; whitespace inside
+  # `**` breaks CommonMark strong parsing).
+  expect_match(md, "| &nbsp;&nbsp;**AE** | &nbsp; |", fixed = TRUE)
 })
 
 # --- header-band label scope (text-only; MD has no border concept) ---
@@ -799,4 +800,35 @@ test_that("markdown table footnote gap defaults to zero extra blanks", {
   )
   # body_to_footnote default 0, so widening to 3 adds exactly 3 blanks
   expect_equal(sum(wide == "") - sum(base == ""), 3L)
+})
+
+test_that("nested MD section headers keep the indent outside the bold markers (#md-nested-header-bold)", {
+  # A depth-1 section header rendered `**  Baseline**` — the leading
+  # spaces inside the strong markers violate CommonMark's left-flanking
+  # rule, so GitHub / pandoc / Quarto show literal asterisks instead of
+  # bold. The indent must ride OUTSIDE the markers, as `&nbsp;` (a raw
+  # space collapses in rendered HTML).
+  spec <- tabular(cdisc_saf_vital) |>
+    cols(
+      paramcd = col_spec(visible = FALSE),
+      param = "Parameter",
+      visit = "Visit",
+      stat_label = "Statistic",
+      placebo = "Placebo"
+    ) |>
+    group_rows(by = c("param", "visit"), skip = "param")
+  out <- withr::local_tempfile(fileext = ".md")
+  emit(spec, out)
+  lines <- readLines(out, warn = FALSE)
+  header <- grep("Baseline", lines, value = TRUE)[[1L]]
+  expect_match(header, "| &nbsp;&nbsp;**Baseline** |", fixed = TRUE)
+  # Every nested visit header carries the prefix outside the markers;
+  # no cell opens a strong span onto whitespace (`| **<space>`), the
+  # exact shape CommonMark refuses to parse as bold.
+  expect_false(any(grepl("| ** ", lines, fixed = TRUE)))
+  week <- grep("Week 8", lines, value = TRUE)[[1L]]
+  expect_match(week, "| &nbsp;&nbsp;**Week 8** |", fixed = TRUE)
+  # Depth-0 header untouched.
+  top <- grep("Diastolic", lines, value = TRUE)[[1L]]
+  expect_match(top, "| **Diastolic Blood Pressure (mmHg)** |", fixed = TRUE)
 })

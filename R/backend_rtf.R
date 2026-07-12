@@ -792,7 +792,7 @@ backend_rtf <- function(grid, file) {
   trhdr = FALSE,
   keep = FALSE,
   prelude = "",
-  trgaph = 108L,
+  trgaph = .rtf_body_trgaph(NULL, preset),
   body_borders = NULL
 ) {
   n <- length(cellx)
@@ -1607,6 +1607,9 @@ backend_rtf <- function(grid, file) {
     preset,
     trhdr = trhdr,
     prelude = prelude,
+    # Preset-resolved gap so the banner shares the body's left margin
+    # under a custom cell_padding (default 108).
+    trgaph = .rtf_body_trgaph(NULL, preset),
     body_borders = body_borders
   )
 }
@@ -1876,7 +1879,9 @@ backend_rtf <- function(grid, file) {
     paste0(
       "\\trowd",
       .rtf_trhdr(trhdr),
-      "\\trgaph108\\trqc",
+      # Preset-resolved gap so band text shares the body's left margin
+      # under a custom cell_padding (default 108, byte-stable).
+      sprintf("\\trgaph%d\\trqc", .rtf_body_trgaph(NULL, preset)),
       .rtf_row_height_str(preset),
       .rtf_row_frame_edges(body_borders)
     ),
@@ -2005,7 +2010,9 @@ backend_rtf <- function(grid, file) {
     paste0(
       "\\trowd",
       .rtf_trhdr(trhdr),
-      "\\trgaph108\\trqc",
+      # Preset-resolved gap so column-label text shares the body's
+      # left margin under a custom cell_padding (default 108).
+      sprintf("\\trgaph%d\\trqc", .rtf_body_trgaph(NULL, preset)),
       .rtf_row_height_str(preset),
       .rtf_row_frame_edges(body_borders)
     ),
@@ -2117,6 +2124,7 @@ backend_rtf <- function(grid, file) {
         trhdr = FALSE,
         keep = keep_row,
         prelude = paste0(blank_prelude, blank_shd),
+        trgaph = trgaph,
         body_borders = body_borders
       )
       next
@@ -2187,6 +2195,7 @@ backend_rtf <- function(grid, file) {
         trhdr = FALSE,
         keep = keep_row,
         prelude = paste0(blank_prelude, header_shading),
+        trgaph = trgaph,
         body_borders = body_borders
       )
       next

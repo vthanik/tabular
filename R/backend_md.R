@@ -769,9 +769,9 @@ backend_md <- function(grid, file) {
       # cells held by `&nbsp;` so renderers (GitHub / pandoc / Quarto)
       # don't collapse the row into a blank line. Blank-gap rows do
       # the same with empty bolded cell 1. Band-2+ headers (depth > 0)
-      # prepend `strrep(" ", indent_size * depth)` to the bold text so
-      # nested bands render visibly nested in markdown -- the only
-      # backend without native padding-left support.
+      # prepend `&nbsp;` repeats BEFORE the bold markers so nested
+      # bands render visibly nested in markdown -- the only backend
+      # without native padding-left support.
       if (isTRUE(is_blank_row[[i]])) {
         return(.md_pipe_row(rep("&nbsp;", ncols)))
       }
@@ -803,12 +803,19 @@ backend_md <- function(grid, file) {
           NULL
         }
         .md_warn_dropped_text_props(host_node, "group header")
-        first_cell <- .md_emphasize(
-          paste0(
-            header_prefix,
-            .md_escape_cell(host_text, preserve = ws_preserve)
-          ),
-          host_node
+        # The indent prefix rides OUTSIDE the emphasis markers as
+        # `&nbsp;`: whitespace directly inside `**` violates
+        # CommonMark's left-flanking rule (literal asterisks in the
+        # render), and a raw space collapses in the GFM -> HTML pass.
+        if (nzchar(header_prefix) && isTRUE(ws_preserve)) {
+          header_prefix <- gsub(" ", "&nbsp;", header_prefix, fixed = TRUE)
+        }
+        first_cell <- paste0(
+          header_prefix,
+          .md_emphasize(
+            .md_escape_cell(host_text, preserve = ws_preserve),
+            host_node
+          )
         )
         return(.md_pipe_row(c(first_cell, rep("&nbsp;", ncols - 1L))))
       }

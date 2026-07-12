@@ -20,6 +20,16 @@
 
 * `check_latex()` now probes package availability through `kpsewhich` (the resolver xelatex itself uses) instead of the tlmgr package database, fixing all-missing false negatives on apt-installed TeX Live and frozen TinyTeX images, no longer requires the tinytex R package, and reports a new `bundled` column.
 
+* `emit()` to DOCX now stamps the body's left/right cell margins on section-header, blank-spacer, column-header, and subgroup-banner cells, so their text aligns with body text exactly as in RTF (section headers previously sat one cell margin further left, making nested indents read one character too wide in Word).
+
+* `emit()` to HTML and Markdown no longer drops a `group_rows()` blank spacer when a group transition coincides with a page boundary; the continuous flow keeps every spacer and only the very first row of the table suppresses one.
+
+* `emit()` to Markdown now renders the indent of nested section headers as `&nbsp;` before the bold markers instead of spaces inside them, which CommonMark refused to parse as bold (literal `**` showed in the render).
+
+* `emit()` to PDF now writes to a relative `file` path correctly; the path was previously resolved after switching into the temporary compile directory, so the output landed there and was deleted with it.
+
+* `emit()` to RTF now resolves the row cell gap of header-band, column-label, blank-spacer, section-header, banner, and title rows from `preset(cell_padding = )` like body rows do (previously hardcoded, so a non-default padding skewed header text relative to body text).
+
 * `emit()` PDF output now works on TeX installations that lack `tabularray` / `ninecolors` and cannot run `tlmgr install` (locked-down Domino / Posit Workbench images): tabular ships verbatim CTAN copies of both single-file packages in `inst/tex/` and stages them next to the generated `.tex` at compile time whenever the local TeX cannot resolve them.
 
 # tabular 0.2.0

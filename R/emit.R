@@ -372,7 +372,12 @@ emit <- function(
   # once per `emit()`, but a second render in the same session warns
   # again.
   .fidelity_warn_reset()
-  backend(grid, .emit_absolute_path(file))
+  # Resolve the absolute target EAGERLY, before the backend runs: a
+  # backend may change the working directory (PDF compiles inside a
+  # throwaway tex dir), and a lazily-forced promise would then anchor a
+  # relative `file` to the wrong directory.
+  abs_file <- .emit_absolute_path(file)
+  backend(grid, abs_file)
 
   data_file_path <- NULL
   if (!is.null(data_file)) {

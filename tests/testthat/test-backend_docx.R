@@ -1815,15 +1815,16 @@ test_that("DOCX emits <w:gridSpan> + <w:b/> on synthesised header rows (Change D
     readLines(file.path(td, "word", "document.xml"), warn = FALSE),
     collapse = ""
   )
-  # Header row: single <w:tc> with <w:gridSpan w:val="3"/> + <w:b/>.
+  # Header row: single <w:tc> with <w:gridSpan w:val="3"/> + <w:b/>,
+  # carrying the body's base cell margins (RTF \trgaph parity).
   expect_match(
     doc,
-    "<w:gridSpan w:val=\"3\"/></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Best Overall Response</w:t>",
+    "<w:gridSpan w:val=\"3\"/><w:tcMar><w:left w:w=\"108\" w:type=\"dxa\"/><w:right w:w=\"108\" w:type=\"dxa\"/></w:tcMar></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Best Overall Response</w:t>",
     fixed = TRUE
   )
   expect_match(
     doc,
-    "<w:gridSpan w:val=\"3\"/></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Objective Response Rate</w:t>",
+    "<w:gridSpan w:val=\"3\"/><w:tcMar><w:left w:w=\"108\" w:type=\"dxa\"/><w:right w:w=\"108\" w:type=\"dxa\"/></w:tcMar></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space=\"preserve\">Objective Response Rate</w:t>",
     fixed = TRUE
   )
 })
@@ -2116,18 +2117,72 @@ test_that("preset(padding=list(header=...)) emits header <w:tcMar> (#thread-C)",
     readLines(file.path(.unzip_docx(out), "word/document.xml"), warn = FALSE),
     collapse = ""
   )
-  # 6pt -> 120 dxa on the header band + column-label cells (preset = NULL
-  # in the emitter, so only the header override emits, not body padding).
+  # 6pt -> 120 dxa on the header band + column-label cells; the base
+  # left / right margins (shared with body cells, RTF \trgaph parity)
+  # ride alongside the vertical override.
   expect_match(
     doc,
-    "<w:tcMar><w:top w:w=\"120\" w:type=\"dxa\"/>",
+    "<w:tcMar><w:top w:w=\"120\" w:type=\"dxa\"/><w:left w:w=\"108\" w:type=\"dxa\"/><w:bottom w:w=\"120\" w:type=\"dxa\"/><w:right w:w=\"108\" w:type=\"dxa\"/></w:tcMar>",
     fixed = TRUE
   )
-  expect_match(
-    doc,
-    "<w:bottom w:w=\"120\" w:type=\"dxa\"/></w:tcMar>",
-    fixed = TRUE
+})
+
+test_that("every in-grid cell shares the body's left cell margin (#header-cell-margin)", {
+  # RTF applies \trgaph108 to EVERY row, so section headers, the
+  # column-label band, blank spacers, and the subgroup banner all share
+  # the body's 108-twip left margin. DOCX emitted tcMar only on body
+  # cells, so a left-aligned section header sat 108 twips left of the
+  # body text and the header-to-data indent read one character wider
+  # than RTF's. Every <w:tc> in the body grid must carry the same
+  # <w:tcMar> left margin as a body cell.
+  spec <- tabular(cdisc_saf_vital) |>
+    cols(
+      paramcd = col_spec(visible = FALSE),
+      param = "Parameter",
+      visit = "Visit",
+      stat_label = "Statistic",
+      placebo = "Placebo",
+      drug_50 = "Drug 50",
+      drug_100 = "Drug 100"
+    ) |>
+    group_rows(by = c("param", "visit"), skip = "param") |>
+    subgroup(by = "param")
+  doc <- .docx_doc_xml(spec)
+  grid_cells <- regmatches(doc, gregexpr("<w:tc>.*?</w:tc>", doc))[[1L]]
+  # A section-header cell (gridSpan + bold "Baseline") carries the same
+  # left margin as a plain body cell.
+  header_cell <- grep("gridSpan.*Baseline", grid_cells, value = TRUE)[[1L]]
+  body_cell <- grep(">Mean \\(SD\\)<", grid_cells, value = TRUE)[[1L]]
+  expect_match(body_cell, "<w:tcMar><w:left w:w=\"108\"", fixed = FALSE)
+  expect_match(header_cell, "<w:tcMar><w:left w:w=\"108\"", fixed = FALSE)
+  # Column-label band cell too.
+  band_cell <- grep(">Statistic<", grid_cells, value = TRUE)[[1L]]
+  expect_match(band_cell, "<w:tcMar><w:left w:w=\"108\"", fixed = FALSE)
+  # Subgroup banner cell too.
+  banner_cell <- grep("param: ", grid_cells, value = TRUE)[[1L]]
+  expect_match(banner_cell, "<w:tcMar><w:left w:w=\"108\"", fixed = FALSE)
+  # Blank spacer cells (merged, single-space run) too — from a plain
+  # sectioned table (the subgroup spec above splits pages at the param
+  # transition, so its spacers never render).
+  doc2 <- .docx_doc_xml(
+    tabular(cdisc_saf_demo) |>
+      cols(
+        variable = col_spec(label = "Characteristic"),
+        stat_label = col_spec(label = "Statistic"),
+        placebo = col_spec(label = "Placebo")
+      ) |>
+      group_rows(by = "variable")
   )
+  cells2 <- regmatches(doc2, gregexpr("<w:tc>.*?</w:tc>", doc2))[[1L]]
+  blank_cells <- grep(
+    "gridSpan.*<w:t xml:space=\"preserve\"> </w:t>",
+    cells2,
+    value = TRUE
+  )
+  expect_gt(length(blank_cells), 0L)
+  for (bc in blank_cells) {
+    expect_match(bc, "<w:tcMar><w:left w:w=\"108\"", fixed = FALSE)
+  }
 })
 
 test_that("rules='frame' draws <w:left/right> on table-proper rows incl. blank/group (#thread-D)", {

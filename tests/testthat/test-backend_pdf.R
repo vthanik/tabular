@@ -348,6 +348,37 @@ test_that("backend_pdf() returns the file path invisibly on a successful compile
   expect_true(file.exists(out))
 })
 
+test_that("emit() to a relative .pdf path lands in the caller's directory (#pdf-relative-path)", {
+  # emit() passed `.emit_absolute_path(file)` into the backend as a lazy
+  # promise; backend_pdf() forced it only at `.compile(...)`, AFTER
+  # changing into the throwaway tex dir, so a relative path normalised
+  # against the temp dir and the "emitted" PDF vanished with it on exit.
+  # `.emit_absolute_path()` is passed lazily below to reproduce the
+  # emit() call shape exactly.
+  skip_if_not_installed("tinytex")
+  spec <- tabular(data.frame(x = 1L), titles = "T")
+  grid <- as_grid(spec)
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  seen <- NULL
+  backend_pdf(
+    grid,
+    tabular:::.emit_absolute_path("relative.pdf"),
+    .compile = function(tex_file, file) {
+      seen <<- file
+      writeLines("%PDF-stub", file)
+      file
+    }
+  )
+  # The compile step must receive the path anchored at the CALLER's
+  # working directory, not the compile dir.
+  expect_identical(
+    normalizePath(seen),
+    normalizePath(file.path(dir, "relative.pdf"))
+  )
+  expect_true(file.exists(file.path(dir, "relative.pdf")))
+})
+
 test_that("check_latex(quiet = FALSE) reaches the cli report", {
   out <- suppressMessages(utils::capture.output(
     res <- check_latex(quiet = FALSE)

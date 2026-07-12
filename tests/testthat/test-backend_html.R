@@ -2900,3 +2900,39 @@ test_that("HTML names a font verbatim and never embeds @font-face", {
   # The default mono chain leads with the Office face.
   expect_match(mono, '"Courier New"', fixed = TRUE)
 })
+
+test_that("HTML keeps the group spacer when a transition falls on a page boundary (#html-boundary-blank)", {
+  # With the two-line BigN column labels, the Systolic parameter
+  # transition lands exactly on a page boundary; the paged-media
+  # leading-blank suppression swallowed its spacer, so 4 parameters
+  # rendered only 2 blank separators. Continuous HTML must render one
+  # spacer per parameter transition (params - 1 = 3), page breaks or
+  # not.
+  spec <- tabular(
+    cdisc_saf_vital,
+    titles = "Vital Signs by Parameter and Visit"
+  ) |>
+    cols(
+      paramcd = col_spec(visible = FALSE),
+      param = "Parameter",
+      visit = "Visit",
+      stat_label = "Statistic",
+      placebo = "Placebo\nN=86",
+      drug_50 = "Drug 50\nN=96",
+      drug_100 = "Drug 100\nN=72"
+    ) |>
+    cols_apply(
+      c("placebo", "drug_50", "drug_100"),
+      col_spec(align = "decimal")
+    ) |>
+    group_rows(by = c("param", "visit"), skip = "param")
+  out <- withr::local_tempfile(fileext = ".html")
+  emit(spec, out)
+  html <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  n_params <- length(unique(cdisc_saf_vital$param))
+  blanks <- regmatches(
+    html,
+    gregexpr("<tr class=\"tabular-blank-row\">", html, fixed = TRUE)
+  )[[1L]]
+  expect_identical(length(blanks), n_params - 1L)
+})

@@ -1667,3 +1667,30 @@ test_that("an arbitrary named font is named verbatim in the RTF font table", {
   f0 <- grep("\\f0\\froman", plex, fixed = TRUE, value = TRUE)
   expect_true(any(grepl("IBM Plex Mono", f0, fixed = TRUE)))
 })
+
+test_that("RTF grid rows share the body \\trgaph under a custom cell_padding (#rtf-trgaph-parity)", {
+  # Body rows resolve \trgaph from preset(cell_padding); the header
+  # band, column-label row, blank spacers, group headers, and the
+  # subgroup banner hardcoded \trgaph108, so any non-default padding
+  # skewed their text 'left margin' relative to body text -- the same
+  # defect class as the DOCX tcMar skew (#header-cell-margin).
+  spec <- tabular(cdisc_saf_vital) |>
+    cols(
+      paramcd = col_spec(visible = FALSE),
+      param = "Parameter",
+      visit = "Visit",
+      stat_label = "Statistic",
+      placebo = "Placebo"
+    ) |>
+    headers("Arms" = "placebo") |>
+    group_rows(by = c("param", "visit"), skip = "param") |>
+    subgroup(by = "param") |>
+    preset(cell_padding = 10)
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(spec, out)
+  rtf <- readLines(out, warn = FALSE)
+  gaphs <- regmatches(rtf, regexpr("\\\\trgaph[0-9]+", rtf))
+  # 10pt -> 200 twips. Every table row agrees; no 108 stragglers.
+  expect_true(all(gaphs == "\\trgaph200"))
+  expect_gt(length(gaphs), 0L)
+})
