@@ -59,13 +59,10 @@ spec <- tabular(
   )
 ) |>
   cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
+    variable = col_spec(label = ""),
     stat_label = col_spec(label = "")
-  )
+  ) |>
+  group_rows(by = "variable")
 
 spec
 ```

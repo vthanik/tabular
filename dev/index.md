@@ -43,7 +43,7 @@ R dependencies install automatically. The five backends differ in what
 |----|:---|
 | RTF, DOCX, HTML, Markdown | none — pure R, no Java, no `pandoc`, no Office |
 | LaTeX (`.tex` source) | none — `tabular` writes the fragment |
-| PDF | a TeX install (xelatex) with `tabularray` + `ninecolors` |
+| PDF | a TeX install (xelatex) — `tabularray` + `ninecolors` ship with `tabular` |
 
 PDF is the only backend that shells out. Install
 [`tinytex`](https://yihui.org/tinytex/) once per machine and `tabular`
@@ -52,14 +52,20 @@ compiles with `xelatex` thereafter:
 ``` r
 
 install.packages("tinytex")
-tinytex::install_tinytex() # one-time TeX setup
-tinytex::tlmgr_install(c("tabularray", "ninecolors", "siunitx", "tex-gyre"))
+tinytex::install_tinytex(bundle = "TinyTeX") # one-time TeX setup
 ```
 
+No `tlmgr_install()` step is needed: `tabular` bundles the only two
+LaTeX packages missing from common TeX distributions (`tabularray`,
+`ninecolors`) and stages them next to the generated `.tex` whenever the
+local TeX cannot resolve them — so PDF also works on locked-down servers
+(Domino, Posit Workbench) where `tlmgr install` is impossible.
+
 [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
-reports which LaTeX packages are present and prints the exact
-`tlmgr_install()` line for anything missing; `check_fonts(spec)` does
-the same for the fonts a spec asks for, per backend.
+reports which LaTeX packages resolve (probed through `kpsewhich`, the
+same resolver `xelatex` uses) and prints the remedy for anything
+genuinely missing; `check_fonts(spec)` does the same for the fonts a
+spec asks for, per backend.
 
 ``` r
 
@@ -104,8 +110,8 @@ tab <- tabular(
   footnotes = "Percentages are based on the number of subjects per treatment group."
 ) |>
   cols(
-    variable = col_spec(usage = "group", label = "Characteristic"),
-    stat_label = col_spec(label = "Statistic"),
+    variable = "Characteristic",
+    stat_label = "Statistic",
     placebo = col_spec(
       label = "Placebo (N={n['placebo']})",
       align = "decimal"
@@ -119,7 +125,8 @@ tab <- tabular(
       align = "decimal"
     ),
     Total = col_spec(label = "Total (N={n['Total']})", align = "decimal")
-  )
+  ) |>
+  group_rows(by = "variable")
 
 # render to any backend by file extension (or format = "...")
 path <- emit(tab, tempfile(fileext = ".rtf")) # submission deliverable

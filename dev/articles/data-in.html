@@ -304,7 +304,7 @@
 <span><span class="co">#&gt; 3   M     RACE      WHITE 10 (25%) 10 (25%)</span></span>
 <span><span class="co">#&gt; 4   M     RACE      BLACK 10 (25%) 10 (25%)</span></span></code></pre></div>
 </div>
-<p>When a 2-variable <code>.by</code> is present you must say which variable is the arm column (<code>column =</code>) and which is the row dimension (<code>row_group =</code>); the <code>SEX</code> column then composes with <code><a href="../reference/subgroup.html">subgroup()</a></code> or <code>col_spec(usage = "group")</code> downstream. cards encodes a crossing factor and a real hierarchy identically, so the declaration is what disambiguates them — leave <code>row_group</code> unset for a genuine SOC/PT hierarchy.</p>
+<p>When a 2-variable <code>.by</code> is present you must say which variable is the arm column (<code>column =</code>) and which is the row dimension (<code>row_group =</code>); the <code>SEX</code> column then composes with <code><a href="../reference/subgroup.html">subgroup()</a></code> or <code><a href="../reference/group_rows.html">group_rows()</a></code> downstream. cards encodes a crossing factor and a real hierarchy identically, so the declaration is what disambiguates them — leave <code>row_group</code> unset for a genuine SOC/PT hierarchy.</p>
 </section><section class="level2"><h2 id="variables-as-column-bands">Variables as column bands<a class="anchor" aria-label="anchor" href="#variables-as-column-bands"></a>
 </h2>
 <p>Two analysis variables side by side — <code>AVAL</code> (“Value”) and <code>PCHG</code> (“Percent Change from Baseline”) — is the canonical “value and change” shell. Make the <strong>variable</strong> a column band with the reserved <code>.variable</code> token in <code>column</code>. Each band keys its own <code>statistic</code> / <code>decimals</code>, so the bands may carry different (even different-length) stat lists; ragged bands pad with <code>NA</code>.</p>
@@ -493,7 +493,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

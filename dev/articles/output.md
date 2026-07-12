@@ -26,13 +26,10 @@ scripted batch runs. One spec, any backend:
 data(cdisc_saf_demo, package = "tabular")
 spec <- tabular(cdisc_saf_demo, titles = "Demographics") |>
   cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
+    variable = col_spec(label = ""),
     stat_label = col_spec(label = "")
-  )
+  ) |>
+  group_rows(by = "variable")
 
 path <- emit(spec, tempfile(fileext = ".rtf"))
 file.exists(path)
@@ -78,22 +75,27 @@ instead of in the repeating header.
 ## System requirements
 
 **RTF, HTML, DOCX, Markdown need nothing beyond the R package.** Only
-PDF has a system dependency — a LaTeX engine plus the packages the
-backend uses (`tabularray`, `ninecolors`, `siunitx`, `tex-gyre`, …).
-Check and install:
+PDF has a system dependency — a LaTeX engine. The two packages missing
+from common TeX distributions (`tabularray`, `ninecolors`) ship *with*
+`tabular` and are staged next to the generated `.tex` whenever the local
+TeX cannot resolve them, so a locked-down server (Domino, Posit
+Workbench) needs no `tlmgr install`. Check readiness and, on a fresh
+machine, install a TeX once:
 
 ``` r
 
-check_latex() # reports what's missing + the exact command
-tinytex::tlmgr_install(c("tabularray", "ninecolors", "siunitx", "tex-gyre"))
+check_latex() # probes via kpsewhich — what a compile will actually find
+tinytex::install_tinytex(bundle = "TinyTeX") # one-time, fresh machines only
 ```
 
 > **OS-managed TeX Live (RHEL/dnf, Debian/apt):** `tlmgr` is locked and
 > refuses to install (“will likely destroy the … TeXLive install”). Do
-> **not** force it with `--ignore-warning`. Install a user-space TinyTeX
-> you control instead:
-> [`tinytex::install_tinytex()`](https://rdrr.io/pkg/tinytex/man/install_tinytex.html),
-> restart R, then `tlmgr_install(...)`.
+> **not** force it with `--ignore-warning`. Usually nothing is needed
+> anyway — the bundled copies cover the gap; if
+> [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
+> still reports a missing package, install a user-space TinyTeX you
+> control: `tinytex::install_tinytex(bundle = "TinyTeX")`, then restart
+> R.
 
 For decimal alignment in paper backends, metric-compatible fonts matter
 — check with `check_fonts(spec)`.

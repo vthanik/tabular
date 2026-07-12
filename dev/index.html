@@ -115,7 +115,7 @@
 </tr>
 <tr>
 <td>PDF</td>
-<td align="left">a TeX install (xelatex) with <code>tabularray</code> + <code>ninecolors</code>
+<td align="left">a TeX install (xelatex) — <code>tabularray</code> + <code>ninecolors</code> ship with <code>tabular</code>
 </td>
 </tr>
 </tbody>
@@ -123,9 +123,9 @@
 <p>PDF is the only backend that shells out. Install <a href="https://yihui.org/tinytex/" class="external-link"><code>tinytex</code></a> once per machine and <code>tabular</code> compiles with <code>xelatex</code> thereafter:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"tinytex"</span><span class="op">)</span></span>
-<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">install_tinytex</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># one-time TeX setup</span></span>
-<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/tlmgr.html" class="external-link">tlmgr_install</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"tabularray"</span>, <span class="st">"ninecolors"</span>, <span class="st">"siunitx"</span>, <span class="st">"tex-gyre"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="reference/check_latex.html">check_latex()</a></code> reports which LaTeX packages are present and prints the exact <code>tlmgr_install()</code> line for anything missing; <code>check_fonts(spec)</code> does the same for the fonts a spec asks for, per backend.</p>
+<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">install_tinytex</a></span><span class="op">(</span>bundle <span class="op">=</span> <span class="st">"TinyTeX"</span><span class="op">)</span> <span class="co"># one-time TeX setup</span></span></code></pre></div>
+<p>No <code>tlmgr_install()</code> step is needed: <code>tabular</code> bundles the only two LaTeX packages missing from common TeX distributions (<code>tabularray</code>, <code>ninecolors</code>) and stages them next to the generated <code>.tex</code> whenever the local TeX cannot resolve them — so PDF also works on locked-down servers (Domino, Posit Workbench) where <code>tlmgr install</code> is impossible.</p>
+<p><code><a href="reference/check_latex.html">check_latex()</a></code> reports which LaTeX packages resolve (probed through <code>kpsewhich</code>, the same resolver <code>xelatex</code> uses) and prints the remedy for anything genuinely missing; <code>check_fonts(spec)</code> does the same for the fonts a spec asks for, per backend.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">tabular</span><span class="fu">::</span><span class="fu"><a href="reference/check_latex.html">check_latex</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># PDF readiness, with the install remedy</span></span></code></pre></div>
 <blockquote>
@@ -160,8 +160,8 @@
 <span>  footnotes <span class="op">=</span> <span class="st">"Percentages are based on the number of subjects per treatment group."</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable <span class="op">=</span> <span class="fu"><a href="reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span>
+<span>    variable <span class="op">=</span> <span class="st">"Characteristic"</span>,</span>
+<span>    stat_label <span class="op">=</span> <span class="st">"Statistic"</span>,</span>
 <span>    placebo <span class="op">=</span> <span class="fu"><a href="reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
 <span>      label <span class="op">=</span> <span class="st">"Placebo (N={n['placebo']})"</span>,</span>
 <span>      align <span class="op">=</span> <span class="st">"decimal"</span></span>
@@ -175,7 +175,8 @@
 <span>      align <span class="op">=</span> <span class="st">"decimal"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    Total <span class="op">=</span> <span class="fu"><a href="reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Total (N={n['Total']})"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># render to any backend by file extension (or format = "...")</span></span>
 <span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/emit.html">emit</a></span><span class="op">(</span><span class="va">tab</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rtf"</span><span class="op">)</span><span class="op">)</span> <span class="co"># submission deliverable</span></span></code></pre></div>
@@ -402,7 +403,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

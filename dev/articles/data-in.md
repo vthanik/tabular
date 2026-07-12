@@ -248,10 +248,11 @@ When a 2-variable `.by` is present you must say which variable is the
 arm column (`column =`) and which is the row dimension (`row_group =`);
 the `SEX` column then composes with
 [`subgroup()`](https://vthanik.github.io/tabular/dev/reference/subgroup.md)
-or `col_spec(usage = "group")` downstream. cards encodes a crossing
-factor and a real hierarchy identically, so the declaration is what
-disambiguates them — leave `row_group` unset for a genuine SOC/PT
-hierarchy.
+or
+[`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
+downstream. cards encodes a crossing factor and a real hierarchy
+identically, so the declaration is what disambiguates them — leave
+`row_group` unset for a genuine SOC/PT hierarchy.
 
 ## Variables as column bands
 

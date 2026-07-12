@@ -2,7 +2,68 @@
 
 ## tabular (development version)
 
+### New features
+
+- [`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
+  accepts a bare string as label shorthand (`soc = "SOC / PT"` is
+  `soc = col_spec(label = "SOC / PT")`, including glue interpolation and
+  the deferred `{.name}` token) and a `.hide` argument that hides the
+  named columns in one flat vector.
+
+- [`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md)
+  keep-together protection on the natively-paginating backends (RTF,
+  DOCX) now emits edge-only row glue instead of gluing a whole fitting
+  block, so a block that fits a fresh page but not the space left on the
+  current one no longer bumps wholesale and strands a near-empty page;
+  widow/orphan floors count content rows only, with trailing blank
+  spacer rows still riding with their block.
+
+- `paginate(keep_together = )` now accepts any column of `data`
+  (including hidden block-key columns), not only `usage = "group"`
+  columns.
+
+### Breaking changes
+
+- [`col_spec()`](https://vthanik.github.io/tabular/dev/reference/col_spec.md)
+  no longer has `usage`, `group_display`, or `group_skip` arguments; row
+  grouping is a table-level fact and is now declared once with the new
+  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
+  verb. The inert-knob warning for `group_display`/`group_skip` on
+  non-group columns is gone with them.
+
+- [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
+  is the new structural verb: `group_rows(by, display, skip)` names the
+  grouping key columns outer to inner with per-key display
+  (`"header_row"`, `"column"`, `"column_repeat"`, or the new break-only
+  `"none"`) and per-key blank-spacer control; it replaces a prior
+  declaration wholesale, and its keys may not overlap `subgroup(by = )`.
+
+- [`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md)
+  gained `repeat_cols`, replacing the `usage = "id"` role: the
+  horizontal-panel stub defaults to the visible
+  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
+  keys, and an explicit `repeat_cols` vector replaces that default.
+
+### Minor improvements and bug fixes
+
+- [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
+  now probes package availability through `kpsewhich` (the resolver
+  xelatex itself uses) instead of the tlmgr package database, fixing
+  all-missing false negatives on apt-installed TeX Live and frozen
+  TinyTeX images, no longer requires the tinytex R package, and reports
+  a new `bundled` column.
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  PDF output now works on TeX installations that lack `tabularray` /
+  `ninecolors` and cannot run `tlmgr install` (locked-down Domino /
+  Posit Workbench images): tabular ships verbatim CTAN copies of both
+  single-file packages in `inst/tex/` and stages them next to the
+  generated `.tex` at compile time whenever the local TeX cannot resolve
+  them.
+
 ## tabular 0.2.0
+
+CRAN release: 2026-07-06
 
 ### New features
 

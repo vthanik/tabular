@@ -20,9 +20,9 @@ list input emits one figure per page.
 
 ## Spec building
 
-Configure per-column display, header bands, sort order, and subgrouping.
-Each verb attaches one slot onto the spec and returns the updated spec
-for chaining.
+Configure per-column display, row grouping, header bands, sort order,
+and subgrouping. Each verb attaches one slot onto the spec and returns
+the updated spec for chaining.
 
 - [`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md) :
   Attach per-column specifications
@@ -30,6 +30,8 @@ for chaining.
   : Apply one column spec to many columns
 - [`col_spec()`](https://vthanik.github.io/tabular/dev/reference/col_spec.md)
   : Per-column display specification
+- [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
+  : Declare the row-grouping structure of the table
 - [`headers()`](https://vthanik.github.io/tabular/dev/reference/headers.md)
   : Attach multi-level column headers
 - [`sort_rows()`](https://vthanik.github.io/tabular/dev/reference/sort_rows.md)
@@ -172,6 +174,7 @@ Class predicates for tabular’s S7 objects.
   [`.col_spec_class`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`header_node`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`sort_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`row_group_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`subgroup_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`style_node`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`style_layer`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
@@ -189,6 +192,7 @@ Class predicates for tabular’s S7 objects.
   [`is_col_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
   [`is_header_node()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
   [`is_sort_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_row_group_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
   [`is_style_node()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
   [`is_style_layer()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
   [`is_style_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)

@@ -166,13 +166,14 @@ the same pipeline.</p>
 <span class="r-in"><span>  footnotes <span class="op">=</span> <span class="st">"Source: ADSL."</span></span></span>
 <span class="r-in"><span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="cols.html">cols</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    variable   <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    variable   <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    stat_label <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    placebo  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo\nN={n['placebo']}"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    drug_50  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50\nN={n['drug_50']}"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    drug_100 <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 100\nN={n['drug_100']}"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    Total    <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Total\nN={n['Total']}"</span>,    align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="sort_rows.html">sort_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"stat_label"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">demo_grid</span> <span class="op">&lt;-</span> <span class="fu">as_grid</span><span class="op">(</span><span class="va">demo</span><span class="op">)</span></span></span>
@@ -205,11 +206,7 @@ the same pipeline.</p>
 <span class="r-in"><span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="cols.html">cols</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    label    <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"SOC / PT"</span>, indent <span class="op">=</span> <span class="st">"indent_level"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    soc      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, visible <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>                        group_display <span class="op">=</span> <span class="st">"column_repeat"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    row_type <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    soc_n    <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    n_total  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    .hide    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"soc"</span>, <span class="st">"row_type"</span>, <span class="st">"soc_n"</span>, <span class="st">"n_total"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    placebo  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo\nN={n['placebo']}"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    drug_50  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50\nN={n['drug_50']}"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    drug_100 <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 100\nN={n['drug_100']}"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>
@@ -235,10 +232,11 @@ the same pipeline.</p>
 <span class="r-in"><span>  <span class="fu"><a href="cols.html">cols</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    sex_n      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    paramcd    <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    param      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Parameter"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    visit      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Visit"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    param      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Parameter"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    visit      <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Visit"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    stat_label <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"param"</span>, <span class="st">"visit"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="subgroup.html">subgroup</a></span><span class="op">(</span><span class="st">"sex"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">sg_grid</span> <span class="op">&lt;-</span> <span class="fu">as_grid</span><span class="op">(</span><span class="va">sg_spec</span><span class="op">)</span></span></span>
@@ -263,7 +261,7 @@ the same pipeline.</p>
 <span class="r-in"><span>  titles <span class="op">=</span> <span class="st">"Demographics"</span></span></span>
 <span class="r-in"><span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="cols.html">cols</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    variable   <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    variable   <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    stat_label <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    placebo    <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>      label <span class="op">=</span> <span class="st">"Placebo\nN={n['placebo']}"</span>,</span></span>
@@ -286,7 +284,7 @@ the same pipeline.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">grid</span><span class="op">@</span><span class="va">pages</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">grid</span><span class="op">@</span><span class="va">pages</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">cells_text</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 16  5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 11  6</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
@@ -299,7 +297,7 @@ the same pipeline.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

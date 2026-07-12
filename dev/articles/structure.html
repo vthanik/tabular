@@ -83,10 +83,10 @@
 
 
     <p>This article is about <em>shape</em>: which column does what, multi-level headers, and how a table that is too long or too wide is split across pages. It assumes you already have a wide frame (see <a href="data-in.html">Data in</a>) and does not cover cosmetics (see <a href="presentation.html">Presentation</a>).</p>
-<section class="level2"><h2 id="the-column-model-usage">The column model: <code>usage</code>
-<a class="anchor" aria-label="anchor" href="#the-column-model-usage"></a>
+<section class="level2"><h2 id="row-grouping-group_rows">Row grouping: <code>group_rows()</code>
+<a class="anchor" aria-label="anchor" href="#row-grouping-group_rows"></a>
 </h2>
-<p>Every column gets a role via <code>col_spec(usage = …)</code>. Picking the right one is the single most important structural decision:</p>
+<p>Row structure is a fact about the whole table, so it is declared once with <code><a href="../reference/group_rows.html">group_rows()</a></code> — not per column. <code>by</code> names the grouping key columns, ordered outer to inner; <code>display</code> picks how each level renders:</p>
 <table class="table caption-top">
 <colgroup>
 <col style="width: 33%">
@@ -94,103 +94,101 @@
 <col style="width: 33%">
 </colgroup>
 <thead><tr class="header">
-<th><code>usage</code></th>
+<th><code>display</code></th>
 <th>Use it for</th>
 <th>Behaviour</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td>
-<code>"display"</code> <em>(default)</em>
+<code>"header_row"</code> <em>(default)</em>
 </td>
-<td>data cells (the arm columns)</td>
-<td>one value per row</td>
+<td>section variable (e.g. parameter)</td>
+<td>each value becomes a <strong>section-header row</strong>; the key column is hidden</td>
 </tr>
 <tr class="even">
-<td><code>"group"</code></td>
-<td>section variable (e.g. parameter)</td>
-<td>each value becomes a <strong>section-header row</strong>; the column is hidden</td>
+<td><code>"column"</code></td>
+<td>a visible row label</td>
+<td>column stays; repeated values are suppressed</td>
 </tr>
 <tr class="odd">
-<td><code>"id"</code></td>
-<td>the row label that must stay visible</td>
-<td>like <code>display</code>, but <strong>joins the stub and repeats on every horizontal panel</strong>
-</td>
+<td><code>"column_repeat"</code></td>
+<td>a visible row label</td>
+<td>column stays; every row repeats the value</td>
+</tr>
+<tr class="even">
+<td><code>"none"</code></td>
+<td>a hidden block key</td>
+<td>break-only: no header, no column — just group transitions</td>
 </tr>
 </tbody>
 </table>
-<p>Indentation is <strong>not</strong> a <code>usage</code> role — it is the separate <code>col_spec(indent = …)</code> argument (a fixed integer level, or a column name for per-row depth).</p>
+<p><code><a href="../reference/cols.html">cols()</a></code> handles the per-column cosmetics — labels (<code>x = "Label"</code> is shorthand for <code>col_spec(label = )</code>), alignment, widths, and <code>.hide =</code> for helper columns. Indentation is the separate <code>col_spec(indent = …)</code> argument (a fixed integer level, or a column name for per-row depth).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span><span class="va">arms</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
-<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
-<span>      group_display <span class="op">=</span> <span class="st">"header_row"</span>,</span>
-<span>      label <span class="op">=</span> <span class="st">""</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span><span class="va">arms</span>, <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span>variable <span class="op">=</span> <span class="st">""</span>, stat_label <span class="op">=</span> <span class="st">""</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span><span class="va">arms</span>, <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-457a048fab { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-457a048fab .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-457a048fab p { line-height: inherit; }
-#tabular-457a048fab .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-457a048fab .tabular-caption { margin: 0; padding: 0; }
-#tabular-457a048fab .tabular-pad { margin: 0; line-height: 1; }
-#tabular-457a048fab .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-457a048fab .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-457a048fab .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-457a048fab .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-457a048fab .tabular-table th, #tabular-457a048fab .tabular-table td { padding: .18rem .6rem; }
-#tabular-457a048fab .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-457a048fab .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-457a048fab .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-457a048fab .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-457a048fab .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-457a048fab .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-457a048fab .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-457a048fab .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-457a048fab .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-457a048fab .tabular-table tbody tr td { border-top: none; }
-#tabular-457a048fab .tabular-band { text-align: center; }
-#tabular-457a048fab .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-457a048fab .tabular-subgroup-label { font-weight: 600; }
-#tabular-457a048fab .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-457a048fab .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-457a048fab .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-457a048fab .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-457a048fab .text-left { text-align: left; }
-#tabular-457a048fab .text-center { text-align: center; }
-#tabular-457a048fab .text-right { text-align: right; }
-#tabular-457a048fab .tabular-table thead th.text-left { text-align: left; }
-#tabular-457a048fab .tabular-table thead th.text-center { text-align: center; }
-#tabular-457a048fab .tabular-table thead th.text-right { text-align: right; }
-#tabular-457a048fab .tabular-table td.text-left { text-align: left; }
-#tabular-457a048fab .tabular-table td.text-center { text-align: center; }
-#tabular-457a048fab .tabular-table td.text-right { text-align: right; }
-#tabular-457a048fab .valign-top { vertical-align: top; }
-#tabular-457a048fab .valign-middle { vertical-align: middle; }
-#tabular-457a048fab .valign-bottom { vertical-align: bottom; }
-#tabular-457a048fab .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-457a048fab .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-457a048fab .tabular-page-break-row { display: none; }
-#tabular-457a048fab { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-457a048fab .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-457a048fab .tabular-page-header, #tabular-457a048fab .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-457a048fab .tabular-page-header { margin-bottom: 1rem; }
-#tabular-457a048fab .tabular-page-footer { margin-top: 1rem; }
-#tabular-457a048fab .tabular-page-header-left, #tabular-457a048fab .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-457a048fab .tabular-page-header-center, #tabular-457a048fab .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-457a048fab .tabular-page-header-right, #tabular-457a048fab .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-457a048fab .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-457a048fab .tabular-table tr { page-break-inside: avoid; } #tabular-457a048fab .tabular-page-header, #tabular-457a048fab .tabular-page-footer { display: none; } #tabular-457a048fab .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-457a048fab .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-457a048fab .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-ac133b15f7 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-ac133b15f7 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-ac133b15f7 p { line-height: inherit; }
+#tabular-ac133b15f7 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-ac133b15f7 .tabular-caption { margin: 0; padding: 0; }
+#tabular-ac133b15f7 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-ac133b15f7 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-ac133b15f7 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-ac133b15f7 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-ac133b15f7 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-ac133b15f7 .tabular-table th, #tabular-ac133b15f7 .tabular-table td { padding: .18rem .6rem; }
+#tabular-ac133b15f7 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-ac133b15f7 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-ac133b15f7 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-ac133b15f7 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-ac133b15f7 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ac133b15f7 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ac133b15f7 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ac133b15f7 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ac133b15f7 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-ac133b15f7 .tabular-table tbody tr td { border-top: none; }
+#tabular-ac133b15f7 .tabular-band { text-align: center; }
+#tabular-ac133b15f7 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-ac133b15f7 .tabular-subgroup-label { font-weight: 600; }
+#tabular-ac133b15f7 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-ac133b15f7 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-ac133b15f7 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-ac133b15f7 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-ac133b15f7 .text-left { text-align: left; }
+#tabular-ac133b15f7 .text-center { text-align: center; }
+#tabular-ac133b15f7 .text-right { text-align: right; }
+#tabular-ac133b15f7 .tabular-table thead th.text-left { text-align: left; }
+#tabular-ac133b15f7 .tabular-table thead th.text-center { text-align: center; }
+#tabular-ac133b15f7 .tabular-table thead th.text-right { text-align: right; }
+#tabular-ac133b15f7 .tabular-table td.text-left { text-align: left; }
+#tabular-ac133b15f7 .tabular-table td.text-center { text-align: center; }
+#tabular-ac133b15f7 .tabular-table td.text-right { text-align: right; }
+#tabular-ac133b15f7 .valign-top { vertical-align: top; }
+#tabular-ac133b15f7 .valign-middle { vertical-align: middle; }
+#tabular-ac133b15f7 .valign-bottom { vertical-align: bottom; }
+#tabular-ac133b15f7 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-ac133b15f7 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-ac133b15f7 .tabular-page-break-row { display: none; }
+#tabular-ac133b15f7 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-ac133b15f7 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-ac133b15f7 .tabular-page-header, #tabular-ac133b15f7 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-ac133b15f7 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-ac133b15f7 .tabular-page-footer { margin-top: 1rem; }
+#tabular-ac133b15f7 .tabular-page-header-left, #tabular-ac133b15f7 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-ac133b15f7 .tabular-page-header-center, #tabular-ac133b15f7 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-ac133b15f7 .tabular-page-header-right, #tabular-ac133b15f7 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-ac133b15f7 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-ac133b15f7 .tabular-table tr { page-break-inside: avoid; } #tabular-ac133b15f7 .tabular-page-header, #tabular-ac133b15f7 .tabular-page-footer { display: none; } #tabular-ac133b15f7 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-ac133b15f7 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-ac133b15f7 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-457a048fab" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-ac133b15f7" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Demographics</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
@@ -304,7 +302,7 @@
 </div>
 <p><code><a href="../reference/cols_apply.html">cols_apply()</a></code> attaches one shared <code>col_spec</code> to <strong>all</strong> the arm columns at once — use it instead of repeating <code>cols(placebo = …, drug_50 = …)</code> for a variable number of arms.</p>
 <blockquote>
-<p><strong>Indent from exactly one source.</strong> <code>group_display = "header_row"</code> already indents its child rows one level, so the stub column (here <code>stat_label</code>) needs <strong>no</strong> <code>indent</code> — the section supplies it. (An explicit <code>indent</code> on the host <em>overrides</em> that auto-indent rather than stacking, so <code>indent = 1</code> there still yields a single level.) The same care applies to labels from <code><a href="../reference/pivot_across.html">pivot_across()</a></code>, which come out with a leading indent baked into the string: keep them as-is or <code><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws()</a></code> them and set <code>indent</code> yourself — don’t double up.</p>
+<p><strong>Indent from exactly one source.</strong> <code>display = "header_row"</code> already indents its child rows one level, so the stub column (here <code>stat_label</code>) needs <strong>no</strong> <code>indent</code> — the section supplies it. (An explicit <code>indent</code> on the host <em>overrides</em> that auto-indent rather than stacking, so <code>indent = 1</code> there still yields a single level.) The same care applies to labels from <code><a href="../reference/pivot_across.html">pivot_across()</a></code>, which come out with a leading indent baked into the string: keep them as-is or <code><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws()</a></code> them and set <code>indent</code> yourself — don’t double up.</p>
 </blockquote>
 </section><section class="level2"><h2 id="bign-in-the-column-headers">BigN in the column headers<a class="anchor" aria-label="anchor" href="#bign-in-the-column-headers"></a>
 </h2>
@@ -315,12 +313,8 @@
 <span><span class="va">N</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">cdisc_saf_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">cdisc_saf_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
-<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
-<span>      group_display <span class="op">=</span> <span class="st">"header_row"</span>,</span>
-<span>      label <span class="op">=</span> <span class="st">""</span></span>
-<span>    <span class="op">)</span>,</span>
 <span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">""</span><span class="op">)</span>,</span>
 <span>    placebo <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
 <span>      label <span class="op">=</span> <span class="st">"Placebo\n(N={N['placebo']})"</span>,</span>
@@ -338,60 +332,60 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-cf776abd8b { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-cf776abd8b .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-cf776abd8b p { line-height: inherit; }
-#tabular-cf776abd8b .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-cf776abd8b .tabular-caption { margin: 0; padding: 0; }
-#tabular-cf776abd8b .tabular-pad { margin: 0; line-height: 1; }
-#tabular-cf776abd8b .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-cf776abd8b .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-cf776abd8b .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-cf776abd8b .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-cf776abd8b .tabular-table th, #tabular-cf776abd8b .tabular-table td { padding: .18rem .6rem; }
-#tabular-cf776abd8b .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-cf776abd8b .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-cf776abd8b .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-cf776abd8b .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-cf776abd8b .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-cf776abd8b .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-cf776abd8b .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-cf776abd8b .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-cf776abd8b .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-cf776abd8b .tabular-table tbody tr td { border-top: none; }
-#tabular-cf776abd8b .tabular-band { text-align: center; }
-#tabular-cf776abd8b .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-cf776abd8b .tabular-subgroup-label { font-weight: 600; }
-#tabular-cf776abd8b .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-cf776abd8b .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-cf776abd8b .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-cf776abd8b .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-cf776abd8b .text-left { text-align: left; }
-#tabular-cf776abd8b .text-center { text-align: center; }
-#tabular-cf776abd8b .text-right { text-align: right; }
-#tabular-cf776abd8b .tabular-table thead th.text-left { text-align: left; }
-#tabular-cf776abd8b .tabular-table thead th.text-center { text-align: center; }
-#tabular-cf776abd8b .tabular-table thead th.text-right { text-align: right; }
-#tabular-cf776abd8b .tabular-table td.text-left { text-align: left; }
-#tabular-cf776abd8b .tabular-table td.text-center { text-align: center; }
-#tabular-cf776abd8b .tabular-table td.text-right { text-align: right; }
-#tabular-cf776abd8b .valign-top { vertical-align: top; }
-#tabular-cf776abd8b .valign-middle { vertical-align: middle; }
-#tabular-cf776abd8b .valign-bottom { vertical-align: bottom; }
-#tabular-cf776abd8b .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-cf776abd8b .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-cf776abd8b .tabular-page-break-row { display: none; }
-#tabular-cf776abd8b { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-cf776abd8b .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-cf776abd8b .tabular-page-header, #tabular-cf776abd8b .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-cf776abd8b .tabular-page-header { margin-bottom: 1rem; }
-#tabular-cf776abd8b .tabular-page-footer { margin-top: 1rem; }
-#tabular-cf776abd8b .tabular-page-header-left, #tabular-cf776abd8b .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-cf776abd8b .tabular-page-header-center, #tabular-cf776abd8b .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-cf776abd8b .tabular-page-header-right, #tabular-cf776abd8b .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-cf776abd8b .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-cf776abd8b .tabular-table tr { page-break-inside: avoid; } #tabular-cf776abd8b .tabular-page-header, #tabular-cf776abd8b .tabular-page-footer { display: none; } #tabular-cf776abd8b .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-cf776abd8b .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-cf776abd8b .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-87e9fe74f8 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-87e9fe74f8 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-87e9fe74f8 p { line-height: inherit; }
+#tabular-87e9fe74f8 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-87e9fe74f8 .tabular-caption { margin: 0; padding: 0; }
+#tabular-87e9fe74f8 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-87e9fe74f8 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-87e9fe74f8 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-87e9fe74f8 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-87e9fe74f8 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-87e9fe74f8 .tabular-table th, #tabular-87e9fe74f8 .tabular-table td { padding: .18rem .6rem; }
+#tabular-87e9fe74f8 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-87e9fe74f8 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-87e9fe74f8 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-87e9fe74f8 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-87e9fe74f8 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-87e9fe74f8 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-87e9fe74f8 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-87e9fe74f8 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-87e9fe74f8 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-87e9fe74f8 .tabular-table tbody tr td { border-top: none; }
+#tabular-87e9fe74f8 .tabular-band { text-align: center; }
+#tabular-87e9fe74f8 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-87e9fe74f8 .tabular-subgroup-label { font-weight: 600; }
+#tabular-87e9fe74f8 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-87e9fe74f8 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-87e9fe74f8 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-87e9fe74f8 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-87e9fe74f8 .text-left { text-align: left; }
+#tabular-87e9fe74f8 .text-center { text-align: center; }
+#tabular-87e9fe74f8 .text-right { text-align: right; }
+#tabular-87e9fe74f8 .tabular-table thead th.text-left { text-align: left; }
+#tabular-87e9fe74f8 .tabular-table thead th.text-center { text-align: center; }
+#tabular-87e9fe74f8 .tabular-table thead th.text-right { text-align: right; }
+#tabular-87e9fe74f8 .tabular-table td.text-left { text-align: left; }
+#tabular-87e9fe74f8 .tabular-table td.text-center { text-align: center; }
+#tabular-87e9fe74f8 .tabular-table td.text-right { text-align: right; }
+#tabular-87e9fe74f8 .valign-top { vertical-align: top; }
+#tabular-87e9fe74f8 .valign-middle { vertical-align: middle; }
+#tabular-87e9fe74f8 .valign-bottom { vertical-align: bottom; }
+#tabular-87e9fe74f8 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-87e9fe74f8 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-87e9fe74f8 .tabular-page-break-row { display: none; }
+#tabular-87e9fe74f8 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-87e9fe74f8 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-87e9fe74f8 .tabular-page-header, #tabular-87e9fe74f8 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-87e9fe74f8 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-87e9fe74f8 .tabular-page-footer { margin-top: 1rem; }
+#tabular-87e9fe74f8 .tabular-page-header-left, #tabular-87e9fe74f8 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-87e9fe74f8 .tabular-page-header-center, #tabular-87e9fe74f8 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-87e9fe74f8 .tabular-page-header-right, #tabular-87e9fe74f8 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-87e9fe74f8 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-87e9fe74f8 .tabular-table tr { page-break-inside: avoid; } #tabular-87e9fe74f8 .tabular-page-header, #tabular-87e9fe74f8 .tabular-page-footer { display: none; } #tabular-87e9fe74f8 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-87e9fe74f8 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-87e9fe74f8 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-cf776abd8b" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-87e9fe74f8" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Demographics</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
@@ -523,74 +517,68 @@
 <code class="sourceCode R"><span><span class="va">arm_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
-<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
-<span>      group_display <span class="op">=</span> <span class="st">"header_row"</span>,</span>
-<span>      label <span class="op">=</span> <span class="st">""</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span>stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">""</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span></span>
 <span>    <span class="va">arm_cols</span>,</span>
 <span>    <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"{.name}\n(N={N[.name]})"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-fe70e17a17 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-fe70e17a17 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-fe70e17a17 p { line-height: inherit; }
-#tabular-fe70e17a17 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-fe70e17a17 .tabular-caption { margin: 0; padding: 0; }
-#tabular-fe70e17a17 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-fe70e17a17 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-fe70e17a17 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-fe70e17a17 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-fe70e17a17 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-fe70e17a17 .tabular-table th, #tabular-fe70e17a17 .tabular-table td { padding: .18rem .6rem; }
-#tabular-fe70e17a17 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-fe70e17a17 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-fe70e17a17 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-fe70e17a17 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-fe70e17a17 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-fe70e17a17 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-fe70e17a17 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-fe70e17a17 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-fe70e17a17 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-fe70e17a17 .tabular-table tbody tr td { border-top: none; }
-#tabular-fe70e17a17 .tabular-band { text-align: center; }
-#tabular-fe70e17a17 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-fe70e17a17 .tabular-subgroup-label { font-weight: 600; }
-#tabular-fe70e17a17 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-fe70e17a17 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-fe70e17a17 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-fe70e17a17 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-fe70e17a17 .text-left { text-align: left; }
-#tabular-fe70e17a17 .text-center { text-align: center; }
-#tabular-fe70e17a17 .text-right { text-align: right; }
-#tabular-fe70e17a17 .tabular-table thead th.text-left { text-align: left; }
-#tabular-fe70e17a17 .tabular-table thead th.text-center { text-align: center; }
-#tabular-fe70e17a17 .tabular-table thead th.text-right { text-align: right; }
-#tabular-fe70e17a17 .tabular-table td.text-left { text-align: left; }
-#tabular-fe70e17a17 .tabular-table td.text-center { text-align: center; }
-#tabular-fe70e17a17 .tabular-table td.text-right { text-align: right; }
-#tabular-fe70e17a17 .valign-top { vertical-align: top; }
-#tabular-fe70e17a17 .valign-middle { vertical-align: middle; }
-#tabular-fe70e17a17 .valign-bottom { vertical-align: bottom; }
-#tabular-fe70e17a17 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-fe70e17a17 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-fe70e17a17 .tabular-page-break-row { display: none; }
-#tabular-fe70e17a17 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-fe70e17a17 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-fe70e17a17 .tabular-page-header, #tabular-fe70e17a17 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-fe70e17a17 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-fe70e17a17 .tabular-page-footer { margin-top: 1rem; }
-#tabular-fe70e17a17 .tabular-page-header-left, #tabular-fe70e17a17 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-fe70e17a17 .tabular-page-header-center, #tabular-fe70e17a17 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-fe70e17a17 .tabular-page-header-right, #tabular-fe70e17a17 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-fe70e17a17 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-fe70e17a17 .tabular-table tr { page-break-inside: avoid; } #tabular-fe70e17a17 .tabular-page-header, #tabular-fe70e17a17 .tabular-page-footer { display: none; } #tabular-fe70e17a17 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-fe70e17a17 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-fe70e17a17 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-4b32f0f8eb { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-4b32f0f8eb .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-4b32f0f8eb p { line-height: inherit; }
+#tabular-4b32f0f8eb .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-4b32f0f8eb .tabular-caption { margin: 0; padding: 0; }
+#tabular-4b32f0f8eb .tabular-pad { margin: 0; line-height: 1; }
+#tabular-4b32f0f8eb .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-4b32f0f8eb .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-4b32f0f8eb .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-4b32f0f8eb .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-4b32f0f8eb .tabular-table th, #tabular-4b32f0f8eb .tabular-table td { padding: .18rem .6rem; }
+#tabular-4b32f0f8eb .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-4b32f0f8eb .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-4b32f0f8eb .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-4b32f0f8eb .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-4b32f0f8eb .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-4b32f0f8eb .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-4b32f0f8eb .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-4b32f0f8eb .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-4b32f0f8eb .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-4b32f0f8eb .tabular-table tbody tr td { border-top: none; }
+#tabular-4b32f0f8eb .tabular-band { text-align: center; }
+#tabular-4b32f0f8eb .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-4b32f0f8eb .tabular-subgroup-label { font-weight: 600; }
+#tabular-4b32f0f8eb .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-4b32f0f8eb .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-4b32f0f8eb .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-4b32f0f8eb .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-4b32f0f8eb .text-left { text-align: left; }
+#tabular-4b32f0f8eb .text-center { text-align: center; }
+#tabular-4b32f0f8eb .text-right { text-align: right; }
+#tabular-4b32f0f8eb .tabular-table thead th.text-left { text-align: left; }
+#tabular-4b32f0f8eb .tabular-table thead th.text-center { text-align: center; }
+#tabular-4b32f0f8eb .tabular-table thead th.text-right { text-align: right; }
+#tabular-4b32f0f8eb .tabular-table td.text-left { text-align: left; }
+#tabular-4b32f0f8eb .tabular-table td.text-center { text-align: center; }
+#tabular-4b32f0f8eb .tabular-table td.text-right { text-align: right; }
+#tabular-4b32f0f8eb .valign-top { vertical-align: top; }
+#tabular-4b32f0f8eb .valign-middle { vertical-align: middle; }
+#tabular-4b32f0f8eb .valign-bottom { vertical-align: bottom; }
+#tabular-4b32f0f8eb .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-4b32f0f8eb .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-4b32f0f8eb .tabular-page-break-row { display: none; }
+#tabular-4b32f0f8eb { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-4b32f0f8eb .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-4b32f0f8eb .tabular-page-header, #tabular-4b32f0f8eb .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-4b32f0f8eb .tabular-page-header { margin-bottom: 1rem; }
+#tabular-4b32f0f8eb .tabular-page-footer { margin-top: 1rem; }
+#tabular-4b32f0f8eb .tabular-page-header-left, #tabular-4b32f0f8eb .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-4b32f0f8eb .tabular-page-header-center, #tabular-4b32f0f8eb .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-4b32f0f8eb .tabular-page-header-right, #tabular-4b32f0f8eb .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-4b32f0f8eb .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-4b32f0f8eb .tabular-table tr { page-break-inside: avoid; } #tabular-4b32f0f8eb .tabular-page-header, #tabular-4b32f0f8eb .tabular-page-footer { display: none; } #tabular-4b32f0f8eb .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-4b32f0f8eb .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-4b32f0f8eb .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-fe70e17a17" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-4b32f0f8eb" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Demographics</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
@@ -719,72 +707,66 @@
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
-<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
-<span>      group_display <span class="op">=</span> <span class="st">"header_row"</span>,</span>
-<span>      label <span class="op">=</span> <span class="st">""</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">""</span>, width <span class="op">=</span> <span class="st">"2.2in"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span>stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">""</span>, width <span class="op">=</span> <span class="st">"2.2in"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span><span class="va">arms</span>, <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span>, width <span class="op">=</span> <span class="st">"1in"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/headers.html">headers</a></span><span class="op">(</span><span class="st">"Treatment Group"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-ff6053d9b1 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-ff6053d9b1 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-ff6053d9b1 p { line-height: inherit; }
-#tabular-ff6053d9b1 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-ff6053d9b1 .tabular-caption { margin: 0; padding: 0; }
-#tabular-ff6053d9b1 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-ff6053d9b1 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-ff6053d9b1 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-ff6053d9b1 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-ff6053d9b1 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-ff6053d9b1 .tabular-table th, #tabular-ff6053d9b1 .tabular-table td { padding: .18rem .6rem; }
-#tabular-ff6053d9b1 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-ff6053d9b1 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-ff6053d9b1 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-ff6053d9b1 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-ff6053d9b1 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-ff6053d9b1 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-ff6053d9b1 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-ff6053d9b1 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-ff6053d9b1 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-ff6053d9b1 .tabular-table tbody tr td { border-top: none; }
-#tabular-ff6053d9b1 .tabular-band { text-align: center; }
-#tabular-ff6053d9b1 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-ff6053d9b1 .tabular-subgroup-label { font-weight: 600; }
-#tabular-ff6053d9b1 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-ff6053d9b1 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-ff6053d9b1 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-ff6053d9b1 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-ff6053d9b1 .text-left { text-align: left; }
-#tabular-ff6053d9b1 .text-center { text-align: center; }
-#tabular-ff6053d9b1 .text-right { text-align: right; }
-#tabular-ff6053d9b1 .tabular-table thead th.text-left { text-align: left; }
-#tabular-ff6053d9b1 .tabular-table thead th.text-center { text-align: center; }
-#tabular-ff6053d9b1 .tabular-table thead th.text-right { text-align: right; }
-#tabular-ff6053d9b1 .tabular-table td.text-left { text-align: left; }
-#tabular-ff6053d9b1 .tabular-table td.text-center { text-align: center; }
-#tabular-ff6053d9b1 .tabular-table td.text-right { text-align: right; }
-#tabular-ff6053d9b1 .valign-top { vertical-align: top; }
-#tabular-ff6053d9b1 .valign-middle { vertical-align: middle; }
-#tabular-ff6053d9b1 .valign-bottom { vertical-align: bottom; }
-#tabular-ff6053d9b1 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-ff6053d9b1 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-ff6053d9b1 .tabular-page-break-row { display: none; }
-#tabular-ff6053d9b1 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-ff6053d9b1 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-ff6053d9b1 .tabular-page-header, #tabular-ff6053d9b1 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-ff6053d9b1 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-ff6053d9b1 .tabular-page-footer { margin-top: 1rem; }
-#tabular-ff6053d9b1 .tabular-page-header-left, #tabular-ff6053d9b1 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-ff6053d9b1 .tabular-page-header-center, #tabular-ff6053d9b1 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-ff6053d9b1 .tabular-page-header-right, #tabular-ff6053d9b1 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-ff6053d9b1 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-ff6053d9b1 .tabular-table tr { page-break-inside: avoid; } #tabular-ff6053d9b1 .tabular-page-header, #tabular-ff6053d9b1 .tabular-page-footer { display: none; } #tabular-ff6053d9b1 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-ff6053d9b1 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-ff6053d9b1 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-13ee9b4ab0 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-13ee9b4ab0 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-13ee9b4ab0 p { line-height: inherit; }
+#tabular-13ee9b4ab0 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-13ee9b4ab0 .tabular-caption { margin: 0; padding: 0; }
+#tabular-13ee9b4ab0 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-13ee9b4ab0 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-13ee9b4ab0 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-13ee9b4ab0 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-13ee9b4ab0 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-13ee9b4ab0 .tabular-table th, #tabular-13ee9b4ab0 .tabular-table td { padding: .18rem .6rem; }
+#tabular-13ee9b4ab0 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-13ee9b4ab0 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-13ee9b4ab0 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-13ee9b4ab0 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-13ee9b4ab0 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-13ee9b4ab0 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-13ee9b4ab0 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-13ee9b4ab0 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-13ee9b4ab0 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-13ee9b4ab0 .tabular-table tbody tr td { border-top: none; }
+#tabular-13ee9b4ab0 .tabular-band { text-align: center; }
+#tabular-13ee9b4ab0 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-13ee9b4ab0 .tabular-subgroup-label { font-weight: 600; }
+#tabular-13ee9b4ab0 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-13ee9b4ab0 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-13ee9b4ab0 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-13ee9b4ab0 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-13ee9b4ab0 .text-left { text-align: left; }
+#tabular-13ee9b4ab0 .text-center { text-align: center; }
+#tabular-13ee9b4ab0 .text-right { text-align: right; }
+#tabular-13ee9b4ab0 .tabular-table thead th.text-left { text-align: left; }
+#tabular-13ee9b4ab0 .tabular-table thead th.text-center { text-align: center; }
+#tabular-13ee9b4ab0 .tabular-table thead th.text-right { text-align: right; }
+#tabular-13ee9b4ab0 .tabular-table td.text-left { text-align: left; }
+#tabular-13ee9b4ab0 .tabular-table td.text-center { text-align: center; }
+#tabular-13ee9b4ab0 .tabular-table td.text-right { text-align: right; }
+#tabular-13ee9b4ab0 .valign-top { vertical-align: top; }
+#tabular-13ee9b4ab0 .valign-middle { vertical-align: middle; }
+#tabular-13ee9b4ab0 .valign-bottom { vertical-align: bottom; }
+#tabular-13ee9b4ab0 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-13ee9b4ab0 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-13ee9b4ab0 .tabular-page-break-row { display: none; }
+#tabular-13ee9b4ab0 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-13ee9b4ab0 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-13ee9b4ab0 .tabular-page-header, #tabular-13ee9b4ab0 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-13ee9b4ab0 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-13ee9b4ab0 .tabular-page-footer { margin-top: 1rem; }
+#tabular-13ee9b4ab0 .tabular-page-header-left, #tabular-13ee9b4ab0 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-13ee9b4ab0 .tabular-page-header-center, #tabular-13ee9b4ab0 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-13ee9b4ab0 .tabular-page-header-right, #tabular-13ee9b4ab0 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-13ee9b4ab0 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-13ee9b4ab0 .tabular-table tr { page-break-inside: avoid; } #tabular-13ee9b4ab0 .tabular-page-header, #tabular-13ee9b4ab0 .tabular-page-footer { display: none; } #tabular-13ee9b4ab0 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-13ee9b4ab0 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-13ee9b4ab0 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-ff6053d9b1" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-13ee9b4ab0" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Demographics</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
@@ -917,73 +899,66 @@
 <span>      label <span class="op">=</span> <span class="st">"SOC / Preferred Term"</span>,</span>
 <span>      indent <span class="op">=</span> <span class="st">"indent_level"</span></span>
 <span>    <span class="op">)</span>,</span>
-<span>    soc <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
-<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
-<span>      visible <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>      group_display <span class="op">=</span> <span class="st">"column_repeat"</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    row_type <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    n_total <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    soc_n <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>    .hide <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"soc"</span>, <span class="st">"row_type"</span>, <span class="st">"n_total"</span>, <span class="st">"soc_n"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span><span class="va">arms</span>, <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/sort_rows.html">sort_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"soc_n"</span>, <span class="st">"n_total"</span><span class="op">)</span>, descending <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-5e7cb84f06 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-5e7cb84f06 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-5e7cb84f06 p { line-height: inherit; }
-#tabular-5e7cb84f06 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-5e7cb84f06 .tabular-caption { margin: 0; padding: 0; }
-#tabular-5e7cb84f06 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-5e7cb84f06 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-5e7cb84f06 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-5e7cb84f06 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-5e7cb84f06 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-5e7cb84f06 .tabular-table th, #tabular-5e7cb84f06 .tabular-table td { padding: .18rem .6rem; }
-#tabular-5e7cb84f06 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-5e7cb84f06 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-5e7cb84f06 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-5e7cb84f06 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-5e7cb84f06 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-5e7cb84f06 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-5e7cb84f06 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-5e7cb84f06 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-5e7cb84f06 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-5e7cb84f06 .tabular-table tbody tr td { border-top: none; }
-#tabular-5e7cb84f06 .tabular-band { text-align: center; }
-#tabular-5e7cb84f06 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-5e7cb84f06 .tabular-subgroup-label { font-weight: 600; }
-#tabular-5e7cb84f06 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-5e7cb84f06 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-5e7cb84f06 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-5e7cb84f06 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-5e7cb84f06 .text-left { text-align: left; }
-#tabular-5e7cb84f06 .text-center { text-align: center; }
-#tabular-5e7cb84f06 .text-right { text-align: right; }
-#tabular-5e7cb84f06 .tabular-table thead th.text-left { text-align: left; }
-#tabular-5e7cb84f06 .tabular-table thead th.text-center { text-align: center; }
-#tabular-5e7cb84f06 .tabular-table thead th.text-right { text-align: right; }
-#tabular-5e7cb84f06 .tabular-table td.text-left { text-align: left; }
-#tabular-5e7cb84f06 .tabular-table td.text-center { text-align: center; }
-#tabular-5e7cb84f06 .tabular-table td.text-right { text-align: right; }
-#tabular-5e7cb84f06 .valign-top { vertical-align: top; }
-#tabular-5e7cb84f06 .valign-middle { vertical-align: middle; }
-#tabular-5e7cb84f06 .valign-bottom { vertical-align: bottom; }
-#tabular-5e7cb84f06 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-5e7cb84f06 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-5e7cb84f06 .tabular-page-break-row { display: none; }
-#tabular-5e7cb84f06 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-5e7cb84f06 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-5e7cb84f06 .tabular-page-header, #tabular-5e7cb84f06 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-5e7cb84f06 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-5e7cb84f06 .tabular-page-footer { margin-top: 1rem; }
-#tabular-5e7cb84f06 .tabular-page-header-left, #tabular-5e7cb84f06 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-5e7cb84f06 .tabular-page-header-center, #tabular-5e7cb84f06 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-5e7cb84f06 .tabular-page-header-right, #tabular-5e7cb84f06 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-5e7cb84f06 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-5e7cb84f06 .tabular-table tr { page-break-inside: avoid; } #tabular-5e7cb84f06 .tabular-page-header, #tabular-5e7cb84f06 .tabular-page-footer { display: none; } #tabular-5e7cb84f06 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-5e7cb84f06 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-5e7cb84f06 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-7aec4ccb44 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-7aec4ccb44 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-7aec4ccb44 p { line-height: inherit; }
+#tabular-7aec4ccb44 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-7aec4ccb44 .tabular-caption { margin: 0; padding: 0; }
+#tabular-7aec4ccb44 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-7aec4ccb44 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-7aec4ccb44 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-7aec4ccb44 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-7aec4ccb44 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-7aec4ccb44 .tabular-table th, #tabular-7aec4ccb44 .tabular-table td { padding: .18rem .6rem; }
+#tabular-7aec4ccb44 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-7aec4ccb44 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-7aec4ccb44 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-7aec4ccb44 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-7aec4ccb44 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7aec4ccb44 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7aec4ccb44 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7aec4ccb44 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7aec4ccb44 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-7aec4ccb44 .tabular-table tbody tr td { border-top: none; }
+#tabular-7aec4ccb44 .tabular-band { text-align: center; }
+#tabular-7aec4ccb44 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-7aec4ccb44 .tabular-subgroup-label { font-weight: 600; }
+#tabular-7aec4ccb44 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-7aec4ccb44 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-7aec4ccb44 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-7aec4ccb44 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-7aec4ccb44 .text-left { text-align: left; }
+#tabular-7aec4ccb44 .text-center { text-align: center; }
+#tabular-7aec4ccb44 .text-right { text-align: right; }
+#tabular-7aec4ccb44 .tabular-table thead th.text-left { text-align: left; }
+#tabular-7aec4ccb44 .tabular-table thead th.text-center { text-align: center; }
+#tabular-7aec4ccb44 .tabular-table thead th.text-right { text-align: right; }
+#tabular-7aec4ccb44 .tabular-table td.text-left { text-align: left; }
+#tabular-7aec4ccb44 .tabular-table td.text-center { text-align: center; }
+#tabular-7aec4ccb44 .tabular-table td.text-right { text-align: right; }
+#tabular-7aec4ccb44 .valign-top { vertical-align: top; }
+#tabular-7aec4ccb44 .valign-middle { vertical-align: middle; }
+#tabular-7aec4ccb44 .valign-bottom { vertical-align: bottom; }
+#tabular-7aec4ccb44 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-7aec4ccb44 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-7aec4ccb44 .tabular-page-break-row { display: none; }
+#tabular-7aec4ccb44 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-7aec4ccb44 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-7aec4ccb44 .tabular-page-header, #tabular-7aec4ccb44 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-7aec4ccb44 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-7aec4ccb44 .tabular-page-footer { margin-top: 1rem; }
+#tabular-7aec4ccb44 .tabular-page-header-left, #tabular-7aec4ccb44 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-7aec4ccb44 .tabular-page-header-center, #tabular-7aec4ccb44 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-7aec4ccb44 .tabular-page-header-right, #tabular-7aec4ccb44 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-7aec4ccb44 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-7aec4ccb44 .tabular-table tr { page-break-inside: avoid; } #tabular-7aec4ccb44 .tabular-page-header, #tabular-7aec4ccb44 .tabular-page-footer { display: none; } #tabular-7aec4ccb44 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-7aec4ccb44 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-7aec4ccb44 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-5e7cb84f06" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-7aec4ccb44" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">AEs by SOC and PT, descending frequency</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
@@ -1446,14 +1421,7 @@
 <span>      label <span class="op">=</span> <span class="st">"SOC / Preferred Term"</span>,</span>
 <span>      indent <span class="op">=</span> <span class="st">"indent_level"</span></span>
 <span>    <span class="op">)</span>,</span>
-<span>    soc <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
-<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
-<span>      visible <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>      group_display <span class="op">=</span> <span class="st">"column_repeat"</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    row_type <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    n_total <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    soc_n <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>    .hide <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"soc"</span>, <span class="st">"row_type"</span>, <span class="st">"n_total"</span>, <span class="st">"soc_n"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span>,</span>
@@ -1468,60 +1436,60 @@
 <span><span class="va">ae_pages</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-821a400b66 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-821a400b66 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-821a400b66 p { line-height: inherit; }
-#tabular-821a400b66 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-821a400b66 .tabular-caption { margin: 0; padding: 0; }
-#tabular-821a400b66 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-821a400b66 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-821a400b66 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-821a400b66 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-821a400b66 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-821a400b66 .tabular-table th, #tabular-821a400b66 .tabular-table td { padding: .18rem .6rem; }
-#tabular-821a400b66 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-821a400b66 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-821a400b66 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-821a400b66 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-821a400b66 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-821a400b66 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-821a400b66 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-821a400b66 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-821a400b66 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-821a400b66 .tabular-table tbody tr td { border-top: none; }
-#tabular-821a400b66 .tabular-band { text-align: center; }
-#tabular-821a400b66 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-821a400b66 .tabular-subgroup-label { font-weight: 600; }
-#tabular-821a400b66 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-821a400b66 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-821a400b66 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-821a400b66 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-821a400b66 .text-left { text-align: left; }
-#tabular-821a400b66 .text-center { text-align: center; }
-#tabular-821a400b66 .text-right { text-align: right; }
-#tabular-821a400b66 .tabular-table thead th.text-left { text-align: left; }
-#tabular-821a400b66 .tabular-table thead th.text-center { text-align: center; }
-#tabular-821a400b66 .tabular-table thead th.text-right { text-align: right; }
-#tabular-821a400b66 .tabular-table td.text-left { text-align: left; }
-#tabular-821a400b66 .tabular-table td.text-center { text-align: center; }
-#tabular-821a400b66 .tabular-table td.text-right { text-align: right; }
-#tabular-821a400b66 .valign-top { vertical-align: top; }
-#tabular-821a400b66 .valign-middle { vertical-align: middle; }
-#tabular-821a400b66 .valign-bottom { vertical-align: bottom; }
-#tabular-821a400b66 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-821a400b66 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-821a400b66 .tabular-page-break-row { display: none; }
-#tabular-821a400b66 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-821a400b66 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-821a400b66 .tabular-page-header, #tabular-821a400b66 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-821a400b66 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-821a400b66 .tabular-page-footer { margin-top: 1rem; }
-#tabular-821a400b66 .tabular-page-header-left, #tabular-821a400b66 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-821a400b66 .tabular-page-header-center, #tabular-821a400b66 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-821a400b66 .tabular-page-header-right, #tabular-821a400b66 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-821a400b66 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-821a400b66 .tabular-table tr { page-break-inside: avoid; } #tabular-821a400b66 .tabular-page-header, #tabular-821a400b66 .tabular-page-footer { display: none; } #tabular-821a400b66 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-821a400b66 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-821a400b66 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-b00f37fdd8 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-b00f37fdd8 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-b00f37fdd8 p { line-height: inherit; }
+#tabular-b00f37fdd8 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-b00f37fdd8 .tabular-caption { margin: 0; padding: 0; }
+#tabular-b00f37fdd8 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-b00f37fdd8 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-b00f37fdd8 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-b00f37fdd8 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-b00f37fdd8 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-b00f37fdd8 .tabular-table th, #tabular-b00f37fdd8 .tabular-table td { padding: .18rem .6rem; }
+#tabular-b00f37fdd8 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-b00f37fdd8 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-b00f37fdd8 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-b00f37fdd8 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-b00f37fdd8 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-b00f37fdd8 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-b00f37fdd8 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-b00f37fdd8 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-b00f37fdd8 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-b00f37fdd8 .tabular-table tbody tr td { border-top: none; }
+#tabular-b00f37fdd8 .tabular-band { text-align: center; }
+#tabular-b00f37fdd8 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-b00f37fdd8 .tabular-subgroup-label { font-weight: 600; }
+#tabular-b00f37fdd8 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-b00f37fdd8 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-b00f37fdd8 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-b00f37fdd8 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-b00f37fdd8 .text-left { text-align: left; }
+#tabular-b00f37fdd8 .text-center { text-align: center; }
+#tabular-b00f37fdd8 .text-right { text-align: right; }
+#tabular-b00f37fdd8 .tabular-table thead th.text-left { text-align: left; }
+#tabular-b00f37fdd8 .tabular-table thead th.text-center { text-align: center; }
+#tabular-b00f37fdd8 .tabular-table thead th.text-right { text-align: right; }
+#tabular-b00f37fdd8 .tabular-table td.text-left { text-align: left; }
+#tabular-b00f37fdd8 .tabular-table td.text-center { text-align: center; }
+#tabular-b00f37fdd8 .tabular-table td.text-right { text-align: right; }
+#tabular-b00f37fdd8 .valign-top { vertical-align: top; }
+#tabular-b00f37fdd8 .valign-middle { vertical-align: middle; }
+#tabular-b00f37fdd8 .valign-bottom { vertical-align: bottom; }
+#tabular-b00f37fdd8 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-b00f37fdd8 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-b00f37fdd8 .tabular-page-break-row { display: none; }
+#tabular-b00f37fdd8 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-b00f37fdd8 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-b00f37fdd8 .tabular-page-header, #tabular-b00f37fdd8 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-b00f37fdd8 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-b00f37fdd8 .tabular-page-footer { margin-top: 1rem; }
+#tabular-b00f37fdd8 .tabular-page-header-left, #tabular-b00f37fdd8 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-b00f37fdd8 .tabular-page-header-center, #tabular-b00f37fdd8 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-b00f37fdd8 .tabular-page-header-right, #tabular-b00f37fdd8 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-b00f37fdd8 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-b00f37fdd8 .tabular-table tr { page-break-inside: avoid; } #tabular-b00f37fdd8 .tabular-page-header, #tabular-b00f37fdd8 .tabular-page-footer { display: none; } #tabular-b00f37fdd8 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-b00f37fdd8 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-b00f37fdd8 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-821a400b66" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-b00f37fdd8" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">AEs by SOC and PT</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
@@ -1978,77 +1946,75 @@
 </div>
 </section><section class="level2"><h2 id="panels-wide-tables">Panels — wide tables<a class="anchor" aria-label="anchor" href="#panels-wide-tables"></a>
 </h2>
-<p>When the columns don’t fit one page, <code>paginate(panels = N)</code> splits the <strong>non-group</strong> columns into <code>N</code> chunks and repeats every <code>group</code>/<code>id</code> column on each panel (so the row labels reappear). Make the row label <code>usage = "id"</code> so it rides every panel:</p>
+<p>When the columns don’t fit one page, <code>paginate(panels = N)</code> splits the <strong>non-stub</strong> columns into <code>N</code> chunks and repeats the stub on each panel (so the row labels reappear). The stub defaults to the <code><a href="../reference/group_rows.html">group_rows()</a></code> keys; name it explicitly with <code>repeat_cols</code> to carry the row label too:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">wide_split</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics (wide split)"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
-<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
-<span>      group_display <span class="op">=</span> <span class="st">"header_row"</span>,</span>
-<span>      label <span class="op">=</span> <span class="st">""</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"id"</span>, label <span class="op">=</span> <span class="st">""</span><span class="op">)</span> <span class="co"># repeats on every panel</span></span>
-<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span>variable <span class="op">=</span> <span class="st">""</span>, stat_label <span class="op">=</span> <span class="st">""</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span><span class="va">arms</span>, <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/paginate.html">paginate</a></span><span class="op">(</span>panels <span class="op">=</span> <span class="fl">2</span>, continuation <span class="op">=</span> <span class="st">"(continued)"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/paginate.html">paginate</a></span><span class="op">(</span></span>
+<span>    panels <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>    repeat_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"stat_label"</span><span class="op">)</span>, <span class="co"># both ride every panel</span></span>
+<span>    continuation <span class="op">=</span> <span class="st">"(continued)"</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="va">wide_split</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-6f7f574113 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-6f7f574113 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-6f7f574113 p { line-height: inherit; }
-#tabular-6f7f574113 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-6f7f574113 .tabular-caption { margin: 0; padding: 0; }
-#tabular-6f7f574113 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-6f7f574113 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-6f7f574113 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-6f7f574113 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-6f7f574113 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-6f7f574113 .tabular-table th, #tabular-6f7f574113 .tabular-table td { padding: .18rem .6rem; }
-#tabular-6f7f574113 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-6f7f574113 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-6f7f574113 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-6f7f574113 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-6f7f574113 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-6f7f574113 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-6f7f574113 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-6f7f574113 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-6f7f574113 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-6f7f574113 .tabular-table tbody tr td { border-top: none; }
-#tabular-6f7f574113 .tabular-band { text-align: center; }
-#tabular-6f7f574113 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-6f7f574113 .tabular-subgroup-label { font-weight: 600; }
-#tabular-6f7f574113 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-6f7f574113 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-6f7f574113 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-6f7f574113 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-6f7f574113 .text-left { text-align: left; }
-#tabular-6f7f574113 .text-center { text-align: center; }
-#tabular-6f7f574113 .text-right { text-align: right; }
-#tabular-6f7f574113 .tabular-table thead th.text-left { text-align: left; }
-#tabular-6f7f574113 .tabular-table thead th.text-center { text-align: center; }
-#tabular-6f7f574113 .tabular-table thead th.text-right { text-align: right; }
-#tabular-6f7f574113 .tabular-table td.text-left { text-align: left; }
-#tabular-6f7f574113 .tabular-table td.text-center { text-align: center; }
-#tabular-6f7f574113 .tabular-table td.text-right { text-align: right; }
-#tabular-6f7f574113 .valign-top { vertical-align: top; }
-#tabular-6f7f574113 .valign-middle { vertical-align: middle; }
-#tabular-6f7f574113 .valign-bottom { vertical-align: bottom; }
-#tabular-6f7f574113 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-6f7f574113 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-6f7f574113 .tabular-page-break-row { display: none; }
-#tabular-6f7f574113 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-6f7f574113 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-6f7f574113 .tabular-page-header, #tabular-6f7f574113 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-6f7f574113 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-6f7f574113 .tabular-page-footer { margin-top: 1rem; }
-#tabular-6f7f574113 .tabular-page-header-left, #tabular-6f7f574113 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-6f7f574113 .tabular-page-header-center, #tabular-6f7f574113 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-6f7f574113 .tabular-page-header-right, #tabular-6f7f574113 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-6f7f574113 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-6f7f574113 .tabular-table tr { page-break-inside: avoid; } #tabular-6f7f574113 .tabular-page-header, #tabular-6f7f574113 .tabular-page-footer { display: none; } #tabular-6f7f574113 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-6f7f574113 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-6f7f574113 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-dd00b03144 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-dd00b03144 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-dd00b03144 p { line-height: inherit; }
+#tabular-dd00b03144 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-dd00b03144 .tabular-caption { margin: 0; padding: 0; }
+#tabular-dd00b03144 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-dd00b03144 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-dd00b03144 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-dd00b03144 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-dd00b03144 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-dd00b03144 .tabular-table th, #tabular-dd00b03144 .tabular-table td { padding: .18rem .6rem; }
+#tabular-dd00b03144 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-dd00b03144 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-dd00b03144 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-dd00b03144 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-dd00b03144 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-dd00b03144 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-dd00b03144 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-dd00b03144 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-dd00b03144 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-dd00b03144 .tabular-table tbody tr td { border-top: none; }
+#tabular-dd00b03144 .tabular-band { text-align: center; }
+#tabular-dd00b03144 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-dd00b03144 .tabular-subgroup-label { font-weight: 600; }
+#tabular-dd00b03144 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-dd00b03144 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-dd00b03144 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-dd00b03144 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-dd00b03144 .text-left { text-align: left; }
+#tabular-dd00b03144 .text-center { text-align: center; }
+#tabular-dd00b03144 .text-right { text-align: right; }
+#tabular-dd00b03144 .tabular-table thead th.text-left { text-align: left; }
+#tabular-dd00b03144 .tabular-table thead th.text-center { text-align: center; }
+#tabular-dd00b03144 .tabular-table thead th.text-right { text-align: right; }
+#tabular-dd00b03144 .tabular-table td.text-left { text-align: left; }
+#tabular-dd00b03144 .tabular-table td.text-center { text-align: center; }
+#tabular-dd00b03144 .tabular-table td.text-right { text-align: right; }
+#tabular-dd00b03144 .valign-top { vertical-align: top; }
+#tabular-dd00b03144 .valign-middle { vertical-align: middle; }
+#tabular-dd00b03144 .valign-bottom { vertical-align: bottom; }
+#tabular-dd00b03144 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-dd00b03144 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-dd00b03144 .tabular-page-break-row { display: none; }
+#tabular-dd00b03144 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-dd00b03144 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-dd00b03144 .tabular-page-header, #tabular-dd00b03144 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-dd00b03144 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-dd00b03144 .tabular-page-footer { margin-top: 1rem; }
+#tabular-dd00b03144 .tabular-page-header-left, #tabular-dd00b03144 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-dd00b03144 .tabular-page-header-center, #tabular-dd00b03144 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-dd00b03144 .tabular-page-header-right, #tabular-dd00b03144 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-dd00b03144 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-dd00b03144 .tabular-table tr { page-break-inside: avoid; } #tabular-dd00b03144 .tabular-page-header, #tabular-dd00b03144 .tabular-page-footer { display: none; } #tabular-dd00b03144 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-dd00b03144 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-dd00b03144 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-6f7f574113" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-dd00b03144" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Demographics (wide split)</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
@@ -2167,7 +2133,7 @@
 </figure></div>
 </div>
 </div>
-<p>Panels are a paged-backend feature: in HTML and Markdown the table stays one continuous block (the preview above), while RTF, PDF, and DOCX place each panel on its own page with the <code>id</code> / <code>group</code> columns repeated. Emit to a paged backend to see the split:</p>
+<p>Panels are a paged-backend feature: in HTML and Markdown the table stays one continuous block (the preview above), while RTF, PDF, and DOCX place each panel on its own page with the stub columns repeated. Emit to a paged backend to see the split:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">wide_split</span>, <span class="st">"demographics_wide.pdf"</span><span class="op">)</span> <span class="co"># panel 2 carries the (continued) marker</span></span></code></pre></div>
@@ -2186,13 +2152,12 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_subgroup</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_subgroup</span>, titles <span class="op">=</span> <span class="st">"Vital signs by sex"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    sex <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    sex_n <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    paramcd <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    param <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Parameter"</span><span class="op">)</span>,</span>
-<span>    visit <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Visit"</span><span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"id"</span>, label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span></span>
+<span>    param <span class="op">=</span> <span class="st">"Parameter"</span>,</span>
+<span>    visit <span class="op">=</span> <span class="st">"Visit"</span>,</span>
+<span>    stat_label <span class="op">=</span> <span class="st">"Statistic"</span>,</span>
+<span>    .hide <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex"</span>, <span class="st">"sex_n"</span>, <span class="st">"paramcd"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"param"</span>, <span class="st">"visit"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span>,</span>
 <span>    <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
@@ -2200,60 +2165,60 @@
 <span>  <span class="fu"><a href="../reference/subgroup.html">subgroup</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"sex"</span>, label <span class="op">=</span> <span class="st">"Sex: {sex} (N = {sex_n})"</span><span class="op">)</span> <span class="co"># page total in banner</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-ce74bee498 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-ce74bee498 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-ce74bee498 p { line-height: inherit; }
-#tabular-ce74bee498 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-ce74bee498 .tabular-caption { margin: 0; padding: 0; }
-#tabular-ce74bee498 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-ce74bee498 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-ce74bee498 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-ce74bee498 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-ce74bee498 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-ce74bee498 .tabular-table th, #tabular-ce74bee498 .tabular-table td { padding: .18rem .6rem; }
-#tabular-ce74bee498 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-ce74bee498 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-ce74bee498 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-ce74bee498 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-ce74bee498 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-ce74bee498 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-ce74bee498 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-ce74bee498 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-ce74bee498 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-ce74bee498 .tabular-table tbody tr td { border-top: none; }
-#tabular-ce74bee498 .tabular-band { text-align: center; }
-#tabular-ce74bee498 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-ce74bee498 .tabular-subgroup-label { font-weight: 600; }
-#tabular-ce74bee498 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-ce74bee498 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-ce74bee498 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-ce74bee498 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-ce74bee498 .text-left { text-align: left; }
-#tabular-ce74bee498 .text-center { text-align: center; }
-#tabular-ce74bee498 .text-right { text-align: right; }
-#tabular-ce74bee498 .tabular-table thead th.text-left { text-align: left; }
-#tabular-ce74bee498 .tabular-table thead th.text-center { text-align: center; }
-#tabular-ce74bee498 .tabular-table thead th.text-right { text-align: right; }
-#tabular-ce74bee498 .tabular-table td.text-left { text-align: left; }
-#tabular-ce74bee498 .tabular-table td.text-center { text-align: center; }
-#tabular-ce74bee498 .tabular-table td.text-right { text-align: right; }
-#tabular-ce74bee498 .valign-top { vertical-align: top; }
-#tabular-ce74bee498 .valign-middle { vertical-align: middle; }
-#tabular-ce74bee498 .valign-bottom { vertical-align: bottom; }
-#tabular-ce74bee498 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-ce74bee498 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-ce74bee498 .tabular-page-break-row { display: none; }
-#tabular-ce74bee498 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-ce74bee498 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-ce74bee498 .tabular-page-header, #tabular-ce74bee498 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-ce74bee498 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-ce74bee498 .tabular-page-footer { margin-top: 1rem; }
-#tabular-ce74bee498 .tabular-page-header-left, #tabular-ce74bee498 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-ce74bee498 .tabular-page-header-center, #tabular-ce74bee498 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-ce74bee498 .tabular-page-header-right, #tabular-ce74bee498 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-ce74bee498 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-ce74bee498 .tabular-table tr { page-break-inside: avoid; } #tabular-ce74bee498 .tabular-page-header, #tabular-ce74bee498 .tabular-page-footer { display: none; } #tabular-ce74bee498 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-ce74bee498 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-ce74bee498 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-bcb6810405 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-bcb6810405 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-bcb6810405 p { line-height: inherit; }
+#tabular-bcb6810405 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-bcb6810405 .tabular-caption { margin: 0; padding: 0; }
+#tabular-bcb6810405 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-bcb6810405 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-bcb6810405 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-bcb6810405 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-bcb6810405 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-bcb6810405 .tabular-table th, #tabular-bcb6810405 .tabular-table td { padding: .18rem .6rem; }
+#tabular-bcb6810405 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-bcb6810405 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-bcb6810405 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-bcb6810405 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-bcb6810405 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-bcb6810405 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-bcb6810405 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-bcb6810405 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-bcb6810405 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-bcb6810405 .tabular-table tbody tr td { border-top: none; }
+#tabular-bcb6810405 .tabular-band { text-align: center; }
+#tabular-bcb6810405 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-bcb6810405 .tabular-subgroup-label { font-weight: 600; }
+#tabular-bcb6810405 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-bcb6810405 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-bcb6810405 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-bcb6810405 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-bcb6810405 .text-left { text-align: left; }
+#tabular-bcb6810405 .text-center { text-align: center; }
+#tabular-bcb6810405 .text-right { text-align: right; }
+#tabular-bcb6810405 .tabular-table thead th.text-left { text-align: left; }
+#tabular-bcb6810405 .tabular-table thead th.text-center { text-align: center; }
+#tabular-bcb6810405 .tabular-table thead th.text-right { text-align: right; }
+#tabular-bcb6810405 .tabular-table td.text-left { text-align: left; }
+#tabular-bcb6810405 .tabular-table td.text-center { text-align: center; }
+#tabular-bcb6810405 .tabular-table td.text-right { text-align: right; }
+#tabular-bcb6810405 .valign-top { vertical-align: top; }
+#tabular-bcb6810405 .valign-middle { vertical-align: middle; }
+#tabular-bcb6810405 .valign-bottom { vertical-align: bottom; }
+#tabular-bcb6810405 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-bcb6810405 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-bcb6810405 .tabular-page-break-row { display: none; }
+#tabular-bcb6810405 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-bcb6810405 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-bcb6810405 .tabular-page-header, #tabular-bcb6810405 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-bcb6810405 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-bcb6810405 .tabular-page-footer { margin-top: 1rem; }
+#tabular-bcb6810405 .tabular-page-header-left, #tabular-bcb6810405 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-bcb6810405 .tabular-page-header-center, #tabular-bcb6810405 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-bcb6810405 .tabular-page-header-right, #tabular-bcb6810405 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-bcb6810405 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-bcb6810405 .tabular-table tr { page-break-inside: avoid; } #tabular-bcb6810405 .tabular-page-header, #tabular-bcb6810405 .tabular-page-footer { display: none; } #tabular-bcb6810405 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-bcb6810405 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-bcb6810405 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-ce74bee498" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-bcb6810405" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Vital signs by sex</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
@@ -2843,12 +2808,12 @@
 <span></span>
 <span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_subgroup</span>, titles <span class="op">=</span> <span class="st">"Vital signs by sex"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    sex_n <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    paramcd <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>    param <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Parameter"</span><span class="op">)</span>,</span>
-<span>    visit <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Visit"</span><span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"id"</span>, label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span></span>
+<span>    param <span class="op">=</span> <span class="st">"Parameter"</span>,</span>
+<span>    visit <span class="op">=</span> <span class="st">"Visit"</span>,</span>
+<span>    stat_label <span class="op">=</span> <span class="st">"Statistic"</span>,</span>
+<span>    .hide <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sex_n"</span>, <span class="st">"paramcd"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"param"</span>, <span class="st">"visit"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span>,</span>
 <span>    <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
@@ -2856,60 +2821,60 @@
 <span>  <span class="fu"><a href="../reference/subgroup.html">subgroup</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"sex"</span>, label <span class="op">=</span> <span class="st">"Sex: {sex}"</span>, big_n <span class="op">=</span> <span class="va">big_n</span><span class="op">)</span> <span class="co"># per-page (N=) per arm</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-7c1c117436 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-7c1c117436 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-7c1c117436 p { line-height: inherit; }
-#tabular-7c1c117436 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-7c1c117436 .tabular-caption { margin: 0; padding: 0; }
-#tabular-7c1c117436 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-7c1c117436 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-7c1c117436 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-7c1c117436 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-7c1c117436 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-7c1c117436 .tabular-table th, #tabular-7c1c117436 .tabular-table td { padding: .18rem .6rem; }
-#tabular-7c1c117436 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-7c1c117436 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-7c1c117436 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-7c1c117436 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-7c1c117436 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-7c1c117436 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-7c1c117436 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-7c1c117436 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-7c1c117436 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-7c1c117436 .tabular-table tbody tr td { border-top: none; }
-#tabular-7c1c117436 .tabular-band { text-align: center; }
-#tabular-7c1c117436 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-7c1c117436 .tabular-subgroup-label { font-weight: 600; }
-#tabular-7c1c117436 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-7c1c117436 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-7c1c117436 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-7c1c117436 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-7c1c117436 .text-left { text-align: left; }
-#tabular-7c1c117436 .text-center { text-align: center; }
-#tabular-7c1c117436 .text-right { text-align: right; }
-#tabular-7c1c117436 .tabular-table thead th.text-left { text-align: left; }
-#tabular-7c1c117436 .tabular-table thead th.text-center { text-align: center; }
-#tabular-7c1c117436 .tabular-table thead th.text-right { text-align: right; }
-#tabular-7c1c117436 .tabular-table td.text-left { text-align: left; }
-#tabular-7c1c117436 .tabular-table td.text-center { text-align: center; }
-#tabular-7c1c117436 .tabular-table td.text-right { text-align: right; }
-#tabular-7c1c117436 .valign-top { vertical-align: top; }
-#tabular-7c1c117436 .valign-middle { vertical-align: middle; }
-#tabular-7c1c117436 .valign-bottom { vertical-align: bottom; }
-#tabular-7c1c117436 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-7c1c117436 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-7c1c117436 .tabular-page-break-row { display: none; }
-#tabular-7c1c117436 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-7c1c117436 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-7c1c117436 .tabular-page-header, #tabular-7c1c117436 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-7c1c117436 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-7c1c117436 .tabular-page-footer { margin-top: 1rem; }
-#tabular-7c1c117436 .tabular-page-header-left, #tabular-7c1c117436 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-7c1c117436 .tabular-page-header-center, #tabular-7c1c117436 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-7c1c117436 .tabular-page-header-right, #tabular-7c1c117436 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-7c1c117436 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-7c1c117436 .tabular-table tr { page-break-inside: avoid; } #tabular-7c1c117436 .tabular-page-header, #tabular-7c1c117436 .tabular-page-footer { display: none; } #tabular-7c1c117436 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-7c1c117436 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-7c1c117436 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-0866e37d40 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-0866e37d40 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-0866e37d40 p { line-height: inherit; }
+#tabular-0866e37d40 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-0866e37d40 .tabular-caption { margin: 0; padding: 0; }
+#tabular-0866e37d40 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-0866e37d40 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-0866e37d40 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-0866e37d40 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-0866e37d40 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-0866e37d40 .tabular-table th, #tabular-0866e37d40 .tabular-table td { padding: .18rem .6rem; }
+#tabular-0866e37d40 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-0866e37d40 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-0866e37d40 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-0866e37d40 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-0866e37d40 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-0866e37d40 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-0866e37d40 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-0866e37d40 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-0866e37d40 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-0866e37d40 .tabular-table tbody tr td { border-top: none; }
+#tabular-0866e37d40 .tabular-band { text-align: center; }
+#tabular-0866e37d40 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-0866e37d40 .tabular-subgroup-label { font-weight: 600; }
+#tabular-0866e37d40 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-0866e37d40 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-0866e37d40 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-0866e37d40 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-0866e37d40 .text-left { text-align: left; }
+#tabular-0866e37d40 .text-center { text-align: center; }
+#tabular-0866e37d40 .text-right { text-align: right; }
+#tabular-0866e37d40 .tabular-table thead th.text-left { text-align: left; }
+#tabular-0866e37d40 .tabular-table thead th.text-center { text-align: center; }
+#tabular-0866e37d40 .tabular-table thead th.text-right { text-align: right; }
+#tabular-0866e37d40 .tabular-table td.text-left { text-align: left; }
+#tabular-0866e37d40 .tabular-table td.text-center { text-align: center; }
+#tabular-0866e37d40 .tabular-table td.text-right { text-align: right; }
+#tabular-0866e37d40 .valign-top { vertical-align: top; }
+#tabular-0866e37d40 .valign-middle { vertical-align: middle; }
+#tabular-0866e37d40 .valign-bottom { vertical-align: bottom; }
+#tabular-0866e37d40 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-0866e37d40 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-0866e37d40 .tabular-page-break-row { display: none; }
+#tabular-0866e37d40 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-0866e37d40 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-0866e37d40 .tabular-page-header, #tabular-0866e37d40 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-0866e37d40 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-0866e37d40 .tabular-page-footer { margin-top: 1rem; }
+#tabular-0866e37d40 .tabular-page-header-left, #tabular-0866e37d40 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-0866e37d40 .tabular-page-header-center, #tabular-0866e37d40 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-0866e37d40 .tabular-page-header-right, #tabular-0866e37d40 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-0866e37d40 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-0866e37d40 .tabular-table tr { page-break-inside: avoid; } #tabular-0866e37d40 .tabular-page-header, #tabular-0866e37d40 .tabular-page-footer { display: none; } #tabular-0866e37d40 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-0866e37d40 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-0866e37d40 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-7c1c117436" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-0866e37d40" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Vital signs by sex</p>
 <p class="tabular-pad"> </p>
 </figcaption><div class="tabular-table-wrap">
@@ -3521,8 +3486,8 @@
 <span>  footnotes <span class="op">=</span> <span class="st">"No subjects met the inclusion criteria for this cohort."</span>,</span>
 <span>  empty_text <span class="op">=</span> <span class="st">"No data available to report"</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span>
 <span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span>
 <span>    placebo <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
 <span>    drug_50 <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50 mg"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span>
@@ -3531,60 +3496,60 @@
 <span>  <span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <style>
-#tabular-172417c892 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-172417c892 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-172417c892 p { line-height: inherit; }
-#tabular-172417c892 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-172417c892 .tabular-caption { margin: 0; padding: 0; }
-#tabular-172417c892 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-172417c892 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-172417c892 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-172417c892 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-172417c892 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-172417c892 .tabular-table th, #tabular-172417c892 .tabular-table td { padding: .18rem .6rem; }
-#tabular-172417c892 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-172417c892 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-172417c892 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-172417c892 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-172417c892 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-172417c892 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-172417c892 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-172417c892 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-172417c892 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-172417c892 .tabular-table tbody tr td { border-top: none; }
-#tabular-172417c892 .tabular-band { text-align: center; }
-#tabular-172417c892 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-172417c892 .tabular-subgroup-label { font-weight: 600; }
-#tabular-172417c892 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-172417c892 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-172417c892 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-172417c892 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-172417c892 .text-left { text-align: left; }
-#tabular-172417c892 .text-center { text-align: center; }
-#tabular-172417c892 .text-right { text-align: right; }
-#tabular-172417c892 .tabular-table thead th.text-left { text-align: left; }
-#tabular-172417c892 .tabular-table thead th.text-center { text-align: center; }
-#tabular-172417c892 .tabular-table thead th.text-right { text-align: right; }
-#tabular-172417c892 .tabular-table td.text-left { text-align: left; }
-#tabular-172417c892 .tabular-table td.text-center { text-align: center; }
-#tabular-172417c892 .tabular-table td.text-right { text-align: right; }
-#tabular-172417c892 .valign-top { vertical-align: top; }
-#tabular-172417c892 .valign-middle { vertical-align: middle; }
-#tabular-172417c892 .valign-bottom { vertical-align: bottom; }
-#tabular-172417c892 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-172417c892 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-172417c892 .tabular-page-break-row { display: none; }
-#tabular-172417c892 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-172417c892 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-172417c892 .tabular-page-header, #tabular-172417c892 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-172417c892 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-172417c892 .tabular-page-footer { margin-top: 1rem; }
-#tabular-172417c892 .tabular-page-header-left, #tabular-172417c892 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-172417c892 .tabular-page-header-center, #tabular-172417c892 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-172417c892 .tabular-page-header-right, #tabular-172417c892 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-172417c892 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-172417c892 .tabular-table tr { page-break-inside: avoid; } #tabular-172417c892 .tabular-page-header, #tabular-172417c892 .tabular-page-footer { display: none; } #tabular-172417c892 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-172417c892 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-172417c892 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-752a2eb4dc { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-752a2eb4dc .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-752a2eb4dc p { line-height: inherit; }
+#tabular-752a2eb4dc .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-752a2eb4dc .tabular-caption { margin: 0; padding: 0; }
+#tabular-752a2eb4dc .tabular-pad { margin: 0; line-height: 1; }
+#tabular-752a2eb4dc .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-752a2eb4dc .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-752a2eb4dc .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-752a2eb4dc .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-752a2eb4dc .tabular-table th, #tabular-752a2eb4dc .tabular-table td { padding: .18rem .6rem; }
+#tabular-752a2eb4dc .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-752a2eb4dc .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-752a2eb4dc .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-752a2eb4dc .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-752a2eb4dc .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-752a2eb4dc .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-752a2eb4dc .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-752a2eb4dc .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-752a2eb4dc .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-752a2eb4dc .tabular-table tbody tr td { border-top: none; }
+#tabular-752a2eb4dc .tabular-band { text-align: center; }
+#tabular-752a2eb4dc .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-752a2eb4dc .tabular-subgroup-label { font-weight: 600; }
+#tabular-752a2eb4dc .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-752a2eb4dc .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-752a2eb4dc .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-752a2eb4dc .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-752a2eb4dc .text-left { text-align: left; }
+#tabular-752a2eb4dc .text-center { text-align: center; }
+#tabular-752a2eb4dc .text-right { text-align: right; }
+#tabular-752a2eb4dc .tabular-table thead th.text-left { text-align: left; }
+#tabular-752a2eb4dc .tabular-table thead th.text-center { text-align: center; }
+#tabular-752a2eb4dc .tabular-table thead th.text-right { text-align: right; }
+#tabular-752a2eb4dc .tabular-table td.text-left { text-align: left; }
+#tabular-752a2eb4dc .tabular-table td.text-center { text-align: center; }
+#tabular-752a2eb4dc .tabular-table td.text-right { text-align: right; }
+#tabular-752a2eb4dc .valign-top { vertical-align: top; }
+#tabular-752a2eb4dc .valign-middle { vertical-align: middle; }
+#tabular-752a2eb4dc .valign-bottom { vertical-align: bottom; }
+#tabular-752a2eb4dc .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-752a2eb4dc .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-752a2eb4dc .tabular-page-break-row { display: none; }
+#tabular-752a2eb4dc { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-752a2eb4dc .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-752a2eb4dc .tabular-page-header, #tabular-752a2eb4dc .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-752a2eb4dc .tabular-page-header { margin-bottom: 1rem; }
+#tabular-752a2eb4dc .tabular-page-footer { margin-top: 1rem; }
+#tabular-752a2eb4dc .tabular-page-header-left, #tabular-752a2eb4dc .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-752a2eb4dc .tabular-page-header-center, #tabular-752a2eb4dc .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-752a2eb4dc .tabular-page-header-right, #tabular-752a2eb4dc .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-752a2eb4dc .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-752a2eb4dc .tabular-table tr { page-break-inside: avoid; } #tabular-752a2eb4dc .tabular-page-header, #tabular-752a2eb4dc .tabular-page-footer { display: none; } #tabular-752a2eb4dc .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-752a2eb4dc .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-752a2eb4dc .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 </style>
-<div id="tabular-172417c892" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<div id="tabular-752a2eb4dc" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
 <p class="tabular-title">Table 14.1.1</p>
 <p class="tabular-title">Demographic and Baseline Characteristics</p>
 <p class="tabular-title">Safety Population</p>
@@ -3593,7 +3558,7 @@
 
 <table class="table tabular-table caption-top">
 <thead><tr class="header">
-<th style="text-align: center;" data-quarto-table-cell-role="th">Characteristic</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">variable</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">Statistic</th>
 <th class="text-center" style="text-align: center;" data-quarto-table-cell-role="th">Placebo</th>
 <th class="text-center" style="text-align: center;" data-quarto-table-cell-role="th">Drug 50 mg</th>
@@ -3703,7 +3668,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

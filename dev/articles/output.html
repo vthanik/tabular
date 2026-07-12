@@ -102,13 +102,10 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
-<span>      usage <span class="op">=</span> <span class="st">"group"</span>,</span>
-<span>      group_display <span class="op">=</span> <span class="st">"header_row"</span>,</span>
-<span>      label <span class="op">=</span> <span class="st">""</span></span>
-<span>    <span class="op">)</span>,</span>
+<span>    variable <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">""</span><span class="op">)</span>,</span>
 <span>    stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rtf"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span>
@@ -200,14 +197,14 @@
 <p>² On HTML/MD the per-page N renders as a row under each subgroup banner instead of in the repeating header.</p>
 </section><section class="level2"><h2 id="system-requirements">System requirements<a class="anchor" aria-label="anchor" href="#system-requirements"></a>
 </h2>
-<p><strong>RTF, HTML, DOCX, Markdown need nothing beyond the R package.</strong> Only PDF has a system dependency — a LaTeX engine plus the packages the backend uses (<code>tabularray</code>, <code>ninecolors</code>, <code>siunitx</code>, <code>tex-gyre</code>, …). Check and install:</p>
+<p><strong>RTF, HTML, DOCX, Markdown need nothing beyond the R package.</strong> Only PDF has a system dependency — a LaTeX engine. The two packages missing from common TeX distributions (<code>tabularray</code>, <code>ninecolors</code>) ship <em>with</em> <code>tabular</code> and are staged next to the generated <code>.tex</code> whenever the local TeX cannot resolve them, so a locked-down server (Domino, Posit Workbench) needs no <code>tlmgr install</code>. Check readiness and, on a fresh machine, install a TeX once:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_latex.html">check_latex</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># reports what's missing + the exact command</span></span>
-<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/tlmgr.html" class="external-link">tlmgr_install</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"tabularray"</span>, <span class="st">"ninecolors"</span>, <span class="st">"siunitx"</span>, <span class="st">"tex-gyre"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_latex.html">check_latex</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># probes via kpsewhich — what a compile will actually find</span></span>
+<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">install_tinytex</a></span><span class="op">(</span>bundle <span class="op">=</span> <span class="st">"TinyTeX"</span><span class="op">)</span> <span class="co"># one-time, fresh machines only</span></span></code></pre></div>
 </div>
 <blockquote>
-<p><strong>OS-managed TeX Live (RHEL/dnf, Debian/apt):</strong> <code>tlmgr</code> is locked and refuses to install (“will likely destroy the … TeXLive install”). Do <strong>not</strong> force it with <code>--ignore-warning</code>. Install a user-space TinyTeX you control instead: <code><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">tinytex::install_tinytex()</a></code>, restart R, then <code>tlmgr_install(...)</code>.</p>
+<p><strong>OS-managed TeX Live (RHEL/dnf, Debian/apt):</strong> <code>tlmgr</code> is locked and refuses to install (“will likely destroy the … TeXLive install”). Do <strong>not</strong> force it with <code>--ignore-warning</code>. Usually nothing is needed anyway — the bundled copies cover the gap; if <code><a href="../reference/check_latex.html">check_latex()</a></code> still reports a missing package, install a user-space TinyTeX you control: <code>tinytex::install_tinytex(bundle = "TinyTeX")</code>, then restart R.</p>
 </blockquote>
 <p>For decimal alignment in paper backends, metric-compatible fonts matter — check with <code>check_fonts(spec)</code>.</p>
 </section><section class="level2"><h2 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
@@ -354,7 +351,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

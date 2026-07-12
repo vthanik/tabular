@@ -4,8 +4,9 @@ Apply the stripped-down table look in one verb. The column-label divider
 (`midrule`) becomes the only rule drawn, and every bold-by-default
 surface renders in normal weight: the title block, the column-header
 band, the subgroup banner, and the section-header rows synthesized for
-`usage = "group"` columns. The analogue of ggplot2's `theme_minimal()`,
-composable on the pipe between the build verbs and the terminal
+[`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
+keys. The analogue of ggplot2's `theme_minimal()`, composable on the
+pipe between the build verbs and the terminal
 [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) /
 [`as_grid()`](https://vthanik.github.io/tabular/dev/reference/as_grid.md).
 
@@ -120,56 +121,56 @@ tabular(
   ) |>
   preset_minimal()
 
-#tabular-e0179cf22d { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-e0179cf22d .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-e0179cf22d p { line-height: inherit; }
-#tabular-e0179cf22d .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-e0179cf22d .tabular-caption { margin: 0; padding: 0; }
-#tabular-e0179cf22d .tabular-pad { margin: 0; line-height: 1; }
-#tabular-e0179cf22d .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-e0179cf22d .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-e0179cf22d .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-e0179cf22d .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-e0179cf22d .tabular-table th, #tabular-e0179cf22d .tabular-table td { padding: .18rem .6rem; }
-#tabular-e0179cf22d .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-e0179cf22d .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-e0179cf22d .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-e0179cf22d .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-e0179cf22d .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-e0179cf22d .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-e0179cf22d .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-e0179cf22d .tabular-table tbody tr td { border-top: none; }
-#tabular-e0179cf22d .tabular-band { text-align: center; }
-#tabular-e0179cf22d .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-e0179cf22d .tabular-subgroup-label { font-weight: 600; }
-#tabular-e0179cf22d .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-e0179cf22d .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-e0179cf22d .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-e0179cf22d .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-e0179cf22d .text-left { text-align: left; }
-#tabular-e0179cf22d .text-center { text-align: center; }
-#tabular-e0179cf22d .text-right { text-align: right; }
-#tabular-e0179cf22d .tabular-table thead th.text-left { text-align: left; }
-#tabular-e0179cf22d .tabular-table thead th.text-center { text-align: center; }
-#tabular-e0179cf22d .tabular-table thead th.text-right { text-align: right; }
-#tabular-e0179cf22d .tabular-table td.text-left { text-align: left; }
-#tabular-e0179cf22d .tabular-table td.text-center { text-align: center; }
-#tabular-e0179cf22d .tabular-table td.text-right { text-align: right; }
-#tabular-e0179cf22d .valign-top { vertical-align: top; }
-#tabular-e0179cf22d .valign-middle { vertical-align: middle; }
-#tabular-e0179cf22d .valign-bottom { vertical-align: bottom; }
-#tabular-e0179cf22d .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-e0179cf22d .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-e0179cf22d .tabular-page-break-row { display: none; }
-#tabular-e0179cf22d { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-e0179cf22d .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-e0179cf22d .tabular-page-header, #tabular-e0179cf22d .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-e0179cf22d .tabular-page-header { margin-bottom: 1rem; }
-#tabular-e0179cf22d .tabular-page-footer { margin-top: 1rem; }
-#tabular-e0179cf22d .tabular-page-header-left, #tabular-e0179cf22d .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-e0179cf22d .tabular-page-header-center, #tabular-e0179cf22d .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-e0179cf22d .tabular-page-header-right, #tabular-e0179cf22d .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-e0179cf22d .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-e0179cf22d .tabular-table tr { page-break-inside: avoid; } #tabular-e0179cf22d .tabular-page-header, #tabular-e0179cf22d .tabular-page-footer { display: none; } #tabular-e0179cf22d .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-e0179cf22d .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-e0179cf22d .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-8e8c2851ff { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-8e8c2851ff .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-8e8c2851ff p { line-height: inherit; }
+#tabular-8e8c2851ff .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-8e8c2851ff .tabular-caption { margin: 0; padding: 0; }
+#tabular-8e8c2851ff .tabular-pad { margin: 0; line-height: 1; }
+#tabular-8e8c2851ff .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-8e8c2851ff .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-8e8c2851ff .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-8e8c2851ff .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-8e8c2851ff .tabular-table th, #tabular-8e8c2851ff .tabular-table td { padding: .18rem .6rem; }
+#tabular-8e8c2851ff .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-8e8c2851ff .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-8e8c2851ff .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-8e8c2851ff .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-8e8c2851ff .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-8e8c2851ff .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-8e8c2851ff .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-8e8c2851ff .tabular-table tbody tr td { border-top: none; }
+#tabular-8e8c2851ff .tabular-band { text-align: center; }
+#tabular-8e8c2851ff .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-8e8c2851ff .tabular-subgroup-label { font-weight: 600; }
+#tabular-8e8c2851ff .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-8e8c2851ff .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-8e8c2851ff .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-8e8c2851ff .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-8e8c2851ff .text-left { text-align: left; }
+#tabular-8e8c2851ff .text-center { text-align: center; }
+#tabular-8e8c2851ff .text-right { text-align: right; }
+#tabular-8e8c2851ff .tabular-table thead th.text-left { text-align: left; }
+#tabular-8e8c2851ff .tabular-table thead th.text-center { text-align: center; }
+#tabular-8e8c2851ff .tabular-table thead th.text-right { text-align: right; }
+#tabular-8e8c2851ff .tabular-table td.text-left { text-align: left; }
+#tabular-8e8c2851ff .tabular-table td.text-center { text-align: center; }
+#tabular-8e8c2851ff .tabular-table td.text-right { text-align: right; }
+#tabular-8e8c2851ff .valign-top { vertical-align: top; }
+#tabular-8e8c2851ff .valign-middle { vertical-align: middle; }
+#tabular-8e8c2851ff .valign-bottom { vertical-align: bottom; }
+#tabular-8e8c2851ff .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-8e8c2851ff .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-8e8c2851ff .tabular-page-break-row { display: none; }
+#tabular-8e8c2851ff { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-8e8c2851ff .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-8e8c2851ff .tabular-page-header, #tabular-8e8c2851ff .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-8e8c2851ff .tabular-page-header { margin-bottom: 1rem; }
+#tabular-8e8c2851ff .tabular-page-footer { margin-top: 1rem; }
+#tabular-8e8c2851ff .tabular-page-header-left, #tabular-8e8c2851ff .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-8e8c2851ff .tabular-page-header-center, #tabular-8e8c2851ff .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-8e8c2851ff .tabular-page-header-right, #tabular-8e8c2851ff .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-8e8c2851ff .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-8e8c2851ff .tabular-table tr { page-break-inside: avoid; } #tabular-8e8c2851ff .tabular-page-header, #tabular-8e8c2851ff .tabular-page-footer { display: none; } #tabular-8e8c2851ff .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-8e8c2851ff .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-8e8c2851ff .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.3.1

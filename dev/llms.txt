@@ -43,7 +43,7 @@ R dependencies install automatically. The five backends differ in what
 |----|:---|
 | RTF, DOCX, HTML, Markdown | none — pure R, no Java, no `pandoc`, no Office |
 | LaTeX (`.tex` source) | none — `tabular` writes the fragment |
-| PDF | a TeX install (xelatex) with `tabularray` + `ninecolors` |
+| PDF | a TeX install (xelatex) — `tabularray` + `ninecolors` ship with `tabular` |
 
 PDF is the only backend that shells out. Install
 [`tinytex`](https://yihui.org/tinytex/) once per machine and `tabular`
@@ -52,14 +52,20 @@ compiles with `xelatex` thereafter:
 ``` r
 
 install.packages("tinytex")
-tinytex::install_tinytex() # one-time TeX setup
-tinytex::tlmgr_install(c("tabularray", "ninecolors", "siunitx", "tex-gyre"))
+tinytex::install_tinytex(bundle = "TinyTeX") # one-time TeX setup
 ```
 
+No `tlmgr_install()` step is needed: `tabular` bundles the only two
+LaTeX packages missing from common TeX distributions (`tabularray`,
+`ninecolors`) and stages them next to the generated `.tex` whenever the
+local TeX cannot resolve them — so PDF also works on locked-down servers
+(Domino, Posit Workbench) where `tlmgr install` is impossible.
+
 [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
-reports which LaTeX packages are present and prints the exact
-`tlmgr_install()` line for anything missing; `check_fonts(spec)` does
-the same for the fonts a spec asks for, per backend.
+reports which LaTeX packages resolve (probed through `kpsewhich`, the
+same resolver `xelatex` uses) and prints the remedy for anything
+genuinely missing; `check_fonts(spec)` does the same for the fonts a
+spec asks for, per backend.
 
 ``` r
 
@@ -104,8 +110,8 @@ tab <- tabular(
   footnotes = "Percentages are based on the number of subjects per treatment group."
 ) |>
   cols(
-    variable = col_spec(usage = "group", label = "Characteristic"),
-    stat_label = col_spec(label = "Statistic"),
+    variable = "Characteristic",
+    stat_label = "Statistic",
     placebo = col_spec(
       label = "Placebo (N={n['placebo']})",
       align = "decimal"
@@ -119,7 +125,8 @@ tab <- tabular(
       align = "decimal"
     ),
     Total = col_spec(label = "Total (N={n['Total']})", align = "decimal")
-  )
+  ) |>
+  group_rows(by = "variable")
 
 # render to any backend by file extension (or format = "...")
 path <- emit(tab, tempfile(fileext = ".rtf")) # submission deliverable
@@ -241,9 +248,9 @@ list input emits one figure per page.
 
 ## Spec building
 
-Configure per-column display, header bands, sort order, and subgrouping.
-Each verb attaches one slot onto the spec and returns the updated spec
-for chaining.
+Configure per-column display, row grouping, header bands, sort order,
+and subgrouping. Each verb attaches one slot onto the spec and returns
+the updated spec for chaining.
 
 - [`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md) :
   Attach per-column specifications
@@ -251,6 +258,8 @@ for chaining.
   : Apply one column spec to many columns
 - [`col_spec()`](https://vthanik.github.io/tabular/dev/reference/col_spec.md)
   : Per-column display specification
+- [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
+  : Declare the row-grouping structure of the table
 - [`headers()`](https://vthanik.github.io/tabular/dev/reference/headers.md)
   : Attach multi-level column headers
 - [`sort_rows()`](https://vthanik.github.io/tabular/dev/reference/sort_rows.md)
@@ -393,6 +402,7 @@ Class predicates for tabular’s S7 objects.
   [`.col_spec_class`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`header_node`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`sort_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
+  [`row_group_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`subgroup_spec`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`style_node`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
   [`style_layer`](https://vthanik.github.io/tabular/dev/reference/tabular_classes.md)
@@ -410,6 +420,7 @@ Class predicates for tabular’s S7 objects.
   [`is_col_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
   [`is_header_node()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
   [`is_sort_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
+  [`is_row_group_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
   [`is_style_node()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
   [`is_style_layer()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)
   [`is_style_spec()`](https://vthanik.github.io/tabular/dev/reference/tabular_predicates.md)

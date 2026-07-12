@@ -42,9 +42,26 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="tabular-development-version">tabular (development version)<a class="anchor" aria-label="anchor" href="#tabular-development-version"></a></h2>
+<div class="section level3">
+<h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
+<ul><li><p><code><a href="../reference/cols.html">cols()</a></code> accepts a bare string as label shorthand (<code>soc = "SOC / PT"</code> is <code>soc = col_spec(label = "SOC / PT")</code>, including glue interpolation and the deferred <code>{.name}</code> token) and a <code>.hide</code> argument that hides the named columns in one flat vector.</p></li>
+<li><p><code><a href="../reference/paginate.html">paginate()</a></code> keep-together protection on the natively-paginating backends (RTF, DOCX) now emits edge-only row glue instead of gluing a whole fitting block, so a block that fits a fresh page but not the space left on the current one no longer bumps wholesale and strands a near-empty page; widow/orphan floors count content rows only, with trailing blank spacer rows still riding with their block.</p></li>
+<li><p><code>paginate(keep_together = )</code> now accepts any column of <code>data</code> (including hidden block-key columns), not only <code>usage = "group"</code> columns.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="breaking-changes-development-version">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-development-version"></a></h3>
+<ul><li><p><code><a href="../reference/col_spec.html">col_spec()</a></code> no longer has <code>usage</code>, <code>group_display</code>, or <code>group_skip</code> arguments; row grouping is a table-level fact and is now declared once with the new <code><a href="../reference/group_rows.html">group_rows()</a></code> verb. The inert-knob warning for <code>group_display</code>/<code>group_skip</code> on non-group columns is gone with them.</p></li>
+<li><p><code><a href="../reference/group_rows.html">group_rows()</a></code> is the new structural verb: <code>group_rows(by, display, skip)</code> names the grouping key columns outer to inner with per-key display (<code>"header_row"</code>, <code>"column"</code>, <code>"column_repeat"</code>, or the new break-only <code>"none"</code>) and per-key blank-spacer control; it replaces a prior declaration wholesale, and its keys may not overlap <code>subgroup(by = )</code>.</p></li>
+<li><p><code><a href="../reference/paginate.html">paginate()</a></code> gained <code>repeat_cols</code>, replacing the <code>usage = "id"</code> role: the horizontal-panel stub defaults to the visible <code><a href="../reference/group_rows.html">group_rows()</a></code> keys, and an explicit <code>repeat_cols</code> vector replaces that default.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="minor-improvements-and-bug-fixes-development-version">Minor improvements and bug fixes<a class="anchor" aria-label="anchor" href="#minor-improvements-and-bug-fixes-development-version"></a></h3>
+<ul><li><p><code><a href="../reference/check_latex.html">check_latex()</a></code> now probes package availability through <code>kpsewhich</code> (the resolver xelatex itself uses) instead of the tlmgr package database, fixing all-missing false negatives on apt-installed TeX Live and frozen TinyTeX images, no longer requires the tinytex R package, and reports a new <code>bundled</code> column.</p></li>
+<li><p><code><a href="../reference/emit.html">emit()</a></code> PDF output now works on TeX installations that lack <code>tabularray</code> / <code>ninecolors</code> and cannot run <code>tlmgr install</code> (locked-down Domino / Posit Workbench images): tabular ships verbatim CTAN copies of both single-file packages in <code>inst/tex/</code> and stages them next to the generated <code>.tex</code> at compile time whenever the local TeX cannot resolve them.</p></li>
+</ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.0" id="tabular-020">tabular 0.2.0<a class="anchor" aria-label="anchor" href="#tabular-020"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.2.0" id="tabular-020">tabular 0.2.0<a class="anchor" aria-label="anchor" href="#tabular-020"></a></h2><p class="text-muted">CRAN release: 2026-07-06</p>
 <div class="section level3">
 <h3 id="new-features-0-2-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-2-0"></a></h3>
 <ul><li><p>The documentation site gained an AI / Agents section linking a tabular skill (for LLM coding agents), the auto-generated <code>llms.txt</code>, and a concatenated <code>llms-full.txt</code>, mirroring the LLM-friendly documentation pattern.</p></li>
@@ -173,7 +190,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
