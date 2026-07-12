@@ -1122,9 +1122,9 @@ aesocpt_tbl |>
 ## Best overall response and response rates
 
 The efficacy companion: `group_label` synthesises one bold section band
-per analysis block (best overall response, ORR, CBR, DCR) via
-`header_row`, with indented response rows beneath. Denominators come
-from `cdisc_eff_n`.
+per analysis block (best overall response, ORR, CBR, DCR) via the
+default `"section"` display, with indented response rows beneath.
+Denominators come from `cdisc_eff_n`.
 
 ``` r
 
@@ -1286,15 +1286,22 @@ not cover cosmetics (see
 Row structure is a fact about the whole table, so it is declared once
 with
 [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
-— not per column. `by` names the grouping key columns, ordered outer to
-inner; `display` picks how each level renders:
+— not per column. `by` names only the **structural** grouping key
+columns (section headers and hidden break keys), ordered outer to inner.
+The visible row-label column (the statistic stub) is an ordinary
+[`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
+column, not a grouping key — it is indented automatically. `display` (a
+single value) picks how the keys render:
 
 | `display` | Use it for | Behaviour |
 |----|----|----|
-| `"header_row"` *(default)* | section variable (e.g. parameter) | each value becomes a **section-header row**; the key column is hidden |
-| `"column"` | a visible row label | column stays; repeated values are suppressed |
-| `"column_repeat"` | a visible row label | column stays; every row repeats the value |
-| `"none"` | a hidden block key | break-only: no header, no column — just group transitions |
+| `"section"` *(default)* | section variable (e.g. parameter) | each value becomes a **section-header row**; the key column is hidden |
+| `"collapse"` | a visible row label | column stays; repeated values are suppressed |
+| `"repeat"` | a visible row label | column stays; every row repeats the value |
+
+A **break-only key** — hidden, contributing only group transitions (the
+blank spacer and decimal-section reset) — is not a `display` mode: mark
+the key `col_spec(visible = FALSE)` and list it in `by`.
 
 [`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
 handles the per-column cosmetics — labels (`x = "Label"` is shorthand
@@ -1343,7 +1350,7 @@ attaches one shared `col_spec` to **all** the arm columns at once — use
 it instead of repeating `cols(placebo = …, drug_50 = …)` for a variable
 number of arms.
 
-> **Indent from exactly one source.** `display = "header_row"` already
+> **Indent from exactly one source.** `display = "section"` already
 > indents its child rows one level, so the stub column (here
 > `stat_label`) needs **no** `indent` — the section supplies it. (An
 > explicit `indent` on the host *overrides* that auto-indent rather than
@@ -1353,6 +1360,226 @@ number of arms.
 > which come out with a leading indent baked into the string: keep them
 > as-is or [`trimws()`](https://rdrr.io/r/base/trimws.html) them and set
 > `indent` yourself — don’t double up.
+
+### Display modes and spacing
+
+The default `display = "section"` is the submission shape. For a
+listing, `display = "collapse"` keeps the keys as visible columns and
+suppresses the repeats, so only the first row of each run carries the
+label — swap in `"repeat"` when every row must be self-describing (an
+export or QC view):
+
+``` r
+
+data(cdisc_saf_vital, package = "tabular")
+
+tabular(cdisc_saf_vital, titles = "Vital Signs Listing") |>
+  cols(
+    paramcd = col_spec(visible = FALSE),
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic"
+  ) |>
+  cols_apply(
+    c("placebo", "drug_50", "drug_100"),
+    col_spec(align = "decimal")
+  ) |>
+  group_rows(by = c("param", "visit"), display = "collapse", skip = FALSE)
+```
+
+| Parameter | Visit | Statistic | placebo | drug_50 | drug_100 |
+|----|----|----|----|----|----|
+| Diastolic Blood Pressure (mmHg) | Baseline | n | 340          | 384          | 288          |
+|  |  | Mean (SD) |  77.1 (10.7) |  76.6 ( 9.8) |  78.2 (10.3) |
+|  |  | Median |  77.7        |  76.7        |  78.8        |
+|  |  | Min, Max |  40  , 110   |  48  , 108   |  51  , 108   |
+|  | Week 8 | n | 292          | 240          | 224          |
+|  |  | Mean (SD) |  75.2 ( 9.1) |  75.4 (10.6) |  77.4 ( 9.1) |
+|  |  | Median |  76.0        |  74.0        |  78.3        |
+|  |  | Min, Max |  49  , 101   |  52  , 100   |  54  , 98    |
+|  | Week 16 | n | 272          | 168          | 148          |
+|  |  | Mean (SD) |  75.1 (10.9) |  75.2 (10.0) |  76.0 ( 9.0) |
+|  |  | Median |  76.0        |  75.7        |  77.3        |
+|  |  | Min, Max |  49  , 98    |  55  , 98    |  50  , 92    |
+|  | End of Treatment | n | 222          | 177          | 168          |
+|  |  | Mean (SD) |  74.4 (10.7) |  76.0 (11.2) |  76.0 ( 9.9) |
+|  |  | Median |  73.5        |  76.0        |  78.0        |
+|  |  | Min, Max |  49  , 104   |  50  , 100   |  56  , 98    |
+| Pulse Rate (beats/min) | Baseline | n | 340          | 384          | 288          |
+|  |  | Mean (SD) |  73.5 (11.6) |  72.1 (10.8) |  72.4 ( 9.7) |
+|  |  | Median |  72.3        |  70.0        |  71.7        |
+|  |  | Min, Max |  51  , 134   |  50  , 104   |  52  , 100   |
+|  | Week 8 | n | 292          | 240          | 224          |
+|  |  | Mean (SD) |  71.8 ( 9.0) |  72.6 (11.1) |  74.0 ( 8.9) |
+|  |  | Median |  72.0        |  72.0        |  73.2        |
+|  |  | Min, Max |  52  , 102   |  49  , 104   |  50  , 104   |
+|  | Week 16 | n | 272          | 168          | 148          |
+|  |  | Mean (SD) |  70.6 ( 8.8) |  68.8 ( 9.4) |  73.2 ( 9.5) |
+|  |  | Median |  70.2        |  68.0        |  72.0        |
+|  |  | Min, Max |  50  , 90    |  48  , 104   |  51  , 96    |
+|  | End of Treatment | n | 222          | 177          | 168          |
+|  |  | Mean (SD) |  75.2 (11.5) |  74.1 ( 9.4) |  73.6 ( 9.6) |
+|  |  | Median |  74.0        |  75.0        |  73.0        |
+|  |  | Min, Max |  51  , 106   |  50  , 94    |  50  , 98    |
+| Systolic Blood Pressure (mmHg) | Baseline | n | 340          | 384          | 288          |
+|  |  |  |  |  |  |
+|  |  | Mean (SD) | 136.8 (17.6) | 137.9 (18.5) | 137.8 (17.2) |
+|  |  | Median | 136.3        | 138.0        | 138.0        |
+|  |  | Min, Max |  80  , 184   | 100  , 194   | 100  , 192   |
+|  | Week 8 | n | 292          | 240          | 224          |
+|  |  | Mean (SD) | 136.3 (17.0) | 134.9 (17.8) | 135.1 (15.5) |
+|  |  | Median | 136.5        | 132.3        | 134.0        |
+|  |  | Min, Max |  90  , 189   |  92  , 200   |  91  , 198   |
+|  | Week 16 | n | 272          | 168          | 148          |
+|  |  | Mean (SD) | 134.6 (18.3) | 132.5 (14.3) | 133.7 (16.0) |
+|  |  | Median | 134.0        | 130.0        | 132.0        |
+|  |  | Min, Max |  76  , 190   | 100  , 168   |  99  , 186   |
+|  | End of Treatment | n | 222          | 177          | 168          |
+|  |  | Mean (SD) | 132.7 (15.4) | 133.0 (17.1) | 132.3 (15.6) |
+|  |  | Median | 131.0        | 130.0        | 131.0        |
+|  |  | Min, Max |  78  , 172   |  92  , 178   | 100  , 177   |
+| Temperature (C) | Baseline | n | 172          | 190          | 144          |
+|  |  | Mean (SD) |  36.6 ( 0.4) |  36.5 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.7        |  36.6        |  36.6        |
+|  |  | Min, Max |  35  , 37    |  35  , 37    |  36  , 37    |
+|  | Week 8 | n | 146          | 118          | 112          |
+|  |  | Mean (SD) |  36.6 ( 0.4) |  36.6 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.6        |  36.7        |  36.7        |
+|  |  | Min, Max |  36  , 37    |  36  , 37    |  36  , 37    |
+|  | Week 16 | n | 136          |  82          |  74          |
+|  |  | Mean (SD) |  36.7 ( 0.3) |  36.6 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.7        |  36.6        |  36.7        |
+|  |  | Min, Max |  36  , 37    |  36  , 37    |  36  , 37    |
+|  | End of Treatment | n |  74          |  59          |  56          |
+|  |  | Mean (SD) |  36.7 ( 0.4) |  36.6 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.8        |  36.7        |  36.7        |
+|  |  | Min, Max |  35  , 37    |  35  , 38    |  36  , 37    |
+
+ 
+
+Vital Signs Listing
+
+ 
+
+`skip` places the blank spacer rows between groups and follows the
+`readr::read_csv(col_names = )` pattern: `TRUE` (the default) derives it
+— a `"section"` key or a hidden break-only key breaks, a visible column
+key runs continuous; `FALSE` inserts none (as in the listing above); a
+character subset of `by` breaks on exactly those keys. Here a blank line
+separates parameters but not the visits within one:
+
+``` r
+
+tabular(cdisc_saf_vital, titles = "Vital Signs by Parameter and Visit") |>
+  cols(
+    paramcd = col_spec(visible = FALSE),
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic"
+  ) |>
+  cols_apply(
+    c("placebo", "drug_50", "drug_100"),
+    col_spec(align = "decimal")
+  ) |>
+  group_rows(by = c("param", "visit"), skip = "param")
+```
+
+| Statistic                           | placebo      | drug_50      | drug_100     |
+|-------------------------------------|--------------|--------------|--------------|
+| **Diastolic Blood Pressure (mmHg)** |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 340          | 384          | 288          |
+| Mean (SD)                           |  77.1 (10.7) |  76.6 ( 9.8) |  78.2 (10.3) |
+| Median                              |  77.7        |  76.7        |  78.8        |
+| Min, Max                            |  40  , 110   |  48  , 108   |  51  , 108   |
+| **Week 8**                          |              |              |              |
+| n                                   | 292          | 240          | 224          |
+| Mean (SD)                           |  75.2 ( 9.1) |  75.4 (10.6) |  77.4 ( 9.1) |
+| Median                              |  76.0        |  74.0        |  78.3        |
+| Min, Max                            |  49  , 101   |  52  , 100   |  54  , 98    |
+| **Week 16**                         |              |              |              |
+| n                                   | 272          | 168          | 148          |
+| Mean (SD)                           |  75.1 (10.9) |  75.2 (10.0) |  76.0 ( 9.0) |
+| Median                              |  76.0        |  75.7        |  77.3        |
+| Min, Max                            |  49  , 98    |  55  , 98    |  50  , 92    |
+| **End of Treatment**                |              |              |              |
+| n                                   | 222          | 177          | 168          |
+| Mean (SD)                           |  74.4 (10.7) |  76.0 (11.2) |  76.0 ( 9.9) |
+| Median                              |  73.5        |  76.0        |  78.0        |
+| Min, Max                            |  49  , 104   |  50  , 100   |  56  , 98    |
+|                                     |              |              |              |
+| **Pulse Rate (beats/min)**          |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 340          | 384          | 288          |
+| Mean (SD)                           |  73.5 (11.6) |  72.1 (10.8) |  72.4 (9.7)  |
+| Median                              |  72.3        |  70.0        |  71.7        |
+| Min, Max                            |  51  , 134   |  50  , 104   |  52  , 100   |
+| **Week 8**                          |              |              |              |
+| n                                   | 292          | 240          | 224          |
+| Mean (SD)                           |  71.8 ( 9.0) |  72.6 (11.1) |  74.0 (8.9)  |
+| Median                              |  72.0        |  72.0        |  73.2        |
+| Min, Max                            |  52  , 102   |  49  , 104   |  50  , 104   |
+| **Week 16**                         |              |              |              |
+| n                                   | 272          | 168          | 148          |
+| Mean (SD)                           |  70.6 ( 8.8) |  68.8 ( 9.4) |  73.2 (9.5)  |
+| Median                              |  70.2        |  68.0        |  72.0        |
+| Min, Max                            |  50  , 90    |  48  , 104   |  51  , 96    |
+| **End of Treatment**                |              |              |              |
+| n                                   | 222          | 177          | 168          |
+| Mean (SD)                           |  75.2 (11.5) |  74.1 ( 9.4) |  73.6 (9.6)  |
+| Median                              |  74.0        |  75.0        |  73.0        |
+| Min, Max                            |  51  , 106   |  50  , 94    |  50  , 98    |
+|                                     |              |              |              |
+| **Systolic Blood Pressure (mmHg)**  |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 340          | 384          | 288          |
+|                                     |              |              |              |
+| Mean (SD)                           | 136.8 (17.6) | 137.9 (18.5) | 137.8 (17.2) |
+| Median                              | 136.3        | 138.0        | 138.0        |
+| Min, Max                            |  80  , 184   | 100  , 194   | 100  , 192   |
+| **Week 8**                          |              |              |              |
+| n                                   | 292          | 240          | 224          |
+| Mean (SD)                           | 136.3 (17.0) | 134.9 (17.8) | 135.1 (15.5) |
+| Median                              | 136.5        | 132.3        | 134.0        |
+| Min, Max                            |  90  , 189   |  92  , 200   |  91  , 198   |
+| **Week 16**                         |              |              |              |
+| n                                   | 272          | 168          | 148          |
+| Mean (SD)                           | 134.6 (18.3) | 132.5 (14.3) | 133.7 (16.0) |
+| Median                              | 134.0        | 130.0        | 132.0        |
+| Min, Max                            |  76  , 190   | 100  , 168   |  99  , 186   |
+| **End of Treatment**                |              |              |              |
+| n                                   | 222          | 177          | 168          |
+| Mean (SD)                           | 132.7 (15.4) | 133.0 (17.1) | 132.3 (15.6) |
+| Median                              | 131.0        | 130.0        | 131.0        |
+| Min, Max                            |  78  , 172   |  92  , 178   | 100  , 177   |
+|                                     |              |              |              |
+| **Temperature (C)**                 |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 172          | 190          | 144          |
+| Mean (SD)                           |  36.6 (0.4)  |  36.5 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.7        |  36.6        |  36.6        |
+| Min, Max                            |  35  , 37    |  35  , 37    |  36  , 37    |
+| **Week 8**                          |              |              |              |
+| n                                   | 146          | 118          | 112          |
+| Mean (SD)                           |  36.6 (0.4)  |  36.6 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.6        |  36.7        |  36.7        |
+| Min, Max                            |  36  , 37    |  36  , 37    |  36  , 37    |
+| **Week 16**                         |              |              |              |
+| n                                   | 136          |  82          |  74          |
+| Mean (SD)                           |  36.7 (0.3)  |  36.6 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.7        |  36.6        |  36.7        |
+| Min, Max                            |  36  , 37    |  36  , 37    |  36  , 37    |
+| **End of Treatment**                |              |              |              |
+| n                                   |  74          |  59          |  56          |
+| Mean (SD)                           |  36.7 (0.4)  |  36.6 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.8        |  36.7        |  36.7        |
+| Min, Max                            |  35  , 37    |  35  , 38    |  36  , 37    |
+
+ 
+
+Vital Signs by Parameter and Visit
+
+ 
 
 ## BigN in the column headers
 
@@ -2594,11 +2821,21 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   non-group columns is gone with them.
 
 - [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
-  is the new structural verb: `group_rows(by, display, skip)` names the
-  grouping key columns outer to inner with per-key display
-  (`"header_row"`, `"column"`, `"column_repeat"`, or the new break-only
-  `"none"`) and per-key blank-spacer control; it replaces a prior
-  declaration wholesale, and its keys may not overlap `subgroup(by = )`.
+  is the new structural verb: `group_rows(by, display, skip)` names only
+  the structural grouping keys outer to inner (the section headers and
+  any hidden break keys, not the visible label column, which stays an
+  ordinary
+  [`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
+  column and is auto-indented). `display` is a single value applied to
+  every key (`"section"`, `"collapse"`, or `"repeat"`); a hidden
+  break-only key is expressed with `col_spec(visible = FALSE)` rather
+  than a display mode. `skip` follows the
+  `readr::read_csv(col_names = )` pattern: `TRUE` (the default) derives
+  the blank spacers from `display` and key visibility, `FALSE` inserts
+  none, and a character subset of `by` breaks on exactly those keys
+  (e.g. `skip = "param"`). Nesting is just listing the header keys
+  (`by = c("param", "visit")`). It replaces a prior declaration
+  wholesale, and its keys may not overlap `subgroup(by = )`.
 
 - [`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md)
   gained `repeat_cols`, replacing the `usage = "id"` role: the
@@ -3782,7 +4019,7 @@ Overall Response, Objective Response Rate, Clinical Benefit Rate,
 Disease Control Rate) are encoded via the `groupid` + `group_label` pair
 so a single `group_rows(by = "group_label")` synthesises one bold
 section band per groupid block; the body rows render below each band,
-auto-indented one level by the `"header_row"` section itself (the stub
+auto-indented one level by the `"section"` display itself (the stub
 needs no `indent` — the section supplies it).
 
 ## Usage
@@ -3825,7 +4062,7 @@ A data frame with 13 rows and 7 columns:
   block ("Best Overall Response" x7, "Objective Response Rate" x2, ...).
   Drives the engine's
   [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
-  header_row synthesis.
+  section-header synthesis.
 
 ## Source
 
@@ -3845,7 +4082,7 @@ for BigN denominators.
 # Disease Control Rate), each followed by indented stat rows. The
 # source already ships in the right display order, so no sort step
 # is needed; `group_label` repeats across every row of its section
-# so the engine's `header_row` mode emits exactly one band per
+# so the engine's `section` mode emits exactly one band per
 # section.
 ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 tabular(
@@ -5274,7 +5511,7 @@ cells_headers(level = -1)
 cells_headers(labels = "Treatment Group")
 #> <tabular_location: headers(labels=c('Treatment Group'))>
 
-# Section-header rows for group_rows(display = "header_row")
+# Section-header rows for group_rows(display = "section")
 cells_group_headers()
 #> <tabular_location: group_headers()>
 
@@ -5764,10 +6001,12 @@ col_spec(
 
   **Break-only grouping key.** To drop a blank line wherever a hidden
   marker column changes (e.g. continuous stats vs. categorical groups
-  inside one characteristic), do not hide the column here — declare it
-  as a break-only key with
-  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)`(by = "marker", display = "none")`,
-  which hides it and contributes only its group transitions.
+  inside one characteristic), set `visible = FALSE` here AND name the
+  column in
+  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)`(by = )`.
+  A hidden grouping key is break-only: it renders nothing and
+  contributes only its group transitions (the blank spacer and the
+  decimal-section reset).
 
 - width:
 
@@ -5898,7 +6137,7 @@ col_spec(
     indented that many levels (each level is `preset@indent_size`
     space-widths). `indent = 1` is the common "nudge this stub in one
     level" case; `indent = 0` is a real value that flattens children
-    under a `"header_row"` section.
+    under a `"section"` header.
 
   - **A column name (character)** — per-row depth: the engine reads
     `spec@data[[indent]]`, coerces each row to a non-negative integer,
@@ -5913,7 +6152,7 @@ col_spec(
   never indented — they are the parent at depth 0.
 
   **Interaction:** an explicit `indent` on the host column of a
-  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)`(display = "header_row")`
+  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)`(display = "section")`
   section **suppresses** that section's automatic one-level child indent
   (you take control of the depth) — so a stub under a section needs no
   `indent` at all, and adding `indent = 1` there yields a single, not
@@ -7534,18 +7773,21 @@ arm
 ```
 # Declare the row-grouping structure of the table
 
-`group_rows()` names the columns whose runs of identical values define
-the table's row hierarchy, ordered outer to inner, and how each level
-renders — as a section header row, as a repeat-suppressed column, as a
-fully repeated column, or as an invisible break-only key. It is the
-row-structure counterpart of
+`group_rows()` names the **structural** columns whose runs of identical
+values define the table's row hierarchy, ordered outer to inner. List
+only the keys that drive the structure — the section headers and any
+hidden break keys; the visible row-label column (e.g. the statistic
+stub) stays an ordinary
+[`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
+column and is indented automatically. It is the row-structure
+counterpart of
 [`sort_rows()`](https://vthanik.github.io/tabular/dev/reference/sort_rows.md):
 one declaration per table, replaced wholesale on a repeat call.
 
 ## Usage
 
 ``` r
-group_rows(.spec, by, display = "header_row", skip = NA)
+group_rows(.spec, by, display = "section", skip = TRUE)
 ```
 
 ## Arguments
@@ -7557,9 +7799,10 @@ group_rows(.spec, by, display = "header_row", skip = NA)
 
 - by:
 
-  *Grouping key columns, ordered outer to inner.*
-  `<character(>= 1)>: required`. Every entry must be a column of `data`;
-  duplicates are rejected.
+  *Structural grouping key columns, ordered outer to inner.*
+  `<character>: required`. Names at least one column of `data`;
+  duplicates are rejected. List only the section-header and break-only
+  keys, not the visible label column.
 
   **Interaction:** A
   [`subgroup()`](https://vthanik.github.io/tabular/dev/reference/subgroup.md)`(by = )`
@@ -7568,31 +7811,39 @@ group_rows(.spec, by, display = "header_row", skip = NA)
 
 - display:
 
-  *How each key's values render in the body.*
-  `<character>: default "header_row"`. Length 1 (applied to every key)
-  or `length(by)` (one mode per key):
+  *How the keys' values render in the body.*
+  `<character(1)>: default "section"`. One value, applied to every key:
 
-  - `"header_row"` (default) — each unique value emits a section header
-    row spanning the visible columns; the key column is hidden from the
+  - `"section"` (default) — each unique value emits a section header row
+    spanning the visible columns; the key column is hidden from the
     body. The canonical submission shape.
 
-  - `"column"` — the key column stays visible; repeated values are
-    suppressed so only the first row of each run shows the label.
+  - `"collapse"` — the key column stays visible; repeated values are
+    suppressed so only the first row of each run shows the label. The
+    classic listing shape.
 
-  - `"column_repeat"` — the key column stays visible and every row
-    repeats the value.
+  - `"repeat"` — the key column stays visible and every row repeats the
+    value. The export / QC shape, where every row must be
+    self-describing.
 
-  - `"none"` — break-only key: no header row, the column is hidden, and
-    the key contributes only group transitions (skip spacers, decimal
-    sections). Use for a hidden block key, e.g. an AE table whose SOC
-    lives in the row text.
+  **Tip:** for a hidden break-only key, set `col_spec(visible = FALSE)`
+  on it rather than a display mode.
 
 - skip:
 
-  *Whether a blank spacer row separates consecutive groups of each key.*
-  `<logical>: default NA`. Length 1 or `length(by)`. `NA` follows
-  `display`: `TRUE` for `"header_row"` and `"none"`, `FALSE` for the
-  column modes.
+  *Which keys get a blank spacer row between their groups.*
+  `<TRUE | FALSE | character>: default TRUE`. A logical flag or an
+  explicit character set (the `readr::read_csv(col_names = )` pattern):
+
+  - `TRUE` (default) — derive: a `"section"` key or a break-only
+    (`visible = FALSE`) key breaks with a blank line; a visible
+    `"collapse"` / `"repeat"` key runs continuous.
+
+  - `FALSE` — no spacer rows anywhere.
+
+  - `<character>` — exactly these `by` keys break, e.g. `skip = "param"`
+    (blank line between params, none between visits). Every name must be
+    in `by`; `character(0)` is equivalent to `FALSE`.
 
 ## Value
 
@@ -7607,12 +7858,17 @@ the remaining build verbs or
 [`sort_rows()`](https://vthanik.github.io/tabular/dev/reference/sort_rows.md)
 contract); levels never accumulate across calls.
 
-**Grouping drives more than display.** The keys feed the section header
-synthesis and repeat suppression in the body, the blank spacer rows
-between groups (`skip`), the decimal-alignment sections (each skip block
-aligns in isolation), and the default column stub repeated on every
-horizontal panel from
-[`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md)`(panels = )`.
+**Structural keys only.** Nesting is just listing the header keys:
+`by = c("param", "visit")` renders `param` as the outer section header
+and `visit` as the indented sub-header, and the first visible column
+beneath (the label stub) is auto-indented one level per header. You do
+not put the label column in `by`.
+
+**Break-only keys use `visible = FALSE`.** A key you mark
+`col_spec(visible = FALSE)` renders nothing and contributes only group
+transitions — the blank spacer between blocks (`skip`) and the
+decimal-alignment reset — exactly what a hidden sort/break key needs.
+There is no separate display mode for it.
 
 ## See also
 
@@ -7635,10 +7891,12 @@ protects runs across page breaks independently of grouping.
 ``` r
 # ---- Example 1: Demographics with section headers and a stat column ----
 #
-# The canonical demographics shape: `variable` renders as a section
-# header row per parameter (Age, Sex, ...), and `stat_label` stays
-# visible as a repeat-suppressed statistic column. The outer key is
-# declared first.
+# The canonical demographics shape: `variable` is the one structural
+# key. The defaults do all the work -- `display = "section"` renders
+# one section header row per parameter (Age, Sex, ...) and hides the
+# key column; `skip = TRUE` derives a blank spacer between sections.
+# `stat_label` is NOT a grouping key -- it stays an ordinary column
+# and is auto-indented one level under each section header.
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
@@ -7657,7 +7915,7 @@ tabular(
     c("placebo", "drug_50", "drug_100", "Total"),
     col_spec(align = "decimal")
   ) |>
-  group_rows(by = c("variable", "stat_label"), display = c("header_row", "column"))
+  group_rows(by = "variable")
 
 #tabular-70f56d538c { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-70f56d538c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
@@ -8569,10 +8827,10 @@ paginate(
   *Stub columns repeated on every horizontal panel.*
   `<character | NULL>: default NULL`. `NULL` derives the stub from the
   [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
-  keys, excluding `display = "none"` break-only keys (hidden columns
-  never repeat). An explicit character vector REPLACES that default —
-  name every column the stub should carry (e.g. the grouping key plus a
-  per-row statistic label).
+  keys, excluding break-only `col_spec(visible = FALSE)` keys (hidden
+  columns never repeat). An explicit character vector REPLACES that
+  default — name every column the stub should carry (e.g. the grouping
+  key plus a per-row statistic label).
   [`character()`](https://rdrr.io/r/base/character.html) repeats
   nothing.
 
@@ -11892,7 +12150,7 @@ data(cdisc_saf_demo, package = "tabular")
 
 tabular(cdisc_saf_demo, titles = c("Table 14-2.01", "Demographics", "ITT")) |>
   cols(variable = "", stat_label = "") |>
-  group_rows(by = "variable", display = "header_row") |>
+  group_rows(by = "variable") |>
   emit("table.rtf")
 ```
 
@@ -11914,7 +12172,7 @@ Describe each column's role, label, width, alignment, and visibility.
 - `cols`: Assign a `col_spec` to one or more columns (a bare string is label shorthand; `.hide` hides columns)
 - `col_spec`: Build a per-column specification (`label`, `width`, `align`, `visible`, `indent`)
 - `cols_apply`: Apply one `col_spec` across many columns by predicate
-- `group_rows`: Declare the table-level row grouping (`by` keys outer to inner, per-key `display` and `skip`)
+- `group_rows`: Declare the table-level row grouping (`by` keys outer to inner; scalar `display` = `"section"` / `"collapse"` / `"repeat"`; `skip` = TRUE / FALSE / a subset of `by`)
 
 ### Column headers
 
@@ -12004,7 +12262,7 @@ of inventing toy data.
   lexically; derive an integer key, hide it with `col_spec(visible = FALSE)`,
   then `sort_rows(by = key)`.
 - **BigN goes inline in the label string**, not a field.
-- **`group_rows(display = "header_row")` auto-indents its child rows** — don't
+- **`group_rows()` sections auto-indent their child rows** — don't
   also add `col_spec(indent = )` on the stub (double indent).
 - **Titles and footnotes are multi-line** — pass a `character()` of any length.
 - Cosmetic knobs are named lists keyed by surface; per-surface specs are flat

@@ -7,7 +7,7 @@ Clinical Benefit Rate, Disease Control Rate) are encoded via the
 groupid + group_label pair so a single
 group_rows(by = "group_label") synthesises one
 bold section band per groupid block; the body rows render below
-each band, auto-indented one level by the "header_row" section
+each band, auto-indented one level by the "section" display
 itself (the stub needs no indent — the section supplies it).'><meta property="og:description" content='Pre-summarised efficacy table. Per-arm counts of best overall
 response (BOR) per CDISC category, plus derived ORR, CBR, and DCR
 rate rows each followed by an exact (Clopper-Pearson) 95% CI row.
@@ -16,7 +16,7 @@ Clinical Benefit Rate, Disease Control Rate) are encoded via the
 groupid + group_label pair so a single
 group_rows(by = "group_label") synthesises one
 bold section band per groupid block; the body rows render below
-each band, auto-indented one level by the "header_row" section
+each band, auto-indented one level by the "section" display
 itself (the stub needs no indent — the section supplies it).'><meta property="og:image" content="https://vthanik.github.io/tabular/reference/figures/README-hero.png"><meta property="og:image:alt" content="A demographic and baseline characteristics table rendered by tabular, with decimal-aligned arm columns."><meta name="robots" content="noindex"><!-- dependencies from examples --></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -68,7 +68,7 @@ Clinical Benefit Rate, Disease Control Rate) are encoded via the
 <code>groupid</code> + <code>group_label</code> pair so a single
 <code>group_rows(by = "group_label")</code> synthesises one
 bold section band per groupid block; the body rows render below
-each band, auto-indented one level by the <code>"header_row"</code> section
+each band, auto-indented one level by the <code>"section"</code> display
 itself (the stub needs no <code>indent</code> — the section supplies it).</p>
     </div>
 
@@ -107,7 +107,7 @@ used as the section sort / partition key.</p></dd>
 <dd><p>Character section label, repeating across
 every row of its groupid block ("Best Overall Response" x7,
 "Objective Response Rate" x2, ...). Drives the engine's
-<code><a href="group_rows.html">group_rows()</a></code> header_row synthesis.</p></dd>
+<code><a href="group_rows.html">group_rows()</a></code> section-header synthesis.</p></dd>
 
 
 </dl></div>
@@ -128,7 +128,7 @@ every row of its groupid block ("Best Overall Response" x7,
 <span class="r-in"><span><span class="co"># Disease Control Rate), each followed by indented stat rows. The</span></span></span>
 <span class="r-in"><span><span class="co"># source already ships in the right display order, so no sort step</span></span></span>
 <span class="r-in"><span><span class="co"># is needed; `group_label` repeats across every row of its section</span></span></span>
-<span class="r-in"><span><span class="co"># so the engine's `header_row` mode emits exactly one band per</span></span></span>
+<span class="r-in"><span><span class="co"># so the engine's `section` mode emits exactly one band per</span></span></span>
 <span class="r-in"><span><span class="co"># section.</span></span></span>
 <span class="r-in"><span><span class="va">ne</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">cdisc_eff_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">cdisc_eff_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="tabular.html">tabular</a></span><span class="op">(</span></span></span>

@@ -60,10 +60,10 @@ paginate(
   *Stub columns repeated on every horizontal panel.*
   `<character | NULL>: default NULL`. `NULL` derives the stub from the
   [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
-  keys, excluding `display = "none"` break-only keys (hidden columns
-  never repeat). An explicit character vector REPLACES that default —
-  name every column the stub should carry (e.g. the grouping key plus a
-  per-row statistic label).
+  keys, excluding break-only `col_spec(visible = FALSE)` keys (hidden
+  columns never repeat). An explicit character vector REPLACES that
+  default — name every column the stub should carry (e.g. the grouping
+  key plus a per-row statistic label).
   [`character()`](https://rdrr.io/r/base/character.html) repeats
   nothing.
 

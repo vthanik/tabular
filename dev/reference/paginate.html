@@ -111,8 +111,8 @@ columns into <code>N</code> chunks and repeats the stub on every panel.</p></dd>
 <dt id="arg-repeat-cols">repeat_cols<a class="anchor" aria-label="anchor" href="#arg-repeat-cols"></a></dt>
 <dd><p><em>Stub columns repeated on every horizontal
 panel.</em> <code>&lt;character | NULL&gt;: default NULL</code>. <code>NULL</code> derives the
-stub from the <code><a href="group_rows.html">group_rows()</a></code> keys, excluding <code>display = "none"</code>
-break-only keys (hidden columns never repeat). An explicit
+stub from the <code><a href="group_rows.html">group_rows()</a></code> keys, excluding break-only
+<code>col_spec(visible = FALSE)</code> keys (hidden columns never repeat). An explicit
 character vector REPLACES that default — name every column the
 stub should carry (e.g. the grouping key plus a per-row
 statistic label). <code><a href="https://rdrr.io/r/base/character.html" class="external-link">character()</a></code> repeats nothing.</p>

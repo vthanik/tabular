@@ -1,17 +1,20 @@
 # Declare the row-grouping structure of the table
 
-`group_rows()` names the columns whose runs of identical values define
-the table's row hierarchy, ordered outer to inner, and how each level
-renders — as a section header row, as a repeat-suppressed column, as a
-fully repeated column, or as an invisible break-only key. It is the
-row-structure counterpart of
+`group_rows()` names the **structural** columns whose runs of identical
+values define the table's row hierarchy, ordered outer to inner. List
+only the keys that drive the structure — the section headers and any
+hidden break keys; the visible row-label column (e.g. the statistic
+stub) stays an ordinary
+[`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
+column and is indented automatically. It is the row-structure
+counterpart of
 [`sort_rows()`](https://vthanik.github.io/tabular/dev/reference/sort_rows.md):
 one declaration per table, replaced wholesale on a repeat call.
 
 ## Usage
 
 ``` r
-group_rows(.spec, by, display = "header_row", skip = NA)
+group_rows(.spec, by, display = "section", skip = TRUE)
 ```
 
 ## Arguments
@@ -23,9 +26,10 @@ group_rows(.spec, by, display = "header_row", skip = NA)
 
 - by:
 
-  *Grouping key columns, ordered outer to inner.*
-  `<character(>= 1)>: required`. Every entry must be a column of `data`;
-  duplicates are rejected.
+  *Structural grouping key columns, ordered outer to inner.*
+  `<character>: required`. Names at least one column of `data`;
+  duplicates are rejected. List only the section-header and break-only
+  keys, not the visible label column.
 
   **Interaction:** A
   [`subgroup()`](https://vthanik.github.io/tabular/dev/reference/subgroup.md)`(by = )`
@@ -34,31 +38,39 @@ group_rows(.spec, by, display = "header_row", skip = NA)
 
 - display:
 
-  *How each key's values render in the body.*
-  `<character>: default "header_row"`. Length 1 (applied to every key)
-  or `length(by)` (one mode per key):
+  *How the keys' values render in the body.*
+  `<character(1)>: default "section"`. One value, applied to every key:
 
-  - `"header_row"` (default) — each unique value emits a section header
-    row spanning the visible columns; the key column is hidden from the
+  - `"section"` (default) — each unique value emits a section header row
+    spanning the visible columns; the key column is hidden from the
     body. The canonical submission shape.
 
-  - `"column"` — the key column stays visible; repeated values are
-    suppressed so only the first row of each run shows the label.
+  - `"collapse"` — the key column stays visible; repeated values are
+    suppressed so only the first row of each run shows the label. The
+    classic listing shape.
 
-  - `"column_repeat"` — the key column stays visible and every row
-    repeats the value.
+  - `"repeat"` — the key column stays visible and every row repeats the
+    value. The export / QC shape, where every row must be
+    self-describing.
 
-  - `"none"` — break-only key: no header row, the column is hidden, and
-    the key contributes only group transitions (skip spacers, decimal
-    sections). Use for a hidden block key, e.g. an AE table whose SOC
-    lives in the row text.
+  **Tip:** for a hidden break-only key, set `col_spec(visible = FALSE)`
+  on it rather than a display mode.
 
 - skip:
 
-  *Whether a blank spacer row separates consecutive groups of each key.*
-  `<logical>: default NA`. Length 1 or `length(by)`. `NA` follows
-  `display`: `TRUE` for `"header_row"` and `"none"`, `FALSE` for the
-  column modes.
+  *Which keys get a blank spacer row between their groups.*
+  `<TRUE | FALSE | character>: default TRUE`. A logical flag or an
+  explicit character set (the `readr::read_csv(col_names = )` pattern):
+
+  - `TRUE` (default) — derive: a `"section"` key or a break-only
+    (`visible = FALSE`) key breaks with a blank line; a visible
+    `"collapse"` / `"repeat"` key runs continuous.
+
+  - `FALSE` — no spacer rows anywhere.
+
+  - `<character>` — exactly these `by` keys break, e.g. `skip = "param"`
+    (blank line between params, none between visits). Every name must be
+    in `by`; `character(0)` is equivalent to `FALSE`.
 
 ## Value
 
@@ -73,12 +85,17 @@ the remaining build verbs or
 [`sort_rows()`](https://vthanik.github.io/tabular/dev/reference/sort_rows.md)
 contract); levels never accumulate across calls.
 
-**Grouping drives more than display.** The keys feed the section header
-synthesis and repeat suppression in the body, the blank spacer rows
-between groups (`skip`), the decimal-alignment sections (each skip block
-aligns in isolation), and the default column stub repeated on every
-horizontal panel from
-[`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md)`(panels = )`.
+**Structural keys only.** Nesting is just listing the header keys:
+`by = c("param", "visit")` renders `param` as the outer section header
+and `visit` as the indented sub-header, and the first visible column
+beneath (the label stub) is auto-indented one level per header. You do
+not put the label column in `by`.
+
+**Break-only keys use `visible = FALSE`.** A key you mark
+`col_spec(visible = FALSE)` renders nothing and contributes only group
+transitions — the blank spacer between blocks (`skip`) and the
+decimal-alignment reset — exactly what a hidden sort/break key needs.
+There is no separate display mode for it.
 
 ## See also
 
@@ -101,10 +118,12 @@ protects runs across page breaks independently of grouping.
 ``` r
 # ---- Example 1: Demographics with section headers and a stat column ----
 #
-# The canonical demographics shape: `variable` renders as a section
-# header row per parameter (Age, Sex, ...), and `stat_label` stays
-# visible as a repeat-suppressed statistic column. The outer key is
-# declared first.
+# The canonical demographics shape: `variable` is the one structural
+# key. The defaults do all the work -- `display = "section"` renders
+# one section header row per parameter (Age, Sex, ...) and hides the
+# key column; `skip = TRUE` derives a blank spacer between sections.
+# `stat_label` is NOT a grouping key -- it stays an ordinary column
+# and is auto-indented one level under each section header.
 n <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(
@@ -123,7 +142,7 @@ tabular(
     c("placebo", "drug_50", "drug_100", "Total"),
     col_spec(align = "decimal")
   ) |>
-  group_rows(by = c("variable", "stat_label"), display = c("header_row", "column"))
+  group_rows(by = "variable")
 
 #tabular-70f56d538c { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-70f56d538c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }

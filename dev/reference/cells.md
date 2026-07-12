@@ -175,7 +175,7 @@ cells_headers(level = -1)
 cells_headers(labels = "Treatment Group")
 #> <tabular_location: headers(labels=c('Treatment Group'))>
 
-# Section-header rows for group_rows(display = "header_row")
+# Section-header rows for group_rows(display = "section")
 cells_group_headers()
 #> <tabular_location: group_headers()>
 

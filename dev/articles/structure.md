@@ -12,15 +12,22 @@ not cover cosmetics (see
 Row structure is a fact about the whole table, so it is declared once
 with
 [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
-— not per column. `by` names the grouping key columns, ordered outer to
-inner; `display` picks how each level renders:
+— not per column. `by` names only the **structural** grouping key
+columns (section headers and hidden break keys), ordered outer to inner.
+The visible row-label column (the statistic stub) is an ordinary
+[`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
+column, not a grouping key — it is indented automatically. `display` (a
+single value) picks how the keys render:
 
 | `display` | Use it for | Behaviour |
 |----|----|----|
-| `"header_row"` *(default)* | section variable (e.g. parameter) | each value becomes a **section-header row**; the key column is hidden |
-| `"column"` | a visible row label | column stays; repeated values are suppressed |
-| `"column_repeat"` | a visible row label | column stays; every row repeats the value |
-| `"none"` | a hidden block key | break-only: no header, no column — just group transitions |
+| `"section"` *(default)* | section variable (e.g. parameter) | each value becomes a **section-header row**; the key column is hidden |
+| `"collapse"` | a visible row label | column stays; repeated values are suppressed |
+| `"repeat"` | a visible row label | column stays; every row repeats the value |
+
+A **break-only key** — hidden, contributing only group transitions (the
+blank spacer and decimal-section reset) — is not a `display` mode: mark
+the key `col_spec(visible = FALSE)` and list it in `by`.
 
 [`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
 handles the per-column cosmetics — labels (`x = "Label"` is shorthand
@@ -69,7 +76,7 @@ attaches one shared `col_spec` to **all** the arm columns at once — use
 it instead of repeating `cols(placebo = …, drug_50 = …)` for a variable
 number of arms.
 
-> **Indent from exactly one source.** `display = "header_row"` already
+> **Indent from exactly one source.** `display = "section"` already
 > indents its child rows one level, so the stub column (here
 > `stat_label`) needs **no** `indent` — the section supplies it. (An
 > explicit `indent` on the host *overrides* that auto-indent rather than
@@ -79,6 +86,226 @@ number of arms.
 > which come out with a leading indent baked into the string: keep them
 > as-is or [`trimws()`](https://rdrr.io/r/base/trimws.html) them and set
 > `indent` yourself — don’t double up.
+
+### Display modes and spacing
+
+The default `display = "section"` is the submission shape. For a
+listing, `display = "collapse"` keeps the keys as visible columns and
+suppresses the repeats, so only the first row of each run carries the
+label — swap in `"repeat"` when every row must be self-describing (an
+export or QC view):
+
+``` r
+
+data(cdisc_saf_vital, package = "tabular")
+
+tabular(cdisc_saf_vital, titles = "Vital Signs Listing") |>
+  cols(
+    paramcd = col_spec(visible = FALSE),
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic"
+  ) |>
+  cols_apply(
+    c("placebo", "drug_50", "drug_100"),
+    col_spec(align = "decimal")
+  ) |>
+  group_rows(by = c("param", "visit"), display = "collapse", skip = FALSE)
+```
+
+| Parameter | Visit | Statistic | placebo | drug_50 | drug_100 |
+|----|----|----|----|----|----|
+| Diastolic Blood Pressure (mmHg) | Baseline | n | 340          | 384          | 288          |
+|  |  | Mean (SD) |  77.1 (10.7) |  76.6 ( 9.8) |  78.2 (10.3) |
+|  |  | Median |  77.7        |  76.7        |  78.8        |
+|  |  | Min, Max |  40  , 110   |  48  , 108   |  51  , 108   |
+|  | Week 8 | n | 292          | 240          | 224          |
+|  |  | Mean (SD) |  75.2 ( 9.1) |  75.4 (10.6) |  77.4 ( 9.1) |
+|  |  | Median |  76.0        |  74.0        |  78.3        |
+|  |  | Min, Max |  49  , 101   |  52  , 100   |  54  , 98    |
+|  | Week 16 | n | 272          | 168          | 148          |
+|  |  | Mean (SD) |  75.1 (10.9) |  75.2 (10.0) |  76.0 ( 9.0) |
+|  |  | Median |  76.0        |  75.7        |  77.3        |
+|  |  | Min, Max |  49  , 98    |  55  , 98    |  50  , 92    |
+|  | End of Treatment | n | 222          | 177          | 168          |
+|  |  | Mean (SD) |  74.4 (10.7) |  76.0 (11.2) |  76.0 ( 9.9) |
+|  |  | Median |  73.5        |  76.0        |  78.0        |
+|  |  | Min, Max |  49  , 104   |  50  , 100   |  56  , 98    |
+| Pulse Rate (beats/min) | Baseline | n | 340          | 384          | 288          |
+|  |  | Mean (SD) |  73.5 (11.6) |  72.1 (10.8) |  72.4 ( 9.7) |
+|  |  | Median |  72.3        |  70.0        |  71.7        |
+|  |  | Min, Max |  51  , 134   |  50  , 104   |  52  , 100   |
+|  | Week 8 | n | 292          | 240          | 224          |
+|  |  | Mean (SD) |  71.8 ( 9.0) |  72.6 (11.1) |  74.0 ( 8.9) |
+|  |  | Median |  72.0        |  72.0        |  73.2        |
+|  |  | Min, Max |  52  , 102   |  49  , 104   |  50  , 104   |
+|  | Week 16 | n | 272          | 168          | 148          |
+|  |  | Mean (SD) |  70.6 ( 8.8) |  68.8 ( 9.4) |  73.2 ( 9.5) |
+|  |  | Median |  70.2        |  68.0        |  72.0        |
+|  |  | Min, Max |  50  , 90    |  48  , 104   |  51  , 96    |
+|  | End of Treatment | n | 222          | 177          | 168          |
+|  |  | Mean (SD) |  75.2 (11.5) |  74.1 ( 9.4) |  73.6 ( 9.6) |
+|  |  | Median |  74.0        |  75.0        |  73.0        |
+|  |  | Min, Max |  51  , 106   |  50  , 94    |  50  , 98    |
+| Systolic Blood Pressure (mmHg) | Baseline | n | 340          | 384          | 288          |
+|  |  |  |  |  |  |
+|  |  | Mean (SD) | 136.8 (17.6) | 137.9 (18.5) | 137.8 (17.2) |
+|  |  | Median | 136.3        | 138.0        | 138.0        |
+|  |  | Min, Max |  80  , 184   | 100  , 194   | 100  , 192   |
+|  | Week 8 | n | 292          | 240          | 224          |
+|  |  | Mean (SD) | 136.3 (17.0) | 134.9 (17.8) | 135.1 (15.5) |
+|  |  | Median | 136.5        | 132.3        | 134.0        |
+|  |  | Min, Max |  90  , 189   |  92  , 200   |  91  , 198   |
+|  | Week 16 | n | 272          | 168          | 148          |
+|  |  | Mean (SD) | 134.6 (18.3) | 132.5 (14.3) | 133.7 (16.0) |
+|  |  | Median | 134.0        | 130.0        | 132.0        |
+|  |  | Min, Max |  76  , 190   | 100  , 168   |  99  , 186   |
+|  | End of Treatment | n | 222          | 177          | 168          |
+|  |  | Mean (SD) | 132.7 (15.4) | 133.0 (17.1) | 132.3 (15.6) |
+|  |  | Median | 131.0        | 130.0        | 131.0        |
+|  |  | Min, Max |  78  , 172   |  92  , 178   | 100  , 177   |
+| Temperature (C) | Baseline | n | 172          | 190          | 144          |
+|  |  | Mean (SD) |  36.6 ( 0.4) |  36.5 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.7        |  36.6        |  36.6        |
+|  |  | Min, Max |  35  , 37    |  35  , 37    |  36  , 37    |
+|  | Week 8 | n | 146          | 118          | 112          |
+|  |  | Mean (SD) |  36.6 ( 0.4) |  36.6 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.6        |  36.7        |  36.7        |
+|  |  | Min, Max |  36  , 37    |  36  , 37    |  36  , 37    |
+|  | Week 16 | n | 136          |  82          |  74          |
+|  |  | Mean (SD) |  36.7 ( 0.3) |  36.6 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.7        |  36.6        |  36.7        |
+|  |  | Min, Max |  36  , 37    |  36  , 37    |  36  , 37    |
+|  | End of Treatment | n |  74          |  59          |  56          |
+|  |  | Mean (SD) |  36.7 ( 0.4) |  36.6 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.8        |  36.7        |  36.7        |
+|  |  | Min, Max |  35  , 37    |  35  , 38    |  36  , 37    |
+
+ 
+
+Vital Signs Listing
+
+ 
+
+`skip` places the blank spacer rows between groups and follows the
+`readr::read_csv(col_names = )` pattern: `TRUE` (the default) derives it
+— a `"section"` key or a hidden break-only key breaks, a visible column
+key runs continuous; `FALSE` inserts none (as in the listing above); a
+character subset of `by` breaks on exactly those keys. Here a blank line
+separates parameters but not the visits within one:
+
+``` r
+
+tabular(cdisc_saf_vital, titles = "Vital Signs by Parameter and Visit") |>
+  cols(
+    paramcd = col_spec(visible = FALSE),
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic"
+  ) |>
+  cols_apply(
+    c("placebo", "drug_50", "drug_100"),
+    col_spec(align = "decimal")
+  ) |>
+  group_rows(by = c("param", "visit"), skip = "param")
+```
+
+| Statistic                           | placebo      | drug_50      | drug_100     |
+|-------------------------------------|--------------|--------------|--------------|
+| **Diastolic Blood Pressure (mmHg)** |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 340          | 384          | 288          |
+| Mean (SD)                           |  77.1 (10.7) |  76.6 ( 9.8) |  78.2 (10.3) |
+| Median                              |  77.7        |  76.7        |  78.8        |
+| Min, Max                            |  40  , 110   |  48  , 108   |  51  , 108   |
+| **Week 8**                          |              |              |              |
+| n                                   | 292          | 240          | 224          |
+| Mean (SD)                           |  75.2 ( 9.1) |  75.4 (10.6) |  77.4 ( 9.1) |
+| Median                              |  76.0        |  74.0        |  78.3        |
+| Min, Max                            |  49  , 101   |  52  , 100   |  54  , 98    |
+| **Week 16**                         |              |              |              |
+| n                                   | 272          | 168          | 148          |
+| Mean (SD)                           |  75.1 (10.9) |  75.2 (10.0) |  76.0 ( 9.0) |
+| Median                              |  76.0        |  75.7        |  77.3        |
+| Min, Max                            |  49  , 98    |  55  , 98    |  50  , 92    |
+| **End of Treatment**                |              |              |              |
+| n                                   | 222          | 177          | 168          |
+| Mean (SD)                           |  74.4 (10.7) |  76.0 (11.2) |  76.0 ( 9.9) |
+| Median                              |  73.5        |  76.0        |  78.0        |
+| Min, Max                            |  49  , 104   |  50  , 100   |  56  , 98    |
+|                                     |              |              |              |
+| **Pulse Rate (beats/min)**          |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 340          | 384          | 288          |
+| Mean (SD)                           |  73.5 (11.6) |  72.1 (10.8) |  72.4 (9.7)  |
+| Median                              |  72.3        |  70.0        |  71.7        |
+| Min, Max                            |  51  , 134   |  50  , 104   |  52  , 100   |
+| **Week 8**                          |              |              |              |
+| n                                   | 292          | 240          | 224          |
+| Mean (SD)                           |  71.8 ( 9.0) |  72.6 (11.1) |  74.0 (8.9)  |
+| Median                              |  72.0        |  72.0        |  73.2        |
+| Min, Max                            |  52  , 102   |  49  , 104   |  50  , 104   |
+| **Week 16**                         |              |              |              |
+| n                                   | 272          | 168          | 148          |
+| Mean (SD)                           |  70.6 ( 8.8) |  68.8 ( 9.4) |  73.2 (9.5)  |
+| Median                              |  70.2        |  68.0        |  72.0        |
+| Min, Max                            |  50  , 90    |  48  , 104   |  51  , 96    |
+| **End of Treatment**                |              |              |              |
+| n                                   | 222          | 177          | 168          |
+| Mean (SD)                           |  75.2 (11.5) |  74.1 ( 9.4) |  73.6 (9.6)  |
+| Median                              |  74.0        |  75.0        |  73.0        |
+| Min, Max                            |  51  , 106   |  50  , 94    |  50  , 98    |
+|                                     |              |              |              |
+| **Systolic Blood Pressure (mmHg)**  |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 340          | 384          | 288          |
+|                                     |              |              |              |
+| Mean (SD)                           | 136.8 (17.6) | 137.9 (18.5) | 137.8 (17.2) |
+| Median                              | 136.3        | 138.0        | 138.0        |
+| Min, Max                            |  80  , 184   | 100  , 194   | 100  , 192   |
+| **Week 8**                          |              |              |              |
+| n                                   | 292          | 240          | 224          |
+| Mean (SD)                           | 136.3 (17.0) | 134.9 (17.8) | 135.1 (15.5) |
+| Median                              | 136.5        | 132.3        | 134.0        |
+| Min, Max                            |  90  , 189   |  92  , 200   |  91  , 198   |
+| **Week 16**                         |              |              |              |
+| n                                   | 272          | 168          | 148          |
+| Mean (SD)                           | 134.6 (18.3) | 132.5 (14.3) | 133.7 (16.0) |
+| Median                              | 134.0        | 130.0        | 132.0        |
+| Min, Max                            |  76  , 190   | 100  , 168   |  99  , 186   |
+| **End of Treatment**                |              |              |              |
+| n                                   | 222          | 177          | 168          |
+| Mean (SD)                           | 132.7 (15.4) | 133.0 (17.1) | 132.3 (15.6) |
+| Median                              | 131.0        | 130.0        | 131.0        |
+| Min, Max                            |  78  , 172   |  92  , 178   | 100  , 177   |
+|                                     |              |              |              |
+| **Temperature (C)**                 |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 172          | 190          | 144          |
+| Mean (SD)                           |  36.6 (0.4)  |  36.5 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.7        |  36.6        |  36.6        |
+| Min, Max                            |  35  , 37    |  35  , 37    |  36  , 37    |
+| **Week 8**                          |              |              |              |
+| n                                   | 146          | 118          | 112          |
+| Mean (SD)                           |  36.6 (0.4)  |  36.6 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.6        |  36.7        |  36.7        |
+| Min, Max                            |  36  , 37    |  36  , 37    |  36  , 37    |
+| **Week 16**                         |              |              |              |
+| n                                   | 136          |  82          |  74          |
+| Mean (SD)                           |  36.7 (0.3)  |  36.6 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.7        |  36.6        |  36.7        |
+| Min, Max                            |  36  , 37    |  36  , 37    |  36  , 37    |
+| **End of Treatment**                |              |              |              |
+| n                                   |  74          |  59          |  56          |
+| Mean (SD)                           |  36.7 (0.4)  |  36.6 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.8        |  36.7        |  36.7        |
+| Min, Max                            |  35  , 37    |  35  , 38    |  36  , 37    |
+
+ 
+
+Vital Signs by Parameter and Visit
+
+ 
 
 ## BigN in the column headers
 

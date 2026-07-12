@@ -86,7 +86,7 @@
 <section class="level2"><h2 id="row-grouping-group_rows">Row grouping: <code>group_rows()</code>
 <a class="anchor" aria-label="anchor" href="#row-grouping-group_rows"></a>
 </h2>
-<p>Row structure is a fact about the whole table, so it is declared once with <code><a href="../reference/group_rows.html">group_rows()</a></code> — not per column. <code>by</code> names the grouping key columns, ordered outer to inner; <code>display</code> picks how each level renders:</p>
+<p>Row structure is a fact about the whole table, so it is declared once with <code><a href="../reference/group_rows.html">group_rows()</a></code> — not per column. <code>by</code> names only the <strong>structural</strong> grouping key columns (section headers and hidden break keys), ordered outer to inner. The visible row-label column (the statistic stub) is an ordinary <code><a href="../reference/cols.html">cols()</a></code> column, not a grouping key — it is indented automatically. <code>display</code> (a single value) picks how the keys render:</p>
 <table class="table caption-top">
 <colgroup>
 <col style="width: 33%">
@@ -101,28 +101,24 @@
 <tbody>
 <tr class="odd">
 <td>
-<code>"header_row"</code> <em>(default)</em>
+<code>"section"</code> <em>(default)</em>
 </td>
 <td>section variable (e.g. parameter)</td>
 <td>each value becomes a <strong>section-header row</strong>; the key column is hidden</td>
 </tr>
 <tr class="even">
-<td><code>"column"</code></td>
+<td><code>"collapse"</code></td>
 <td>a visible row label</td>
 <td>column stays; repeated values are suppressed</td>
 </tr>
 <tr class="odd">
-<td><code>"column_repeat"</code></td>
+<td><code>"repeat"</code></td>
 <td>a visible row label</td>
 <td>column stays; every row repeats the value</td>
 </tr>
-<tr class="even">
-<td><code>"none"</code></td>
-<td>a hidden block key</td>
-<td>break-only: no header, no column — just group transitions</td>
-</tr>
 </tbody>
 </table>
+<p>A <strong>break-only key</strong> — hidden, contributing only group transitions (the blank spacer and decimal-section reset) — is not a <code>display</code> mode: mark the key <code>col_spec(visible = FALSE)</code> and list it in <code>by</code>.</p>
 <p><code><a href="../reference/cols.html">cols()</a></code> handles the per-column cosmetics — labels (<code>x = "Label"</code> is shorthand for <code>col_spec(label = )</code>), alignment, widths, and <code>.hide =</code> for helper columns. Indentation is the separate <code>col_spec(indent = …)</code> argument (a fixed integer level, or a column name for per-row depth).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
@@ -302,13 +298,1168 @@
 </div>
 <p><code><a href="../reference/cols_apply.html">cols_apply()</a></code> attaches one shared <code>col_spec</code> to <strong>all</strong> the arm columns at once — use it instead of repeating <code>cols(placebo = …, drug_50 = …)</code> for a variable number of arms.</p>
 <blockquote>
-<p><strong>Indent from exactly one source.</strong> <code>display = "header_row"</code> already indents its child rows one level, so the stub column (here <code>stat_label</code>) needs <strong>no</strong> <code>indent</code> — the section supplies it. (An explicit <code>indent</code> on the host <em>overrides</em> that auto-indent rather than stacking, so <code>indent = 1</code> there still yields a single level.) The same care applies to labels from <code><a href="../reference/pivot_across.html">pivot_across()</a></code>, which come out with a leading indent baked into the string: keep them as-is or <code><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws()</a></code> them and set <code>indent</code> yourself — don’t double up.</p>
+<p><strong>Indent from exactly one source.</strong> <code>display = "section"</code> already indents its child rows one level, so the stub column (here <code>stat_label</code>) needs <strong>no</strong> <code>indent</code> — the section supplies it. (An explicit <code>indent</code> on the host <em>overrides</em> that auto-indent rather than stacking, so <code>indent = 1</code> there still yields a single level.) The same care applies to labels from <code><a href="../reference/pivot_across.html">pivot_across()</a></code>, which come out with a leading indent baked into the string: keep them as-is or <code><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws()</a></code> them and set <code>indent</code> yourself — don’t double up.</p>
 </blockquote>
-</section><section class="level2"><h2 id="bign-in-the-column-headers">BigN in the column headers<a class="anchor" aria-label="anchor" href="#bign-in-the-column-headers"></a>
+<section class="level3"><h3 id="display-modes-and-spacing">Display modes and spacing<a class="anchor" aria-label="anchor" href="#display-modes-and-spacing"></a>
+</h3>
+<p>The default <code>display = "section"</code> is the submission shape. For a listing, <code>display = "collapse"</code> keeps the keys as visible columns and suppresses the repeats, so only the first row of each run carries the label — swap in <code>"repeat"</code> when every row must be self-describing (an export or QC view):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_vital</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_vital</span>, titles <span class="op">=</span> <span class="st">"Vital Signs Listing"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
+<span>    paramcd <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>    param <span class="op">=</span> <span class="st">"Parameter"</span>,</span>
+<span>    visit <span class="op">=</span> <span class="st">"Visit"</span>,</span>
+<span>    stat_label <span class="op">=</span> <span class="st">"Statistic"</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"param"</span>, <span class="st">"visit"</span><span class="op">)</span>, display <span class="op">=</span> <span class="st">"collapse"</span>, skip <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<div class="cell-output-display">
+<style>
+#tabular-ec5ce5398e { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-ec5ce5398e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-ec5ce5398e p { line-height: inherit; }
+#tabular-ec5ce5398e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-ec5ce5398e .tabular-caption { margin: 0; padding: 0; }
+#tabular-ec5ce5398e .tabular-pad { margin: 0; line-height: 1; }
+#tabular-ec5ce5398e .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-ec5ce5398e .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-ec5ce5398e .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-ec5ce5398e .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-ec5ce5398e .tabular-table th, #tabular-ec5ce5398e .tabular-table td { padding: .18rem .6rem; }
+#tabular-ec5ce5398e .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-ec5ce5398e .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-ec5ce5398e .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-ec5ce5398e .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-ec5ce5398e .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ec5ce5398e .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ec5ce5398e .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ec5ce5398e .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ec5ce5398e .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-ec5ce5398e .tabular-table tbody tr td { border-top: none; }
+#tabular-ec5ce5398e .tabular-band { text-align: center; }
+#tabular-ec5ce5398e .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-ec5ce5398e .tabular-subgroup-label { font-weight: 600; }
+#tabular-ec5ce5398e .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-ec5ce5398e .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-ec5ce5398e .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-ec5ce5398e .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-ec5ce5398e .text-left { text-align: left; }
+#tabular-ec5ce5398e .text-center { text-align: center; }
+#tabular-ec5ce5398e .text-right { text-align: right; }
+#tabular-ec5ce5398e .tabular-table thead th.text-left { text-align: left; }
+#tabular-ec5ce5398e .tabular-table thead th.text-center { text-align: center; }
+#tabular-ec5ce5398e .tabular-table thead th.text-right { text-align: right; }
+#tabular-ec5ce5398e .tabular-table td.text-left { text-align: left; }
+#tabular-ec5ce5398e .tabular-table td.text-center { text-align: center; }
+#tabular-ec5ce5398e .tabular-table td.text-right { text-align: right; }
+#tabular-ec5ce5398e .valign-top { vertical-align: top; }
+#tabular-ec5ce5398e .valign-middle { vertical-align: middle; }
+#tabular-ec5ce5398e .valign-bottom { vertical-align: bottom; }
+#tabular-ec5ce5398e .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-ec5ce5398e .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-ec5ce5398e .tabular-page-break-row { display: none; }
+#tabular-ec5ce5398e { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-ec5ce5398e .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-ec5ce5398e .tabular-page-header, #tabular-ec5ce5398e .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-ec5ce5398e .tabular-page-header { margin-bottom: 1rem; }
+#tabular-ec5ce5398e .tabular-page-footer { margin-top: 1rem; }
+#tabular-ec5ce5398e .tabular-page-header-left, #tabular-ec5ce5398e .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-ec5ce5398e .tabular-page-header-center, #tabular-ec5ce5398e .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-ec5ce5398e .tabular-page-header-right, #tabular-ec5ce5398e .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-ec5ce5398e .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-ec5ce5398e .tabular-table tr { page-break-inside: avoid; } #tabular-ec5ce5398e .tabular-page-header, #tabular-ec5ce5398e .tabular-page-footer { display: none; } #tabular-ec5ce5398e .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-ec5ce5398e .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-ec5ce5398e .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style>
+<div id="tabular-ec5ce5398e" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<p class="tabular-title">Vital Signs Listing</p>
+<p class="tabular-pad"> </p>
+</figcaption><div class="tabular-table-wrap">
+
+<table class="table tabular-table caption-top">
+<thead><tr class="header">
+<th data-quarto-table-cell-role="th">Parameter</th>
+<th data-quarto-table-cell-role="th">Visit</th>
+<th data-quarto-table-cell-role="th">Statistic</th>
+<th class="text-center" data-quarto-table-cell-role="th">placebo</th>
+<th class="text-center" data-quarto-table-cell-role="th">drug_50</th>
+<th class="text-center" data-quarto-table-cell-role="th">drug_100</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Diastolic Blood Pressure (mmHg)</td>
+<td>Baseline</td>
+<td>n</td>
+<td class="text-center">340         </td>
+<td class="text-center">384         </td>
+<td class="text-center">288         </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 77.1 (10.7)</td>
+<td class="text-center"> 76.6 ( 9.8)</td>
+<td class="text-center"> 78.2 (10.3)</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 77.7       </td>
+<td class="text-center"> 76.7       </td>
+<td class="text-center"> 78.8       </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 40  , 110  </td>
+<td class="text-center"> 48  , 108  </td>
+<td class="text-center"> 51  , 108  </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td>Week 8</td>
+<td>n</td>
+<td class="text-center">292         </td>
+<td class="text-center">240         </td>
+<td class="text-center">224         </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 75.2 ( 9.1)</td>
+<td class="text-center"> 75.4 (10.6)</td>
+<td class="text-center"> 77.4 ( 9.1)</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 76.0       </td>
+<td class="text-center"> 74.0       </td>
+<td class="text-center"> 78.3       </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 49  , 101  </td>
+<td class="text-center"> 52  , 100  </td>
+<td class="text-center"> 54  , 98   </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td>Week 16</td>
+<td>n</td>
+<td class="text-center">272         </td>
+<td class="text-center">168         </td>
+<td class="text-center">148         </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 75.1 (10.9)</td>
+<td class="text-center"> 75.2 (10.0)</td>
+<td class="text-center"> 76.0 ( 9.0)</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 76.0       </td>
+<td class="text-center"> 75.7       </td>
+<td class="text-center"> 77.3       </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 49  , 98   </td>
+<td class="text-center"> 55  , 98   </td>
+<td class="text-center"> 50  , 92   </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td>End of Treatment</td>
+<td>n</td>
+<td class="text-center">222         </td>
+<td class="text-center">177         </td>
+<td class="text-center">168         </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 74.4 (10.7)</td>
+<td class="text-center"> 76.0 (11.2)</td>
+<td class="text-center"> 76.0 ( 9.9)</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 73.5       </td>
+<td class="text-center"> 76.0       </td>
+<td class="text-center"> 78.0       </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 49  , 104  </td>
+<td class="text-center"> 50  , 100  </td>
+<td class="text-center"> 56  , 98   </td>
+</tr>
+<tr class="odd">
+<td>Pulse Rate (beats/min)</td>
+<td>Baseline</td>
+<td>n</td>
+<td class="text-center">340         </td>
+<td class="text-center">384         </td>
+<td class="text-center">288         </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 73.5 (11.6)</td>
+<td class="text-center"> 72.1 (10.8)</td>
+<td class="text-center"> 72.4 ( 9.7)</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 72.3       </td>
+<td class="text-center"> 70.0       </td>
+<td class="text-center"> 71.7       </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 51  , 134  </td>
+<td class="text-center"> 50  , 104  </td>
+<td class="text-center"> 52  , 100  </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td>Week 8</td>
+<td>n</td>
+<td class="text-center">292         </td>
+<td class="text-center">240         </td>
+<td class="text-center">224         </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 71.8 ( 9.0)</td>
+<td class="text-center"> 72.6 (11.1)</td>
+<td class="text-center"> 74.0 ( 8.9)</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 72.0       </td>
+<td class="text-center"> 72.0       </td>
+<td class="text-center"> 73.2       </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 52  , 102  </td>
+<td class="text-center"> 49  , 104  </td>
+<td class="text-center"> 50  , 104  </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td>Week 16</td>
+<td>n</td>
+<td class="text-center">272         </td>
+<td class="text-center">168         </td>
+<td class="text-center">148         </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 70.6 ( 8.8)</td>
+<td class="text-center"> 68.8 ( 9.4)</td>
+<td class="text-center"> 73.2 ( 9.5)</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 70.2       </td>
+<td class="text-center"> 68.0       </td>
+<td class="text-center"> 72.0       </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 50  , 90   </td>
+<td class="text-center"> 48  , 104  </td>
+<td class="text-center"> 51  , 96   </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td>End of Treatment</td>
+<td>n</td>
+<td class="text-center">222         </td>
+<td class="text-center">177         </td>
+<td class="text-center">168         </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 75.2 (11.5)</td>
+<td class="text-center"> 74.1 ( 9.4)</td>
+<td class="text-center"> 73.6 ( 9.6)</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 74.0       </td>
+<td class="text-center"> 75.0       </td>
+<td class="text-center"> 73.0       </td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 51  , 106  </td>
+<td class="text-center"> 50  , 94   </td>
+<td class="text-center"> 50  , 98   </td>
+</tr>
+<tr class="odd">
+<td>Systolic Blood Pressure (mmHg)</td>
+<td>Baseline</td>
+<td>n</td>
+<td class="text-center">340         </td>
+<td class="text-center">384         </td>
+<td class="text-center">288         </td>
+</tr>
+<tr class="tabular-page-break-row even" aria-hidden="true">
+<td colspan="6"></td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center">136.8 (17.6)</td>
+<td class="text-center">137.9 (18.5)</td>
+<td class="text-center">137.8 (17.2)</td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center">136.3       </td>
+<td class="text-center">138.0       </td>
+<td class="text-center">138.0       </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 80  , 184  </td>
+<td class="text-center">100  , 194  </td>
+<td class="text-center">100  , 192  </td>
+</tr>
+<tr class="even">
+<td></td>
+<td>Week 8</td>
+<td>n</td>
+<td class="text-center">292         </td>
+<td class="text-center">240         </td>
+<td class="text-center">224         </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center">136.3 (17.0)</td>
+<td class="text-center">134.9 (17.8)</td>
+<td class="text-center">135.1 (15.5)</td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center">136.5       </td>
+<td class="text-center">132.3       </td>
+<td class="text-center">134.0       </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 90  , 189  </td>
+<td class="text-center"> 92  , 200  </td>
+<td class="text-center"> 91  , 198  </td>
+</tr>
+<tr class="even">
+<td></td>
+<td>Week 16</td>
+<td>n</td>
+<td class="text-center">272         </td>
+<td class="text-center">168         </td>
+<td class="text-center">148         </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center">134.6 (18.3)</td>
+<td class="text-center">132.5 (14.3)</td>
+<td class="text-center">133.7 (16.0)</td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center">134.0       </td>
+<td class="text-center">130.0       </td>
+<td class="text-center">132.0       </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 76  , 190  </td>
+<td class="text-center">100  , 168  </td>
+<td class="text-center"> 99  , 186  </td>
+</tr>
+<tr class="even">
+<td></td>
+<td>End of Treatment</td>
+<td>n</td>
+<td class="text-center">222         </td>
+<td class="text-center">177         </td>
+<td class="text-center">168         </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center">132.7 (15.4)</td>
+<td class="text-center">133.0 (17.1)</td>
+<td class="text-center">132.3 (15.6)</td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center">131.0       </td>
+<td class="text-center">130.0       </td>
+<td class="text-center">131.0       </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 78  , 172  </td>
+<td class="text-center"> 92  , 178  </td>
+<td class="text-center">100  , 177  </td>
+</tr>
+<tr class="even">
+<td>Temperature (C)</td>
+<td>Baseline</td>
+<td>n</td>
+<td class="text-center">172         </td>
+<td class="text-center">190         </td>
+<td class="text-center">144         </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 36.6 ( 0.4)</td>
+<td class="text-center"> 36.5 ( 0.4)</td>
+<td class="text-center"> 36.6 ( 0.4)</td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 36.7       </td>
+<td class="text-center"> 36.6       </td>
+<td class="text-center"> 36.6       </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 35  , 37   </td>
+<td class="text-center"> 35  , 37   </td>
+<td class="text-center"> 36  , 37   </td>
+</tr>
+<tr class="even">
+<td></td>
+<td>Week 8</td>
+<td>n</td>
+<td class="text-center">146         </td>
+<td class="text-center">118         </td>
+<td class="text-center">112         </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 36.6 ( 0.4)</td>
+<td class="text-center"> 36.6 ( 0.4)</td>
+<td class="text-center"> 36.6 ( 0.4)</td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 36.6       </td>
+<td class="text-center"> 36.7       </td>
+<td class="text-center"> 36.7       </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 36  , 37   </td>
+<td class="text-center"> 36  , 37   </td>
+<td class="text-center"> 36  , 37   </td>
+</tr>
+<tr class="even">
+<td></td>
+<td>Week 16</td>
+<td>n</td>
+<td class="text-center">136         </td>
+<td class="text-center"> 82         </td>
+<td class="text-center"> 74         </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 36.7 ( 0.3)</td>
+<td class="text-center"> 36.6 ( 0.4)</td>
+<td class="text-center"> 36.6 ( 0.4)</td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 36.7       </td>
+<td class="text-center"> 36.6       </td>
+<td class="text-center"> 36.7       </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Min, Max</td>
+<td class="text-center"> 36  , 37   </td>
+<td class="text-center"> 36  , 37   </td>
+<td class="text-center"> 36  , 37   </td>
+</tr>
+<tr class="even">
+<td></td>
+<td>End of Treatment</td>
+<td>n</td>
+<td class="text-center"> 74         </td>
+<td class="text-center"> 59         </td>
+<td class="text-center"> 56         </td>
+</tr>
+<tr class="odd">
+<td></td>
+<td></td>
+<td>Mean (SD)</td>
+<td class="text-center"> 36.7 ( 0.4)</td>
+<td class="text-center"> 36.6 ( 0.4)</td>
+<td class="text-center"> 36.6 ( 0.4)</td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+<td>Median</td>
+<td class="text-center"> 36.8       </td>
+<td class="text-center"> 36.7       </td>
+<td class="text-center"> 36.7       </td>
+</tr>
+<tr class="odd">
+<td style="border-bottom: 0.5pt solid #212529"></td>
+<td style="border-bottom: 0.5pt solid #212529"></td>
+<td style="border-bottom: 0.5pt solid #212529">Min, Max</td>
+<td class="text-center" style="border-bottom: 0.5pt solid #212529"> 35  , 37   </td>
+<td class="text-center" style="border-bottom: 0.5pt solid #212529"> 35  , 38   </td>
+<td class="text-center" style="border-bottom: 0.5pt solid #212529"> 36  , 37   </td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure></div>
+</div>
+</div>
+<p><code>skip</code> places the blank spacer rows between groups and follows the <code>readr::read_csv(col_names = )</code> pattern: <code>TRUE</code> (the default) derives it — a <code>"section"</code> key or a hidden break-only key breaks, a visible column key runs continuous; <code>FALSE</code> inserts none (as in the listing above); a character subset of <code>by</code> breaks on exactly those keys. Here a blank line separates parameters but not the visits within one:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_vital</span>, titles <span class="op">=</span> <span class="st">"Vital Signs by Parameter and Visit"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
+<span>    paramcd <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>    param <span class="op">=</span> <span class="st">"Parameter"</span>,</span>
+<span>    visit <span class="op">=</span> <span class="st">"Visit"</span>,</span>
+<span>    stat_label <span class="op">=</span> <span class="st">"Statistic"</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"param"</span>, <span class="st">"visit"</span><span class="op">)</span>, skip <span class="op">=</span> <span class="st">"param"</span><span class="op">)</span></span></code></pre></div>
+<div class="cell-output-display">
+<style>
+#tabular-7465ce2bd1 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-7465ce2bd1 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-7465ce2bd1 p { line-height: inherit; }
+#tabular-7465ce2bd1 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-7465ce2bd1 .tabular-caption { margin: 0; padding: 0; }
+#tabular-7465ce2bd1 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-7465ce2bd1 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-7465ce2bd1 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-7465ce2bd1 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-7465ce2bd1 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-7465ce2bd1 .tabular-table th, #tabular-7465ce2bd1 .tabular-table td { padding: .18rem .6rem; }
+#tabular-7465ce2bd1 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-7465ce2bd1 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-7465ce2bd1 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-7465ce2bd1 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-7465ce2bd1 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7465ce2bd1 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7465ce2bd1 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7465ce2bd1 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7465ce2bd1 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-7465ce2bd1 .tabular-table tbody tr td { border-top: none; }
+#tabular-7465ce2bd1 .tabular-band { text-align: center; }
+#tabular-7465ce2bd1 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-7465ce2bd1 .tabular-subgroup-label { font-weight: 600; }
+#tabular-7465ce2bd1 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-7465ce2bd1 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-7465ce2bd1 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-7465ce2bd1 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-7465ce2bd1 .text-left { text-align: left; }
+#tabular-7465ce2bd1 .text-center { text-align: center; }
+#tabular-7465ce2bd1 .text-right { text-align: right; }
+#tabular-7465ce2bd1 .tabular-table thead th.text-left { text-align: left; }
+#tabular-7465ce2bd1 .tabular-table thead th.text-center { text-align: center; }
+#tabular-7465ce2bd1 .tabular-table thead th.text-right { text-align: right; }
+#tabular-7465ce2bd1 .tabular-table td.text-left { text-align: left; }
+#tabular-7465ce2bd1 .tabular-table td.text-center { text-align: center; }
+#tabular-7465ce2bd1 .tabular-table td.text-right { text-align: right; }
+#tabular-7465ce2bd1 .valign-top { vertical-align: top; }
+#tabular-7465ce2bd1 .valign-middle { vertical-align: middle; }
+#tabular-7465ce2bd1 .valign-bottom { vertical-align: bottom; }
+#tabular-7465ce2bd1 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-7465ce2bd1 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-7465ce2bd1 .tabular-page-break-row { display: none; }
+#tabular-7465ce2bd1 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-7465ce2bd1 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-7465ce2bd1 .tabular-page-header, #tabular-7465ce2bd1 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-7465ce2bd1 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-7465ce2bd1 .tabular-page-footer { margin-top: 1rem; }
+#tabular-7465ce2bd1 .tabular-page-header-left, #tabular-7465ce2bd1 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-7465ce2bd1 .tabular-page-header-center, #tabular-7465ce2bd1 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-7465ce2bd1 .tabular-page-header-right, #tabular-7465ce2bd1 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-7465ce2bd1 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-7465ce2bd1 .tabular-table tr { page-break-inside: avoid; } #tabular-7465ce2bd1 .tabular-page-header, #tabular-7465ce2bd1 .tabular-page-footer { display: none; } #tabular-7465ce2bd1 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-7465ce2bd1 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-7465ce2bd1 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+</style>
+<div id="tabular-7465ce2bd1" class="tabular-doc" style="overflow-x:auto;max-width:100%;"><figure class="tabular-content"><figcaption class="tabular-caption"><p class="tabular-pad"> </p>
+<p class="tabular-title">Vital Signs by Parameter and Visit</p>
+<p class="tabular-pad"> </p>
+</figcaption><div class="tabular-table-wrap">
+
+<table class="table tabular-table caption-top">
+<thead><tr class="header">
+<th data-quarto-table-cell-role="th">Statistic</th>
+<th class="text-center" data-quarto-table-cell-role="th">placebo</th>
+<th class="text-center" data-quarto-table-cell-role="th">drug_50</th>
+<th class="text-center" data-quarto-table-cell-role="th">drug_100</th>
+</tr></thead>
+<tbody>
+<tr class="tabular-group-header odd">
+<td colspan="4"><strong>Diastolic Blood Pressure (mmHg)</strong></td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Baseline</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">340         </td>
+<td class="text-center">384         </td>
+<td class="text-center">288         </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 77.1 (10.7)</td>
+<td class="text-center"> 76.6 ( 9.8)</td>
+<td class="text-center"> 78.2 (10.3)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 77.7       </td>
+<td class="text-center"> 76.7       </td>
+<td class="text-center"> 78.8       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 40  , 110  </td>
+<td class="text-center"> 48  , 108  </td>
+<td class="text-center"> 51  , 108  </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Week 8</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">292         </td>
+<td class="text-center">240         </td>
+<td class="text-center">224         </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 75.2 ( 9.1)</td>
+<td class="text-center"> 75.4 (10.6)</td>
+<td class="text-center"> 77.4 ( 9.1)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 76.0       </td>
+<td class="text-center"> 74.0       </td>
+<td class="text-center"> 78.3       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 49  , 101  </td>
+<td class="text-center"> 52  , 100  </td>
+<td class="text-center"> 54  , 98   </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Week 16</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">272         </td>
+<td class="text-center">168         </td>
+<td class="text-center">148         </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 75.1 (10.9)</td>
+<td class="text-center"> 75.2 (10.0)</td>
+<td class="text-center"> 76.0 ( 9.0)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 76.0       </td>
+<td class="text-center"> 75.7       </td>
+<td class="text-center"> 77.3       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 49  , 98   </td>
+<td class="text-center"> 55  , 98   </td>
+<td class="text-center"> 50  , 92   </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>End of Treatment</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">222         </td>
+<td class="text-center">177         </td>
+<td class="text-center">168         </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 74.4 (10.7)</td>
+<td class="text-center"> 76.0 (11.2)</td>
+<td class="text-center"> 76.0 ( 9.9)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 73.5       </td>
+<td class="text-center"> 76.0       </td>
+<td class="text-center"> 78.0       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 49  , 104  </td>
+<td class="text-center"> 50  , 100  </td>
+<td class="text-center"> 56  , 98   </td>
+</tr>
+<tr class="tabular-blank-row even">
+<td colspan="4"> </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="4"><strong>Pulse Rate (beats/min)</strong></td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Baseline</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">340         </td>
+<td class="text-center">384         </td>
+<td class="text-center">288         </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 73.5 (11.6)</td>
+<td class="text-center"> 72.1 (10.8)</td>
+<td class="text-center"> 72.4 (9.7) </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 72.3       </td>
+<td class="text-center"> 70.0       </td>
+<td class="text-center"> 71.7       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 51  , 134  </td>
+<td class="text-center"> 50  , 104  </td>
+<td class="text-center"> 52  , 100  </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Week 8</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">292         </td>
+<td class="text-center">240         </td>
+<td class="text-center">224         </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 71.8 ( 9.0)</td>
+<td class="text-center"> 72.6 (11.1)</td>
+<td class="text-center"> 74.0 (8.9) </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 72.0       </td>
+<td class="text-center"> 72.0       </td>
+<td class="text-center"> 73.2       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 52  , 102  </td>
+<td class="text-center"> 49  , 104  </td>
+<td class="text-center"> 50  , 104  </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Week 16</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">272         </td>
+<td class="text-center">168         </td>
+<td class="text-center">148         </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 70.6 ( 8.8)</td>
+<td class="text-center"> 68.8 ( 9.4)</td>
+<td class="text-center"> 73.2 (9.5) </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 70.2       </td>
+<td class="text-center"> 68.0       </td>
+<td class="text-center"> 72.0       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 50  , 90   </td>
+<td class="text-center"> 48  , 104  </td>
+<td class="text-center"> 51  , 96   </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>End of Treatment</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">222         </td>
+<td class="text-center">177         </td>
+<td class="text-center">168         </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 75.2 (11.5)</td>
+<td class="text-center"> 74.1 ( 9.4)</td>
+<td class="text-center"> 73.6 (9.6) </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 74.0       </td>
+<td class="text-center"> 75.0       </td>
+<td class="text-center"> 73.0       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 51  , 106  </td>
+<td class="text-center"> 50  , 94   </td>
+<td class="text-center"> 50  , 98   </td>
+</tr>
+<tr class="tabular-blank-row even">
+<td colspan="4"> </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="4"><strong>Systolic Blood Pressure (mmHg)</strong></td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Baseline</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">340         </td>
+<td class="text-center">384         </td>
+<td class="text-center">288         </td>
+</tr>
+<tr class="tabular-page-break-row even" aria-hidden="true">
+<td colspan="4"></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center">136.8 (17.6)</td>
+<td class="text-center">137.9 (18.5)</td>
+<td class="text-center">137.8 (17.2)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center">136.3       </td>
+<td class="text-center">138.0       </td>
+<td class="text-center">138.0       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 80  , 184  </td>
+<td class="text-center">100  , 194  </td>
+<td class="text-center">100  , 192  </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Week 8</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">292         </td>
+<td class="text-center">240         </td>
+<td class="text-center">224         </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center">136.3 (17.0)</td>
+<td class="text-center">134.9 (17.8)</td>
+<td class="text-center">135.1 (15.5)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center">136.5       </td>
+<td class="text-center">132.3       </td>
+<td class="text-center">134.0       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 90  , 189  </td>
+<td class="text-center"> 92  , 200  </td>
+<td class="text-center"> 91  , 198  </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Week 16</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">272         </td>
+<td class="text-center">168         </td>
+<td class="text-center">148         </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center">134.6 (18.3)</td>
+<td class="text-center">132.5 (14.3)</td>
+<td class="text-center">133.7 (16.0)</td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center">134.0       </td>
+<td class="text-center">130.0       </td>
+<td class="text-center">132.0       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 76  , 190  </td>
+<td class="text-center">100  , 168  </td>
+<td class="text-center"> 99  , 186  </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>End of Treatment</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">222         </td>
+<td class="text-center">177         </td>
+<td class="text-center">168         </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center">132.7 (15.4)</td>
+<td class="text-center">133.0 (17.1)</td>
+<td class="text-center">132.3 (15.6)</td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center">131.0       </td>
+<td class="text-center">130.0       </td>
+<td class="text-center">131.0       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 78  , 172  </td>
+<td class="text-center"> 92  , 178  </td>
+<td class="text-center">100  , 177  </td>
+</tr>
+<tr class="tabular-blank-row odd">
+<td colspan="4"> </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="4"><strong>Temperature (C)</strong></td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Baseline</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">172         </td>
+<td class="text-center">190         </td>
+<td class="text-center">144         </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 36.6 (0.4) </td>
+<td class="text-center"> 36.5 (0.4) </td>
+<td class="text-center"> 36.6 (0.4) </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 36.7       </td>
+<td class="text-center"> 36.6       </td>
+<td class="text-center"> 36.6       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 35  , 37   </td>
+<td class="text-center"> 35  , 37   </td>
+<td class="text-center"> 36  , 37   </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Week 8</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">146         </td>
+<td class="text-center">118         </td>
+<td class="text-center">112         </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 36.6 (0.4) </td>
+<td class="text-center"> 36.6 (0.4) </td>
+<td class="text-center"> 36.6 (0.4) </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 36.6       </td>
+<td class="text-center"> 36.7       </td>
+<td class="text-center"> 36.7       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 36  , 37   </td>
+<td class="text-center"> 36  , 37   </td>
+<td class="text-center"> 36  , 37   </td>
+</tr>
+<tr class="tabular-group-header odd">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>Week 16</strong></td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center">136         </td>
+<td class="text-center"> 82         </td>
+<td class="text-center"> 74         </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 36.7 (0.3) </td>
+<td class="text-center"> 36.6 (0.4) </td>
+<td class="text-center"> 36.6 (0.4) </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 36.7       </td>
+<td class="text-center"> 36.6       </td>
+<td class="text-center"> 36.7       </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Min, Max</td>
+<td class="text-center"> 36  , 37   </td>
+<td class="text-center"> 36  , 37   </td>
+<td class="text-center"> 36  , 37   </td>
+</tr>
+<tr class="tabular-group-header even">
+<td colspan="4" style="padding-left: calc(.6rem + 1.2em)"><strong>End of Treatment</strong></td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">n</td>
+<td class="text-center"> 74         </td>
+<td class="text-center"> 59         </td>
+<td class="text-center"> 56         </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em)">Mean (SD)</td>
+<td class="text-center"> 36.7 (0.4) </td>
+<td class="text-center"> 36.6 (0.4) </td>
+<td class="text-center"> 36.6 (0.4) </td>
+</tr>
+<tr class="odd">
+<td style="padding-left: calc(.6rem + 2.4em)">Median</td>
+<td class="text-center"> 36.8       </td>
+<td class="text-center"> 36.7       </td>
+<td class="text-center"> 36.7       </td>
+</tr>
+<tr class="even">
+<td style="padding-left: calc(.6rem + 2.4em); border-bottom: 0.5pt solid #212529">Min, Max</td>
+<td class="text-center" style="border-bottom: 0.5pt solid #212529"> 35  , 37   </td>
+<td class="text-center" style="border-bottom: 0.5pt solid #212529"> 35  , 38   </td>
+<td class="text-center" style="border-bottom: 0.5pt solid #212529"> 36  , 37   </td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure></div>
+</div>
+</div>
+</section></section><section class="level2"><h2 id="bign-in-the-column-headers">BigN in the column headers<a class="anchor" aria-label="anchor" href="#bign-in-the-column-headers"></a>
 </h2>
 <p>The <code>(N=…)</code> denominator goes in each arm’s header label. Build it from a BigN table and interpolate with glue:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_n</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span><span class="va">N</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">cdisc_saf_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">cdisc_saf_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span>
 <span></span>
@@ -513,7 +1664,7 @@
 </blockquote>
 <p>For a <strong>variable</strong> number of arms, the per-arm label is one <code><a href="../reference/cols_apply.html">cols_apply()</a></code> call instead of a hand-written line each: the <code>{.name}</code> token resolves to each matched column’s name, and the rest of the <code>{…}</code> evaluates in the calling environment, so the BigN looks itself up:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">arm_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"placebo"</span>, <span class="st">"drug_50"</span>, <span class="st">"drug_100"</span>, <span class="st">"Total"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -705,7 +1856,7 @@
 </h2>
 <p><code><a href="../reference/headers.html">headers()</a></code> builds spanning bands over groups of columns:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span>stat_label <span class="op">=</span> <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">""</span>, width <span class="op">=</span> <span class="st">"2.2in"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -890,7 +2041,7 @@
 <p>Display cells are formatted strings — <code>"54 (21.3)"</code> sorts lexically, not numerically. The idiom: carry one hidden <strong>numeric key</strong> per sort level, hide it with <code>col_spec(visible = FALSE)</code>, and hand the keys to <code><a href="../reference/sort_rows.html">sort_rows()</a></code>. <code>descending</code> takes one value per key, so mixed-direction sorts are a single call.</p>
 <p>The bundled AE table ships its keys precomputed: <code>soc_n</code> (events in the parent SOC, constant down each SOC block) and <code>n_total</code> (events on the row). Sorting on both, descending, clusters every preferred term under its SOC and orders both levels by frequency — the standard SAP ordering:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt</span>, titles <span class="op">=</span> <span class="st">"AEs by SOC and PT, descending frequency"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -1413,7 +2564,7 @@
 </h2>
 <p><code><a href="../reference/paginate.html">paginate()</a></code> derives the rows-per-page budget from the preset (paper, font, margins) and the title/footnote/header line counts — you never set rows-per-page by hand. <code>keep_together</code> stops a page break landing inside a section’s run:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span><span class="va">ae_pages</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_aesocpt</span>, titles <span class="op">=</span> <span class="st">"AEs by SOC and PT"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
@@ -1941,14 +3092,14 @@
 </div>
 <p>The preview above is one continuous table: row pagination, <code>keep_together</code>, and the <code>continuation</code> marker materialise only in the <strong>paged backends</strong> (RTF, PDF, DOCX), not in HTML. Emit to one of those to see the page breaks:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">ae_pages</span>, <span class="st">"ae_soc_pt.pdf"</span><span class="op">)</span> <span class="co"># continuation marker repeats on each continued page</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="panels-wide-tables">Panels — wide tables<a class="anchor" aria-label="anchor" href="#panels-wide-tables"></a>
 </h2>
 <p>When the columns don’t fit one page, <code>paginate(panels = N)</code> splits the <strong>non-stub</strong> columns into <code>N</code> chunks and repeats the stub on each panel (so the row labels reappear). The stub defaults to the <code><a href="../reference/group_rows.html">group_rows()</a></code> keys; name it explicitly with <code>repeat_cols</code> to carry the row label too:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">wide_split</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics (wide split)"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span>variable <span class="op">=</span> <span class="st">""</span>, stat_label <span class="op">=</span> <span class="st">""</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols_apply.html">cols_apply</a></span><span class="op">(</span><span class="va">arms</span>, <span class="fu"><a href="../reference/col_spec.html">col_spec</a></span><span class="op">(</span>align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -2135,7 +3286,7 @@
 </div>
 <p>Panels are a paged-backend feature: in HTML and Markdown the table stays one continuous block (the preview above), while RTF, PDF, and DOCX place each panel on its own page with the stub columns repeated. Emit to a paged backend to see the split:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">wide_split</span>, <span class="st">"demographics_wide.pdf"</span><span class="op">)</span> <span class="co"># panel 2 carries the (continued) marker</span></span></code></pre></div>
 </div>
 <p>Two things to know:</p>
@@ -2148,7 +3299,7 @@
 </h2>
 <p><code><a href="../reference/subgroup.html">subgroup()</a></code> partitions the table — one page block per value, with a banner and a hard page break. A partition-constant column can ride into the banner:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_subgroup</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_subgroup</span>, titles <span class="op">=</span> <span class="st">"Vital signs by sex"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
@@ -2799,7 +3950,7 @@
 </div>
 <p>For a <strong>different <code>(N=)</code> per arm on each page</strong> (the column headers re-resolving per subgroup), pass <code>big_n</code> — a small table of N per page × arm. No bundled dataset carries per-arm-per-page counts, so build it inline (this is also the shape <code>big_n</code> expects):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">big_n</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
 <span>  <span class="op">~</span><span class="va">sex</span>, <span class="op">~</span><span class="va">placebo</span>, <span class="op">~</span><span class="va">drug_50</span>, <span class="op">~</span><span class="va">drug_100</span>, <span class="op">~</span><span class="va">Total</span>,</span>
 <span>  <span class="st">"F"</span>,       <span class="fl">53L</span>,      <span class="fl">55L</span>,       <span class="fl">35L</span>,    <span class="fl">143L</span>,</span>
@@ -3472,7 +4623,7 @@
 </h2>
 <p>A table whose data has zero rows still renders — the full page chrome and the column headers stay intact, and an empty-data placeholder takes the place of the body. This is the correct output for a population that produced no records (a cohort with no subjects, a serious-AE table with no events), rather than an error or a blank page. The per-table message is <code>tabular(empty_text = ...)</code>; set a house default for every table with <code>preset(empty_text = ...)</code>. The message renders as a single horizontally centred row in the table body, where the first data row would sit.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Same demographics shell, but the population filter has left no rows.</span></span>
 <span><span class="va">empty_demo</span> <span class="op">&lt;-</span> <span class="va">cdisc_saf_demo</span><span class="op">[</span><span class="fl">0</span>, <span class="op">]</span></span>
 <span></span>

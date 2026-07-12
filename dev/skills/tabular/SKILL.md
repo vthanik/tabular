@@ -37,7 +37,7 @@ data(cdisc_saf_demo, package = "tabular")
 
 tabular(cdisc_saf_demo, titles = c("Table 14-2.01", "Demographics", "ITT")) |>
   cols(variable = "", stat_label = "") |>
-  group_rows(by = "variable", display = "header_row") |>
+  group_rows(by = "variable") |>
   emit("table.rtf")
 ```
 
@@ -59,7 +59,7 @@ Describe each column's role, label, width, alignment, and visibility.
 - `cols`: Assign a `col_spec` to one or more columns (a bare string is label shorthand; `.hide` hides columns)
 - `col_spec`: Build a per-column specification (`label`, `width`, `align`, `visible`, `indent`)
 - `cols_apply`: Apply one `col_spec` across many columns by predicate
-- `group_rows`: Declare the table-level row grouping (`by` keys outer to inner, per-key `display` and `skip`)
+- `group_rows`: Declare the table-level row grouping (`by` keys outer to inner; scalar `display` = `"section"` / `"collapse"` / `"repeat"`; `skip` = TRUE / FALSE / a subset of `by`)
 
 ### Column headers
 
@@ -149,7 +149,7 @@ of inventing toy data.
   lexically; derive an integer key, hide it with `col_spec(visible = FALSE)`,
   then `sort_rows(by = key)`.
 - **BigN goes inline in the label string**, not a field.
-- **`group_rows(display = "header_row")` auto-indents its child rows** — don't
+- **`group_rows()` sections auto-indent their child rows** — don't
   also add `col_spec(indent = )` on the stub (double indent).
 - **Titles and footnotes are multi-line** — pass a `character()` of any length.
 - Cosmetic knobs are named lists keyed by surface; per-surface specs are flat

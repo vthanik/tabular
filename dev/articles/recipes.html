@@ -1050,7 +1050,7 @@ N=254</th>
 </div>
 </section><section class="level2"><h2 id="best-overall-response-and-response-rates">Best overall response and response rates<a class="anchor" aria-label="anchor" href="#best-overall-response-and-response-rates"></a>
 </h2>
-<p>The efficacy companion: <code>group_label</code> synthesises one bold section band per analysis block (best overall response, ORR, CBR, DCR) via <code>header_row</code>, with indented response rows beneath. Denominators come from <code>cdisc_eff_n</code>.</p>
+<p>The efficacy companion: <code>group_label</code> synthesises one bold section band per analysis block (best overall response, ORR, CBR, DCR) via the default <code>"section"</code> display, with indented response rows beneath. Denominators come from <code>cdisc_eff_n</code>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ne</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">cdisc_eff_n</span><span class="op">$</span><span class="va">n</span>, <span class="va">cdisc_eff_n</span><span class="op">$</span><span class="va">arm_short</span><span class="op">)</span></span>

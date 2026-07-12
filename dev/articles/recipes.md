@@ -200,9 +200,9 @@ aesocpt_tbl |>
 ## Best overall response and response rates
 
 The efficacy companion: `group_label` synthesises one bold section band
-per analysis block (best overall response, ORR, CBR, DCR) via
-`header_row`, with indented response rows beneath. Denominators come
-from `cdisc_eff_n`.
+per analysis block (best overall response, ORR, CBR, DCR) via the
+default `"section"` display, with indented response rows beneath.
+Denominators come from `cdisc_eff_n`.
 
 ``` r
 

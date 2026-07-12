@@ -7,7 +7,7 @@ Overall Response, Objective Response Rate, Clinical Benefit Rate,
 Disease Control Rate) are encoded via the `groupid` + `group_label` pair
 so a single `group_rows(by = "group_label")` synthesises one bold
 section band per groupid block; the body rows render below each band,
-auto-indented one level by the `"header_row"` section itself (the stub
+auto-indented one level by the `"section"` display itself (the stub
 needs no `indent` — the section supplies it).
 
 ## Usage
@@ -50,7 +50,7 @@ A data frame with 13 rows and 7 columns:
   block ("Best Overall Response" x7, "Objective Response Rate" x2, ...).
   Drives the engine's
   [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
-  header_row synthesis.
+  section-header synthesis.
 
 ## Source
 
@@ -70,7 +70,7 @@ for BigN denominators.
 # Disease Control Rate), each followed by indented stat rows. The
 # source already ships in the right display order, so no sort step
 # is needed; `group_label` repeats across every row of its section
-# so the engine's `header_row` mode emits exactly one band per
+# so the engine's `section` mode emits exactly one band per
 # section.
 ne <- stats::setNames(cdisc_eff_n$n, cdisc_eff_n$arm_short)
 tabular(

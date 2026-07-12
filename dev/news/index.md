@@ -32,11 +32,21 @@
   non-group columns is gone with them.
 
 - [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
-  is the new structural verb: `group_rows(by, display, skip)` names the
-  grouping key columns outer to inner with per-key display
-  (`"header_row"`, `"column"`, `"column_repeat"`, or the new break-only
-  `"none"`) and per-key blank-spacer control; it replaces a prior
-  declaration wholesale, and its keys may not overlap `subgroup(by = )`.
+  is the new structural verb: `group_rows(by, display, skip)` names only
+  the structural grouping keys outer to inner (the section headers and
+  any hidden break keys, not the visible label column, which stays an
+  ordinary
+  [`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
+  column and is auto-indented). `display` is a single value applied to
+  every key (`"section"`, `"collapse"`, or `"repeat"`); a hidden
+  break-only key is expressed with `col_spec(visible = FALSE)` rather
+  than a display mode. `skip` follows the
+  `readr::read_csv(col_names = )` pattern: `TRUE` (the default) derives
+  the blank spacers from `display` and key visibility, `FALSE` inserts
+  none, and a character subset of `by` breaks on exactly those keys
+  (e.g. `skip = "param"`). Nesting is just listing the header keys
+  (`by = c("param", "visit")`). It replaces a prior declaration
+  wholesale, and its keys may not overlap `subgroup(by = )`.
 
 - [`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md)
   gained `repeat_cols`, replacing the `usage = "id"` role: the

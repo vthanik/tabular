@@ -105,10 +105,12 @@ col_spec(
 
   **Break-only grouping key.** To drop a blank line wherever a hidden
   marker column changes (e.g. continuous stats vs. categorical groups
-  inside one characteristic), do not hide the column here — declare it
-  as a break-only key with
-  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)`(by = "marker", display = "none")`,
-  which hides it and contributes only its group transitions.
+  inside one characteristic), set `visible = FALSE` here AND name the
+  column in
+  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)`(by = )`.
+  A hidden grouping key is break-only: it renders nothing and
+  contributes only its group transitions (the blank spacer and the
+  decimal-section reset).
 
 - width:
 
@@ -239,7 +241,7 @@ col_spec(
     indented that many levels (each level is `preset@indent_size`
     space-widths). `indent = 1` is the common "nudge this stub in one
     level" case; `indent = 0` is a real value that flattens children
-    under a `"header_row"` section.
+    under a `"section"` header.
 
   - **A column name (character)** — per-row depth: the engine reads
     `spec@data[[indent]]`, coerces each row to a non-negative integer,
@@ -254,7 +256,7 @@ col_spec(
   never indented — they are the parent at depth 0.
 
   **Interaction:** an explicit `indent` on the host column of a
-  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)`(display = "header_row")`
+  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)`(display = "section")`
   section **suppresses** that section's automatic one-level child indent
   (you take control of the depth) — so a stub under a section needs no
   `indent` at all, and adding `indent = 1` there yields a single, not
