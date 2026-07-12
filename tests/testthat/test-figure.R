@@ -482,3 +482,43 @@ test_that(".wrapped_line_count counts a short block as one line per element", {
     1L
   )
 })
+
+test_that(".figure_box reserves the pagefoot slot rows (#figure-pagefoot-page)", {
+  # The pagefoot band (Program / date slots) rides the page-footer band,
+  # which anchors at the bottom margin and intrudes into the body by its
+  # full height in Word. Footnote lines were counted; the slot rows were
+  # not, so a full-page figure with a populated pagefoot spilled onto a
+  # blank second page.
+  base <- figure(function() plot(1:10), titles = "T", footnotes = "F")
+  with_foot <- base |>
+    preset(pagefoot = list(left = "Program: demo.R", right = "01JAN2026"))
+  b0 <- tabular:::.figure_box(base)
+  b1 <- tabular:::.figure_box(with_foot)
+  one_row <- tabular:::.row_height_twips(
+    tabular:::.effective_preset(base)@font_size
+  )
+  expect_identical(b0$box_h_twips - b1$box_h_twips, as.numeric(one_row))
+  # Two slot rows reserve two body rows.
+  with_foot2 <- base |>
+    preset(pagefoot = list(left = c("Program: demo.R", "Output: fig.rtf")))
+  b2 <- tabular:::.figure_box(with_foot2)
+  expect_identical(b0$box_h_twips - b2$box_h_twips, as.numeric(2L * one_row))
+  # A pagehead that fits above the top margin costs no body rows.
+  with_head <- base |>
+    preset(pagehead = list(left = "Protocol: ABC", right = "Page {page}"))
+  expect_identical(
+    tabular:::.figure_box(with_head)$box_h_twips,
+    b0$box_h_twips
+  )
+})
+
+test_that("table rows-per-page budgets the pagefoot slot rows (#figure-pagefoot-page)", {
+  base <- tabular(cdisc_saf_demo, titles = "T", footnotes = "F")
+  with_foot <- base |>
+    preset(pagefoot = list(left = "Program: demo.R", right = "01JAN2026"))
+  expect_identical(
+    tabular:::.compute_rows_per_page(base) -
+      tabular:::.compute_rows_per_page(with_foot),
+    1L
+  )
+})

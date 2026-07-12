@@ -321,17 +321,19 @@ test_that("RTF figure exits table context after every image (#fig-blank)", {
   one <- withr::local_tempfile(fileext = ".rtf")
   emit(basic_figure(), one)
   r1 <- paste(readLines(one, warn = FALSE), collapse = "\n")
-  # One \pard\par closing paragraph per plot, emitted right after the image
-  # \row. On the broken code the \row was followed directly by the closing }
-  # (single-plot) or \sect (multi-plot), with zero \pard\par.
-  expect_equal(length(gregexpr("\\pard\\par", r1, fixed = TRUE)[[1L]]), 1L)
-  expect_true(grepl("\\row\n\\pard\\par", r1, fixed = TRUE))
+  # One closing paragraph per plot, emitted right after the image \row,
+  # at the explicit body font size (a bare \pard\par rendered at RTF's
+  # 12pt default, taller than the reserved row -- phantom page). On the
+  # broken code the \row was followed directly by the closing }
+  # (single-plot) or \sect (multi-plot), with zero closing paragraphs.
+  closing <- "\\row\n\\pard\\plain\\fs20\\par"
+  expect_equal(length(gregexpr(closing, r1, fixed = TRUE)[[1L]]), 1L)
   expect_false(grepl("\\row\n}", r1, fixed = TRUE))
 
   three <- withr::local_tempfile(fileext = ".rtf")
   emit(figure(list(png_fixture(), png_fixture(), png_fixture())), three)
   r3 <- paste(readLines(three, warn = FALSE), collapse = "\n")
-  expect_equal(length(gregexpr("\\pard\\par", r3, fixed = TRUE)[[1L]]), 3L)
+  expect_equal(length(gregexpr(closing, r3, fixed = TRUE)[[1L]]), 3L)
   expect_false(grepl("\\row\n\\sect", r3, fixed = TRUE))
 })
 
@@ -677,8 +679,9 @@ test_that("default RTF figure has one blank par above title, one below", {
     "\\par"
   )
   n <- lengths(regmatches(txt, gregexpr(blank, txt, fixed = TRUE)))
-  # 1 above + 1 below title; footnote pad default 0
-  expect_equal(n, 2L)
+  # 1 above + 1 below title (footnote pad default 0), plus the sized
+  # closing paragraph after the image row shares the same shape.
+  expect_equal(n, 3L)
 })
 
 # ---------------------------------------------------------------------

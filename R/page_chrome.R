@@ -398,6 +398,36 @@
   length(band$left %||% list())
 }
 
+# Body rows the page bands consume BEYOND the margin space Word grants
+# them. The footer band anchors at the bottom margin line and its
+# content intrudes into the body by its full height; footnote lines are
+# already counted by the chrome models, but the pagefoot SLOT rows
+# (Program / date band) were not, so a populated pagefoot pushed an
+# exactly-full page — a figure, or a table page with less than one row
+# of slack — onto a blank next page. The header band is positioned so
+# its rows END at the top margin (`headery = margt - rows * head_line`,
+# floored at 360 twips); only rows that no longer fit above the floor
+# intrude into the body. Shared by `.figure_box()` and
+# `.chrome_line_counts()`.
+.page_band_body_rows <- function(preset) {
+  one_row <- .row_height_twips(preset@font_size)
+  foot_rows <- .page_band_nrow(
+    .normalize_page_band(preset@pagefoot, arg = "pagefoot")
+  )
+  head_n <- .page_band_nrow(
+    .normalize_page_band(preset@pagehead, arg = "pagehead")
+  )
+  head_extra <- 0L
+  if (head_n > 0L) {
+    margin_top <- .margin_top_bottom_twips(preset@margins)[["top"]]
+    head_line <- as.integer(round(preset@font_size * 28))
+    headery <- max(360L, margin_top - head_line * head_n)
+    overflow <- max(0L, headery + head_line * head_n - margin_top)
+    head_extra <- as.integer(ceiling(overflow / one_row))
+  }
+  foot_rows + head_extra
+}
+
 # Extract one row's three slots from a resolved band. Returns
 # `list(left = ast, center = ast, right = ast)` where any cell can
 # be an empty `inline_ast`. Backends iterate rows and decide whether

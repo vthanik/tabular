@@ -251,3 +251,71 @@ test_that("a break-only key stays out of the body and drives only its breaks", {
   expect_true(any(page$is_blank_row))
   expect_false(any(page$is_header_row))
 })
+
+# ---------------------------------------------------------------------
+# Continuous backends keep the skip spacer at a page boundary
+# ---------------------------------------------------------------------
+
+test_that("continuous page slices keep a blank at the page-top transition (#html-boundary-blank)", {
+  # HTML / Markdown are one flowing table: the engine still paginates
+  # (to draw page-break markers), and the leading-blank suppression
+  # that is correct for paged media (a printed page must not open with
+  # a spacer) swallowed the group spacer whenever a transition
+  # coincided with a page boundary. Continuous mode must suppress only
+  # at the GLOBAL first row.
+  txt <- matrix(
+    c("B", "B", "B"),
+    nrow = 3L,
+    ncol = 1L,
+    dimnames = list(NULL, "v")
+  )
+  ast <- matrix(
+    lapply(txt, tabular:::.parse_inline),
+    nrow = 3L,
+    ncol = 1L,
+    dimnames = list(NULL, "v")
+  )
+  st <- matrix(
+    list(style_node(), style_node(), style_node()),
+    nrow = 3L,
+    ncol = 1L,
+    dimnames = list(NULL, "v")
+  )
+  # This slice is PAGE 2 (global rows 4:6); global row 4 is a skip
+  # transition sitting exactly at the page top.
+  paged <- tabular:::.inject_header_rows_for_page(
+    cells_text = txt,
+    cells_ast = ast,
+    cells_style = st,
+    row_indices = 4:6,
+    visible_col_names = "v",
+    header_row_plan = NULL,
+    skip_transitions = 4L
+  )
+  # Paged media: page must not open with a spacer (unchanged).
+  expect_false(any(paged$is_blank_row))
+  continuous <- tabular:::.inject_header_rows_for_page(
+    cells_text = txt,
+    cells_ast = ast,
+    cells_style = st,
+    row_indices = 4:6,
+    visible_col_names = "v",
+    header_row_plan = NULL,
+    skip_transitions = 4L,
+    continuous = TRUE
+  )
+  # Continuous media: the spacer renders (the "page" is only a marker).
+  expect_identical(which(continuous$is_blank_row), 1L)
+  # The GLOBAL first row never gets a leading blank, even continuous.
+  first_page <- tabular:::.inject_header_rows_for_page(
+    cells_text = txt,
+    cells_ast = ast,
+    cells_style = st,
+    row_indices = 1:3,
+    visible_col_names = "v",
+    header_row_plan = NULL,
+    skip_transitions = 1L,
+    continuous = TRUE
+  )
+  expect_false(any(first_page$is_blank_row))
+})

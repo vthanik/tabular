@@ -577,7 +577,8 @@ as_grid <- function(.spec) {
     col_labels_ast = fmt$col_labels_ast,
     col_names = names(spec@data),
     header_row_plan = gd$header_row_plan,
-    skip_transitions = gd$skip_transitions
+    skip_transitions = gd$skip_transitions,
+    continuous = continuous
   )
 
   # Stamp per-group subgroup metadata onto every page descriptor.
@@ -1079,7 +1080,8 @@ as_grid <- function(.spec) {
   col_labels_ast,
   col_names,
   header_row_plan = NULL,
-  skip_transitions = integer(0L)
+  skip_transitions = integer(0L),
+  continuous = FALSE
 ) {
   lapply(pag$pages, function(p) {
     .slice_one_page(
@@ -1091,7 +1093,8 @@ as_grid <- function(.spec) {
       col_labels_ast = col_labels_ast,
       col_names = col_names,
       header_row_plan = header_row_plan,
-      skip_transitions = skip_transitions
+      skip_transitions = skip_transitions,
+      continuous = continuous
     )
   })
 }
@@ -1352,7 +1355,8 @@ as_grid <- function(.spec) {
   col_labels_ast,
   col_names,
   header_row_plan = NULL,
-  skip_transitions = integer(0L)
+  skip_transitions = integer(0L),
+  continuous = FALSE
 ) {
   ri <- p$row_indices
   ci <- p$col_indices
@@ -1385,7 +1389,8 @@ as_grid <- function(.spec) {
       row_indices = ri,
       visible_col_names = visible,
       header_row_plan = header_row_plan,
-      skip_transitions = skip_transitions
+      skip_transitions = skip_transitions,
+      continuous = continuous
     )
     text_slice <- injected$cells_text
     ast_slice <- injected$cells_ast

@@ -311,11 +311,15 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
     n_footnote = n_footnote_lines,
     footnote_spacing = footnote_spacing,
     one_row_twips = .row_height_twips(preset@font_size),
+    # Page-band intrusion: pagefoot slot rows (and any pagehead rows
+    # that overflow the top margin) eat body height beyond the margins,
+    # exactly like footnote lines do.
     chrome_rows = n_title_lines +
       title_spacing +
       n_header_lines +
       n_footnote_lines +
-      footnote_spacing
+      footnote_spacing +
+      .page_band_body_rows(preset)
   )
 }
 

@@ -312,7 +312,11 @@ backend_rtf <- function(grid, file) {
       # Exit table context so the following `\sect` (next figure) or the
       # document-closing `}` does not land inside the image row, which
       # makes Word emit phantom pages. Mirrors `.render_rtf_panel`.
-      "\\pard\\par"
+      # Explicit body font size: `\plain` inside the image cell reset the
+      # character size to RTF's 12pt default, and a bare closing par then
+      # rendered TALLER than the one_row the figure box reserved for it,
+      # overflowing a full-page figure onto a blank second page.
+      paste0("\\pard\\plain", .rtf_body_fs(preset), "\\par")
     )
   })
 
@@ -670,11 +674,18 @@ backend_rtf <- function(grid, file) {
     )
   }
 
-  # `\pard\par` exits the table context so Word does not merge this
-  # panel's table with the next section's. The `\sect` break that starts
-  # the NEXT panel is emitted by the caller as a SEPARATOR (n-1 breaks for
-  # n panels); the final panel is closed by the document's `}`.
-  out[[length(out) + 1L]] <- "\\pard\\par"
+  # The closing paragraph exits the table context so Word does not merge
+  # this panel's table with the next section's. The `\sect` break that
+  # starts the NEXT panel is emitted by the caller as a SEPARATOR (n-1
+  # breaks for n panels); the final panel is closed by the document's
+  # `}`. Explicit body font size: a bare `\pard\par` renders at RTF's
+  # 12pt default (taller than the one_row the pagination model budgets)
+  # and can spill a phantom page when the page is otherwise full.
+  out[[length(out) + 1L]] <- paste0(
+    "\\pard\\plain",
+    .rtf_body_fs(preset),
+    "\\par"
+  )
   unlist(out, use.names = FALSE)
 }
 
@@ -792,7 +803,7 @@ backend_rtf <- function(grid, file) {
   trhdr = FALSE,
   keep = FALSE,
   prelude = "",
-  trgaph = 108L,
+  trgaph = .rtf_body_trgaph(NULL, preset),
   body_borders = NULL
 ) {
   n <- length(cellx)
@@ -1607,6 +1618,9 @@ backend_rtf <- function(grid, file) {
     preset,
     trhdr = trhdr,
     prelude = prelude,
+    # Preset-resolved gap so the banner shares the body's left margin
+    # under a custom cell_padding (default 108).
+    trgaph = .rtf_body_trgaph(NULL, preset),
     body_borders = body_borders
   )
 }
@@ -1876,7 +1890,9 @@ backend_rtf <- function(grid, file) {
     paste0(
       "\\trowd",
       .rtf_trhdr(trhdr),
-      "\\trgaph108\\trqc",
+      # Preset-resolved gap so band text shares the body's left margin
+      # under a custom cell_padding (default 108, byte-stable).
+      sprintf("\\trgaph%d\\trqc", .rtf_body_trgaph(NULL, preset)),
       .rtf_row_height_str(preset),
       .rtf_row_frame_edges(body_borders)
     ),
@@ -2005,7 +2021,9 @@ backend_rtf <- function(grid, file) {
     paste0(
       "\\trowd",
       .rtf_trhdr(trhdr),
-      "\\trgaph108\\trqc",
+      # Preset-resolved gap so column-label text shares the body's
+      # left margin under a custom cell_padding (default 108).
+      sprintf("\\trgaph%d\\trqc", .rtf_body_trgaph(NULL, preset)),
       .rtf_row_height_str(preset),
       .rtf_row_frame_edges(body_borders)
     ),
@@ -2117,6 +2135,7 @@ backend_rtf <- function(grid, file) {
         trhdr = FALSE,
         keep = keep_row,
         prelude = paste0(blank_prelude, blank_shd),
+        trgaph = trgaph,
         body_borders = body_borders
       )
       next
@@ -2187,6 +2206,7 @@ backend_rtf <- function(grid, file) {
         trhdr = FALSE,
         keep = keep_row,
         prelude = paste0(blank_prelude, header_shading),
+        trgaph = trgaph,
         body_borders = body_borders
       )
       next

@@ -753,6 +753,7 @@ engine_group_display <- function(
   visible_col_names,
   header_row_plan,
   skip_transitions = integer(0L),
+  continuous = FALSE,
   call = rlang::caller_env()
 ) {
   # `cells_indent` defaults to a zero matrix of the right shape so
@@ -875,9 +876,14 @@ engine_group_display <- function(
   first_emit <- TRUE
   for (k in seq_len(n_page)) {
     data_idx <- row_indices[[k]]
-    # Blank row goes BEFORE the row at this transition, but not for
-    # the very first row of the page (no preceding group on page).
-    if (data_idx %in% blank_transitions && !first_emit) {
+    # Blank row goes BEFORE the row at this transition. On paged media
+    # a page must not OPEN with a spacer, so the first emit on the
+    # page suppresses it. Continuous backends (HTML / Markdown) render
+    # one flowing table where the "page" is only a break marker, so
+    # there the spacer must survive a page-top transition; only the
+    # GLOBAL first row (no preceding group at all) suppresses.
+    suppress_blank <- if (continuous) data_idx == 1L else first_emit
+    if (data_idx %in% blank_transitions && !suppress_blank) {
       out_pos <- out_pos + 1L
       for (j in seq_len(ncol_visible)) {
         ast_out[[out_pos, j]] <- blank_ast

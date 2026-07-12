@@ -1267,7 +1267,8 @@ backend_docx <- function(grid, file) {
     widths,
     cs = cs,
     top_border = top_el,
-    body_borders = body_borders
+    body_borders = body_borders,
+    preset = preset
   )
   label_row <- .render_docx_col_labels_row(
     hdr$col_labels_ast,
@@ -1473,7 +1474,8 @@ backend_docx <- function(grid, file) {
   widths_twips,
   cs = NULL,
   top_border = "",
-  body_borders = NULL
+  body_borders = NULL,
+  preset = NULL
 ) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(character())
@@ -1530,12 +1532,14 @@ backend_docx <- function(grid, file) {
       # Header surface drives the band background (so a coloured band
       # reads end-to-end, including the empty flanking cells) and the
       # header padding override. `<w:shd>` follows `<w:tcBorders>` and
-      # precedes `<w:tcMar>` in CT_TcPr order. preset = NULL on tcMar so
-      # only the header padding override emits (no body-padding bleed).
+      # precedes `<w:tcMar>` in CT_TcPr order. The preset supplies the
+      # base left / right margins every grid cell shares (RTF parity:
+      # \trgaph applies to every row); the header padding override wins
+      # per side.
       header_surface <- .chrome_surface_at(cs, "header")
       band_shd <- .docx_shd_from_style(header_surface)
       band_rpr <- .docx_rPr_from_style(header_surface, bold_default = TRUE)
-      tc_mar <- .docx_tcMar_from_style(header_surface, NULL)
+      tc_mar <- .docx_tcMar_from_style(header_surface, preset)
       tc_pr <- paste0(
         "<w:tcPr>",
         sprintf("<w:tcW w:w=\"%d\" w:type=\"dxa\"/>", cell_w),
@@ -1717,11 +1721,12 @@ backend_docx <- function(grid, file) {
         right_border
       )
       # Header surface drives the column-label background (RTF / HTML
-      # parity) and the header padding override (preset = NULL: header
-      # override only, no body-padding bleed). Canonical CT_TcPr order is
+      # parity) and the header padding override; the preset supplies the
+      # base left / right margins every grid cell shares (RTF parity:
+      # \trgaph applies to every row). Canonical CT_TcPr order is
       # tcW -> tcBorders -> shd -> tcMar -> vAlign.
       col_shd <- .docx_shd_from_style(surface_node)
-      tc_mar <- .docx_tcMar_from_style(surface_node, NULL)
+      tc_mar <- .docx_tcMar_from_style(surface_node, preset)
       tc_pr <- sprintf(
         "<w:tcPr><w:tcW w:w=\"%d\" w:type=\"dxa\"/>%s%s%s%s</w:tcPr>",
         widths_twips[[j]],
@@ -1839,6 +1844,7 @@ backend_docx <- function(grid, file) {
             sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols_vis),
             merged_edges,
             blank_shd,
+            .docx_tcMar_from_style(NULL, preset),
             "</w:tcPr>",
             "<w:p><w:pPr></w:pPr><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p>",
             "</w:tc></w:tr>"
@@ -1945,6 +1951,10 @@ backend_docx <- function(grid, file) {
             sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols_vis),
             merged_edges,
             group_shd,
+            # Base left / right cell margins shared with body cells (RTF
+            # parity: \trgaph applies to every row); a per-cell padding
+            # override on the group-header host node wins per side.
+            .docx_tcMar_from_style(host_node, preset),
             "</w:tcPr>",
             "<w:p><w:pPr>",
             header_ind_tok,
@@ -2176,6 +2186,9 @@ backend_docx <- function(grid, file) {
     sprintf("<w:gridSpan w:val=\"%d\"/>", n_cols),
     merged_edges,
     banner_shd,
+    # Base left / right cell margins shared with body cells (RTF
+    # parity: \trgaph applies to every row). CT_TcPr: tcMar -> vAlign.
+    .docx_tcMar_from_style(surface_node, preset),
     valign_tok,
     "</w:tcPr>",
     "<w:p><w:pPr>",
@@ -3018,19 +3031,22 @@ backend_docx <- function(grid, file) {
   }
 
   # utils::zip writes in the order `files` is given. Caller pinned
-  # `[Content_Types].xml` first per OPC.
+  # `[Content_Types].xml` first per OPC. Anchor `file` at the CALLER's
+  # working directory before entering `tmp` (emit absolutises it
+  # eagerly; this guards direct backend calls with a relative path).
+  file <- file.path(
+    normalizePath(dirname(file), mustWork = FALSE),
+    basename(file)
+  )
   if (file.exists(file)) {
     unlink(file)
   }
-  old_wd <- getwd()
-  on.exit(setwd(old_wd), add = TRUE)
-  setwd(tmp)
+  withr::local_dir(tmp)
   status <- utils::zip(
     zipfile = file,
     files = rels,
     flags = "-X9q"
   )
-  setwd(old_wd)
   if (!identical(status, 0L)) {
     cli::cli_abort(
       c(
