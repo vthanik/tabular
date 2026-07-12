@@ -2852,6 +2852,46 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   TinyTeX images, no longer requires the tinytex R package, and reports
   a new `bundled` column.
 
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  DOCX now stamps the body’s left/right cell margins on section-header,
+  blank-spacer, column-header, and subgroup-banner cells, so their text
+  aligns with body text exactly as in RTF (section headers previously
+  sat one cell margin further left, making nested indents read one
+  character too wide in Word).
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  HTML and Markdown no longer drops a
+  [`group_rows()`](https://vthanik.github.io/tabular/dev/reference/group_rows.md)
+  blank spacer when a group transition coincides with a page boundary;
+  the continuous flow keeps every spacer and only the very first row of
+  the table suppresses one.
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  Markdown now renders the indent of nested section headers as `&nbsp;`
+  before the bold markers instead of spaces inside them, which
+  CommonMark refused to parse as bold (literal `**` showed in the
+  render).
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  PDF now writes to a relative `file` path correctly; the path was
+  previously resolved after switching into the temporary compile
+  directory, so the output landed there and was deleted with it.
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  RTF now resolves the row cell gap of header-band, column-label,
+  blank-spacer, section-header, banner, and title rows from
+  `preset(cell_padding = )` like body rows do (previously hardcoded, so
+  a non-default padding skewed header text relative to body text).
+
+- [`figure()`](https://vthanik.github.io/tabular/dev/reference/figure.md)
+  output no longer spills onto a blank trailing page in Word: the RTF
+  closing paragraph after the full-page image row now carries the body
+  font size (a bare paragraph rendered at RTF’s 12pt default, taller
+  than the reserved row), and the page-size model now budgets the
+  `preset(pagefoot = )` slot rows (and any `pagehead` rows that overflow
+  the top margin), which intrude into the body exactly like footnote
+  lines. The same budget applies to table pagination.
+
 - [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
   PDF output now works on TeX installations that lack `tabularray` /
   `ninecolors` and cannot run `tlmgr install` (locked-down Domino /
