@@ -30,6 +30,8 @@
 
 * `emit()` to RTF now resolves the row cell gap of header-band, column-label, blank-spacer, section-header, banner, and title rows from `preset(cell_padding = )` like body rows do (previously hardcoded, so a non-default padding skewed header text relative to body text).
 
+* `figure()` output no longer spills onto a blank trailing page in Word: the RTF closing paragraph after the full-page image row now carries the body font size (a bare paragraph rendered at RTF's 12pt default, taller than the reserved row), and the page-size model now budgets the `preset(pagefoot = )` slot rows (and any `pagehead` rows that overflow the top margin), which intrude into the body exactly like footnote lines. The same budget applies to table pagination.
+
 * `emit()` PDF output now works on TeX installations that lack `tabularray` / `ninecolors` and cannot run `tlmgr install` (locked-down Domino / Posit Workbench images): tabular ships verbatim CTAN copies of both single-file packages in `inst/tex/` and stages them next to the generated `.tex` at compile time whenever the local TeX cannot resolve them.
 
 # tabular 0.2.0

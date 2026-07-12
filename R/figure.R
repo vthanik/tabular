@@ -621,7 +621,10 @@ figure <- function(
   # paragraph spills onto a fresh page. Reserve it unconditionally (a
   # footnote-less figure still gets a closing paragraph).
   closing_rows <- 1L
-  chrome_rows <- title_rows + foot_rows + closing_rows
+  # Page-band intrusion: pagefoot slot rows (and any pagehead rows that
+  # overflow the top margin) eat body height beyond the margins.
+  band_rows <- .page_band_body_rows(preset)
+  chrome_rows <- title_rows + foot_rows + closing_rows + band_rows
 
   box_h <- printable_h - chrome_rows * one_row
 

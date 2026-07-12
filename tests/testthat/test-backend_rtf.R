@@ -211,11 +211,12 @@ test_that("single-panel table emits no bare \\sect (no phantom blank page)", {
   # Regression: .render_rtf_panel suffixed a bare \sect after every
   # panel including the last, opening an empty trailing section that
   # Word renders as a phantom blank page. A single-panel table must
-  # emit ZERO section breaks and end on \pard\par } directly.
+  # emit ZERO section breaks and end on the sized closing paragraph
+  # directly (explicit \fs so it renders no taller than one body row).
   rtf <- .rtf_emit_text(tabular(data.frame(x = 1:3)))
   sect_lines <- grep("^\\\\sect$", strsplit(rtf, "\n")[[1L]])
   expect_length(sect_lines, 0L)
-  expect_true(endsWith(rtf, "\\pard\\par\n}"))
+  expect_true(endsWith(rtf, "\\pard\\plain\\fs20\\par\n}"))
 })
 
 test_that("multi-panel table emits one \\sect SEPARATOR between panels", {
@@ -232,7 +233,7 @@ test_that("multi-panel table emits one \\sect SEPARATOR between panels", {
   lines <- strsplit(rtf, "\n")[[1L]]
   expect_length(grep("^\\\\sect$", lines), 1L)
   expect_length(grep("\\\\sectd\\\\sbkpage", lines), 2L)
-  expect_true(endsWith(rtf, "\\pard\\par\n}"))
+  expect_true(endsWith(rtf, "\\pard\\plain\\fs20\\par\n}"))
 })
 
 test_that("section def emits letter landscape by default in twips", {
@@ -1693,4 +1694,25 @@ test_that("RTF grid rows share the body \\trgaph under a custom cell_padding (#r
   # 10pt -> 200 twips. Every table row agrees; no 108 stragglers.
   expect_true(all(gaphs == "\\trgaph200"))
   expect_gt(length(gaphs), 0L)
+})
+
+test_that("RTF closing paragraphs carry the body font size (#figure-phantom-page)", {
+  # The table-exit paragraph after the figure's exact-height image row
+  # (and after each table panel) was a bare \pard\par: \plain inside the
+  # preceding cell had reset the character size to RTF's 12pt default,
+  # so the closing line rendered ~280 twips against the 260-twip row
+  # .figure_box reserved -- a 20-twip overflow that pushed a full-page
+  # figure onto a blank second page in Word.
+  fig <- figure(function() plot(1:10))
+  out <- withr::local_tempfile(fileext = ".rtf")
+  emit(fig, out)
+  rtf <- readLines(out, warn = FALSE)
+  expect_false(any(rtf == "\\pard\\par"))
+  expect_true(any(rtf == "\\pard\\plain\\fs20\\par"))
+  # Table panels share the same closing-paragraph contract.
+  tab <- tabular(data.frame(a = "1", b = "2"))
+  out2 <- withr::local_tempfile(fileext = ".rtf")
+  emit(tab, out2)
+  rtf2 <- readLines(out2, warn = FALSE)
+  expect_false(any(rtf2 == "\\pard\\par"))
 })

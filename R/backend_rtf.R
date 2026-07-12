@@ -312,7 +312,11 @@ backend_rtf <- function(grid, file) {
       # Exit table context so the following `\sect` (next figure) or the
       # document-closing `}` does not land inside the image row, which
       # makes Word emit phantom pages. Mirrors `.render_rtf_panel`.
-      "\\pard\\par"
+      # Explicit body font size: `\plain` inside the image cell reset the
+      # character size to RTF's 12pt default, and a bare closing par then
+      # rendered TALLER than the one_row the figure box reserved for it,
+      # overflowing a full-page figure onto a blank second page.
+      paste0("\\pard\\plain", .rtf_body_fs(preset), "\\par")
     )
   })
 
@@ -670,11 +674,18 @@ backend_rtf <- function(grid, file) {
     )
   }
 
-  # `\pard\par` exits the table context so Word does not merge this
-  # panel's table with the next section's. The `\sect` break that starts
-  # the NEXT panel is emitted by the caller as a SEPARATOR (n-1 breaks for
-  # n panels); the final panel is closed by the document's `}`.
-  out[[length(out) + 1L]] <- "\\pard\\par"
+  # The closing paragraph exits the table context so Word does not merge
+  # this panel's table with the next section's. The `\sect` break that
+  # starts the NEXT panel is emitted by the caller as a SEPARATOR (n-1
+  # breaks for n panels); the final panel is closed by the document's
+  # `}`. Explicit body font size: a bare `\pard\par` renders at RTF's
+  # 12pt default (taller than the one_row the pagination model budgets)
+  # and can spill a phantom page when the page is otherwise full.
+  out[[length(out) + 1L]] <- paste0(
+    "\\pard\\plain",
+    .rtf_body_fs(preset),
+    "\\par"
+  )
   unlist(out, use.names = FALSE)
 }
 
