@@ -49,8 +49,10 @@
       v tabularray (not found, bundled copy used)
       ! TeX Live 2018 cannot compile tabular's PDF output: the bundled tabularray requires the 2022-11-01 LaTeX kernel (TeX Live 2023 or newer).
       Update the TeX installation, or install a user-space TinyTeX with
-      `tinytex::install_tinytex(bundle = "TinyTeX")` and put its bin directory
-      (usually '~/bin') first on the `PATH`.
+      `tinytex::install_tinytex(bundle = "TinyTeX")` or `quarto install tinytex`
+      (downloads from GitHub, so it also works behind proxies that block CTAN). Both
+      land in the standard TinyTeX location, which tabular and `tinytex::latexmk()`
+      prefer over the `PATH` automatically.
       In a containerised workspace (Domino / Posit Workbench / Databricks): ask the
       image admin to update TeX Live, or render to RTF / HTML / DOCX instead via
       `emit(spec, "out.rtf")`.

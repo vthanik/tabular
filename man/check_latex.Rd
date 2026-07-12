@@ -47,12 +47,21 @@ OS-managed or containerised image (Domino, Posit Workbench) frozen
 on TeX Live 2018, where every package resolves but the compile dies
 at \verb{\\\\ProvidesExplPackage}. The remedy is a newer TeX, not a package
 install: update the image, or install a user-space TinyTeX with
-\code{\link[tinytex:install_tinytex]{tinytex::install_tinytex()}}\code{(bundle = "TinyTeX")} and put its bin
-directory first on the \code{PATH}. MiKTeX is rolling-release (always
-current), so its version reports as undetermined (\verb{?}) rather than
-failing.
+\code{\link[tinytex:install_tinytex]{tinytex::install_tinytex()}}\code{(bundle = "TinyTeX")} or
+\verb{quarto install tinytex} — the Quarto route downloads from GitHub,
+so it also works behind corporate proxies that block CTAN mirrors.
+Both land in the standard TinyTeX location, which the compile (and
+this check) prefer over the \code{PATH} automatically. MiKTeX is
+rolling-release (always current), so its version reports as
+undetermined (\verb{?}) rather than failing.
 
-\strong{How availability is probed.} Each package is resolved through
+\strong{How availability is probed.} The check first resolves TeX the
+way the compile does: \code{\link[tinytex:latexmk]{tinytex::latexmk()}} prefers a TinyTeX at
+the standard root (\verb{~/.TinyTeX} on Linux, \verb{~/Library/TinyTeX} on
+macOS, \verb{\%APPDATA\%/TinyTeX} on Windows — the location used by both
+\code{\link[tinytex:install_tinytex]{tinytex::install_tinytex()}} and \verb{quarto install tinytex}) over
+whatever is on the \code{PATH}, and the report probes that same tree.
+Each package is then resolved through
 \code{kpsewhich}, the same file resolver \code{xelatex} uses at compile time,
 so the report reflects what a compile will actually find. This works
 on every TeX layout — TinyTeX, a full TeX Live, or an OS-managed

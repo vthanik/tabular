@@ -617,3 +617,47 @@ test_that(".pdf_compile_abort catches tabularray's own too-old message", {
   )
   expect_match(conditionMessage(err), "TeX Live 2023", fixed = TRUE)
 })
+
+test_that(".tinytex_bin_dir returns character(0) or an existing xelatex dir", {
+  bin <- tabular:::.tinytex_bin_dir()
+  expect_true(is.character(bin))
+  expect_lte(length(bin), 1L)
+  if (length(bin) == 1L) {
+    exe <- if (.Platform$OS.type == "windows") "xelatex.exe" else "xelatex"
+    expect_true(file.exists(file.path(bin, exe)))
+  }
+})
+
+test_that(".local_path_prepend scopes the PATH change to the caller", {
+  old <- Sys.getenv("PATH")
+  fake <- withr::local_tempdir()
+  local({
+    tabular:::.local_path_prepend(fake)
+    expect_identical(
+      strsplit(Sys.getenv("PATH"), .Platform$path.sep)[[1L]][[1L]],
+      fake
+    )
+  })
+  expect_identical(Sys.getenv("PATH"), old)
+})
+
+test_that(".local_path_prepend is a no-op on character(0)", {
+  old <- Sys.getenv("PATH")
+  tabular:::.local_path_prepend(character())
+  expect_identical(Sys.getenv("PATH"), old)
+})
+
+test_that("check_latex() sees a TinyTeX that is not on the PATH", {
+  # The compile (tinytex::latexmk) prefers the TinyTeX root over the
+  # PATH; the diagnostic must resolve identically or it reports a
+  # different TeX than the one emit() will use.
+  skip_if_not_installed("tinytex")
+  root <- tryCatch(
+    tinytex::tinytex_root(error = FALSE),
+    error = function(e) ""
+  )
+  skip_if(!nzchar(root), "no TinyTeX at the standard root")
+  withr::local_envvar(PATH = "")
+  res <- suppressMessages(check_latex(quiet = TRUE))
+  expect_true(any(tabular:::.is_true_vec(res$installed)))
+})

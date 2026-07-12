@@ -4,6 +4,8 @@
 
 * `check_latex()` now reports the TeX Live release year of the active `xelatex` and fails the check when it predates 2023, the first release whose LaTeX kernel (2022-11-01) can load the bundled tabularray; the report and the `emit()` PDF compile error both explain the update / user-space TinyTeX remedy for images frozen on an old TeX Live.
 
+* `check_latex()` and the PDF pre-compile staging now resolve TeX the same way the compile does, preferring a TinyTeX at the standard root (installed by either `tinytex::install_tinytex()` or `quarto install tinytex`) over the `PATH`, so the diagnostic can no longer describe a different TeX than the one `emit()` actually runs; remediation hints name the `quarto install tinytex` route, which downloads from GitHub and therefore works behind proxies that block CTAN.
+
 * `cols()` accepts a bare string as label shorthand (`soc = "SOC / PT"` is `soc = col_spec(label = "SOC / PT")`, including glue interpolation and the deferred `{.name}` token) and a `.hide` argument that hides the named columns in one flat vector.
 
 * `paginate()` keep-together protection on the natively-paginating backends (RTF, DOCX) now emits edge-only row glue instead of gluing a whole fitting block, so a block that fits a fresh page but not the space left on the current one no longer bumps wholesale and strands a near-empty page; widow/orphan floors count content rows only, with trailing blank spacer rows still riding with their block.

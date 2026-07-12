@@ -136,6 +136,11 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
 
   tex_file <- file.path(tex_dir, "tabular.tex")
   backend_latex(grid, tex_file)
+  # Probe with the same TeX the compile will use: tinytex::latexmk()
+  # prepends the TinyTeX-root bin dir to the PATH internally, so the
+  # staging kpsewhich must see it too or it stages against the wrong
+  # (system) tree.
+  .local_path_prepend(.tinytex_bin_dir())
   .pdf_stage_bundled_sty(tex_dir)
 
   # Compile with the working directory set to tex_dir so a figure's
@@ -193,6 +198,54 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
     return(rep(NA, length(sty_files)))
   }
   sty_files %in% basename(as.character(found))
+}
+
+# Bin directory of a TinyTeX at the standard root (~/.TinyTeX,
+# ~/Library/TinyTeX, %APPDATA%/TinyTeX) — the location used both by
+# tinytex::install_tinytex() and by `quarto install tinytex`. Returns
+# character(0) when no root (or no xelatex inside it) is found.
+#
+# Why this matters: tinytex::latexmk(), the compile path, prepends this
+# bin dir to the PATH for the compile (its internal tweak_path()), so a
+# TinyTeX at the root is used even when it is not on the caller's PATH.
+# Every diagnostic probe (check_latex(), the bundled-sty staging) must
+# resolve TeX the same way, or the report describes a different TeX
+# than the one the compile will actually run.
+.tinytex_bin_dir <- function() {
+  if (!requireNamespace("tinytex", quietly = TRUE)) {
+    return(character())
+  }
+  root <- tryCatch(
+    tinytex::tinytex_root(error = FALSE),
+    error = function(e) ""
+  )
+  if (!nzchar(root)) {
+    return(character())
+  }
+  bins <- list.dirs(file.path(root, "bin"), recursive = FALSE)
+  exe <- if (.Platform$OS.type == "windows") "xelatex.exe" else "xelatex"
+  bins <- bins[file.exists(file.path(bins, exe))]
+  if (length(bins) == 0L) {
+    return(character())
+  }
+  bins[[1L]]
+}
+
+# Prepend `dir` to the PATH for the lifetime of the calling frame — a
+# base-R twin of tinytex's internal tweak_path(), so the diagnostics
+# stay usable without withr (Suggests-only). No-op on character(0).
+.local_path_prepend <- function(dir, envir = parent.frame()) {
+  if (length(dir) == 0L) {
+    return(invisible(NULL))
+  }
+  old <- Sys.getenv("PATH")
+  Sys.setenv(PATH = paste(c(dir, old), collapse = .Platform$path.sep))
+  do.call(
+    on.exit,
+    list(substitute(Sys.setenv(PATH = x), list(x = old)), add = TRUE),
+    envir = envir
+  )
+  invisible(NULL)
 }
 
 # Minimum TeX Live release year whose LaTeX format is new enough for
@@ -287,7 +340,7 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
     c(
       "x" = "The LaTeX kernel is too old for tabularray: it requires the 2022-11-01 kernel, shipped from TeX Live 2023 onward.",
       "i" = "Run {.run tabular::check_latex()} to see the TeX Live year of the active installation.",
-      "i" = "Update the TeX installation, or install a user-space TinyTeX with {.run tinytex::install_tinytex(bundle = \"TinyTeX\")} and put its bin directory (usually {.path ~/bin}) first on the {.envvar PATH}.",
+      "i" = "Update the TeX installation, or install a user-space TinyTeX with {.run tinytex::install_tinytex(bundle = \"TinyTeX\")} or {.code quarto install tinytex} (a GitHub download, so it also works behind proxies that block CTAN); both land in the standard TinyTeX location, which the PDF compile prefers over the {.envvar PATH} automatically.",
       "i" = "In a containerised workspace (Domino / Posit Workbench / Databricks): ask the image admin to update TeX Live; 2018-era images fail exactly this way."
     )
   } else if (length(missing_pkg) > 0L) {
@@ -393,12 +446,21 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
 #' on TeX Live 2018, where every package resolves but the compile dies
 #' at `\\ProvidesExplPackage`. The remedy is a newer TeX, not a package
 #' install: update the image, or install a user-space TinyTeX with
-#' [`tinytex::install_tinytex()`]`(bundle = "TinyTeX")` and put its bin
-#' directory first on the `PATH`. MiKTeX is rolling-release (always
-#' current), so its version reports as undetermined (`?`) rather than
-#' failing.
+#' [`tinytex::install_tinytex()`]`(bundle = "TinyTeX")` or
+#' `quarto install tinytex` — the Quarto route downloads from GitHub,
+#' so it also works behind corporate proxies that block CTAN mirrors.
+#' Both land in the standard TinyTeX location, which the compile (and
+#' this check) prefer over the `PATH` automatically. MiKTeX is
+#' rolling-release (always current), so its version reports as
+#' undetermined (`?`) rather than failing.
 #'
-#' **How availability is probed.** Each package is resolved through
+#' **How availability is probed.** The check first resolves TeX the
+#' way the compile does: [`tinytex::latexmk()`] prefers a TinyTeX at
+#' the standard root (`~/.TinyTeX` on Linux, `~/Library/TinyTeX` on
+#' macOS, `%APPDATA%/TinyTeX` on Windows — the location used by both
+#' [`tinytex::install_tinytex()`] and `quarto install tinytex`) over
+#' whatever is on the `PATH`, and the report probes that same tree.
+#' Each package is then resolved through
 #' `kpsewhich`, the same file resolver `xelatex` uses at compile time,
 #' so the report reflects what a compile will actually find. This works
 #' on every TeX layout — TinyTeX, a full TeX Live, or an OS-managed
@@ -489,6 +551,11 @@ check_latex <- function(quiet = FALSE) {
       call = rlang::caller_env()
     )
   }
+  # Resolve TeX exactly like the compile does: tinytex::latexmk()
+  # prefers a TinyTeX at the standard root (installed by either
+  # tinytex::install_tinytex() or `quarto install tinytex`) over the
+  # PATH, so the report must probe that same tree.
+  .local_path_prepend(.tinytex_bin_dir())
   pkgs <- .tabular_required_tex_packages
   out <- data.frame(
     package = pkgs,
@@ -562,7 +629,7 @@ check_latex <- function(quiet = FALSE) {
       "TeX Live {texlive_year} cannot compile tabular's PDF output: the bundled tabularray requires the 2022-11-01 LaTeX kernel (TeX Live {min_year} or newer)."
     )
     cli::cli_text(
-      "Update the TeX installation, or install a user-space TinyTeX with {.run tinytex::install_tinytex(bundle = \"TinyTeX\")} and put its bin directory (usually {.path ~/bin}) first on the {.envvar PATH}."
+      "Update the TeX installation, or install a user-space TinyTeX with {.run tinytex::install_tinytex(bundle = \"TinyTeX\")} or {.code quarto install tinytex} (downloads from GitHub, so it also works behind proxies that block CTAN). Both land in the standard TinyTeX location, which tabular and {.fn tinytex::latexmk} prefer over the {.envvar PATH} automatically."
     )
     cli::cli_text(
       "In a containerised workspace (Domino / Posit Workbench / Databricks): ask the image admin to update TeX Live, or render to RTF / HTML / DOCX instead via {.code emit(spec, \"out.rtf\")}."
