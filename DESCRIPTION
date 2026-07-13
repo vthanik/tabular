@@ -46,7 +46,7 @@ VignetteBuilder:
     quarto
 SystemRequirements: Quarto command line tool
     (<https://github.com/quarto-dev/quarto-cli>), needed only to build
-    the package vignettes. Optional for PDF output: a LaTeX
+    the package vignettes. Optional for PDF output: a TeX
     distribution (e.g. TinyTeX) or Typst
     (<https://github.com/typst/typst>, standalone or the copy bundled
     with Quarto); see check_latex() and check_typst().
