@@ -491,12 +491,16 @@ as_grid <- function(.spec) {
         logical(1)
       )
     )
-    # No metric table for this face: be honest that we measure with
-    # the serif (Times) fallback. Gated on a decimal column actually
-    # being present so a custom font alone never warns.
+    # No metric table for this face AND no graphics device could
+    # measure it (`.device_afm_register()`): be honest that we measure
+    # with the serif (Times) fallback. Gated on a decimal column
+    # actually being present so a custom font alone never warns. When
+    # the device probe succeeds the face is measured exactly, so
+    # nothing warns.
     if (
       has_decimal_col &&
-        is.na(.font_chain_family_class(family, default = NA_character_))
+        is.na(.font_chain_family_class(family, default = NA_character_)) &&
+        is.na(.device_afm_register(family))
     ) {
       .fidelity_warn(
         "decimal_metrics = \"afm\"",
@@ -1499,4 +1503,137 @@ as_grid <- function(.spec) {
 # `[` on a list with `dim` works exactly like matrix subsetting.
 .slice_list_matrix <- function(mat, ri, ci) {
   mat[ri, ci, drop = FALSE]
+}
+
+# ---------------------------------------------------------------------
+# Discardable group separators (LaTeX / Typst native pagination)
+# ---------------------------------------------------------------------
+
+# Drop plain group-separator blank rows from a rendered body source so
+# the paged vector backends can re-express the inter-group gap as
+# DISCARDABLE space — a `row-gutter` entry on Typst, a white hline
+# band on tabularray. Both vanish when the native page break lands at
+# the group boundary, so a page never ends on a stray blank line above
+# the repeated closing rule (Word already swallows the RTF / DOCX
+# blank into the bottom margin there; this brings the vector backends
+# to parity). Mid-page the gap renders at exactly the height the blank
+# row occupied.
+#
+# A blank row converts only when it is PLAIN — no background fill and
+# no per-cell border on any of its cells; a styled separator (striped
+# body, per-cell rules) still reads as a real row and is kept. Callers
+# additionally gate on `.separator_gap_convertible()`: with rowrules /
+# vlines running through the body the blank row is part of the ruled
+# grid and must stay a row.
+#
+# Returns list(src, gap_before): `src` with the dropped rows removed
+# from every row-indexed field, and `gap_before` — indices into the
+# REDUCED body such that a one-blank-line gap belongs ABOVE that row.
+# The keep-with-next mask glues THROUGH a dropped row (the row before
+# the blank stays glued to the following row only when both edges
+# around the blank were glued), so a dropped separator re-opens the
+# break opportunity at the group boundary — exactly where the
+# discardable gap then collapses.
+.drop_blank_separators <- function(src) {
+  blank <- src$is_blank_row %||% logical(0)
+  n <- length(blank)
+  if (n == 0L || !any(blank %in% TRUE)) {
+    return(list(src = src, gap_before = integer(0)))
+  }
+  drop <- which(vapply(
+    seq_len(n),
+    function(i) isTRUE(blank[[i]]) && .blank_row_is_plain(src$cells_style, i),
+    logical(1)
+  ))
+  if (length(drop) == 0L) {
+    return(list(src = src, gap_before = integer(0)))
+  }
+  keep <- setdiff(seq_len(n), drop)
+  kwn <- src$keep_with_next
+  if (is.logical(kwn) && length(kwn) == n) {
+    # Descending so a run of consecutive blanks folds right-to-left
+    # and the surviving predecessor sees the whole chain.
+    for (i in rev(drop)) {
+      if (i > 1L) {
+        kwn[[i - 1L]] <- isTRUE(kwn[[i - 1L]]) && isTRUE(kwn[[i]])
+      }
+    }
+    src$keep_with_next <- kwn[keep]
+  }
+  gap_before <- integer(0)
+  for (i in drop) {
+    nxt <- i + 1L
+    while (nxt <= n && nxt %in% drop) {
+      nxt <- nxt + 1L
+    }
+    if (nxt <= n) {
+      gap_before <- c(gap_before, match(nxt, keep))
+    }
+  }
+  gap_before <- sort(unique(gap_before))
+  for (fld in c("cells_text", "cells_ast", "cells_style", "cells_indent")) {
+    if (!is.null(src[[fld]])) {
+      src[[fld]] <- src[[fld]][keep, , drop = FALSE]
+    }
+  }
+  for (fld in c("is_header_row", "is_blank_row", "header_meta")) {
+    if (!is.null(src[[fld]])) {
+      src[[fld]] <- src[[fld]][keep]
+    }
+  }
+  list(src = src, gap_before = gap_before)
+}
+
+# TRUE when every cell of row `i` carries no background fill and no
+# per-cell border — the row is pure spacing and safe to re-express as
+# discardable space.
+.blank_row_is_plain <- function(cells_style, i) {
+  if (is.null(cells_style)) {
+    return(TRUE)
+  }
+  for (j in seq_len(ncol(cells_style))) {
+    node <- cells_style[[i, j]]
+    if (!is_style_node(node)) {
+      next
+    }
+    bg <- node@background
+    if (length(bg) == 1L && !is.na(bg) && nzchar(bg)) {
+      return(FALSE)
+    }
+    for (s in c("top", "right", "bottom", "left")) {
+      if (!is.null(.effective_border(s, node))) {
+        return(FALSE)
+      }
+    }
+  }
+  TRUE
+}
+
+# TRUE when the resolved body-border manifest draws nothing THROUGH
+# the body interior (no rowrules, no column rules, no side frame), so
+# a separator gap can replace the blank row without cutting a rule.
+.separator_gap_convertible <- function(body_borders) {
+  if (!is.list(body_borders)) {
+    return(TRUE)
+  }
+  is.null(body_borders$rows) &&
+    is.null(body_borders$cols) &&
+    is.null(body_borders$outer_left) &&
+    is.null(body_borders$outer_right)
+}
+
+# Height of one separator gap in pt: one text line at the body size
+# (the strut the blank row carried) plus the vertical cell padding the
+# row would have had. Shared by the LaTeX white-hline band and the
+# Typst row-gutter entry so both media keep the blank row's exact
+# visual rhythm.
+.separator_gap_pt <- function(cells_style, preset) {
+  size <- if (is_preset_spec(preset)) preset@font_size else NA_real_
+  if (length(size) != 1L || !is.finite(size)) {
+    size <- 10
+  }
+  sides <- .first_cell_padding_sides(cells_style)
+  top <- if (is.na(sides[["top"]])) 2 else sides[["top"]]
+  bottom <- if (is.na(sides[["bottom"]])) 2 else sides[["bottom"]]
+  size * .tabular_baseline_ratio + top + bottom
 }

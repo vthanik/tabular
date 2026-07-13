@@ -194,10 +194,15 @@ knob; blank-line spacing is set via \code{spacing} (above).
 \verb{<character(1)>}. \code{"afm"} (default) measures glyphs with the
 bundled Core font metrics, so decimal columns align
 width-exact in proportional fonts (to within one padding
-space of rounding; exact in Courier). \code{"chars"} pads by
-character count — exact in monospaced faces only. Markdown
-output always pads by character count, the correct geometry
-for a text medium.
+space of rounding; exact in Courier). A \code{font_family} with no
+bundled metric table (e.g. a system-installed face such as
+Courier 10 Pitch) is measured through a temporary graphics
+device instead, so alignment stays exact whenever the host
+can resolve the font; only when that also fails does the
+engine fall back to Times metrics with a fidelity warning.
+\code{"chars"} pads by character count — exact in monospaced faces
+only. Markdown output always pads by character count, the
+correct geometry for a text medium.
 \item \strong{\code{decimal_markers}} — missing-value tokens recognised by
 \code{col_spec(align = "decimal")}. \verb{<character>}. Default
 \code{c("NR", "NE", "NC", "ND", "BLQ")}. A cell whose trimmed
