@@ -684,3 +684,41 @@ test_that(".separator_gap_convertible reads the border manifest", {
     rows = list(style = "solid", width = 0.5, color = NA)
   )))
 })
+
+test_that(".drop_blank_separators folds a run of consecutive blanks", {
+  txtm <- matrix(
+    c("a", "", "", "b", "1", "", "", "2"),
+    nrow = 4,
+    dimnames = list(NULL, c("x", "y"))
+  )
+  src <- list(
+    cells_text = txtm,
+    is_blank_row = c(FALSE, TRUE, TRUE, FALSE)
+  )
+  out <- tabular:::.drop_blank_separators(src)
+  expect_identical(nrow(out$src$cells_text), 2L)
+  # One gap above the survivor after the run, not one per blank.
+  expect_identical(out$gap_before, 2L)
+})
+
+test_that(".blank_row_is_plain skips non-style cells and flags borders", {
+  bordered <- tabular:::style_node(border_bottom_style = "solid")
+  # Cell 1 carries no style node (skipped), cell 2 a border: the row
+  # is NOT plain even without a background fill.
+  sty <- matrix(list(NULL, bordered), nrow = 1)
+  expect_false(tabular:::.blank_row_is_plain(sty, 1L))
+  # All cells styleless: plain.
+  expect_true(tabular:::.blank_row_is_plain(
+    matrix(list(NULL, NULL), nrow = 1),
+    1L
+  ))
+})
+
+test_that(".separator_gap_pt falls back to the 10 pt body size", {
+  # No preset and no measurable padding: one 10 pt text line plus the
+  # 2 pt default vertical padding on each side.
+  expect_identical(
+    tabular:::.separator_gap_pt(NULL, NULL),
+    10 * tabular:::.tabular_baseline_ratio + 2 + 2
+  )
+})
