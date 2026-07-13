@@ -29,13 +29,17 @@
 # `.font_generic_class` (RTF/DOCX class, R/fonts.R) — extend it here,
 # never by touching the generic `.stack_*` cores.
 #
-# Liberation faces: metric-compatible with the Adobe Core faces
-# (Liberation Serif = Times-Roman, Sans = Helvetica, Mono = Courier),
-# so we measure with the matching Core AFM.
+# Liberation and URW/Nimbus faces: metric-compatible with the Adobe
+# Core faces (Liberation Serif / Nimbus Roman = Times-Roman, Sans /
+# Nimbus Sans = Helvetica, Mono / Nimbus Mono PS = Courier), so we
+# measure with the matching Core AFM.
 .font_to_family_class <- list(
   "Liberation Serif" = "serif",
   "Liberation Sans" = "sans",
-  "Liberation Mono" = "mono"
+  "Liberation Mono" = "mono",
+  "Nimbus Roman" = "serif",
+  "Nimbus Sans" = "sans",
+  "Nimbus Mono PS" = "mono"
 )
 
 # Pick the family class for a font_family chain. Walks top-to-bottom;
@@ -62,9 +66,141 @@
   default
 }
 
+# ---------------------------------------------------------------------
+# Device-measured metrics — fallback for faces without an AFM table
+# ---------------------------------------------------------------------
+
+# Per-session cache of device-measured width tables, keyed by the
+# "device:<face>[:bold][:italic]" AFM-name surrogate returned by
+# `.resolve_afm_name()`. Entries mirror the bundled pair —
+# list(chars = <char-keyed int>, glyphs = <AGL-name-keyed int>), both
+# in 1/1000 em — or FALSE when a face already failed to measure
+# (negative cache: one device probe per face per session).
+.device_metrics_cache <- new.env(parent = emptyenv())
+
+.device_afm_key <- function(face, bold = FALSE, italic = FALSE) {
+  paste0(
+    "device:",
+    face,
+    if (bold) ":bold" else "",
+    if (italic) ":italic" else ""
+  )
+}
+
+# Measure the advance widths of ASCII 32-126 plus the curated Latin-1
+# supplement on a throwaway bitmap device, under the ACTUAL requested
+# face. The device's font system (fontconfig on Linux cairo, Core Text
+# on macOS quartz) resolves system-installed fonts the bundled AFM
+# tables cannot cover (e.g. "Courier 10 Pitch"), so decimal alignment
+# and width measurement stay exact instead of degrading to the Times
+# fallback. Measured once per face per session (see the cache above).
+#
+# Any warning during the probe (quartz warns "font family not found";
+# a headless box may fail to open the device) is treated as failure —
+# NULL — so the caller degrades to the serif fallback with the honest
+# fidelity warning. Linux fontconfig substitutes silently; that match
+# is what the downstream renderer will use, so measuring it is right.
+.device_glyph_widths <- function(face, bold = FALSE, italic = FALSE) {
+  if (!isTRUE(capabilities("png")[[1L]])) {
+    return(NULL)
+  }
+  tf <- tempfile(fileext = ".png")
+  opened <- tryCatch(
+    {
+      grDevices::png(tf)
+      TRUE
+    },
+    error = function(e) FALSE,
+    warning = function(w) FALSE
+  )
+  if (!opened) {
+    return(NULL)
+  }
+  on.exit(
+    {
+      grDevices::dev.off()
+      unlink(tf)
+    },
+    add = TRUE
+  )
+  ascii <- vapply(32:126, intToUtf8, character(1))
+  latin1 <- vapply(
+    as.integer(names(.agl_latin1)),
+    intToUtf8,
+    character(1)
+  )
+  fontface <- 1L + as.integer(bold) + 2L * as.integer(italic)
+  pts <- tryCatch(
+    {
+      grid::grid.newpage()
+      grid::pushViewport(grid::viewport(
+        gp = grid::gpar(
+          fontfamily = face,
+          fontsize = 100,
+          fontface = fontface
+        )
+      ))
+      grid::convertWidth(
+        grid::stringWidth(c(ascii, latin1)),
+        "points",
+        valueOnly = TRUE
+      )
+    },
+    error = function(e) NULL,
+    warning = function(w) NULL
+  )
+  if (is.null(pts) || !all(is.finite(pts)) || all(pts <= 0)) {
+    return(NULL)
+  }
+  # Measured at 100pt, so points * 10 = 1/1000 em.
+  em1000 <- as.integer(round(pts * 10))
+  n_ascii <- length(ascii)
+  list(
+    chars = stats::setNames(em1000[seq_len(n_ascii)], ascii),
+    glyphs = stats::setNames(em1000[-seq_len(n_ascii)], unname(.agl_latin1))
+  )
+}
+
+# Try to resolve `font_family` to a device-measured surrogate AFM key.
+# The chain's first non-empty name is the face that gets measured (a
+# chain reaching this path has no generic / aliased / Liberation hit,
+# so its head is the user's actual custom face). Returns the cache key
+# on success, NA_character_ when measurement is impossible.
+.device_afm_register <- function(font_family, bold = FALSE, italic = FALSE) {
+  # Escape hatch + test determinism: device-measured widths depend on
+  # the fonts installed on the host, so byte-snapshot tests disable
+  # the probe (tests/testthat/setup-device-metrics.R) and re-enable it
+  # locally where the machinery itself is under test.
+  if (!isTRUE(getOption("tabular.device_metrics", TRUE))) {
+    return(NA_character_)
+  }
+  face <- as.character(font_family)
+  face <- face[nzchar(face)][1L]
+  if (is.na(face)) {
+    return(NA_character_)
+  }
+  key <- .device_afm_key(face, bold, italic)
+  hit <- .device_metrics_cache[[key]]
+  if (isFALSE(hit)) {
+    return(NA_character_)
+  }
+  if (!is.null(hit)) {
+    return(key)
+  }
+  widths <- .device_glyph_widths(face, bold, italic)
+  if (is.null(widths)) {
+    assign(key, FALSE, envir = .device_metrics_cache)
+    return(NA_character_)
+  }
+  assign(key, widths, envir = .device_metrics_cache)
+  key
+}
+
 # Resolve a font_family chain + style to an AFM lookup key.
-# Returns one of the 12 weighted Core-12 names — Symbol is never
-# returned here (it's a glyph-fallback target, not a body face).
+# Returns one of the 12 weighted Core-12 names, or a
+# "device:<face>..." surrogate when the face has no bundled table but
+# a graphics device could measure it — Symbol is never returned here
+# (it's a glyph-fallback target, not a body face).
 #
 #   serif + regular     -> Times-Roman
 #   serif + bold        -> Times-Bold
@@ -72,6 +208,7 @@
 #   serif + bold+italic -> Times-BoldItalic
 #   sans  + ...         -> Helvetica + variant
 #   mono  + ...         -> Courier + variant
+#   unknown face        -> device-measured surrogate, else serif
 #
 # Naming quirks (Adobe AFM conventions):
 #   - Times uses "Italic" / "BoldItalic" suffixes.
@@ -79,7 +216,14 @@
 #   - Helvetica regular is plain "Helvetica" (no -Roman suffix).
 #   - Times regular is "Times-Roman" (with -Roman suffix).
 .resolve_afm_name <- function(font_family, bold = FALSE, italic = FALSE) {
-  fam <- .font_chain_family_class(font_family)
+  fam <- .font_chain_family_class(font_family, default = NA_character_)
+  if (is.na(fam)) {
+    key <- .device_afm_register(font_family, bold, italic)
+    if (!is.na(key)) {
+      return(key)
+    }
+    fam <- "serif"
+  }
   switch(
     fam,
     serif = {
@@ -360,7 +504,18 @@
 # Returns 0 for empty / NA input. Never errors on malformed UTF-8;
 # unmappable codepoints become space-width contributions.
 .text_width_em <- function(text, afm_name) {
-  char_widths <- afm_metrics[[afm_name]]
+  # Device-measured surrogate faces (see `.device_afm_register()`)
+  # carry their own char/glyph tables in the session cache.
+  dev_entry <- if (startsWith(afm_name, "device:")) {
+    .device_metrics_cache[[afm_name]]
+  } else {
+    NULL
+  }
+  char_widths <- if (is.list(dev_entry)) {
+    dev_entry$chars
+  } else {
+    afm_metrics[[afm_name]]
+  }
   if (is.null(char_widths)) {
     cli::cli_abort(
       c(
@@ -394,7 +549,11 @@
 
   # Glyph-name keyed widths for the primary font. Drives the
   # Latin-1 supplement bridge (cp 160-255 -> AGL name -> width).
-  primary_glyph_widths <- afm_glyph_widths[[afm_name]]
+  primary_glyph_widths <- if (is.list(dev_entry)) {
+    dev_entry$glyphs
+  } else {
+    afm_glyph_widths[[afm_name]]
+  }
 
   vapply(
     text,

@@ -262,3 +262,96 @@ test_that(".agl_symbol entries match Symbol AFM slot widths", {
     )
   }
 })
+
+# ---------------------------------------------------------------------
+# Device-measured metrics fallback (unknown faces, e.g. Courier 10
+# Pitch on a Linux host) — the suite-wide setup turns the probe off
+# for determinism; these tests re-enable it locally.
+# ---------------------------------------------------------------------
+
+test_that(".device_glyph_widths measures a device-resolvable family", {
+  skip_if_not(isTRUE(capabilities("png")[[1L]]))
+  w <- tabular:::.device_glyph_widths("sans")
+  skip_if(is.null(w), "no bitmap device able to measure fonts here")
+  expect_named(w, c("chars", "glyphs"))
+  expect_length(w$chars, 95L)
+  expect_true(all(w$chars > 0L))
+  # Proportional sanity: "W" is wider than "i" in any sans face.
+  expect_gt(w$chars[["W"]], w$chars[["i"]])
+  expect_length(w$glyphs, length(tabular:::.agl_latin1))
+})
+
+test_that(".device_afm_register serves hits and misses from the cache", {
+  withr::local_options(tabular.device_metrics = TRUE)
+  cache <- tabular:::.device_metrics_cache
+
+  # Negative cache: a seeded FALSE short-circuits without a probe.
+  neg_key <- tabular:::.device_afm_key("NoSuchFace-tabular-test")
+  assign(neg_key, FALSE, envir = cache)
+  withr::defer(rm(list = neg_key, envir = cache))
+  expect_identical(
+    tabular:::.device_afm_register("NoSuchFace-tabular-test"),
+    NA_character_
+  )
+  # And the unknown face degrades to the serif default.
+  expect_identical(
+    tabular:::.resolve_afm_name("NoSuchFace-tabular-test"),
+    "Times-Roman"
+  )
+
+  # Positive cache: .resolve_afm_name returns the surrogate key and
+  # .text_width_em measures with the cached table.
+  pos_key <- tabular:::.device_afm_key("FakeMono-tabular-test")
+  fake <- list(
+    chars = stats::setNames(
+      rep(600L, 95L),
+      vapply(32:126, intToUtf8, character(1))
+    ),
+    glyphs = stats::setNames(
+      rep(600L, length(tabular:::.agl_latin1)),
+      unname(tabular:::.agl_latin1)
+    )
+  )
+  assign(pos_key, fake, envir = cache)
+  withr::defer(rm(list = pos_key, envir = cache))
+  expect_identical(
+    tabular:::.resolve_afm_name("FakeMono-tabular-test"),
+    pos_key
+  )
+  expect_identical(tabular:::.text_width_em("ab", pos_key), 1200L)
+  # Latin-1 supplement resolves through the device glyph table.
+  expect_identical(tabular:::.text_width_em("é", pos_key), 600L)
+})
+
+test_that("device metrics honour the tabular.device_metrics option", {
+  withr::local_options(tabular.device_metrics = FALSE)
+  expect_identical(
+    tabular:::.device_afm_register("Some Custom Face"),
+    NA_character_
+  )
+})
+
+test_that("a device-measured face silences the decimal fidelity warning", {
+  withr::local_options(tabular.device_metrics = TRUE)
+  cache <- tabular:::.device_metrics_cache
+  pos_key <- tabular:::.device_afm_key("FakeMono-tabular-test")
+  fake <- list(
+    chars = stats::setNames(
+      rep(600L, 95L),
+      vapply(32:126, intToUtf8, character(1))
+    ),
+    glyphs = stats::setNames(
+      rep(600L, length(tabular:::.agl_latin1)),
+      unname(tabular:::.agl_latin1)
+    )
+  )
+  assign(pos_key, fake, envir = cache)
+  withr::defer(rm(list = pos_key, envir = cache))
+
+  tabular:::.fidelity_warn_reset()
+  df <- data.frame(stat = c("8", "108.0"))
+  spec <- tabular(df) |>
+    cols(stat = col_spec(label = "Value", align = "decimal")) |>
+    preset(font_family = "FakeMono-tabular-test")
+  expect_no_warning(as_grid(spec))
+})

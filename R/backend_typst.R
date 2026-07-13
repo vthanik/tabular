@@ -476,6 +476,24 @@ backend_typst <- function(grid, file) {
       keep_with_next = page$keep_with_next
     )
 
+  # Discardable group separators: plain blank rows become `row-gutter`
+  # entries, which typst DISCARDS when its page break lands at that
+  # boundary — a real blank row would sit as a stray gap above the
+  # repeated closing rule at every page bottom (RTF/DOCX parity: Word
+  # swallows the blank into the margin). Mid-page the gutter renders
+  # at the blank row's exact height. Skipped when rules run through
+  # the body interior (`.separator_gap_convertible()`), where the
+  # blank row is part of the ruled grid.
+  gap_before <- integer(0)
+  if (
+    !isTRUE(page$is_empty_page) &&
+      .separator_gap_convertible(meta$body_borders)
+  ) {
+    sep <- .drop_blank_separators(src)
+    src <- sep$src
+    gap_before <- sep$gap_before
+  }
+
   # Per-page BigN: one table per subgroup, so read that subgroup's
   # SUFFIXED bands + leaf labels from the page descriptor via the shared
   # resolver. Inert (global metadata) without big_n.
@@ -561,6 +579,25 @@ backend_typst <- function(grid, file) {
   )
 
   inset_arg <- .typst_table_inset(src$cells_style, meta$preset)
+  # Separator gaps land as row-gutter entries. The gutter array is
+  # positional over EVERY table row (header rows included): entry g is
+  # the gutter after table row g, so the gap above body row k sits at
+  # index n_header_rows + k - 1. Typst discards a gutter that
+  # coincides with a page break (verified empirically), which is the
+  # whole point of the conversion above.
+  gutter_arg <- if (length(gap_before) > 0L) {
+    total_rows <- header_block$n_rows + body_rows$n_rows
+    gutters <- rep("0pt", max(total_rows - 1L, 0L))
+    idx <- header_block$n_rows + gap_before - 1L
+    idx <- idx[idx >= 1L & idx <= length(gutters)]
+    gutters[idx] <- sprintf(
+      "%spt",
+      .typst_num(.separator_gap_pt(src$cells_style, meta$preset))
+    )
+    sprintf("  row-gutter: (%s,),", paste(gutters, collapse = ", "))
+  } else {
+    character()
+  }
   args <- c(
     sprintf(
       "  columns: %s,",
@@ -571,7 +608,8 @@ backend_typst <- function(grid, file) {
       .typst_align_array(col_names_vis, cols, meta$preset, hidden_col)
     ),
     "  stroke: none,",
-    if (length(inset_arg) > 0L) sprintf("  inset: %s,", inset_arg)
+    if (length(inset_arg) > 0L) sprintf("  inset: %s,", inset_arg),
+    gutter_arg
   )
 
   # The whole table centres on the page (the canonical submission

@@ -146,14 +146,17 @@
 #'          chain that leads with the Microsoft Office face (Courier
 #'          New / Times New Roman / Arial) — installed on every
 #'          Windows and macOS machine, where documents are reviewed —
-#'          then the PostScript legacy name, then the metric-compatible
-#'          **Liberation** face LAST as the Linux-server fallback
-#'          (Posit Workbench / Domino / Citrix / RStudio Server),
-#'          then TeX Gyre for LaTeX compile / the CSS generic for
-#'          HTML. Liberation Mono / Serif / Sans are metric-compatible
-#'          with Courier New / TNR / Arial, so layout, line breaks,
-#'          and decimal alignment hold across every render context
-#'          regardless of which end of the chain resolves. The mono
+#'          then the PostScript legacy name, then the two
+#'          metric-compatible Linux-server fallbacks: the **URW /
+#'          Nimbus** clone (Nimbus Mono PS / Nimbus Roman / Nimbus
+#'          Sans, ghostscript's Core-35 set shipped on virtually
+#'          every Linux distro) and the **Liberation** face (Posit
+#'          Workbench / Domino / Citrix / RStudio Server), then TeX
+#'          Gyre for LaTeX compile / the CSS generic for HTML. Every
+#'          link is metric-compatible with Courier New / TNR / Arial,
+#'          so layout, line breaks, and decimal alignment hold across
+#'          every render context regardless of which end of the
+#'          chain resolves. The mono
 #'          default matches the dominant submission-TFL convention
 #'          where deterministic glyph widths drive `n (%)` cell
 #'          alignment.
@@ -189,8 +192,8 @@
 #'       chain leads with the Office face, Word's font dropdown
 #'       shows a face the reader actually has installed on Windows /
 #'       macOS (e.g. Courier New for `"mono"`), not a phantom name;
-#'       the metric-compatible Liberation face only appears as the
-#'       fallback for a headless Linux box.
+#'       the metric-compatible Nimbus / Liberation faces only appear
+#'       as the fallback for a headless Linux box.
 #'   *   **`orientation`** — page orientation.
 #'       `<character(1)>`. One of `"landscape"` (default),
 #'       `"portrait"`.
@@ -303,10 +306,15 @@
 #'       `<character(1)>`. `"afm"` (default) measures glyphs with the
 #'       bundled Core font metrics, so decimal columns align
 #'       width-exact in proportional fonts (to within one padding
-#'       space of rounding; exact in Courier). `"chars"` pads by
-#'       character count — exact in monospaced faces only. Markdown
-#'       output always pads by character count, the correct geometry
-#'       for a text medium.
+#'       space of rounding; exact in Courier). A `font_family` with no
+#'       bundled metric table (e.g. a system-installed face such as
+#'       Courier 10 Pitch) is measured through a temporary graphics
+#'       device instead, so alignment stays exact whenever the host
+#'       can resolve the font; only when that also fails does the
+#'       engine fall back to Times metrics with a fidelity warning.
+#'       `"chars"` pads by character count — exact in monospaced faces
+#'       only. Markdown output always pads by character count, the
+#'       correct geometry for a text medium.
 #'   *   **`decimal_markers`** — missing-value tokens recognised by
 #'       `col_spec(align = "decimal")`. `<character>`. Default
 #'       `c("NR", "NE", "NC", "ND", "BLQ")`. A cell whose trimmed

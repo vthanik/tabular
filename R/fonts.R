@@ -60,17 +60,18 @@
 # Office face (Times New Roman / Arial / Courier New) — installed on
 # every Windows and macOS machine, i.e. wherever an RTF / DOCX / PDF
 # is actually opened and reviewed — then the PostScript legacy name,
-# then the Liberation face LAST as the Linux-server fallback. The
-# Liberation set (Red Hat's metric-compatible faces, shipped on Posit
-# Workbench, Domino, Citrix, RStudio Server, every major Linux distro)
-# is metric-compatible with the Office face by design (Liberation
-# Serif / Sans / Mono match Times New Roman / Arial / Courier New), so
-# whichever end of the chain resolves, the layout (line breaks,
-# decimal alignment, page breaks) is identical. Leading with the
-# Office face means Word shows a font the reviewer actually has in its
-# font menu instead of a phantom "Liberation Mono"; on a headless
-# Linux box without the Office fonts the chain falls through to
-# Liberation with the same metrics.
+# then the two Linux-server fallbacks: the URW/Nimbus clone
+# (ghostscript's Core-35 set — Nimbus Roman / Nimbus Sans / Nimbus
+# Mono PS — shipped as OpenType on virtually every Linux distro, and
+# often the ONLY Core-metric face a locked-down corporate compute
+# image has), then the Liberation face (Red Hat's metric-compatible set,
+# shipped on Posit Workbench, Citrix, RStudio Server). Every link is
+# metric-compatible with the Office face by design, so whichever end
+# of the chain resolves, the layout (line breaks, decimal alignment,
+# page breaks) is identical. Leading with the Office face means Word
+# shows a font the reviewer actually has in its font menu instead of
+# a phantom "Nimbus Mono PS"; on a headless Linux box without the
+# Office fonts the chain falls through with the same metrics.
 #
 # Per-backend tails are appended in `.resolve_font_stack`:
 #   * HTML adds the CSS generic family (`serif` / `sans-serif` /
@@ -83,9 +84,19 @@
 #   * RTF appends nothing — the consuming app handles substitution
 #     when the named face is missing (and we emit `\*\falt` so it
 #     can pick the next chain entry explicitly).
-.stack_serif <- c("Times New Roman", "Times", "Liberation Serif")
-.stack_sans <- c("Arial", "Helvetica", "Liberation Sans")
-.stack_mono <- c("Courier New", "Courier", "Liberation Mono")
+.stack_serif <- c(
+  "Times New Roman",
+  "Times",
+  "Nimbus Roman",
+  "Liberation Serif"
+)
+.stack_sans <- c("Arial", "Helvetica", "Nimbus Sans", "Liberation Sans")
+.stack_mono <- c(
+  "Courier New",
+  "Courier",
+  "Nimbus Mono PS",
+  "Liberation Mono"
+)
 
 # Backend tails — appended after the shared chain so the backend's
 # native fallback layer always closes the chain. The LaTeX tail
@@ -411,8 +422,9 @@
 #' #
 #' # Side-by-side check of the two generic families. Useful when
 #' # deciding the house-style default: the serif chain leads with
-#' # Liberation Serif (Linux-server-first); the sans chain leads
-#' # with Liberation Sans. Both close with the backend's native
+#' # Times New Roman, the sans chain with Arial, then each walks the
+#' # PostScript name and the metric-compatible Nimbus / Liberation
+#' # clones. Both close with the backend's native
 #' # fallback layer (CSS generic on HTML, Latin Modern on LaTeX).
 #' if (requireNamespace("systemfonts", quietly = TRUE)) {
 #'   tabular(cdisc_saf_demo) |>

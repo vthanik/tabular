@@ -49,6 +49,7 @@ test_that("LaTeX backend appends TeX Gyre + Latin Modern tail after the shared c
     c(
       "Times New Roman",
       "Times",
+      "Nimbus Roman",
       "Liberation Serif",
       "TeX Gyre Termes",
       "Latin Modern Roman"
@@ -59,6 +60,7 @@ test_that("LaTeX backend appends TeX Gyre + Latin Modern tail after the shared c
     c(
       "Arial",
       "Helvetica",
+      "Nimbus Sans",
       "Liberation Sans",
       "TeX Gyre Heros",
       "Latin Modern Sans"
@@ -69,6 +71,7 @@ test_that("LaTeX backend appends TeX Gyre + Latin Modern tail after the shared c
     c(
       "Courier New",
       "Courier",
+      "Nimbus Mono PS",
       "Liberation Mono",
       "TeX Gyre Cursor",
       "Latin Modern Mono"
@@ -79,15 +82,15 @@ test_that("LaTeX backend appends TeX Gyre + Latin Modern tail after the shared c
 test_that("RTF backend returns the shared core only (no tail)", {
   expect_identical(
     tabular:::.resolve_font_stack("serif", "rtf"),
-    c("Times New Roman", "Times", "Liberation Serif")
+    c("Times New Roman", "Times", "Nimbus Roman", "Liberation Serif")
   )
   expect_identical(
     tabular:::.resolve_font_stack("sans", "rtf"),
-    c("Arial", "Helvetica", "Liberation Sans")
+    c("Arial", "Helvetica", "Nimbus Sans", "Liberation Sans")
   )
   expect_identical(
     tabular:::.resolve_font_stack("mono", "rtf"),
-    c("Courier New", "Courier", "Liberation Mono")
+    c("Courier New", "Courier", "Nimbus Mono PS", "Liberation Mono")
   )
 })
 

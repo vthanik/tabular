@@ -627,3 +627,60 @@ test_that("non-empty spec leaves is_empty_page unset", {
   g <- as_grid(tabular(data.frame(x = 1:2)))
   expect_null(g@pages[[1L]]$is_empty_page)
 })
+
+# ---------------------------------------------------------------------
+# .drop_blank_separators — discardable group separators
+# ---------------------------------------------------------------------
+
+test_that(".drop_blank_separators drops plain blanks and rewires the keep mask", {
+  txtm <- matrix(
+    c("a", "", "b", "1", "", "2"),
+    nrow = 3,
+    dimnames = list(NULL, c("x", "y"))
+  )
+  src <- list(
+    cells_text = txtm,
+    is_header_row = c(FALSE, FALSE, FALSE),
+    is_blank_row = c(FALSE, TRUE, FALSE),
+    # Row 1 glued to the blank, blank NOT glued to row 3: after the
+    # drop the glue must NOT jump the gap (glue-through is an AND).
+    keep_with_next = c(TRUE, FALSE, FALSE)
+  )
+  out <- tabular:::.drop_blank_separators(src)
+  expect_identical(nrow(out$src$cells_text), 2L)
+  expect_identical(out$gap_before, 2L)
+  expect_identical(out$src$keep_with_next, c(FALSE, FALSE))
+  expect_identical(out$src$is_blank_row, c(FALSE, FALSE))
+
+  # Fully glued edges DO glue through the dropped blank.
+  src$keep_with_next <- c(TRUE, TRUE, FALSE)
+  out2 <- tabular:::.drop_blank_separators(src)
+  expect_identical(out2$src$keep_with_next, c(TRUE, FALSE))
+})
+
+test_that(".drop_blank_separators keeps styled blank rows", {
+  txtm <- matrix(c("a", "", "1", ""), nrow = 2)
+  styled <- tabular:::style_node(background = "#eeeeee")
+  sty <- matrix(list(NULL, styled, NULL, styled), nrow = 2)
+  src <- list(
+    cells_text = txtm,
+    cells_style = sty,
+    is_blank_row = c(FALSE, TRUE)
+  )
+  out <- tabular:::.drop_blank_separators(src)
+  expect_identical(nrow(out$src$cells_text), 2L)
+  expect_identical(out$gap_before, integer(0))
+})
+
+test_that(".separator_gap_convertible reads the border manifest", {
+  expect_true(tabular:::.separator_gap_convertible(NULL))
+  expect_true(tabular:::.separator_gap_convertible(list(
+    outer_top = list(style = "solid"),
+    outer_bottom = list(style = "solid"),
+    rows = NULL,
+    cols = NULL
+  )))
+  expect_false(tabular:::.separator_gap_convertible(list(
+    rows = list(style = "solid", width = 0.5, color = NA)
+  )))
+})

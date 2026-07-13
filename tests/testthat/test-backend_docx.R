@@ -483,7 +483,7 @@ test_that(".docx_styles_xml defaults to Courier New and fontTable declares the s
   )
   expect_match(
     fonts,
-    "<w:font w:name=\"Courier\"><w:altName w:val=\"Liberation Mono\"/>",
+    "<w:font w:name=\"Courier\"><w:altName w:val=\"Nimbus Mono PS\"/>",
     fixed = TRUE
   )
   # The last face in the stack has no successor, so no altName.

@@ -769,6 +769,25 @@ backend_latex <- function(grid, file) {
       keep_with_next = page$keep_with_next
     )
 
+  # Discardable group separators: plain blank rows become a white
+  # hline band (`hline{i}={<gap>pt, solid, white}`), which tabularray
+  # DROPS when its page break lands at that boundary — a real blank
+  # row would sit as a stray gap above the repeated bottom rule at
+  # every page bottom (RTF/DOCX parity: Word swallows the blank into
+  # the margin). Mid-page the band renders at the blank row's exact
+  # height. Skipped when rules run through the body interior
+  # (`.separator_gap_convertible()`), where the blank row is part of
+  # the ruled grid.
+  gap_before <- integer(0)
+  if (
+    !isTRUE(page$is_empty_page) &&
+      .separator_gap_convertible(meta$body_borders)
+  ) {
+    sep <- .drop_blank_separators(src)
+    src <- sep$src
+    gap_before <- sep$gap_before
+  }
+
   # Column separation is derived from the BODY cells_style (per-cell
   # `style(.at = cells_body(), padding = ...)` overrides win, else the
   # preset default), NOT the chrome style `cs`: the engine folds body
@@ -903,6 +922,17 @@ backend_latex <- function(grid, file) {
     sprintf("valign=%s", .latex_valign_letter(body_valign)),
     .latex_rowsep_inner(src$cells_style)
   )
+  # Separator gaps land as white hline bands ABOVE their body row
+  # (body row k = table row rowhead + k). See the conversion above.
+  gap_dirs <- if (length(gap_before) > 0L) {
+    sprintf(
+      "hline{%d}={%spt, solid, white}",
+      rowhead + gap_before,
+      format(.separator_gap_pt(src$cells_style, meta$preset), trim = TRUE)
+    )
+  } else {
+    character()
+  }
   outer_args <- paste(
     c(
       sprintf("colspec={%s}", colspec),
@@ -911,6 +941,7 @@ backend_latex <- function(grid, file) {
       sprintf("rows={%s}", paste(rows_inner, collapse = ", ")),
       header_rule_dirs,
       border_directives,
+      gap_dirs,
       bands$band_hlines
     ),
     collapse = ", "

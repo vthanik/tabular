@@ -10,7 +10,7 @@
         flipped: true,
         margin: 1in,
       )
-      #set text(font: ("Courier New", "Courier", "Liberation Mono", "DejaVu Sans Mono",), size: 10pt, top-edge: 0.84em, bottom-edge: -0.36em)
+      #set text(font: ("Courier New", "Courier", "Nimbus Mono PS", "Liberation Mono", "DejaVu Sans Mono",), size: 10pt, top-edge: 0.84em, bottom-edge: -0.36em)
       #set par(leading: 0em)
       #set block(spacing: 0pt)
       #align(center)[#table(
@@ -18,6 +18,7 @@
         align: (left + top, left + top, center + top, left + top, left + top, center + top,),
         stroke: none,
         inset: (left: 5.4pt, right: 5.4pt, top: 2pt, bottom: 2pt),
+        row-gutter: (0pt, 0pt, 0pt, 0pt, 0pt, 0pt, 0pt, 16pt, 0pt, 0pt, 16pt, 0pt, 0pt, 0pt, 0pt,),
         table.header(
           repeat: true,
           [], table.cell(colspan: 5, align: left + top, inset: (left: 0pt, right: 0pt, top: 0pt, bottom: 0pt))[#v(12pt)
@@ -33,11 +34,9 @@
         [], [#pad(left: 12pt)[Median]], [76.0       ], [78.0], [75.5], [ 77.0       ],
         [], [#pad(left: 12pt)[Q1,~Q3]], [69.2,~81.8 ], [71.0,~82.0], [70.5,~79.0], [ 70.0,~81.0 ],
         [], [#pad(left: 12pt)[Min,~Max]], [52  ,~89   ], [51,~88], [56,~88], [ 51  ,~89   ],
-        [], table.cell(colspan: 5)[#hide[X]],
         table.cell(rowspan: 2, breakable: false)[], table.cell(colspan: 5, align: left + top)[#strong[Sex, n (%)]],
         [#pad(left: 12pt)[F]], [53~(61.6)  ], [55~(57.3)], [35~(48.6)], [143~(56.3)  ],
         [], [#pad(left: 12pt)[M]], [33~(38.4)  ], [41~(42.7)], [37~(51.4)], [111~(43.7)  ],
-        [], table.cell(colspan: 5)[#hide[X]],
         table.cell(rowspan: 2, breakable: false)[], table.cell(colspan: 5, align: left + top)[#strong[Race, n (%)]],
         [#pad(left: 12pt)[WHITE]], [78~(90.7)  ], [90~(93.8)], [62~(86.1)], [230~(90.6)  ],
         [], [#pad(left: 12pt)[BLACK~OR~AFRICAN~AMERICAN]], [ 8~( 9.3)  ], [6~(6.2)], [9~(12.5)], [ 23~( 9.1)  ],
