@@ -2,6 +2,12 @@
 
 ## New features
 
+* `check_typst()` is a new diagnostic that audits the Typst PDF toolchain: which typst binary is discoverable (standalone `typst`, or the copy bundled inside Quarto), whether its version meets the 0.11 floor, and which families of the default font chain the compiler can see (typst substitutes missing fonts silently, so the check surfaces the one failure mode a compile will not).
+
+* `emit()` gained a Typst backend: `emit(spec, "out.typ")` writes a standalone Typst document (native `#table` with repeating `table.header`/`table.footer`, page chrome via `#set page()` counters, native per-cell borders), and `emit(spec, "out.pdf", format = "typst")` compiles it through the standalone typst binary or Quarto's bundled copy, so PDF output no longer requires any TeX installation.
+
+* `emit()` on a bare `.pdf` target now selects its compile engine by probing the machine, LaTeX first: a usable TeX (resolved the way the compile resolves it, and not frozen on a pre-2023 TeX Live kernel) keeps the historical LaTeX path byte-stable, a discoverable typst binary takes over otherwise, and with neither engine the call aborts up front naming both remedies; `format = "latex"` / `format = "typst"` pick the engine explicitly.
+
 * `check_latex()` now reports the TeX Live release year of the active `xelatex` and fails the check when it predates 2023, the first release whose LaTeX kernel (2022-11-01) can load the bundled tabularray; the report and the `emit()` PDF compile error both explain the update / user-space TinyTeX remedy for images frozen on an old TeX Live.
 
 * `check_latex()` and the PDF pre-compile staging now resolve TeX the same way the compile does, preferring a TinyTeX at the standard root (installed by either `tinytex::install_tinytex()` or `quarto install tinytex`) over the `PATH`, so the diagnostic can no longer describe a different TeX than the one `emit()` actually runs; remediation hints name the `quarto install tinytex` route, which downloads from GitHub and therefore works behind proxies that block CTAN.

@@ -98,7 +98,8 @@
 #' | `.md`, `.markdown` | `md`    | GFM pipe table                       |
 #' | `.html`, `.htm`    | `html`  | self-contained Bootstrap 5           |
 #' | `.tex`, `.latex`   | `latex` | tabularray                           |
-#' | `.pdf`             | `pdf`   | tinytex compile of LaTeX             |
+#' | `.typ`             | `typst` | Typst native `#table`                |
+#' | `.pdf`             | (probed) | LaTeX (tinytex) or Typst compile    |
 #' | `.rtf`             | `rtf`   | RTF 1.9.1, native                    |
 #' | `.docx`            | `docx`  | OOXML native, no JVM                  |
 #'
@@ -106,6 +107,31 @@
 #' registered backend all raise `tabular_error_input`. The error
 #' message lists the currently registered formats so the failure is
 #' actionable.
+#'
+#' **PDF engines.** A `.pdf` target compiles through one of two
+#' engines: **LaTeX** (via [`tinytex::latexmk()`]; needs a TeX
+#' installation) or **Typst** (via the standalone `typst` binary or
+#' the copy bundled inside Quarto >= 1.4; needs no TeX at all). Pass
+#' `format = "latex"` or `format = "typst"` to pick one explicitly.
+#' With no `format`, `emit()` probes the machine LaTeX-first: a
+#' usable TeX (found the way the compile finds it, preferring a
+#' standard-root TinyTeX, and not frozen on a pre-2023 TeX Live
+#' kernel) keeps the historical LaTeX path; otherwise a discoverable
+#' typst binary takes over; with neither, `emit()` aborts up front
+#' naming both remedies. Audit the toolchains with [`check_latex()`]
+#' and [`check_typst()`].
+#'
+#' **Typst capability notes.** The Typst output matches the LaTeX
+#' layout contract with three documented deviations: (1) Typst has no
+#' per-row keep-with-next primitive (LaTeX `\\\\*`, RTF `\\keepn`,
+#' DOCX `keepNext`), so a group header can land as the last row of a
+#' page; (2) the `paginate(continuation =)` marker appears on
+#' continuation panels only (the repeating page header is identical on
+#' every page), matching the RTF tier rather than LaTeX's every-page
+#' marker; (3) the spanner underline is trimmed by the cell inset at
+#' both ends (the HTML tier), where LaTeX keeps the table's outer
+#' edges flush. Conversely, Typst renders per-cell body borders that
+#' the LaTeX backend cannot (see [`style()`]).
 #'
 #' **`data_file` is sponsor-neutral.** Pass an explicit path
 #' (`"out/qc.csv"`) for a fixed location, or a lambda
@@ -157,6 +183,11 @@
 #'   file extension. Useful for writing `.txt` files that should
 #'   contain RTF, for round-trip testing, or when the user has a
 #'   custom backend registered under a non-standard name.
+#'
+#'   **Interaction:** On a `.pdf` target, `format` names the compile
+#'   ENGINE: `"latex"` compiles via TeX and `"typst"` via the typst
+#'   binary (see the *PDF engines* section). On every other
+#'   extension the generic override semantics apply unchanged.
 #'
 #' @param data_file *QC artefact writer.*
 #'   `<character(1) | function(file) -> character(1) | NULL>:`
@@ -275,7 +306,7 @@
 #'   manifest  = TRUE
 #' )
 #'
-#' # ---- Example 3: Same spec, four backends — one-loop fan-out ----
+#' # ---- Example 3: Same spec, every text backend — one-loop fan-out ----
 #' #
 #' # `emit()` dispatches by file extension, so the same spec can
 #' # render to every backend in one loop. Useful for visual diffs
@@ -295,7 +326,7 @@
 #'
 #' out_dir <- tempfile()
 #' dir.create(out_dir)
-#' for (ext in c(".html", ".rtf", ".tex", ".docx", ".md")) {
+#' for (ext in c(".html", ".rtf", ".tex", ".typ", ".docx", ".md")) {
 #'   emit(eff_spec, file.path(out_dir, paste0("eff", ext)))
 #' }
 #' list.files(out_dir)
