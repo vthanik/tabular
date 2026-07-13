@@ -659,6 +659,21 @@ test_that("header background and padding reach the column-label cells", {
   expect_match(row, "inset: (top: 6pt, bottom: 6pt)", fixed = TRUE)
 })
 
+test_that(".typst_cell_inset is silent for non-nodes and all-silent nodes", {
+  # Contract: NULL (inherit the table-level inset) unless a padding side
+  # is explicitly set. The non-node guard fires only for internal
+  # callers that pass a bare value; the all-silent guard is the default
+  # header/body cell path.
+  expect_null(tabular:::.typst_cell_inset(42))
+  expect_null(tabular:::.typst_cell_inset(tabular:::style_node()))
+  expect_identical(
+    tabular:::.typst_cell_inset(
+      tabular:::style_node(padding_top = 6, padding_left = 3)
+    ),
+    "(top: 6pt, left: 3pt)"
+  )
+})
+
 test_that("preset(whitespace = 'collapse') folds 2+ space runs in body cells", {
   # The no-wrap hardening rewrites every remaining space to `~` before
   # typst's native markup folding can collapse a run, so the collapse
