@@ -2858,6 +2858,32 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### New features
 
+- `preset(font_family = )` generic chains (`"mono"` / `"serif"` /
+  `"sans"`) gained the URW/Nimbus Core-35 clone (Nimbus Mono PS / Nimbus
+  Roman / Nimbus Sans) between the PostScript name and the Liberation
+  face, so the default still renders as Courier / Times / Helvetica on
+  Linux images that ship only the ghostscript fonts (and whose Type 1
+  Courier the Typst compiler cannot read); all links are
+  metric-compatible, so layout is unchanged wherever the chain resolves.
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  `.tex`, `.typ`, and PDF now re-expresses plain group-separator blank
+  rows as discardable space (a white tabularray hline band on LaTeX, a
+  `row-gutter` entry on Typst), so a page never ends on a stray blank
+  line above the repeated closing rule when the native page break lands
+  at a group boundary, matching how Word renders the RTF/DOCX output;
+  mid-page the gap keeps the blank row’s exact height, and styled or
+  ruled tables (rowrules, side frames, striped separators) keep the real
+  blank row.
+
+- `preset(decimal_metrics = "afm")` now measures a `font_family` with no
+  bundled metric table (e.g. a system-installed face such as Courier 10
+  Pitch) through a temporary graphics device, so decimal alignment and
+  width measurement stay exact whenever the host can resolve the font;
+  the Times-fallback fidelity warning now fires only when that device
+  probe also fails, and the probe can be disabled with
+  `options(tabular.device_metrics = FALSE)`.
+
 - [`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md)
   is a new diagnostic that audits the Typst PDF toolchain: which typst
   binary is discoverable (standalone `typst`, or the copy bundled inside
@@ -2966,6 +2992,16 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   keys, and an explicit `repeat_cols` vector replaces that default.
 
 ### Minor improvements and bug fixes
+
+- DESCRIPTION’s SystemRequirements no longer contains the bare word
+  “LaTeX”, which pak’s system-requirements scraper matched and answered
+  by force-installing the `texlive` OS package (a sudo failure on
+  locked-down hosts such as Domino); the TeX distribution remains
+  optional for PDF output.
+
+- Fidelity warnings now render their feature string as inline code
+  instead of a quoted value, so a feature that itself contains quotes
+  (`decimal_metrics = "afm"`) no longer prints with escaped quotes.
 
 - [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
   now probes package availability through `kpsewhich` (the resolver
@@ -3770,7 +3806,7 @@ tables <- htmltools::tagList(
 # launches a browser.
 s1
 
-#tabular-763eb95427 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-763eb95427 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-763eb95427 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-763eb95427 p { line-height: inherit; }
 #tabular-763eb95427 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -3973,7 +4009,7 @@ tabular(
     )
   )
 
-#tabular-d7214c217f { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-d7214c217f { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-d7214c217f .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-d7214c217f p { line-height: inherit; }
 #tabular-d7214c217f .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4098,7 +4134,7 @@ tabular(cdisc_eff_estimates, titles = "Treatment-effect estimates by model") |>
                         format = "%.4f")
   )
 
-#tabular-3fcbfcfbba { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-3fcbfcfbba { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-3fcbfcfbba .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-3fcbfcfbba p { line-height: inherit; }
 #tabular-3fcbfcfbba .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4299,7 +4335,7 @@ tabular(
   ) |>
   group_rows(by = "group_label")
 
-#tabular-8024c4df67 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-8024c4df67 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-8024c4df67 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-8024c4df67 p { line-height: inherit; }
 #tabular-8024c4df67 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4449,7 +4485,7 @@ tabular(
     )
   )
 
-#tabular-77ba8233e9 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-77ba8233e9 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-77ba8233e9 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-77ba8233e9 p { line-height: inherit; }
 #tabular-77ba8233e9 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4579,7 +4615,7 @@ cdisc_saf_aesocpt_ard |>
     `Xanomeline High Dose` = col_spec(align = "decimal")
   )
 
-#tabular-d914555dd7 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-d914555dd7 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-d914555dd7 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-d914555dd7 p { line-height: inherit; }
 #tabular-d914555dd7 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4782,7 +4818,7 @@ tabular(
     descending = c(TRUE, TRUE)
   )
 
-#tabular-ca84999b75 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-ca84999b75 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-ca84999b75 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-ca84999b75 p { line-height: inherit; }
 #tabular-ca84999b75 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -4923,7 +4959,7 @@ cdisc_saf_demo_ard |>
     )
   )
 
-#tabular-c9e79afd11 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-c9e79afd11 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-c9e79afd11 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-c9e79afd11 p { line-height: inherit; }
 #tabular-c9e79afd11 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -5088,7 +5124,7 @@ tabular(
     )
   )
 
-#tabular-c73e2cc0e2 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-c73e2cc0e2 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-c73e2cc0e2 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-c73e2cc0e2 p { line-height: inherit; }
 #tabular-c73e2cc0e2 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -5313,7 +5349,7 @@ tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
   ) |>
   subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
 
-#tabular-bde4edb2c1 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-bde4edb2c1 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-bde4edb2c1 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-bde4edb2c1 p { line-height: inherit; }
 #tabular-bde4edb2c1 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -5458,7 +5494,7 @@ tabular(
     )
   )
 
-#tabular-b13c054115 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-b13c054115 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-b13c054115 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-b13c054115 p { line-height: inherit; }
 #tabular-b13c054115 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -5811,18 +5847,21 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> ── Font resolution for `font_family = mono` 
 #> backend: html
 #> x Courier New (not on this machine)
-#> v Courier
+#> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
 #> x Courier New (not on this machine)
-#> v Courier
+#> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
-#> v TeX Gyre Cursor
-#> v Latin Modern Mono
+#> x TeX Gyre Cursor (not on this machine)
+#> x Latin Modern Mono (not on this machine)
 #> backend: rtf
 #> x Courier New (not on this machine)
-#> v Courier
+#> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
 
 # ---- Example 2: Diagnose a Courier New request ----
@@ -5843,18 +5882,21 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> ── Font resolution for `font_family = Courier New` 
 #> backend: html
 #> x Courier New (not on this machine)
-#> v Courier
+#> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
 #> x Courier New (not on this machine)
-#> v Courier
+#> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
-#> v TeX Gyre Cursor
-#> v Latin Modern Mono
+#> x TeX Gyre Cursor (not on this machine)
+#> x Latin Modern Mono (not on this machine)
 #> backend: rtf
 #> x Courier New (not on this machine)
-#> v Courier
+#> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
 
 # ---- Example 3: Explicit cross-platform stack ----
@@ -5890,8 +5932,9 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #
 # Side-by-side check of the two generic families. Useful when
 # deciding the house-style default: the serif chain leads with
-# Liberation Serif (Linux-server-first); the sans chain leads
-# with Liberation Sans. Both close with the backend's native
+# Times New Roman, the sans chain with Arial, then each walks the
+# PostScript name and the metric-compatible Nimbus / Liberation
+# clones. Both close with the backend's native
 # fallback layer (CSS generic on HTML, Latin Modern on LaTeX).
 if (requireNamespace("systemfonts", quietly = TRUE)) {
   tabular(cdisc_saf_demo) |>
@@ -5907,34 +5950,40 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> backend: html
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Nimbus Roman
 #> v Liberation Serif
 #> o serif (generic, always available)
 #> backend: latex
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Nimbus Roman
 #> v Liberation Serif
-#> v TeX Gyre Termes
-#> v Latin Modern Roman
+#> x TeX Gyre Termes (not on this machine)
+#> x Latin Modern Roman (not on this machine)
 #> backend: rtf
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Nimbus Roman
 #> v Liberation Serif
 #> 
 #> ── Font resolution for `font_family = sans` 
 #> backend: html
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Nimbus Sans
 #> v Liberation Sans
 #> o sans-serif (generic, always available)
 #> backend: latex
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Nimbus Sans
 #> v Liberation Sans
-#> v TeX Gyre Heros
-#> v Latin Modern Sans
+#> x TeX Gyre Heros (not on this machine)
+#> x Latin Modern Sans (not on this machine)
 #> backend: rtf
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Nimbus Sans
 #> v Liberation Sans
 ```
 # Check LaTeX-package availability for PDF output
@@ -6082,20 +6131,22 @@ check_latex()
 #> such as MiKTeX)
 #> v tabularray (not found, bundled copy used)
 #> v ninecolors (not found, bundled copy used)
-#> v xcolor
-#> v graphics
-#> x siunitx
-#> v geometry
-#> v hyperref
-#> v iftex
-#> v base
-#> v fancyhdr
-#> x lastpage
-#> v fontspec
-#> v tex-gyre
-#> v psnfss
-#> ! Missing 2 LaTeX packages: "siunitx" and "lastpage".
-#> Install with `tinytex::tlmgr_install(c('siunitx', 'lastpage'))`.
+#> ? xcolor
+#> ? graphics
+#> ? siunitx
+#> ? geometry
+#> ? hyperref
+#> ? iftex
+#> ? base
+#> ? fancyhdr
+#> ? lastpage
+#> ? fontspec
+#> ? tex-gyre
+#> ? psnfss
+#> ! Missing 12 LaTeX packages: "xcolor", "graphics", "siunitx", "geometry", "hyperref", "iftex", "base", "fancyhdr", "lastpage", "fontspec", "tex-gyre", and "psnfss".
+#> Install with `tinytex::tlmgr_install(c('xcolor', 'graphics',
+#> 'siunitx', 'geometry', 'hyperref', 'iftex', 'base', 'fancyhdr',
+#> 'lastpage', 'fontspec', 'tex-gyre', 'psnfss'))`.
 #> If the install stalls (commonly on Windows, where the default CTAN
 #> mirror redirects on every call), pin a concrete mirror once with
 #> `tinytex::tlmgr_repo("auto")` then retry.
@@ -6198,9 +6249,10 @@ check_typst()
 #> v quarto typst 0.14.2
 #> x font Courier New
 #> x font Courier
+#> v font Nimbus Mono PS
 #> v font Liberation Mono
 #> v font DejaVu Sans Mono
-#> ✔ Typst is ready; PDFs render in "Liberation Mono" (the first available family of the chain).
+#> ✔ Typst is ready; PDFs render in "Nimbus Mono PS" (the first available family of the chain).
 ```
 # Per-column display specification
 
@@ -6587,7 +6639,7 @@ tabular(
   group_rows(by = "variable") |>
   sort_rows(by = c("variable", "stat_label"))
 
-#tabular-ba6debc427 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-ba6debc427 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-ba6debc427 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-ba6debc427 p { line-height: inherit; }
 #tabular-ba6debc427 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -6784,7 +6836,7 @@ tabular(
   group_rows(by = "variable") |>
   sort_rows(by = c("variable", "stat_label"))
 
-#tabular-d628277aa5 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-d628277aa5 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-d628277aa5 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-d628277aa5 p { line-height: inherit; }
 #tabular-d628277aa5 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -7039,7 +7091,7 @@ tabular(
   group_rows(by = "variable") |>
   sort_rows(by = c("variable", "stat_label"))
 
-#tabular-69e6f53254 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-69e6f53254 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-69e6f53254 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-69e6f53254 p { line-height: inherit; }
 #tabular-69e6f53254 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -7650,7 +7702,7 @@ fig <- figure(
 )
 fig
 
-#tabular-cd0522e723 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-cd0522e723 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-cd0522e723 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-cd0522e723 p { line-height: inherit; }
 #tabular-cd0522e723 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -7733,7 +7785,7 @@ per_arm <- figure(
 )
 per_arm
 
-#tabular-e184540ca8 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-e184540ca8 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-e184540ca8 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-e184540ca8 p { line-height: inherit; }
 #tabular-e184540ca8 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -7932,7 +7984,7 @@ tabular(cdisc_saf_aesocpt) |>
     .at = cells_headers(j = "Total")
   )
 
-#tabular-755de0cc12 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-755de0cc12 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-755de0cc12 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-755de0cc12 p { line-height: inherit; }
 #tabular-755de0cc12 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -8058,7 +8110,7 @@ tabular(cdisc_saf_n) |>
     orientation = "landscape"
   )
 
-#tabular-01893db7f4 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
+#tabular-01893db7f4 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
 #tabular-01893db7f4 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-01893db7f4 p { line-height: inherit; }
 #tabular-01893db7f4 .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -8262,7 +8314,7 @@ tabular(
   ) |>
   group_rows(by = "variable")
 
-#tabular-70f56d538c { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-70f56d538c { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-70f56d538c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-70f56d538c p { line-height: inherit; }
 #tabular-70f56d538c .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -8476,7 +8528,7 @@ tabular(
   ) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 
-#tabular-b46407910e { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-b46407910e { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-b46407910e .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-b46407910e p { line-height: inherit; }
 #tabular-b46407910e .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -8630,7 +8682,7 @@ tabular(
   )
 )
 
-#tabular-d9e90739e2 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-d9e90739e2 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-d9e90739e2 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-d9e90739e2 p { line-height: inherit; }
 #tabular-d9e90739e2 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -9051,7 +9103,7 @@ tabular(
     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   )
 
-#tabular-3a410ec737 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-3a410ec737 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-3a410ec737 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-3a410ec737 p { line-height: inherit; }
 #tabular-3a410ec737 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -9360,7 +9412,7 @@ tabular(
     continuation = "(continued)"
   )
 
-#tabular-8ae01bbdb5 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-8ae01bbdb5 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-8ae01bbdb5 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-8ae01bbdb5 p { line-height: inherit; }
 #tabular-8ae01bbdb5 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -9880,7 +9932,7 @@ cdisc_saf_demo_ard |>
     )
   )
 
-#tabular-0eb6858e8f { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-0eb6858e8f { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-0eb6858e8f .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-0eb6858e8f p { line-height: inherit; }
 #tabular-0eb6858e8f .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -10066,7 +10118,7 @@ tabular(
   ) |>
   preset_minimal()
 
-#tabular-8e8c2851ff { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-8e8c2851ff { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-8e8c2851ff .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-8e8c2851ff p { line-height: inherit; }
 #tabular-8e8c2851ff .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -10182,11 +10234,13 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
         The resolver expands to a per-backend chain that leads with the
         Microsoft Office face (Courier New / Times New Roman / Arial) —
         installed on every Windows and macOS machine, where documents
-        are reviewed — then the PostScript legacy name, then the
-        metric-compatible **Liberation** face LAST as the Linux-server
-        fallback (Posit Workbench / Domino / Citrix / RStudio Server),
-        then TeX Gyre for LaTeX compile / the CSS generic for HTML.
-        Liberation Mono / Serif / Sans are metric-compatible with
+        are reviewed — then the PostScript legacy name, then the two
+        metric-compatible Linux-server fallbacks: the **URW / Nimbus**
+        clone (Nimbus Mono PS / Nimbus Roman / Nimbus Sans,
+        ghostscript's Core-35 set shipped on virtually every Linux
+        distro) and the **Liberation** face (Posit Workbench / Domino /
+        Citrix / RStudio Server), then TeX Gyre for LaTeX compile / the
+        CSS generic for HTML. Every link is metric-compatible with
         Courier New / TNR / Arial, so layout, line breaks, and decimal
         alignment hold across every render context regardless of which
         end of the chain resolves. The mono default matches the dominant
@@ -10221,8 +10275,9 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
     **Note:** tabular bundles no fonts. Because the default chain leads
     with the Office face, Word's font dropdown shows a face the reader
     actually has installed on Windows / macOS (e.g. Courier New for
-    `"mono"`), not a phantom name; the metric-compatible Liberation face
-    only appears as the fallback for a headless Linux box.
+    `"mono"`), not a phantom name; the metric-compatible Nimbus /
+    Liberation faces only appear as the fallback for a headless Linux
+    box.
 
   - **`orientation`** — page orientation. `<character(1)>`. One of
     `"landscape"` (default), `"portrait"`.
@@ -10338,10 +10393,15 @@ preset(.spec, ..., .template = NULL, .style = NULL, .reset = FALSE)
   - **`decimal_metrics`** — decimal-padding metric. `<character(1)>`.
     `"afm"` (default) measures glyphs with the bundled Core font
     metrics, so decimal columns align width-exact in proportional fonts
-    (to within one padding space of rounding; exact in Courier).
-    `"chars"` pads by character count — exact in monospaced faces only.
-    Markdown output always pads by character count, the correct geometry
-    for a text medium.
+    (to within one padding space of rounding; exact in Courier). A
+    `font_family` with no bundled metric table (e.g. a system-installed
+    face such as Courier 10 Pitch) is measured through a temporary
+    graphics device instead, so alignment stays exact whenever the host
+    can resolve the font; only when that also fails does the engine fall
+    back to Times metrics with a fidelity warning. `"chars"` pads by
+    character count — exact in monospaced faces only. Markdown output
+    always pads by character count, the correct geometry for a text
+    medium.
 
   - **`decimal_markers`** — missing-value tokens recognised by
     `col_spec(align = "decimal")`. `<character>`. Default
@@ -10632,7 +10692,7 @@ tabular(
   ) |>
   paginate()
 
-#tabular-da34745d33 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
+#tabular-da34745d33 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 8pt; line-height: 1.3; }
 #tabular-da34745d33 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-da34745d33 p { line-height: inherit; }
 #tabular-da34745d33 .tabular-title { font-size: 8pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -10825,7 +10885,7 @@ tabular(
   footnotes = "Safety Population."
 )
 
-#tabular-dc6b2f85cd { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-dc6b2f85cd { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-dc6b2f85cd .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-dc6b2f85cd p { line-height: inherit; }
 #tabular-dc6b2f85cd .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -11052,7 +11112,7 @@ tabular(
     Total      = col_spec(label = "Total\nN={demo_n['Total']}")
   )
 
-#tabular-b73983854c { font-family: "Times New Roman", Times, "Liberation Serif", serif; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
+#tabular-b73983854c { font-family: "Times New Roman", Times, "Nimbus Roman", "Liberation Serif", serif; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
 #tabular-b73983854c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-b73983854c p { line-height: inherit; }
 #tabular-b73983854c .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -11241,7 +11301,7 @@ tabular(
   ) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 
-#tabular-04d130afcc { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-04d130afcc { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-04d130afcc .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-04d130afcc p { line-height: inherit; }
 #tabular-04d130afcc .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -11582,7 +11642,7 @@ tabular(cdisc_saf_aesocpt, titles = "Adverse Events by SOC / PT",
   style(background = "#f0f0f0",
         .at = cells_body(where = row_type == "overall"))
 
-#tabular-7434ee2d40 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-7434ee2d40 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-7434ee2d40 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-7434ee2d40 p { line-height: inherit; }
 #tabular-7434ee2d40 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -11863,7 +11923,7 @@ tabular(
   group_rows(by = c("param", "visit")) |>
   subgroup(by = "sex")
 
-#tabular-12edd6302c { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-12edd6302c { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-12edd6302c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-12edd6302c p { line-height: inherit; }
 #tabular-12edd6302c .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -12104,7 +12164,7 @@ is_tabular_spec("not a spec") # FALSE — does not raise
 #> [1] FALSE
 add_safety_footnote(demo)
 
-#tabular-763eb95427 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-763eb95427 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-763eb95427 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-763eb95427 p { line-height: inherit; }
 #tabular-763eb95427 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
@@ -12397,7 +12457,7 @@ tabular(
   ) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
 
-#tabular-44ce677a75 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-44ce677a75 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-44ce677a75 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-44ce677a75 p { line-height: inherit; }
 #tabular-44ce677a75 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }

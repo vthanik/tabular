@@ -88,7 +88,8 @@ check_typst()
 #> v quarto typst 0.14.2
 #> x font Courier New
 #> x font Courier
+#> v font Nimbus Mono PS
 #> v font Liberation Mono
 #> v font DejaVu Sans Mono
-#> ✔ Typst is ready; PDFs render in "Liberation Mono" (the first available family of the chain).
+#> ✔ Typst is ready; PDFs render in "Nimbus Mono PS" (the first available family of the chain).
 ```

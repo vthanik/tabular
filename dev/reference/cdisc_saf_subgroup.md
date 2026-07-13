@@ -93,7 +93,7 @@ tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
   ) |>
   subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
 
-#tabular-bde4edb2c1 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-bde4edb2c1 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-bde4edb2c1 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-bde4edb2c1 p { line-height: inherit; }
 #tabular-bde4edb2c1 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }

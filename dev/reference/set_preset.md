@@ -163,7 +163,7 @@ tabular(
     Total      = col_spec(label = "Total\nN={demo_n['Total']}")
   )
 
-#tabular-b73983854c { font-family: "Times New Roman", Times, "Liberation Serif", serif; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
+#tabular-b73983854c { font-family: "Times New Roman", Times, "Nimbus Roman", "Liberation Serif", serif; color: #212529; margin: 1.5rem; font-size: 9pt; line-height: 1.3; }
 #tabular-b73983854c .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-b73983854c p { line-height: inherit; }
 #tabular-b73983854c .tabular-title { font-size: 9pt; font-weight: 600; text-align: center; margin: .2rem 0; }

@@ -82,7 +82,7 @@ tabular(
     )
   )
 
-#tabular-b13c054115 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-b13c054115 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-b13c054115 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-b13c054115 p { line-height: inherit; }
 #tabular-b13c054115 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }

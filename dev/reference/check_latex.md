@@ -143,20 +143,22 @@ check_latex()
 #> such as MiKTeX)
 #> v tabularray (not found, bundled copy used)
 #> v ninecolors (not found, bundled copy used)
-#> v xcolor
-#> v graphics
-#> x siunitx
-#> v geometry
-#> v hyperref
-#> v iftex
-#> v base
-#> v fancyhdr
-#> x lastpage
-#> v fontspec
-#> v tex-gyre
-#> v psnfss
-#> ! Missing 2 LaTeX packages: "siunitx" and "lastpage".
-#> Install with `tinytex::tlmgr_install(c('siunitx', 'lastpage'))`.
+#> ? xcolor
+#> ? graphics
+#> ? siunitx
+#> ? geometry
+#> ? hyperref
+#> ? iftex
+#> ? base
+#> ? fancyhdr
+#> ? lastpage
+#> ? fontspec
+#> ? tex-gyre
+#> ? psnfss
+#> ! Missing 12 LaTeX packages: "xcolor", "graphics", "siunitx", "geometry", "hyperref", "iftex", "base", "fancyhdr", "lastpage", "fontspec", "tex-gyre", and "psnfss".
+#> Install with `tinytex::tlmgr_install(c('xcolor', 'graphics',
+#> 'siunitx', 'geometry', 'hyperref', 'iftex', 'base', 'fancyhdr',
+#> 'lastpage', 'fontspec', 'tex-gyre', 'psnfss'))`.
 #> If the install stalls (commonly on Windows, where the default CTAN
 #> mirror redirects on every call), pin a concrete mirror once with
 #> `tinytex::tlmgr_repo("auto")` then retry.

@@ -383,7 +383,7 @@ tabular(
   group_rows(by = "variable") |>
   sort_rows(by = c("variable", "stat_label"))
 
-#tabular-ba6debc427 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-ba6debc427 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
 #tabular-ba6debc427 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
 #tabular-ba6debc427 p { line-height: inherit; }
 #tabular-ba6debc427 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }

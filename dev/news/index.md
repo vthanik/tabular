@@ -4,6 +4,32 @@
 
 ### New features
 
+- `preset(font_family = )` generic chains (`"mono"` / `"serif"` /
+  `"sans"`) gained the URW/Nimbus Core-35 clone (Nimbus Mono PS / Nimbus
+  Roman / Nimbus Sans) between the PostScript name and the Liberation
+  face, so the default still renders as Courier / Times / Helvetica on
+  Linux images that ship only the ghostscript fonts (and whose Type 1
+  Courier the Typst compiler cannot read); all links are
+  metric-compatible, so layout is unchanged wherever the chain resolves.
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  `.tex`, `.typ`, and PDF now re-expresses plain group-separator blank
+  rows as discardable space (a white tabularray hline band on LaTeX, a
+  `row-gutter` entry on Typst), so a page never ends on a stray blank
+  line above the repeated closing rule when the native page break lands
+  at a group boundary, matching how Word renders the RTF/DOCX output;
+  mid-page the gap keeps the blank row’s exact height, and styled or
+  ruled tables (rowrules, side frames, striped separators) keep the real
+  blank row.
+
+- `preset(decimal_metrics = "afm")` now measures a `font_family` with no
+  bundled metric table (e.g. a system-installed face such as Courier 10
+  Pitch) through a temporary graphics device, so decimal alignment and
+  width measurement stay exact whenever the host can resolve the font;
+  the Times-fallback fidelity warning now fires only when that device
+  probe also fails, and the probe can be disabled with
+  `options(tabular.device_metrics = FALSE)`.
+
 - [`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md)
   is a new diagnostic that audits the Typst PDF toolchain: which typst
   binary is discoverable (standalone `typst`, or the copy bundled inside
@@ -112,6 +138,16 @@
   keys, and an explicit `repeat_cols` vector replaces that default.
 
 ### Minor improvements and bug fixes
+
+- DESCRIPTION’s SystemRequirements no longer contains the bare word
+  “LaTeX”, which pak’s system-requirements scraper matched and answered
+  by force-installing the `texlive` OS package (a sudo failure on
+  locked-down hosts such as Domino); the TeX distribution remains
+  optional for PDF output.
+
+- Fidelity warnings now render their feature string as inline code
+  instead of a quoted value, so a feature that itself contains quotes
+  (`decimal_metrics = "afm"`) no longer prints with escaped quotes.
 
 - [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
   now probes package availability through `kpsewhich` (the resolver
