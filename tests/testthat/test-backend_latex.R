@@ -914,7 +914,7 @@ test_that("multi-row pagehead REVERSES order (body-edge row last) inside slot te
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_true(grepl("Far row\\\\Body edge", tex, fixed = TRUE))
+  expect_true(grepl("Far row\\strut\\\\Body edge\\strut", tex, fixed = TRUE))
 })
 
 test_that("multi-row pagefoot keeps FORWARD order (body-edge row first)", {
@@ -925,7 +925,7 @@ test_that("multi-row pagefoot keeps FORWARD order (body-edge row first)", {
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_true(grepl("Body edge\\\\Far row", tex, fixed = TRUE))
+  expect_true(grepl("Body edge\\strut\\\\Far row\\strut", tex, fixed = TRUE))
 })
 
 test_that("headheight bumps when multi-row pagehead is present", {
@@ -939,10 +939,11 @@ test_that("headheight bumps when multi-row pagehead is present", {
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  expect_true(grepl("\\setlength{\\headheight}", tex, fixed = TRUE))
+  # 3 rows * 10pt * 1.2 + 2pt slack = 38pt, on the geometry option list
+  expect_true(grepl("headheight=38pt", tex, fixed = TRUE))
 })
 
-test_that("running header sets a tightened \\headsep (header -> title gap)", {
+test_that("running header pins the band bottom on the top-margin line", {
   spec <- tabular(data.frame(x = 1:3)) |>
     preset(
       font_size = 10,
@@ -951,9 +952,13 @@ test_that("running header sets a tightened \\headsep (header -> title gap)", {
   out <- withr::local_tempfile(fileext = ".tex")
   emit(spec, out)
   tex <- paste(readLines(out, warn = FALSE), collapse = "\n")
-  # \headsep is derived as font_size * baseline_ratio (10 * 1.2 = 12pt), not
-  # the article class default (~25pt) that pushed the title far down.
-  expect_match(tex, "\\setlength{\\headsep}{12pt}", fixed = TRUE)
+  # headsep = 0 on the geometry option list: the strutted band's bottom
+  # edge lands exactly on the top-margin line (RTF/DOCX parity), and
+  # geometry must know both head lengths at load time (a post-load
+  # \setlength moves the body, not the header).
+  expect_match(tex, "headheight=14pt", fixed = TRUE)
+  expect_match(tex, "headsep=0pt", fixed = TRUE)
+  expect_false(grepl("\\setlength{\\headsep}", tex, fixed = TRUE))
 })
 
 test_that("running footer sets a tightened \\footskip", {

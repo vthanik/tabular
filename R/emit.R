@@ -122,16 +122,19 @@
 #' and [`check_typst()`].
 #'
 #' **Typst capability notes.** The Typst output matches the LaTeX
-#' layout contract with three documented deviations: (1) Typst has no
-#' per-row keep-with-next primitive (LaTeX `\\\\*`, RTF `\\keepn`,
-#' DOCX `keepNext`), so a group header can land as the last row of a
-#' page; (2) the `paginate(continuation =)` marker appears on
-#' continuation panels only (the repeating page header is identical on
-#' every page), matching the RTF tier rather than LaTeX's every-page
-#' marker; (3) the spanner underline is trimmed by the cell inset at
-#' both ends (the HTML tier), where LaTeX keeps the table's outer
-#' edges flush. Conversely, Typst renders per-cell body borders that
-#' the LaTeX backend cannot (see [`style()`]).
+#' layout contract, including the engine's keep-with-next mask
+#' ([`paginate()`]'s `keep_together` / orphan control): Typst has no
+#' per-row no-break primitive (LaTeX `\\\\*`, RTF `\\keepn`, DOCX
+#' `keepNext`), so the backend enforces the mask through a hidden
+#' zero-width column whose unbreakable rowspans pin each keep run to
+#' one page. Two documented deviations remain: (1) the
+#' `paginate(continuation =)` marker appears on continuation panels
+#' only (the repeating page header is identical on every page),
+#' matching the RTF tier rather than LaTeX's every-page marker;
+#' (2) the spanner underline is trimmed by the cell inset at both
+#' ends (the HTML tier), where LaTeX keeps the table's outer edges
+#' flush. Conversely, Typst renders per-cell body borders that the
+#' LaTeX backend cannot (see [`style()`]).
 #'
 #' **`data_file` is sponsor-neutral.** Pass an explicit path
 #' (`"out/qc.csv"`) for a fixed location, or a lambda

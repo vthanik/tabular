@@ -1,12 +1,14 @@
 cff-version: 1.2.0
 message: "If you use tabular, please cite it as below."
 type: software
-title: "tabular: Render Tables and Listings for Clinical Submissions"
-version: 0.1.0
+title: "tabular: Render Tables, Listings, and Figures for Clinical Submissions"
+version: 0.2.0.9000
 abstract: >-
-  Native rendering of pre-summarised clinical submission tables and
-  listings to RTF, LaTeX, HTML, PDF, and DOCX from one immutable verb
-  pipeline, with no external Java or SAS dependency.
+  Native rendering of pre-summarised clinical submission tables,
+  listings, and figures to RTF, LaTeX, Typst, HTML, PDF, DOCX, and
+  Markdown from one immutable verb pipeline, with no external Java or
+  SAS dependency. PDF compiles through LaTeX or, on TeX-less machines,
+  the typst engine bundled with Quarto.
 authors:
   - family-names: Thanikachalam
     given-names: Vignesh

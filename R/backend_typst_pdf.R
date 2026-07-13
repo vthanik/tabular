@@ -178,8 +178,15 @@ backend_typst_pdf <- function(grid, file, .compile = .tabular_typst_compile) {
 }
 
 # Extract the distinct family names from typst's
-# "unknown font family: <name>" compiler notes and surface them as ONE
-# loud warning. No matching lines -> silent.
+# "unknown font family: <name>" compiler notes and surface the
+# USER-NAMED ones as ONE loud warning. Members of the fabricated
+# generic fallback chains (the cross-OS mono / serif / sans stacks the
+# resolver appends for `"mono"` etc.) are expected to be partially
+# absent on any one OS — every backend silently walks past them to the
+# next face, so a note about them is noise, not a defect. Only a
+# family the user actually named (a custom face or an explicit stack
+# entry) that typst cannot see warrants the warning. No matching
+# lines -> silent.
 .typst_warn_unknown_fonts <- function(output) {
   if (!is.character(output) || length(output) == 0L) {
     return(invisible(NULL))
@@ -190,6 +197,7 @@ backend_typst_pdf <- function(grid, file, .compile = .tabular_typst_compile) {
   )
   fams <- unique(sub("^unknown font family: ", "", m))
   fams <- trimws(fams[nzchar(fams)])
+  fams <- fams[!tolower(fams) %in% tolower(.typst_fallback_families())]
   if (length(fams) == 0L) {
     return(invisible(NULL))
   }
@@ -197,11 +205,23 @@ backend_typst_pdf <- function(grid, file, .compile = .tabular_typst_compile) {
     c(
       "Typst could not find {length(fams)} font famil{?y/ies}: {.val {fams}}.",
       "i" = "The PDF fell back to the next family in the chain (or typst's default face), so the layout may not match other backends.",
-      "i" = "Run {.run tabular::check_typst()} to see which families of the configured chain resolve."
+      "i" = "Run {.run tabular::check_typst()} to audit the typst toolchain and font chain."
     ),
     class = "tabular_warning_backend"
   )
   invisible(NULL)
+}
+
+# Every family the resolver can FABRICATE as a fallback: the union of
+# the generic mono / serif / sans chains for the typst backend. A
+# missing member of these chains is normal cross-OS variance (the
+# chains exist precisely so the next face steps in), never worth a
+# warning.
+.typst_fallback_families <- function() {
+  unique(unlist(
+    lapply(c("mono", "serif", "sans"), .compose_generic_chain, "typst"),
+    use.names = FALSE
+  ))
 }
 
 # Abort when no typst binary can be found at all.
@@ -280,12 +300,14 @@ backend_typst_pdf <- function(grid, file, .compile = .tabular_typst_compile) {
 #' package stops a compile with an error, typst substitutes a missing
 #' font family silently and only notes it on the compiler's stderr.
 #' The check therefore lists every family in the resolved default
-#' chain with its availability; the chain ends in faces embedded in
-#' the typst binary itself (New Computer Modern, DejaVu Sans Mono, the
-#' Libertinus serif), so SOME face always renders — the question this
-#' check answers is whether it is the face the other backends use.
-#' `emit()` additionally re-surfaces the compiler's font notes as a
-#' loud warning after every Typst compile.
+#' chain with its availability. The chain is a *fallback* chain:
+#' typst renders in the first family it can see, so a missing later
+#' member is normal cross-OS variance, not a defect — the check
+#' reports ready as soon as any family resolves, and names the face
+#' PDFs will render in. `emit()` additionally warns after a Typst
+#' compile when a family the user explicitly named cannot be found
+#' (missing members of the built-in fallback chains stay silent,
+#' matching the other backends' silent font-substitution behaviour).
 #'
 #' **Status markers:**
 #'
@@ -414,20 +436,30 @@ check_typst <- function(quiet = FALSE) {
       "Update Quarto to >= 1.6, or install a current standalone typst."
     )
   }
-  missing <- out$font[!.is_true_vec(out$available)]
-  if (length(missing) == 0L) {
+  # The chain is a FALLBACK chain: typst renders in the first family
+  # it can see, so missing later (or earlier, already-skipped) members
+  # are normal cross-OS variance, not defects. Ready as soon as any
+  # family resolves; alarm only when none do or the list is unreadable.
+  hit <- which(.is_true_vec(out$available))
+  if (length(hit) > 0L) {
     if (!too_old) {
       cli::cli_alert_success(
-        "Typst is ready; every family in the default font chain resolves."
+        "Typst is ready; PDFs render in {.val {out$font[[hit[[1L]]]]}} (the first available family of the chain)."
       )
     }
     return(invisible(NULL))
   }
+  if (anyNA(out$available)) {
+    cli::cli_alert_warning(
+      "The typst font list could not be read, so font availability is unknown; typst substitutes its embedded default face for any missing family."
+    )
+    return(invisible(NULL))
+  }
   cli::cli_alert_warning(
-    "{length(missing)} famil{?y/ies} of the default chain {?is/are} not visible to typst: {.val {missing}}."
+    "No family of the configured chain is visible to typst; PDFs render in typst's embedded default face."
   )
   cli::cli_text(
-    "Typst walks the chain and substitutes silently, so output still renders, but possibly in a different face than the RTF / DOCX / LaTeX backends use. Install the missing {cli::qty(length(missing))}famil{?y/ies}, or point typst at a font directory via the {.envvar TYPST_FONT_PATHS} environment variable."
+    "Install one of the chain families, or point typst at a font directory via the {.envvar TYPST_FONT_PATHS} environment variable."
   )
   invisible(NULL)
 }

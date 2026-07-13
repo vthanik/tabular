@@ -2260,7 +2260,6 @@ backend_latex <- function(grid, file) {
   if (is.null(preset) || !is_preset_spec(preset)) {
     preset <- preset_spec()
   }
-  geo <- .latex_geometry_opts(preset)
   body_font_size <- .effective_font_size(preset)
   body_font_family <- .effective_font_family(preset)
   class_opt <- .latex_class_size(body_font_size)
@@ -2270,6 +2269,13 @@ backend_latex <- function(grid, file) {
     pagefoot_ast,
     preset,
     cs = cs
+  )
+  # The head lengths ride the geometry option list (chrome$geometry) so
+  # geometry places the header AND the body together; a post-load
+  # `\setlength` cannot move the header (see .latex_pagestyle_block).
+  geo <- paste(
+    c(.latex_geometry_opts(preset), chrome$geometry),
+    collapse = ", "
   )
 
   # Body-cell text colour is per-cell now via cells_style[r,c]@color
@@ -2306,7 +2312,7 @@ backend_latex <- function(grid, file) {
 }
 
 # Compose the fancyhdr + lastpage scaffolding from resolved page
-# bands. Returns `list(packages, style)`:
+# bands. Returns `list(packages, style, geometry)`:
 #   - `packages` is the extra `\usepackage` lines (only when at
 #     least one band is populated).
 #   - `style` is the `\pagestyle{fancy}` + `\fancyhf{}` +
@@ -2315,7 +2321,11 @@ backend_latex <- function(grid, file) {
 #     `\\` line joins; pagehead reverses index order (so index 1
 #     ends up at the bottom of the header zone, body edge);
 #     pagefoot keeps forward order (index 1 at the top, body edge).
-#   - When both bands are empty, both fields are empty character
+#   - `geometry` is the extra `headheight=` / `headsep=` option
+#     strings for the `\usepackage[...]{geometry}` line (only when
+#     the pagehead is populated) — geometry must know the head
+#     lengths at load time to place header and body together.
+#   - When both bands are empty, all fields are empty character
 #     vectors — the document keeps the LaTeX-default `plain` page
 #     style.
 .latex_pagestyle_block <- function(
@@ -2330,7 +2340,11 @@ backend_latex <- function(grid, file) {
     # No running header/footer band: suppress LaTeX's default `plain`
     # pagestyle so no stray page number prints. Page numbers appear ONLY
     # when the user puts {page}/{npages} in a pagehead/pagefoot.
-    return(list(packages = character(), style = "\\pagestyle{empty}"))
+    return(list(
+      packages = character(),
+      style = "\\pagestyle{empty}",
+      geometry = character()
+    ))
   }
   packages <- c(
     "\\usepackage{fancyhdr}",
@@ -2338,8 +2352,11 @@ backend_latex <- function(grid, file) {
   )
   body <- "\\pagestyle{fancy}"
   body <- c(body, "\\fancyhf{}")
-  # Bump headheight per row count so multi-row pagehead doesn't
-  # overflow the default header zone.
+  geometry <- character()
+  # Head geometry rides the `geometry` package OPTIONS, never a later
+  # `\setlength`: geometry freezes `\topmargin` (and with it the header
+  # position) at load time, so a post-load `\setlength{\headsep}` moves
+  # the BODY off the 1in margin line while the header stays put.
   if (ph_pop) {
     nrow_h <- .page_band_nrow(pagehead_ast)
     # Header zone height: the stacked single-line baselines of the band
@@ -2352,15 +2369,20 @@ backend_latex <- function(grid, file) {
         .tabular_baseline_ratio +
         .latex_headheight_pad_pt
     )
-    # Tighten the header band -> title gap to one blank line
-    # (font_size * baseline_ratio), matching the engine's above_title = 1
-    # reservation and DOCX single-line spacing. The article class default
-    # \headsep (~25pt) otherwise pushes the title far below the header.
-    headsep_pt <- preset@font_size * .tabular_baseline_ratio
-    body <- c(
-      body,
-      sprintf("\\setlength{\\headheight}{%dpt}", as.integer(headheight_pt)),
-      sprintf("\\setlength{\\headsep}{%gpt}", headsep_pt)
+    # Pin the header band's BOTTOM edge on the top-margin line, matching
+    # the RTF (`\headery`) / DOCX (`w:header`) placement: the band ends
+    # exactly at the top margin and grows upward into it. fancyhdr
+    # bottom-aligns the band content (including its depth) at
+    # body_top - headsep, and every band row carries a \strut (see
+    # .latex_band_slot_text) so that depth is a deterministic 0.3 line
+    # pitch — headsep = 0 therefore puts the last row's line-box bottom
+    # exactly on the margin line (baseline at body_top - 0.3 * line,
+    # identical to the typst backend's header-ascent: 0pt). The gap to
+    # the title is the engine's above_title reservation inside the
+    # body, not \headsep.
+    geometry <- c(
+      sprintf("headheight=%gpt", headheight_pt),
+      "headsep=0pt"
     )
   }
   if (pf_pop) {
@@ -2410,7 +2432,7 @@ backend_latex <- function(grid, file) {
       .latex_band_rule_width(cs, "pagefoot_top")
     )
   )
-  list(packages = packages, style = body)
+  list(packages = packages, style = body, geometry = geometry)
 }
 
 # Resolve a page-band chrome border region to a fancyhdr rule width.
@@ -2479,7 +2501,16 @@ backend_latex <- function(grid, file) {
       if (!is_inline_ast(ast) || length(ast@runs) == 0L) {
         return("")
       }
-      .latex_resolve_page_tokens(.render_latex_inline(ast))
+      # \strut pins every band row to the TeX line box (0.7 above /
+      # 0.3 below the baseline at the band's \fontsize), so the band's
+      # bottom edge is deterministic — fancyhdr otherwise bottom-aligns
+      # the natural ink depth, which shifts with descenders in the
+      # content ("Page" vs "PROTOCOL"). The header geometry
+      # (headsep = 0, band bottom on the top-margin line) relies on it.
+      paste0(
+        .latex_resolve_page_tokens(.render_latex_inline(ast)),
+        "\\strut"
+      )
     },
     character(1L)
   )

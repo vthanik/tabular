@@ -2,9 +2,9 @@
 
 ## New features
 
-* `check_typst()` is a new diagnostic that audits the Typst PDF toolchain: which typst binary is discoverable (standalone `typst`, or the copy bundled inside Quarto), whether its version meets the 0.11 floor, and which families of the default font chain the compiler can see (typst substitutes missing fonts silently, so the check surfaces the one failure mode a compile will not).
+* `check_typst()` is a new diagnostic that audits the Typst PDF toolchain: which typst binary is discoverable (standalone `typst`, or the copy bundled inside Quarto), whether its version meets the 0.11 floor, and which families of the configured font chain the compiler can see; the chain is a fallback chain, so the check reports ready as soon as any family resolves and names the face PDFs render in. `emit()` warns after a Typst compile only when a family the user explicitly named cannot be found — missing members of the built-in cross-OS fallback chains substitute silently, matching the other backends.
 
-* `emit()` gained a Typst backend: `emit(spec, "out.typ")` writes a standalone Typst document (native `#table` with repeating `table.header`/`table.footer`, page chrome via `#set page()` counters, native per-cell borders), and `emit(spec, "out.pdf", format = "typst")` compiles it through the standalone typst binary or Quarto's bundled copy, so PDF output no longer requires any TeX installation.
+* `emit()` gained a Typst backend: `emit(spec, "out.typ")` writes a standalone Typst document (native `#table` with repeating `table.header`/`table.footer`, page chrome via `#set page()` counters, native per-cell borders), and `emit(spec, "out.pdf", format = "typst")` compiles it through the standalone typst binary or Quarto's bundled copy, so PDF output no longer requires any TeX installation. The table centres on the page, the running header and footer anchor to the body edges (the header grows upward into the top margin, the footer downward, tracking the configured margins), and `paginate()`'s keep-with-next mask is enforced through unbreakable rowspans in a hidden zero-width column.
 
 * `emit()` on a bare `.pdf` target now selects its compile engine by probing the machine, LaTeX first: a usable TeX (resolved the way the compile resolves it, and not frozen on a pre-2023 TeX Live kernel) keeps the historical LaTeX path byte-stable, a discoverable typst binary takes over otherwise, and with neither engine the call aborts up front naming both remedies; `format = "latex"` / `format = "typst"` pick the engine explicitly.
 
@@ -31,6 +31,12 @@
 * `check_latex()` now probes package availability through `kpsewhich` (the resolver xelatex itself uses) instead of the tlmgr package database, fixing all-missing false negatives on apt-installed TeX Live and frozen TinyTeX images, no longer requires the tinytex R package, and reports a new `bundled` column.
 
 * `emit()` to DOCX now stamps the body's left/right cell margins on section-header, blank-spacer, column-header, and subgroup-banner cells, so their text aligns with body text exactly as in RTF (section headers previously sat one cell margin further left, making nested indents read one character too wide in Word).
+
+* `emit()` to Typst now folds 2+ space runs in body cells under `preset(whitespace = "collapse")`; the no-wrap hardening previously rewrote the run to non-breaking spaces first, so the knob was a silent no-op on Typst while every other backend honoured it.
+
+* `emit()` to Typst now stamps the header surface background and padding on the column-label cells, so `preset(colors = list(header = ...))`, `preset(padding = list(header = ...))`, and the equivalent `style()` at `cells_headers()` render as they do on RTF, HTML, LaTeX, and DOCX.
+
+* `emit()` to LaTeX/PDF and Typst now places the running header band so its bottom edge sits exactly on the top-margin line, growing upward into the margin, and keeps the body at exactly the configured top margin — matching the RTF and DOCX placement; the LaTeX head lengths moved onto the `geometry` option list (a post-load `\setlength{\headsep}` shifted the body off the margin instead of moving the header) and every band row now carries a `\strut` so the band's bottom edge no longer depends on descenders in its content.
 
 * `emit()` to HTML and Markdown no longer drops a `group_rows()` blank spacer when a group transition coincides with a page boundary; the continuous flow keeps every spacer and only the very first row of the table suppresses one.
 

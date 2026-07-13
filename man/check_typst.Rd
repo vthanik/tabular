@@ -40,12 +40,14 @@ installation and no package downloads at all.
 package stops a compile with an error, typst substitutes a missing
 font family silently and only notes it on the compiler's stderr.
 The check therefore lists every family in the resolved default
-chain with its availability; the chain ends in faces embedded in
-the typst binary itself (New Computer Modern, DejaVu Sans Mono, the
-Libertinus serif), so SOME face always renders — the question this
-check answers is whether it is the face the other backends use.
-\code{emit()} additionally re-surfaces the compiler's font notes as a
-loud warning after every Typst compile.
+chain with its availability. The chain is a \emph{fallback} chain:
+typst renders in the first family it can see, so a missing later
+member is normal cross-OS variance, not a defect — the check
+reports ready as soon as any family resolves, and names the face
+PDFs will render in. \code{emit()} additionally warns after a Typst
+compile when a family the user explicitly named cannot be found
+(missing members of the built-in fallback chains stay silent,
+matching the other backends' silent font-substitution behaviour).
 
 \strong{Status markers:}
 \itemize{

@@ -639,6 +639,43 @@ test_that(".typst_escape_cell handles NULL and preserves whitespace runs", {
   )
 })
 
+test_that("header background and padding reach the column-label cells", {
+  # The band spanner cells already carry `fill:`; the column-label row
+  # dropped both the header surface background and its padding, so
+  # `preset(colors = list(header = ...))` / `padding = list(header = ...)`
+  # (and the equivalent style() at cells_headers()) were silent no-ops
+  # on typst while RTF / HTML / LaTeX / DOCX honoured them.
+  spec <- tabular(data.frame(v = "1")) |>
+    cols(v = col_spec(label = "V")) |>
+    preset(
+      colors = list(header = c(background = "#dddddd")),
+      padding = list(header = c(top = 6, bottom = 6))
+    )
+  txt <- render_typ(spec)
+  labels_row <- grep("[#strong[V]]", strsplit(txt, "\n")[[1L]], fixed = TRUE)
+  expect_length(labels_row, 1L)
+  row <- strsplit(txt, "\n")[[1L]][labels_row]
+  expect_match(row, "fill: rgb(\"#dddddd\")", fixed = TRUE)
+  expect_match(row, "inset: (top: 6pt, bottom: 6pt)", fixed = TRUE)
+})
+
+test_that("preset(whitespace = 'collapse') folds 2+ space runs in body cells", {
+  # The no-wrap hardening rewrites every remaining space to `~` before
+  # typst's native markup folding can collapse a run, so the collapse
+  # must happen at the escape chokepoint — otherwise "collapse" was a
+  # silent no-op on typst while RTF / HTML / LaTeX / MD all honoured it.
+  expect_identical(
+    tabular:::.typst_escape_cell("a  spaced  cell", preserve = FALSE),
+    "a spaced cell"
+  )
+  spec <- tabular(data.frame(lbl = c("a  spaced  cell", "b"))) |>
+    cols(lbl = col_spec(label = "L")) |>
+    preset(whitespace = "collapse")
+  txt <- render_typ(spec)
+  expect_match(txt, "a~spaced~cell", fixed = TRUE)
+  expect_no_match(txt, "a~~spaced~~cell", fixed = TRUE)
+})
+
 test_that("body rows-between rules interleave hlines", {
   spec <- tabular(data.frame(v = c("a", "b", "c"))) |>
     cols(v = col_spec(label = "V")) |>
@@ -657,4 +694,106 @@ test_that("outer frame edges emit table-level vlines", {
   txt <- render_typ(spec)
   expect_match(txt, "table.vline(x: 0,", fixed = TRUE)
   expect_match(txt, "table.vline(x: 1,", fixed = TRUE)
+})
+
+# ---------------------------------------------------------------------
+# Body-anchored page bands, page-centred table, keep-with-next
+# ---------------------------------------------------------------------
+
+test_that("page bands anchor to the body edges, not fixed page positions", {
+  spec <- tabular(data.frame(x = 1L)) |>
+    preset(
+      pagehead = list(left = "Protocol: ABC-123"),
+      pagefoot = list(left = "Program: t_demo.R")
+    )
+  txt <- render_typ(spec)
+  # RTF/DOCX/LaTeX parity (font 10, line pitch 12): the header band's
+  # bottom edge sits exactly ON the top-margin line (ascent = 0) and
+  # the footer's first baseline ON the bottom-margin line (descent =
+  # -top_edge = -8.4pt), instead of typst's margin-proportional
+  # default.
+  expect_match(txt, "header-ascent: 0pt,", fixed = TRUE)
+  expect_match(txt, "footer-descent: -8.4pt,", fixed = TRUE)
+  # The header bottom-aligns in the top margin (rows grow upward from
+  # the body edge); the footer top-aligns (rows grow downward).
+  expect_match(txt, "#align(bottom)[", fixed = TRUE)
+  expect_match(txt, "#align(top)[", fixed = TRUE)
+})
+
+test_that("no page bands -> no ascent/descent overrides", {
+  txt <- render_typ(tabular(data.frame(x = 1L)))
+  expect_no_match(txt, "header-ascent", fixed = TRUE)
+  expect_no_match(txt, "footer-descent", fixed = TRUE)
+})
+
+test_that("the table centres on the page like the other backends", {
+  txt <- render_typ(tabular(data.frame(x = 1L)))
+  expect_match(txt, "#align(center)[#table(", fixed = TRUE)
+})
+
+test_that("paginate(keep_together) emits unbreakable rowspans in a hidden 0pt column", {
+  spec <- tabular(cdisc_saf_vital) |>
+    cols(
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo"),
+      drug_50 = col_spec(label = "Drug 50"),
+      drug_100 = col_spec(label = "Drug 100"),
+      paramcd = col_spec(visible = FALSE)
+    ) |>
+    group_rows(by = c("param", "visit"), display = "section") |>
+    paginate(keep_together = "visit")
+  txt <- render_typ(spec)
+  expect_match(txt, "columns: (0pt, ", fixed = TRUE)
+  expect_match(txt, "table.cell(rowspan: ", fixed = TRUE)
+  expect_match(txt, "breakable: false", fixed = TRUE)
+})
+
+test_that("keep-free tables emit no hidden keep column", {
+  txt <- render_typ(tabular(data.frame(x = 1:3)))
+  expect_no_match(txt, "columns: (0pt", fixed = TRUE)
+  expect_no_match(txt, "breakable: false", fixed = TRUE)
+})
+
+test_that(".typst_keep_leads maps the keep mask to rowspan lead cells", {
+  leads <- tabular:::.typst_keep_leads(
+    c(TRUE, TRUE, FALSE, FALSE, TRUE),
+    5L
+  )
+  expect_identical(
+    leads,
+    c(
+      "table.cell(rowspan: 3, breakable: false)[], ",
+      "",
+      "",
+      "[], ",
+      # A trailing TRUE has no next row to glue to -> solo.
+      "[], "
+    )
+  )
+  # NULL / all-FALSE masks mean no hidden column: every lead empty.
+  expect_identical(tabular:::.typst_keep_leads(NULL, 3L), rep("", 3L))
+  expect_identical(
+    tabular:::.typst_keep_leads(c(FALSE, FALSE), 2L),
+    rep("", 2L)
+  )
+})
+
+test_that("outer frame vlines shift right of the hidden keep column", {
+  spec <- tabular(cdisc_saf_vital) |>
+    cols(
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo"),
+      drug_50 = col_spec(label = "Drug 50"),
+      drug_100 = col_spec(label = "Drug 100"),
+      paramcd = col_spec(visible = FALSE)
+    ) |>
+    group_rows(by = c("param", "visit"), display = "section") |>
+    paginate(keep_together = "visit") |>
+    preset(rules = "frame")
+  txt <- render_typ(spec)
+  # 4 visible columns + the hidden keep column: outer edges at x = 1
+  # and x = 5, never x = 0 (the hidden track's outer boundary).
+  expect_match(txt, "table.vline(x: 1,", fixed = TRUE)
+  expect_match(txt, "table.vline(x: 5,", fixed = TRUE)
+  expect_no_match(txt, "table.vline(x: 0,", fixed = TRUE)
 })

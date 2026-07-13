@@ -25,13 +25,15 @@
 # the footnotes ride `table.footer`. This mirrors the LaTeX backend's
 # longtblr model (one environment per group, head/foot templates).
 #
+# Keep-with-next: typst's `#table` has no per-row no-break terminator
+# (longtblr `\\*`, RTF `\keepn`, DOCX `keepNext`), so the engine's keep
+# mask is enforced through a hidden 0pt first column instead — each
+# keep run carries one `table.cell(rowspan: L, breakable: false)[]`
+# there, which typst refuses to split across pages. The column exists
+# only when the mask has a TRUE (see `.typst_keep_leads`).
+#
 # KNOWN DEVIATIONS from the LaTeX backend (documented, by design):
 #
-# * **No per-row keep-with-next.** Typst's `#table` has no analogue of
-#   longtblr's `\\*` no-break row terminator (RTF `\keepn`, DOCX
-#   `keepNext`), so the engine's keep mask is not enforced: a group
-#   header may land as the last row of a page. Revisit when typst gains
-#   row grouping (typst repo discussion on row-level orphan control).
 # * **Continuation marker is panel-level.** The repeating header is
 #   identical on every page, so the `paginate(continuation=)` marker
 #   appears on continuation PANELS only (RTF-tier capability), not on
@@ -479,6 +481,17 @@ backend_typst <- function(grid, file) {
   # resolver. Inert (global metadata) without big_n.
   page_hdr <- .page_header_for_render(meta, page)
 
+  # The engine's keep mask is enforced through a hidden 0pt first
+  # column: each keep run carries a `table.cell(rowspan: L,
+  # breakable: false)[]` in that column, which typst refuses to split
+  # across pages — the native-pagination analogue of longtblr's `\\*`
+  # / RTF's `\keepn`. The column only exists when the mask has at
+  # least one TRUE, so keep-free tables emit unchanged.
+  hidden_col <- !isTRUE(page$is_empty_page) &&
+    is.logical(src$keep_with_next) &&
+    any(src$keep_with_next %in% TRUE)
+  row_lead <- if (hidden_col) "[], " else ""
+
   header_block <- .typst_header_block(
     page = page,
     meta = meta,
@@ -489,7 +502,8 @@ backend_typst <- function(grid, file) {
     cols = cols,
     titles_in_header = titles_in_header,
     is_cont_panel = is_cont_panel,
-    continuation = continuation
+    continuation = continuation,
+    row_lead = row_lead
   )
 
   body_rows <- if (isTRUE(page$is_empty_page)) {
@@ -511,7 +525,8 @@ backend_typst <- function(grid, file) {
         meta$body_borders$rows
       } else {
         NULL
-      }
+      },
+      keep_with_next = if (hidden_col) src$keep_with_next else NULL
     )
   }
 
@@ -533,36 +548,45 @@ backend_typst <- function(grid, file) {
     n_cols = n_cols,
     n_title_rows = header_block$n_title_rows,
     n_header_rows = header_block$n_rows,
-    nrow_body = body_rows$n_rows
+    nrow_body = body_rows$n_rows,
+    x_offset = if (hidden_col) 1L else 0L
   )
 
   footer_block <- .typst_footer_block(
     meta,
     cs,
     n_cols = n_cols,
-    rep_footnotes = rep_footnotes
+    rep_footnotes = rep_footnotes,
+    row_lead = row_lead
   )
 
   inset_arg <- .typst_table_inset(src$cells_style, meta$preset)
   args <- c(
-    sprintf("  columns: %s,", .typst_columns(col_names_vis, cols)),
+    sprintf(
+      "  columns: %s,",
+      .typst_columns(col_names_vis, cols, hidden_col = hidden_col)
+    ),
     sprintf(
       "  align: %s,",
-      .typst_align_array(col_names_vis, cols, meta$preset)
+      .typst_align_array(col_names_vis, cols, meta$preset, hidden_col)
     ),
     "  stroke: none,",
     if (length(inset_arg) > 0L) sprintf("  inset: %s,", inset_arg)
   )
 
+  # The whole table centres on the page (the canonical submission
+  # layout's centred data block — RTF/LaTeX/DOCX parity). `#align`
+  # does not affect breakability: the table still paginates natively
+  # with its repeating header. A full-window table centres as a no-op.
   c(
-    "#table(",
+    "#align(center)[#table(",
     args,
     header_block$lines,
     vlines,
     body_rows$lines,
     bottom_rule,
     footer_block,
-    ")"
+    ")]"
   )
 }
 
@@ -631,7 +655,8 @@ backend_typst <- function(grid, file) {
   cols,
   titles_in_header = TRUE,
   is_cont_panel = FALSE,
-  continuation = character()
+  continuation = character(),
+  row_lead = ""
 ) {
   n_cols <- length(col_names_vis)
   out <- character()
@@ -677,7 +702,8 @@ backend_typst <- function(grid, file) {
     out <- c(
       out,
       sprintf(
-        "    %s,",
+        "    %s%s,",
+        row_lead,
         .typst_cell(
           # Newline-joined: `#set` lines inside the block need a line
           # break before the following markup.
@@ -705,7 +731,8 @@ backend_typst <- function(grid, file) {
     page$subgroup_line_ast,
     n_cols = n_cols,
     meta = meta,
-    cs = cs
+    cs = cs,
+    row_lead = row_lead
   )
   if (length(banner) > 0L) {
     out <- c(out, banner)
@@ -726,7 +753,12 @@ backend_typst <- function(grid, file) {
   }
 
   # -- spanner band rows -------------------------------------------------
-  band <- .render_typst_header_bands(page_headers, col_names_vis, cs)
+  band <- .render_typst_header_bands(
+    page_headers,
+    col_names_vis,
+    cs,
+    row_lead = row_lead
+  )
   out <- c(out, band$lines)
   n_rows <- n_rows + band$n_rows
 
@@ -738,7 +770,8 @@ backend_typst <- function(grid, file) {
       col_names_vis,
       cols,
       cs,
-      preset = meta$preset
+      preset = meta$preset,
+      row_lead = row_lead
     )
   )
   n_rows <- n_rows + 1L
@@ -763,7 +796,8 @@ backend_typst <- function(grid, file) {
   subgroup_line_ast,
   n_cols,
   meta,
-  cs = NULL
+  cs = NULL,
+  row_lead = ""
 ) {
   if (
     is.null(subgroup_line_ast) ||
@@ -803,7 +837,8 @@ backend_typst <- function(grid, file) {
     collapse = "\n"
   )
   sprintf(
-    "    %s,",
+    "    %s%s,",
+    row_lead,
     .typst_cell(
       content,
       colspan = if (n_cols > 1L) n_cols else NULL,
@@ -828,7 +863,8 @@ backend_typst <- function(grid, file) {
 .render_typst_header_bands <- function(
   headers,
   col_names_visible,
-  cs = NULL
+  cs = NULL,
+  row_lead = ""
 ) {
   if (!is.data.frame(headers) || nrow(headers) == 0L) {
     return(list(lines = character(), n_rows = 0L))
@@ -871,7 +907,10 @@ backend_typst <- function(grid, file) {
         )
       )
     }
-    lines <- c(lines, sprintf("    %s,", paste(cells, collapse = ", ")))
+    lines <- c(
+      lines,
+      sprintf("    %s%s,", row_lead, paste(cells, collapse = ", "))
+    )
   }
   list(lines = lines, n_rows = length(depths))
 }
@@ -887,7 +926,8 @@ backend_typst <- function(grid, file) {
   col_names_visible,
   cols,
   cs = NULL,
-  preset = NULL
+  preset = NULL,
+  row_lead = ""
 ) {
   surface_node <- .chrome_surface_at(cs, "header")
   ws_preserve <- .preset_ws_preserve(preset)
@@ -941,14 +981,20 @@ backend_typst <- function(grid, file) {
       } else {
         "left"
       }
+      # Background and padding from the header surface node ride the
+      # CELL (fill / partial inset), matching the band spanner cells —
+      # the label row previously dropped both, making the header
+      # colors / padding knobs silent no-ops on typst.
       .typst_cell(
         body,
-        align = paste(.typst_halign(halign), "+", .typst_valign(valign))
+        align = paste(.typst_halign(halign), "+", .typst_valign(valign)),
+        fill = .typst_fill(surface_node),
+        inset = .typst_cell_inset(surface_node)
       )
     },
     character(1L)
   )
-  sprintf("    %s,", paste(cells, collapse = ", "))
+  sprintf("    %s%s,", row_lead, paste(cells, collapse = ", "))
 }
 
 # ---------------------------------------------------------------------
@@ -960,7 +1006,13 @@ backend_typst <- function(grid, file) {
 # opening rule + the footnote lines). `repeat: true` replays the
 # footnotes on every physical page; `repeat: false` pins them to the
 # final page only (lastfoot parity). Empty footnotes emit nothing.
-.typst_footer_block <- function(meta, cs, n_cols, rep_footnotes = TRUE) {
+.typst_footer_block <- function(
+  meta,
+  cs,
+  n_cols,
+  rep_footnotes = TRUE,
+  row_lead = ""
+) {
   fn <- .typst_footnote_block(
     meta$footnotes_ast,
     preset = meta$preset,
@@ -989,7 +1041,8 @@ backend_typst <- function(grid, file) {
       if (isTRUE(rep_footnotes)) "true" else "false"
     ),
     sprintf(
-      "    %s,",
+      "    %s%s,",
+      row_lead,
       .typst_cell(
         content,
         colspan = if (n_cols > 1L) n_cols else NULL,
@@ -1010,8 +1063,9 @@ backend_typst <- function(grid, file) {
 # cell. Markup specials are escaped. Per-cell predicate overrides from
 # `cells_style@halign / @valign` emit an explicit `align:` pair on the
 # cell; column-level alignment is carried by the table `align:` array.
-# The engine's keep-with-next mask is NOT enforced (typst has no per-row
-# no-break primitive — see the file header).
+# The engine's keep-with-next mask arrives as `keep_with_next` (non-NULL
+# only when the table carries the hidden keep column) and is enforced
+# through per-row lead cells in that column (see `.typst_keep_leads`).
 #
 # Returns `list(lines, n_rows)` where `lines` may interleave
 # `table.hline` directives (the body `rows` rules) between row lines.
@@ -1025,7 +1079,8 @@ backend_typst <- function(grid, file) {
   cols = NULL,
   preset = NULL,
   body_valign = "top",
-  rows_triple = NULL
+  rows_triple = NULL,
+  keep_with_next = NULL
 ) {
   nrow_data <- nrow(cells_text)
   if (nrow_data == 0L) {
@@ -1059,6 +1114,7 @@ backend_typst <- function(grid, file) {
     NULL
   }
   body_font_pt <- if (is_preset_spec(preset)) preset@font_size else NA_real_
+  row_leads <- .typst_keep_leads(keep_with_next, nrow_data)
 
   lines <- character()
   for (i in seq_len(nrow_data)) {
@@ -1079,7 +1135,8 @@ backend_typst <- function(grid, file) {
       lines <- c(
         lines,
         sprintf(
-          "  %s,",
+          "  %s%s,",
+          row_leads[[i]],
           .typst_cell(
             "#hide[X]",
             colspan = if (ncol_data > 1L) ncol_data else NULL,
@@ -1101,7 +1158,8 @@ backend_typst <- function(grid, file) {
           ncol_data,
           indent_pt_per_level,
           body_valign,
-          ws_preserve
+          ws_preserve,
+          row_lead = row_leads[[i]]
         )
       )
       next
@@ -1166,9 +1224,46 @@ backend_typst <- function(grid, file) {
       },
       character(1L)
     )
-    lines <- c(lines, sprintf("  %s,", paste(cells, collapse = ", ")))
+    lines <- c(
+      lines,
+      sprintf("  %s%s,", row_leads[[i]], paste(cells, collapse = ", "))
+    )
   }
   list(lines = lines, n_rows = nrow_data)
+}
+
+# Per-row lead cells for the hidden keep column. `keep[i]` TRUE glues
+# row i to row i+1 (the engine's keep-with-next mask); each maximal
+# glued run emits ONE `table.cell(rowspan: L, breakable: false)[]` on
+# its first row — typst refuses to break an unbreakable rowspan across
+# pages, so the run moves to the next page whole. Rows covered by an
+# active rowspan emit nothing in the hidden column; unglued rows emit
+# a bare `[]` (zero width inside the 0pt track). A NULL / all-FALSE
+# mask returns empty leads for every row (no hidden column in play).
+.typst_keep_leads <- function(keep, nrow_data) {
+  leads <- rep("", nrow_data)
+  if (!is.logical(keep) || !any(keep %in% TRUE)) {
+    return(leads)
+  }
+  glued <- vapply(
+    seq_len(nrow_data),
+    function(i) isTRUE(keep[[i]]),
+    logical(1L)
+  )
+  i <- 1L
+  while (i <= nrow_data) {
+    len <- 1L
+    while (i + len <= nrow_data && glued[[i + len - 1L]]) {
+      len <- len + 1L
+    }
+    leads[[i]] <- if (len > 1L) {
+      sprintf("table.cell(rowspan: %d, breakable: false)[], ", len)
+    } else {
+      "[], "
+    }
+    i <- i + len
+  }
+  leads
 }
 
 # One synthesised group-header row: a full-span left-aligned cell whose
@@ -1183,7 +1278,8 @@ backend_typst <- function(grid, file) {
   ncol_data,
   indent_pt_per_level,
   body_valign,
-  ws_preserve
+  ws_preserve,
+  row_lead = ""
 ) {
   host_text <- ""
   host_idx <- NA_integer_
@@ -1214,7 +1310,8 @@ backend_typst <- function(grid, file) {
   body <- .typst_wrap_text_props(body, host_node)
   body <- .typst_indent_wrap(body, header_indent_pt)
   sprintf(
-    "  %s,",
+    "  %s%s,",
+    row_lead,
     .typst_cell(
       body,
       colspan = if (ncol_data > 1L) ncol_data else NULL,
@@ -1339,6 +1436,32 @@ backend_typst <- function(grid, file) {
   paste(c(h, v), collapse = " + ")
 }
 
+# Per-cell `inset:` dict from a style_node's explicit padding
+# overrides. Partial by design: unspecified sides inherit the
+# table-level inset (typst folds a partial dict over the table's).
+# NULL when every side is silent.
+.typst_cell_inset <- function(style) {
+  if (!is_style_node(style)) {
+    return(NULL)
+  }
+  vals <- c(
+    top = style@padding_top,
+    right = style@padding_right,
+    bottom = style@padding_bottom,
+    left = style@padding_left
+  )
+  set <- !is.na(vals)
+  if (!any(set)) {
+    return(NULL)
+  }
+  parts <- vapply(
+    which(set),
+    function(i) sprintf("%s: %spt", names(vals)[[i]], .typst_num(vals[[i]])),
+    character(1L)
+  )
+  sprintf("(%s)", paste(parts, collapse = ", "))
+}
+
 # Cell fill from a style_node background (NA = silent -> NULL).
 .typst_fill <- function(style) {
   if (!is_style_node(style)) {
@@ -1431,8 +1554,9 @@ backend_typst <- function(grid, file) {
 # inset pads INSIDE the track width, so no separation correction is
 # needed, unlike tabularray's outside-`wd` colsep), or `auto` for the
 # rare synthesised column without engine resolution. The trailing comma
-# keeps a 1-column tuple valid typst.
-.typst_columns <- function(col_names_vis, cols) {
+# keeps a 1-column tuple valid typst. `hidden_col` prepends the 0pt
+# keep-mask track (see `.render_typst_table`).
+.typst_columns <- function(col_names_vis, cols, hidden_col = FALSE) {
   toks <- vapply(
     col_names_vis,
     function(nm) {
@@ -1446,13 +1570,22 @@ backend_typst <- function(grid, file) {
     },
     character(1L)
   )
+  if (isTRUE(hidden_col)) {
+    toks <- c("0pt", toks)
+  }
   sprintf("(%s,)", paste(toks, collapse = ", "))
 }
 
 # Compose the `align:` tuple: per-column halign (from `col_spec@align`;
 # decimal centres over the engine's NBSP padding) + the table-level body
-# valign baseline.
-.typst_align_array <- function(col_names_vis, cols, preset) {
+# valign baseline. `hidden_col` prepends an entry for the 0pt keep-mask
+# track.
+.typst_align_array <- function(
+  col_names_vis,
+  cols,
+  preset,
+  hidden_col = FALSE
+) {
   v <- .typst_body_valign(preset)
   toks <- vapply(
     col_names_vis,
@@ -1463,6 +1596,9 @@ backend_typst <- function(grid, file) {
     },
     character(1L)
   )
+  if (isTRUE(hidden_col)) {
+    toks <- c(paste("left", "+", v), toks)
+  }
   sprintf("(%s,)", paste(toks, collapse = ", "))
 }
 
@@ -1594,7 +1730,8 @@ backend_typst <- function(grid, file) {
   n_cols,
   n_title_rows,
   n_header_rows,
-  nrow_body
+  nrow_body,
+  x_offset = 0L
 ) {
   if (!is.list(body_borders) || length(body_borders) == 0L) {
     return(character())
@@ -1616,10 +1753,10 @@ backend_typst <- function(grid, file) {
   }
   out <- character()
   if (!is.null(body_borders$outer_left)) {
-    out <- c(out, vline(0L, body_borders$outer_left))
+    out <- c(out, vline(0L + x_offset, body_borders$outer_left))
   }
   if (!is.null(body_borders$outer_right)) {
-    out <- c(out, vline(n_cols, body_borders$outer_right))
+    out <- c(out, vline(n_cols + x_offset, body_borders$outer_right))
   }
   out
 }
@@ -1780,6 +1917,13 @@ backend_typst <- function(grid, file) {
   # and renders as a non-breaking space natively.)
   if (isTRUE(preserve)) {
     text <- .preserve_ws(text, "~")
+  } else {
+    # "collapse" cannot rely on typst's native markup folding here: the
+    # call-site no-wrap hardening rewrites every remaining space to `~`
+    # (non-breaking) before typst sees the markup, which would freeze a
+    # 2+ run verbatim. Fold runs at this chokepoint so "collapse" means
+    # the same thing it does on the RTF / HTML / LaTeX / MD paths.
+    text <- gsub(" {2,}", " ", text)
   }
   if (any(peeled$has)) {
     text[peeled$has] <- paste0(
@@ -1837,10 +1981,36 @@ backend_typst <- function(grid, file) {
   if (length(size) != 1L || !is.finite(size)) {
     size <- .latex_default_class_pt
   }
+  # Anchor the running bands to the BODY edges, not fixed page
+  # positions (typst's default `header-ascent` / `footer-descent` is
+  # 30% of the margin, which floats the bands away from the body as
+  # the margin grows). Both bands hug the margin lines, matching the
+  # RTF (`\headery` / `\footery`) and DOCX (`w:header` / `w:footer`)
+  # placement and the LaTeX backend's fancyhdr geometry:
+  #
+  # * Header: the band's BOTTOM edge sits exactly on the top-margin
+  #   line (ascent = 0) and rows grow upward into the margin (the
+  #   band is bottom-anchored); the one-blank-line gap to the title
+  #   is the engine's `above_title` reservation inside the body.
+  # * Footer: LaTeX's tightened `\footskip` puts the footer's first
+  #   BASELINE on the bottom-margin line, i.e. the footer starts
+  #   exactly where the bottom margin starts. Typst measures descent
+  #   to the line-box TOP, so descent = -top_edge (the box extends
+  #   top_edge above its baseline); rows 2+ flow downward into the
+  #   margin (see the `#align(top)` in `.typst_page_band_arg`).
+  top_edge_pt <- round(0.7 * .tabular_baseline_ratio * size, 2L)
+  header_ascent_pt <- 0
+  footer_descent_pt <- -top_edge_pt
   page_args <- c(
     sprintf("  paper: \"%s\",", .typst_paper(preset@paper_size)),
     if (identical(preset@orientation, "landscape")) "  flipped: true,",
     sprintf("  margin: %s,", .typst_margin_dict(preset@margins)),
+    if (.page_band_is_populated(pagehead_ast)) {
+      sprintf("  header-ascent: %spt,", .typst_num(header_ascent_pt))
+    },
+    if (.page_band_is_populated(pagefoot_ast)) {
+      sprintf("  footer-descent: %spt,", .typst_num(footer_descent_pt))
+    },
     .typst_page_band_arg(pagehead_ast, head = TRUE, cs = cs, size = size),
     .typst_page_band_arg(pagefoot_ast, head = FALSE, cs = cs, size = size)
   )
@@ -1972,9 +2142,16 @@ backend_typst <- function(grid, file) {
   } else {
     c(if (length(rule) > 0L) paste0("    ", rule), grid_lines)
   }
+  # Anchor the band content to the BODY edge of the margin box: the
+  # header bottom-aligns (extra rows stack upward, away from the body),
+  # the footer top-aligns (extra rows stack downward). Pairs with the
+  # `header-ascent` / `footer-descent` page arguments in the prelude.
+  edge <- if (head) "bottom" else "top"
   c(
     sprintf("  %s: context [", key),
+    sprintf("    #align(%s)[", edge),
     body,
+    "    ]",
     "  ],"
   )
 }

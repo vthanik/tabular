@@ -5,8 +5,8 @@ Authors@R:
     person("Vignesh", "Thanikachalam", email = "about.vignesh@gmail.com",
            role = c("aut", "cre", "cph"))
 Description: Render clinical submission tables, listings, and figures to
-    'RTF', 'LaTeX', 'HTML', 'PDF', and 'DOCX' from pre-summarised data
-    frames, with no external 'Java' or 'SAS' dependency. Features include
+    'RTF', 'LaTeX', 'Typst', 'HTML', 'PDF', and 'DOCX' from pre-summarised
+    data frames, with no external 'Java' or 'SAS' dependency. Features include
     decimal alignment via font metrics, multi-level column headers with
     passthrough leaves, predicate-targeted cell styling, footnotes,
     group-aware pagination, and figures that wrap a plot or image in the
@@ -46,7 +46,10 @@ VignetteBuilder:
     quarto
 SystemRequirements: Quarto command line tool
     (<https://github.com/quarto-dev/quarto-cli>), needed only to build
-    the package vignettes.
+    the package vignettes. Optional for PDF output: a LaTeX
+    distribution (e.g. TinyTeX) or Typst
+    (<https://github.com/typst/typst>, standalone or the copy bundled
+    with Quarto); see check_latex() and check_typst().
 Config/testthat/edition: 3
 Config/Needs/website: pkgdown
 LazyData: true

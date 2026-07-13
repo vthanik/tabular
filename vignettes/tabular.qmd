@@ -12,8 +12,9 @@ library(tabular)
 ```
 
 `tabular` turns one **pre-summarised, wide data frame** into a publication-ready
-table and renders it natively to **RTF, HTML, DOCX, PDF/LaTeX and Markdown** —
-from a single spec, with no Java or Office dependency.
+table and renders it natively to **RTF, HTML, DOCX, PDF (LaTeX- or
+typst-compiled), LaTeX, Typst and Markdown** — from a single spec, with no
+Java or Office dependency.
 
 Two things to internalise up front:
 
@@ -61,7 +62,7 @@ extension (or an explicit `format =`):
 
 ```{r}
 out <- tempfile(fileext = ".rtf")
-emit(spec, out) # RTF here; swap to .docx / .pdf / .html / .md
+emit(spec, out) # RTF here; swap to .docx / .pdf / .html / .tex / .typ / .md
 file.exists(out)
 ```
 

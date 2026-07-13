@@ -57,11 +57,7 @@
       v font Courier New
       x font Liberation Mono
       ? font DejaVu Sans Mono
-      ! 2 families of the default chain are not visible to typst: "Liberation Mono" and "DejaVu Sans Mono".
-      Typst walks the chain and substitutes silently, so output still renders, but
-      possibly in a different face than the RTF / DOCX / LaTeX backends use. Install
-      the missing families, or point typst at a font directory via the
-      `TYPST_FONT_PATHS` environment variable.
+      v Typst is ready; PDFs render in "Courier New" (the first available family of the chain).
 
 ---
 
@@ -92,11 +88,6 @@
       ? font DejaVu Sans Mono
       ! typst 0.10.0 is older than tabular's floor (0.11.0); compiles will fail on the table constructs the backend emits.
       Update Quarto to >= 1.6, or install a current standalone typst.
-      ! 2 families of the default chain are not visible to typst: "Liberation Mono" and "DejaVu Sans Mono".
-      Typst walks the chain and substitutes silently, so output still renders, but
-      possibly in a different face than the RTF / DOCX / LaTeX backends use. Install
-      the missing families, or point typst at a font directory via the
-      `TYPST_FONT_PATHS` environment variable.
 
 ---
 
@@ -108,5 +99,32 @@
       -- Typst toolchain for PDF output 
       v typst 0.14.2
       v font Courier New
-      v Typst is ready; every family in the default font chain resolves.
+      v Typst is ready; PDFs render in "Courier New" (the first available family of the chain).
+
+---
+
+    Code
+      tabular:::.check_typst_report(none_ok, version = numeric_version("0.14.2"),
+      command = "typst")
+    Message
+      
+      -- Typst toolchain for PDF output 
+      v typst 0.14.2
+      x font Sponsor Sans
+      x font Sponsor Serif
+      ! No family of the configured chain is visible to typst; PDFs render in typst's embedded default face.
+      Install one of the chain families, or point typst at a font directory via the
+      `TYPST_FONT_PATHS` environment variable.
+
+---
+
+    Code
+      tabular:::.check_typst_report(unknown, version = numeric_version("0.14.2"),
+      command = "typst")
+    Message
+      
+      -- Typst toolchain for PDF output 
+      v typst 0.14.2
+      ? font Courier New
+      ! The typst font list could not be read, so font availability is unknown; typst substitutes its embedded default face for any missing family.
 

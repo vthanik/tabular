@@ -137,16 +137,19 @@ naming both remedies. Audit the toolchains with \code{\link[=check_latex]{check_
 and \code{\link[=check_typst]{check_typst()}}.
 
 \strong{Typst capability notes.} The Typst output matches the LaTeX
-layout contract with three documented deviations: (1) Typst has no
-per-row keep-with-next primitive (LaTeX \verb{\\\\\\\\*}, RTF \verb{\\\\keepn},
-DOCX \code{keepNext}), so a group header can land as the last row of a
-page; (2) the \code{paginate(continuation =)} marker appears on
-continuation panels only (the repeating page header is identical on
-every page), matching the RTF tier rather than LaTeX's every-page
-marker; (3) the spanner underline is trimmed by the cell inset at
-both ends (the HTML tier), where LaTeX keeps the table's outer
-edges flush. Conversely, Typst renders per-cell body borders that
-the LaTeX backend cannot (see \code{\link[=style]{style()}}).
+layout contract, including the engine's keep-with-next mask
+(\code{\link[=paginate]{paginate()}}'s \code{keep_together} / orphan control): Typst has no
+per-row no-break primitive (LaTeX \verb{\\\\\\\\*}, RTF \verb{\\\\keepn}, DOCX
+\code{keepNext}), so the backend enforces the mask through a hidden
+zero-width column whose unbreakable rowspans pin each keep run to
+one page. Two documented deviations remain: (1) the
+\code{paginate(continuation =)} marker appears on continuation panels
+only (the repeating page header is identical on every page),
+matching the RTF tier rather than LaTeX's every-page marker;
+(2) the spanner underline is trimmed by the cell inset at both
+ends (the HTML tier), where LaTeX keeps the table's outer edges
+flush. Conversely, Typst renders per-cell body borders that the
+LaTeX backend cannot (see \code{\link[=style]{style()}}).
 
 \strong{\code{data_file} is sponsor-neutral.} Pass an explicit path
 (\code{"out/qc.csv"}) for a fixed location, or a lambda

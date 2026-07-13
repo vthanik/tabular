@@ -105,11 +105,15 @@ test_that("backend_typst_pdf compiles via the injected seam", {
   expect_match(called, "tabular\\.typ$")
 })
 
-test_that("backend_typst_pdf surfaces unknown-font compiler notes loudly", {
+test_that("backend_typst_pdf warns only for user-named unknown fonts", {
   skip_if(is.null(tabular:::.typst_bin()))
   grid <- mk_typst_grid()
   out <- withr::local_tempfile(fileext = ".pdf")
-  fake_compile <- function(typ_file, file) {
+  # Members of the fabricated cross-OS fallback chains are EXPECTED to
+  # be partially absent on any one machine; typst walks past them to
+  # the next face exactly like every other backend substitutes
+  # silently, so no warning.
+  fallback_compile <- function(typ_file, file) {
     writeLines("%PDF-fake", file)
     c(
       "warning: unknown font family: liberation mono",
@@ -117,8 +121,16 @@ test_that("backend_typst_pdf surfaces unknown-font compiler notes loudly", {
       "warning: unknown font family: courier new"
     )
   }
+  expect_no_warning(
+    tabular:::backend_typst_pdf(grid, out, .compile = fallback_compile)
+  )
+  # A family the user explicitly named still warns loudly.
+  named_compile <- function(typ_file, file) {
+    writeLines("%PDF-fake", file)
+    "warning: unknown font family: sponsor sans pro"
+  }
   expect_warning(
-    tabular:::backend_typst_pdf(grid, out, .compile = fake_compile),
+    tabular:::backend_typst_pdf(grid, out, .compile = named_compile),
     class = "tabular_warning_backend"
   )
 })
@@ -258,6 +270,33 @@ test_that(".check_typst_report prints every status branch", {
   expect_snapshot(
     tabular:::.check_typst_report(
       all_ok,
+      version = numeric_version("0.14.2"),
+      command = "typst"
+    )
+  )
+  # No family of the chain visible at all -> the only font state that
+  # warrants a warning (typst renders in its embedded default face).
+  none_ok <- data.frame(
+    font = c("Sponsor Sans", "Sponsor Serif"),
+    available = c(FALSE, FALSE),
+    stringsAsFactors = FALSE
+  )
+  expect_snapshot(
+    tabular:::.check_typst_report(
+      none_ok,
+      version = numeric_version("0.14.2"),
+      command = "typst"
+    )
+  )
+  # Font list unreadable -> availability unknown, soft warning only.
+  unknown <- data.frame(
+    font = "Courier New",
+    available = NA,
+    stringsAsFactors = FALSE
+  )
+  expect_snapshot(
+    tabular:::.check_typst_report(
+      unknown,
       version = numeric_version("0.14.2"),
       command = "typst"
     )
