@@ -355,3 +355,74 @@ test_that("a device-measured face silences the decimal fidelity warning", {
     preset(font_family = "FakeMono-tabular-test")
   expect_no_warning(as_grid(spec))
 })
+
+test_that(".device_glyph_widths returns NULL without png capability", {
+  testthat::local_mocked_bindings(
+    capabilities = function(...) FALSE,
+    .package = "base"
+  )
+  expect_null(tabular:::.device_glyph_widths("sans"))
+})
+
+test_that("a failed device probe writes the negative cache", {
+  skip_if_not(isTRUE(capabilities("png")[[1L]]))
+  withr::local_options(tabular.device_metrics = TRUE)
+  # A png device that cannot open: the probe degrades to NULL ...
+  testthat::local_mocked_bindings(
+    png = function(...) stop("no bitmap device"),
+    .package = "grDevices"
+  )
+  expect_null(tabular:::.device_glyph_widths("sans"))
+  # ... and the register caches FALSE so the face is probed only once.
+  key <- tabular:::.device_afm_key("ProbeFail-tabular-test")
+  withr::defer(
+    if (exists(key, envir = tabular:::.device_metrics_cache)) {
+      rm(list = key, envir = tabular:::.device_metrics_cache)
+    }
+  )
+  expect_identical(
+    tabular:::.device_afm_register("ProbeFail-tabular-test"),
+    NA_character_
+  )
+  expect_false(get(key, envir = tabular:::.device_metrics_cache))
+})
+
+test_that("degenerate measured widths are rejected", {
+  skip_if_not(isTRUE(capabilities("png")[[1L]]))
+  # All-zero advance widths (a face the device cannot really shape)
+  # must not be cached as a usable metrics table.
+  testthat::local_mocked_bindings(
+    convertWidth = function(x, ...) rep(0, length(x)),
+    .package = "grid"
+  )
+  expect_null(tabular:::.device_glyph_widths("sans"))
+})
+
+test_that(".device_afm_register rejects an all-blank chain", {
+  withr::local_options(tabular.device_metrics = TRUE)
+  expect_identical(tabular:::.device_afm_register(""), NA_character_)
+})
+
+test_that("a successful probe caches the measured table", {
+  skip_if_not(isTRUE(capabilities("png")[[1L]]))
+  withr::local_options(tabular.device_metrics = TRUE)
+  # Positive advance widths regardless of the fonts on the host, so
+  # the success path is deterministic on every platform.
+  testthat::local_mocked_bindings(
+    convertWidth = function(x, ...) rep(60, length(x)),
+    .package = "grid"
+  )
+  key <- tabular:::.device_afm_key("ProbeOK-tabular-test")
+  withr::defer(
+    if (exists(key, envir = tabular:::.device_metrics_cache)) {
+      rm(list = key, envir = tabular:::.device_metrics_cache)
+    }
+  )
+  expect_identical(
+    tabular:::.device_afm_register("ProbeOK-tabular-test"),
+    key
+  )
+  cached <- get(key, envir = tabular:::.device_metrics_cache)
+  expect_named(cached, c("chars", "glyphs"))
+  expect_true(all(cached$chars == 600L))
+})

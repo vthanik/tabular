@@ -174,6 +174,14 @@ The sponsor-name guard (`.local/scripts/check-sponsor-names.sh`) runs at
 - When reading an issue with `gh`, always pass `--comments`.
 - Branch for every new task; never commit new work directly to `main`.
 - No AI attribution in commits or PRs.
+- **Never merge a PR into `main` while any check fails — including
+  `codecov/patch` (≥ 95% patch coverage), even though it is not a
+  required check.** Find the uncovered diff lines (codecov report or
+  `covr::zero_coverage()`) and add tests that execute them before
+  merging. OS- or device-conditional branches are covered by mocking
+  the boundary (`testthat::local_mocked_bindings` with `.package =`
+  for foreign namespaces — own-namespace mocks do not engage under
+  covr), not waived.
 
 ### Doc-sync surfaces (merge gate into `main`)
 
