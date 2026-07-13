@@ -488,3 +488,102 @@ test_that("emit() returns the file path invisibly", {
   ret <- emit(spec, f)
   expect_identical(ret, f)
 })
+
+# ---------------------------------------------------------------------
+# PDF engine selection (.pdf is engine-selectable: LaTeX or Typst)
+# ---------------------------------------------------------------------
+
+test_that(".typ extension resolves to the typst backend", {
+  expect_identical(
+    tabular:::.resolve_format("out.typ", NULL, call = NULL),
+    "typst"
+  )
+})
+
+test_that("emit(.typ) writes a standalone typst file end to end", {
+  spec <- tabular(data.frame(x = 1L), titles = "T")
+  f <- withr::local_tempfile(fileext = ".typ")
+  emit(spec, f)
+  txt <- paste(readLines(f), collapse = "\n")
+  expect_match(txt, "#table(", fixed = TRUE)
+  expect_match(txt, "#set page(", fixed = TRUE)
+})
+
+test_that("format on a .pdf target names the ENGINE", {
+  expect_identical(
+    tabular:::.resolve_format("out.pdf", "latex", call = NULL),
+    "pdf"
+  )
+  expect_identical(
+    tabular:::.resolve_format("out.pdf", "typst", call = NULL),
+    "typst_pdf"
+  )
+  # Direct registry keys still pass through untouched.
+  expect_identical(
+    tabular:::.resolve_format("out.pdf", "pdf", call = NULL),
+    "pdf"
+  )
+  expect_identical(
+    tabular:::.resolve_format("out.pdf", "typst_pdf", call = NULL),
+    "typst_pdf"
+  )
+  # On a non-.pdf target the generic override semantics are unchanged:
+  # format names the SOURCE backend regardless of extension.
+  expect_identical(
+    tabular:::.resolve_format("out.txt", "typst", call = NULL),
+    "typst"
+  )
+  expect_identical(
+    tabular:::.resolve_format("out.typ", "latex", call = NULL),
+    "latex"
+  )
+})
+
+test_that("bare .pdf probes LaTeX first, then typst, then aborts", {
+  expect_identical(
+    tabular:::.pdf_default_format(
+      NULL,
+      .tex_ok = function() TRUE,
+      .typst_ok = function() TRUE
+    ),
+    "pdf"
+  )
+  expect_identical(
+    tabular:::.pdf_default_format(
+      NULL,
+      .tex_ok = function() FALSE,
+      .typst_ok = function() TRUE
+    ),
+    "typst_pdf"
+  )
+  expect_error(
+    tabular:::.pdf_default_format(
+      NULL,
+      .tex_ok = function() FALSE,
+      .typst_ok = function() FALSE
+    ),
+    class = "tabular_error_input"
+  )
+  expect_snapshot(
+    error = TRUE,
+    tabular:::.pdf_default_format(
+      NULL,
+      .tex_ok = function() FALSE,
+      .typst_ok = function() FALSE
+    )
+  )
+})
+
+test_that(".pdf_tex_ok probes the same TeX the compile would use", {
+  # A standard-root TinyTeX wins even with an empty PATH (the compile
+  # resolves TeX the same way), so the assertable invariant is a clean
+  # scalar answer; TRUE is guaranteed only when xelatex is reachable.
+  withr::local_envvar(PATH = "")
+  out <- tabular:::.pdf_tex_ok()
+  expect_type(out, "logical")
+  expect_length(out, 1L)
+  expect_false(is.na(out))
+  if (nzchar(Sys.which("xelatex"))) {
+    expect_true(tabular:::.pdf_tex_ok())
+  }
+})

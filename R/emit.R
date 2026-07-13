@@ -59,6 +59,7 @@
   htm = "html",
   tex = "latex",
   latex = "latex",
+  typ = "typst",
   pdf = "pdf",
   rtf = "rtf",
   docx = "docx"
@@ -490,6 +491,14 @@ emit <- function(
 # `format` override, it wins; otherwise the file extension is mapped
 # through `.extension_format_map`. Unknown / missing extensions
 # abort with `tabular_error_input`.
+#
+# The `.pdf` extension is engine-selectable: PDF output compiles via
+# LaTeX (registry key "pdf") or Typst (registry key "typst_pdf").
+# `format = "latex"` / `format = "typst"` on a `.pdf` target name the
+# ENGINE (they map to the compiling keys, not the source-emitting
+# ones); a bare `.pdf` probes the machine, LaTeX first — a working TeX
+# keeps the historical behaviour byte-stable, and the Quarto-bundled
+# typst rescues TeX-less or frozen-TeX machines.
 .resolve_format <- function(file, format, call) {
   if (!is.null(format)) {
     if (
@@ -506,6 +515,14 @@ emit <- function(
         class = "tabular_error_input",
         call = call
       )
+    }
+    if (identical(tolower(tools::file_ext(file)), "pdf")) {
+      if (identical(format, "latex")) {
+        return("pdf")
+      }
+      if (identical(format, "typst")) {
+        return("typst_pdf")
+      }
     }
     return(format)
   }
@@ -533,7 +550,60 @@ emit <- function(
       call = call
     )
   }
+  if (identical(resolved, "pdf")) {
+    return(.pdf_default_format(call))
+  }
   resolved
+}
+
+# Pick the PDF engine for a bare `.pdf` target: LaTeX when a usable TeX
+# is found (preserves pre-typst behaviour on every machine with TeX),
+# else Typst when a typst binary is found, else an up-front abort
+# naming both remedies (better than failing inside a compile that was
+# never going to start). Probed fresh on every emit — the probes are a
+# `Sys.which()` plus, when TeX is present, one `xelatex --version`
+# spawn, both negligible next to a compile — so installing a toolchain
+# mid-session is picked up immediately. `.tex_ok` / `.typst_ok` are
+# injected seams for tests.
+.pdf_default_format <- function(
+  call,
+  .tex_ok = .pdf_tex_ok,
+  .typst_ok = function() !is.null(.typst_bin())
+) {
+  if (isTRUE(.tex_ok())) {
+    return("pdf")
+  }
+  if (isTRUE(.typst_ok())) {
+    return("typst_pdf")
+  }
+  cli::cli_abort(
+    c(
+      "No PDF engine found.",
+      "x" = "PDF output compiles via LaTeX (a TeX installation) or Typst (the typst binary, bundled with Quarto), and neither was found.",
+      "i" = "Install a TeX with {.run tinytex::install_tinytex(bundle = \"TinyTeX\")} or {.code quarto install tinytex}, or install Quarto (>= 1.4, which bundles typst) from {.url https://quarto.org}.",
+      "i" = "Audit either toolchain with {.run tabular::check_latex()} or {.run tabular::check_typst()}.",
+      "i" = "Or render to another format: {.code emit(spec, \"out.rtf\")} / {.code emit(spec, \"out.html\")}."
+    ),
+    class = "tabular_error_input",
+    call = call
+  )
+}
+
+# TRUE when a TeX able to compile tabular's LaTeX output is found:
+# xelatex resolves (after preferring a standard-root TinyTeX, exactly
+# like the compile does) AND its TeX Live year is not known to predate
+# the tabularray kernel floor. An undeterminable year (MiKTeX,
+# unparseable banner) counts as usable — the honest default is to let
+# the compile try. A frozen pre-2023 TeX Live (the Domino/containerised
+# image case) fails here so the bare-`.pdf` default can fall through to
+# Typst instead of dying mid-compile.
+.pdf_tex_ok <- function() {
+  .local_path_prepend(.tinytex_bin_dir())
+  if (!nzchar(Sys.which("xelatex"))) {
+    return(FALSE)
+  }
+  year <- .latex_texlive_year()
+  is.na(year) || year >= .tabular_min_texlive_year
 }
 
 # Validate `manifest`. Must be a single non-NA logical. We do not
