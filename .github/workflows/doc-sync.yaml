@@ -1,0 +1,27 @@
+# Merge gate: the release-metadata and AI/Agents doc surfaces must
+# track the package. Fails the PR when CITATION.cff drifts from
+# DESCRIPTION (version / title) or an exported function is missing
+# from the AI/Agents skill (pkgdown/assets/skills/tabular/SKILL.md,
+# which the pkgdown workflow serves and indexes into llms.txt).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+name: doc-sync.yaml
+
+permissions: read-all
+
+jobs:
+  doc-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Check CITATION.cff and AI/Agents skill are current
+        run: Rscript tools/check-doc-sync.R

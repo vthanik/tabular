@@ -7,7 +7,7 @@
 \description{
 \if{html}{\figure{logo.svg}{options: style='float: right' alt='logo' width='120'}}
 
-Render clinical submission tables, listings, and figures to 'RTF', 'LaTeX', 'HTML', 'PDF', and 'DOCX' from pre-summarised data frames, with no external 'Java' or 'SAS' dependency. Features include decimal alignment via font metrics, multi-level column headers with passthrough leaves, predicate-targeted cell styling, footnotes, group-aware pagination, and figures that wrap a plot or image in the same page chrome as a table. Built for Clinical Data Interchange Standards Consortium (CDISC) Analysis Data Model (ADaM) workflows and regulatory submissions to agencies such as the Food and Drug Administration (FDA), European Medicines Agency (EMA), and Pharmaceuticals and Medical Devices Agency (PMDA).
+Render clinical submission tables, listings, and figures to 'RTF', 'LaTeX', 'Typst', 'HTML', 'PDF', and 'DOCX' from pre-summarised data frames, with no external 'Java' or 'SAS' dependency. Features include decimal alignment via font metrics, multi-level column headers with passthrough leaves, predicate-targeted cell styling, footnotes, group-aware pagination, and figures that wrap a plot or image in the same page chrome as a table. Built for Clinical Data Interchange Standards Consortium (CDISC) Analysis Data Model (ADaM) workflows and regulatory submissions to agencies such as the Food and Drug Administration (FDA), European Medicines Agency (EMA), and Pharmaceuticals and Medical Devices Agency (PMDA).
 }
 \seealso{
 Useful links:

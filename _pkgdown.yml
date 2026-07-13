@@ -129,14 +129,15 @@ reference:
 
 - title: Rendering and inspection
   desc: Terminal verbs. `emit()` writes a file; `as_grid()` resolves the
-        spec without I/O; `check_fonts()` and `check_latex()` audit
-        font and LaTeX-package availability; the print and `as.tags()`
-        methods drive the live HTML preview.
+        spec without I/O; `check_fonts()`, `check_latex()`, and
+        `check_typst()` audit font and PDF-toolchain availability; the
+        print and `as.tags()` methods drive the live HTML preview.
   contents:
   - emit
   - as_grid
   - check_fonts
   - check_latex
+  - check_typst
   - print.tabular_spec
   - as.tags.tabular_spec
 

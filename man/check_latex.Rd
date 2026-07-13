@@ -17,9 +17,11 @@ that branch on the return value.}
 required package and columns \code{package} (\verb{<character>}),
 \code{installed} (\verb{<logical>}, \code{NA} when undeterminable), and
 \code{bundled} (\verb{<logical>}, \code{TRUE} for packages tabular ships a
-fallback copy of). Side effect: prints a cli report with a
-per-package status marker and, when anything is missing, the
-exact \code{tlmgr_install()} remedy.
+fallback copy of), plus a \code{texlive_year} attribute
+(\verb{<integer(1) | NA_integer_>}, the TeX Live release year of the
+active \code{xelatex}). Side effect: prints a cli report with a
+per-package status marker and, when anything is missing or the
+TeX Live release is older than 2023, the exact remedy.
 }
 \description{
 Reports, for every TeX package the LaTeX / PDF backend can emit,
@@ -36,7 +38,30 @@ conditional branches (running headers / footers pull \code{fancyhdr} +
 classic font bundles). The check is informational, it does not
 install anything.
 
-\strong{How availability is probed.} Each package is resolved through
+\strong{Minimum TeX Live version.} Package availability alone is not
+sufficient: the bundled \code{tabularray} requires the 2022-11-01 LaTeX
+kernel, shipped from \strong{TeX Live 2023} onward. The report therefore
+opens with the TeX Live year of the active \code{xelatex} and fails the
+check when the kernel predates it — the classic symptom is an
+OS-managed or containerised image (Domino, Posit Workbench) frozen
+on TeX Live 2018, where every package resolves but the compile dies
+at \verb{\\\\ProvidesExplPackage}. The remedy is a newer TeX, not a package
+install: update the image, or install a user-space TinyTeX with
+\code{\link[tinytex:install_tinytex]{tinytex::install_tinytex()}}\code{(bundle = "TinyTeX")} or
+\verb{quarto install tinytex} — the Quarto route downloads from GitHub,
+so it also works behind corporate proxies that block CTAN mirrors.
+Both land in the standard TinyTeX location, which the compile (and
+this check) prefer over the \code{PATH} automatically. MiKTeX is
+rolling-release (always current), so its version reports as
+undetermined (\verb{?}) rather than failing.
+
+\strong{How availability is probed.} The check first resolves TeX the
+way the compile does: \code{\link[tinytex:latexmk]{tinytex::latexmk()}} prefers a TinyTeX at
+the standard root (\verb{~/.TinyTeX} on Linux, \verb{~/Library/TinyTeX} on
+macOS, \verb{\%APPDATA\%/TinyTeX} on Windows — the location used by both
+\code{\link[tinytex:install_tinytex]{tinytex::install_tinytex()}} and \verb{quarto install tinytex}) over
+whatever is on the \code{PATH}, and the report probes that same tree.
+Each package is then resolved through
 \code{kpsewhich}, the same file resolver \code{xelatex} uses at compile time,
 so the report reflects what a compile will actually find. This works
 on every TeX layout — TinyTeX, a full TeX Live, or an OS-managed

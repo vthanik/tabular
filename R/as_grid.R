@@ -274,9 +274,11 @@ as_grid <- function(.spec) {
 # the LaTeX backend emits one `longtblr` per panel (tabularray paginates
 # the body, `rowhead` repeats the header band, and a keep-with-next mask
 # drives `\\*`); DOCX reuses this hook, emitting one `<w:tbl>` per panel
-# with Word repeating the `<w:tblHeader/>` rows. Every other backend (and
-# `as_grid()` with `format = NA`) keeps tabular's estimated vertical split.
-.native_pagination_formats <- c("rtf", "latex", "docx")
+# with Word repeating the `<w:tblHeader/>` rows. Typst emits one `#table`
+# per panel (typst paginates the body, `table.header(repeat: true)`
+# replays the header band). Every other backend (and `as_grid()` with
+# `format = NA`) keeps tabular's estimated vertical split.
+.native_pagination_formats <- c("rtf", "latex", "docx", "typst")
 
 # Continuous, scrollable backends have no fixed page width, so a
 # horizontal `panels = N` split is meaningless: the engine collapses it
@@ -877,6 +879,59 @@ as_grid <- function(.spec) {
     )
     grp[order(idx)]
   })
+}
+
+# Concatenate a panel's page slices into one body. For a native (unsplit)
+# grid this is a single page (pass-through); for a split inspection grid
+# it stitches the per-page slices back into one continuous table. rbinds
+# the cell-text + sidecar matrices (column names preserved so
+# `.cell_style_at` keeps indexing by name) and concatenates the parallel
+# row vectors in render order. Shared by the RTF / LaTeX / Typst panel
+# renderers (`.rtf_concat_panel_body` / `.latex_concat_panel_body`
+# delegate here).
+#
+# @keywords internal
+# @noRd
+.concat_panel_body <- function(panel_pages) {
+  first <- panel_pages[[1L]]
+  if (length(panel_pages) == 1L) {
+    return(list(
+      cells_text = first$cells_text,
+      cells_style = first$cells_style,
+      cells_indent = first$cells_indent,
+      is_header_row = first$is_header_row,
+      is_blank_row = first$is_blank_row,
+      keep_with_next = first$keep_with_next,
+      host_col = first$host_col
+    ))
+  }
+  list(
+    cells_text = do.call(
+      rbind,
+      lapply(panel_pages, function(p) p$cells_text)
+    ),
+    cells_style = do.call(
+      rbind,
+      lapply(panel_pages, function(p) p$cells_style)
+    ),
+    cells_indent = do.call(
+      rbind,
+      lapply(panel_pages, function(p) p$cells_indent)
+    ),
+    is_header_row = unlist(
+      lapply(panel_pages, function(p) p$is_header_row),
+      use.names = FALSE
+    ),
+    is_blank_row = unlist(
+      lapply(panel_pages, function(p) p$is_blank_row),
+      use.names = FALSE
+    ),
+    keep_with_next = unlist(
+      lapply(panel_pages, function(p) p$keep_with_next),
+      use.names = FALSE
+    ),
+    host_col = first$host_col
+  )
 }
 
 # Merge per-group sub-grids into one tabular_grid. Pages

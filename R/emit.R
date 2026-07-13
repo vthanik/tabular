@@ -59,6 +59,7 @@
   htm = "html",
   tex = "latex",
   latex = "latex",
+  typ = "typst",
   pdf = "pdf",
   rtf = "rtf",
   docx = "docx"
@@ -97,7 +98,8 @@
 #' | `.md`, `.markdown` | `md`    | GFM pipe table                       |
 #' | `.html`, `.htm`    | `html`  | self-contained Bootstrap 5           |
 #' | `.tex`, `.latex`   | `latex` | tabularray                           |
-#' | `.pdf`             | `pdf`   | tinytex compile of LaTeX             |
+#' | `.typ`             | `typst` | Typst native `#table`                |
+#' | `.pdf`             | (probed) | LaTeX (tinytex) or Typst compile    |
 #' | `.rtf`             | `rtf`   | RTF 1.9.1, native                    |
 #' | `.docx`            | `docx`  | OOXML native, no JVM                  |
 #'
@@ -105,6 +107,34 @@
 #' registered backend all raise `tabular_error_input`. The error
 #' message lists the currently registered formats so the failure is
 #' actionable.
+#'
+#' **PDF engines.** A `.pdf` target compiles through one of two
+#' engines: **LaTeX** (via [`tinytex::latexmk()`]; needs a TeX
+#' installation) or **Typst** (via the standalone `typst` binary or
+#' the copy bundled inside Quarto >= 1.4; needs no TeX at all). Pass
+#' `format = "latex"` or `format = "typst"` to pick one explicitly.
+#' With no `format`, `emit()` probes the machine LaTeX-first: a
+#' usable TeX (found the way the compile finds it, preferring a
+#' standard-root TinyTeX, and not frozen on a pre-2023 TeX Live
+#' kernel) keeps the historical LaTeX path; otherwise a discoverable
+#' typst binary takes over; with neither, `emit()` aborts up front
+#' naming both remedies. Audit the toolchains with [`check_latex()`]
+#' and [`check_typst()`].
+#'
+#' **Typst capability notes.** The Typst output matches the LaTeX
+#' layout contract, including the engine's keep-with-next mask
+#' ([`paginate()`]'s `keep_together` / orphan control): Typst has no
+#' per-row no-break primitive (LaTeX `\\\\*`, RTF `\\keepn`, DOCX
+#' `keepNext`), so the backend enforces the mask through a hidden
+#' zero-width column whose unbreakable rowspans pin each keep run to
+#' one page. Two documented deviations remain: (1) the
+#' `paginate(continuation =)` marker appears on continuation panels
+#' only (the repeating page header is identical on every page),
+#' matching the RTF tier rather than LaTeX's every-page marker;
+#' (2) the spanner underline is trimmed by the cell inset at both
+#' ends (the HTML tier), where LaTeX keeps the table's outer edges
+#' flush. Conversely, Typst renders per-cell body borders that the
+#' LaTeX backend cannot (see [`style()`]).
 #'
 #' **`data_file` is sponsor-neutral.** Pass an explicit path
 #' (`"out/qc.csv"`) for a fixed location, or a lambda
@@ -156,6 +186,11 @@
 #'   file extension. Useful for writing `.txt` files that should
 #'   contain RTF, for round-trip testing, or when the user has a
 #'   custom backend registered under a non-standard name.
+#'
+#'   **Interaction:** On a `.pdf` target, `format` names the compile
+#'   ENGINE: `"latex"` compiles via TeX and `"typst"` via the typst
+#'   binary (see the *PDF engines* section). On every other
+#'   extension the generic override semantics apply unchanged.
 #'
 #' @param data_file *QC artefact writer.*
 #'   `<character(1) | function(file) -> character(1) | NULL>:`
@@ -274,7 +309,7 @@
 #'   manifest  = TRUE
 #' )
 #'
-#' # ---- Example 3: Same spec, four backends — one-loop fan-out ----
+#' # ---- Example 3: Same spec, every text backend — one-loop fan-out ----
 #' #
 #' # `emit()` dispatches by file extension, so the same spec can
 #' # render to every backend in one loop. Useful for visual diffs
@@ -294,7 +329,7 @@
 #'
 #' out_dir <- tempfile()
 #' dir.create(out_dir)
-#' for (ext in c(".html", ".rtf", ".tex", ".docx", ".md")) {
+#' for (ext in c(".html", ".rtf", ".tex", ".typ", ".docx", ".md")) {
 #'   emit(eff_spec, file.path(out_dir, paste0("eff", ext)))
 #' }
 #' list.files(out_dir)
@@ -490,6 +525,14 @@ emit <- function(
 # `format` override, it wins; otherwise the file extension is mapped
 # through `.extension_format_map`. Unknown / missing extensions
 # abort with `tabular_error_input`.
+#
+# The `.pdf` extension is engine-selectable: PDF output compiles via
+# LaTeX (registry key "pdf") or Typst (registry key "typst_pdf").
+# `format = "latex"` / `format = "typst"` on a `.pdf` target name the
+# ENGINE (they map to the compiling keys, not the source-emitting
+# ones); a bare `.pdf` probes the machine, LaTeX first — a working TeX
+# keeps the historical behaviour byte-stable, and the Quarto-bundled
+# typst rescues TeX-less or frozen-TeX machines.
 .resolve_format <- function(file, format, call) {
   if (!is.null(format)) {
     if (
@@ -506,6 +549,14 @@ emit <- function(
         class = "tabular_error_input",
         call = call
       )
+    }
+    if (identical(tolower(tools::file_ext(file)), "pdf")) {
+      if (identical(format, "latex")) {
+        return("pdf")
+      }
+      if (identical(format, "typst")) {
+        return("typst_pdf")
+      }
     }
     return(format)
   }
@@ -533,7 +584,60 @@ emit <- function(
       call = call
     )
   }
+  if (identical(resolved, "pdf")) {
+    return(.pdf_default_format(call))
+  }
   resolved
+}
+
+# Pick the PDF engine for a bare `.pdf` target: LaTeX when a usable TeX
+# is found (preserves pre-typst behaviour on every machine with TeX),
+# else Typst when a typst binary is found, else an up-front abort
+# naming both remedies (better than failing inside a compile that was
+# never going to start). Probed fresh on every emit — the probes are a
+# `Sys.which()` plus, when TeX is present, one `xelatex --version`
+# spawn, both negligible next to a compile — so installing a toolchain
+# mid-session is picked up immediately. `.tex_ok` / `.typst_ok` are
+# injected seams for tests.
+.pdf_default_format <- function(
+  call,
+  .tex_ok = .pdf_tex_ok,
+  .typst_ok = function() !is.null(.typst_bin())
+) {
+  if (isTRUE(.tex_ok())) {
+    return("pdf")
+  }
+  if (isTRUE(.typst_ok())) {
+    return("typst_pdf")
+  }
+  cli::cli_abort(
+    c(
+      "No PDF engine found.",
+      "x" = "PDF output compiles via LaTeX (a TeX installation) or Typst (the typst binary, bundled with Quarto), and neither was found.",
+      "i" = "Install a TeX with {.run tinytex::install_tinytex(bundle = \"TinyTeX\")} or {.code quarto install tinytex}, or install Quarto (>= 1.4, which bundles typst) from {.url https://quarto.org}.",
+      "i" = "Audit either toolchain with {.run tabular::check_latex()} or {.run tabular::check_typst()}.",
+      "i" = "Or render to another format: {.code emit(spec, \"out.rtf\")} / {.code emit(spec, \"out.html\")}."
+    ),
+    class = "tabular_error_input",
+    call = call
+  )
+}
+
+# TRUE when a TeX able to compile tabular's LaTeX output is found:
+# xelatex resolves (after preferring a standard-root TinyTeX, exactly
+# like the compile does) AND its TeX Live year is not known to predate
+# the tabularray kernel floor. An undeterminable year (MiKTeX,
+# unparseable banner) counts as usable — the honest default is to let
+# the compile try. A frozen pre-2023 TeX Live (the Domino/containerised
+# image case) fails here so the bare-`.pdf` default can fall through to
+# Typst instead of dying mid-compile.
+.pdf_tex_ok <- function() {
+  .local_path_prepend(.tinytex_bin_dir())
+  if (!nzchar(Sys.which("xelatex"))) {
+    return(FALSE)
+  }
+  year <- .latex_texlive_year()
+  is.na(year) || year >= .tabular_min_texlive_year
 }
 
 # Validate `manifest`. Must be a single non-NA logical. We do not

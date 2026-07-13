@@ -524,3 +524,140 @@ test_that("emit(.pdf) with a generic font_family compiles via the fallback casca
   expect_true(file.exists(out))
   expect_gt(file.info(out)$size, 0L)
 })
+
+# ---------------------------------------------------------------------
+# TeX Live version / LaTeX kernel age (#domino TL2018)
+# ---------------------------------------------------------------------
+
+test_that(".latex_texlive_year parses TeX Live banners and rejects others", {
+  expect_identical(
+    tabular:::.latex_texlive_year(
+      "XeTeX 3.141592653-2.6-0.999998 (TeX Live 2026)"
+    ),
+    2026L
+  )
+  expect_identical(
+    tabular:::.latex_texlive_year(
+      "XeTeX 3.14159265-2.6-0.99999 (TeX Live 2018)"
+    ),
+    2018L
+  )
+  expect_identical(
+    tabular:::.latex_texlive_year(
+      "XeTeX 3.141592653-2.6-0.999996 (MiKTeX 24.1)"
+    ),
+    NA_integer_
+  )
+  expect_identical(tabular:::.latex_texlive_year(NA_character_), NA_integer_)
+})
+
+test_that(".latex_texlive_year returns NA when xelatex is absent", {
+  withr::local_envvar(PATH = "")
+  expect_identical(tabular:::.latex_texlive_year(), NA_integer_)
+})
+
+test_that(".check_latex_report flags a too-old TeX Live kernel", {
+  # The Domino / TL2018 failure: every package resolves (or is bundled),
+  # but the LaTeX kernel predates tabularray's 2022-11-01 requirement.
+  # The report must show an `x TeX Live 2018` line, suppress the
+  # all-available success line, and print the update remedy.
+  out <- data.frame(
+    package = c("base", "tabularray"),
+    installed = c(TRUE, FALSE),
+    bundled = c(FALSE, TRUE),
+    stringsAsFactors = FALSE
+  )
+  expect_snapshot(tabular:::.check_latex_report(out, texlive_year = 2018L))
+})
+
+test_that(".check_latex_report passes a current TeX Live year", {
+  out <- data.frame(
+    package = c("base", "tabularray"),
+    installed = c(TRUE, TRUE),
+    bundled = c(FALSE, TRUE),
+    stringsAsFactors = FALSE
+  )
+  expect_snapshot(tabular:::.check_latex_report(out, texlive_year = 2026L))
+})
+
+test_that("check_latex() attaches the probed TeX Live year", {
+  res <- suppressMessages(check_latex(quiet = TRUE))
+  expect_true("texlive_year" %in% names(attributes(res)))
+  expect_true(
+    is.na(attr(res, "texlive_year")) ||
+      is.integer(attr(res, "texlive_year"))
+  )
+})
+
+test_that(".pdf_compile_abort explains a too-old LaTeX kernel", {
+  # xelatex dies at tabularray's \ProvidesExplPackage on pre-2020
+  # kernels; the abort must name the kernel requirement, not a
+  # missing package.
+  fake_err <- simpleError(
+    "! Undefined control sequence.\nl.22 \\ProvidesExplPackage"
+  )
+  err <- tryCatch(
+    tabular:::.pdf_compile_abort(fake_err),
+    tabular_error_backend = function(e) e
+  )
+  expect_s3_class(err, "tabular_error_backend")
+  msg <- conditionMessage(err)
+  expect_match(msg, "2022-11-01", fixed = TRUE)
+  expect_match(msg, "check_latex", fixed = TRUE)
+  expect_match(msg, "install_tinytex", fixed = TRUE)
+})
+
+test_that(".pdf_compile_abort catches tabularray's own too-old message", {
+  fake_err <- simpleError(
+    "Your LaTeX release is too old. Please update it to 2022-11-01 first."
+  )
+  err <- tryCatch(
+    tabular:::.pdf_compile_abort(fake_err),
+    tabular_error_backend = function(e) e
+  )
+  expect_match(conditionMessage(err), "TeX Live 2023", fixed = TRUE)
+})
+
+test_that(".tinytex_bin_dir returns character(0) or an existing xelatex dir", {
+  bin <- tabular:::.tinytex_bin_dir()
+  expect_true(is.character(bin))
+  expect_lte(length(bin), 1L)
+  if (length(bin) == 1L) {
+    exe <- if (.Platform$OS.type == "windows") "xelatex.exe" else "xelatex"
+    expect_true(file.exists(file.path(bin, exe)))
+  }
+})
+
+test_that(".local_path_prepend scopes the PATH change to the caller", {
+  old <- Sys.getenv("PATH")
+  fake <- withr::local_tempdir()
+  local({
+    tabular:::.local_path_prepend(fake)
+    expect_identical(
+      strsplit(Sys.getenv("PATH"), .Platform$path.sep)[[1L]][[1L]],
+      fake
+    )
+  })
+  expect_identical(Sys.getenv("PATH"), old)
+})
+
+test_that(".local_path_prepend is a no-op on character(0)", {
+  old <- Sys.getenv("PATH")
+  tabular:::.local_path_prepend(character())
+  expect_identical(Sys.getenv("PATH"), old)
+})
+
+test_that("check_latex() sees a TinyTeX that is not on the PATH", {
+  # The compile (tinytex::latexmk) prefers the TinyTeX root over the
+  # PATH; the diagnostic must resolve identically or it reports a
+  # different TeX than the one emit() will use.
+  skip_if_not_installed("tinytex")
+  root <- tryCatch(
+    tinytex::tinytex_root(error = FALSE),
+    error = function(e) ""
+  )
+  skip_if(!nzchar(root), "no TinyTeX at the standard root")
+  withr::local_envvar(PATH = "")
+  res <- suppressMessages(check_latex(quiet = TRUE))
+  expect_true(any(tabular:::.is_true_vec(res$installed)))
+})
