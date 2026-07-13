@@ -732,52 +732,11 @@ backend_rtf <- function(grid, file) {
   )
 }
 
-# Concatenate a panel's page slices into one body. For a native (unsplit)
-# grid this is a single page (pass-through); for a split inspection grid
-# it stitches the per-page slices back into one continuous table. rbinds
-# the cell-text + sidecar matrices (column names preserved so
-# `.cell_style_at` keeps indexing by name) and concatenates the parallel
-# row vectors in render order.
+# Concatenate a panel's page slices into one body — delegates to the
+# shared `.concat_panel_body()` in as_grid.R (also used by the LaTeX and
+# Typst panel renderers).
 .rtf_concat_panel_body <- function(panel_pages) {
-  first <- panel_pages[[1L]]
-  if (length(panel_pages) == 1L) {
-    return(list(
-      cells_text = first$cells_text,
-      cells_style = first$cells_style,
-      cells_indent = first$cells_indent,
-      is_header_row = first$is_header_row,
-      is_blank_row = first$is_blank_row,
-      keep_with_next = first$keep_with_next,
-      host_col = first$host_col
-    ))
-  }
-  list(
-    cells_text = do.call(
-      rbind,
-      lapply(panel_pages, function(p) p$cells_text)
-    ),
-    cells_style = do.call(
-      rbind,
-      lapply(panel_pages, function(p) p$cells_style)
-    ),
-    cells_indent = do.call(
-      rbind,
-      lapply(panel_pages, function(p) p$cells_indent)
-    ),
-    is_header_row = unlist(
-      lapply(panel_pages, function(p) p$is_header_row),
-      use.names = FALSE
-    ),
-    is_blank_row = unlist(
-      lapply(panel_pages, function(p) p$is_blank_row),
-      use.names = FALSE
-    ),
-    keep_with_next = unlist(
-      lapply(panel_pages, function(p) p$keep_with_next),
-      use.names = FALSE
-    ),
-    host_col = first$host_col
-  )
+  .concat_panel_body(panel_pages)
 }
 
 # `\trhdr` row-prelude token. Marks a table row as a repeating header so

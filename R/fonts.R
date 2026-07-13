@@ -98,6 +98,20 @@
 .html_tail_serif <- "serif"
 .html_tail_sans <- "sans-serif"
 .html_tail_mono <- "monospace"
+# Typst tails end in faces the typst compiler EMBEDS (no install needed
+# anywhere): Libertinus Serif (>= 0.13; "Linux Libertine" is the same
+# face's pre-0.13 name, listed second so older binaries resolve it too),
+# New Computer Modern, and DejaVu Sans Mono. Typst bundles no sans face,
+# so the sans chain has no guaranteed leaf; typst falls back to its
+# global default (Libertinus Serif) silently — `check_typst()` surfaces
+# the gap loudly.
+.typst_tail_serif <- c(
+  "Libertinus Serif",
+  "Linux Libertine",
+  "New Computer Modern"
+)
+.typst_tail_sans <- character()
+.typst_tail_mono <- "DejaVu Sans Mono"
 
 # ---------------------------------------------------------------------
 # Named-font alias table for the PS-era four
@@ -151,6 +165,12 @@
       serif = .html_tail_serif,
       sans = .html_tail_sans,
       mono = .html_tail_mono
+    ),
+    typst = switch(
+      fam,
+      serif = .typst_tail_serif,
+      sans = .typst_tail_sans,
+      mono = .typst_tail_mono
     ),
     # RTF + unknown backends: no tail (consuming app handles
     # substitution; RTF also gets explicit \*\falt in the font

@@ -191,3 +191,16 @@ chrome_style <- function() {
   n <- data[[slot]]
   if (is_style_node(n)) n else style_node()
 }
+
+# Resolve the blank-line count for a chrome surface side. chrome_style
+# wins when the user set `style(blank_above = N, at = cells_title())`;
+# otherwise the legacy preset `*_pad_*` scalar fills in. Shared by the
+# LaTeX and Typst backends (`.latex_blank_count` delegates here).
+.chrome_blank_count <- function(cs, surface, side, legacy) {
+  node <- .chrome_surface_at(cs, surface)
+  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
+  if (length(prop) == 1L && !is.na(prop)) {
+    return(max(0L, as.integer(prop)))
+  }
+  max(0L, as.integer(legacy))
+}

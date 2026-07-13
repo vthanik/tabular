@@ -286,52 +286,11 @@ backend_latex <- function(grid, file) {
   )
 }
 
-# Concatenate a panel's page slices into one body. For a native (unsplit)
-# grid this is a single page (pass-through); for a split inspection grid
-# it stitches the per-page slices back into one continuous table. rbinds
-# the cell-text + sidecar matrices (column names preserved so
-# `.cell_style_at` keeps indexing by name) and concatenates the parallel
-# row vectors in render order. Port of `.rtf_concat_panel_body`.
+# Concatenate a panel's page slices into one body — delegates to the
+# shared `.concat_panel_body()` in as_grid.R (also used by the RTF and
+# Typst panel renderers).
 .latex_concat_panel_body <- function(panel_pages) {
-  first <- panel_pages[[1L]]
-  if (length(panel_pages) == 1L) {
-    return(list(
-      cells_text = first$cells_text,
-      cells_style = first$cells_style,
-      cells_indent = first$cells_indent,
-      is_header_row = first$is_header_row,
-      is_blank_row = first$is_blank_row,
-      keep_with_next = first$keep_with_next,
-      host_col = first$host_col
-    ))
-  }
-  list(
-    cells_text = do.call(
-      rbind,
-      lapply(panel_pages, function(p) p$cells_text)
-    ),
-    cells_style = do.call(
-      rbind,
-      lapply(panel_pages, function(p) p$cells_style)
-    ),
-    cells_indent = do.call(
-      rbind,
-      lapply(panel_pages, function(p) p$cells_indent)
-    ),
-    is_header_row = unlist(
-      lapply(panel_pages, function(p) p$is_header_row),
-      use.names = FALSE
-    ),
-    is_blank_row = unlist(
-      lapply(panel_pages, function(p) p$is_blank_row),
-      use.names = FALSE
-    ),
-    keep_with_next = unlist(
-      lapply(panel_pages, function(p) p$keep_with_next),
-      use.names = FALSE
-    ),
-    host_col = first$host_col
-  )
+  .concat_panel_body(panel_pages)
 }
 
 # Render one panel as ONE `longtblr`. The title block rides the
@@ -418,16 +377,11 @@ backend_latex <- function(grid, file) {
   )
 }
 
-# Resolve the blank-line count for a chrome surface side. chrome_style
-# wins when the user set `style(blank_above = N, at = cells_title())`;
-# otherwise the legacy preset `*_pad_*` scalar fills in.
+# Resolve the blank-line count for a chrome surface side — delegates to
+# the shared `.chrome_blank_count()` in chrome_style.R (also used by the
+# Typst backend).
 .latex_blank_count <- function(cs, surface, side, legacy) {
-  node <- .chrome_surface_at(cs, surface)
-  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
-  if (length(prop) == 1L && !is.na(prop)) {
-    return(max(0L, as.integer(prop)))
-  }
-  max(0L, as.integer(legacy))
+  .chrome_blank_count(cs, surface, side, legacy)
 }
 
 # ---------------------------------------------------------------------
