@@ -41,14 +41,17 @@ also recognised). The resolver expands to a per-backend
 chain that leads with the Microsoft Office face (Courier
 New / Times New Roman / Arial) — installed on every
 Windows and macOS machine, where documents are reviewed —
-then the PostScript legacy name, then the metric-compatible
-\strong{Liberation} face LAST as the Linux-server fallback
-(Posit Workbench / Domino / Citrix / RStudio Server),
-then TeX Gyre for LaTeX compile / the CSS generic for
-HTML. Liberation Mono / Serif / Sans are metric-compatible
-with Courier New / TNR / Arial, so layout, line breaks,
-and decimal alignment hold across every render context
-regardless of which end of the chain resolves. The mono
+then the PostScript legacy name, then the two
+metric-compatible Linux-server fallbacks: the \strong{URW /
+Nimbus} clone (Nimbus Mono PS / Nimbus Roman / Nimbus
+Sans, ghostscript's Core-35 set shipped on virtually
+every Linux distro) and the \strong{Liberation} face (Posit
+Workbench / Domino / Citrix / RStudio Server), then TeX
+Gyre for LaTeX compile / the CSS generic for HTML. Every
+link is metric-compatible with Courier New / TNR / Arial,
+so layout, line breaks, and decimal alignment hold across
+every render context regardless of which end of the
+chain resolves. The mono
 default matches the dominant submission-TFL convention
 where deterministic glyph widths drive \verb{n (\%)} cell
 alignment.
@@ -82,8 +85,8 @@ users who genuinely want exact-name semantics).
 chain leads with the Office face, Word's font dropdown
 shows a face the reader actually has installed on Windows /
 macOS (e.g. Courier New for \code{"mono"}), not a phantom name;
-the metric-compatible Liberation face only appears as the
-fallback for a headless Linux box.
+the metric-compatible Nimbus / Liberation faces only appear
+as the fallback for a headless Linux box.
 \item \strong{\code{orientation}} — page orientation.
 \verb{<character(1)>}. One of \code{"landscape"} (default),
 \code{"portrait"}.

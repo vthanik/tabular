@@ -128,8 +128,8 @@ test_that("prelude resolves the font chain with the typst tail", {
   expect_match(
     txt,
     paste0(
-      "#set text(font: (\"Courier New\", \"Courier\", \"Liberation Mono\", ",
-      "\"DejaVu Sans Mono\",), size: 10pt,"
+      "#set text(font: (\"Courier New\", \"Courier\", \"Nimbus Mono PS\", ",
+      "\"Liberation Mono\", \"DejaVu Sans Mono\",), size: 10pt,"
     ),
     fixed = TRUE
   )

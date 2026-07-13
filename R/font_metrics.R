@@ -29,13 +29,17 @@
 # `.font_generic_class` (RTF/DOCX class, R/fonts.R) — extend it here,
 # never by touching the generic `.stack_*` cores.
 #
-# Liberation faces: metric-compatible with the Adobe Core faces
-# (Liberation Serif = Times-Roman, Sans = Helvetica, Mono = Courier),
-# so we measure with the matching Core AFM.
+# Liberation and URW/Nimbus faces: metric-compatible with the Adobe
+# Core faces (Liberation Serif / Nimbus Roman = Times-Roman, Sans /
+# Nimbus Sans = Helvetica, Mono / Nimbus Mono PS = Courier), so we
+# measure with the matching Core AFM.
 .font_to_family_class <- list(
   "Liberation Serif" = "serif",
   "Liberation Sans" = "sans",
-  "Liberation Mono" = "mono"
+  "Liberation Mono" = "mono",
+  "Nimbus Roman" = "serif",
+  "Nimbus Sans" = "sans",
+  "Nimbus Mono PS" = "mono"
 )
 
 # Pick the family class for a font_family chain. Walks top-to-bottom;

@@ -98,8 +98,9 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #
 # Side-by-side check of the two generic families. Useful when
 # deciding the house-style default: the serif chain leads with
-# Liberation Serif (Linux-server-first); the sans chain leads
-# with Liberation Sans. Both close with the backend's native
+# Times New Roman, the sans chain with Arial, then each walks the
+# PostScript name and the metric-compatible Nimbus / Liberation
+# clones. Both close with the backend's native
 # fallback layer (CSS generic on HTML, Latin Modern on LaTeX).
 if (requireNamespace("systemfonts", quietly = TRUE)) {
   tabular(cdisc_saf_demo) |>

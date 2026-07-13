@@ -10,7 +10,7 @@
         flipped: true,
         margin: 1in,
       )
-      #set text(font: ("Courier New", "Courier", "Liberation Mono", "DejaVu Sans Mono",), size: 10pt, top-edge: 0.84em, bottom-edge: -0.36em)
+      #set text(font: ("Courier New", "Courier", "Nimbus Mono PS", "Liberation Mono", "DejaVu Sans Mono",), size: 10pt, top-edge: 0.84em, bottom-edge: -0.36em)
       #set par(leading: 0em)
       #set block(spacing: 0pt)
       #align(center)[#table(
