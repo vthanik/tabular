@@ -1994,3 +1994,42 @@ test_that("an arbitrary named font sets the LaTeX main font verbatim", {
   gtxt <- render_tex(tabular(dat) |> preset(font_family = "mono"))
   expect_match(gtxt, "\\setmainfont{Latin Modern Mono}", fixed = TRUE)
 })
+
+# ---------------------------------------------------------------------
+# Discardable group separators (white hline bands)
+# ---------------------------------------------------------------------
+
+test_that("plain blank separators become discardable white hline bands", {
+  # tabularray drops an hline that coincides with its page break, so
+  # the group separator is emitted as a white hline band instead of a
+  # real blank row — a page never ends on a stray blank line above the
+  # repeated bottom rule.
+  spec <- tabular(cdisc_saf_demo) |>
+    cols(
+      variable = col_spec(label = "Char"),
+      stat_label = col_spec(label = "Stat"),
+      placebo = col_spec(label = "P")
+    ) |>
+    group_rows(by = "variable")
+  txt <- render_tex(spec)
+  # Default 10pt body + 2pt/2pt rowsep -> a 16pt white band.
+  expect_match(txt, "={16pt, solid, white}", fixed = TRUE)
+  # No all-empty body row survives (" & & ... & \\").
+  lines <- strsplit(txt, "\n", fixed = TRUE)[[1]]
+  expect_false(any(grepl("^\\s*(&\\s*)+\\\\\\\\\\*?$", lines)))
+})
+
+test_that("ruled tables keep real blank separator rows", {
+  spec <- tabular(cdisc_saf_demo) |>
+    cols(
+      variable = col_spec(label = "Char"),
+      stat_label = col_spec(label = "Stat"),
+      placebo = col_spec(label = "P")
+    ) |>
+    group_rows(by = "variable") |>
+    preset(rules = "grid")
+  txt <- render_tex(spec)
+  expect_false(grepl("solid, white", txt, fixed = TRUE))
+  lines <- strsplit(txt, "\n", fixed = TRUE)[[1]]
+  expect_true(any(grepl("^\\s*(&\\s*)+\\\\\\\\\\*?$", lines)))
+})

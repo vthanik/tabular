@@ -256,7 +256,10 @@ test_that("multi-line cell text renders typst linebreaks", {
   expect_match(txt, "line1 \\ line2", fixed = TRUE)
 })
 
-test_that("blank separator rows render as hidden-strut spanning cells", {
+test_that("plain blank separators become discardable row-gutter entries", {
+  # A page must never end on a stray blank line above the repeated
+  # closing rule: typst discards a row-gutter entry at a page break,
+  # so the group separator is emitted as gutter, not as a row.
   spec <- tabular(cdisc_saf_demo) |>
     cols(
       variable = col_spec(label = "Char"),
@@ -265,7 +268,26 @@ test_that("blank separator rows render as hidden-strut spanning cells", {
     ) |>
     group_rows(by = "variable")
   txt <- render_typ(spec)
+  expect_match(txt, "row-gutter: (", fixed = TRUE)
+  # Default 10pt body + 2pt/2pt inset -> a 16pt gap entry.
+  expect_match(txt, "16pt")
+  expect_false(grepl("#hide[X]", txt, fixed = TRUE))
+})
+
+test_that("ruled tables keep real blank separator rows", {
+  # With rowrules through the body the blank row is part of the ruled
+  # grid; converting it to gutter would cut the rules.
+  spec <- tabular(cdisc_saf_demo) |>
+    cols(
+      variable = col_spec(label = "Char"),
+      stat_label = col_spec(label = "Stat"),
+      placebo = col_spec(label = "P")
+    ) |>
+    group_rows(by = "variable") |>
+    preset(rules = "grid")
+  txt <- render_typ(spec)
   expect_match(txt, "#hide[X]", fixed = TRUE)
+  expect_false(grepl("row-gutter", txt, fixed = TRUE))
 })
 
 test_that("per-cell style overrides emit align / fill / text props", {
