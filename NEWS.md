@@ -2,6 +2,10 @@
 
 ## New features
 
+* `emit()` to `.tex`, `.typ`, and PDF now re-expresses plain group-separator blank rows as discardable space (a white tabularray hline band on LaTeX, a `row-gutter` entry on Typst), so a page never ends on a stray blank line above the repeated closing rule when the native page break lands at a group boundary, matching how Word renders the RTF/DOCX output; mid-page the gap keeps the blank row's exact height, and styled or ruled tables (rowrules, side frames, striped separators) keep the real blank row.
+
+* `preset(decimal_metrics = "afm")` now measures a `font_family` with no bundled metric table (e.g. a system-installed face such as Courier 10 Pitch) through a temporary graphics device, so decimal alignment and width measurement stay exact whenever the host can resolve the font; the Times-fallback fidelity warning now fires only when that device probe also fails, and the probe can be disabled with `options(tabular.device_metrics = FALSE)`.
+
 * `check_typst()` is a new diagnostic that audits the Typst PDF toolchain: which typst binary is discoverable (standalone `typst`, or the copy bundled inside Quarto), whether its version meets the 0.11 floor, and which families of the configured font chain the compiler can see; the chain is a fallback chain, so the check reports ready as soon as any family resolves and names the face PDFs render in. `emit()` warns after a Typst compile only when a family the user explicitly named cannot be found — missing members of the built-in cross-OS fallback chains substitute silently, matching the other backends.
 
 * `emit()` gained a Typst backend: `emit(spec, "out.typ")` writes a standalone Typst document (native `#table` with repeating `table.header`/`table.footer`, page chrome via `#set page()` counters, native per-cell borders), and `emit(spec, "out.pdf", format = "typst")` compiles it through the standalone typst binary or Quarto's bundled copy, so PDF output no longer requires any TeX installation. The table centres on the page, the running header and footer anchor to the body edges (the header grows upward into the top margin, the footer downward, tracking the configured margins), and `paginate()`'s keep-with-next mask is enforced through unbreakable rowspans in a hidden zero-width column.
@@ -27,6 +31,10 @@
 * `paginate()` gained `repeat_cols`, replacing the `usage = "id"` role: the horizontal-panel stub defaults to the visible `group_rows()` keys, and an explicit `repeat_cols` vector replaces that default.
 
 ## Minor improvements and bug fixes
+
+* DESCRIPTION's SystemRequirements no longer contains the bare word "LaTeX", which pak's system-requirements scraper matched and answered by force-installing the `texlive` OS package (a sudo failure on locked-down hosts such as Domino); the TeX distribution remains optional for PDF output.
+
+* Fidelity warnings now render their feature string as inline code instead of a quoted value, so a feature that itself contains quotes (`decimal_metrics = "afm"`) no longer prints with escaped quotes.
 
 * `check_latex()` now probes package availability through `kpsewhich` (the resolver xelatex itself uses) instead of the tlmgr package database, fixing all-missing false negatives on apt-installed TeX Live and frozen TinyTeX images, no longer requires the tinytex R package, and reports a new `bundled` column.
 

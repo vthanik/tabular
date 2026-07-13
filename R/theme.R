@@ -526,7 +526,7 @@ resolve_stripe <- function(stripe = NULL, call = rlang::caller_env()) {
   }
   assign(key, TRUE, envir = .tabular_fidelity_seen)
   msg <- c(
-    "{.field {backend}} cannot natively honour {.val {feature}}; emulating.",
+    "{.field {backend}} cannot natively honour {.code {feature}}; emulating.",
     if (!is.null(detail)) c("i" = detail)
   )
   cli::cli_warn(msg, class = "tabular_warning_fidelity")
