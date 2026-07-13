@@ -87,18 +87,18 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> ── Font resolution for `font_family = mono` 
 #> backend: html
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
-#> x TeX Gyre Cursor (not on this machine)
-#> x Latin Modern Mono (not on this machine)
+#> v TeX Gyre Cursor
+#> v Latin Modern Mono
 #> backend: rtf
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
 
 # ---- Example 2: Diagnose a Courier New request ----
@@ -119,18 +119,18 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> ── Font resolution for `font_family = Courier New` 
 #> backend: html
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
-#> x TeX Gyre Cursor (not on this machine)
-#> x Latin Modern Mono (not on this machine)
+#> v TeX Gyre Cursor
+#> v Latin Modern Mono
 #> backend: rtf
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
 
 # ---- Example 3: Explicit cross-platform stack ----
@@ -189,8 +189,8 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
 #> v Liberation Serif
-#> x TeX Gyre Termes (not on this machine)
-#> x Latin Modern Roman (not on this machine)
+#> v TeX Gyre Termes
+#> v Latin Modern Roman
 #> backend: rtf
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
@@ -206,8 +206,8 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
 #> v Liberation Sans
-#> x TeX Gyre Heros (not on this machine)
-#> x Latin Modern Sans (not on this machine)
+#> v TeX Gyre Heros
+#> v Latin Modern Sans
 #> backend: rtf
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)

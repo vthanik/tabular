@@ -2,8 +2,8 @@
 name: tabular
 description: >
   Render clinical submission tables, listings, and figures to RTF, HTML,
-  DOCX, PDF/LaTeX, and Markdown from R. Use when writing R code that uses
-  the tabular package.
+  DOCX, PDF (LaTeX or Typst engine), LaTeX, Typst, and Markdown from R.
+  Use when writing R code that uses the tabular package.
 license: MIT
 compatibility: Requires R >=4.3.
 ---
@@ -11,8 +11,10 @@ compatibility: Requires R >=4.3.
 # tabular
 
 Render tables, listings, and figures for clinical submissions, natively to
-RTF, HTML, DOCX, PDF/LaTeX, and Markdown from a single immutable spec, with no
-Java, SAS, or Office dependency.
+RTF, HTML, DOCX, PDF, LaTeX, Typst, and Markdown from a single immutable
+spec, with no Java, SAS, or Office dependency. PDF compiles through LaTeX
+when a TeX is installed, or through the typst engine (bundled with
+Quarto ≥ 1.4) on TeX-less machines.
 
 ## Installation
 
@@ -28,8 +30,9 @@ tabular is **display-only**: it never aggregates, filters, weights, or computes
 statistics. You bring a **pre-summarised, wide data frame** (one input row = one
 display row) and pipe a `tabular()` object through verbs; each verb returns a
 new immutable spec. Nothing renders until `emit()`, which picks the backend from
-the file extension (`.rtf` `.html` `.docx` `.tex` `.pdf`) or an explicit
-`format=`.
+the file extension (`.rtf` `.html` `.docx` `.tex` `.typ` `.pdf` `.md`) or an
+explicit `format=`. A `.pdf` target probes LaTeX first and falls back to the
+typst engine; force one with `format = "latex"` or `format = "typst"`.
 
 ```r
 library(tabular)
@@ -118,17 +121,18 @@ Select precise table regions for `style(.at = ...)`.
 - `emit`: Render the spec to a file (backend chosen by extension or `format=`)
 - `as_grid`: Resolve a spec to its finalized `tabular_grid` (the pre-backend IR)
 
-### Font utilities
+### Toolchain and font diagnostics
 
 - `check_fonts`: Verify the fonts a spec needs are available for decimal alignment
-- `check_latex`: Verify the LaTeX toolchain for `.pdf` / `.tex` output
+- `check_latex`: Verify the LaTeX toolchain for `.pdf` (LaTeX engine) / `.tex` output
+- `check_typst`: Verify the Typst toolchain for `.pdf` (typst engine) / `.typ` output — binary, version floor, and the font chain PDFs render in (no TeX needed)
 
 ### Predicates
 
 Class checks for the spec types.
 
 - `is_tabular_spec`, `is_figure_spec`, `is_col_spec`, `is_header_node`
-- `is_sort_spec`, `is_subgroup_spec`, `is_pagination_spec`
+- `is_row_group_spec`, `is_sort_spec`, `is_subgroup_spec`, `is_pagination_spec`
 - `is_preset_spec`, `is_style_spec`, `is_style_layer`, `is_style_node`, `is_style_template`
 - `is_brdr`, `is_inline_ast`, `is_tabular_grid`, `is_tabular_location`
 

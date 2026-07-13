@@ -132,10 +132,11 @@ Terminal verbs.
 writes a file;
 [`as_grid()`](https://vthanik.github.io/tabular/dev/reference/as_grid.md)
 resolves the spec without I/O;
-[`check_fonts()`](https://vthanik.github.io/tabular/dev/reference/check_fonts.md)
+[`check_fonts()`](https://vthanik.github.io/tabular/dev/reference/check_fonts.md),
+[`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md),
 and
-[`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
-audit font and LaTeX-package availability; the print and `as.tags()`
+[`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md)
+audit font and PDF-toolchain availability; the print and `as.tags()`
 methods drive the live HTML preview.
 
 - [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) :
@@ -152,6 +153,9 @@ methods drive the live HTML preview.
 
 - [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
   : Check LaTeX-package availability for PDF output
+
+- [`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md)
+  : Check Typst availability for PDF output
 
 - [`print.tabular_spec`](https://vthanik.github.io/tabular/dev/reference/print.tabular_spec.md)
   :

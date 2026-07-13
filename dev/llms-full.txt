@@ -416,8 +416,25 @@ writes a file, dispatching on the extension:
 emit(spec, "table.rtf") # RTF
 emit(spec, "table.html") # HTML
 emit(spec, "table.docx") # Word
-emit(spec, "table.pdf") # PDF (via LaTeX)
+emit(spec, "table.tex") # LaTeX source
+emit(spec, "table.typ") # Typst source
+emit(spec, "table.pdf") # PDF (LaTeX engine, or typst without a TeX)
 emit(spec, "table.md") # Markdown
+```
+
+A `.pdf` target compiles through one of **two engines**. With no
+`format =`,
+[`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+probes the machine LaTeX-first: a usable TeX keeps the LaTeX path;
+otherwise a discoverable typst binary (standalone `typst`, or the copy
+bundled inside Quarto ≥ 1.4) takes over; with neither, the call aborts
+up front naming both remedies. Pick an engine explicitly with
+`format = "latex"` or `format = "typst"`:
+
+``` r
+
+emit(spec, "table.pdf", format = "latex") # force the TeX compile
+emit(spec, "table.pdf", format = "typst") # force typst — no TeX needed
 ```
 
 It returns the written path invisibly, so the emit is chainable into
@@ -458,15 +475,16 @@ grid@metadata$col_names
 One spec renders to every backend, but the page-oriented features
 differ:
 
-| Capability | RTF | HTML | DOCX | PDF/LaTeX | MD |
-|----|:--:|:--:|:--:|:--:|:--:|
-| Vertical pagination | ✓ | n/a¹ | ✓ | ✓ | n/a |
-| Horizontal panels (`panels=`) | ✓ | n/a¹ | ✓ | ✓ | n/a |
-| Per-page running header/footer | ✓ | – | ✓ | ✓ | – |
-| [`subgroup()`](https://vthanik.github.io/tabular/dev/reference/subgroup.md) per-page BigN | ✓ | row² | ✓ | ✓ | row² |
-| Continuation marker | panels only | – | – | ✓ | – |
-| Decimal alignment (NBSP) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| System dependency | none | none | none | LaTeX | none |
+| Capability | RTF | HTML | DOCX | PDF/LaTeX | PDF/Typst | MD |
+|----|:--:|:--:|:--:|:--:|:--:|:--:|
+| Vertical pagination | ✓ | n/a¹ | ✓ | ✓ | ✓ | n/a |
+| Horizontal panels (`panels=`) | ✓ | n/a¹ | ✓ | ✓ | ✓ | n/a |
+| Per-page running header/footer | ✓ | – | ✓ | ✓ | ✓ | – |
+| [`subgroup()`](https://vthanik.github.io/tabular/dev/reference/subgroup.md) per-page BigN | ✓ | row² | ✓ | ✓ | ✓ | row² |
+| Continuation marker | panels only | – | – | ✓ | panels only | – |
+| Keep-together / orphan control | ✓ | n/a¹ | ✓ | ✓ | ✓ | n/a |
+| Decimal alignment (NBSP) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| System dependency | none | none | none | TeX install | typst³ | none |
 
 ¹ HTML/MD are one continuous document; the browser repeats `<thead>` on
 print.
@@ -474,20 +492,40 @@ print.
 ² On HTML/MD the per-page N renders as a row under each subgroup banner
 instead of in the repeating header.
 
+³ The standalone `typst` binary, or the copy bundled inside Quarto ≥ 1.4
+— so machines with RStudio / Posit Workbench typically need nothing. The
+`.tex` and `.typ` *source* backends have no system dependency at all;
+only the compile to PDF does.
+
 ## System requirements
 
-**RTF, HTML, DOCX, Markdown need nothing beyond the R package.** Only
-PDF has a system dependency — a LaTeX engine. The two packages missing
-from common TeX distributions (`tabularray`, `ninecolors`) ship *with*
-`tabular` and are staged next to the generated `.tex` whenever the local
-TeX cannot resolve them, so a locked-down server (Domino, Posit
-Workbench) needs no `tlmgr install`. Check readiness and, on a fresh
-machine, install a TeX once:
+**RTF, HTML, DOCX, LaTeX source, Typst source, Markdown need nothing
+beyond the R package.** Only the compile to PDF has a system dependency,
+and either engine satisfies it:
+
+- **LaTeX engine.** The two packages missing from common TeX
+  distributions (`tabularray`, `ninecolors`) ship *with* `tabular` and
+  are staged next to the generated `.tex` whenever the local TeX cannot
+  resolve them, so a locked-down server (Domino, Posit Workbench) needs
+  no `tlmgr install`.
+- **Typst engine.** No TeX at all:
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  runs the standalone `typst` binary, or Quarto’s bundled copy
+  (`quarto typst`). Fonts are typst’s one quiet failure mode — a missing
+  family substitutes silently — so
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  warns when a family you explicitly named cannot be found, and
+  [`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md)
+  names the face PDFs actually render in.
+
+Check readiness and, on a fresh machine, install an engine once:
 
 ``` r
 
-check_latex() # probes via kpsewhich — what a compile will actually find
+check_latex() # LaTeX engine: probes via kpsewhich — what a compile will find
+check_typst() # Typst engine: binary, version floor, font chain
 tinytex::install_tinytex(bundle = "TinyTeX") # one-time, fresh machines only
+# or install Quarto (https://quarto.org), which bundles the typst engine
 ```
 
 > **OS-managed TeX Live (RHEL/dnf, Debian/apt):** `tlmgr` is locked and
@@ -497,7 +535,10 @@ tinytex::install_tinytex(bundle = "TinyTeX") # one-time, fresh machines only
 > [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
 > still reports a missing package, install a user-space TinyTeX you
 > control: `tinytex::install_tinytex(bundle = "TinyTeX")`, then restart
-> R.
+> R. On images whose TeX Live is frozen on a pre-2023 kernel (too old
+> for `tabularray`),
+> [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+> skips LaTeX automatically and compiles through typst instead.
 
 For decimal alignment in paper backends, metric-compatible fonts matter
 — check with `check_fonts(spec)`.
@@ -511,8 +552,18 @@ For decimal alignment in paper backends, metric-compatible fonts matter
   is needed.
 - **If a PDF build appears to hang,** it is the LaTeX engine stopping at
   an interactive error prompt — fix the underlying LaTeX dependency (run
-  [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md));
-  render RTF/HTML to keep working in the meantime.
+  [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)),
+  or sidestep TeX entirely with
+  `emit(spec, "out.pdf", format = "typst")`; render RTF/HTML to keep
+  working in the meantime.
+- **If a typst-compiled PDF renders in an unexpected font,** run
+  [`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md)
+  — it names the first available family of the chain, i.e. the face
+  typst actually uses. Missing *later* members of the built-in fallback
+  chain are normal cross-OS variance and are not warned about; only a
+  family you explicitly named triggers the
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  warning.
 
 ## Cross-backend qualification (CDISC pilot)
 
@@ -2321,8 +2372,8 @@ has no data.
 
 `tabular` turns one **pre-summarised, wide data frame** into a
 publication-ready table and renders it natively to **RTF, HTML, DOCX,
-PDF/LaTeX and Markdown** — from a single spec, with no Java or Office
-dependency.
+PDF (LaTeX- or typst-compiled), LaTeX, Typst and Markdown** — from a
+single spec, with no Java or Office dependency.
 
 Two things to internalise up front:
 
@@ -2422,7 +2473,7 @@ backend is chosen by the file extension (or an explicit `format =`):
 ``` r
 
 out <- tempfile(fileext = ".rtf")
-emit(spec, out) # RTF here; swap to .docx / .pdf / .html / .md
+emit(spec, out) # RTF here; swap to .docx / .pdf / .html / .tex / .typ / .md
 file.exists(out)
 #> [1] TRUE
 ```
@@ -2537,11 +2588,11 @@ Clinical Submissions*. R package version 0.2.0.9000,
 # tabular
 
 **tabular** turns a pre-summarised data frame into a submission-grade
-clinical table and emits it natively to **RTF, PDF, HTML, LaTeX, and
-DOCX** — no Java, no LibreOffice, no Word automation. One short pipeline
-gives you decimal alignment via real font metrics, multi-level column
-headers, predicate-targeted styling, and group-aware pagination, built
-for CDISC ADaM workflows and FDA / EMA / PMDA submissions.
+clinical table and emits it natively to **RTF, PDF, HTML, LaTeX, Typst,
+and DOCX** — no Java, no LibreOffice, no Word automation. One short
+pipeline gives you decimal alignment via real font metrics, multi-level
+column headers, predicate-targeted styling, and group-aware pagination,
+built for CDISC ADaM workflows and FDA / EMA / PMDA submissions.
 
 It is the only R table package that pairs a **live HTML preview** with a
 **paginated print deliverable**: the same spec you eyeball in a notebook
@@ -2549,9 +2600,10 @@ is the one that paginates into the RTF you ship.
 
 > **Scope.** `tabular` renders the full set of clinical outputs –
 > **tables, listings, and figures** (the “T”, “L”, and “F” of TFL) – to
-> RTF, LaTeX, HTML, PDF, and DOCX from one verb pipeline. A zero-row
-> table renders an empty-data placeholder (“No data available to
-> report”) in the body, with the page chrome and column headers intact.
+> RTF, LaTeX, Typst, HTML, PDF, and DOCX from one verb pipeline. A
+> zero-row table renders an empty-data placeholder (“No data available
+> to report”) in the body, with the page chrome and column headers
+> intact.
 
 ## Installation
 
@@ -2572,40 +2624,50 @@ pak::pak("vthanik/tabular")
 remotes::install_github("vthanik/tabular")
 ```
 
-R dependencies install automatically. The five backends differ in what
-*else* they need:
+R dependencies install automatically. The backends differ in what *else*
+they need:
 
 | Backend | Extra requirement |
 |----|:---|
 | RTF, DOCX, HTML, Markdown | none — pure R, no Java, no `pandoc`, no Office |
-| LaTeX (`.tex` source) | none — `tabular` writes the fragment |
-| PDF | a TeX install (xelatex) — `tabularray` + `ninecolors` ship with `tabular` |
+| LaTeX (`.tex` source), Typst (`.typ` source) | none — `tabular` writes the source |
+| PDF | one of two engines: a TeX install (xelatex), **or** a typst binary — Quarto ≥ 1.4 bundles one, so most machines already qualify |
 
-PDF is the only backend that shells out. Install
-[`tinytex`](https://yihui.org/tinytex/) once per machine and `tabular`
-compiles with `xelatex` thereafter:
+PDF is the only backend that shells out, and it has **two engines**:
+
+- **LaTeX** — `emit(spec, "out.pdf")` compiles via `xelatex` when a
+  usable TeX is found. `tabularray` + `ninecolors` ship with `tabular`,
+  so no `tlmgr_install()` step is needed even on locked-down servers
+  (Domino, Posit Workbench) where `tlmgr install` is impossible.
+- **Typst** — with no usable TeX,
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  falls back to the `typst` compiler (the standalone binary, or the copy
+  bundled inside Quarto, which ships with RStudio / Posit Workbench). No
+  TeX installation at all, and compiles in well under a second.
+
+Pass `format = "latex"` or `format = "typst"` to pick an engine
+explicitly; with neither engine present, install one:
 
 ``` r
 
 install.packages("tinytex")
 tinytex::install_tinytex(bundle = "TinyTeX") # one-time TeX setup
+# or: install Quarto (https://quarto.org) — it bundles the typst engine
 ```
-
-No `tlmgr_install()` step is needed: `tabular` bundles the only two
-LaTeX packages missing from common TeX distributions (`tabularray`,
-`ninecolors`) and stages them next to the generated `.tex` whenever the
-local TeX cannot resolve them — so PDF also works on locked-down servers
-(Domino, Posit Workbench) where `tlmgr install` is impossible.
 
 [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
 reports which LaTeX packages resolve (probed through `kpsewhich`, the
 same resolver `xelatex` uses) and prints the remedy for anything
-genuinely missing; `check_fonts(spec)` does the same for the fonts a
-spec asks for, per backend.
+genuinely missing;
+[`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md)
+does the same for the typst engine (binary, version floor, and the font
+chain PDFs render in); `check_fonts(spec)` audits the fonts a spec asks
+for, per backend.
 
 ``` r
 
-tabular::check_latex()   # PDF readiness, with the install remedy
+tabular::check_latex()   # LaTeX-PDF readiness, with the install remedy
+tabular::check_typst()   # Typst-PDF readiness (no TeX needed)
 ```
 
 > **TeX Live on a managed OS.** If TeX Live came from the system package
@@ -2670,7 +2732,8 @@ path <- emit(tab, tempfile(fileext = ".rtf")) # submission deliverable
 
 The same `tab` emits to every backend from the one spec. The table below
 is tabular’s own HTML render — the identical spec also produces RTF, a
-paginated PDF, a `tabularray` LaTeX fragment, and native OOXML `.docx`:
+paginated PDF (LaTeX- or typst-compiled), a `tabularray` LaTeX fragment,
+a native Typst document, and native OOXML `.docx`:
 
 ![Demographic and baseline characteristics table rendered by tabular:
 decimal-aligned arm columns, a centred multi-line caption, and a single
@@ -2678,11 +2741,13 @@ footnote.](reference/figures/README-hero.png)
 
 ## Why tabular?
 
-- **Five native backends, one spec.**
+- **Every native backend, one spec.**
   [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
-  dispatches on the file extension to RTF 1.9.1, PDF (via `tinytex`),
-  self-contained Bootstrap HTML, `tabularray` LaTeX, and native OOXML
-  DOCX. No JVM, no Office round-trip.
+  dispatches on the file extension to RTF 1.9.1, self-contained
+  Bootstrap HTML, `tabularray` LaTeX, native Typst, native OOXML DOCX,
+  and PDF — compiled through LaTeX when a TeX is installed, or through
+  the typst engine (bundled with Quarto) on TeX-less machines. No JVM,
+  no Office round-trip.
 - **Decimal alignment that survives the page.** Numbers align on the
   decimal using the backend’s real font metrics, not guessed padding —
   so columns stay aligned in print, not just on screen.
@@ -2793,6 +2858,63 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### New features
 
+- [`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md)
+  is a new diagnostic that audits the Typst PDF toolchain: which typst
+  binary is discoverable (standalone `typst`, or the copy bundled inside
+  Quarto), whether its version meets the 0.11 floor, and which families
+  of the configured font chain the compiler can see; the chain is a
+  fallback chain, so the check reports ready as soon as any family
+  resolves and names the face PDFs render in.
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  warns after a Typst compile only when a family the user explicitly
+  named cannot be found — missing members of the built-in cross-OS
+  fallback chains substitute silently, matching the other backends.
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  gained a Typst backend: `emit(spec, "out.typ")` writes a standalone
+  Typst document (native `#table` with repeating
+  `table.header`/`table.footer`, page chrome via `#set page()` counters,
+  native per-cell borders), and
+  `emit(spec, "out.pdf", format = "typst")` compiles it through the
+  standalone typst binary or Quarto’s bundled copy, so PDF output no
+  longer requires any TeX installation. The table centres on the page,
+  the running header and footer anchor to the body edges (the header
+  grows upward into the top margin, the footer downward, tracking the
+  configured margins), and
+  [`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md)’s
+  keep-with-next mask is enforced through unbreakable rowspans in a
+  hidden zero-width column.
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) on
+  a bare `.pdf` target now selects its compile engine by probing the
+  machine, LaTeX first: a usable TeX (resolved the way the compile
+  resolves it, and not frozen on a pre-2023 TeX Live kernel) keeps the
+  historical LaTeX path byte-stable, a discoverable typst binary takes
+  over otherwise, and with neither engine the call aborts up front
+  naming both remedies; `format = "latex"` / `format = "typst"` pick the
+  engine explicitly.
+
+- [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
+  now reports the TeX Live release year of the active `xelatex` and
+  fails the check when it predates 2023, the first release whose LaTeX
+  kernel (2022-11-01) can load the bundled tabularray; the report and
+  the
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  PDF compile error both explain the update / user-space TinyTeX remedy
+  for images frozen on an old TeX Live.
+
+- [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
+  and the PDF pre-compile staging now resolve TeX the same way the
+  compile does, preferring a TinyTeX at the standard root (installed by
+  either
+  [`tinytex::install_tinytex()`](https://rdrr.io/pkg/tinytex/man/install_tinytex.html)
+  or `quarto install tinytex`) over the `PATH`, so the diagnostic can no
+  longer describe a different TeX than the one
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  actually runs; remediation hints name the `quarto install tinytex`
+  route, which downloads from GitHub and therefore works behind proxies
+  that block CTAN.
+
 - [`cols()`](https://vthanik.github.io/tabular/dev/reference/cols.md)
   accepts a bare string as label shorthand (`soc = "SOC / PT"` is
   `soc = col_spec(label = "SOC / PT")`, including glue interpolation and
@@ -2858,6 +2980,31 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   aligns with body text exactly as in RTF (section headers previously
   sat one cell margin further left, making nested indents read one
   character too wide in Word).
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  Typst now folds 2+ space runs in body cells under
+  `preset(whitespace = "collapse")`; the no-wrap hardening previously
+  rewrote the run to non-breaking spaces first, so the knob was a silent
+  no-op on Typst while every other backend honoured it.
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  Typst now stamps the header surface background and padding on the
+  column-label cells, so `preset(colors = list(header = ...))`,
+  `preset(padding = list(header = ...))`, and the equivalent
+  [`style()`](https://vthanik.github.io/tabular/dev/reference/style.md)
+  at
+  [`cells_headers()`](https://vthanik.github.io/tabular/dev/reference/cells.md)
+  render as they do on RTF, HTML, LaTeX, and DOCX.
+
+- [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
+  LaTeX/PDF and Typst now places the running header band so its bottom
+  edge sits exactly on the top-margin line, growing upward into the
+  margin, and keeps the body at exactly the configured top margin —
+  matching the RTF and DOCX placement; the LaTeX head lengths moved onto
+  the `geometry` option list (a post-load `\setlength{\headsep}` shifted
+  the body off the margin instead of moving the header) and every band
+  row now carries a `\strut` so the band’s bottom edge no longer depends
+  on descenders in its content.
 
 - [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) to
   HTML and Markdown no longer drops a
@@ -5664,18 +5811,18 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> ── Font resolution for `font_family = mono` 
 #> backend: html
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
-#> x TeX Gyre Cursor (not on this machine)
-#> x Latin Modern Mono (not on this machine)
+#> v TeX Gyre Cursor
+#> v Latin Modern Mono
 #> backend: rtf
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
 
 # ---- Example 2: Diagnose a Courier New request ----
@@ -5696,18 +5843,18 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> ── Font resolution for `font_family = Courier New` 
 #> backend: html
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
-#> x TeX Gyre Cursor (not on this machine)
-#> x Latin Modern Mono (not on this machine)
+#> v TeX Gyre Cursor
+#> v Latin Modern Mono
 #> backend: rtf
 #> x Courier New (not on this machine)
-#> x Courier (not on this machine)
+#> v Courier
 #> v Liberation Mono
 
 # ---- Example 3: Explicit cross-platform stack ----
@@ -5766,8 +5913,8 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
 #> v Liberation Serif
-#> x TeX Gyre Termes (not on this machine)
-#> x Latin Modern Roman (not on this machine)
+#> v TeX Gyre Termes
+#> v Latin Modern Roman
 #> backend: rtf
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
@@ -5783,8 +5930,8 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
 #> v Liberation Sans
-#> x TeX Gyre Heros (not on this machine)
-#> x Latin Modern Sans (not on this machine)
+#> v TeX Gyre Heros
+#> v Latin Modern Sans
 #> backend: rtf
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
@@ -5819,9 +5966,11 @@ check_latex(quiet = FALSE)
 *Invisibly returns a data frame* with one row per required package and
 columns `package` (`<character>`), `installed` (`<logical>`, `NA` when
 undeterminable), and `bundled` (`<logical>`, `TRUE` for packages tabular
-ships a fallback copy of). Side effect: prints a cli report with a
-per-package status marker and, when anything is missing, the exact
-`tlmgr_install()` remedy.
+ships a fallback copy of), plus a `texlive_year` attribute
+(`<integer(1) | NA_integer_>`, the TeX Live release year of the active
+`xelatex`). Side effect: prints a cli report with a per-package status
+marker and, when anything is missing or the TeX Live release is older
+than 2023, the exact remedy.
 
 ## Details
 
@@ -5831,7 +5980,32 @@ branches (running headers / footers pull `fancyhdr` + `lastpage`;
 `xelatex` pulls `fontspec`; `pdflatex` pulls the classic font bundles).
 The check is informational, it does not install anything.
 
-**How availability is probed.** Each package is resolved through
+**Minimum TeX Live version.** Package availability alone is not
+sufficient: the bundled `tabularray` requires the 2022-11-01 LaTeX
+kernel, shipped from **TeX Live 2023** onward. The report therefore
+opens with the TeX Live year of the active `xelatex` and fails the check
+when the kernel predates it — the classic symptom is an OS-managed or
+containerised image (Domino, Posit Workbench) frozen on TeX Live 2018,
+where every package resolves but the compile dies at
+`\\ProvidesExplPackage`. The remedy is a newer TeX, not a package
+install: update the image, or install a user-space TinyTeX with
+[`tinytex::install_tinytex()`](https://rdrr.io/pkg/tinytex/man/install_tinytex.html)`(bundle = "TinyTeX")`
+or `quarto install tinytex` — the Quarto route downloads from GitHub, so
+it also works behind corporate proxies that block CTAN mirrors. Both
+land in the standard TinyTeX location, which the compile (and this
+check) prefer over the `PATH` automatically. MiKTeX is rolling-release
+(always current), so its version reports as undetermined (`?`) rather
+than failing.
+
+**How availability is probed.** The check first resolves TeX the way the
+compile does:
+[`tinytex::latexmk()`](https://rdrr.io/pkg/tinytex/man/latexmk.html)
+prefers a TinyTeX at the standard root (`~/.TinyTeX` on Linux,
+`~/Library/TinyTeX` on macOS, `%APPDATA%/TinyTeX` on Windows — the
+location used by both
+[`tinytex::install_tinytex()`](https://rdrr.io/pkg/tinytex/man/install_tinytex.html)
+and `quarto install tinytex`) over whatever is on the `PATH`, and the
+report probes that same tree. Each package is then resolved through
 `kpsewhich`, the same file resolver `xelatex` uses at compile time, so
 the report reflects what a compile will actually find. This works on
 every TeX layout — TinyTeX, a full TeX Live, or an OS-managed install
@@ -5904,24 +6078,24 @@ retry the install.
 check_latex()
 #> 
 #> ── LaTeX packages for PDF output 
+#> ? TeX Live version (xelatex missing, or a non-TeX-Live distribution
+#> such as MiKTeX)
 #> v tabularray (not found, bundled copy used)
 #> v ninecolors (not found, bundled copy used)
-#> ? xcolor
-#> ? graphics
-#> ? siunitx
-#> ? geometry
-#> ? hyperref
-#> ? iftex
-#> ? base
-#> ? fancyhdr
-#> ? lastpage
-#> ? fontspec
-#> ? tex-gyre
-#> ? psnfss
-#> ! Missing 12 LaTeX packages: "xcolor", "graphics", "siunitx", "geometry", "hyperref", "iftex", "base", "fancyhdr", "lastpage", "fontspec", "tex-gyre", and "psnfss".
-#> Install with `tinytex::tlmgr_install(c('xcolor', 'graphics',
-#> 'siunitx', 'geometry', 'hyperref', 'iftex', 'base', 'fancyhdr',
-#> 'lastpage', 'fontspec', 'tex-gyre', 'psnfss'))`.
+#> v xcolor
+#> v graphics
+#> x siunitx
+#> v geometry
+#> v hyperref
+#> v iftex
+#> v base
+#> v fancyhdr
+#> x lastpage
+#> v fontspec
+#> v tex-gyre
+#> v psnfss
+#> ! Missing 2 LaTeX packages: "siunitx" and "lastpage".
+#> Install with `tinytex::tlmgr_install(c('siunitx', 'lastpage'))`.
 #> If the install stalls (commonly on Windows, where the default CTAN
 #> mirror redirects on every call), pin a concrete mirror once with
 #> `tinytex::tlmgr_repo("auto")` then retry.
@@ -5933,6 +6107,100 @@ check_latex()
 #> Where no TeX install is possible at all: download each missing `.sty`
 #> from CTAN into ~/texmf/tex/latex/<package>/ and set `TEXMFHOME` to
 #> ~/texmf; xelatex resolves it from there without tlmgr.
+```
+# Check Typst availability for PDF output
+
+Reports whether a typst compiler is available (the standalone `typst`
+binary, or the copy bundled inside Quarto), whether its version meets
+tabular's floor, and which families of the default font chain the
+compiler can actually see. Run this before
+`emit(spec, "out.pdf", format = "typst")` on a fresh machine, and
+whenever a Typst-compiled PDF renders in an unexpected face.
+
+## Usage
+
+``` r
+check_typst(quiet = FALSE)
+```
+
+## Arguments
+
+- quiet:
+
+  *Suppress the printed cli report.* `<logical(1)>: default FALSE`. When
+  `TRUE`, runs the checks and returns the result invisibly without
+  printing. Use in scripts that branch on the return value.
+
+## Value
+
+*Invisibly returns a data frame* with one row per family in the resolved
+default font chain and columns `font` (`<character>`) and `available`
+(`<logical>`, `NA` when the font list could not be read), plus
+attributes `typst_version` (`<numeric_version | NA>`) and
+`typst_command` (`<character(1) | NA_character_>`, the discovered
+compiler invocation). Side effect: prints a cli report with a status
+marker per check and, when anything is missing, the remedy.
+
+## Details
+
+**Binary discovery.** A standalone `typst` on the `PATH` wins; otherwise
+the check falls back to `quarto typst` (Quarto \>= 1.4 bundles the typst
+compiler — so most machines with RStudio / Posit Workbench already have
+one). The Typst PDF path needs no TeX installation and no package
+downloads at all.
+
+**Fonts are the silent failure mode.** Where a missing LaTeX package
+stops a compile with an error, typst substitutes a missing font family
+silently and only notes it on the compiler's stderr. The check therefore
+lists every family in the resolved default chain with its availability.
+The chain is a *fallback* chain: typst renders in the first family it
+can see, so a missing later member is normal cross-OS variance, not a
+defect — the check reports ready as soon as any family resolves, and
+names the face PDFs will render in.
+[`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+additionally warns after a Typst compile when a family the user
+explicitly named cannot be found (missing members of the built-in
+fallback chains stay silent, matching the other backends' silent
+font-substitution behaviour).
+
+**Status markers:**
+
+- `v` — found (binary; version at or above the floor; font family
+  visible to typst).
+
+- `x` — missing (no binary; version below the floor; font family not
+  visible).
+
+- `?` — could not be determined (e.g. the font list could not be read);
+  treated as missing for remediation.
+
+## See also
+
+**Companion diagnostics:**
+[`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md),
+[`check_fonts()`](https://vthanik.github.io/tabular/dev/reference/check_fonts.md).
+
+**Consumes the result:**
+[`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md).
+
+## Examples
+
+``` r
+# ---- Example 1: Audit the Typst toolchain before emitting ----
+#
+# Run check_typst() on a fresh machine to confirm a typst compiler
+# is present and to see which families of the default font chain it
+# resolves. Where no binary is found every row reports `?` and the
+# remedy lines print; the call never errors.
+check_typst()
+#> 
+#> ── Typst toolchain for PDF output 
+#> v quarto typst 0.14.2
+#> x font Courier New
+#> x font Courier
+#> v font Liberation Mono
+#> v font DejaVu Sans Mono
+#> ✔ Typst is ready; PDFs render in "Liberation Mono" (the first available family of the chain).
 ```
 # Per-column display specification
 
@@ -6894,6 +7162,11 @@ emit(
   files that should contain RTF, for round-trip testing, or when the
   user has a custom backend registered under a non-standard name.
 
+  **Interaction:** On a `.pdf` target, `format` names the compile
+  ENGINE: `"latex"` compiles via TeX and `"typst"` via the typst binary
+  (see the *PDF engines* section). On every other extension the generic
+  override semantics apply unchanged.
+
 - data_file:
 
   *QC artefact writer.*
@@ -6956,19 +7229,51 @@ extension via the table below; the `format` argument always wins when
 both are supplied. Each backend lives in its own `R/backend_<fmt>.R`
 file and self-registers at package load time.
 
-|                    |         |                            |
-|--------------------|---------|----------------------------|
-| extension(s)       | format  | backend                    |
-| `.md`, `.markdown` | `md`    | GFM pipe table             |
-| `.html`, `.htm`    | `html`  | self-contained Bootstrap 5 |
-| `.tex`, `.latex`   | `latex` | tabularray                 |
-| `.pdf`             | `pdf`   | tinytex compile of LaTeX   |
-| `.rtf`             | `rtf`   | RTF 1.9.1, native          |
-| `.docx`            | `docx`  | OOXML native, no JVM       |
+|                    |          |                                  |
+|--------------------|----------|----------------------------------|
+| extension(s)       | format   | backend                          |
+| `.md`, `.markdown` | `md`     | GFM pipe table                   |
+| `.html`, `.htm`    | `html`   | self-contained Bootstrap 5       |
+| `.tex`, `.latex`   | `latex`  | tabularray                       |
+| `.typ`             | `typst`  | Typst native `#table`            |
+| `.pdf`             | (probed) | LaTeX (tinytex) or Typst compile |
+| `.rtf`             | `rtf`    | RTF 1.9.1, native                |
+| `.docx`            | `docx`   | OOXML native, no JVM             |
 
 Unknown extensions, missing extensions, and formats with no registered
 backend all raise `tabular_error_input`. The error message lists the
 currently registered formats so the failure is actionable.
+
+**PDF engines.** A `.pdf` target compiles through one of two engines:
+**LaTeX** (via
+[`tinytex::latexmk()`](https://rdrr.io/pkg/tinytex/man/latexmk.html);
+needs a TeX installation) or **Typst** (via the standalone `typst`
+binary or the copy bundled inside Quarto \>= 1.4; needs no TeX at all).
+Pass `format = "latex"` or `format = "typst"` to pick one explicitly.
+With no `format`, `emit()` probes the machine LaTeX-first: a usable TeX
+(found the way the compile finds it, preferring a standard-root TinyTeX,
+and not frozen on a pre-2023 TeX Live kernel) keeps the historical LaTeX
+path; otherwise a discoverable typst binary takes over; with neither,
+`emit()` aborts up front naming both remedies. Audit the toolchains with
+[`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
+and
+[`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md).
+
+**Typst capability notes.** The Typst output matches the LaTeX layout
+contract, including the engine's keep-with-next mask
+([`paginate()`](https://vthanik.github.io/tabular/dev/reference/paginate.md)'s
+`keep_together` / orphan control): Typst has no per-row no-break
+primitive (LaTeX `\\\\*`, RTF `\\keepn`, DOCX `keepNext`), so the
+backend enforces the mask through a hidden zero-width column whose
+unbreakable rowspans pin each keep run to one page. Two documented
+deviations remain: (1) the `paginate(continuation =)` marker appears on
+continuation panels only (the repeating page header is identical on
+every page), matching the RTF tier rather than LaTeX's every-page
+marker; (2) the spanner underline is trimmed by the cell inset at both
+ends (the HTML tier), where LaTeX keeps the table's outer edges flush.
+Conversely, Typst renders per-cell body borders that the LaTeX backend
+cannot (see
+[`style()`](https://vthanik.github.io/tabular/dev/reference/style.md)).
 
 **`data_file` is sponsor-neutral.** Pass an explicit path
 (`"out/qc.csv"`) for a fixed location, or a lambda
@@ -7102,7 +7407,7 @@ emit(
   manifest  = TRUE
 )
 
-# ---- Example 3: Same spec, four backends — one-loop fan-out ----
+# ---- Example 3: Same spec, every text backend — one-loop fan-out ----
 #
 # `emit()` dispatches by file extension, so the same spec can
 # render to every backend in one loop. Useful for visual diffs
@@ -7122,11 +7427,11 @@ eff_spec <- tabular(cdisc_eff_resp, titles = "Best Overall Response") |>
 
 out_dir <- tempfile()
 dir.create(out_dir)
-for (ext in c(".html", ".rtf", ".tex", ".docx", ".md")) {
+for (ext in c(".html", ".rtf", ".tex", ".typ", ".docx", ".md")) {
   emit(eff_spec, file.path(out_dir, paste0("eff", ext)))
 }
 list.files(out_dir)
-#> [1] "eff.docx" "eff.html" "eff.md"   "eff.rtf"  "eff.tex" 
+#> [1] "eff.docx" "eff.html" "eff.md"   "eff.rtf"  "eff.tex"  "eff.typ" 
 
 # ---- Example 4: QC artefact via data_file alongside the render ----
 #
@@ -8522,10 +8827,11 @@ Terminal verbs.
 writes a file;
 [`as_grid()`](https://vthanik.github.io/tabular/dev/reference/as_grid.md)
 resolves the spec without I/O;
-[`check_fonts()`](https://vthanik.github.io/tabular/dev/reference/check_fonts.md)
+[`check_fonts()`](https://vthanik.github.io/tabular/dev/reference/check_fonts.md),
+[`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md),
 and
-[`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
-audit font and LaTeX-package availability; the print and `as.tags()`
+[`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md)
+audit font and PDF-toolchain availability; the print and `as.tags()`
 methods drive the live HTML preview.
 
 - [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md) :
@@ -8542,6 +8848,9 @@ methods drive the live HTML preview.
 
 - [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
   : Check LaTeX-package availability for PDF output
+
+- [`check_typst()`](https://vthanik.github.io/tabular/dev/reference/check_typst.md)
+  : Check Typst availability for PDF output
 
 - [`print.tabular_spec`](https://vthanik.github.io/tabular/dev/reference/print.tabular_spec.md)
   :
@@ -11859,16 +12168,16 @@ variable
 # tabular: Render Tables, Listings, and Figures for Clinical Submissions
 
 Render clinical submission tables, listings, and figures to 'RTF',
-'LaTeX', 'HTML', 'PDF', and 'DOCX' from pre-summarised data frames, with
-no external 'Java' or 'SAS' dependency. Features include decimal
-alignment via font metrics, multi-level column headers with passthrough
-leaves, predicate-targeted cell styling, footnotes, group-aware
-pagination, and figures that wrap a plot or image in the same page
-chrome as a table. Built for Clinical Data Interchange Standards
-Consortium (CDISC) Analysis Data Model (ADaM) workflows and regulatory
-submissions to agencies such as the Food and Drug Administration (FDA),
-European Medicines Agency (EMA), and Pharmaceuticals and Medical Devices
-Agency (PMDA).
+'LaTeX', 'Typst', 'HTML', 'PDF', and 'DOCX' from pre-summarised data
+frames, with no external 'Java' or 'SAS' dependency. Features include
+decimal alignment via font metrics, multi-level column headers with
+passthrough leaves, predicate-targeted cell styling, footnotes,
+group-aware pagination, and figures that wrap a plot or image in the
+same page chrome as a table. Built for Clinical Data Interchange
+Standards Consortium (CDISC) Analysis Data Model (ADaM) workflows and
+regulatory submissions to agencies such as the Food and Drug
+Administration (FDA), European Medicines Agency (EMA), and
+Pharmaceuticals and Medical Devices Agency (PMDA).
 
 ## See also
 
@@ -12155,8 +12464,8 @@ SOC / PT
 name: tabular
 description: >
   Render clinical submission tables, listings, and figures to RTF, HTML,
-  DOCX, PDF/LaTeX, and Markdown from R. Use when writing R code that uses
-  the tabular package.
+  DOCX, PDF (LaTeX or Typst engine), LaTeX, Typst, and Markdown from R.
+  Use when writing R code that uses the tabular package.
 license: MIT
 compatibility: Requires R >=4.3.
 ---
@@ -12164,8 +12473,10 @@ compatibility: Requires R >=4.3.
 # tabular
 
 Render tables, listings, and figures for clinical submissions, natively to
-RTF, HTML, DOCX, PDF/LaTeX, and Markdown from a single immutable spec, with no
-Java, SAS, or Office dependency.
+RTF, HTML, DOCX, PDF, LaTeX, Typst, and Markdown from a single immutable
+spec, with no Java, SAS, or Office dependency. PDF compiles through LaTeX
+when a TeX is installed, or through the typst engine (bundled with
+Quarto ≥ 1.4) on TeX-less machines.
 
 ## Installation
 
@@ -12181,8 +12492,9 @@ tabular is **display-only**: it never aggregates, filters, weights, or computes
 statistics. You bring a **pre-summarised, wide data frame** (one input row = one
 display row) and pipe a `tabular()` object through verbs; each verb returns a
 new immutable spec. Nothing renders until `emit()`, which picks the backend from
-the file extension (`.rtf` `.html` `.docx` `.tex` `.pdf`) or an explicit
-`format=`.
+the file extension (`.rtf` `.html` `.docx` `.tex` `.typ` `.pdf` `.md`) or an
+explicit `format=`. A `.pdf` target probes LaTeX first and falls back to the
+typst engine; force one with `format = "latex"` or `format = "typst"`.
 
 ```r
 library(tabular)
@@ -12271,17 +12583,18 @@ Select precise table regions for `style(.at = ...)`.
 - `emit`: Render the spec to a file (backend chosen by extension or `format=`)
 - `as_grid`: Resolve a spec to its finalized `tabular_grid` (the pre-backend IR)
 
-### Font utilities
+### Toolchain and font diagnostics
 
 - `check_fonts`: Verify the fonts a spec needs are available for decimal alignment
-- `check_latex`: Verify the LaTeX toolchain for `.pdf` / `.tex` output
+- `check_latex`: Verify the LaTeX toolchain for `.pdf` (LaTeX engine) / `.tex` output
+- `check_typst`: Verify the Typst toolchain for `.pdf` (typst engine) / `.typ` output — binary, version floor, and the font chain PDFs render in (no TeX needed)
 
 ### Predicates
 
 Class checks for the spec types.
 
 - `is_tabular_spec`, `is_figure_spec`, `is_col_spec`, `is_header_node`
-- `is_sort_spec`, `is_subgroup_spec`, `is_pagination_spec`
+- `is_row_group_spec`, `is_sort_spec`, `is_subgroup_spec`, `is_pagination_spec`
 - `is_preset_spec`, `is_style_spec`, `is_style_layer`, `is_style_node`, `is_style_template`
 - `is_brdr`, `is_inline_ast`, `is_tabular_grid`, `is_tabular_location`
 

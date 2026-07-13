@@ -79,9 +79,11 @@ that branch on the return value.</p></dd>
 required package and columns <code>package</code> (<code>&lt;character&gt;</code>),
 <code>installed</code> (<code>&lt;logical&gt;</code>, <code>NA</code> when undeterminable), and
 <code>bundled</code> (<code>&lt;logical&gt;</code>, <code>TRUE</code> for packages tabular ships a
-fallback copy of). Side effect: prints a cli report with a
-per-package status marker and, when anything is missing, the
-exact <code>tlmgr_install()</code> remedy.</p>
+fallback copy of), plus a <code>texlive_year</code> attribute
+(<code>&lt;integer(1) | NA_integer_&gt;</code>, the TeX Live release year of the
+active <code>xelatex</code>). Side effect: prints a cli report with a
+per-package status marker and, when anything is missing or the
+TeX Live release is older than 2023, the exact remedy.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -91,7 +93,29 @@ conditional branches (running headers / footers pull <code>fancyhdr</code> +
 <code>lastpage</code>; <code>xelatex</code> pulls <code>fontspec</code>; <code>pdflatex</code> pulls the
 classic font bundles). The check is informational, it does not
 install anything.</p>
-<p><strong>How availability is probed.</strong> Each package is resolved through
+<p><strong>Minimum TeX Live version.</strong> Package availability alone is not
+sufficient: the bundled <code>tabularray</code> requires the 2022-11-01 LaTeX
+kernel, shipped from <strong>TeX Live 2023</strong> onward. The report therefore
+opens with the TeX Live year of the active <code>xelatex</code> and fails the
+check when the kernel predates it — the classic symptom is an
+OS-managed or containerised image (Domino, Posit Workbench) frozen
+on TeX Live 2018, where every package resolves but the compile dies
+at <code>\\ProvidesExplPackage</code>. The remedy is a newer TeX, not a package
+install: update the image, or install a user-space TinyTeX with
+<code><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">tinytex::install_tinytex()</a></code><code>(bundle = "TinyTeX")</code> or
+<code>quarto install tinytex</code> — the Quarto route downloads from GitHub,
+so it also works behind corporate proxies that block CTAN mirrors.
+Both land in the standard TinyTeX location, which the compile (and
+this check) prefer over the <code>PATH</code> automatically. MiKTeX is
+rolling-release (always current), so its version reports as
+undetermined (<code>?</code>) rather than failing.</p>
+<p><strong>How availability is probed.</strong> The check first resolves TeX the
+way the compile does: <code><a href="https://rdrr.io/pkg/tinytex/man/latexmk.html" class="external-link">tinytex::latexmk()</a></code> prefers a TinyTeX at
+the standard root (<code>~/.TinyTeX</code> on Linux, <code>~/Library/TinyTeX</code> on
+macOS, <code>%APPDATA%/TinyTeX</code> on Windows — the location used by both
+<code><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">tinytex::install_tinytex()</a></code> and <code>quarto install tinytex</code>) over
+whatever is on the <code>PATH</code>, and the report probes that same tree.
+Each package is then resolved through
 <code>kpsewhich</code>, the same file resolver <code>xelatex</code> uses at compile time,
 so the report reflects what a compile will actually find. This works
 on every TeX layout — TinyTeX, a full TeX Live, or an OS-managed
@@ -152,24 +176,24 @@ remediation.</p></li>
 <span class="r-in"><span><span class="fu">check_latex</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── LaTeX packages for PDF output </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ? TeX Live version (xelatex missing, or a non-TeX-Live distribution</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> such as MiKTeX)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> v tabularray (not found, bundled copy used)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> v ninecolors (not found, bundled copy used)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? xcolor</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? graphics</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? siunitx</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? geometry</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? hyperref</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? iftex</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? base</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? fancyhdr</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? lastpage</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? fontspec</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? tex-gyre</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ? psnfss</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> Missing 12 LaTeX packages: <span style="color: #0000BB;">"xcolor"</span>, <span style="color: #0000BB;">"graphics"</span>, <span style="color: #0000BB;">"siunitx"</span>, <span style="color: #0000BB;">"geometry"</span>, <span style="color: #0000BB;">"hyperref"</span>, <span style="color: #0000BB;">"iftex"</span>, <span style="color: #0000BB;">"base"</span>, <span style="color: #0000BB;">"fancyhdr"</span>, <span style="color: #0000BB;">"lastpage"</span>, <span style="color: #0000BB;">"fontspec"</span>, <span style="color: #0000BB;">"tex-gyre"</span>, and <span style="color: #0000BB;">"psnfss"</span>.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Install with `tinytex::tlmgr_install(c('xcolor', 'graphics',</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 'siunitx', 'geometry', 'hyperref', 'iftex', 'base', 'fancyhdr',</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 'lastpage', 'fontspec', 'tex-gyre', 'psnfss'))`.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v xcolor</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v graphics</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> x siunitx</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v geometry</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v hyperref</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v iftex</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v base</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v fancyhdr</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> x lastpage</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v fontspec</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v tex-gyre</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> v psnfss</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> Missing 2 LaTeX packages: <span style="color: #0000BB;">"siunitx"</span> and <span style="color: #0000BB;">"lastpage"</span>.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Install with `tinytex::tlmgr_install(c('siunitx', 'lastpage'))`.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> If the install stalls (commonly on Windows, where the default CTAN</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> mirror redirects on every call), pin a concrete mirror once with</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> `tinytex::tlmgr_repo("auto")` then retry.</span>

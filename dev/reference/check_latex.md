@@ -27,9 +27,11 @@ check_latex(quiet = FALSE)
 *Invisibly returns a data frame* with one row per required package and
 columns `package` (`<character>`), `installed` (`<logical>`, `NA` when
 undeterminable), and `bundled` (`<logical>`, `TRUE` for packages tabular
-ships a fallback copy of). Side effect: prints a cli report with a
-per-package status marker and, when anything is missing, the exact
-`tlmgr_install()` remedy.
+ships a fallback copy of), plus a `texlive_year` attribute
+(`<integer(1) | NA_integer_>`, the TeX Live release year of the active
+`xelatex`). Side effect: prints a cli report with a per-package status
+marker and, when anything is missing or the TeX Live release is older
+than 2023, the exact remedy.
 
 ## Details
 
@@ -39,7 +41,32 @@ branches (running headers / footers pull `fancyhdr` + `lastpage`;
 `xelatex` pulls `fontspec`; `pdflatex` pulls the classic font bundles).
 The check is informational, it does not install anything.
 
-**How availability is probed.** Each package is resolved through
+**Minimum TeX Live version.** Package availability alone is not
+sufficient: the bundled `tabularray` requires the 2022-11-01 LaTeX
+kernel, shipped from **TeX Live 2023** onward. The report therefore
+opens with the TeX Live year of the active `xelatex` and fails the check
+when the kernel predates it — the classic symptom is an OS-managed or
+containerised image (Domino, Posit Workbench) frozen on TeX Live 2018,
+where every package resolves but the compile dies at
+`\\ProvidesExplPackage`. The remedy is a newer TeX, not a package
+install: update the image, or install a user-space TinyTeX with
+[`tinytex::install_tinytex()`](https://rdrr.io/pkg/tinytex/man/install_tinytex.html)`(bundle = "TinyTeX")`
+or `quarto install tinytex` — the Quarto route downloads from GitHub, so
+it also works behind corporate proxies that block CTAN mirrors. Both
+land in the standard TinyTeX location, which the compile (and this
+check) prefer over the `PATH` automatically. MiKTeX is rolling-release
+(always current), so its version reports as undetermined (`?`) rather
+than failing.
+
+**How availability is probed.** The check first resolves TeX the way the
+compile does:
+[`tinytex::latexmk()`](https://rdrr.io/pkg/tinytex/man/latexmk.html)
+prefers a TinyTeX at the standard root (`~/.TinyTeX` on Linux,
+`~/Library/TinyTeX` on macOS, `%APPDATA%/TinyTeX` on Windows — the
+location used by both
+[`tinytex::install_tinytex()`](https://rdrr.io/pkg/tinytex/man/install_tinytex.html)
+and `quarto install tinytex`) over whatever is on the `PATH`, and the
+report probes that same tree. Each package is then resolved through
 `kpsewhich`, the same file resolver `xelatex` uses at compile time, so
 the report reflects what a compile will actually find. This works on
 every TeX layout — TinyTeX, a full TeX Live, or an OS-managed install
@@ -112,24 +139,24 @@ retry the install.
 check_latex()
 #> 
 #> ── LaTeX packages for PDF output 
+#> ? TeX Live version (xelatex missing, or a non-TeX-Live distribution
+#> such as MiKTeX)
 #> v tabularray (not found, bundled copy used)
 #> v ninecolors (not found, bundled copy used)
-#> ? xcolor
-#> ? graphics
-#> ? siunitx
-#> ? geometry
-#> ? hyperref
-#> ? iftex
-#> ? base
-#> ? fancyhdr
-#> ? lastpage
-#> ? fontspec
-#> ? tex-gyre
-#> ? psnfss
-#> ! Missing 12 LaTeX packages: "xcolor", "graphics", "siunitx", "geometry", "hyperref", "iftex", "base", "fancyhdr", "lastpage", "fontspec", "tex-gyre", and "psnfss".
-#> Install with `tinytex::tlmgr_install(c('xcolor', 'graphics',
-#> 'siunitx', 'geometry', 'hyperref', 'iftex', 'base', 'fancyhdr',
-#> 'lastpage', 'fontspec', 'tex-gyre', 'psnfss'))`.
+#> v xcolor
+#> v graphics
+#> x siunitx
+#> v geometry
+#> v hyperref
+#> v iftex
+#> v base
+#> v fancyhdr
+#> x lastpage
+#> v fontspec
+#> v tex-gyre
+#> v psnfss
+#> ! Missing 2 LaTeX packages: "siunitx" and "lastpage".
+#> Install with `tinytex::tlmgr_install(c('siunitx', 'lastpage'))`.
 #> If the install stalls (commonly on Windows, where the default CTAN
 #> mirror redirects on every call), pin a concrete mirror once with
 #> `tinytex::tlmgr_repo("auto")` then retry.

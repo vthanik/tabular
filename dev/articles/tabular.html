@@ -82,7 +82,7 @@
 
 
 
-    <p><code>tabular</code> turns one <strong>pre-summarised, wide data frame</strong> into a publication-ready table and renders it natively to <strong>RTF, HTML, DOCX, PDF/LaTeX and Markdown</strong> — from a single spec, with no Java or Office dependency.</p>
+    <p><code>tabular</code> turns one <strong>pre-summarised, wide data frame</strong> into a publication-ready table and renders it natively to <strong>RTF, HTML, DOCX, PDF (LaTeX- or typst-compiled), LaTeX, Typst and Markdown</strong> — from a single spec, with no Java or Office dependency.</p>
 <p>Two things to internalise up front:</p>
 <ol type="1">
 <li>
@@ -296,7 +296,7 @@
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rtf"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="va">out</span><span class="op">)</span> <span class="co"># RTF here; swap to .docx / .pdf / .html / .md</span></span>
+<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="va">out</span><span class="op">)</span> <span class="co"># RTF here; swap to .docx / .pdf / .html / .tex / .typ / .md</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>

@@ -93,12 +93,20 @@
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.rtf"</span><span class="op">)</span> <span class="co"># RTF</span></span>
 <span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.html"</span><span class="op">)</span> <span class="co"># HTML</span></span>
 <span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.docx"</span><span class="op">)</span> <span class="co"># Word</span></span>
-<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.pdf"</span><span class="op">)</span> <span class="co"># PDF (via LaTeX)</span></span>
+<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.tex"</span><span class="op">)</span> <span class="co"># LaTeX source</span></span>
+<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.typ"</span><span class="op">)</span> <span class="co"># Typst source</span></span>
+<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.pdf"</span><span class="op">)</span> <span class="co"># PDF (LaTeX engine, or typst without a TeX)</span></span>
 <span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.md"</span><span class="op">)</span> <span class="co"># Markdown</span></span></code></pre></div>
+</div>
+<p>A <code>.pdf</code> target compiles through one of <strong>two engines</strong>. With no <code>format =</code>, <code><a href="../reference/emit.html">emit()</a></code> probes the machine LaTeX-first: a usable TeX keeps the LaTeX path; otherwise a discoverable typst binary (standalone <code>typst</code>, or the copy bundled inside Quarto ≥ 1.4) takes over; with neither, the call aborts up front naming both remedies. Pick an engine explicitly with <code>format = "latex"</code> or <code>format = "typst"</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.pdf"</span>, format <span class="op">=</span> <span class="st">"latex"</span><span class="op">)</span> <span class="co"># force the TeX compile</span></span>
+<span><span class="fu"><a href="../reference/emit.html">emit</a></span><span class="op">(</span><span class="va">spec</span>, <span class="st">"table.pdf"</span>, format <span class="op">=</span> <span class="st">"typst"</span><span class="op">)</span> <span class="co"># force typst — no TeX needed</span></span></code></pre></div>
 </div>
 <p>It returns the written path invisibly, so the emit is chainable into scripted batch runs. One spec, any backend:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, package <span class="op">=</span> <span class="st">"tabular"</span><span class="op">)</span></span>
 <span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_saf_demo</span>, titles <span class="op">=</span> <span class="st">"Demographics"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/cols.html">cols</a></span><span class="op">(</span></span>
@@ -113,7 +121,7 @@
 </div>
 <p><code>as_grid(spec)</code> resolves the fully-laid-out grid <strong>without</strong> writing a file — useful for testing or programmatic inspection. The grid carries the resolved pages plus a metadata block (pagination counts, resolved column names, the effective preset):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_grid.html">as_grid</a></span><span class="op">(</span><span class="va">spec</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">grid</span><span class="op">@</span><span class="va">pages</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 1</span></span>
@@ -131,6 +139,7 @@
 <th style="text-align: center;">HTML</th>
 <th style="text-align: center;">DOCX</th>
 <th style="text-align: center;">PDF/LaTeX</th>
+<th style="text-align: center;">PDF/Typst</th>
 <th style="text-align: center;">MD</th>
 </tr></thead>
 <tbody>
@@ -138,6 +147,7 @@
 <td>Vertical pagination</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">n/a¹</td>
+<td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">n/a</td>
@@ -148,12 +158,14 @@
 <td style="text-align: center;">n/a¹</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
 <td style="text-align: center;">n/a</td>
 </tr>
 <tr class="odd">
 <td>Per-page running header/footer</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">–</td>
+<td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">–</td>
@@ -165,6 +177,7 @@
 <td style="text-align: center;">row²</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
 <td style="text-align: center;">row²</td>
 </tr>
 <tr class="odd">
@@ -173,38 +186,60 @@
 <td style="text-align: center;">–</td>
 <td style="text-align: center;">–</td>
 <td style="text-align: center;">✓</td>
+<td style="text-align: center;">panels only</td>
 <td style="text-align: center;">–</td>
 </tr>
 <tr class="even">
+<td>Keep-together / orphan control</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">n/a¹</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">n/a</td>
+</tr>
+<tr class="odd">
 <td>Decimal alignment (NBSP)</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>System dependency</td>
 <td style="text-align: center;">none</td>
 <td style="text-align: center;">none</td>
 <td style="text-align: center;">none</td>
-<td style="text-align: center;">LaTeX</td>
+<td style="text-align: center;">TeX install</td>
+<td style="text-align: center;">typst³</td>
 <td style="text-align: center;">none</td>
 </tr>
 </tbody>
 </table>
 <p>¹ HTML/MD are one continuous document; the browser repeats <code>&lt;thead&gt;</code> on print.</p>
 <p>² On HTML/MD the per-page N renders as a row under each subgroup banner instead of in the repeating header.</p>
+<p>³ The standalone <code>typst</code> binary, or the copy bundled inside Quarto ≥ 1.4 — so machines with RStudio / Posit Workbench typically need nothing. The <code>.tex</code> and <code>.typ</code> <em>source</em> backends have no system dependency at all; only the compile to PDF does.</p>
 </section><section class="level2"><h2 id="system-requirements">System requirements<a class="anchor" aria-label="anchor" href="#system-requirements"></a>
 </h2>
-<p><strong>RTF, HTML, DOCX, Markdown need nothing beyond the R package.</strong> Only PDF has a system dependency — a LaTeX engine. The two packages missing from common TeX distributions (<code>tabularray</code>, <code>ninecolors</code>) ship <em>with</em> <code>tabular</code> and are staged next to the generated <code>.tex</code> whenever the local TeX cannot resolve them, so a locked-down server (Domino, Posit Workbench) needs no <code>tlmgr install</code>. Check readiness and, on a fresh machine, install a TeX once:</p>
+<p><strong>RTF, HTML, DOCX, LaTeX source, Typst source, Markdown need nothing beyond the R package.</strong> Only the compile to PDF has a system dependency, and either engine satisfies it:</p>
+<ul>
+<li>
+<strong>LaTeX engine.</strong> The two packages missing from common TeX distributions (<code>tabularray</code>, <code>ninecolors</code>) ship <em>with</em> <code>tabular</code> and are staged next to the generated <code>.tex</code> whenever the local TeX cannot resolve them, so a locked-down server (Domino, Posit Workbench) needs no <code>tlmgr install</code>.</li>
+<li>
+<strong>Typst engine.</strong> No TeX at all: <code><a href="../reference/emit.html">emit()</a></code> runs the standalone <code>typst</code> binary, or Quarto’s bundled copy (<code>quarto typst</code>). Fonts are typst’s one quiet failure mode — a missing family substitutes silently — so <code><a href="../reference/emit.html">emit()</a></code> warns when a family you explicitly named cannot be found, and <code><a href="../reference/check_typst.html">check_typst()</a></code> names the face PDFs actually render in.</li>
+</ul>
+<p>Check readiness and, on a fresh machine, install an engine once:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_latex.html">check_latex</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># probes via kpsewhich — what a compile will actually find</span></span>
-<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">install_tinytex</a></span><span class="op">(</span>bundle <span class="op">=</span> <span class="st">"TinyTeX"</span><span class="op">)</span> <span class="co"># one-time, fresh machines only</span></span></code></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_latex.html">check_latex</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># LaTeX engine: probes via kpsewhich — what a compile will find</span></span>
+<span><span class="fu"><a href="../reference/check_typst.html">check_typst</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># Typst engine: binary, version floor, font chain</span></span>
+<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">install_tinytex</a></span><span class="op">(</span>bundle <span class="op">=</span> <span class="st">"TinyTeX"</span><span class="op">)</span> <span class="co"># one-time, fresh machines only</span></span>
+<span><span class="co"># or install Quarto (https://quarto.org), which bundles the typst engine</span></span></code></pre></div>
 </div>
 <blockquote>
-<p><strong>OS-managed TeX Live (RHEL/dnf, Debian/apt):</strong> <code>tlmgr</code> is locked and refuses to install (“will likely destroy the … TeXLive install”). Do <strong>not</strong> force it with <code>--ignore-warning</code>. Usually nothing is needed anyway — the bundled copies cover the gap; if <code><a href="../reference/check_latex.html">check_latex()</a></code> still reports a missing package, install a user-space TinyTeX you control: <code>tinytex::install_tinytex(bundle = "TinyTeX")</code>, then restart R.</p>
+<p><strong>OS-managed TeX Live (RHEL/dnf, Debian/apt):</strong> <code>tlmgr</code> is locked and refuses to install (“will likely destroy the … TeXLive install”). Do <strong>not</strong> force it with <code>--ignore-warning</code>. Usually nothing is needed anyway — the bundled copies cover the gap; if <code><a href="../reference/check_latex.html">check_latex()</a></code> still reports a missing package, install a user-space TinyTeX you control: <code>tinytex::install_tinytex(bundle = "TinyTeX")</code>, then restart R. On images whose TeX Live is frozen on a pre-2023 kernel (too old for <code>tabularray</code>), <code><a href="../reference/emit.html">emit()</a></code> skips LaTeX automatically and compiles through typst instead.</p>
 </blockquote>
 <p>For decimal alignment in paper backends, metric-compatible fonts matter — check with <code>check_fonts(spec)</code>.</p>
 </section><section class="level2"><h2 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
@@ -213,7 +248,9 @@
 <li>
 <strong>A relative DOCX path works.</strong> <code>emit(spec, "out/x.docx")</code> resolves the path against your working directory like every other backend (the output path is absolutised before the OOXML zip is staged). No <code><a href="https://rdrr.io/r/base/normalizePath.html" class="external-link">normalizePath()</a></code> dance is needed.</li>
 <li>
-<strong>If a PDF build appears to hang,</strong> it is the LaTeX engine stopping at an interactive error prompt — fix the underlying LaTeX dependency (run <code><a href="../reference/check_latex.html">check_latex()</a></code>); render RTF/HTML to keep working in the meantime.</li>
+<strong>If a PDF build appears to hang,</strong> it is the LaTeX engine stopping at an interactive error prompt — fix the underlying LaTeX dependency (run <code><a href="../reference/check_latex.html">check_latex()</a></code>), or sidestep TeX entirely with <code>emit(spec, "out.pdf", format = "typst")</code>; render RTF/HTML to keep working in the meantime.</li>
+<li>
+<strong>If a typst-compiled PDF renders in an unexpected font,</strong> run <code><a href="../reference/check_typst.html">check_typst()</a></code> — it names the first available family of the chain, i.e. the face typst actually uses. Missing <em>later</em> members of the built-in fallback chain are normal cross-OS variance and are not warned about; only a family you explicitly named triggers the <code><a href="../reference/emit.html">emit()</a></code> warning.</li>
 </ul></section><section class="level2"><h2 id="cross-backend-qualification-cdisc-pilot">Cross-backend qualification (CDISC pilot)<a class="anchor" aria-label="anchor" href="#cross-backend-qualification-cdisc-pilot"></a>
 </h2>
 <p>The package ships a qualification (<code>inst/qualification/</code>) that rebuilds representative CDISC-pilot tables (demographics, populations, AE overview, AE by SOC/PT) from the public PHUSE Test Data Factory ADaM and renders <strong>each to every backend</strong>, checking three things per cell: it emits without error, the file is structurally valid, and an <strong>independent count computed from the ADaM appears in the rendered text of that backend</strong> (cross-backend content parity). The four pilot tables across all four file backends give a 16/16 PASS matrix:</p>
