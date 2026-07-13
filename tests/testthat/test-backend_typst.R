@@ -95,7 +95,12 @@ test_that("default prelude uses preset defaults", {
   expect_match(txt, "flipped: true,", fixed = TRUE)
   expect_match(txt, "margin: 1in,", fixed = TRUE)
   expect_match(txt, "size: 10pt", fixed = TRUE)
-  expect_match(txt, "#set par(leading: 0.2em)", fixed = TRUE)
+  expect_match(
+    txt,
+    "top-edge: 0.84em, bottom-edge: -0.36em",
+    fixed = TRUE
+  )
+  expect_match(txt, "#set par(leading: 0em)", fixed = TRUE)
   expect_match(txt, "#set block(spacing: 0pt)", fixed = TRUE)
 })
 
@@ -124,7 +129,7 @@ test_that("prelude resolves the font chain with the typst tail", {
     txt,
     paste0(
       "#set text(font: (\"Courier New\", \"Courier\", \"Liberation Mono\", ",
-      "\"DejaVu Sans Mono\",), size: 10pt)"
+      "\"DejaVu Sans Mono\",), size: 10pt,"
     ),
     fixed = TRUE
   )
@@ -486,4 +491,170 @@ test_that("figure grids render #image sidecars with placement glue", {
   block <- tabular:::.typst_figure_image_block(pg, "fig-1.png")
   expect_identical(block[[1L]], "#v(1fr)")
   expect_identical(block[[3L]], "#v(1fr)")
+})
+
+# ---------------------------------------------------------------------
+# Coverage: figure path, subgroup banner, repeat variants, inline runs
+# ---------------------------------------------------------------------
+
+test_that("emit(.typ) renders a figure with sidecar, glue, and chrome", {
+  skip_if_not_installed("ggplot2")
+  fig <- figure(function() plot(1), titles = "Figure 1", footnotes = "fn") |>
+    preset(
+      pagehead = list(left = "Protocol: X", right = "Page {page} of {npages}")
+    )
+  f <- withr::local_tempfile(fileext = ".typ")
+  suppressMessages(emit(fig, f))
+  txt <- paste(readLines(f), collapse = "\n")
+  expect_match(txt, "#image(\"", fixed = TRUE)
+  expect_match(txt, "#v(1fr)", fixed = TRUE)
+  expect_match(txt, "Figure 1", fixed = TRUE)
+  expect_match(txt, "fn", fixed = TRUE)
+  # The sidecar landed next to the .typ.
+  stem <- tools::file_path_sans_ext(basename(f))
+  expect_true(
+    length(list.files(dirname(f), pattern = paste0(stem, "-fig1"))) == 1L
+  )
+})
+
+test_that("subgroup banner rides the header block as a spanning cell", {
+  spec <- tabular(cdisc_saf_vital) |>
+    cols(
+      visit = col_spec(label = "Visit"),
+      stat_label = col_spec(label = "Statistic"),
+      placebo = col_spec(label = "Placebo")
+    ) |>
+    subgroup(by = "param")
+  txt <- render_typ(spec)
+  expect_match(txt, "#pagebreak()", fixed = TRUE)
+  expect_match(txt, "Diastolic Blood Pressure", fixed = TRUE)
+})
+
+test_that("non-repeating titles emit once before the table", {
+  spec <- tabular(data.frame(x = 1L), titles = "Once") |>
+    paginate(repeat_content = "headers")
+  txt <- render_typ(spec)
+  # Title block precedes #table( and no title cell rides the header.
+  expect_lt(
+    regexpr("#strong[Once]", txt, fixed = TRUE)[[1L]],
+    regexpr("#table(", txt, fixed = TRUE)[[1L]]
+  )
+})
+
+test_that("continuation marker appears on continuation panels", {
+  spec <- tabular(
+    data.frame(a = 1:3, b = 4:6, c = 7:9, d = 10:12),
+    titles = "T"
+  ) |>
+    cols(
+      a = col_spec(label = "A", width = 3),
+      b = col_spec(label = "B", width = 3),
+      c = col_spec(label = "C", width = 3),
+      d = col_spec(label = "D", width = 3)
+    ) |>
+    paginate(panels = 2, repeat_cols = "a", continuation = "(cont.)")
+  txt <- render_typ(spec)
+  expect_match(txt, "#emph[(cont.)]", fixed = TRUE)
+})
+
+test_that("inline sup, sub, and unknown runs render", {
+  ast <- tabular:::inline_ast(
+    runs = list(
+      list(type = "sup", children = list(list(type = "plain", text = "a"))),
+      list(type = "sub", children = list(list(type = "plain", text = "b"))),
+      list(type = "newline")
+    )
+  )
+  out <- tabular:::.render_typst_inline(ast)
+  expect_match(out, "#super[a]", fixed = TRUE)
+  expect_match(out, "#sub[b]", fixed = TRUE)
+  expect_match(out, " \\ ", fixed = TRUE)
+  # Unknown run types fall through to their escaped text field.
+  expect_identical(
+    tabular:::.render_typst_run(list(type = "mystery", text = "c*d")),
+    "c\\*d"
+  )
+})
+
+test_that("alignment keyword helpers cover every branch", {
+  expect_identical(tabular:::.typst_halign("center"), "center")
+  expect_identical(tabular:::.typst_halign("right"), "right")
+  expect_identical(tabular:::.typst_halign("junk"), "left")
+  expect_identical(tabular:::.typst_valign("middle"), "horizon")
+  expect_identical(tabular:::.typst_valign("bottom"), "bottom")
+  expect_identical(tabular:::.typst_valign("junk"), "top")
+  expect_identical(tabular:::.typst_halign_letterlike(NULL), "left")
+  expect_identical(tabular:::.typst_halign_letterlike("right"), "right")
+  expect_identical(tabular:::.typst_halign_letterlike("junk"), "left")
+})
+
+test_that(".typst_chrome_stroke falls back to the SSOT rule width", {
+  expect_identical(
+    tabular:::.typst_chrome_stroke(chrome_style(), "header_top"),
+    "0.5pt"
+  )
+})
+
+test_that(".typst_prelude defaults a missing preset", {
+  lines <- tabular:::.typst_prelude(preset = NULL)
+  expect_match(paste(lines, collapse = "\n"), "#set page(", fixed = TRUE)
+})
+
+test_that(".typst_wrap_text_props passes through non-scalar text", {
+  expect_identical(tabular:::.typst_wrap_text_props(1L, NULL), 1L)
+  # Chrome-surface font overrides emit one #text() wrapper.
+  node <- tabular:::style_node(font_size = 7, font_family = "Inter")
+  out <- tabular:::.typst_wrap_text_props("x", node)
+  expect_match(out, "#text(size: 7pt, font: (\"Inter\",))[x]", fixed = TRUE)
+})
+
+test_that("nested group keys indent the inner group-header rows", {
+  df <- data.frame(
+    outer = c("A", "A", "B"),
+    inner = c("a1", "a2", "b1"),
+    lbl = c("r1", "r2", "r3"),
+    v = c(1, 2, 3)
+  )
+  spec <- tabular(df) |>
+    cols(lbl = col_spec(label = "Row"), v = col_spec(label = "V")) |>
+    group_rows(by = c("outer", "inner"))
+  txt <- render_typ(spec)
+  # Inner header cell carries the band-depth #pad indent.
+  expect_match(txt, "#pad(left: ", fixed = TRUE)
+})
+
+test_that(".render_typst_body_rows handles a zero-row matrix", {
+  out <- tabular:::.render_typst_body_rows(
+    matrix(character(), nrow = 0L, ncol = 2L)
+  )
+  expect_identical(out$lines, character())
+  expect_identical(out$n_rows, 0L)
+})
+
+test_that(".typst_escape_cell handles NULL and preserves whitespace runs", {
+  expect_identical(tabular:::.typst_escape_cell(NULL), "")
+  expect_identical(
+    tabular:::.typst_escape_cell("a  b", preserve = TRUE),
+    "a~ b"
+  )
+})
+
+test_that("body rows-between rules interleave hlines", {
+  spec <- tabular(data.frame(v = c("a", "b", "c"))) |>
+    cols(v = col_spec(label = "V")) |>
+    preset(rules = list(rowrule = brdr("thin")))
+  txt <- render_typ(spec)
+  expect_gte(
+    length(gregexpr("table.hline", txt, fixed = TRUE)[[1L]]),
+    4L
+  )
+})
+
+test_that("outer frame edges emit table-level vlines", {
+  spec <- tabular(data.frame(v = c("a", "b"))) |>
+    cols(v = col_spec(label = "V")) |>
+    preset(rules = "frame")
+  txt <- render_typ(spec)
+  expect_match(txt, "table.vline(x: 0,", fixed = TRUE)
+  expect_match(txt, "table.vline(x: 1,", fixed = TRUE)
 })

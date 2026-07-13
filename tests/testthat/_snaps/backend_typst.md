@@ -10,8 +10,8 @@
         flipped: true,
         margin: 1in,
       )
-      #set text(font: ("Courier New", "Courier", "Liberation Mono", "DejaVu Sans Mono",), size: 10pt)
-      #set par(leading: 0.2em)
+      #set text(font: ("Courier New", "Courier", "Liberation Mono", "DejaVu Sans Mono",), size: 10pt, top-edge: 0.84em, bottom-edge: -0.36em)
+      #set par(leading: 0em)
       #set block(spacing: 0pt)
       #table(
         columns: (2.9833in, 1.0667in, 1.0667in, 1.0667in, 1.15in,),

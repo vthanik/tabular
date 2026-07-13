@@ -263,3 +263,15 @@ test_that(".check_typst_report prints every status branch", {
     )
   )
 })
+
+test_that(".typst_fonts reads quarto's stderr-relayed list (regression)", {
+  # `quarto typst fonts` relays the font list on STDERR (the standalone
+  # binary prints to stdout); capturing stdout alone reported every
+  # family as missing, including the faces embedded in typst itself.
+  bin <- tabular:::.typst_bin()
+  skip_if(is.null(bin), "no typst binary")
+  fonts <- tabular:::.typst_fonts(bin)
+  expect_true(length(fonts) > 0L)
+  # The embedded faces are always visible, whichever binary answered.
+  expect_true(any(grepl("DejaVu Sans Mono", fonts, fixed = TRUE)))
+})

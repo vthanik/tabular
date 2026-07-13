@@ -86,8 +86,11 @@
 
 # Font families the discovered typst binary can see (`typst fonts`
 # prints one family name per line, including the faces embedded in the
-# binary itself). Returns a character vector, or NULL when the binary
-# is absent or the call fails. `.lines` is an injected seam for tests.
+# binary itself). Both streams are captured and merged: the standalone
+# binary prints the list on stdout, but Quarto's `quarto typst fonts`
+# wrapper relays it on stderr. Returns a character vector, or NULL
+# when the binary is absent or the call fails. `.lines` is an injected
+# seam for tests.
 .typst_fonts <- function(bin = .typst_bin(), .lines = NULL) {
   lines <- .lines
   if (is.null(lines)) {
@@ -96,7 +99,7 @@
     }
     lines <- tryCatch(
       suppressWarnings(
-        system2(bin$cmd, c(bin$args, "fonts"), stdout = TRUE, stderr = FALSE)
+        system2(bin$cmd, c(bin$args, "fonts"), stdout = TRUE, stderr = TRUE)
       ),
       error = function(e) NULL
     )
