@@ -382,6 +382,12 @@ as_grid <- function(.spec) {
 ) {
   spec <- engine_sort(spec)
 
+  # Resolve the cascade-effective preset ONCE for the whole resolve —
+  # engine_sort / engine phases never touch spec@preset, so every read
+  # below (group display, decimal metrics, page chrome, stripe,
+  # metadata) shares this one lookup.
+  eff_preset <- .effective_preset(spec)
+
   headers <- engine_headers(spec)
   style_mat <- engine_style(spec)
   # engine_borders runs after engine_style so per-cell predicate
@@ -447,7 +453,6 @@ as_grid <- function(.spec) {
   # host-column text is prefixed with `strrep(" ", preset@indent_size)`
   # so the data rows visually nest under their synthetic section
   # header.
-  gd_preset <- .effective_preset(spec)
   gd <- engine_group_display(
     cells_text = fmt$cells_text,
     cells_ast = fmt$cells_ast,
@@ -455,8 +460,8 @@ as_grid <- function(.spec) {
     cols = .cols_by_name(spec@cols, names(spec@data)),
     row_groups = spec@row_groups,
     data = spec@data,
-    indent_size = if (is_preset_spec(gd_preset)) {
-      gd_preset@indent_size
+    indent_size = if (is_preset_spec(eff_preset)) {
+      eff_preset@indent_size
     } else {
       preset_spec()@indent_size
     },
@@ -481,12 +486,12 @@ as_grid <- function(.spec) {
   # NBSP-unit (exact in monospace only). Markdown is a text medium
   # where count-padding IS the correct geometry, so "md" always pads
   # by chars regardless of the preset.
-  decimal_metrics <- .effective_preset(spec)@decimal_metrics
+  decimal_metrics <- eff_preset@decimal_metrics
   if (identical(format, "md")) {
     decimal_metrics <- "chars"
   }
   afm_name <- if (identical(decimal_metrics, "afm")) {
-    family <- .effective_preset(spec)@font_family
+    family <- eff_preset@font_family
     has_decimal_col <- any(
       vapply(
         cols_named,
@@ -535,7 +540,7 @@ as_grid <- function(.spec) {
     fmt$cells_text,
     cols = cols_named,
     sections = decimal_sections,
-    not_considered = .effective_preset(spec)@decimal_markers,
+    not_considered = eff_preset@decimal_markers,
     metrics = decimal_metrics,
     afm_name = afm_name
   )
@@ -609,7 +614,6 @@ as_grid <- function(.spec) {
   # substitution for {program} / {datetime} happens inside
   # `.resolve_page_band` before .parse_inline runs. {page} /
   # {npages} are deferred to backend emission.
-  eff_preset <- .effective_preset(spec)
   pagehead_ast <- .resolve_page_band(
     eff_preset@pagehead,
     arg = "pagehead",
@@ -642,7 +646,9 @@ as_grid <- function(.spec) {
   # continuous with no white gaps; the parity counter still advances on
   # DATA rows only, so the zebra never desyncs. `stripe = NULL` (the
   # default) leaves the pages untouched.
-  pages <- .stamp_stripe(pages, resolve_stripe(eff_preset@stripe))
+  # Resolved once; shared by the stamping pass and the metadata entry.
+  eff_stripe <- resolve_stripe(eff_preset@stripe)
+  pages <- .stamp_stripe(pages, eff_stripe)
 
   # Empty-state placement. When the spec resolves to zero data rows the
   # (single) page carries no body rows; engine_group_display synthesises
@@ -696,7 +702,7 @@ as_grid <- function(.spec) {
       body_borders = body_borders_mat,
       spacing = resolve_spacing(eff_preset@spacing),
       gaps = gap_counts(eff_preset@spacing),
-      stripe = resolve_stripe(eff_preset@stripe),
+      stripe = eff_stripe,
       subgroup_runtime = runtime
     )
   )
@@ -1012,12 +1018,20 @@ as_grid <- function(.spec) {
   # Constant fold: HTML / md show the N once in the suffixed column
   # header (kept on `meta` below), so there are no per-arm N records to
   # build or stamp. Decide once and skip the record build entirely.
+  # Compute the (keep_empty-aware) combos once and thread them into
+  # both bign helpers, instead of each rebuilding the crossing.
+  sg <- spec@subgroup
+  combos <- if (!is.null(sg) && !is.null(sg@big_n)) {
+    .subgroup_combos(spec@data, sg@by, keep_empty = isTRUE(sg@keep_empty))
+  } else {
+    NULL
+  }
   constant_fold <- !is.null(base_col_labels_ast) &&
-    .subgroup_bign_constant(spec)
+    .subgroup_bign_constant(spec, combos = combos)
   bign_records <- if (constant_fold) {
     NULL
   } else {
-    .subgroup_bign_records_all(spec)
+    .subgroup_bign_records_all(spec, combos = combos)
   }
   pages <- unlist(
     lapply(sub_grids, function(g) {

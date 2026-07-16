@@ -116,6 +116,13 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   rpp <- .compute_rows_per_page(spec, native = native)
 
   kt_idx <- if (length(kt) > 0L) match(kt, col_names) else integer()
+  # Compute the per-row keep_together key vector ONCE; both the
+  # vertical-page split and the keep mask read from it.
+  kt_keys <- if (length(kt_idx) > 0L) {
+    .keep_together_keys(data, kt_idx)
+  } else {
+    character(0L)
+  }
 
   # Native backends (RTF/Word) paginate the body themselves: skip the
   # vertical split so every row rides one page per panel and the
@@ -128,8 +135,7 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
     .compute_vertical_pages(
       nrow_data = nrow_data,
       rpp = rpp,
-      kt_idx = kt_idx,
-      data = data,
+      kt_keys = kt_keys,
       orphan_floor = orphan,
       widow_floor = widow
     )
@@ -160,7 +166,8 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
     kt_idx = kt_idx,
     orphan_floor = orphan,
     widow_floor = widow,
-    is_blank = .blank_rows(data, visible_col_names)
+    is_blank = .blank_rows(data, visible_col_names),
+    keys = kt_keys
   )
   col_panels <- .compute_horizontal_panels(
     col_names = visible_col_names,
@@ -510,12 +517,13 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
 # Vertical pagination: return a list of integer vectors, each
 # vector the row indices for one page. Honours `keep_together`
 # (move break back to start of straddling group) and `widow_floor`
-# (merge a tiny final page into the previous one).
+# (merge a tiny final page into the previous one). `kt_keys` is the
+# per-row keep_together key vector from `.keep_together_keys()`
+# (length `nrow_data`), or `character(0L)` when keep_together is off.
 .compute_vertical_pages <- function(
   nrow_data,
   rpp,
-  kt_idx,
-  data,
+  kt_keys,
   orphan_floor,
   widow_floor
 ) {
@@ -531,12 +539,11 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   while (start <= nrow_data) {
     tentative_end <- min(start + rpp - 1L, nrow_data)
 
-    if (length(kt_idx) > 0L && tentative_end < nrow_data) {
+    if (length(kt_keys) > 0L && tentative_end < nrow_data) {
       adjusted_end <- .respect_keep_together(
         start = start,
         tentative_end = tentative_end,
-        kt_idx = kt_idx,
-        data = data
+        keys = kt_keys
       )
       if (adjusted_end >= start + orphan_floor - 1L) {
         tentative_end <- adjusted_end
@@ -571,19 +578,19 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
   kt_idx,
   orphan_floor,
   widow_floor,
-  is_blank = rep(FALSE, nrow(data))
+  is_blank = rep(FALSE, nrow(data)),
+  keys = NULL
 ) {
   nr <- nrow(data)
   if (nr <= 1L || length(kt_idx) == 0L) {
     return(rep(FALSE, nr))
   }
 
-  # Build a single string key per row over the keep_together cols.
-  key_parts <- lapply(kt_idx, function(j) as.character(data[, j]))
-  keys <- do.call(
-    function(...) paste(..., sep = "\x1f"),
-    key_parts
-  )
+  # Build a single string key per row over the keep_together cols
+  # (precomputed by engine_paginate; rebuilt here for direct callers).
+  if (is.null(keys)) {
+    keys <- .keep_together_keys(data, kt_idx)
+  }
 
   mask <- rep(FALSE, nr)
   start <- 1L
@@ -655,34 +662,39 @@ engine_paginate <- function(spec, native = FALSE, continuous = FALSE) {
 # adjusted page-end row index. If the run extends back past `start`
 # (the entire page is one big run), returns the original
 # `tentative_end` so the caller's orphan-floor escape can trigger.
-.respect_keep_together <- function(start, tentative_end, kt_idx, data) {
-  if (tentative_end + 1L > nrow(data)) {
+# `keys` is the precomputed per-row key vector from
+# `.keep_together_keys()`.
+.respect_keep_together <- function(start, tentative_end, keys) {
+  if (tentative_end + 1L > length(keys)) {
     return(tentative_end)
   }
 
-  key_at <- function(i) {
-    parts <- vapply(
-      kt_idx,
-      function(j) as.character(data[i, j]),
-      character(1)
-    )
-    paste(parts, collapse = "\x1f")
+  end_key <- keys[[tentative_end]]
+  if (end_key != keys[[tentative_end + 1L]]) {
+    return(tentative_end)
   }
-
-  end_key <- key_at(tentative_end)
-  next_key <- key_at(tentative_end + 1L)
-  if (end_key != next_key) {
+  if (tentative_end <= start) {
     return(tentative_end)
   }
 
-  i <- tentative_end - 1L
-  while (i >= start && key_at(i) == end_key) {
-    i <- i - 1L
-  }
-  if (i < start) {
+  # Last index before `tentative_end` whose key differs from the run's
+  # key — the adjusted page end. None within [start, tentative_end):
+  # the whole page is one run; keep the original break.
+  prior <- start:(tentative_end - 1L)
+  diff_idx <- prior[keys[prior] != end_key]
+  if (length(diff_idx) == 0L) {
     return(tentative_end)
   }
-  i
+  diff_idx[[length(diff_idx)]]
+}
+
+# One "\x1f"-joined string key per row of `data` over the
+# keep_together columns (`kt_idx`, integer positions). Shared by
+# `.build_keep_mask` and `.respect_keep_together` so both phases see
+# identical key semantics (NA prints as "NA", as before).
+.keep_together_keys <- function(data, kt_idx) {
+  key_parts <- lapply(kt_idx, function(j) as.character(data[[j]]))
+  do.call(paste, c(key_parts, list(sep = "\x1f")))
 }
 
 # Filter `col_names` to those whose `col_spec@visible` is TRUE.

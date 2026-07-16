@@ -360,6 +360,20 @@ engine_decimal <- function(
     opaque_mask[!na_mask] <- v[!na_mask] %in% not_considered
   }
 
+  # Tokenise every non-NA cell ONCE, up front. Both the column-floor
+  # pass and the per-section render read from this list, so a cell is
+  # never tokenised twice. Opaque cells get the dummy "0 floats" token
+  # (they bypass slot-width contribution and render as raw text); NA
+  # cells stay NULL and are never read.
+  all_tokens <- vector("list", n)
+  for (i in which(!na_mask)) {
+    all_tokens[[i]] <- if (opaque_mask[[i]]) {
+      list(floats = character(), literals = v[[i]], parsed = list())
+    } else {
+      .tokenize_cell(v[[i]])
+    }
+  }
+
   # Compute the column-wide slot-1 floor across every non-NA,
   # non-opaque cell. Only needed in sections-mode; in single-section
   # mode the section's own slot-1 widths already span the column.
@@ -376,7 +390,11 @@ engine_decimal <- function(
     }
     contrib <- which(!na_mask & !opaque_mask)
     if (length(contrib) > 0L) {
-      column_floor <- .compute_column_floor(v[contrib], measure = measure)
+      column_floor <- .compute_column_floor(
+        v[contrib],
+        measure = measure,
+        tokens = all_tokens[contrib]
+      )
     }
   }
 
@@ -391,7 +409,8 @@ engine_decimal <- function(
       column_floor = NULL,
       pad = pad,
       zero_suppress = zero_suppress,
-      measure = measure
+      measure = measure,
+      tokens = all_tokens
     )
   } else {
     sec_ids <- .runs(sections)
@@ -408,7 +427,8 @@ engine_decimal <- function(
         column_floor = column_floor,
         pad = pad,
         zero_suppress = zero_suppress,
-        measure = measure
+        measure = measure,
+        tokens = all_tokens[keep]
       )
       out[keep] <- rendered
     }
@@ -444,6 +464,10 @@ engine_decimal <- function(
 #
 # Opaque cells (those with `opaque_mask[i] == TRUE`) are skipped
 # during tokenisation and rendered as their raw `v[i]` value.
+#
+# `tokens` (optional) is a list aligned 1:1 with `v` carrying each
+# cell's pre-computed `.tokenize_cell()` result (opaque cells hold the
+# dummy "0 floats" token). When supplied, no cell is re-tokenised here.
 .render_section <- function(
   v,
   na_mask,
@@ -451,7 +475,8 @@ engine_decimal <- function(
   column_floor,
   pad,
   zero_suppress,
-  measure = function(s) nchar(s, type = "chars")
+  measure = function(s) nchar(s, type = "chars"),
+  tokens = NULL
 ) {
   n <- length(v)
   out <- character(n)
@@ -462,21 +487,25 @@ engine_decimal <- function(
     return(out)
   }
 
-  # Tokenise non-opaque cells; opaque cells get a dummy "0 floats"
-  # token so they bypass slot-width contribution and the render
-  # path returns their raw text.
-  tokens <- vector("list", length(active))
-  for (k in seq_along(active)) {
-    i <- active[[k]]
-    if (opaque_mask[[i]]) {
-      tokens[[k]] <- list(
-        floats = character(),
-        literals = v[[i]],
-        parsed = list()
-      )
-    } else {
-      tokens[[k]] <- .tokenize_cell(v[[i]])
+  if (is.null(tokens)) {
+    # Tokenise non-opaque cells; opaque cells get a dummy "0 floats"
+    # token so they bypass slot-width contribution and the render
+    # path returns their raw text.
+    tokens <- vector("list", length(active))
+    for (k in seq_along(active)) {
+      i <- active[[k]]
+      if (opaque_mask[[i]]) {
+        tokens[[k]] <- list(
+          floats = character(),
+          literals = v[[i]],
+          parsed = list()
+        )
+      } else {
+        tokens[[k]] <- .tokenize_cell(v[[i]])
+      }
     }
+  } else {
+    tokens <- tokens[active]
   }
 
   sigs <- vapply(tokens, .signature_key, character(1))
@@ -524,14 +553,18 @@ engine_decimal <- function(
 #   int_w : max nchar(comparator + sign + int) of the FIRST float
 #           token (the comparator and sign fold into this field).
 # Returns NULL if no cell has any float token.
+# `tokens` (optional) is a list aligned 1:1 with `values` carrying each
+# cell's pre-computed `.tokenize_cell()` result; when supplied, no cell
+# is re-tokenised here.
 .compute_column_floor <- function(
   values,
-  measure = function(s) nchar(s, type = "chars")
+  measure = function(s) nchar(s, type = "chars"),
+  tokens = NULL
 ) {
   int_w <- 0L
   any_float <- FALSE
-  for (val in values) {
-    tok <- .tokenize_cell(val)
+  for (k in seq_along(values)) {
+    tok <- if (is.null(tokens)) .tokenize_cell(values[[k]]) else tokens[[k]]
     if (length(tok$floats) == 0L) {
       next
     }

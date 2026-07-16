@@ -67,8 +67,17 @@ engine_subgroup_split <- function(spec) {
   }
   out <- vector("list", total)
 
+  # One composite-key pass over the data replaces a per-combo
+  # `.subgroup_match_mask` full-data scan: split the row indices by key
+  # once, then each group's rows come from a named-list lookup.
+  combo_key <- .subgroup_row_key(combos, by_cols)
+  row_groups <- split(seq_len(nrow(data)), .subgroup_row_key(data, by_cols))
+
   for (i in seq_len(total)) {
-    keep <- .subgroup_match_mask(data, by_cols, combos[i, , drop = FALSE])
+    keep <- row_groups[[combo_key[[i]]]]
+    if (is.null(keep)) {
+      keep <- integer(0L)
+    }
     sub_data <- data[keep, , drop = FALSE]
     # Preserve column attributes (factor levels, labels) — the
     # default `[` on a data frame keeps factor levels but drops some
@@ -186,6 +195,20 @@ engine_subgroup_split <- function(spec) {
   vals
 }
 
+# Composite row key over the partition columns: one string per row of
+# `df`, columns joined with "\x1f". NA values collapse to a "\x1e"
+# sentinel so NA matches NA only (never a literal "NA" data string),
+# mirroring `.subgroup_match_mask` semantics. Two rows share a key iff
+# `.subgroup_match_mask` would place them in the same group.
+.subgroup_row_key <- function(df, by_cols) {
+  parts <- lapply(by_cols, function(col) {
+    chr <- as.character(df[[col]])
+    chr[is.na(chr)] <- "\x1e"
+    chr
+  })
+  do.call(paste, c(parts, list(sep = "\x1f")))
+}
+
 # Logical mask over `data` rows where every partition column equals
 # the corresponding value in `combo_row` (a 1-row data.frame). NA
 # values match NA only.
@@ -202,15 +225,10 @@ engine_subgroup_split <- function(spec) {
 
 # Vector of TRUE/FALSE, one per row of `combos`, indicating whether
 # the corresponding combination appears in `data`. Used to drop
-# crossings that would yield empty groups.
+# crossings that would yield empty groups. One composite-key pass over
+# `data` (O(nrow)) instead of a per-combo full-data mask.
 .subgroup_combo_present_mask <- function(data, by_cols, combos) {
-  vapply(
-    seq_len(nrow(combos)),
-    function(i) {
-      any(.subgroup_match_mask(data, by_cols, combos[i, , drop = FALSE]))
-    },
-    logical(1L)
-  )
+  .subgroup_row_key(combos, by_cols) %in% .subgroup_row_key(data, by_cols)
 }
 
 # Per-page BigN application. For the subgroup whose combo is
@@ -309,7 +327,7 @@ engine_subgroup_split <- function(spec) {
 # joined to `big_n`, not over the raw `big_n` rows: table reuse may carry
 # extra denominator rows for subgroups absent from the data, and those
 # must not influence whether the displayed Ns vary.
-.subgroup_bign_constant <- function(spec) {
+.subgroup_bign_constant <- function(spec, combos = NULL) {
   sg <- spec@subgroup
   if (is.null(sg) || is.null(sg@big_n)) {
     return(FALSE)
@@ -320,22 +338,18 @@ engine_subgroup_split <- function(spec) {
   if (length(val_cols) == 0L) {
     return(FALSE)
   }
-  combos <- .subgroup_combos(
-    spec@data,
-    by_cols,
-    keep_empty = isTRUE(sg@keep_empty)
-  )
-  idx <- vapply(
-    seq_len(nrow(combos)),
-    function(i) {
-      m <- which(.subgroup_match_mask(
-        big_n,
-        by_cols,
-        combos[i, , drop = FALSE]
-      ))
-      if (length(m) == 0L) NA_integer_ else m[[1L]]
-    },
-    integer(1L)
+  if (is.null(combos)) {
+    combos <- .subgroup_combos(
+      spec@data,
+      by_cols,
+      keep_empty = isTRUE(sg@keep_empty)
+    )
+  }
+  # First-match semantics of the old per-combo `which(mask)[[1L]]`,
+  # via one composite-key match() over big_n.
+  idx <- match(
+    .subgroup_row_key(combos, by_cols),
+    .subgroup_row_key(big_n, by_cols)
   )
   idx <- idx[!is.na(idx)]
   if (length(idx) == 0L) {
@@ -344,7 +358,7 @@ engine_subgroup_split <- function(spec) {
   nrow(unique(big_n[idx, val_cols, drop = FALSE])) <= 1L
 }
 
-.subgroup_bign_records_all <- function(spec) {
+.subgroup_bign_records_all <- function(spec, combos = NULL) {
   sg <- spec@subgroup
   if (is.null(sg) || is.null(sg@big_n)) {
     return(NULL)
@@ -357,24 +371,27 @@ engine_subgroup_split <- function(spec) {
   n_cols <- setdiff(names(big_n), by_cols)
   # Iterate the SAME combos the split iterates (keep_empty-aware) so the
   # returned list index matches `runtime$index` at the as_grid merge.
-  combos <- .subgroup_combos(
-    spec@data,
-    by_cols,
-    keep_empty = isTRUE(sg@keep_empty)
+  if (is.null(combos)) {
+    combos <- .subgroup_combos(
+      spec@data,
+      by_cols,
+      keep_empty = isTRUE(sg@keep_empty)
+    )
+  }
+  # First-match semantics of the old per-combo `which(mask)[[1L]]`,
+  # via one composite-key match() over big_n.
+  bn_idx <- match(
+    .subgroup_row_key(combos, by_cols),
+    .subgroup_row_key(big_n, by_cols)
   )
 
   lapply(seq_len(nrow(combos)), function(i) {
-    idx <- which(.subgroup_match_mask(
-      big_n,
-      by_cols,
-      combos[i, , drop = FALSE]
-    ))
-    if (length(idx) == 0L) {
+    idx <- bn_idx[[i]]
+    if (is.na(idx)) {
       # A keep_empty zero-N combo has no big_n row; emit an empty record
       # so the continuous backends render no per-arm N row for it.
       return(list())
     }
-    idx <- idx[[1L]]
     lapply(n_cols, function(nm) {
       n_val <- big_n[[nm]][[idx]]
       suffix <- gsub("{n}", format(n_val, trim = TRUE), fmt, fixed = TRUE)
