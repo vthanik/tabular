@@ -696,39 +696,15 @@ backend_html <- function(grid, file) {
 # 1:1 then pads with last). Empty title list returns an empty
 # character vector so the caller can skip the surrounding spacing.
 .render_html_title_block <- function(titles_ast, preset = NULL, cs = NULL) {
-  n <- length(titles_ast)
-  if (n == 0L) {
-    return(character())
-  }
-  surface_node <- .chrome_surface_at(cs, "title")
-  surface_style <- .html_chrome_inline_style(surface_node)
-  ws_preserve <- .preset_ws_preserve(preset)
-  vapply(
-    seq_len(n),
-    function(i) {
-      halign <- .surface_halign(surface_node)
-      cls <- "tabular-title"
-      if (length(halign) == 1L && !is.na(halign)) {
-        extra <- .html_align_class(halign)
-        if (nzchar(extra)) {
-          cls <- c(cls, extra)
-        }
-      }
-      # Title borders ride the block edges (top on line 1, bottom on
-      # line n). The title surface has no region channel, so the
-      # surface-node border is the only path -- no double-emission.
-      line_style <- .html_merge_style_attr(
-        surface_style,
-        .html_chrome_block_border_decls(surface_node, i, n)
-      )
-      sprintf(
-        "<p class=\"%s\"%s>%s</p>",
-        paste(cls, collapse = " "),
-        line_style,
-        .render_html_inline(titles_ast[[i]], preserve = ws_preserve)
-      )
-    },
-    character(1L)
+  # Title borders ride the block edges (top on line 1, bottom on line
+  # n). The title surface has no region channel, so the surface-node
+  # border is the only path -- no double-emission.
+  .render_html_chrome_block(
+    titles_ast,
+    surface = "title",
+    class = "tabular-title",
+    preset = preset,
+    cs = cs
   )
 }
 
@@ -743,42 +719,61 @@ backend_html <- function(grid, file) {
   preset = NULL,
   cs = NULL
 ) {
-  n <- length(footnotes_ast)
+  # Footnote borders ride the block edges. `top` is already drawn by
+  # the `footer_top` region (the separator rule above the block), so
+  # it is skipped here to keep that side single-channel; `bottom` /
+  # `left` / `right` come from the surface node.
+  .render_html_chrome_block(
+    footnotes_ast,
+    surface = "footer",
+    class = "tabular-footnote",
+    skip = "top",
+    preset = preset,
+    cs = cs
+  )
+}
+
+# Shared title/footnote chrome renderer: one `<p class="<class>">` per
+# line with the per-line halign class from the `surface` node's
+# cascade, the surface inline style, and block-edge borders (top on
+# line 1, bottom on line n). `skip` names border sides already drawn
+# by a region channel. Empty AST list returns an empty character
+# vector so the caller can skip the surrounding spacing.
+.render_html_chrome_block <- function(
+  ast,
+  surface,
+  class,
+  skip = character(),
+  preset = NULL,
+  cs = NULL
+) {
+  n <- length(ast)
   if (n == 0L) {
     return(character())
   }
-  surface_node <- .chrome_surface_at(cs, "footer")
+  surface_node <- .chrome_surface_at(cs, surface)
   surface_style <- .html_chrome_inline_style(surface_node)
   ws_preserve <- .preset_ws_preserve(preset)
   vapply(
     seq_len(n),
     function(i) {
       halign <- .surface_halign(surface_node)
-      cls <- "tabular-footnote"
+      cls <- class
       if (length(halign) == 1L && !is.na(halign)) {
         extra <- .html_align_class(halign)
         if (nzchar(extra)) {
           cls <- c(cls, extra)
         }
       }
-      # Footnote borders ride the block edges. `top` is already drawn by
-      # the `footer_top` region (the separator rule above the block), so
-      # it is skipped here to keep that side single-channel; `bottom` /
-      # `left` / `right` come from the surface node.
       line_style <- .html_merge_style_attr(
         surface_style,
-        .html_chrome_block_border_decls(
-          surface_node,
-          i,
-          n,
-          skip = "top"
-        )
+        .html_chrome_block_border_decls(surface_node, i, n, skip = skip)
       )
       sprintf(
         "<p class=\"%s\"%s>%s</p>",
         paste(cls, collapse = " "),
         line_style,
-        .render_html_inline(footnotes_ast[[i]], preserve = ws_preserve)
+        .render_html_inline(ast[[i]], preserve = ws_preserve)
       )
     },
     character(1L)

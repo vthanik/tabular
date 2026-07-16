@@ -385,35 +385,17 @@ backend_latex <- function(grid, file) {
 # alignment comes from `chrome_style$surfaces$title@halign` (scalar
 # broadcasts; vector zips per-line). Cascade default centre.
 .render_latex_title_block <- function(titles_ast, preset = NULL, cs = NULL) {
-  n <- length(titles_ast)
-  if (n == 0L) {
+  if (length(titles_ast) == 0L) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "title")
-  ws_preserve <- .preset_ws_preserve(preset)
-  lines <- unlist(lapply(
-    seq_len(n),
-    function(i) {
-      halign <- .surface_halign(surface_node, "center")
-      bold_open <- if (
-        is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
-      ) {
-        ""
-      } else {
-        "{\\bfseries "
-      }
-      bold_close <- if (identical(bold_open, "")) "" else "}"
-      body <- .latex_wrap_text_props(
-        paste0(
-          bold_open,
-          .render_latex_inline(titles_ast[[i]], preserve = ws_preserve),
-          bold_close
-        ),
-        surface_node
-      )
-      .latex_aligned_paragraph(body = body, halign = halign)
-    }
-  ))
+  lines <- .latex_chrome_lines(
+    titles_ast,
+    surface_node,
+    default_halign = "center",
+    bold = TRUE,
+    ws_preserve = .preset_ws_preserve(preset)
+  )
   # Title borders ride the block edges as full-width rules (top above the
   # first line, bottom below the last). No region channel for the title,
   # so the surface node is the only path. NULL / no border => no rule
@@ -434,24 +416,46 @@ backend_latex <- function(grid, file) {
   preset = NULL,
   cs = NULL
 ) {
-  n <- length(footnotes_ast)
-  if (n == 0L) {
+  if (length(footnotes_ast) == 0L) {
     return(character())
   }
-  surface_node <- .chrome_surface_at(cs, "footer")
-  ws_preserve <- .preset_ws_preserve(preset)
-  rendered <- unlist(lapply(
-    seq_len(n),
+  rendered <- .latex_chrome_lines(
+    footnotes_ast,
+    .chrome_surface_at(cs, "footer"),
+    default_halign = "left",
+    bold = FALSE,
+    ws_preserve = .preset_ws_preserve(preset)
+  )
+  c("\\noindent\\small", rendered, "\\normalsize")
+}
+
+# Shared title/footnote per-line renderer: each AST line resolves its
+# halign from the surface node's cascade (falling back to
+# `default_halign`), optionally wraps in `{\bfseries ...}` unless the
+# surface node explicitly sets `bold = FALSE`, threads the surface
+# text props, and emits one aligned paragraph group per line.
+.latex_chrome_lines <- function(
+  ast,
+  surface_node,
+  default_halign,
+  bold,
+  ws_preserve
+) {
+  unlist(lapply(
+    seq_along(ast),
     function(i) {
-      halign <- .surface_halign(surface_node, "left")
-      body <- .latex_wrap_text_props(
-        .render_latex_inline(footnotes_ast[[i]], preserve = ws_preserve),
-        surface_node
-      )
+      halign <- .surface_halign(surface_node, default_halign)
+      inner <- .render_latex_inline(ast[[i]], preserve = ws_preserve)
+      if (
+        bold &&
+          !(is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE))
+      ) {
+        inner <- paste0("{\\bfseries ", inner, "}")
+      }
+      body <- .latex_wrap_text_props(inner, surface_node)
       .latex_aligned_paragraph(body = body, halign = halign)
     }
   ))
-  c("\\noindent\\small", rendered, "\\normalsize")
 }
 
 # Wrap an inline-rendered fragment in the LaTeX environment that

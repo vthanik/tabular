@@ -321,25 +321,17 @@ backend_typst <- function(grid, file) {
 # per-line blocks would read double-spaced; a mixed-alignment title
 # gains that block gap only at the alignment changes).
 .typst_title_block <- function(titles_ast, preset = NULL, cs = NULL) {
-  n <- length(titles_ast)
-  if (n == 0L) {
+  if (length(titles_ast) == 0L) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "title")
-  ws_preserve <- .preset_ws_preserve(preset)
-  haligns <- character(n)
-  bodies <- character(n)
-  for (i in seq_len(n)) {
-    haligns[[i]] <- .surface_halign(surface_node, "center")
-    inner <- .render_typst_inline(titles_ast[[i]], preserve = ws_preserve)
-    if (
-      !(is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE))
-    ) {
-      inner <- paste0("#strong[", inner, "]")
-    }
-    bodies[[i]] <- .typst_wrap_text_props(inner, surface_node)
-  }
-  lines <- .typst_aligned_lines(bodies, haligns)
+  lines <- .typst_chrome_lines(
+    titles_ast,
+    surface_node,
+    default_halign = "center",
+    bold = TRUE,
+    ws_preserve = .preset_ws_preserve(preset)
+  )
   # Title borders ride the block edges as full-width rules (top above
   # the first line, bottom below the last). NULL / no border => no rule.
   c(
@@ -358,21 +350,16 @@ backend_typst <- function(grid, file) {
   preset = NULL,
   cs = NULL
 ) {
-  n <- length(footnotes_ast)
-  if (n == 0L) {
+  if (length(footnotes_ast) == 0L) {
     return(character())
   }
-  surface_node <- .chrome_surface_at(cs, "footer")
-  ws_preserve <- .preset_ws_preserve(preset)
-  haligns <- character(n)
-  bodies <- character(n)
-  for (i in seq_len(n)) {
-    haligns[[i]] <- .surface_halign(surface_node, "left")
-    bodies[[i]] <- .typst_wrap_text_props(
-      .render_typst_inline(footnotes_ast[[i]], preserve = ws_preserve),
-      surface_node
-    )
-  }
+  lines <- .typst_chrome_lines(
+    footnotes_ast,
+    .chrome_surface_at(cs, "footer"),
+    default_halign = "left",
+    bold = FALSE,
+    ws_preserve = .preset_ws_preserve(preset)
+  )
   # `0.9em` is the LaTeX `\small` ratio at the standard class sizes
   # (10pt -> 9pt). The `#[ ... ]` content block SCOPES the `#set` — at
   # the document top level (figure / empty-state pages) an unscoped set
@@ -380,9 +367,39 @@ backend_typst <- function(grid, file) {
   c(
     "#[",
     "#set text(size: 0.9em)",
-    .typst_aligned_lines(bodies, haligns),
+    lines,
     "]"
   )
+}
+
+# Shared title/footnote per-line renderer: each AST line resolves its
+# halign from the surface node's cascade (falling back to
+# `default_halign`), optionally wraps in `#strong[...]` unless the
+# surface node explicitly sets `bold = FALSE`, threads the surface
+# text props, and groups same-alignment runs via
+# `.typst_aligned_lines()`.
+.typst_chrome_lines <- function(
+  ast,
+  surface_node,
+  default_halign,
+  bold,
+  ws_preserve
+) {
+  n <- length(ast)
+  haligns <- character(n)
+  bodies <- character(n)
+  for (i in seq_len(n)) {
+    haligns[[i]] <- .surface_halign(surface_node, default_halign)
+    inner <- .render_typst_inline(ast[[i]], preserve = ws_preserve)
+    if (
+      bold &&
+        !(is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE))
+    ) {
+      inner <- paste0("#strong[", inner, "]")
+    }
+    bodies[[i]] <- .typst_wrap_text_props(inner, surface_node)
+  }
+  .typst_aligned_lines(bodies, haligns)
 }
 
 # Group consecutive same-alignment lines into single `#align()` blocks

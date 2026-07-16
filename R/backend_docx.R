@@ -768,19 +768,45 @@ backend_docx <- function(grid, file) {
   preset = NULL,
   cs = NULL
 ) {
-  n <- length(titles_ast)
+  .docx_chrome_block(
+    titles_ast,
+    hyperlinks,
+    rid_map = rid_map,
+    preset = preset,
+    cs = cs,
+    surface = "title",
+    pstyle = "TabularTitle"
+  )
+}
+
+# Shared title/footnote chrome renderer: one paragraph per AST line,
+# each tagged with the `pstyle` named style (defined in styles.xml);
+# the per-line halign cascade from the `surface` node overrides the
+# style default when set. Inline AST flows through
+# `.render_docx_inline()` with the surface's `<w:rPr>` as the run
+# default.
+.docx_chrome_block <- function(
+  ast,
+  hyperlinks,
+  rid_map = NULL,
+  preset = NULL,
+  cs = NULL,
+  surface,
+  pstyle
+) {
+  n <- length(ast)
   if (n == 0L) {
     return(character())
   }
-  surface_node <- .chrome_surface_at(cs, "title")
-  title_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
+  surface_node <- .chrome_surface_at(cs, surface)
+  surface_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
   vapply(
     seq_len(n),
     function(i) {
       runs <- .render_docx_inline(
-        titles_ast[[i]],
+        ast[[i]],
         hyperlinks,
-        default_rpr = title_rpr,
+        default_rpr = surface_rpr,
         rid_map = rid_map
       )
       halign <- .surface_halign(surface_node)
@@ -790,7 +816,7 @@ backend_docx <- function(grid, file) {
         ""
       }
       paste0(
-        "<w:p><w:pPr><w:pStyle w:val=\"TabularTitle\"/>",
+        sprintf("<w:p><w:pPr><w:pStyle w:val=\"%s\"/>", pstyle),
         jc_override,
         "</w:pPr>",
         runs,
@@ -941,36 +967,14 @@ backend_docx <- function(grid, file) {
   preset = NULL,
   cs = NULL
 ) {
-  n <- length(footnotes_ast)
-  if (n == 0L) {
-    return(character())
-  }
-  surface_node <- .chrome_surface_at(cs, "footer")
-  foot_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
-  vapply(
-    seq_len(n),
-    function(i) {
-      runs <- .render_docx_inline(
-        footnotes_ast[[i]],
-        hyperlinks,
-        default_rpr = foot_rpr,
-        rid_map = rid_map
-      )
-      halign <- .surface_halign(surface_node)
-      jc_override <- if (length(halign) == 1L && !is.na(halign)) {
-        .docx_align_token(halign)
-      } else {
-        ""
-      }
-      paste0(
-        "<w:p><w:pPr><w:pStyle w:val=\"TabularFoot\"/>",
-        jc_override,
-        "</w:pPr>",
-        runs,
-        "</w:p>"
-      )
-    },
-    character(1L)
+  .docx_chrome_block(
+    footnotes_ast,
+    hyperlinks,
+    rid_map = rid_map,
+    preset = preset,
+    cs = cs,
+    surface = "footer",
+    pstyle = "TabularFoot"
   )
 }
 
