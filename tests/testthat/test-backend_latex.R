@@ -450,16 +450,6 @@ test_that("ampersand, dollar, percent in cells escape into LaTeX", {
 # Alignment column specs
 # ---------------------------------------------------------------------
 
-test_that(".latex_align_token maps every align value", {
-  expect_identical(tabular:::.latex_align_token("left"), "Q[l]")
-  expect_identical(tabular:::.latex_align_token("center"), "Q[c]")
-  expect_identical(tabular:::.latex_align_token("right"), "Q[r]")
-  expect_identical(tabular:::.latex_align_token("decimal"), "Q[c]")
-  expect_identical(tabular:::.latex_align_token(NA_character_), "Q[l]")
-  expect_identical(tabular:::.latex_align_token(NULL), "Q[l]")
-  expect_identical(tabular:::.latex_align_token("garbage"), "Q[l]")
-})
-
 test_that("col_spec align surfaces in the colspec={...} arg", {
   # Auto-default widths now emit Q[<align>,wd=Xin], so we check
   # the align letters individually rather than against a bare

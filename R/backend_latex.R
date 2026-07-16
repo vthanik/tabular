@@ -149,19 +149,19 @@ backend_latex <- function(grid, file) {
   # full-height image minipage, so they sit at the page bottom (the figure
   # is not a longtable, so there is no foot template to route through).
   blank_line <- "{\\strut\\par}"
-  pad_above_title <- .latex_blank_count(
+  pad_above_title <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_title_to_body <- .latex_blank_count(
+  pad_title_to_body <- .chrome_blank_count(
     cs,
     "title",
     "below",
     .meta_gap(meta, "title_to_body", 1L)
   )
-  pad_body_to_foot <- .latex_blank_count(
+  pad_body_to_foot <- .chrome_blank_count(
     cs,
     "footer",
     "above",
@@ -377,13 +377,6 @@ backend_latex <- function(grid, file) {
   )
 }
 
-# Resolve the blank-line count for a chrome surface side — delegates to
-# the shared `.chrome_blank_count()` in chrome_style.R (also used by the
-# Typst backend).
-.latex_blank_count <- function(cs, surface, side, legacy) {
-  .chrome_blank_count(cs, surface, side, legacy)
-}
-
 # ---------------------------------------------------------------------
 # Title + footnote blocks
 # ---------------------------------------------------------------------
@@ -401,16 +394,7 @@ backend_latex <- function(grid, file) {
   lines <- unlist(lapply(
     seq_len(n),
     function(i) {
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        h <- .effective_title_halign(preset, line_index = i, n_lines = n)
-        if (is.na(h)) "center" else h
-      }
+      halign <- .surface_halign(surface_node, "center")
       bold_open <- if (
         is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
       ) {
@@ -459,20 +443,7 @@ backend_latex <- function(grid, file) {
   rendered <- unlist(lapply(
     seq_len(n),
     function(i) {
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        h <- .effective_footnote_halign(
-          preset,
-          line_index = i,
-          n_lines = n
-        )
-        if (is.na(h)) "left" else h
-      }
+      halign <- .surface_halign(surface_node, "left")
       body <- .latex_wrap_text_props(
         .render_latex_inline(footnotes_ast[[i]], preserve = ws_preserve),
         surface_node
@@ -557,8 +528,8 @@ backend_latex <- function(grid, file) {
   # .at = cells_title())`, else the legacy single blank line) wraps the
   # title block so the spacing repeats with the titles on every page.
   if (has_titles) {
-    pad_top <- .latex_blank_count(cs, "title", "above", gap_above)
-    pad_bottom <- .latex_blank_count(cs, "title", "below", gap_below)
+    pad_top <- .chrome_blank_count(cs, "title", "above", gap_above)
+    pad_bottom <- .chrome_blank_count(cs, "title", "below", gap_below)
     # Real blank lines, NOT empty strings: an empty TeX paragraph has
     # zero height under `\parskip=0pt`, so `rep("", n)` produced no
     # visible gap. `{\strut\par}` is one full-height blank line each,
@@ -627,7 +598,7 @@ backend_latex <- function(grid, file) {
   # `body_to_footnote` spacing gap. `{\strut\par}` is one full-height
   # blank line each (matching the title padding), standing in for the
   # bottomrule when `preset_minimal()` drops it.
-  pad_above <- .latex_blank_count(cs, "footer", "above", gap_above)
+  pad_above <- .chrome_blank_count(cs, "footer", "above", gap_above)
   wrapped <- c(
     rep("{\\strut\\par}", pad_above),
     .latex_minipage_wrap(fn, width_in, foot_triple)
@@ -900,10 +871,7 @@ backend_latex <- function(grid, file) {
 
   # Table-level row baseline from cells_style[r,c]@valign
   # (cascade default top). Per-cell overrides emit `\SetCell{...}`.
-  body_valign <- .preset_align(meta$preset, "body_valign")
-  if (is.na(body_valign)) {
-    body_valign <- "top"
-  }
+  body_valign <- "top"
   # tabularray border manifest. Reads `meta$body_borders` — the
   # resolved-triples sidecar built by `.body_border_manifest()` from
   # the spec's cells_table layer cascade — and emits one
@@ -1179,18 +1147,7 @@ backend_latex <- function(grid, file) {
   }
   inner <- .render_latex_inline(subgroup_line_ast)
   surface_node <- .chrome_surface_at(cs, "subgroup")
-  halign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@halign) == 1L &&
-      !is.na(surface_node@halign)
-  ) {
-    surface_node@halign
-  } else {
-    h <- .effective_subgroup_halign(preset)
-    # Paged backends left-align the banner by default (anatomy); an
-    # explicit cells_subgroup_labels() halign override still wins.
-    if (is.na(h)) "left" else h
-  }
+  halign <- .surface_halign(surface_node, "left")
   letter <- .latex_halign_letter(halign)
   bold_open <- if (
     is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
@@ -1354,25 +1311,6 @@ backend_latex <- function(grid, file) {
     # decimal header rather than hugging the right edge (HTML parity).
     decimal = "c",
     "l"
-  )
-}
-
-# Map an `align` value to a tabularray column spec token.
-# `decimal` uses tabularray's siunitx-backed `Q[si=...]` so
-# the decimal points align even without engine-decimal padding
-# — but the engine already padded with NBSP, so right-align is
-# functionally equivalent and cheaper.
-.latex_align_token <- function(align) {
-  if (is.null(align) || length(align) == 0L || is.na(align)) {
-    return("Q[l]")
-  }
-  switch(
-    align,
-    left = "Q[l]",
-    center = "Q[c]",
-    right = "Q[r]",
-    decimal = "Q[c]",
-    "Q[l]"
   )
 }
 
@@ -1552,7 +1490,7 @@ backend_latex <- function(grid, file) {
       ) {
         surface_node@valign
       } else {
-        .effective_header_valign(col, preset)
+        .effective_header_valign(col)
       }
       if (is.na(valign)) {
         valign <- "bottom"

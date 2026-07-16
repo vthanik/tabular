@@ -280,19 +280,19 @@ backend_docx <- function(grid, file) {
   # A blank paragraph carrying only the page-break property; used to start
   # each continuation page on a fresh page (see the loop below).
   break_p <- "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>"
-  pad_above_title <- .docx_blank_count(
+  pad_above_title <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_title_to_body <- .docx_blank_count(
+  pad_title_to_body <- .chrome_blank_count(
     cs,
     "title",
     "below",
     .meta_gap(meta, "title_to_body", 1L)
   )
-  pad_body_to_foot <- .docx_blank_count(
+  pad_body_to_foot <- .chrome_blank_count(
     cs,
     "footer",
     "above",
@@ -639,13 +639,13 @@ backend_docx <- function(grid, file) {
   meta <- grid@metadata
   cs <- meta$chrome_style %||% chrome_style()
   blank_p <- "<w:p/>"
-  pad_title_top <- .docx_blank_count(
+  pad_title_top <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_title_bottom <- .docx_blank_count(
+  pad_title_bottom <- .chrome_blank_count(
     cs,
     "title",
     "below",
@@ -783,15 +783,7 @@ backend_docx <- function(grid, file) {
         default_rpr = title_rpr,
         rid_map = rid_map
       )
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        .effective_title_halign(preset, line_index = i, n_lines = n)
-      }
+      halign <- .surface_halign(surface_node)
       jc_override <- if (length(halign) == 1L && !is.na(halign)) {
         .docx_align_token(halign)
       } else {
@@ -847,15 +839,7 @@ backend_docx <- function(grid, file) {
         default_rpr = title_rpr,
         rid_map = rid_map
       )
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        .effective_title_halign(preset, line_index = i, n_lines = n)
-      }
+      halign <- .surface_halign(surface_node)
       jc_override <- if (length(halign) == 1L && !is.na(halign)) {
         .docx_align_token(halign)
       } else {
@@ -944,18 +928,6 @@ backend_docx <- function(grid, file) {
   paste0(borders, .docx_shd_from_style(node))
 }
 
-# Resolve the blank-line count for a chrome surface side. chrome_style
-# wins when the user set `style(blank_above = N, at = cells_title())`;
-# otherwise the legacy preset `*_pad_*` scalar fills in.
-.docx_blank_count <- function(cs, surface, side, legacy) {
-  node <- .chrome_surface_at(cs, surface)
-  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
-  if (length(prop) == 1L && !is.na(prop)) {
-    return(max(0L, as.integer(prop)))
-  }
-  max(0L, as.integer(legacy))
-}
-
 # Render the footnote block: one paragraph per footnote, each
 # tagged with the `TabularFoot` named style (left-aligned; defined
 # in styles.xml). Per-line horizontal alignment from the cascade
@@ -984,19 +956,7 @@ backend_docx <- function(grid, file) {
         default_rpr = foot_rpr,
         rid_map = rid_map
       )
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        .effective_footnote_halign(
-          preset,
-          line_index = i,
-          n_lines = n
-        )
-      }
+      halign <- .surface_halign(surface_node)
       jc_override <- if (length(halign) == 1L && !is.na(halign)) {
         .docx_align_token(halign)
       } else {
@@ -1084,7 +1044,7 @@ backend_docx <- function(grid, file) {
   # cells_footnotes())`) wins, else the `body_to_footnote` spacing gap.
   # Lets `preset_minimal()` separate the footnotes from the body once
   # the bottomrule is gone.
-  blank_above <- .docx_blank_count(
+  blank_above <- .chrome_blank_count(
     cs,
     "footer",
     "above",
@@ -1673,7 +1633,7 @@ backend_docx <- function(grid, file) {
       ) {
         surface_node@halign
       } else {
-        .effective_header_halign(col, preset)
+        .effective_header_halign(col)
       }
       # Valign cascade mirrors RTF: col_spec > surface > preset, then a
       # bottom default (HTML parity) when nothing set one. (Adding the
@@ -1692,7 +1652,7 @@ backend_docx <- function(grid, file) {
       ) {
         surface_node@valign
       } else {
-        .effective_header_valign(col, preset)
+        .effective_header_valign(col)
       }
       if (is.na(valign)) {
         valign <- "bottom"
@@ -1993,8 +1953,8 @@ backend_docx <- function(grid, file) {
             NULL
           }
           cs <- col_specs[[j]]
-          halign <- .effective_body_halign(style, cs, preset)
-          valign <- .effective_body_valign(style, cs, preset)
+          halign <- .effective_body_halign(style, cs)
+          valign <- .effective_body_valign(style, cs)
           align_tok <- .docx_align_token(halign)
           valign_tok <- .docx_valign_token(valign)
           tc_pr <- .docx_tcPr_inject_valign(
@@ -2134,27 +2094,8 @@ backend_docx <- function(grid, file) {
   } else {
     ""
   }
-  halign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@halign) == 1L &&
-      !is.na(surface_node@halign)
-  ) {
-    surface_node@halign
-  } else {
-    h <- .effective_subgroup_halign(preset)
-    # Paged backends left-align the banner by default (anatomy); an
-    # explicit cells_subgroup_labels() halign override still wins.
-    if (is.na(h)) "left" else h
-  }
-  valign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@valign) == 1L &&
-      !is.na(surface_node@valign)
-  ) {
-    surface_node@valign
-  } else {
-    .effective_subgroup_valign(preset)
-  }
+  halign <- .surface_halign(surface_node, "left")
+  valign <- .surface_valign(surface_node)
   valign_tok <- .docx_valign_token(valign)
   jc_tok <- .docx_align_token(halign)
   # Merged full-width cell: both frame edges ride it, plus the subgroup

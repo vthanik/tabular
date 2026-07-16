@@ -330,16 +330,7 @@ backend_typst <- function(grid, file) {
   haligns <- character(n)
   bodies <- character(n)
   for (i in seq_len(n)) {
-    haligns[[i]] <- if (
-      is_style_node(surface_node) &&
-        length(surface_node@halign) == 1L &&
-        !is.na(surface_node@halign)
-    ) {
-      surface_node@halign
-    } else {
-      h <- .effective_title_halign(preset, line_index = i, n_lines = n)
-      if (is.na(h)) "center" else h
-    }
+    haligns[[i]] <- .surface_halign(surface_node, "center")
     inner <- .render_typst_inline(titles_ast[[i]], preserve = ws_preserve)
     if (
       !(is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE))
@@ -376,16 +367,7 @@ backend_typst <- function(grid, file) {
   haligns <- character(n)
   bodies <- character(n)
   for (i in seq_len(n)) {
-    haligns[[i]] <- if (
-      is_style_node(surface_node) &&
-        length(surface_node@halign) == 1L &&
-        !is.na(surface_node@halign)
-    ) {
-      surface_node@halign
-    } else {
-      h <- .effective_footnote_halign(preset, line_index = i, n_lines = n)
-      if (is.na(h)) "left" else h
-    }
+    haligns[[i]] <- .surface_halign(surface_node, "left")
     bodies[[i]] <- .typst_wrap_text_props(
       .render_typst_inline(footnotes_ast[[i]], preserve = ws_preserve),
       surface_node
@@ -538,7 +520,7 @@ backend_typst <- function(grid, file) {
       is_blank_row = src$is_blank_row,
       cols = cols,
       preset = meta$preset,
-      body_valign = .typst_body_valign(meta$preset),
+      body_valign = .typst_valign("top"),
       rows_triple = if (is.list(meta$body_borders)) {
         meta$body_borders$rows
       } else {
@@ -647,16 +629,6 @@ backend_typst <- function(grid, file) {
     ),
     n_rows = 1L
   )
-}
-
-# Table-level body row baseline valign from the preset (cascade default
-# top), as the typst keyword.
-.typst_body_valign <- function(preset) {
-  v <- .preset_align(preset, "body_valign")
-  if (is.na(v)) {
-    v <- "top"
-  }
-  .typst_valign(v)
 }
 
 # ---------------------------------------------------------------------
@@ -847,18 +819,7 @@ backend_typst <- function(grid, file) {
   }
   inner <- .render_typst_inline(subgroup_line_ast)
   surface_node <- .chrome_surface_at(cs, "subgroup")
-  halign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@halign) == 1L &&
-      !is.na(surface_node@halign)
-  ) {
-    surface_node@halign
-  } else {
-    h <- .effective_subgroup_halign(meta$preset)
-    # Paged backends left-align the banner by default (anatomy); an
-    # explicit cells_subgroup_labels() halign override still wins.
-    if (is.na(h)) "left" else h
-  }
+  halign <- .surface_halign(surface_node, "left")
   if (!(is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE))) {
     inner <- paste0("#strong[", inner, "]")
   }
@@ -993,7 +954,7 @@ backend_typst <- function(grid, file) {
       ) {
         surface_node@valign
       } else {
-        .effective_header_valign(col, preset)
+        .effective_header_valign(col)
       }
       if (is.na(valign)) {
         valign <- "bottom"
@@ -1624,7 +1585,7 @@ backend_typst <- function(grid, file) {
   preset,
   hidden_col = FALSE
 ) {
-  v <- .typst_body_valign(preset)
+  v <- .typst_valign("top")
   toks <- vapply(
     col_names_vis,
     function(nm) {

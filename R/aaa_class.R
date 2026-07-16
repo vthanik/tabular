@@ -406,8 +406,7 @@ header_node <- S7::new_class(
   properties = list(
     label = S7::new_property(S7::class_character, default = NA_character_),
     span = S7::new_property(S7::class_character, default = character()),
-    children = S7::new_property(S7::class_list, default = list()),
-    style = S7::class_any
+    children = S7::new_property(S7::class_list, default = list())
   )
 )
 
@@ -736,9 +735,6 @@ style_spec <- S7::new_class(
   "style_spec",
   package = "tabular",
   properties = list(
-    defaults = style_node,
-    cols = S7::new_property(S7::class_list, default = list()),
-    headers = S7::new_property(S7::class_list, default = list()),
     layers = S7::new_property(S7::class_list, default = list())
   )
 )
@@ -1157,8 +1153,6 @@ figure_spec <- S7::new_class(
   "figure_spec",
   package = "tabular",
   properties = list(
-    # The original user input, kept for print / re-resolve.
-    source = S7::class_any,
     source_kind = S7::new_property(
       S7::class_character,
       default = "ggplot"

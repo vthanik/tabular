@@ -1098,20 +1098,6 @@ as_grid <- function(.spec) {
   base_cols
 }
 
-# Build the name-keyed col_spec map engine_decimal expects. Only
-# user-declared col_specs are forwarded; default-only columns
-# (engine_format synthesises a default col_spec internally for those)
-# never need decimal alignment, so leaving them absent here is the
-# right thing — engine_decimal's loop skips entries that are not
-# col_spec objects, matching the smoke-test pattern.
-.cols_named_for_decimal <- function(spec) {
-  cols <- spec@cols
-  if (length(cols) == 0L) {
-    return(list())
-  }
-  cols
-}
-
 # Map a vector of group_skip transition rows (1-based indices where a
 # new block begins) to a length-`n` section id vector for the decimal
 # aligner. Each transition row starts a new section; the count rises

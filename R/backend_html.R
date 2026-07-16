@@ -158,13 +158,13 @@ backend_html <- function(grid, file) {
   # blank-paragraph padding from `chrome_style$surfaces$title`
   # (blank_above / blank_below).
   blank_p <- "<p class=\"tabular-pad\">&nbsp;</p>"
-  pad_title_top <- .html_blank_count(
+  pad_title_top <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_title_bottom <- .html_blank_count(
+  pad_title_bottom <- .chrome_blank_count(
     cs,
     "title",
     "below",
@@ -197,7 +197,7 @@ backend_html <- function(grid, file) {
   # `body_to_footnote` spacing gap. Stands in for the bottomrule when
   # `preset_minimal()` drops it.
   if (length(footnote_block) > 0L) {
-    foot_blank_above <- .html_blank_count(
+    foot_blank_above <- .chrome_blank_count(
       cs,
       "footer",
       "above",
@@ -359,19 +359,19 @@ backend_html <- function(grid, file) {
   # Title pads ride INSIDE the <figcaption> (mirror the table title block);
   # the footnote pad leads the footnote block.
   blank_p <- "<p class=\"tabular-pad\">&nbsp;</p>"
-  pad_title_top <- .html_blank_count(
+  pad_title_top <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_title_bottom <- .html_blank_count(
+  pad_title_bottom <- .chrome_blank_count(
     cs,
     "title",
     "below",
     .meta_gap(meta, "title_to_body", 1L)
   )
-  pad_foot_above <- .html_blank_count(
+  pad_foot_above <- .chrome_blank_count(
     cs,
     "footer",
     "above",
@@ -622,18 +622,6 @@ backend_html <- function(grid, file) {
   gsub("{npages}", as.character(total_pages), html, fixed = TRUE)
 }
 
-# Resolve the blank-line count for a chrome surface side. chrome_style
-# wins when the user set `style(blank_above = N, at = cells_title())`;
-# otherwise the legacy preset `*_pad_*` scalar fills in.
-.html_blank_count <- function(cs, surface, side, legacy) {
-  node <- .chrome_surface_at(cs, surface)
-  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
-  if (length(prop) == 1L && !is.na(prop)) {
-    return(max(0L, as.integer(prop)))
-  }
-  max(0L, as.integer(legacy))
-}
-
 # Render the run-level inline-style declarations from a chrome
 # surface style_node. Returns a `style="..."` attribute fragment
 # when any prop is set, else an empty string. Backends append this
@@ -718,15 +706,7 @@ backend_html <- function(grid, file) {
   vapply(
     seq_len(n),
     function(i) {
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        .effective_title_halign(preset, line_index = i, n_lines = n)
-      }
+      halign <- .surface_halign(surface_node)
       cls <- "tabular-title"
       if (length(halign) == 1L && !is.na(halign)) {
         extra <- .html_align_class(halign)
@@ -773,19 +753,7 @@ backend_html <- function(grid, file) {
   vapply(
     seq_len(n),
     function(i) {
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        .effective_footnote_halign(
-          preset,
-          line_index = i,
-          n_lines = n
-        )
-      }
+      halign <- .surface_halign(surface_node)
       cls <- "tabular-footnote"
       if (length(halign) == 1L && !is.na(halign)) {
         extra <- .html_align_class(halign)
@@ -1154,8 +1122,8 @@ backend_html <- function(grid, file) {
           }
           text <- .html_escape_cell(raw, preserve = ws_preserve)
           sn <- .cell_style_at(cells_style, i, col_names_visible[[j]])
-          halign <- .effective_body_halign(sn, spec, preset)
-          valign <- .effective_body_valign(sn, spec, preset)
+          halign <- .effective_body_halign(sn, spec)
+          valign <- .effective_body_valign(sn, spec)
           class_attr <- .html_cell_class_attr(halign, valign)
           style_attr <- .html_cell_inline_style_attr(
             sn,
@@ -1362,7 +1330,7 @@ backend_html <- function(grid, file) {
       ) {
         surface_node@halign
       } else {
-        .effective_header_halign(col, preset)
+        .effective_header_halign(col)
       }
       valign <- if (
         is_col_spec(col) &&
@@ -1371,7 +1339,7 @@ backend_html <- function(grid, file) {
       ) {
         col@valign
       } else {
-        .effective_header_valign(col, preset)
+        .effective_header_valign(col)
       }
       attr <- .html_cell_class_attr(halign, valign)
       paste0("<th", attr, surface_style, ">", label, "</th>")
@@ -1440,24 +1408,8 @@ backend_html <- function(grid, file) {
       sprintf(" style=\"%s\"", border_str)
     }
   }
-  halign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@halign) == 1L &&
-      !is.na(surface_node@halign)
-  ) {
-    surface_node@halign
-  } else {
-    .effective_subgroup_halign(preset)
-  }
-  valign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@valign) == 1L &&
-      !is.na(surface_node@valign)
-  ) {
-    surface_node@valign
-  } else {
-    .effective_subgroup_valign(preset)
-  }
+  halign <- .surface_halign(surface_node)
+  valign <- .surface_valign(surface_node)
   attr <- .html_cell_class_attr(
     halign,
     valign,
@@ -1836,18 +1788,6 @@ backend_html <- function(grid, file) {
   }
   pages[[li]]$cells_style <- mat
   pages
-}
-
-# Compose an inline `style="..."` fragment for one cell covering
-# any explicit borders set on the cascade. Returns `""` when no
-# side carries an override. Used in addition to the class attribute
-# so the CSS baseline still drives non-overridden cells.
-.html_cell_border_style_attr <- function(cell_style) {
-  decls <- .html_cell_border_decls(cell_style)
-  if (length(decls) == 0L) {
-    return("")
-  }
-  sprintf(" style=\"%s\"", paste(decls, collapse = " "))
 }
 
 # Sub-helper: the CSS border declarations alone (no `style=`

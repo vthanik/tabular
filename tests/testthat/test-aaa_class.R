@@ -62,8 +62,6 @@ test_that("style_node(bold = TRUE) holds the value", {
 test_that("style_spec() builds with empty containers", {
   s <- style_spec()
   expect_true(is_style_spec(s))
-  expect_length(s@cols, 0L)
-  expect_length(s@headers, 0L)
   expect_length(s@layers, 0L)
 })
 

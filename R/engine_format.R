@@ -269,15 +269,15 @@ engine_format <- function(spec) {
 
 # Parse every cell into an `inline_ast`. Returns a list-matrix shaped
 # like cells_text. Empty data returns an empty list-matrix with the
-# right dimnames.
+# right dimnames. Clinical tables repeat cell text heavily ("", "0",
+# "0 (0.0)", stat labels), and ASTs are immutable once built, so parse
+# each distinct string once and share the AST across its occurrences.
 .parse_cells_ast <- function(cells_text, call) {
-  nrow_data <- nrow(cells_text)
-  ncol_data <- ncol(cells_text)
-  asts <- vector("list", nrow_data * ncol_data)
-  for (k in seq_along(asts)) {
-    asts[[k]] <- .parse_inline(cells_text[[k]], call = call)
-  }
-  dim(asts) <- c(nrow_data, ncol_data)
+  strings <- as.character(cells_text)
+  uniq <- unique(strings)
+  parsed <- lapply(uniq, .parse_inline, call = call)
+  asts <- parsed[match(strings, uniq)]
+  dim(asts) <- dim(cells_text)
   dimnames(asts) <- dimnames(cells_text)
   asts
 }

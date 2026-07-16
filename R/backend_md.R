@@ -105,19 +105,19 @@ backend_md <- function(grid, file) {
   # Inter-section blank-line pads from the spacing gaps (`style()` override
   # wins, else the preset `spacing` gap). Markdown is continuous, so these
   # are blank lines around the title / footnote blocks.
-  pad_above_title <- .md_blank_count(
+  pad_above_title <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_title_to_body <- .md_blank_count(
+  pad_title_to_body <- .chrome_blank_count(
     cs,
     "title",
     "below",
     .meta_gap(meta, "title_to_body", 1L)
   )
-  pad_body_to_foot <- .md_blank_count(
+  pad_body_to_foot <- .chrome_blank_count(
     cs,
     "footer",
     "above",
@@ -245,13 +245,13 @@ backend_md <- function(grid, file) {
   total <- length(pages)
   meta <- grid@metadata
   cs <- meta$chrome_style %||% chrome_style()
-  pad_title_top <- .md_blank_count(
+  pad_title_top <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_title_bottom <- .md_blank_count(
+  pad_title_bottom <- .chrome_blank_count(
     cs,
     "title",
     "below",
@@ -374,7 +374,7 @@ backend_md <- function(grid, file) {
     # before parsing the following prose. Any `body_to_footnote` spacing
     # gap rides ON TOP of that mandatory closing blank (default 0 keeps
     # output byte-identical).
-    foot_blank_above <- .md_blank_count(
+    foot_blank_above <- .chrome_blank_count(
       cs,
       "footer",
       "above",
@@ -454,18 +454,6 @@ backend_md <- function(grid, file) {
   }
   sp <- .subgroup_bign_spans(records, headers, col_names)
   .md_pipe_row(vapply(sp$text, .md_escape_cell, character(1L)))
-}
-
-# Resolve the blank-line count for a chrome surface side. chrome_style
-# wins when the user set `style(blank_above = N, at = cells_title())`;
-# otherwise the legacy preset `*_pad_*` scalar fills in.
-.md_blank_count <- function(cs, surface, side, legacy) {
-  node <- .chrome_surface_at(cs, surface)
-  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
-  if (length(prop) == 1L && !is.na(prop)) {
-    return(max(0L, as.integer(prop)))
-  }
-  max(0L, as.integer(legacy))
 }
 
 # Render the subgroup banner (e.g. "Treatment Arm: Placebo") as one
