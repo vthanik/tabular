@@ -388,12 +388,15 @@ as_grid <- function(.spec) {
   # borders (the user's highest-priority layer via `style(border_
   # <side>_*)`) survive theme-side region stamping. Region values
   # only apply where the predicate layer is silent.
-  style_mat <- engine_borders(spec, style_mat)
+  # The table-surface cascade is collected once and shared by the
+  # per-cell stamping pass and the manifest resolution below.
+  table_layers <- .collect_table_layers(spec)
+  style_mat <- engine_borders(spec, style_mat, layers = table_layers)
   # Body-region border manifest (outer edges + row/col separators) —
   # one resolved triple per side. Backends like LaTeX consume this
   # to emit table-level `hline{i}={spec}` / `vline{j}={spec}`
   # directives without inferring from per-cell scalars on cells_style.
-  body_borders_mat <- .body_border_manifest(spec)
+  body_borders_mat <- .body_border_manifest(spec, layers = table_layers)
   # Chrome regions (header_*, subgroup_*, footer_*, pagehead_bottom,
   # pagefoot_top) live outside the body-cell matrix; populate the
   # parallel sidecar from the lowered cells_*() chrome layers.
@@ -1205,29 +1208,13 @@ as_grid <- function(.spec) {
 # `group_headers` surface, which `engine_style()` deliberately drops
 # (those rows do not exist until pagination). Returns an ordered list.
 .collect_group_header_layers <- function(spec) {
-  sources <- list()
-  session <- get_preset()
-  if (is_preset_spec(session)) {
-    sources <- c(sources, session@style)
-  }
-  if (is_preset_spec(spec@preset)) {
-    sources <- c(sources, spec@preset@style)
-  }
-  if (is_style_spec(spec@styles)) {
-    sources <- c(sources, spec@styles@layers)
-  }
-  if (length(sources) == 0L) {
-    return(list())
-  }
-  keep <- vapply(
-    sources,
-    function(layer) {
+  .collect_cascade_layers(
+    spec,
+    keep = function(layer) {
       loc <- layer@location
       !is.null(loc) && identical(loc$surface, "group_headers")
-    },
-    logical(1L)
+    }
   )
-  sources[keep]
 }
 
 # Stamp the resolved `cells_group_headers()` cascade onto the synthetic
