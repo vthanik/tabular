@@ -43,6 +43,11 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="tabular-development-version">tabular (development version)<a class="anchor" aria-label="anchor" href="#tabular-development-version"></a></h2>
 <div class="section level3">
+<h3 id="improvements-development-version">Improvements<a class="anchor" aria-label="anchor" href="#improvements-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/as_grid.html">as_grid()</a></code> and <code><a href="../reference/emit.html">emit()</a></code> are 11-24% faster on long tables across every backend: cell inline-markup ASTs are parsed once per distinct string, style layers extract their overrides once per layer instead of per cell, subgroup splitting / decimal alignment / pagination keys are single-pass, XML/HTML escaping is vectorised, and body rows are assembled without quadratic append.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
 <ul><li><p><code>preset(font_family = )</code> generic chains (<code>"mono"</code> / <code>"serif"</code> / <code>"sans"</code>) gained the URW/Nimbus Core-35 clone (Nimbus Mono PS / Nimbus Roman / Nimbus Sans) between the PostScript name and the Liberation face, so the default still renders as Courier / Times / Helvetica on Linux images that ship only the ghostscript fonts (and whose Type 1 Courier the Typst compiler cannot read); all links are metric-compatible, so layout is unchanged wherever the chain resolves.</p></li>
 <li><p><code><a href="../reference/emit.html">emit()</a></code> to <code>.tex</code>, <code>.typ</code>, and PDF now re-expresses plain group-separator blank rows as discardable space (a white tabularray hline band on LaTeX, a <code>row-gutter</code> entry on Typst), so a page never ends on a stray blank line above the repeated closing rule when the native page break lands at a group boundary, matching how Word renders the RTF/DOCX output; mid-page the gap keeps the blank row’s exact height, and styled or ruled tables (rowrules, side frames, striped separators) keep the real blank row.</p></li>

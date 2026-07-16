@@ -2,6 +2,18 @@
 
 ## tabular (development version)
 
+### Improvements
+
+- [`as_grid()`](https://vthanik.github.io/tabular/dev/reference/as_grid.md)
+  and
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)
+  are 11-24% faster on long tables across every backend: cell
+  inline-markup ASTs are parsed once per distinct string, style layers
+  extract their overrides once per layer instead of per cell, subgroup
+  splitting / decimal alignment / pagination keys are single-pass,
+  XML/HTML escaping is vectorised, and body rows are assembled without
+  quadratic append.
+
 ### New features
 
 - `preset(font_family = )` generic chains (`"mono"` / `"serif"` /
