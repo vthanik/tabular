@@ -1,5 +1,9 @@
 # tabular (development version)
 
+## Improvements
+
+* `as_grid()` and `emit()` are 11-24% faster on long tables across every backend: cell inline-markup ASTs are parsed once per distinct string, style layers extract their overrides once per layer instead of per cell, subgroup splitting / decimal alignment / pagination keys are single-pass, XML/HTML escaping is vectorised, and body rows are assembled without quadratic append.
+
 ## New features
 
 * `preset(font_family = )` generic chains (`"mono"` / `"serif"` / `"sans"`) gained the URW/Nimbus Core-35 clone (Nimbus Mono PS / Nimbus Roman / Nimbus Sans) between the PostScript name and the Liberation face, so the default still renders as Courier / Times / Helvetica on Linux images that ship only the ghostscript fonts (and whose Type 1 Courier the Typst compiler cannot read); all links are metric-compatible, so layout is unchanged wherever the chain resolves.
