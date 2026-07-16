@@ -584,68 +584,33 @@ preset <- function(
   .reset <- .check_scalar_lgl(.reset, arg = ".reset", call = call)
 
   knobs <- rlang::list2(...)
-  .check_preset_knob_names(knobs, call = call)
-  .validate_lowered_knobs(knobs, call = call)
-  # A figure takes only page-geometry knobs; the cosmetic surface knobs
-  # and style templates target table cells a figure does not have.
-  if (is_figure_spec(.spec)) {
-    .check_figure_preset_knobs(knobs, .template, .style, call = call)
-  }
-  template_knobs <- .extract_template_knobs(.template, call = call)
-  template_style_layers <- .extract_template_style_layers(.template)
-  style_layers <- .extract_style_template_layers(.style, call = call)
-
-  if (
-    .reset &&
-      length(knobs) == 0L &&
-      length(template_knobs) == 0L &&
-      length(template_style_layers) == 0L &&
-      length(style_layers) == 0L
-  ) {
-    return(S7::set_props(.spec, preset = NULL))
-  }
-  if (
-    !.reset &&
-      length(knobs) == 0L &&
-      length(template_knobs) == 0L &&
-      length(template_style_layers) == 0L &&
-      length(style_layers) == 0L
-  ) {
-    return(.spec)
-  }
-
   prior <- .spec@preset
   base <- if (.reset || !is_preset_spec(prior)) preset_spec() else prior
-
-  # After the Task 4/5 slot cut, only the 15 scalar preset_spec
-  # properties (font_size / paper_size / margins / pagehead / …)
-  # survive as slots. The five named-list knobs (`alignment` /
-  # `borders` / `fonts` / `colors` / `padding`) flow exclusively
-  # through `.preset_args_to_layers()` and land on `@style` as
-  # ordered `style_layer` records — there is no slot-side state to
-  # merge anymore. Template knobs lower first so user knobs land
-  # later and win per attribute (layer order is precedence within
-  # the cascade).
-  scalar_template_knobs <- .split_preset_knobs(template_knobs)$scalar
-  scalar_user_knobs <- .split_preset_knobs(knobs)$scalar
-  if (length(scalar_template_knobs) > 0L) {
-    base <- .apply_preset_knobs(base, scalar_template_knobs, call = call)
-  }
-  new_preset <- if (length(scalar_user_knobs) > 0L) {
-    .apply_preset_knobs(base, scalar_user_knobs, call = call)
+  # A figure takes only page-geometry knobs; the cosmetic surface knobs
+  # and style templates target table cells a figure does not have. The
+  # hook runs after knob validation, before template extraction.
+  check_knobs <- if (is_figure_spec(.spec)) {
+    function() {
+      .check_figure_preset_knobs(knobs, .template, .style, call = call)
+    }
   } else {
-    base
+    NULL
   }
-  lowered <- c(
-    .preset_args_to_layers(template_knobs),
-    .preset_args_to_layers(knobs)
+  new_preset <- .compose_preset(
+    base,
+    knobs,
+    .template = .template,
+    .style = .style,
+    call = call,
+    check_knobs = check_knobs
   )
-  appended <- c(template_style_layers, lowered, style_layers)
-  if (length(appended) > 0L) {
-    new_preset <- S7::set_props(
-      new_preset,
-      style = c(new_preset@style, appended)
-    )
+  if (is.null(new_preset)) {
+    # Nothing to compose: a bare `.reset` clears the per-spec preset,
+    # a bare call is a no-op.
+    if (.reset) {
+      return(S7::set_props(.spec, preset = NULL))
+    }
+    return(.spec)
   }
   S7::set_props(.spec, preset = new_preset)
 }
@@ -938,27 +903,73 @@ set_preset <- function(
   .reset <- .check_scalar_lgl(.reset, arg = ".reset", call = call)
 
   knobs <- rlang::list2(...)
+  base <- if (.reset || !is_preset_spec(old)) preset_spec() else old
+  new_preset <- .compose_preset(
+    base,
+    knobs,
+    .template = .template,
+    .style = .style,
+    call = call
+  )
+  if (is.null(new_preset)) {
+    # Nothing to compose: a bare `.reset` clears the session default,
+    # a bare call (re)installs `base` unchanged.
+    if (.reset) {
+      .tabular_session$preset <- NULL
+      return(invisible(old))
+    }
+    new_preset <- base
+  }
+  .tabular_session$preset <- new_preset
+  invisible(old)
+}
+
+# Shared composition body for `preset()` / `set_preset()`. Validates
+# the knob set, extracts the `.template` / `.style` surfaces, and
+# layers everything onto `base` (the prior preset, or a fresh
+# `preset_spec()` under `.reset`). Returns the composed `preset_spec`,
+# or NULL when there is nothing to compose (no knobs, no template
+# knobs or layers, no style layers) so each verb can apply its own
+# empty-call semantics. `call` is the calling verb's caller env,
+# threaded into every validator so cli messages keep their context.
+# `check_knobs` is an optional zero-arg hook run after knob validation
+# and before template extraction (`preset()` uses it for the
+# figure-surface check).
+.compose_preset <- function(
+  base,
+  knobs,
+  .template,
+  .style,
+  call,
+  check_knobs = NULL
+) {
   .check_preset_knob_names(knobs, call = call)
   .validate_lowered_knobs(knobs, call = call)
+  if (!is.null(check_knobs)) {
+    check_knobs()
+  }
   template_knobs <- .extract_template_knobs(.template, call = call)
   template_style_layers <- .extract_template_style_layers(.template)
   style_layers <- .extract_style_template_layers(.style, call = call)
 
   if (
-    .reset &&
-      length(knobs) == 0L &&
+    length(knobs) == 0L &&
       length(template_knobs) == 0L &&
       length(template_style_layers) == 0L &&
       length(style_layers) == 0L
   ) {
-    .tabular_session$preset <- NULL
-    return(invisible(old))
+    return(NULL)
   }
 
-  base <- if (.reset || !is_preset_spec(old)) preset_spec() else old
-
-  # Mirrors `preset()`'s lower-only path for the five named-list
-  # knobs — see the long comment there for the rationale.
+  # After the Task 4/5 slot cut, only the 15 scalar preset_spec
+  # properties (font_size / paper_size / margins / pagehead / …)
+  # survive as slots. The five named-list knobs (`alignment` /
+  # `borders` / `fonts` / `colors` / `padding`) flow exclusively
+  # through `.preset_args_to_layers()` and land on `@style` as
+  # ordered `style_layer` records — there is no slot-side state to
+  # merge anymore. Template knobs lower first so user knobs land
+  # later and win per attribute (layer order is precedence within
+  # the cascade).
   scalar_template_knobs <- .split_preset_knobs(template_knobs)$scalar
   scalar_user_knobs <- .split_preset_knobs(knobs)$scalar
   if (length(scalar_template_knobs) > 0L) {
@@ -980,8 +991,7 @@ set_preset <- function(
       style = c(new_preset@style, appended)
     )
   }
-  .tabular_session$preset <- new_preset
-  invisible(old)
+  new_preset
 }
 
 #' Get the active session-default preset

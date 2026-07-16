@@ -109,10 +109,23 @@ engine_style <- function(spec) {
     return(grid)
   }
   target_cols <- .resolve_layer_cols(loc, col_names, call = call)
-  incoming <- layer@style
+  # The layer's override list is identical for every stamped cell, so
+  # extract it ONCE and re-apply, instead of re-walking the incoming
+  # node's fields per cell (.merge_style_node would redo that O(rows
+  # x cols) times). Merged results repeat too (most cells still hold
+  # the shared default node), so memoise by existing-node identity.
+  overrides <- .style_node_overrides(layer@style)
+  merged_default <- NULL
   for (r in target_rows) {
     for (c in target_cols) {
-      grid[[r, c]] <- .merge_style_node(grid[[r, c]], incoming)
+      existing <- grid[[r, c]]
+      grid[[r, c]] <- if (.style_node_is_default(existing)) {
+        merged_default <- merged_default %||%
+          do.call(S7::set_props, c(list(existing), overrides))
+        merged_default
+      } else {
+        do.call(S7::set_props, c(list(existing), overrides))
+      }
     }
   }
   grid
@@ -260,6 +273,16 @@ engine_style <- function(spec) {
 # default field on every incoming node (the verb errored if the user
 # supplied no attributes), so the override list is always non-empty.
 .merge_style_node <- function(existing, incoming) {
+  do.call(
+    S7::set_props,
+    c(list(existing), .style_node_overrides(incoming))
+  )
+}
+
+# Extract a style_node's non-default fields as a named list, ready for
+# one set_props() call. Shared by the per-layer stamp loop (hoisted out
+# of the per-cell path) and .merge_style_node.
+.style_node_overrides <- function(incoming) {
   overrides <- list()
   for (f in .style_node_fields) {
     v <- S7::prop(incoming, f)
@@ -268,7 +291,13 @@ engine_style <- function(spec) {
     }
     overrides[[f]] <- v
   }
-  do.call(S7::set_props, c(list(existing), overrides))
+  overrides
+}
+
+# TRUE when every field of the node is still at its default (the
+# shared .empty_style_grid node, before any layer touched it).
+.style_node_is_default <- function(node) {
+  length(.style_node_overrides(node)) == 0L
 }
 
 # Detect "no override" state on a style_node field. Defaults across

@@ -382,18 +382,27 @@ as_grid <- function(.spec) {
 ) {
   spec <- engine_sort(spec)
 
+  # Resolve the cascade-effective preset ONCE for the whole resolve —
+  # engine_sort / engine phases never touch spec@preset, so every read
+  # below (group display, decimal metrics, page chrome, stripe,
+  # metadata) shares this one lookup.
+  eff_preset <- .effective_preset(spec)
+
   headers <- engine_headers(spec)
   style_mat <- engine_style(spec)
   # engine_borders runs after engine_style so per-cell predicate
   # borders (the user's highest-priority layer via `style(border_
   # <side>_*)`) survive theme-side region stamping. Region values
   # only apply where the predicate layer is silent.
-  style_mat <- engine_borders(spec, style_mat)
+  # The table-surface cascade is collected once and shared by the
+  # per-cell stamping pass and the manifest resolution below.
+  table_layers <- .collect_table_layers(spec)
+  style_mat <- engine_borders(spec, style_mat, layers = table_layers)
   # Body-region border manifest (outer edges + row/col separators) —
   # one resolved triple per side. Backends like LaTeX consume this
   # to emit table-level `hline{i}={spec}` / `vline{j}={spec}`
   # directives without inferring from per-cell scalars on cells_style.
-  body_borders_mat <- .body_border_manifest(spec)
+  body_borders_mat <- .body_border_manifest(spec, layers = table_layers)
   # Chrome regions (header_*, subgroup_*, footer_*, pagehead_bottom,
   # pagefoot_top) live outside the body-cell matrix; populate the
   # parallel sidecar from the lowered cells_*() chrome layers.
@@ -432,7 +441,7 @@ as_grid <- function(.spec) {
   # QC artefact stays decoration-free) and before engine_group_display
   # (so the affix flows through repeat-suppression / indent / header
   # injection and is measured by engine_decimal + column widths).
-  fmt <- .apply_affixes(fmt, style_mat, call = call)
+  fmt <- .apply_affixes(fmt, style_mat, spec, call = call)
 
   # Apply the group_rows() plan. "section" mode splices
   # section-header rows above each grouping-key transition; "collapse"
@@ -444,7 +453,6 @@ as_grid <- function(.spec) {
   # host-column text is prefixed with `strrep(" ", preset@indent_size)`
   # so the data rows visually nest under their synthetic section
   # header.
-  gd_preset <- .effective_preset(spec)
   gd <- engine_group_display(
     cells_text = fmt$cells_text,
     cells_ast = fmt$cells_ast,
@@ -452,8 +460,8 @@ as_grid <- function(.spec) {
     cols = .cols_by_name(spec@cols, names(spec@data)),
     row_groups = spec@row_groups,
     data = spec@data,
-    indent_size = if (is_preset_spec(gd_preset)) {
-      gd_preset@indent_size
+    indent_size = if (is_preset_spec(eff_preset)) {
+      eff_preset@indent_size
     } else {
       preset_spec()@indent_size
     },
@@ -478,12 +486,12 @@ as_grid <- function(.spec) {
   # NBSP-unit (exact in monospace only). Markdown is a text medium
   # where count-padding IS the correct geometry, so "md" always pads
   # by chars regardless of the preset.
-  decimal_metrics <- .effective_preset(spec)@decimal_metrics
+  decimal_metrics <- eff_preset@decimal_metrics
   if (identical(format, "md")) {
     decimal_metrics <- "chars"
   }
   afm_name <- if (identical(decimal_metrics, "afm")) {
-    family <- .effective_preset(spec)@font_family
+    family <- eff_preset@font_family
     has_decimal_col <- any(
       vapply(
         cols_named,
@@ -532,7 +540,7 @@ as_grid <- function(.spec) {
     fmt$cells_text,
     cols = cols_named,
     sections = decimal_sections,
-    not_considered = .effective_preset(spec)@decimal_markers,
+    not_considered = eff_preset@decimal_markers,
     metrics = decimal_metrics,
     afm_name = afm_name
   )
@@ -606,7 +614,6 @@ as_grid <- function(.spec) {
   # substitution for {program} / {datetime} happens inside
   # `.resolve_page_band` before .parse_inline runs. {page} /
   # {npages} are deferred to backend emission.
-  eff_preset <- .effective_preset(spec)
   pagehead_ast <- .resolve_page_band(
     eff_preset@pagehead,
     arg = "pagehead",
@@ -639,7 +646,9 @@ as_grid <- function(.spec) {
   # continuous with no white gaps; the parity counter still advances on
   # DATA rows only, so the zebra never desyncs. `stripe = NULL` (the
   # default) leaves the pages untouched.
-  pages <- .stamp_stripe(pages, resolve_stripe(eff_preset@stripe))
+  # Resolved once; shared by the stamping pass and the metadata entry.
+  eff_stripe <- resolve_stripe(eff_preset@stripe)
+  pages <- .stamp_stripe(pages, eff_stripe)
 
   # Empty-state placement. When the spec resolves to zero data rows the
   # (single) page carries no body rows; engine_group_display synthesises
@@ -693,7 +702,7 @@ as_grid <- function(.spec) {
       body_borders = body_borders_mat,
       spacing = resolve_spacing(eff_preset@spacing),
       gaps = gap_counts(eff_preset@spacing),
-      stripe = resolve_stripe(eff_preset@stripe),
+      stripe = eff_stripe,
       subgroup_runtime = runtime
     )
   )
@@ -708,10 +717,18 @@ as_grid <- function(.spec) {
 # the AST path parses each affix to its own runs and splices them on.
 # `style_mat` is the post-engine_borders matrix, index-aligned 1:1 with
 # `fmt$cells_text` / `fmt$cells_ast` (same shape + column dimnames).
-.apply_affixes <- function(fmt, style_mat, call) {
+.apply_affixes <- function(fmt, style_mat, spec, call) {
   ct <- fmt$cells_text
   ca <- fmt$cells_ast
   if (is.null(style_mat) || nrow(ct) == 0L || ncol(ct) == 0L) {
+    return(fmt)
+  }
+  # O(layers) gate: affixes reach cells_style only through style()
+  # layers (stripe / border engines never set them), so when no layer
+  # in the cascade carries pretext / posttext the per-cell scan below
+  # cannot find one. Skips the 2-prop S7 read on every cell for the
+  # overwhelmingly common no-affix table.
+  if (!.cascade_has_affixes(spec)) {
     return(fmt)
   }
   for (j in seq_len(ncol(ct))) {
@@ -746,6 +763,40 @@ as_grid <- function(.spec) {
   fmt$cells_text <- ct
   fmt$cells_ast <- ca
   fmt
+}
+
+# TRUE when any style layer in the cascade (session preset, spec
+# preset, spec styles) declares pretext / posttext. O(layers), so the
+# per-cell affix scan can be skipped for the common no-affix table.
+.cascade_has_affixes <- function(spec) {
+  layer_has <- function(layer) {
+    node <- layer@style
+    (length(node@pretext) == 1L && !is.na(node@pretext)) ||
+      (length(node@posttext) == 1L && !is.na(node@posttext))
+  }
+  session_preset <- get_preset()
+  if (is_preset_spec(session_preset)) {
+    for (layer in session_preset@style) {
+      if (layer_has(layer)) {
+        return(TRUE)
+      }
+    }
+  }
+  if (is_preset_spec(spec@preset)) {
+    for (layer in spec@preset@style) {
+      if (layer_has(layer)) {
+        return(TRUE)
+      }
+    }
+  }
+  if (is_style_spec(spec@styles)) {
+    for (layer in spec@styles@layers) {
+      if (layer_has(layer)) {
+        return(TRUE)
+      }
+    }
+  }
+  FALSE
 }
 
 # Stamp per-group subgroup runtime onto every page in `pages` and
@@ -967,12 +1018,20 @@ as_grid <- function(.spec) {
   # Constant fold: HTML / md show the N once in the suffixed column
   # header (kept on `meta` below), so there are no per-arm N records to
   # build or stamp. Decide once and skip the record build entirely.
+  # Compute the (keep_empty-aware) combos once and thread them into
+  # both bign helpers, instead of each rebuilding the crossing.
+  sg <- spec@subgroup
+  combos <- if (!is.null(sg) && !is.null(sg@big_n)) {
+    .subgroup_combos(spec@data, sg@by, keep_empty = isTRUE(sg@keep_empty))
+  } else {
+    NULL
+  }
   constant_fold <- !is.null(base_col_labels_ast) &&
-    .subgroup_bign_constant(spec)
+    .subgroup_bign_constant(spec, combos = combos)
   bign_records <- if (constant_fold) {
     NULL
   } else {
-    .subgroup_bign_records_all(spec)
+    .subgroup_bign_records_all(spec, combos = combos)
   }
   pages <- unlist(
     lapply(sub_grids, function(g) {
@@ -1098,20 +1157,6 @@ as_grid <- function(.spec) {
   base_cols
 }
 
-# Build the name-keyed col_spec map engine_decimal expects. Only
-# user-declared col_specs are forwarded; default-only columns
-# (engine_format synthesises a default col_spec internally for those)
-# never need decimal alignment, so leaving them absent here is the
-# right thing — engine_decimal's loop skips entries that are not
-# col_spec objects, matching the smoke-test pattern.
-.cols_named_for_decimal <- function(spec) {
-  cols <- spec@cols
-  if (length(cols) == 0L) {
-    return(list())
-  }
-  cols
-}
-
 # Map a vector of group_skip transition rows (1-based indices where a
 # new block begins) to a length-`n` section id vector for the decimal
 # aligner. Each transition row starts a new section; the count rises
@@ -1177,29 +1222,13 @@ as_grid <- function(.spec) {
 # `group_headers` surface, which `engine_style()` deliberately drops
 # (those rows do not exist until pagination). Returns an ordered list.
 .collect_group_header_layers <- function(spec) {
-  sources <- list()
-  session <- get_preset()
-  if (is_preset_spec(session)) {
-    sources <- c(sources, session@style)
-  }
-  if (is_preset_spec(spec@preset)) {
-    sources <- c(sources, spec@preset@style)
-  }
-  if (is_style_spec(spec@styles)) {
-    sources <- c(sources, spec@styles@layers)
-  }
-  if (length(sources) == 0L) {
-    return(list())
-  }
-  keep <- vapply(
-    sources,
-    function(layer) {
+  .collect_cascade_layers(
+    spec,
+    keep = function(layer) {
       loc <- layer@location
       !is.null(loc) && identical(loc$surface, "group_headers")
-    },
-    logical(1L)
+    }
   )
-  sources[keep]
 }
 
 # Stamp the resolved `cells_group_headers()` cascade onto the synthetic

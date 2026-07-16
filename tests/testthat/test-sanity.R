@@ -69,29 +69,3 @@ test_that("check_pos_int rejects zero / negative / fractional / Inf / multi / NA
   expect_error(check_pos_int(NA_integer_), class = "tabular_error_input")
   expect_error(check_pos_int("3"), class = "tabular_error_input")
 })
-
-test_that("check_enum accepts values in choices", {
-  expect_invisible(check_enum("left", choices = c("left", "right")))
-})
-
-test_that("check_enum rejects values outside choices", {
-  expect_error(
-    check_enum("up", choices = c("left", "right")),
-    class = "tabular_error_input"
-  )
-})
-
-test_that("check_enum rejects non-character / multi / NA", {
-  expect_error(
-    check_enum(1L, choices = "left"),
-    class = "tabular_error_input"
-  )
-  expect_error(
-    check_enum(c("left", "right"), choices = c("left", "right")),
-    class = "tabular_error_input"
-  )
-  expect_error(
-    check_enum(NA_character_, choices = "left"),
-    class = "tabular_error_input"
-  )
-})

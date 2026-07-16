@@ -52,7 +52,11 @@
 #'   names). Cells outside any region come through unchanged.
 #' @keywords internal
 #' @noRd
-engine_borders <- function(spec, cells_style) {
+engine_borders <- function(
+  spec,
+  cells_style,
+  layers = .collect_table_layers(spec)
+) {
   if (!is.matrix(cells_style)) {
     return(cells_style)
   }
@@ -66,7 +70,7 @@ engine_borders <- function(spec, cells_style) {
   if (length(visible_idx) == 0L) {
     return(cells_style)
   }
-  for (layer in .collect_table_layers(spec)) {
+  for (layer in layers) {
     cells_style <- .apply_table_layer(
       layer = layer,
       cells_style = cells_style,
@@ -96,7 +100,10 @@ engine_borders <- function(spec, cells_style) {
 #' @return Named list (length 6) of triples or NULLs.
 #' @keywords internal
 #' @noRd
-.body_border_manifest <- function(spec) {
+.body_border_manifest <- function(
+  spec,
+  layers = .collect_table_layers(spec)
+) {
   out <- list(
     outer_top = NULL,
     outer_bottom = NULL,
@@ -105,7 +112,7 @@ engine_borders <- function(spec, cells_style) {
     rows = NULL,
     cols = NULL
   )
-  for (layer in .collect_table_layers(spec)) {
+  for (layer in layers) {
     side <- layer@location$side
     node <- layer@style
     if (is.null(side) || identical(side, "outer")) {
@@ -144,15 +151,14 @@ engine_borders <- function(spec, cells_style) {
   out
 }
 
-# Collect every layer in the four-tier cascade whose location is a
-# `cells_table` (border-only surface). Returns layers in cascade
-# order — session preset first, per-spec layers last — so the
-# last-write wins per side at stamp time.
-.collect_table_layers <- function(spec) {
-  # The booktabs baseline is injected first (lowest precedence) so a
-  # table with no `rules` knob still gets the clinical default rules;
-  # session / preset / per-spec layers override via later position.
-  sources <- .default_rule_layers()
+# Collect every layer in the style cascade that satisfies `keep`, a
+# predicate function(layer) -> logical(1). Layers come back in cascade
+# order — `defaults` first (lowest precedence), then session preset,
+# spec preset, per-spec layers — so last-write wins per attribute at
+# stamp time. Shared engine for the table / chrome / group-header
+# surface collectors below and in R/as_grid.R.
+.collect_cascade_layers <- function(spec, keep, defaults = list()) {
+  sources <- defaults
   session <- get_preset()
   if (is_preset_spec(session)) {
     sources <- c(sources, session@style)
@@ -163,15 +169,25 @@ engine_borders <- function(spec, cells_style) {
   if (is_style_spec(spec@styles)) {
     sources <- c(sources, spec@styles@layers)
   }
-  matches <- vapply(
-    sources,
-    function(layer) {
+  matches <- vapply(sources, keep, logical(1L))
+  sources[matches]
+}
+
+# Collect every layer in the four-tier cascade whose location is a
+# `cells_table` (border-only surface). Returns layers in cascade
+# order — session preset first, per-spec layers last — so the
+# last-write wins per side at stamp time. The booktabs baseline is
+# injected first (lowest precedence) so a table with no `rules` knob
+# still gets the clinical default rules.
+.collect_table_layers <- function(spec) {
+  .collect_cascade_layers(
+    spec,
+    keep = function(layer) {
       loc <- layer@location
       !is.null(loc) && identical(loc$surface, "table")
     },
-    logical(1L)
+    defaults = .default_rule_layers()
   )
-  sources[matches]
 }
 
 # Stamp one cells_table layer onto the cells_style matrix. Maps the
@@ -494,27 +510,15 @@ engine_chrome_borders <- function(spec) {
   # Inject the booktabs baseline first (lowest precedence) for the
   # chrome rules (toprule / midrule / spanrule / footnoterule); later
   # cascade sources override.
-  sources <- .default_rule_layers()
-  session <- get_preset()
-  if (is_preset_spec(session)) {
-    sources <- c(sources, session@style)
-  }
-  if (is_preset_spec(spec@preset)) {
-    sources <- c(sources, spec@preset@style)
-  }
-  if (is_style_spec(spec@styles)) {
-    sources <- c(sources, spec@styles@layers)
-  }
   chrome_surfaces <- names(.location_to_chrome_surface)
-  matches <- vapply(
-    sources,
-    function(layer) {
+  .collect_cascade_layers(
+    spec,
+    keep = function(layer) {
       loc <- layer@location
       !is.null(loc) && loc$surface %in% chrome_surfaces
     },
-    logical(1L)
+    defaults = .default_rule_layers()
   )
-  sources[matches]
 }
 
 # Apply one chrome-surface layer to a chrome_style sidecar:

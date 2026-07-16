@@ -321,34 +321,17 @@ backend_typst <- function(grid, file) {
 # per-line blocks would read double-spaced; a mixed-alignment title
 # gains that block gap only at the alignment changes).
 .typst_title_block <- function(titles_ast, preset = NULL, cs = NULL) {
-  n <- length(titles_ast)
-  if (n == 0L) {
+  if (length(titles_ast) == 0L) {
     return(character())
   }
   surface_node <- .chrome_surface_at(cs, "title")
-  ws_preserve <- .preset_ws_preserve(preset)
-  haligns <- character(n)
-  bodies <- character(n)
-  for (i in seq_len(n)) {
-    haligns[[i]] <- if (
-      is_style_node(surface_node) &&
-        length(surface_node@halign) == 1L &&
-        !is.na(surface_node@halign)
-    ) {
-      surface_node@halign
-    } else {
-      h <- .effective_title_halign(preset, line_index = i, n_lines = n)
-      if (is.na(h)) "center" else h
-    }
-    inner <- .render_typst_inline(titles_ast[[i]], preserve = ws_preserve)
-    if (
-      !(is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE))
-    ) {
-      inner <- paste0("#strong[", inner, "]")
-    }
-    bodies[[i]] <- .typst_wrap_text_props(inner, surface_node)
-  }
-  lines <- .typst_aligned_lines(bodies, haligns)
+  lines <- .typst_chrome_lines(
+    titles_ast,
+    surface_node,
+    default_halign = "center",
+    bold = TRUE,
+    ws_preserve = .preset_ws_preserve(preset)
+  )
   # Title borders ride the block edges as full-width rules (top above
   # the first line, bottom below the last). NULL / no border => no rule.
   c(
@@ -367,30 +350,16 @@ backend_typst <- function(grid, file) {
   preset = NULL,
   cs = NULL
 ) {
-  n <- length(footnotes_ast)
-  if (n == 0L) {
+  if (length(footnotes_ast) == 0L) {
     return(character())
   }
-  surface_node <- .chrome_surface_at(cs, "footer")
-  ws_preserve <- .preset_ws_preserve(preset)
-  haligns <- character(n)
-  bodies <- character(n)
-  for (i in seq_len(n)) {
-    haligns[[i]] <- if (
-      is_style_node(surface_node) &&
-        length(surface_node@halign) == 1L &&
-        !is.na(surface_node@halign)
-    ) {
-      surface_node@halign
-    } else {
-      h <- .effective_footnote_halign(preset, line_index = i, n_lines = n)
-      if (is.na(h)) "left" else h
-    }
-    bodies[[i]] <- .typst_wrap_text_props(
-      .render_typst_inline(footnotes_ast[[i]], preserve = ws_preserve),
-      surface_node
-    )
-  }
+  lines <- .typst_chrome_lines(
+    footnotes_ast,
+    .chrome_surface_at(cs, "footer"),
+    default_halign = "left",
+    bold = FALSE,
+    ws_preserve = .preset_ws_preserve(preset)
+  )
   # `0.9em` is the LaTeX `\small` ratio at the standard class sizes
   # (10pt -> 9pt). The `#[ ... ]` content block SCOPES the `#set` — at
   # the document top level (figure / empty-state pages) an unscoped set
@@ -398,9 +367,39 @@ backend_typst <- function(grid, file) {
   c(
     "#[",
     "#set text(size: 0.9em)",
-    .typst_aligned_lines(bodies, haligns),
+    lines,
     "]"
   )
+}
+
+# Shared title/footnote per-line renderer: each AST line resolves its
+# halign from the surface node's cascade (falling back to
+# `default_halign`), optionally wraps in `#strong[...]` unless the
+# surface node explicitly sets `bold = FALSE`, threads the surface
+# text props, and groups same-alignment runs via
+# `.typst_aligned_lines()`.
+.typst_chrome_lines <- function(
+  ast,
+  surface_node,
+  default_halign,
+  bold,
+  ws_preserve
+) {
+  n <- length(ast)
+  haligns <- character(n)
+  bodies <- character(n)
+  for (i in seq_len(n)) {
+    haligns[[i]] <- .surface_halign(surface_node, default_halign)
+    inner <- .render_typst_inline(ast[[i]], preserve = ws_preserve)
+    if (
+      bold &&
+        !(is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE))
+    ) {
+      inner <- paste0("#strong[", inner, "]")
+    }
+    bodies[[i]] <- .typst_wrap_text_props(inner, surface_node)
+  }
+  .typst_aligned_lines(bodies, haligns)
 }
 
 # Group consecutive same-alignment lines into single `#align()` blocks
@@ -538,7 +537,7 @@ backend_typst <- function(grid, file) {
       is_blank_row = src$is_blank_row,
       cols = cols,
       preset = meta$preset,
-      body_valign = .typst_body_valign(meta$preset),
+      body_valign = .typst_valign("top"),
       rows_triple = if (is.list(meta$body_borders)) {
         meta$body_borders$rows
       } else {
@@ -647,16 +646,6 @@ backend_typst <- function(grid, file) {
     ),
     n_rows = 1L
   )
-}
-
-# Table-level body row baseline valign from the preset (cascade default
-# top), as the typst keyword.
-.typst_body_valign <- function(preset) {
-  v <- .preset_align(preset, "body_valign")
-  if (is.na(v)) {
-    v <- "top"
-  }
-  .typst_valign(v)
 }
 
 # ---------------------------------------------------------------------
@@ -847,18 +836,7 @@ backend_typst <- function(grid, file) {
   }
   inner <- .render_typst_inline(subgroup_line_ast)
   surface_node <- .chrome_surface_at(cs, "subgroup")
-  halign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@halign) == 1L &&
-      !is.na(surface_node@halign)
-  ) {
-    surface_node@halign
-  } else {
-    h <- .effective_subgroup_halign(meta$preset)
-    # Paged backends left-align the banner by default (anatomy); an
-    # explicit cells_subgroup_labels() halign override still wins.
-    if (is.na(h)) "left" else h
-  }
+  halign <- .surface_halign(surface_node, "left")
   if (!(is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE))) {
     inner <- paste0("#strong[", inner, "]")
   }
@@ -993,7 +971,7 @@ backend_typst <- function(grid, file) {
       ) {
         surface_node@valign
       } else {
-        .effective_header_valign(col, preset)
+        .effective_header_valign(col)
       }
       if (is.na(valign)) {
         valign <- "bottom"
@@ -1154,10 +1132,15 @@ backend_typst <- function(grid, file) {
   body_font_pt <- if (is_preset_spec(preset)) preset@font_size else NA_real_
   row_leads <- .typst_keep_leads(keep_with_next, nrow_data)
 
-  lines <- character()
+  # One slot per row plus one per possible inter-row rule; filled by
+  # index, NULLs dropped by the final unlist (no O(n^2) c() growth).
+  lines <- vector("list", 2L * nrow_data)
   for (i in seq_len(nrow_data)) {
     if (i > 1L && !is.null(rows_stroke)) {
-      lines <- c(lines, sprintf("  table.hline(stroke: %s),", rows_stroke))
+      lines[[2L * i - 1L]] <- sprintf(
+        "  table.hline(stroke: %s),",
+        rows_stroke
+      )
     }
     if (isTRUE(is_blank_row[[i]])) {
       # Blank separator row: one spanning cell whose hidden strut keeps
@@ -1170,35 +1153,29 @@ backend_typst <- function(grid, file) {
         NULL
       }
       first_node <- if (!is.null(cells_style)) cells_style[[i, 1L]] else NULL
-      lines <- c(
-        lines,
-        sprintf(
-          "  %s%s,",
-          row_leads[[i]],
-          .typst_cell(
-            "#hide[X]",
-            colspan = if (ncol_data > 1L) ncol_data else NULL,
-            fill = bg,
-            stroke = .typst_cell_stroke(first_node)
-          )
+      lines[[2L * i]] <- sprintf(
+        "  %s%s,",
+        row_leads[[i]],
+        .typst_cell(
+          "#hide[X]",
+          colspan = if (ncol_data > 1L) ncol_data else NULL,
+          fill = bg,
+          stroke = .typst_cell_stroke(first_node)
         )
       )
       next
     }
     if (isTRUE(is_header_row[[i]])) {
-      lines <- c(
-        lines,
-        .typst_group_header_row(
-          cells_text,
-          cells_style,
-          cells_indent,
-          i,
-          ncol_data,
-          indent_pt_per_level,
-          body_valign,
-          ws_preserve,
-          row_lead = row_leads[[i]]
-        )
+      lines[[2L * i]] <- .typst_group_header_row(
+        cells_text,
+        cells_style,
+        cells_indent,
+        i,
+        ncol_data,
+        indent_pt_per_level,
+        body_valign,
+        ws_preserve,
+        row_lead = row_leads[[i]]
       )
       next
     }
@@ -1262,12 +1239,13 @@ backend_typst <- function(grid, file) {
       },
       character(1L)
     )
-    lines <- c(
-      lines,
-      sprintf("  %s%s,", row_leads[[i]], paste(cells, collapse = ", "))
+    lines[[2L * i]] <- sprintf(
+      "  %s%s,",
+      row_leads[[i]],
+      paste(cells, collapse = ", ")
     )
   }
-  list(lines = lines, n_rows = nrow_data)
+  list(lines = as.character(unlist(lines)), n_rows = nrow_data)
 }
 
 # Per-row lead cells for the hidden keep column. `keep[i]` TRUE glues
@@ -1624,7 +1602,7 @@ backend_typst <- function(grid, file) {
   preset,
   hidden_col = FALSE
 ) {
-  v <- .typst_body_valign(preset)
+  v <- .typst_valign("top")
   toks <- vapply(
     col_names_vis,
     function(nm) {

@@ -193,7 +193,6 @@ figure <- function(
   }
 
   figure_spec(
-    source = plot,
     source_kind = classified$source_kind,
     plots = classified$plots,
     figure_meta = meta_val,

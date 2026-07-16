@@ -236,19 +236,19 @@ backend_rtf <- function(grid, file) {
   # `\plain` reverts to RTF 12pt, so re-emit the preset body size on each
   # spacer line to match the body height (mirrors `.render_rtf_panel`).
   blank_par <- paste0("\\pard\\plain", .rtf_body_fs(preset), "\\par")
-  pad_above_title <- .rtf_blank_count(
+  pad_above_title <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_title_to_body <- .rtf_blank_count(
+  pad_title_to_body <- .chrome_blank_count(
     cs,
     "title",
     "below",
     .meta_gap(meta, "title_to_body", 1L)
   )
-  pad_body_to_foot <- .rtf_blank_count(
+  pad_body_to_foot <- .chrome_blank_count(
     cs,
     "footer",
     "above",
@@ -438,7 +438,7 @@ backend_rtf <- function(grid, file) {
     # size so the blank spacer line matches the body height (mirrors the
     # blank table rows and the title / footnote rows).
     paste0("\\pard\\plain", .rtf_body_fs(preset), "\\par"),
-    .rtf_blank_count(
+    .chrome_blank_count(
       cs,
       "footer",
       "above",
@@ -475,13 +475,13 @@ backend_rtf <- function(grid, file) {
     lead_sect = FALSE
   )
 
-  pad_top <- .rtf_blank_count(
+  pad_top <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_bottom <- .rtf_blank_count(
+  pad_bottom <- .chrome_blank_count(
     cs,
     "title",
     "below",
@@ -837,16 +837,7 @@ backend_rtf <- function(grid, file) {
   # this `collapse` is silently a no-op on repeated page titles.
   ws_preserve <- .preset_ws_preserve(preset)
   for (i in seq_len(n)) {
-    halign <- if (
-      is_style_node(surface_node) &&
-        length(surface_node@halign) == 1L &&
-        !is.na(surface_node@halign)
-    ) {
-      surface_node@halign
-    } else {
-      h <- .effective_title_halign(preset, line_index = i, n_lines = n)
-      if (is.na(h)) "center" else h
-    }
+    halign <- .surface_halign(surface_node, "center")
     inner <- .render_rtf_inline(titles_ast[[i]], preserve = ws_preserve)
     if (i == 1L && isTRUE(mark_continuation) && length(continuation) > 0L) {
       inner <- paste0(
@@ -910,19 +901,6 @@ backend_rtf <- function(grid, file) {
     )
   }
   invisible()
-}
-
-# Resolve the blank-line count for a chrome surface side. chrome_style
-# wins when the user set `style(blank_above = N, at = cells_title())`;
-# otherwise the legacy preset `*_pad_*` scalar fills in. Always
-# returns a non-negative whole integer.
-.rtf_blank_count <- function(cs, surface, side, legacy) {
-  node <- .chrome_surface_at(cs, surface)
-  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
-  if (length(prop) == 1L && !is.na(prop)) {
-    return(max(0L, as.integer(prop)))
-  }
-  max(0L, as.integer(legacy))
 }
 
 # ---------------------------------------------------------------------
@@ -1277,16 +1255,7 @@ backend_rtf <- function(grid, file) {
   vapply(
     seq_len(n),
     function(i) {
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        h <- .effective_title_halign(preset, line_index = i, n_lines = n)
-        if (is.na(h)) "center" else h
-      }
+      halign <- .surface_halign(surface_node, "center")
       align_tok <- .rtf_align_token(halign)
       bold_open <- if (
         is_style_node(surface_node) && isTRUE(surface_node@bold == FALSE)
@@ -1358,20 +1327,7 @@ backend_rtf <- function(grid, file) {
   paras <- vapply(
     seq_len(n),
     function(i) {
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        h <- .effective_footnote_halign(
-          preset,
-          line_index = i,
-          n_lines = n
-        )
-        if (is.na(h)) "left" else h
-      }
+      halign <- .surface_halign(surface_node, "left")
       align_tok <- .rtf_align_token(halign)
       paste0(
         "\\pard\\plain",
@@ -1515,27 +1471,8 @@ backend_rtf <- function(grid, file) {
   inner <- .render_rtf_inline(subgroup_line_ast)
   surface_node <- .chrome_surface_at(cs, "subgroup")
   surface_props <- .rtf_chrome_text_props(surface_node, colors, fonts)
-  halign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@halign) == 1L &&
-      !is.na(surface_node@halign)
-  ) {
-    surface_node@halign
-  } else {
-    h <- .effective_subgroup_halign(preset)
-    # Paged backends left-align the banner by default (anatomy); an
-    # explicit style(.at = cells_subgroup_labels()) override still wins.
-    if (is.na(h)) "left" else h
-  }
-  valign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@valign) == 1L &&
-      !is.na(surface_node@valign)
-  ) {
-    surface_node@valign
-  } else {
-    .effective_subgroup_valign(preset)
-  }
+  halign <- .surface_halign(surface_node, "left")
+  valign <- .surface_valign(surface_node)
   align_tok <- .rtf_align_token(halign)
   valign_tok <- .rtf_valign_token(valign)
   # Subgroup banner chrome rules: chrome_style$borders takes priority
@@ -1923,7 +1860,7 @@ backend_rtf <- function(grid, file) {
     ) {
       surface_node@halign
     } else {
-      .effective_header_halign(col, preset)
+      .effective_header_halign(col)
     }
     valign <- if (
       is_col_spec(col) &&
@@ -1938,7 +1875,7 @@ backend_rtf <- function(grid, file) {
     ) {
       surface_node@valign
     } else {
-      .effective_header_valign(col, preset)
+      .effective_header_valign(col)
     }
     # Header cells default to bottom valign (HTML parity) only when
     # nothing in the cascade set one, so a wrapped multi-line header sits
@@ -2177,8 +2114,8 @@ backend_rtf <- function(grid, file) {
     for (i in seq_along(col_names_vis)) {
       sn <- .cell_style_at(cells_style, r, col_names_vis[[i]])
       col <- col_specs[[i]]
-      halign <- .effective_body_halign(sn, col, preset)
-      valign <- .effective_body_valign(sn, col, preset)
+      halign <- .effective_body_halign(sn, col)
+      valign <- .effective_body_valign(sn, col)
       align_tok <- .rtf_align_token(halign)
       valign_tok <- .rtf_valign_token(valign)
       # Backend default per-side borders for a body cell: top and left

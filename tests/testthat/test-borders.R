@@ -219,37 +219,6 @@ test_that(".html_border_decl maps style enum to CSS keyword", {
   )
 })
 
-test_that(".html_cell_border_style_attr emits per-side decls", {
-  sn <- style_node(
-    border_top_style = "solid",
-    border_top_width = 0.5,
-    border_top_color = "#212529",
-    border_bottom_style = "dashed",
-    border_bottom_width = 1
-  )
-  out <- tabular:::.html_cell_border_style_attr(sn)
-  expect_true(grepl("border-top: 0.5pt solid #212529;", out, fixed = TRUE))
-  # Unset bottom colour now resolves to the ink hex (was currentColor).
-  expect_true(grepl(
-    "border-bottom: 1pt dashed #212529;",
-    out,
-    fixed = TRUE
-  ))
-})
-
-test_that(".html_cell_border_style_attr is empty when no overrides", {
-  expect_identical(
-    tabular:::.html_cell_border_style_attr(style_node()),
-    ""
-  )
-})
-
-test_that(".html_cell_border_style_attr emits 'none' for explicit clear", {
-  sn <- style_node(border_top_style = "none")
-  out <- tabular:::.html_cell_border_style_attr(sn)
-  expect_true(grepl("border-top: none;", out, fixed = TRUE))
-})
-
 test_that("default border colour is ink, decoupled from text colour (#issue6)", {
   # brdr() and the .effective_border default both resolve to the `ink`
   # token, NOT `currentColor` -- so a rule under a recoloured header no

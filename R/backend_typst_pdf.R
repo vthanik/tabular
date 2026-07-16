@@ -74,14 +74,11 @@
       error = function(e) NA_character_
     )
   }
-  if (length(line) == 0L || is.na(line)) {
+  version <- .parse_version_banner(line, "typst (\\d+\\.\\d+(\\.\\d+)?)")
+  if (is.na(version)) {
     return(NA)
   }
-  m <- regmatches(line, regexec("typst (\\d+\\.\\d+(\\.\\d+)?)", line))[[1L]]
-  if (length(m) < 2L) {
-    return(NA)
-  }
-  numeric_version(m[[2L]])
+  numeric_version(version)
 }
 
 # Font families the discovered typst binary can see (`typst fonts`
@@ -129,20 +126,16 @@ backend_typst_pdf <- function(grid, file, .compile = .tabular_typst_compile) {
     .typst_missing_abort()
   }
 
-  typ_dir <- tempfile(pattern = "tabular_typst_")
-  dir.create(typ_dir, recursive = TRUE)
-  on.exit(unlink(typ_dir, recursive = TRUE), add = TRUE)
-
-  typ_file <- file.path(typ_dir, "tabular.typ")
-  backend_typst(grid, typ_file)
-
-  result <- tryCatch(
-    .compile(typ_file, file),
-    error = function(e) e
+  call <- rlang::caller_env()
+  result <- .compile_pdf_source(
+    grid = grid,
+    file = file,
+    compile = .compile,
+    write_source = backend_typst,
+    src_name = "tabular.typ",
+    dir_pattern = "tabular_typst_",
+    on_error = function(e) .typst_compile_abort(e, bin, call = call)
   )
-  if (inherits(result, "error")) {
-    .typst_compile_abort(result, bin)
-  }
   # typst falls back on a missing font family SILENTLY in the PDF and
   # only notes it on stderr; surface those notes loudly so a layout
   # rendered in the wrong face is never a quiet defect.
@@ -244,7 +237,12 @@ backend_typst_pdf <- function(grid, file, .compile = .tabular_typst_compile) {
 # remedy, so that branch wins; otherwise the compiler's own message
 # (which carries file/line context) is surfaced verbatim. `.version`
 # is an injected seam for tests.
-.typst_compile_abort <- function(err, bin = NULL, .version = NULL) {
+.typst_compile_abort <- function(
+  err,
+  bin = NULL,
+  .version = NULL,
+  call = rlang::caller_env(2L)
+) {
   msg <- conditionMessage(err)
   version <- .version %||% .typst_version(bin)
   min_version <- .tabular_min_typst_version
@@ -272,7 +270,7 @@ backend_typst_pdf <- function(grid, file, .compile = .tabular_typst_compile) {
       "i" = "Fallback: render to HTML or RTF instead via {.code emit(spec, \"out.html\")} or {.code emit(spec, \"out.rtf\")}."
     ),
     class = "tabular_error_backend",
-    call = rlang::caller_env(2L)
+    call = call
   )
 }
 
@@ -406,18 +404,7 @@ check_typst <- function(quiet = FALSE) {
     "v {command} {version}"
   }
   cli::cli_text(paste0("  ", bin_line))
-  for (i in seq_len(nrow(out))) {
-    fam <- out$font[[i]]
-    ok <- out$available[[i]]
-    line <- if (isTRUE(ok)) {
-      "v font {fam}"
-    } else if (isFALSE(ok)) {
-      "x font {fam}"
-    } else {
-      "? font {fam}"
-    }
-    cli::cli_text(paste0("  ", line))
-  }
+  .check_report_status_lines(out$font, out$available, prefix = "font ")
 
   if (is.na(command)) {
     cli::cli_alert_warning(

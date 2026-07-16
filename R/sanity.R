@@ -177,36 +177,3 @@ check_pos_int <- function(
     call = call
   )
 }
-
-#' Check that `x` is one of a fixed set of strings
-#'
-#' Single-element character; value must be in `choices`.
-#'
-#' @inheritParams check_tabular_spec
-#' @param choices Allowed values.
-#' @return `x` invisibly on success; otherwise aborts.
-#' @keywords internal
-#' @noRd
-check_enum <- function(
-  x,
-  choices,
-  arg = rlang::caller_arg(x),
-  call = rlang::caller_env()
-) {
-  if (
-    is.character(x) &&
-      length(x) == 1L &&
-      !is.na(x) &&
-      x %in% choices
-  ) {
-    return(invisible(x))
-  }
-  cli::cli_abort(
-    c(
-      "{.arg {arg}} must be one of {.val {choices}}.",
-      "x" = "You supplied {.val {x}}."
-    ),
-    class = "tabular_error_input",
-    call = call
-  )
-}

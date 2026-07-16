@@ -134,43 +134,6 @@ test_that(".preset_alignment_shape_error: valign vector rejected", {
   )
 })
 
-test_that(".effective_footnote_halign returns NA on a default preset", {
-  # No footnote alignment slot remains; the resolver returns NA and the
-  # backend applies its own left default (the `alignment` knob, when
-  # set, flows through the chrome layer the backend checks first).
-  expect_true(is.na(tabular:::.effective_footnote_halign(preset_spec())))
-})
-
-# ---------------------------------------------------------------------
-# .preset_align — baked-default resolver (no alignment slots)
-# ---------------------------------------------------------------------
-
-test_that(".preset_align returns NA for body / header / subgroup keys", {
-  # These surfaces carry no baked default; backends consume the
-  # chrome_style / cells_style cascade for them.
-  expect_true(is.na(tabular:::.preset_align(preset_spec(), "body_halign")))
-  expect_true(is.na(tabular:::.preset_align(preset_spec(), "header_halign")))
-  expect_true(
-    is.na(tabular:::.preset_align(preset_spec(), "subgroup_halign"))
-  )
-})
-
-test_that(".preset_align returns NA for non-preset input", {
-  expect_true(is.na(tabular:::.preset_align(NULL, "body_halign")))
-  expect_true(is.na(tabular:::.preset_align("not a preset", "body_halign")))
-})
-
-test_that(".preset_align returns NA for every key (no alignment slots)", {
-  # With the title_align / footnote_align slots removed, the resolver
-  # always returns NA; backends apply their own surface defaults and
-  # the `alignment` knob flows through the chrome layer.
-  expect_true(is.na(tabular:::.preset_align(preset_spec(), "title_halign")))
-  expect_true(is.na(tabular:::.preset_align(
-    preset_spec(),
-    "footnote_halign"
-  )))
-})
-
 # ---------------------------------------------------------------------
 # Class validators — last-line defence
 # ---------------------------------------------------------------------
@@ -335,29 +298,25 @@ test_that(".effective_body_halign cascade: predicate > col_spec > NA", {
   # No style override -> col_spec wins.
   sn_empty <- style_node()
   expect_identical(
-    tabular:::.effective_body_halign(sn_empty, cs, preset_spec()),
+    tabular:::.effective_body_halign(sn_empty, cs),
     "right"
   )
 
   # Style override -> beats col_spec.
   sn_override <- style_node(halign = "left")
   expect_identical(
-    tabular:::.effective_body_halign(sn_override, cs, preset_spec()),
+    tabular:::.effective_body_halign(sn_override, cs),
     "left"
   )
 
   # No col_spec @align, no preset legacy scalar -> NA.
-  expect_true(is.na(tabular:::.effective_body_halign(
-    sn_empty,
-    col_spec(),
-    preset_spec()
-  )))
+  expect_true(is.na(tabular:::.effective_body_halign(sn_empty, col_spec())))
 })
 
 test_that(".effective_body_halign centres 'decimal' (engine padded to column width)", {
   cs <- col_spec(align = "decimal")
   expect_identical(
-    tabular:::.effective_body_halign(style_node(), cs, preset_spec()),
+    tabular:::.effective_body_halign(style_node(), cs),
     "center"
   )
 })
@@ -365,21 +324,16 @@ test_that(".effective_body_halign centres 'decimal' (engine padded to column wid
 test_that(".effective_body_valign cascade: predicate > col_spec > NA", {
   cs <- col_spec(valign = "bottom")
   expect_identical(
-    tabular:::.effective_body_valign(style_node(), cs, preset_spec()),
+    tabular:::.effective_body_valign(style_node(), cs),
     "bottom"
   )
   expect_identical(
-    tabular:::.effective_body_valign(
-      style_node(valign = "top"),
-      cs,
-      preset_spec()
-    ),
+    tabular:::.effective_body_valign(style_node(valign = "top"), cs),
     "top"
   )
   expect_true(is.na(tabular:::.effective_body_valign(
     style_node(),
-    col_spec(),
-    preset_spec()
+    col_spec()
   )))
 })
 
@@ -387,31 +341,12 @@ test_that(".effective_body_valign cascade: predicate > col_spec > NA", {
 # Header / subgroup / title / footnote cascade
 # ---------------------------------------------------------------------
 
-test_that(".effective_header_halign cascade: col_spec > preset > NA", {
-  # No preset@alignment slot; .preset_align returns NA for header_halign.
+test_that(".effective_header_halign cascade: col_spec > NA", {
   expect_identical(
-    tabular:::.effective_header_halign(
-      col_spec(align = "right"),
-      preset_spec()
-    ),
+    tabular:::.effective_header_halign(col_spec(align = "right")),
     "right"
   )
-  expect_true(is.na(tabular:::.effective_header_halign(
-    col_spec(),
-    preset_spec()
-  )))
-})
-
-test_that(".effective_subgroup_halign returns NA on factory preset", {
-  expect_true(is.na(tabular:::.effective_subgroup_halign(preset_spec())))
-})
-
-test_that(".effective_title_halign returns NA on a default preset", {
-  expect_true(is.na(tabular:::.effective_title_halign(
-    preset_spec(),
-    line_index = 1L,
-    n_lines = 1L
-  )))
+  expect_true(is.na(tabular:::.effective_header_halign(col_spec())))
 })
 
 # ---------------------------------------------------------------------
@@ -563,11 +498,11 @@ test_that(".effective_header_halign centres a decimal-aligned column header (#co
   # mirroring the body); a plain align passes through.
   p <- tabular:::.effective_preset(tabular(data.frame(x = 1)))
   expect_identical(
-    tabular:::.effective_header_halign(col_spec(align = "decimal"), p),
+    tabular:::.effective_header_halign(col_spec(align = "decimal")),
     "center"
   )
   expect_identical(
-    tabular:::.effective_header_halign(col_spec(align = "left"), p),
+    tabular:::.effective_header_halign(col_spec(align = "left")),
     "left"
   )
 })

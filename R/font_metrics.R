@@ -78,6 +78,9 @@
 # (negative cache: one device probe per face per session).
 .device_metrics_cache <- new.env(parent = emptyenv())
 
+# Per-face ASCII LUT cache for `.text_width_em()` (see there).
+.afm_lut_cache <- new.env(parent = emptyenv())
+
 .device_afm_key <- function(face, bold = FALSE, italic = FALSE) {
   paste0(
     "device:",
@@ -533,12 +536,23 @@
   # ASCII LUT only — codepoints 32-127 where byte == codepoint ==
   # AFM slot. Higher slots in the AFM exist but don't correspond
   # to Latin-1 codepoints (Adobe Standard Encoding mismatch),
-  # so we don't fold them into a Unicode-keyed LUT here.
-  lut <- rep(default_w, 128L)
-  ascii_names <- names(char_widths)
-  ascii_bytes <- as.integer(charToRaw(paste0(ascii_names, collapse = "")))
-  ascii_keep <- ascii_bytes < 128L
-  lut[ascii_bytes[ascii_keep]] <- unname(char_widths)[ascii_keep]
+  # so we don't fold them into a Unicode-keyed LUT here. Memoised
+  # per afm_name for the bundled (immutable) AFM tables: width /
+  # decimal / pagination passes call in a tight per-column loop.
+  # Device-measured faces skip the cache — their session tables can
+  # be re-registered (tests do).
+  cacheable <- !is.list(dev_entry)
+  lut <- if (cacheable) .afm_lut_cache[[afm_name]] else NULL
+  if (is.null(lut)) {
+    lut <- rep(default_w, 128L)
+    ascii_names <- names(char_widths)
+    ascii_bytes <- as.integer(charToRaw(paste0(ascii_names, collapse = "")))
+    ascii_keep <- ascii_bytes < 128L
+    lut[ascii_bytes[ascii_keep]] <- unname(char_widths)[ascii_keep]
+    if (cacheable) {
+      assign(afm_name, lut, envir = .afm_lut_cache)
+    }
+  }
 
   symbol_widths <- afm_metrics[["Symbol"]]
   symbol_default <- if (!is.null(symbol_widths)) {

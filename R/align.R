@@ -96,22 +96,6 @@
 }
 
 # ---------------------------------------------------------------------
-# preset accessor: read one alignment key with cascade
-# ---------------------------------------------------------------------
-
-# Alignment resolver. After the rules/spacing redesign there are NO
-# alignment slots on `preset_spec`: title / footnote / subgroup /
-# header / body alignment all flow through the `alignment` knob, which
-# lowers to `cells_<surface>()` layers (chrome_style / cells_style)
-# that backends consult FIRST. With no slot left to read, this helper
-# returns NA for every key, so each backend applies its own baked-in
-# surface default (title centered, footnote left, via CSS / markup).
-# The `preset` argument is retained for signature stability but unused.
-.preset_align <- function(preset, key, line_index = 1L, n_lines = 1L) {
-  NA_character_
-}
-
-# ---------------------------------------------------------------------
 # Cell-level effective alignment (body cells)
 # ---------------------------------------------------------------------
 
@@ -123,7 +107,7 @@
 # Body alignment from `preset(alignment = list(body_halign = ...))`
 # stamps `cells_style[r,c]@halign` via the lowered cells_body()
 # layer, so the top of the cascade reads it.
-.effective_body_halign <- function(cell_style, col_spec, preset) {
+.effective_body_halign <- function(cell_style, col_spec) {
   if (
     is_style_node(cell_style) &&
       length(cell_style@halign) == 1L &&
@@ -146,7 +130,7 @@
     }
     return(col_spec@align)
   }
-  .preset_align(preset, "body_halign")
+  NA_character_
 }
 
 # Effective vertical alignment for one body cell. Walks:
@@ -156,7 +140,7 @@
 # Body valign from `preset(alignment = list(body_valign = ...))`
 # stamps `cells_style[r,c]@valign` via the lowered cells_body()
 # layer, so the top of the cascade reads it.
-.effective_body_valign <- function(cell_style, col_spec, preset) {
+.effective_body_valign <- function(cell_style, col_spec) {
   if (
     is_style_node(cell_style) &&
       length(cell_style@valign) == 1L &&
@@ -171,7 +155,7 @@
   ) {
     return(col_spec@valign)
   }
-  .preset_align(preset, "body_valign")
+  NA_character_
 }
 
 # ---------------------------------------------------------------------
@@ -182,7 +166,7 @@
 # col_spec, then the preset header default. The body-level fallback
 # of "left" does not apply — header cells default to centre via the
 # baked `header_halign` default.
-.effective_header_halign <- function(col_spec, preset) {
+.effective_header_halign <- function(col_spec) {
   if (
     is_col_spec(col_spec) &&
       length(col_spec@align) == 1L &&
@@ -193,10 +177,10 @@
     }
     return(col_spec@align)
   }
-  .preset_align(preset, "header_halign")
+  NA_character_
 }
 
-.effective_header_valign <- function(col_spec, preset) {
+.effective_header_valign <- function(col_spec) {
   if (
     is_col_spec(col_spec) &&
       length(col_spec@valign) == 1L &&
@@ -204,42 +188,5 @@
   ) {
     return(col_spec@valign)
   }
-  .preset_align(preset, "header_valign")
-}
-
-# ---------------------------------------------------------------------
-# Surface accessors (subgroup banner, title, footnote)
-# ---------------------------------------------------------------------
-
-.effective_subgroup_halign <- function(preset) {
-  .preset_align(preset, "subgroup_halign")
-}
-
-.effective_subgroup_valign <- function(preset) {
-  .preset_align(preset, "subgroup_valign")
-}
-
-# Title / footnote alignment by line index. `line_index` is 1-based;
-# `n_lines` is the total title or footnote vector length (informational;
-# used only by .preset_align for vector-form broadcast).
-.effective_title_halign <- function(preset, line_index = 1L, n_lines = 1L) {
-  .preset_align(
-    preset,
-    "title_halign",
-    line_index = line_index,
-    n_lines = n_lines
-  )
-}
-
-.effective_footnote_halign <- function(
-  preset,
-  line_index = 1L,
-  n_lines = 1L
-) {
-  .preset_align(
-    preset,
-    "footnote_halign",
-    line_index = line_index,
-    n_lines = n_lines
-  )
+  NA_character_
 }

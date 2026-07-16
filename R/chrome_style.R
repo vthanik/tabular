@@ -192,10 +192,33 @@ chrome_style <- function() {
   if (is_style_node(n)) n else style_node()
 }
 
+# Halign / valign for a chrome surface: an explicit style-node value
+# wins, else the backend's baked default for that surface (NA when the
+# backend's markup layer supplies the default itself, e.g. HTML CSS).
+.surface_halign <- function(node, default = NA_character_) {
+  if (
+    is_style_node(node) && length(node@halign) == 1L && !is.na(node@halign)
+  ) {
+    node@halign
+  } else {
+    default
+  }
+}
+
+.surface_valign <- function(node, default = NA_character_) {
+  if (
+    is_style_node(node) && length(node@valign) == 1L && !is.na(node@valign)
+  ) {
+    node@valign
+  } else {
+    default
+  }
+}
+
 # Resolve the blank-line count for a chrome surface side. chrome_style
 # wins when the user set `style(blank_above = N, at = cells_title())`;
-# otherwise the legacy preset `*_pad_*` scalar fills in. Shared by the
-# LaTeX and Typst backends (`.latex_blank_count` delegates here).
+# otherwise the legacy preset `*_pad_*` scalar fills in. Shared by
+# every backend.
 .chrome_blank_count <- function(cs, surface, side, legacy) {
   node <- .chrome_surface_at(cs, surface)
   prop <- if (identical(side, "above")) node@blank_above else node@blank_below

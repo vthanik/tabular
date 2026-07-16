@@ -280,19 +280,19 @@ backend_docx <- function(grid, file) {
   # A blank paragraph carrying only the page-break property; used to start
   # each continuation page on a fresh page (see the loop below).
   break_p <- "<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>"
-  pad_above_title <- .docx_blank_count(
+  pad_above_title <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_title_to_body <- .docx_blank_count(
+  pad_title_to_body <- .chrome_blank_count(
     cs,
     "title",
     "below",
     .meta_gap(meta, "title_to_body", 1L)
   )
-  pad_body_to_foot <- .docx_blank_count(
+  pad_body_to_foot <- .chrome_blank_count(
     cs,
     "footer",
     "above",
@@ -639,13 +639,13 @@ backend_docx <- function(grid, file) {
   meta <- grid@metadata
   cs <- meta$chrome_style %||% chrome_style()
   blank_p <- "<w:p/>"
-  pad_title_top <- .docx_blank_count(
+  pad_title_top <- .chrome_blank_count(
     cs,
     "title",
     "above",
     .meta_gap(meta, "above_title", 1L)
   )
-  pad_title_bottom <- .docx_blank_count(
+  pad_title_bottom <- .chrome_blank_count(
     cs,
     "title",
     "below",
@@ -768,37 +768,55 @@ backend_docx <- function(grid, file) {
   preset = NULL,
   cs = NULL
 ) {
-  n <- length(titles_ast)
+  .docx_chrome_block(
+    titles_ast,
+    hyperlinks,
+    rid_map = rid_map,
+    preset = preset,
+    cs = cs,
+    surface = "title",
+    pstyle = "TabularTitle"
+  )
+}
+
+# Shared title/footnote chrome renderer: one paragraph per AST line,
+# each tagged with the `pstyle` named style (defined in styles.xml);
+# the per-line halign cascade from the `surface` node overrides the
+# style default when set. Inline AST flows through
+# `.render_docx_inline()` with the surface's `<w:rPr>` as the run
+# default.
+.docx_chrome_block <- function(
+  ast,
+  hyperlinks,
+  rid_map = NULL,
+  preset = NULL,
+  cs = NULL,
+  surface,
+  pstyle
+) {
+  n <- length(ast)
   if (n == 0L) {
     return(character())
   }
-  surface_node <- .chrome_surface_at(cs, "title")
-  title_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
+  surface_node <- .chrome_surface_at(cs, surface)
+  surface_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
   vapply(
     seq_len(n),
     function(i) {
       runs <- .render_docx_inline(
-        titles_ast[[i]],
+        ast[[i]],
         hyperlinks,
-        default_rpr = title_rpr,
+        default_rpr = surface_rpr,
         rid_map = rid_map
       )
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        .effective_title_halign(preset, line_index = i, n_lines = n)
-      }
+      halign <- .surface_halign(surface_node)
       jc_override <- if (length(halign) == 1L && !is.na(halign)) {
         .docx_align_token(halign)
       } else {
         ""
       }
       paste0(
-        "<w:p><w:pPr><w:pStyle w:val=\"TabularTitle\"/>",
+        sprintf("<w:p><w:pPr><w:pStyle w:val=\"%s\"/>", pstyle),
         jc_override,
         "</w:pPr>",
         runs,
@@ -847,15 +865,7 @@ backend_docx <- function(grid, file) {
         default_rpr = title_rpr,
         rid_map = rid_map
       )
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        .effective_title_halign(preset, line_index = i, n_lines = n)
-      }
+      halign <- .surface_halign(surface_node)
       jc_override <- if (length(halign) == 1L && !is.na(halign)) {
         .docx_align_token(halign)
       } else {
@@ -944,18 +954,6 @@ backend_docx <- function(grid, file) {
   paste0(borders, .docx_shd_from_style(node))
 }
 
-# Resolve the blank-line count for a chrome surface side. chrome_style
-# wins when the user set `style(blank_above = N, at = cells_title())`;
-# otherwise the legacy preset `*_pad_*` scalar fills in.
-.docx_blank_count <- function(cs, surface, side, legacy) {
-  node <- .chrome_surface_at(cs, surface)
-  prop <- if (identical(side, "above")) node@blank_above else node@blank_below
-  if (length(prop) == 1L && !is.na(prop)) {
-    return(max(0L, as.integer(prop)))
-  }
-  max(0L, as.integer(legacy))
-}
-
 # Render the footnote block: one paragraph per footnote, each
 # tagged with the `TabularFoot` named style (left-aligned; defined
 # in styles.xml). Per-line horizontal alignment from the cascade
@@ -969,48 +967,14 @@ backend_docx <- function(grid, file) {
   preset = NULL,
   cs = NULL
 ) {
-  n <- length(footnotes_ast)
-  if (n == 0L) {
-    return(character())
-  }
-  surface_node <- .chrome_surface_at(cs, "footer")
-  foot_rpr <- .docx_rPr_from_style(surface_node, preset = preset)
-  vapply(
-    seq_len(n),
-    function(i) {
-      runs <- .render_docx_inline(
-        footnotes_ast[[i]],
-        hyperlinks,
-        default_rpr = foot_rpr,
-        rid_map = rid_map
-      )
-      halign <- if (
-        is_style_node(surface_node) &&
-          length(surface_node@halign) == 1L &&
-          !is.na(surface_node@halign)
-      ) {
-        surface_node@halign
-      } else {
-        .effective_footnote_halign(
-          preset,
-          line_index = i,
-          n_lines = n
-        )
-      }
-      jc_override <- if (length(halign) == 1L && !is.na(halign)) {
-        .docx_align_token(halign)
-      } else {
-        ""
-      }
-      paste0(
-        "<w:p><w:pPr><w:pStyle w:val=\"TabularFoot\"/>",
-        jc_override,
-        "</w:pPr>",
-        runs,
-        "</w:p>"
-      )
-    },
-    character(1L)
+  .docx_chrome_block(
+    footnotes_ast,
+    hyperlinks,
+    rid_map = rid_map,
+    preset = preset,
+    cs = cs,
+    surface = "footer",
+    pstyle = "TabularFoot"
   )
 }
 
@@ -1084,7 +1048,7 @@ backend_docx <- function(grid, file) {
   # cells_footnotes())`) wins, else the `body_to_footnote` spacing gap.
   # Lets `preset_minimal()` separate the footnotes from the body once
   # the bottomrule is gone.
-  blank_above <- .docx_blank_count(
+  blank_above <- .chrome_blank_count(
     cs,
     "footer",
     "above",
@@ -1673,7 +1637,7 @@ backend_docx <- function(grid, file) {
       ) {
         surface_node@halign
       } else {
-        .effective_header_halign(col, preset)
+        .effective_header_halign(col)
       }
       # Valign cascade mirrors RTF: col_spec > surface > preset, then a
       # bottom default (HTML parity) when nothing set one. (Adding the
@@ -1692,7 +1656,7 @@ backend_docx <- function(grid, file) {
       ) {
         surface_node@valign
       } else {
-        .effective_header_valign(col, preset)
+        .effective_header_valign(col)
       }
       if (is.na(valign)) {
         valign <- "bottom"
@@ -1780,7 +1744,7 @@ backend_docx <- function(grid, file) {
   indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
   indent_unit <- nchar(.indent_text_unit(indent_size))
   indent_twips_per_level <- .indent_native_twips_per_level(preset)
-  out <- character()
+  out <- list()
   prev_subgroup_index <- NULL
   for (page in pages) {
     sg_index <- page$subgroup_index
@@ -1805,7 +1769,7 @@ backend_docx <- function(grid, file) {
         body_borders = body_borders
       )
       if (length(banner_row) > 0L) {
-        out <- c(out, banner_row)
+        out[[length(out) + 1L]] <- banner_row
       }
       prev_subgroup_index <- sg_index
     }
@@ -1822,6 +1786,7 @@ backend_docx <- function(grid, file) {
     is_header_row_vec <- page$is_header_row %||% rep(FALSE, nrows)
     is_blank_row_vec <- page$is_blank_row %||% rep(FALSE, nrows)
     span_total_twips <- sum(as.integer(widths_twips))
+    page_rows <- vector("list", nrows)
     for (i in seq_len(nrows)) {
       if (isTRUE(is_blank_row_vec[[i]])) {
         # Merged full-width cell: both frame edges ride this single cell,
@@ -1835,8 +1800,7 @@ backend_docx <- function(grid, file) {
         blank_shd <- .docx_shd_from_style(
           tryCatch(cs_mat[[i, 1L]], error = function(e) NULL)
         )
-        out <- c(
-          out,
+        page_rows[[i]] <- c(
           paste0(
             "<w:tr><w:trPr><w:cantSplit/></w:trPr>",
             "<w:tc><w:tcPr>",
@@ -1942,8 +1906,7 @@ backend_docx <- function(grid, file) {
           "left"
         }
         header_jc_tok <- .docx_align_token(header_halign)
-        out <- c(
-          out,
+        page_rows[[i]] <- c(
           paste0(
             "<w:tr><w:trPr><w:cantSplit/></w:trPr>",
             "<w:tc><w:tcPr>",
@@ -1993,8 +1956,8 @@ backend_docx <- function(grid, file) {
             NULL
           }
           cs <- col_specs[[j]]
-          halign <- .effective_body_halign(style, cs, preset)
-          valign <- .effective_body_valign(style, cs, preset)
+          halign <- .effective_body_halign(style, cs)
+          valign <- .effective_body_valign(style, cs)
           align_tok <- .docx_align_token(halign)
           valign_tok <- .docx_valign_token(valign)
           tc_pr <- .docx_tcPr_inject_valign(
@@ -2068,13 +2031,16 @@ backend_docx <- function(grid, file) {
       # position; the paragraph-level `<w:keepNext/>` above handles
       # the row-to-row glue.
       tr_pr <- "<w:trPr><w:cantSplit/></w:trPr>"
-      out <- c(
-        out,
-        paste0("<w:tr>", tr_pr, paste(cells, collapse = ""), "</w:tr>")
+      page_rows[[i]] <- paste0(
+        "<w:tr>",
+        tr_pr,
+        paste(cells, collapse = ""),
+        "</w:tr>"
       )
     }
+    out[[length(out) + 1L]] <- unlist(page_rows)
   }
-  out
+  as.character(unlist(out))
 }
 
 # Inject a `<w:vAlign .../>` element into an existing `<w:tcPr>...
@@ -2134,27 +2100,8 @@ backend_docx <- function(grid, file) {
   } else {
     ""
   }
-  halign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@halign) == 1L &&
-      !is.na(surface_node@halign)
-  ) {
-    surface_node@halign
-  } else {
-    h <- .effective_subgroup_halign(preset)
-    # Paged backends left-align the banner by default (anatomy); an
-    # explicit cells_subgroup_labels() halign override still wins.
-    if (is.na(h)) "left" else h
-  }
-  valign <- if (
-    is_style_node(surface_node) &&
-      length(surface_node@valign) == 1L &&
-      !is.na(surface_node@valign)
-  ) {
-    surface_node@valign
-  } else {
-    .effective_subgroup_valign(preset)
-  }
+  halign <- .surface_halign(surface_node, "left")
+  valign <- .surface_valign(surface_node)
   valign_tok <- .docx_valign_token(valign)
   jc_tok <- .docx_align_token(halign)
   # Merged full-width cell: both frame edges ride it, plus the subgroup
@@ -3791,16 +3738,12 @@ backend_docx <- function(grid, file) {
   if (is.null(text) || length(text) == 0L) {
     return("")
   }
-  if (length(text) > 1L) {
-    return(unname(vapply(text, .docx_escape, character(1L))))
-  }
-  if (is.na(text)) {
-    return("")
-  }
+  scalar <- length(text) == 1L
+  text[is.na(text)] <- ""
   text <- gsub("&", "&amp;", text, fixed = TRUE)
   text <- gsub("<", "&lt;", text, fixed = TRUE)
   text <- gsub(">", "&gt;", text, fixed = TRUE)
-  text
+  if (scalar) text else unname(text)
 }
 
 # Escape XML attribute content: text-escape rules plus " (the

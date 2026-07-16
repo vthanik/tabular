@@ -504,32 +504,7 @@ engine_group_display <- function(
   candidates[[1L]]
 }
 
-# Prepend an indent prefix to every AST in `asts` (a list-column of
-# `inline_ast` records). The prefix becomes a leading `plain` run on
-# each AST, which every backend already renders verbatim through its
-# inline-run pipeline.
-#
-# NA / NULL / non-inline_ast entries pass through unchanged — the
-# user might have hand-attached a wrapper that doesn't carry runs,
-# and the host column may contain entries from rows the
-# group-display engine doesn't manage.
-.indent_host_asts <- function(asts, indent_size) {
-  indent_unit <- .indent_text_unit(indent_size)
-  if (length(asts) == 0L || !nzchar(indent_unit)) {
-    return(asts)
-  }
-  prefix_run <- list(type = "plain", text = indent_unit)
-  for (i in seq_along(asts)) {
-    a <- asts[[i]]
-    if (!is_inline_ast(a)) {
-      next
-    }
-    asts[[i]] <- inline_ast(runs = c(list(prefix_run), a@runs))
-  }
-  asts
-}
-
-# Per-row variant of `.indent_host_asts`. Takes a parallel
+# Indent host-column ASTs row by row. Takes a parallel
 # `prefixes` character vector (length == length(asts)); each row's
 # AST gets its OWN prefix prepended as a leading `plain` run.
 # Empty prefix on a row means no prefix run is added (zero-depth
@@ -706,7 +681,7 @@ engine_group_display <- function(
 # yield "" so callers can `nzchar()`-gate on the result without a
 # special-case branch. Single source of truth for any code path
 # that needs to translate the integer knob into characters for
-# `cells_text` (the engine prefix pass, `.indent_host_asts*`,
+# `cells_text` (the engine prefix pass, `.indent_host_asts_per_row`,
 # `.build_indent_prefixes`, and every backend leading-strip pass).
 .indent_text_unit <- function(indent_size) {
   size <- suppressWarnings(as.integer(indent_size))

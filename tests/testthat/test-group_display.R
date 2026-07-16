@@ -569,32 +569,6 @@ test_that("MD body indent collapses to literal spaces under whitespace = collaps
 })
 
 # ---------------------------------------------------------------------
-# Edge-case coverage on `.indent_host_asts`
-# ---------------------------------------------------------------------
-
-test_that(".indent_host_asts is a no-op on empty / zero-size input", {
-  expect_identical(
-    tabular:::.indent_host_asts(list(), 2L),
-    list()
-  )
-  expect_identical(
-    tabular:::.indent_host_asts(
-      list(tabular:::.parse_inline("foo")),
-      0L
-    ),
-    list(tabular:::.parse_inline("foo"))
-  )
-})
-
-test_that(".indent_host_asts skips entries that are not inline_ast", {
-  asts <- list("not an ast", tabular:::.parse_inline("foo"))
-  out <- tabular:::.indent_host_asts(asts, 2L)
-  expect_identical(out[[1L]], "not an ast")
-  expect_true(tabular::is_inline_ast(out[[2L]]))
-  expect_equal(out[[2L]]@runs[[1L]]$text, "  ")
-})
-
-# ---------------------------------------------------------------------
 # col_spec(indent = ...) — argument validation
 # ---------------------------------------------------------------------
 

@@ -130,35 +130,31 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
     reason = "to compile PDF output via xelatex"
   )
 
-  tex_dir <- tempfile(pattern = "tabular_pdf_")
-  dir.create(tex_dir, recursive = TRUE)
-  on.exit(unlink(tex_dir, recursive = TRUE), add = TRUE)
-
-  tex_file <- file.path(tex_dir, "tabular.tex")
-  backend_latex(grid, tex_file)
   # Probe with the same TeX the compile will use: tinytex::latexmk()
   # prepends the TinyTeX-root bin dir to the PATH internally, so the
   # staging kpsewhich must see it too or it stages against the wrong
   # (system) tree.
   .local_path_prepend(.tinytex_bin_dir())
-  .pdf_stage_bundled_sty(tex_dir)
 
-  # Compile with the working directory set to tex_dir so a figure's
-  # relative `\includegraphics` sidecar (written next to tabular.tex by
-  # backend_latex) resolves; latexmk searches graphics relative to its
-  # cwd, not the input file's directory. `file` was forced above (emit
-  # absolutises it eagerly), so the PDF still lands at the user's
-  # target. A table emits no graphics, so this is inert for the table
-  # path. `withr::local_dir()` restores the directory on any exit,
-  # including a compile error, before the tex dir is unlinked.
-  withr::local_dir(tex_dir)
-  result <- tryCatch(
-    .compile(tex_file, file),
-    error = function(e) e
+  # Compile with the working directory set to the tex dir
+  # (`compile_in_dir`) so a figure's relative `\includegraphics`
+  # sidecar (written next to tabular.tex by backend_latex) resolves;
+  # latexmk searches graphics relative to its cwd, not the input
+  # file's directory. `file` was forced above (emit absolutises it
+  # eagerly), so the PDF still lands at the user's target. A table
+  # emits no graphics, so this is inert for the table path.
+  call <- rlang::caller_env()
+  .compile_pdf_source(
+    grid = grid,
+    file = file,
+    compile = .compile,
+    write_source = backend_latex,
+    src_name = "tabular.tex",
+    dir_pattern = "tabular_pdf_",
+    on_error = function(e) .pdf_compile_abort(e, call = call),
+    pre_compile = .pdf_stage_bundled_sty,
+    compile_in_dir = TRUE
   )
-  if (inherits(result, "error")) {
-    .pdf_compile_abort(result)
-  }
   invisible(file)
 }
 
@@ -278,14 +274,11 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
       error = function(e) NA_character_
     )
   }
-  if (length(line) == 0L || is.na(line)) {
+  year <- .parse_version_banner(line, "TeX Live (\\d{4})")
+  if (is.na(year)) {
     return(NA_integer_)
   }
-  m <- regmatches(line, regexec("TeX Live (\\d{4})", line))[[1L]]
-  if (length(m) < 2L) {
-    return(NA_integer_)
-  }
-  as.integer(m[[2L]])
+  as.integer(year)
 }
 
 # Stage the bundled `.sty` copies (inst/tex/) into the compile
@@ -316,7 +309,7 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
 # Detects the common "tabularray.sty not found" / "missing
 # package" pattern and points the user at the right remediation
 # path for their environment.
-.pdf_compile_abort <- function(err) {
+.pdf_compile_abort <- function(err, call = rlang::caller_env(2L)) {
   msg <- conditionMessage(err)
   missing_pkg <- .pdf_extract_missing_pkg(msg)
   # The error names the missing `.sty` stem (graphicx, fontenc, helvet);
@@ -366,7 +359,7 @@ backend_pdf <- function(grid, file, .compile = .tabular_latexmk) {
       "i" = "Fallback: render to HTML or RTF instead via {.code emit(spec, \"out.html\")} or {.code emit(spec, \"out.rtf\")}."
     ),
     class = "tabular_error_backend",
-    call = rlang::caller_env(2L)
+    call = call
   )
 }
 
@@ -604,20 +597,7 @@ check_latex <- function(quiet = FALSE) {
     "? TeX Live version (xelatex missing, or a non-TeX-Live distribution such as MiKTeX)"
   }
   cli::cli_text(paste0("  ", dist_line))
-  for (i in seq_len(nrow(out))) {
-    pkg <- out$package[[i]]
-    ok <- out$installed[[i]]
-    line <- if (isTRUE(ok)) {
-      "v {pkg}"
-    } else if (bundled[[i]]) {
-      "v {pkg} (not found, bundled copy used)"
-    } else if (isFALSE(ok)) {
-      "x {pkg}"
-    } else {
-      "? {pkg}"
-    }
-    cli::cli_text(paste0("  ", line))
-  }
+  .check_report_status_lines(out$package, out$installed, bundled = bundled)
 
   missing <- out$package[!.is_true_vec(out$installed) & !bundled]
   if (length(missing) == 0L && !kernel_old) {
