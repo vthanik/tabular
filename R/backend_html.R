@@ -988,6 +988,17 @@ backend_html <- function(grid, file) {
   is_header_row <- page$is_header_row %||% rep(FALSE, nrow_data)
   is_blank_row <- page$is_blank_row %||% rep(FALSE, nrow_data)
   ncols_vis <- length(col_names_visible)
+  # Escape the whole cell matrix in one vectorised pass (7 gsub calls
+  # total instead of 7 per cell). Indented cells strip their leading
+  # spaces BEFORE escaping (preserve mode rewrites spaces), so those
+  # few fall back to a per-cell escape below.
+  esc_cells <- cells_text
+  if (length(esc_cells) > 0L) {
+    esc_cells[] <- .html_escape_cell(
+      as.character(cells_text),
+      preserve = ws_preserve
+    )
+  }
   rows <- vapply(
     seq_len(nrow_data),
     function(i) {
@@ -1092,6 +1103,7 @@ backend_html <- function(grid, file) {
           # the leading spaces from the cell text.
           depth <- cells_indent[i, j]
           indent_decl <- NULL
+          stripped <- FALSE
           if (
             isTRUE(depth > 0L) &&
               indent_unit > 0L &&
@@ -1107,6 +1119,7 @@ backend_html <- function(grid, file) {
                 startsWith(raw, strrep(" ", n_leading))
             ) {
               raw <- substr(raw, n_leading + 1L, nchar(raw))
+              stripped <- TRUE
             }
             # ADDITIVE over the baseline `.tabular-table td
             # { padding: .18rem .6rem }` left slot via CSS `calc()`
@@ -1120,7 +1133,11 @@ backend_html <- function(grid, file) {
               indent_em_per_level * depth
             )
           }
-          text <- .html_escape_cell(raw, preserve = ws_preserve)
+          text <- if (stripped) {
+            .html_escape_cell(raw, preserve = ws_preserve)
+          } else {
+            esc_cells[[i, j]]
+          }
           sn <- .cell_style_at(cells_style, i, col_names_visible[[j]])
           halign <- .effective_body_halign(sn, spec)
           valign <- .effective_body_valign(sn, spec)

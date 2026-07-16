@@ -1115,10 +1115,15 @@ backend_typst <- function(grid, file) {
   body_font_pt <- if (is_preset_spec(preset)) preset@font_size else NA_real_
   row_leads <- .typst_keep_leads(keep_with_next, nrow_data)
 
-  lines <- character()
+  # One slot per row plus one per possible inter-row rule; filled by
+  # index, NULLs dropped by the final unlist (no O(n^2) c() growth).
+  lines <- vector("list", 2L * nrow_data)
   for (i in seq_len(nrow_data)) {
     if (i > 1L && !is.null(rows_stroke)) {
-      lines <- c(lines, sprintf("  table.hline(stroke: %s),", rows_stroke))
+      lines[[2L * i - 1L]] <- sprintf(
+        "  table.hline(stroke: %s),",
+        rows_stroke
+      )
     }
     if (isTRUE(is_blank_row[[i]])) {
       # Blank separator row: one spanning cell whose hidden strut keeps
@@ -1131,35 +1136,29 @@ backend_typst <- function(grid, file) {
         NULL
       }
       first_node <- if (!is.null(cells_style)) cells_style[[i, 1L]] else NULL
-      lines <- c(
-        lines,
-        sprintf(
-          "  %s%s,",
-          row_leads[[i]],
-          .typst_cell(
-            "#hide[X]",
-            colspan = if (ncol_data > 1L) ncol_data else NULL,
-            fill = bg,
-            stroke = .typst_cell_stroke(first_node)
-          )
+      lines[[2L * i]] <- sprintf(
+        "  %s%s,",
+        row_leads[[i]],
+        .typst_cell(
+          "#hide[X]",
+          colspan = if (ncol_data > 1L) ncol_data else NULL,
+          fill = bg,
+          stroke = .typst_cell_stroke(first_node)
         )
       )
       next
     }
     if (isTRUE(is_header_row[[i]])) {
-      lines <- c(
-        lines,
-        .typst_group_header_row(
-          cells_text,
-          cells_style,
-          cells_indent,
-          i,
-          ncol_data,
-          indent_pt_per_level,
-          body_valign,
-          ws_preserve,
-          row_lead = row_leads[[i]]
-        )
+      lines[[2L * i]] <- .typst_group_header_row(
+        cells_text,
+        cells_style,
+        cells_indent,
+        i,
+        ncol_data,
+        indent_pt_per_level,
+        body_valign,
+        ws_preserve,
+        row_lead = row_leads[[i]]
       )
       next
     }
@@ -1223,12 +1222,13 @@ backend_typst <- function(grid, file) {
       },
       character(1L)
     )
-    lines <- c(
-      lines,
-      sprintf("  %s%s,", row_leads[[i]], paste(cells, collapse = ", "))
+    lines[[2L * i]] <- sprintf(
+      "  %s%s,",
+      row_leads[[i]],
+      paste(cells, collapse = ", ")
     )
   }
-  list(lines = lines, n_rows = nrow_data)
+  list(lines = as.character(unlist(lines)), n_rows = nrow_data)
 }
 
 # Per-row lead cells for the hidden keep column. `keep[i]` TRUE glues

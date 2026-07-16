@@ -432,7 +432,7 @@ as_grid <- function(.spec) {
   # QC artefact stays decoration-free) and before engine_group_display
   # (so the affix flows through repeat-suppression / indent / header
   # injection and is measured by engine_decimal + column widths).
-  fmt <- .apply_affixes(fmt, style_mat, call = call)
+  fmt <- .apply_affixes(fmt, style_mat, spec, call = call)
 
   # Apply the group_rows() plan. "section" mode splices
   # section-header rows above each grouping-key transition; "collapse"
@@ -708,10 +708,18 @@ as_grid <- function(.spec) {
 # the AST path parses each affix to its own runs and splices them on.
 # `style_mat` is the post-engine_borders matrix, index-aligned 1:1 with
 # `fmt$cells_text` / `fmt$cells_ast` (same shape + column dimnames).
-.apply_affixes <- function(fmt, style_mat, call) {
+.apply_affixes <- function(fmt, style_mat, spec, call) {
   ct <- fmt$cells_text
   ca <- fmt$cells_ast
   if (is.null(style_mat) || nrow(ct) == 0L || ncol(ct) == 0L) {
+    return(fmt)
+  }
+  # O(layers) gate: affixes reach cells_style only through style()
+  # layers (stripe / border engines never set them), so when no layer
+  # in the cascade carries pretext / posttext the per-cell scan below
+  # cannot find one. Skips the 2-prop S7 read on every cell for the
+  # overwhelmingly common no-affix table.
+  if (!.cascade_has_affixes(spec)) {
     return(fmt)
   }
   for (j in seq_len(ncol(ct))) {
@@ -746,6 +754,40 @@ as_grid <- function(.spec) {
   fmt$cells_text <- ct
   fmt$cells_ast <- ca
   fmt
+}
+
+# TRUE when any style layer in the cascade (session preset, spec
+# preset, spec styles) declares pretext / posttext. O(layers), so the
+# per-cell affix scan can be skipped for the common no-affix table.
+.cascade_has_affixes <- function(spec) {
+  layer_has <- function(layer) {
+    node <- layer@style
+    (length(node@pretext) == 1L && !is.na(node@pretext)) ||
+      (length(node@posttext) == 1L && !is.na(node@posttext))
+  }
+  session_preset <- get_preset()
+  if (is_preset_spec(session_preset)) {
+    for (layer in session_preset@style) {
+      if (layer_has(layer)) {
+        return(TRUE)
+      }
+    }
+  }
+  if (is_preset_spec(spec@preset)) {
+    for (layer in spec@preset@style) {
+      if (layer_has(layer)) {
+        return(TRUE)
+      }
+    }
+  }
+  if (is_style_spec(spec@styles)) {
+    for (layer in spec@styles@layers) {
+      if (layer_has(layer)) {
+        return(TRUE)
+      }
+    }
+  }
+  FALSE
 }
 
 # Stamp per-group subgroup runtime onto every page in `pages` and

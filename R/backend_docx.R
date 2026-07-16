@@ -1740,7 +1740,7 @@ backend_docx <- function(grid, file) {
   indent_size <- if (is_preset_spec(preset)) preset@indent_size else 2L
   indent_unit <- nchar(.indent_text_unit(indent_size))
   indent_twips_per_level <- .indent_native_twips_per_level(preset)
-  out <- character()
+  out <- list()
   prev_subgroup_index <- NULL
   for (page in pages) {
     sg_index <- page$subgroup_index
@@ -1765,7 +1765,7 @@ backend_docx <- function(grid, file) {
         body_borders = body_borders
       )
       if (length(banner_row) > 0L) {
-        out <- c(out, banner_row)
+        out[[length(out) + 1L]] <- banner_row
       }
       prev_subgroup_index <- sg_index
     }
@@ -1782,6 +1782,7 @@ backend_docx <- function(grid, file) {
     is_header_row_vec <- page$is_header_row %||% rep(FALSE, nrows)
     is_blank_row_vec <- page$is_blank_row %||% rep(FALSE, nrows)
     span_total_twips <- sum(as.integer(widths_twips))
+    page_rows <- vector("list", nrows)
     for (i in seq_len(nrows)) {
       if (isTRUE(is_blank_row_vec[[i]])) {
         # Merged full-width cell: both frame edges ride this single cell,
@@ -1795,8 +1796,7 @@ backend_docx <- function(grid, file) {
         blank_shd <- .docx_shd_from_style(
           tryCatch(cs_mat[[i, 1L]], error = function(e) NULL)
         )
-        out <- c(
-          out,
+        page_rows[[i]] <- c(
           paste0(
             "<w:tr><w:trPr><w:cantSplit/></w:trPr>",
             "<w:tc><w:tcPr>",
@@ -1902,8 +1902,7 @@ backend_docx <- function(grid, file) {
           "left"
         }
         header_jc_tok <- .docx_align_token(header_halign)
-        out <- c(
-          out,
+        page_rows[[i]] <- c(
           paste0(
             "<w:tr><w:trPr><w:cantSplit/></w:trPr>",
             "<w:tc><w:tcPr>",
@@ -2028,13 +2027,16 @@ backend_docx <- function(grid, file) {
       # position; the paragraph-level `<w:keepNext/>` above handles
       # the row-to-row glue.
       tr_pr <- "<w:trPr><w:cantSplit/></w:trPr>"
-      out <- c(
-        out,
-        paste0("<w:tr>", tr_pr, paste(cells, collapse = ""), "</w:tr>")
+      page_rows[[i]] <- paste0(
+        "<w:tr>",
+        tr_pr,
+        paste(cells, collapse = ""),
+        "</w:tr>"
       )
     }
+    out[[length(out) + 1L]] <- unlist(page_rows)
   }
-  out
+  as.character(unlist(out))
 }
 
 # Inject a `<w:vAlign .../>` element into an existing `<w:tcPr>...
@@ -3732,16 +3734,12 @@ backend_docx <- function(grid, file) {
   if (is.null(text) || length(text) == 0L) {
     return("")
   }
-  if (length(text) > 1L) {
-    return(unname(vapply(text, .docx_escape, character(1L))))
-  }
-  if (is.na(text)) {
-    return("")
-  }
+  scalar <- length(text) == 1L
+  text[is.na(text)] <- ""
   text <- gsub("&", "&amp;", text, fixed = TRUE)
   text <- gsub("<", "&lt;", text, fixed = TRUE)
   text <- gsub(">", "&gt;", text, fixed = TRUE)
-  text
+  if (scalar) text else unname(text)
 }
 
 # Escape XML attribute content: text-escape rules plus " (the
