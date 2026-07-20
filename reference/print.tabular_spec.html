@@ -17,7 +17,7 @@ specific branching."><meta property="og:image" content="https://vthanik.github.i
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,36 +61,6 @@ specific branching.</p>
     </div>
 
 
-    <div class="section level2">
-    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
-
-
-<dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p><em>The <code>tabular_spec</code> to render.</em>
-<code>&lt;tabular_spec&gt;: required</code>. The same object you'd hand to
-<code><a href="emit.html">emit()</a></code>.</p></dd>
-
-
-<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p><em>Forwarded to <code>htmltools::print</code> / <code>as.tags()</code>.</em>
-Use this to pass <code>id</code>, <code>style</code>, <code>class</code> overrides to the
-wrapping <code>&lt;div&gt;</code>.</p></dd>
-
-
-<dt id="arg-view">view<a class="anchor" aria-label="anchor" href="#arg-view"></a></dt>
-<dd><p><em>Open the viewer?</em> <code>&lt;logical(1)&gt;: default </code>interactive()“. Same role as <code>gt::gt</code>'s `view` argument:
-passes through to htmltools as `browse = view`. Set
-`view = FALSE` to suppress the viewer for one call (e.g.
-to capture the HTML string without launching a window).</p></dd>
-
-
-<dt id="arg-output">output<a class="anchor" aria-label="anchor" href="#arg-output"></a></dt>
-<dd><p><em>Force a specific preview format.</em> <code>&lt;character(1) | NULL&gt;: default </code>NULL<code> (auto)</code>. See the <strong><code>output</code>
-argument</strong> section below for the full list. The session
-default can be set via <code>options(tabular_print_output = "cli")</code> for users who prefer the structural summary over
-the HTML preview.</p></dd>
-
-</dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><em>Invisibly returns <code>x</code>.</em> Side effect: opens the
@@ -136,6 +106,27 @@ Override the option to keep them in a stable location (handy
 on Linux distros where browsers don't have read access to
 <code>/tmp/</code>).</p>
     </div>
+    <div class="section level2">
+    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
+
+
+<p><code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> dispatches on a <code>tabular_spec</code> via an S7 method on the
+base generic, so its arguments are documented here rather than in a
+formal usage table:</p><ul><li><p><code>x</code> — <em>the <code>tabular_spec</code> to render.</em> Required. The same object
+you'd hand to <code><a href="emit.html">emit()</a></code>.</p></li>
+<li><p><code>...</code> — <em>forwarded to <code>htmltools::print</code> / <code>as.tags()</code>.</em> Pass
+<code>id</code>, <code>style</code>, <code>class</code> overrides for the wrapping <code>&lt;div&gt;</code>.</p></li>
+<li><p><code>view</code> — <em>open the viewer?</em> <code>logical(1)</code>, default
+<code><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive()</a></code>. Same role as <code>gt::gt</code>'s <code>view</code> argument: passes
+through to htmltools as <code>browse = view</code>. Set <code>view = FALSE</code> to
+suppress the viewer for one call (e.g. to capture the HTML string
+without launching a window).</p></li>
+<li><p><code>output</code> — <em>force a specific preview format.</em> <code>character(1)</code> or
+<code>NULL</code>, default <code>NULL</code> (auto). See the <strong><code>output</code> argument</strong>
+section below for the full list. The session default can be set
+via <code>options(tabular_print_output = "cli")</code> for users who prefer
+the structural summary over the HTML preview.</p></li>
+</ul></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><strong>Tag conversion:</strong> <code><a href="as.tags.tabular_spec.html">as.tags.tabular_spec()</a></code> — the

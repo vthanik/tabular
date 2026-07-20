@@ -1,6 +1,6 @@
 # Changelog
 
-## tabular 0.3.0
+## tabular 0.3.1
 
 ### Improvements
 
