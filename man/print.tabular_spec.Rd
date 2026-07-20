@@ -3,25 +3,6 @@
 \name{print.tabular_spec}
 \alias{print.tabular_spec}
 \title{Print a \code{tabular_spec}}
-\arguments{
-\item{x}{\emph{The \code{tabular_spec} to render.}
-\verb{<tabular_spec>: required}. The same object you'd hand to
-\code{\link[=emit]{emit()}}.}
-
-\item{...}{\emph{Forwarded to \code{htmltools::print} / \code{as.tags()}.}
-Use this to pass \code{id}, \code{style}, \code{class} overrides to the
-wrapping \verb{<div>}.}
-
-\item{view}{\emph{Open the viewer?} \verb{<logical(1)>: default }interactive()``. Same role as \code{gt::gt}'s `view` argument:
-passes through to htmltools as `browse = view`. Set
-`view = FALSE` to suppress the viewer for one call (e.g.
-to capture the HTML string without launching a window).}
-
-\item{output}{\emph{Force a specific preview format.} \verb{<character(1) | NULL>: default }NULL\code{ (auto)}. See the \strong{\code{output}
-argument} section below for the full list. The session
-default can be set via \code{options(tabular_print_output = "cli")} for users who prefer the structural summary over
-the HTML preview.}
-}
 \value{
 \emph{Invisibly returns \code{x}.} Side effect: opens the
 viewer, inlines under a chunk, or \code{cat()}s output.
@@ -80,6 +61,29 @@ Override the option to keep them in a stable location (handy
 on Linux distros where browsers don't have read access to
 \verb{/tmp/}).
 }
+\section{Arguments}{
+
+\code{print()} dispatches on a \code{tabular_spec} via an S7 method on the
+base generic, so its arguments are documented here rather than in a
+formal usage table:
+\itemize{
+\item \code{x} — \emph{the \code{tabular_spec} to render.} Required. The same object
+you'd hand to \code{\link[=emit]{emit()}}.
+\item \code{...} — \emph{forwarded to \code{htmltools::print} / \code{as.tags()}.} Pass
+\code{id}, \code{style}, \code{class} overrides for the wrapping \verb{<div>}.
+\item \code{view} — \emph{open the viewer?} \code{logical(1)}, default
+\code{interactive()}. Same role as \code{gt::gt}'s \code{view} argument: passes
+through to htmltools as \code{browse = view}. Set \code{view = FALSE} to
+suppress the viewer for one call (e.g. to capture the HTML string
+without launching a window).
+\item \code{output} — \emph{force a specific preview format.} \code{character(1)} or
+\code{NULL}, default \code{NULL} (auto). See the \strong{\code{output} argument}
+section below for the full list. The session default can be set
+via \code{options(tabular_print_output = "cli")} for users who prefer
+the structural summary over the HTML preview.
+}
+}
+
 \examples{
 # ---- Example 1: Build + autoprint (HTML preview) ----
 #
