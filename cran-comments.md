@@ -4,11 +4,14 @@ This is a resubmission (version 0.3.1). The 0.3.0 incoming pretest raised
 one NOTE on the r-devel Debian check:
 
 - `Rd files without \usage: 'print.tabular_spec.Rd'` /
-  `\arguments should not be documented without \usage`. The manual help
-  page for the `print()` method carried `@param` entries but suppressed
-  its usage with `@usage NULL`. It now declares an explicit
-  `\usage{\method{print}{tabular_spec}(...)}`, so `\arguments` is
-  accompanied by `\usage`. No user-facing change.
+  `\arguments should not be documented without \usage`. `print()` for a
+  `tabular_spec` is an S7 method on the base `print` generic, so there is
+  no `print.tabular_spec` function object; the manual help page therefore
+  documented the arguments with `@param` while suppressing usage with
+  `@usage NULL`. The page now keeps `@usage NULL` and moves the argument
+  descriptions from `@param` into an `@section Arguments:` prose list, so
+  the Rd contains neither `\arguments` nor `\usage` and the NOTE no longer
+  applies. No user-facing change.
 
 ## R CMD check results
 
