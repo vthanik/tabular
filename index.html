@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -76,10 +76,10 @@
 </div>
 <!-- badges: start -->
 
-<p><strong>tabular</strong> turns a pre-summarised data frame into a submission-grade clinical table and emits it natively to <strong>RTF, PDF, HTML, LaTeX, and DOCX</strong> — no Java, no LibreOffice, no Word automation. One short pipeline gives you decimal alignment via real font metrics, multi-level column headers, predicate-targeted styling, and group-aware pagination, built for CDISC ADaM workflows and FDA / EMA / PMDA submissions.</p>
+<p><strong>tabular</strong> turns a pre-summarised data frame into a submission-grade clinical table and emits it natively to <strong>RTF, PDF, HTML, LaTeX, Typst, and DOCX</strong> — no Java, no LibreOffice, no Word automation. One short pipeline gives you decimal alignment via real font metrics, multi-level column headers, predicate-targeted styling, and group-aware pagination, built for CDISC ADaM workflows and FDA / EMA / PMDA submissions.</p>
 <p>It is the only R table package that pairs a <strong>live HTML preview</strong> with a <strong>paginated print deliverable</strong>: the same spec you eyeball in a notebook is the one that paginates into the RTF you ship.</p>
 <blockquote>
-<p><strong>Scope.</strong> <code>tabular</code> renders the full set of clinical outputs – <strong>tables, listings, and figures</strong> (the “T”, “L”, and “F” of TFL) – to RTF, LaTeX, HTML, PDF, and DOCX from one verb pipeline. A zero-row table renders an empty-data placeholder (“No data available to report”) in the body, with the page chrome and column headers intact.</p>
+<p><strong>Scope.</strong> <code>tabular</code> renders the full set of clinical outputs – <strong>tables, listings, and figures</strong> (the “T”, “L”, and “F” of TFL) – to RTF, LaTeX, Typst, HTML, PDF, and DOCX from one verb pipeline. A zero-row table renders an empty-data placeholder (“No data available to report”) in the body, with the page chrome and column headers intact.</p>
 </blockquote>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -93,7 +93,7 @@
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"vthanik/tabular"</span><span class="op">)</span></span>
 <span><span class="co"># or</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"vthanik/tabular"</span><span class="op">)</span></span></code></pre></div>
-<p>R dependencies install automatically. The five backends differ in what <em>else</em> they need:</p>
+<p>R dependencies install automatically. The backends differ in what <em>else</em> they need:</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -109,24 +109,31 @@
 <td align="left">none — pure R, no Java, no <code>pandoc</code>, no Office</td>
 </tr>
 <tr>
-<td>LaTeX (<code>.tex</code> source)</td>
-<td align="left">none — <code>tabular</code> writes the fragment</td>
+<td>LaTeX (<code>.tex</code> source), Typst (<code>.typ</code> source)</td>
+<td align="left">none — <code>tabular</code> writes the source</td>
 </tr>
 <tr>
 <td>PDF</td>
-<td align="left">a TeX install (xelatex) with <code>tabularray</code> + <code>ninecolors</code>
-</td>
+<td align="left">one of two engines: a TeX install (xelatex), <strong>or</strong> a typst binary — Quarto ≥ 1.4 bundles one, so most machines already qualify</td>
 </tr>
 </tbody>
 </table>
-<p>PDF is the only backend that shells out. Install <a href="https://yihui.org/tinytex/" class="external-link"><code>tinytex</code></a> once per machine and <code>tabular</code> compiles with <code>xelatex</code> thereafter:</p>
+<p>PDF is the only backend that shells out, and it has <strong>two engines</strong>:</p>
+<ul>
+<li>
+<strong>LaTeX</strong> — <code>emit(spec, "out.pdf")</code> compiles via <code>xelatex</code> when a usable TeX is found. <code>tabularray</code> + <code>ninecolors</code> ship with <code>tabular</code>, so no <code>tlmgr_install()</code> step is needed even on locked-down servers (Domino, Posit Workbench) where <code>tlmgr install</code> is impossible.</li>
+<li>
+<strong>Typst</strong> — with no usable TeX, <code><a href="reference/emit.html">emit()</a></code> falls back to the <code>typst</code> compiler (the standalone binary, or the copy bundled inside Quarto, which ships with RStudio / Posit Workbench). No TeX installation at all, and compiles in well under a second.</li>
+</ul>
+<p>Pass <code>format = "latex"</code> or <code>format = "typst"</code> to pick an engine explicitly; with neither engine present, install one:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"tinytex"</span><span class="op">)</span></span>
-<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">install_tinytex</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># one-time TeX setup</span></span>
-<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/tlmgr.html" class="external-link">tlmgr_install</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"tabularray"</span>, <span class="st">"ninecolors"</span>, <span class="st">"siunitx"</span>, <span class="st">"tex-gyre"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="reference/check_latex.html">check_latex()</a></code> reports which LaTeX packages are present and prints the exact <code>tlmgr_install()</code> line for anything missing; <code>check_fonts(spec)</code> does the same for the fonts a spec asks for, per backend.</p>
+<span><span class="fu">tinytex</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tinytex/man/install_tinytex.html" class="external-link">install_tinytex</a></span><span class="op">(</span>bundle <span class="op">=</span> <span class="st">"TinyTeX"</span><span class="op">)</span> <span class="co"># one-time TeX setup</span></span>
+<span><span class="co"># or: install Quarto (https://quarto.org) — it bundles the typst engine</span></span></code></pre></div>
+<p><code><a href="reference/check_latex.html">check_latex()</a></code> reports which LaTeX packages resolve (probed through <code>kpsewhich</code>, the same resolver <code>xelatex</code> uses) and prints the remedy for anything genuinely missing; <code><a href="reference/check_typst.html">check_typst()</a></code> does the same for the typst engine (binary, version floor, and the font chain PDFs render in); <code>check_fonts(spec)</code> audits the fonts a spec asks for, per backend.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">tabular</span><span class="fu">::</span><span class="fu"><a href="reference/check_latex.html">check_latex</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># PDF readiness, with the install remedy</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu">tabular</span><span class="fu">::</span><span class="fu"><a href="reference/check_latex.html">check_latex</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># LaTeX-PDF readiness, with the install remedy</span></span>
+<span><span class="fu">tabular</span><span class="fu">::</span><span class="fu"><a href="reference/check_typst.html">check_typst</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># Typst-PDF readiness (no TeX needed)</span></span></code></pre></div>
 <blockquote>
 <p><strong>TeX Live on a managed OS.</strong> If TeX Live came from the system package manager (RHEL <code>dnf</code>, Debian/Ubuntu <code>apt</code>), its <code>tlmgr</code> is usually locked and <code>tlmgr_install()</code> fails on permissions. Install user-space TinyTeX alongside it rather than fighting the system copy — and never reach for <code>--ignore-warning</code> to force it.</p>
 </blockquote>
@@ -159,8 +166,8 @@
 <span>  footnotes <span class="op">=</span> <span class="st">"Percentages are based on the number of subjects per treatment group."</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/cols.html">cols</a></span><span class="op">(</span></span>
-<span>    variable <span class="op">=</span> <span class="fu"><a href="reference/col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span>
-<span>    stat_label <span class="op">=</span> <span class="fu"><a href="reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span>
+<span>    variable <span class="op">=</span> <span class="st">"Characteristic"</span>,</span>
+<span>    stat_label <span class="op">=</span> <span class="st">"Statistic"</span>,</span>
 <span>    placebo <span class="op">=</span> <span class="fu"><a href="reference/col_spec.html">col_spec</a></span><span class="op">(</span></span>
 <span>      label <span class="op">=</span> <span class="st">"Placebo (N={n['placebo']})"</span>,</span>
 <span>      align <span class="op">=</span> <span class="st">"decimal"</span></span>
@@ -174,11 +181,12 @@
 <span>      align <span class="op">=</span> <span class="st">"decimal"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    Total <span class="op">=</span> <span class="fu"><a href="reference/col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Total (N={n['Total']})"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># render to any backend by file extension (or format = "...")</span></span>
 <span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/emit.html">emit</a></span><span class="op">(</span><span class="va">tab</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rtf"</span><span class="op">)</span><span class="op">)</span> <span class="co"># submission deliverable</span></span></code></pre></div>
-<p>The same <code>tab</code> emits to every backend from the one spec. The table below is tabular’s own HTML render — the identical spec also produces RTF, a paginated PDF, a <code>tabularray</code> LaTeX fragment, and native OOXML <code>.docx</code>:</p>
+<p>The same <code>tab</code> emits to every backend from the one spec. The table below is tabular’s own HTML render — the identical spec also produces RTF, a paginated PDF (LaTeX- or typst-compiled), a <code>tabularray</code> LaTeX fragment, a native Typst document, and native OOXML <code>.docx</code>:</p>
 <div align="center">
 <p><img src="reference/figures/README-hero.png" width="815" alt="Demographic and baseline characteristics table rendered by tabular: decimal-aligned arm columns, a centred multi-line caption, and a single footnote."></p>
 </div>
@@ -188,7 +196,7 @@
 </h2>
 <ul>
 <li>
-<strong>Five native backends, one spec.</strong> <code><a href="reference/emit.html">emit()</a></code> dispatches on the file extension to RTF 1.9.1, PDF (via <code>tinytex</code>), self-contained Bootstrap HTML, <code>tabularray</code> LaTeX, and native OOXML DOCX. No JVM, no Office round-trip.</li>
+<strong>Every native backend, one spec.</strong> <code><a href="reference/emit.html">emit()</a></code> dispatches on the file extension to RTF 1.9.1, self-contained Bootstrap HTML, <code>tabularray</code> LaTeX, native Typst, native OOXML DOCX, and PDF — compiled through LaTeX when a TeX is installed, or through the typst engine (bundled with Quarto) on TeX-less machines. No JVM, no Office round-trip.</li>
 <li>
 <strong>Decimal alignment that survives the page.</strong> Numbers align on the decimal using the backend’s real font metrics, not guessed padding — so columns stay aligned in print, not just on screen.</li>
 <li>
@@ -393,7 +401,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

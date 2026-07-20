@@ -20,9 +20,9 @@ list input emits one figure per page.
 
 ## Spec building
 
-Configure per-column display, header bands, sort order, and subgrouping.
-Each verb attaches one slot onto the spec and returns the updated spec
-for chaining.
+Configure per-column display, row grouping, header bands, sort order,
+and subgrouping. Each verb attaches one slot onto the spec and returns
+the updated spec for chaining.
 
 - [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) :
   Attach per-column specifications
@@ -30,6 +30,8 @@ for chaining.
   : Apply one column spec to many columns
 - [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
   : Per-column display specification
+- [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+  : Declare the row-grouping structure of the table
 - [`headers()`](https://vthanik.github.io/tabular/reference/headers.md)
   : Attach multi-level column headers
 - [`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md)
@@ -129,10 +131,11 @@ Terminal verbs.
 file;
 [`as_grid()`](https://vthanik.github.io/tabular/reference/as_grid.md)
 resolves the spec without I/O;
-[`check_fonts()`](https://vthanik.github.io/tabular/reference/check_fonts.md)
+[`check_fonts()`](https://vthanik.github.io/tabular/reference/check_fonts.md),
+[`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md),
 and
-[`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
-audit font and LaTeX-package availability; the print and `as.tags()`
+[`check_typst()`](https://vthanik.github.io/tabular/reference/check_typst.md)
+audit font and PDF-toolchain availability; the print and `as.tags()`
 methods drive the live HTML preview.
 
 - [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) :
@@ -149,6 +152,9 @@ methods drive the live HTML preview.
 
 - [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
   : Check LaTeX-package availability for PDF output
+
+- [`check_typst()`](https://vthanik.github.io/tabular/reference/check_typst.md)
+  : Check Typst availability for PDF output
 
 - [`print.tabular_spec`](https://vthanik.github.io/tabular/reference/print.tabular_spec.md)
   :
@@ -171,6 +177,7 @@ Class predicates for tabular’s S7 objects.
   [`.col_spec_class`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`header_node`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`sort_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
+  [`row_group_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`subgroup_spec`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`style_node`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
   [`style_layer`](https://vthanik.github.io/tabular/reference/tabular_classes.md)
@@ -188,6 +195,7 @@ Class predicates for tabular’s S7 objects.
   [`is_col_spec()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
   [`is_header_node()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
   [`is_sort_spec()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
+  [`is_row_group_spec()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
   [`is_style_node()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
   [`is_style_layer()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)
   [`is_style_spec()`](https://vthanik.github.io/tabular/reference/tabular_predicates.md)

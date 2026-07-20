@@ -56,6 +56,11 @@ emit(
   files that should contain RTF, for round-trip testing, or when the
   user has a custom backend registered under a non-standard name.
 
+  **Interaction:** On a `.pdf` target, `format` names the compile
+  ENGINE: `"latex"` compiles via TeX and `"typst"` via the typst binary
+  (see the *PDF engines* section). On every other extension the generic
+  override semantics apply unchanged.
+
 - data_file:
 
   *QC artefact writer.*
@@ -118,19 +123,51 @@ extension via the table below; the `format` argument always wins when
 both are supplied. Each backend lives in its own `R/backend_<fmt>.R`
 file and self-registers at package load time.
 
-|                    |         |                            |
-|--------------------|---------|----------------------------|
-| extension(s)       | format  | backend                    |
-| `.md`, `.markdown` | `md`    | GFM pipe table             |
-| `.html`, `.htm`    | `html`  | self-contained Bootstrap 5 |
-| `.tex`, `.latex`   | `latex` | tabularray                 |
-| `.pdf`             | `pdf`   | tinytex compile of LaTeX   |
-| `.rtf`             | `rtf`   | RTF 1.9.1, native          |
-| `.docx`            | `docx`  | OOXML native, no JVM       |
+|                    |          |                                  |
+|--------------------|----------|----------------------------------|
+| extension(s)       | format   | backend                          |
+| `.md`, `.markdown` | `md`     | GFM pipe table                   |
+| `.html`, `.htm`    | `html`   | self-contained Bootstrap 5       |
+| `.tex`, `.latex`   | `latex`  | tabularray                       |
+| `.typ`             | `typst`  | Typst native `#table`            |
+| `.pdf`             | (probed) | LaTeX (tinytex) or Typst compile |
+| `.rtf`             | `rtf`    | RTF 1.9.1, native                |
+| `.docx`            | `docx`   | OOXML native, no JVM             |
 
 Unknown extensions, missing extensions, and formats with no registered
 backend all raise `tabular_error_input`. The error message lists the
 currently registered formats so the failure is actionable.
+
+**PDF engines.** A `.pdf` target compiles through one of two engines:
+**LaTeX** (via
+[`tinytex::latexmk()`](https://rdrr.io/pkg/tinytex/man/latexmk.html);
+needs a TeX installation) or **Typst** (via the standalone `typst`
+binary or the copy bundled inside Quarto \>= 1.4; needs no TeX at all).
+Pass `format = "latex"` or `format = "typst"` to pick one explicitly.
+With no `format`, `emit()` probes the machine LaTeX-first: a usable TeX
+(found the way the compile finds it, preferring a standard-root TinyTeX,
+and not frozen on a pre-2023 TeX Live kernel) keeps the historical LaTeX
+path; otherwise a discoverable typst binary takes over; with neither,
+`emit()` aborts up front naming both remedies. Audit the toolchains with
+[`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
+and
+[`check_typst()`](https://vthanik.github.io/tabular/reference/check_typst.md).
+
+**Typst capability notes.** The Typst output matches the LaTeX layout
+contract, including the engine's keep-with-next mask
+([`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)'s
+`keep_together` / orphan control): Typst has no per-row no-break
+primitive (LaTeX `\\\\*`, RTF `\\keepn`, DOCX `keepNext`), so the
+backend enforces the mask through a hidden zero-width column whose
+unbreakable rowspans pin each keep run to one page. Two documented
+deviations remain: (1) the `paginate(continuation =)` marker appears on
+continuation panels only (the repeating page header is identical on
+every page), matching the RTF tier rather than LaTeX's every-page
+marker; (2) the spanner underline is trimmed by the cell inset at both
+ends (the HTML tier), where LaTeX keeps the table's outer edges flush.
+Conversely, Typst renders per-cell body borders that the LaTeX backend
+cannot (see
+[`style()`](https://vthanik.github.io/tabular/reference/style.md)).
 
 **`data_file` is sponsor-neutral.** Pass an explicit path
 (`"out/qc.csv"`) for a fixed location, or a lambda
@@ -212,13 +249,14 @@ demo <- tabular(
   footnotes = "Source: ADSL."
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Characteristic"),
+    variable   = col_spec(label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
     placebo  = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
     drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
     drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
     Total    = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
+  group_rows(by = "variable") |>
   sort_rows(by = c("variable", "stat_label"))
 
 demo_md <- tempfile(fileext = ".md")
@@ -263,7 +301,7 @@ emit(
   manifest  = TRUE
 )
 
-# ---- Example 3: Same spec, four backends — one-loop fan-out ----
+# ---- Example 3: Same spec, every text backend — one-loop fan-out ----
 #
 # `emit()` dispatches by file extension, so the same spec can
 # render to every backend in one loop. Useful for visual diffs
@@ -272,7 +310,7 @@ emit(
 # CSR appendix).
 eff_spec <- tabular(cdisc_eff_resp, titles = "Best Overall Response") |>
   cols(
-    stat_label  = col_spec(usage = "id", label = "Response"),
+    stat_label  = col_spec(label = "Response"),
     row_type    = col_spec(visible = FALSE),
     groupid     = col_spec(visible = FALSE),
     group_label = col_spec(visible = FALSE),
@@ -283,11 +321,11 @@ eff_spec <- tabular(cdisc_eff_resp, titles = "Best Overall Response") |>
 
 out_dir <- tempfile()
 dir.create(out_dir)
-for (ext in c(".html", ".rtf", ".tex", ".docx", ".md")) {
+for (ext in c(".html", ".rtf", ".tex", ".typ", ".docx", ".md")) {
   emit(eff_spec, file.path(out_dir, paste0("eff", ext)))
 }
 list.files(out_dir)
-#> [1] "eff.docx" "eff.html" "eff.md"   "eff.rtf"  "eff.tex" 
+#> [1] "eff.docx" "eff.html" "eff.md"   "eff.rtf"  "eff.tex"  "eff.typ" 
 
 # ---- Example 4: QC artefact via data_file alongside the render ----
 #

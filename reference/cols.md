@@ -3,17 +3,18 @@
 Add
 [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
 entries to a `tabular_spec`. Each named argument is one column: the name
-is the input column in `.spec@data` and the value is the `col_spec`
-carrying that column's display attributes (usage, label, format,
-alignment, width, visibility, NA text). Columns not mentioned get a
-default
+is the input column in `.spec@data` and the value is either the
+`col_spec` carrying that column's display attributes (label, format,
+alignment, width, visibility, NA text) or a bare label string —
+`x = "Label"` is shorthand for `x = col_spec(label = "Label")`. Columns
+not mentioned get a default
 [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
-(usage = display) at engine-validate time.
+at engine-validate time.
 
 ## Usage
 
 ``` r
-cols(.spec, ..., .default = NULL)
+cols(.spec, ..., .default = NULL, .hide = character())
 ```
 
 ## Arguments
@@ -28,11 +29,14 @@ cols(.spec, ..., .default = NULL)
 
 - ...:
 
-  *Named `col_spec` objects, one per column.* Each name is the input
-  column name in `.spec@data`. Names must match an existing column —
-  pre-compute derived columns upstream with `dplyr::mutate()` (or
-  equivalent) before
+  *Named `col_spec` objects or label strings, one per column.* Each name
+  is the input column name in `.spec@data`. Names must match an existing
+  column — pre-compute derived columns upstream with `dplyr::mutate()`
+  (or equivalent) before
   [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md).
+  A `character(1)` value is label shorthand: `soc = "SOC / PT"` is
+  exactly `soc = col_spec(label = "SOC / PT")`, including glue-style
+  `{expr}` interpolation and the deferred `{.name}` / `{.col}` token.
 
   **Restriction:** Names must be unique within a single `cols()` call
   (duplicates warn; "last value wins"). **Tip:** To override an
@@ -56,10 +60,21 @@ cols(.spec, ..., .default = NULL)
       # Decimal-align every arm column without listing each by name.
       tabular(cdisc_saf_demo) |>
         cols(
-          variable   = col_spec(usage = "group", label = "Parameter"),
-          stat_label = col_spec(label = "Statistic"),
+          variable   = "Parameter",
+          stat_label = "Statistic",
           .default   = col_spec(align = "decimal")
         )
+
+- .hide:
+
+  *Columns to hide, by name.* `<character>: default character()`. Sugar
+  for `nm = col_spec(visible = FALSE)` entries — one flat vector for the
+  hidden sort keys and helper columns every clinical table carries.
+  Field-merged like any other entry, so a later
+  `cols(nm = col_spec(visible = TRUE))` can re-show the column.
+
+  **Interaction:** A column named in both `...` and `.hide` ends up with
+  its `...` attributes plus `visible = FALSE`.
 
 ## Value
 
@@ -93,8 +108,7 @@ merges the new `col_spec` into the existing one field-by- field. A field
 set to a non-default value on the new spec overrides; a field left at
 its "unset" sentinel leaves the existing value intact. Every mergeable
 field has a genuine unset sentinel, so a later call can also *restore* a
-default (e.g. `visible = TRUE` re-shows a hidden column,
-`group_display = "header_row"` resets a prior `"column"`). This lets you
+default (e.g. `visible = TRUE` re-shows a hidden column). This lets you
 build a column's spec in stages — declare the label-and-alignment block
 up front, add the width once you know it fits, then attach a sort key,
 all without re-stating earlier attributes. Essential when generating
@@ -105,29 +119,26 @@ Unset sentinels — a field left at this value does NOT override the
 existing field (every other value, including a default like
 `visible = TRUE`, overrides):
 
-|                 |                                  |
-|-----------------|----------------------------------|
-| field           | unset sentinel                   |
-| `usage`         | `NA`                             |
-| `label`         | `NA_character_`                  |
-| `format`        | `NULL`                           |
-| `visible`       | `NA`                             |
-| `width`         | `"auto"`                         |
-| `group_display` | `NA`                             |
-| `group_skip`    | `NA`                             |
-| `align`         | `NA_character_`                  |
-| `valign`        | `NA_character_`                  |
-| `na_text`       | `NA_character_` (inherit preset) |
-| `indent`        | `NA`                             |
+|           |                                  |
+|-----------|----------------------------------|
+| field     | unset sentinel                   |
+| `label`   | `NA_character_`                  |
+| `format`  | `NULL`                           |
+| `visible` | `NA`                             |
+| `width`   | `"auto"`                         |
+| `align`   | `NA_character_`                  |
+| `valign`  | `NA_character_`                  |
+| `na_text` | `NA_character_` (inherit preset) |
+| `indent`  | `NA`                             |
 
-    # Three-stage build: label/usage first, alignment second, width
-    # third. Each stage leaves earlier fields intact.
+    # Three-stage build: label first, alignment second, width third.
+    # Each stage leaves earlier fields intact.
     tabular(cdisc_saf_demo) |>
-      cols(variable = col_spec(usage = "group", label = "Parameter")) |>
+      cols(variable = "Parameter") |>
       cols(variable = col_spec(align = "left")) |>
       cols(variable = col_spec(width = 2.0))
-    # Result: variable has usage="group", label="Parameter",
-    #         align="left", width=2.0 — all four fields set.
+    # Result: variable has label="Parameter", align="left",
+    #         width=2.0 — all three fields set.
 
 ## See also
 
@@ -169,67 +180,68 @@ tabular(
   footnotes = "Percentages based on N per treatment group."
 ) |>
   cols(
-    variable   = col_spec(usage = "group", label = "Parameter"),
-    stat_label = col_spec(label = "Statistic"),
+    variable   = "Parameter",
+    stat_label = "Statistic",
     placebo    = col_spec(label = "Placebo\nN={n['placebo']}",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50\nN={n['drug_50']}",  align = "decimal"),
     drug_100   = col_spec(label = "Drug 100\nN={n['drug_100']}", align = "decimal"),
     Total      = col_spec(label = "Total\nN={n['Total']}",    align = "decimal")
   ) |>
+  group_rows(by = "variable") |>
   sort_rows(by = c("variable", "stat_label"))
 
-#tabular-212d34e159 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-212d34e159 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-212d34e159 p { line-height: inherit; }
-#tabular-212d34e159 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-212d34e159 .tabular-caption { margin: 0; padding: 0; }
-#tabular-212d34e159 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-212d34e159 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-212d34e159 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-212d34e159 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-212d34e159 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-212d34e159 .tabular-table th, #tabular-212d34e159 .tabular-table td { padding: .18rem .6rem; }
-#tabular-212d34e159 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-212d34e159 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-212d34e159 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-212d34e159 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-212d34e159 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-212d34e159 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-212d34e159 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-212d34e159 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-212d34e159 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-212d34e159 .tabular-table tbody tr td { border-top: none; }
-#tabular-212d34e159 .tabular-band { text-align: center; }
-#tabular-212d34e159 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-212d34e159 .tabular-subgroup-label { font-weight: 600; }
-#tabular-212d34e159 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-212d34e159 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-212d34e159 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-212d34e159 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-212d34e159 .text-left { text-align: left; }
-#tabular-212d34e159 .text-center { text-align: center; }
-#tabular-212d34e159 .text-right { text-align: right; }
-#tabular-212d34e159 .tabular-table thead th.text-left { text-align: left; }
-#tabular-212d34e159 .tabular-table thead th.text-center { text-align: center; }
-#tabular-212d34e159 .tabular-table thead th.text-right { text-align: right; }
-#tabular-212d34e159 .tabular-table td.text-left { text-align: left; }
-#tabular-212d34e159 .tabular-table td.text-center { text-align: center; }
-#tabular-212d34e159 .tabular-table td.text-right { text-align: right; }
-#tabular-212d34e159 .valign-top { vertical-align: top; }
-#tabular-212d34e159 .valign-middle { vertical-align: middle; }
-#tabular-212d34e159 .valign-bottom { vertical-align: bottom; }
-#tabular-212d34e159 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-212d34e159 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-212d34e159 .tabular-page-break-row { display: none; }
-#tabular-212d34e159 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-212d34e159 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-212d34e159 .tabular-page-header, #tabular-212d34e159 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-212d34e159 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-212d34e159 .tabular-page-footer { margin-top: 1rem; }
-#tabular-212d34e159 .tabular-page-header-left, #tabular-212d34e159 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-212d34e159 .tabular-page-header-center, #tabular-212d34e159 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-212d34e159 .tabular-page-header-right, #tabular-212d34e159 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-212d34e159 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-212d34e159 .tabular-table tr { page-break-inside: avoid; } #tabular-212d34e159 .tabular-page-header, #tabular-212d34e159 .tabular-page-footer { display: none; } #tabular-212d34e159 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-212d34e159 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-212d34e159 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-69e6f53254 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-69e6f53254 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-69e6f53254 p { line-height: inherit; }
+#tabular-69e6f53254 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-69e6f53254 .tabular-caption { margin: 0; padding: 0; }
+#tabular-69e6f53254 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-69e6f53254 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-69e6f53254 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-69e6f53254 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-69e6f53254 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-69e6f53254 .tabular-table th, #tabular-69e6f53254 .tabular-table td { padding: .18rem .6rem; }
+#tabular-69e6f53254 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-69e6f53254 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-69e6f53254 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-69e6f53254 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-69e6f53254 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-69e6f53254 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-69e6f53254 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-69e6f53254 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-69e6f53254 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-69e6f53254 .tabular-table tbody tr td { border-top: none; }
+#tabular-69e6f53254 .tabular-band { text-align: center; }
+#tabular-69e6f53254 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-69e6f53254 .tabular-subgroup-label { font-weight: 600; }
+#tabular-69e6f53254 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-69e6f53254 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-69e6f53254 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-69e6f53254 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-69e6f53254 .text-left { text-align: left; }
+#tabular-69e6f53254 .text-center { text-align: center; }
+#tabular-69e6f53254 .text-right { text-align: right; }
+#tabular-69e6f53254 .tabular-table thead th.text-left { text-align: left; }
+#tabular-69e6f53254 .tabular-table thead th.text-center { text-align: center; }
+#tabular-69e6f53254 .tabular-table thead th.text-right { text-align: right; }
+#tabular-69e6f53254 .tabular-table td.text-left { text-align: left; }
+#tabular-69e6f53254 .tabular-table td.text-center { text-align: center; }
+#tabular-69e6f53254 .tabular-table td.text-right { text-align: right; }
+#tabular-69e6f53254 .valign-top { vertical-align: top; }
+#tabular-69e6f53254 .valign-middle { vertical-align: middle; }
+#tabular-69e6f53254 .valign-bottom { vertical-align: bottom; }
+#tabular-69e6f53254 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-69e6f53254 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-69e6f53254 .tabular-page-break-row { display: none; }
+#tabular-69e6f53254 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-69e6f53254 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-69e6f53254 .tabular-page-header, #tabular-69e6f53254 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-69e6f53254 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-69e6f53254 .tabular-page-footer { margin-top: 1rem; }
+#tabular-69e6f53254 .tabular-page-header-left, #tabular-69e6f53254 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-69e6f53254 .tabular-page-header-center, #tabular-69e6f53254 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-69e6f53254 .tabular-page-header-right, #tabular-69e6f53254 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-69e6f53254 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-69e6f53254 .tabular-table tr { page-break-inside: avoid; } #tabular-69e6f53254 .tabular-page-header, #tabular-69e6f53254 .tabular-page-footer { display: none; } #tabular-69e6f53254 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-69e6f53254 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-69e6f53254 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.1.1

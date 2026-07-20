@@ -2,8 +2,8 @@
 
 `tabular` turns one **pre-summarised, wide data frame** into a
 publication-ready table and renders it natively to **RTF, HTML, DOCX,
-PDF/LaTeX and Markdown** — from a single spec, with no Java or Office
-dependency.
+PDF (LaTeX- or typst-compiled), LaTeX, Typst and Markdown** — from a
+single spec, with no Java or Office dependency.
 
 Two things to internalise up front:
 
@@ -59,13 +59,10 @@ spec <- tabular(
   )
 ) |>
   cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
+    variable = col_spec(label = ""),
     stat_label = col_spec(label = "")
-  )
+  ) |>
+  group_rows(by = "variable")
 
 spec
 ```
@@ -106,7 +103,7 @@ backend is chosen by the file extension (or an explicit `format =`):
 ``` r
 
 out <- tempfile(fileext = ".rtf")
-emit(spec, out) # RTF here; swap to .docx / .pdf / .html / .md
+emit(spec, out) # RTF here; swap to .docx / .pdf / .html / .tex / .typ / .md
 file.exists(out)
 #> [1] TRUE
 ```

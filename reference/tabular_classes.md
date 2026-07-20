@@ -26,9 +26,10 @@ one mental model:
 |----|----|----|
 | class | role | constructor |
 | `tabular_spec` | root container; carries data + every other spec slot | [`tabular()`](https://vthanik.github.io/tabular/reference/tabular.md) |
-| `col_spec` | per-column DSL (usage, label, format, align, ...) | [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md) |
+| `col_spec` | per-column DSL (label, format, align, width, ...) | [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md) |
 | `header_node` | one node in the multi-level header tree | internal — built by [`headers()`](https://vthanik.github.io/tabular/reference/headers.md) |
 | `sort_spec` | sort keys + per-key direction | internal — built by [`sort_rows()`](https://vthanik.github.io/tabular/reference/sort_rows.md) |
+| `row_group_spec` | row-grouping plan (keys + per-key display / skip) | internal — built by [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md) |
 | `style_node` | one resolved style attribute set (per-cell) | internal — built by [`style()`](https://vthanik.github.io/tabular/reference/style.md) |
 | `style_layer` | one `tabular_location` + style_node | internal — built by [`style()`](https://vthanik.github.io/tabular/reference/style.md) |
 | `style_spec` | the cascade root (defaults + cols + headers + layers) | internal — built by [`style()`](https://vthanik.github.io/tabular/reference/style.md) |

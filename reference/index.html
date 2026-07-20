@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -81,7 +81,7 @@
       </dl></div><div class="section level2">
       <h2 id="spec-building">Spec building<a class="anchor" aria-label="anchor" href="#spec-building"></a></h2>
 
-      <div class="section-desc"><p>Configure per-column display, header bands, sort order, and subgrouping. Each verb attaches one slot onto the spec and returns the updated spec for chaining.</p></div>
+      <div class="section-desc"><p>Configure per-column display, row grouping, header bands, sort order, and subgrouping. Each verb attaches one slot onto the spec and returns the updated spec for chaining.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -108,6 +108,13 @@
 
         </dt>
         <dd>Per-column display specification</dd>
+
+        <dt>
+
+          <code><a href="group_rows.html">group_rows()</a></code>
+
+        </dt>
+        <dd>Declare the row-grouping structure of the table</dd>
 
         <dt>
 
@@ -261,7 +268,7 @@
       </dl></div><div class="section level2">
       <h2 id="rendering-and-inspection">Rendering and inspection<a class="anchor" aria-label="anchor" href="#rendering-and-inspection"></a></h2>
 
-      <div class="section-desc"><p>Terminal verbs. <code><a href="../reference/emit.html">emit()</a></code> writes a file; <code><a href="../reference/as_grid.html">as_grid()</a></code> resolves the spec without I/O; <code><a href="../reference/check_fonts.html">check_fonts()</a></code> and <code><a href="../reference/check_latex.html">check_latex()</a></code> audit font and LaTeX-package availability; the print and <code>as.tags()</code> methods drive the live HTML preview.</p></div>
+      <div class="section-desc"><p>Terminal verbs. <code><a href="../reference/emit.html">emit()</a></code> writes a file; <code><a href="../reference/as_grid.html">as_grid()</a></code> resolves the spec without I/O; <code><a href="../reference/check_fonts.html">check_fonts()</a></code>, <code><a href="../reference/check_latex.html">check_latex()</a></code>, and <code><a href="../reference/check_typst.html">check_typst()</a></code> audit font and PDF-toolchain availability; the print and <code>as.tags()</code> methods drive the live HTML preview.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -298,6 +305,13 @@
 
         <dt>
 
+          <code><a href="check_typst.html">check_typst()</a></code>
+
+        </dt>
+        <dd>Check Typst availability for PDF output</dd>
+
+        <dt>
+
           <code><a href="print.tabular_spec.html">print.tabular_spec</a></code>
 
         </dt>
@@ -328,14 +342,14 @@
 
         <dt>
 
-          <code><a href="tabular_classes.html">tabular_classes</a></code> <code><a href="tabular_classes.html">.col_spec_class</a></code> <code><a href="tabular_classes.html">header_node</a></code> <code><a href="tabular_classes.html">sort_spec</a></code> <code><a href="tabular_classes.html">subgroup_spec</a></code> <code><a href="tabular_classes.html">style_node</a></code> <code><a href="tabular_classes.html">style_layer</a></code> <code><a href="tabular_classes.html">style_spec</a></code> <code><a href="tabular_classes.html">.repeat_content_values</a></code> <code><a href="tabular_classes.html">preset_spec</a></code> <code><a href="tabular_classes.html">tabular_spec</a></code> <code><a href="tabular_classes.html">figure_spec</a></code> <code><a href="tabular_classes.html">inline_ast</a></code> <code><a href="tabular_classes.html">tabular_grid</a></code>
+          <code><a href="tabular_classes.html">tabular_classes</a></code> <code><a href="tabular_classes.html">.col_spec_class</a></code> <code><a href="tabular_classes.html">header_node</a></code> <code><a href="tabular_classes.html">sort_spec</a></code> <code><a href="tabular_classes.html">row_group_spec</a></code> <code><a href="tabular_classes.html">subgroup_spec</a></code> <code><a href="tabular_classes.html">style_node</a></code> <code><a href="tabular_classes.html">style_layer</a></code> <code><a href="tabular_classes.html">style_spec</a></code> <code><a href="tabular_classes.html">.repeat_content_values</a></code> <code><a href="tabular_classes.html">preset_spec</a></code> <code><a href="tabular_classes.html">tabular_spec</a></code> <code><a href="tabular_classes.html">figure_spec</a></code> <code><a href="tabular_classes.html">inline_ast</a></code> <code><a href="tabular_classes.html">tabular_grid</a></code>
 
         </dt>
         <dd>tabular S7 classes</dd>
 
         <dt>
 
-          <code><a href="tabular_predicates.html">is_tabular_spec()</a></code> <code><a href="tabular_predicates.html">is_figure_spec()</a></code> <code><a href="tabular_predicates.html">is_tabular_grid()</a></code> <code><a href="tabular_predicates.html">is_col_spec()</a></code> <code><a href="tabular_predicates.html">is_header_node()</a></code> <code><a href="tabular_predicates.html">is_sort_spec()</a></code> <code><a href="tabular_predicates.html">is_style_node()</a></code> <code><a href="tabular_predicates.html">is_style_layer()</a></code> <code><a href="tabular_predicates.html">is_style_spec()</a></code> <code><a href="tabular_predicates.html">is_pagination_spec()</a></code> <code><a href="tabular_predicates.html">is_preset_spec()</a></code> <code><a href="tabular_predicates.html">is_subgroup_spec()</a></code> <code><a href="tabular_predicates.html">is_inline_ast()</a></code>
+          <code><a href="tabular_predicates.html">is_tabular_spec()</a></code> <code><a href="tabular_predicates.html">is_figure_spec()</a></code> <code><a href="tabular_predicates.html">is_tabular_grid()</a></code> <code><a href="tabular_predicates.html">is_col_spec()</a></code> <code><a href="tabular_predicates.html">is_header_node()</a></code> <code><a href="tabular_predicates.html">is_sort_spec()</a></code> <code><a href="tabular_predicates.html">is_row_group_spec()</a></code> <code><a href="tabular_predicates.html">is_style_node()</a></code> <code><a href="tabular_predicates.html">is_style_layer()</a></code> <code><a href="tabular_predicates.html">is_style_spec()</a></code> <code><a href="tabular_predicates.html">is_pagination_spec()</a></code> <code><a href="tabular_predicates.html">is_preset_spec()</a></code> <code><a href="tabular_predicates.html">is_subgroup_spec()</a></code> <code><a href="tabular_predicates.html">is_inline_ast()</a></code>
 
         </dt>
         <dd>Test for tabular S7 class instances</dd>
@@ -435,7 +449,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

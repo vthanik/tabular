@@ -2,8 +2,8 @@
 name: tabular
 description: >
   Render clinical submission tables, listings, and figures to RTF, HTML,
-  DOCX, PDF/LaTeX, and Markdown from R. Use when writing R code that uses
-  the tabular package.
+  DOCX, PDF (LaTeX or Typst engine), LaTeX, Typst, and Markdown from R.
+  Use when writing R code that uses the tabular package.
 license: MIT
 compatibility: Requires R >=4.3.
 ---
@@ -11,8 +11,10 @@ compatibility: Requires R >=4.3.
 # tabular
 
 Render tables, listings, and figures for clinical submissions, natively to
-RTF, HTML, DOCX, PDF/LaTeX, and Markdown from a single immutable spec, with no
-Java, SAS, or Office dependency.
+RTF, HTML, DOCX, PDF, LaTeX, Typst, and Markdown from a single immutable
+spec, with no Java, SAS, or Office dependency. PDF compiles through LaTeX
+when a TeX is installed, or through the typst engine (bundled with
+Quarto ≥ 1.4) on TeX-less machines.
 
 ## Installation
 
@@ -28,18 +30,17 @@ tabular is **display-only**: it never aggregates, filters, weights, or computes
 statistics. You bring a **pre-summarised, wide data frame** (one input row = one
 display row) and pipe a `tabular()` object through verbs; each verb returns a
 new immutable spec. Nothing renders until `emit()`, which picks the backend from
-the file extension (`.rtf` `.html` `.docx` `.tex` `.pdf`) or an explicit
-`format=`.
+the file extension (`.rtf` `.html` `.docx` `.tex` `.typ` `.pdf` `.md`) or an
+explicit `format=`. A `.pdf` target probes LaTeX first and falls back to the
+typst engine; force one with `format = "latex"` or `format = "typst"`.
 
 ```r
 library(tabular)
 data(cdisc_saf_demo, package = "tabular")
 
 tabular(cdisc_saf_demo, titles = c("Table 14-2.01", "Demographics", "ITT")) |>
-  cols(
-    variable = col_spec(usage = "group", group_display = "header_row", label = ""),
-    stat_label = col_spec(label = "")
-  ) |>
+  cols(variable = "", stat_label = "") |>
+  group_rows(by = "variable") |>
   emit("table.rtf")
 ```
 
@@ -58,9 +59,10 @@ spec.
 
 Describe each column's role, label, width, alignment, and visibility.
 
-- `cols`: Assign a `col_spec` to one or more columns
-- `col_spec`: Build a per-column specification (`usage`, `label`, `width`, `align`, `visible`, `group_display`)
+- `cols`: Assign a `col_spec` to one or more columns (a bare string is label shorthand; `.hide` hides columns)
+- `col_spec`: Build a per-column specification (`label`, `width`, `align`, `visible`, `indent`)
 - `cols_apply`: Apply one `col_spec` across many columns by predicate
+- `group_rows`: Declare the table-level row grouping (`by` keys outer to inner; scalar `display` = `"section"` / `"collapse"` / `"repeat"`; `skip` = TRUE / FALSE / a subset of `by`)
 
 ### Column headers
 
@@ -119,17 +121,18 @@ Select precise table regions for `style(.at = ...)`.
 - `emit`: Render the spec to a file (backend chosen by extension or `format=`)
 - `as_grid`: Resolve a spec to its finalized `tabular_grid` (the pre-backend IR)
 
-### Font utilities
+### Toolchain and font diagnostics
 
 - `check_fonts`: Verify the fonts a spec needs are available for decimal alignment
-- `check_latex`: Verify the LaTeX toolchain for `.pdf` / `.tex` output
+- `check_latex`: Verify the LaTeX toolchain for `.pdf` (LaTeX engine) / `.tex` output
+- `check_typst`: Verify the Typst toolchain for `.pdf` (typst engine) / `.typ` output — binary, version floor, and the font chain PDFs render in (no TeX needed)
 
 ### Predicates
 
 Class checks for the spec types.
 
 - `is_tabular_spec`, `is_figure_spec`, `is_col_spec`, `is_header_node`
-- `is_sort_spec`, `is_subgroup_spec`, `is_pagination_spec`
+- `is_row_group_spec`, `is_sort_spec`, `is_subgroup_spec`, `is_pagination_spec`
 - `is_preset_spec`, `is_style_spec`, `is_style_layer`, `is_style_node`, `is_style_template`
 - `is_brdr`, `is_inline_ast`, `is_tabular_grid`, `is_tabular_location`
 
@@ -150,8 +153,8 @@ of inventing toy data.
   lexically; derive an integer key, hide it with `col_spec(visible = FALSE)`,
   then `sort_rows(by = key)`.
 - **BigN goes inline in the label string**, not a field.
-- **`group_display = "header_row"` auto-indents its child rows** — don't also
-  add `usage = "indent"` (double indent).
+- **`group_rows()` sections auto-indent their child rows** — don't
+  also add `col_spec(indent = )` on the stub (double indent).
 - **Titles and footnotes are multi-line** — pass a `character()` of any length.
 - Cosmetic knobs are named lists keyed by surface; per-surface specs are flat
   `c(...)` vectors, validated strictly at call time.

@@ -7,20 +7,33 @@ in](https://vthanik.github.io/tabular/articles/data-in.md)) and does not
 cover cosmetics (see
 [Presentation](https://vthanik.github.io/tabular/articles/presentation.md)).
 
-## The column model: `usage`
+## Row grouping: `group_rows()`
 
-Every column gets a role via `col_spec(usage = …)`. Picking the right
-one is the single most important structural decision:
+Row structure is a fact about the whole table, so it is declared once
+with
+[`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+— not per column. `by` names only the **structural** grouping key
+columns (section headers and hidden break keys), ordered outer to inner.
+The visible row-label column (the statistic stub) is an ordinary
+[`cols()`](https://vthanik.github.io/tabular/reference/cols.md) column,
+not a grouping key — it is indented automatically. `display` (a single
+value) picks how the keys render:
 
-| `usage` | Use it for | Behaviour |
+| `display` | Use it for | Behaviour |
 |----|----|----|
-| `"display"` *(default)* | data cells (the arm columns) | one value per row |
-| `"group"` | section variable (e.g. parameter) | each value becomes a **section-header row**; the column is hidden |
-| `"id"` | the row label that must stay visible | like `display`, but **joins the stub and repeats on every horizontal panel** |
+| `"section"` *(default)* | section variable (e.g. parameter) | each value becomes a **section-header row**; the key column is hidden |
+| `"collapse"` | a visible row label | column stays; repeated values are suppressed |
+| `"repeat"` | a visible row label | column stays; every row repeats the value |
 
-Indentation is **not** a `usage` role — it is the separate
-`col_spec(indent = …)` argument (a fixed integer level, or a column name
-for per-row depth).
+A **break-only key** — hidden, contributing only group transitions (the
+blank spacer and decimal-section reset) — is not a `display` mode: mark
+the key `col_spec(visible = FALSE)` and list it in `by`.
+
+[`cols()`](https://vthanik.github.io/tabular/reference/cols.md) handles
+the per-column cosmetics — labels (`x = "Label"` is shorthand for
+`col_spec(label = )`), alignment, widths, and `.hide =` for helper
+columns. Indentation is the separate `col_spec(indent = …)` argument (a
+fixed integer level, or a column name for per-row depth).
 
 ``` r
 
@@ -28,15 +41,9 @@ data(cdisc_saf_demo, package = "tabular")
 arms <- c("placebo", "drug_50", "drug_100", "Total")
 
 tabular(cdisc_saf_demo, titles = "Demographics") |>
-  cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
-    stat_label = col_spec(label = "")
-  ) |>
-  cols_apply(arms, col_spec(align = "decimal"))
+  cols(variable = "", stat_label = "") |>
+  cols_apply(arms, col_spec(align = "decimal")) |>
+  group_rows(by = "variable")
 ```
 
 |  | placebo | drug_50 | drug_100 | Total |
@@ -69,8 +76,8 @@ attaches one shared `col_spec` to **all** the arm columns at once — use
 it instead of repeating `cols(placebo = …, drug_50 = …)` for a variable
 number of arms.
 
-> **Indent from exactly one source.** `group_display = "header_row"`
-> already indents its child rows one level, so the stub column (here
+> **Indent from exactly one source.** `display = "section"` already
+> indents its child rows one level, so the stub column (here
 > `stat_label`) needs **no** `indent` — the section supplies it. (An
 > explicit `indent` on the host *overrides* that auto-indent rather than
 > stacking, so `indent = 1` there still yields a single level.) The same
@@ -79,6 +86,226 @@ number of arms.
 > which come out with a leading indent baked into the string: keep them
 > as-is or [`trimws()`](https://rdrr.io/r/base/trimws.html) them and set
 > `indent` yourself — don’t double up.
+
+### Display modes and spacing
+
+The default `display = "section"` is the submission shape. For a
+listing, `display = "collapse"` keeps the keys as visible columns and
+suppresses the repeats, so only the first row of each run carries the
+label — swap in `"repeat"` when every row must be self-describing (an
+export or QC view):
+
+``` r
+
+data(cdisc_saf_vital, package = "tabular")
+
+tabular(cdisc_saf_vital, titles = "Vital Signs Listing") |>
+  cols(
+    paramcd = col_spec(visible = FALSE),
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic"
+  ) |>
+  cols_apply(
+    c("placebo", "drug_50", "drug_100"),
+    col_spec(align = "decimal")
+  ) |>
+  group_rows(by = c("param", "visit"), display = "collapse", skip = FALSE)
+```
+
+| Parameter | Visit | Statistic | placebo | drug_50 | drug_100 |
+|----|----|----|----|----|----|
+| Diastolic Blood Pressure (mmHg) | Baseline | n | 340          | 384          | 288          |
+|  |  | Mean (SD) |  77.1 (10.7) |  76.6 ( 9.8) |  78.2 (10.3) |
+|  |  | Median |  77.7        |  76.7        |  78.8        |
+|  |  | Min, Max |  40  , 110   |  48  , 108   |  51  , 108   |
+|  | Week 8 | n | 292          | 240          | 224          |
+|  |  | Mean (SD) |  75.2 ( 9.1) |  75.4 (10.6) |  77.4 ( 9.1) |
+|  |  | Median |  76.0        |  74.0        |  78.3        |
+|  |  | Min, Max |  49  , 101   |  52  , 100   |  54  , 98    |
+|  | Week 16 | n | 272          | 168          | 148          |
+|  |  | Mean (SD) |  75.1 (10.9) |  75.2 (10.0) |  76.0 ( 9.0) |
+|  |  | Median |  76.0        |  75.7        |  77.3        |
+|  |  | Min, Max |  49  , 98    |  55  , 98    |  50  , 92    |
+|  | End of Treatment | n | 222          | 177          | 168          |
+|  |  | Mean (SD) |  74.4 (10.7) |  76.0 (11.2) |  76.0 ( 9.9) |
+|  |  | Median |  73.5        |  76.0        |  78.0        |
+|  |  | Min, Max |  49  , 104   |  50  , 100   |  56  , 98    |
+| Pulse Rate (beats/min) | Baseline | n | 340          | 384          | 288          |
+|  |  | Mean (SD) |  73.5 (11.6) |  72.1 (10.8) |  72.4 ( 9.7) |
+|  |  | Median |  72.3        |  70.0        |  71.7        |
+|  |  | Min, Max |  51  , 134   |  50  , 104   |  52  , 100   |
+|  | Week 8 | n | 292          | 240          | 224          |
+|  |  | Mean (SD) |  71.8 ( 9.0) |  72.6 (11.1) |  74.0 ( 8.9) |
+|  |  | Median |  72.0        |  72.0        |  73.2        |
+|  |  | Min, Max |  52  , 102   |  49  , 104   |  50  , 104   |
+|  | Week 16 | n | 272          | 168          | 148          |
+|  |  | Mean (SD) |  70.6 ( 8.8) |  68.8 ( 9.4) |  73.2 ( 9.5) |
+|  |  | Median |  70.2        |  68.0        |  72.0        |
+|  |  | Min, Max |  50  , 90    |  48  , 104   |  51  , 96    |
+|  | End of Treatment | n | 222          | 177          | 168          |
+|  |  | Mean (SD) |  75.2 (11.5) |  74.1 ( 9.4) |  73.6 ( 9.6) |
+|  |  | Median |  74.0        |  75.0        |  73.0        |
+|  |  | Min, Max |  51  , 106   |  50  , 94    |  50  , 98    |
+| Systolic Blood Pressure (mmHg) | Baseline | n | 340          | 384          | 288          |
+|  |  |  |  |  |  |
+|  |  | Mean (SD) | 136.8 (17.6) | 137.9 (18.5) | 137.8 (17.2) |
+|  |  | Median | 136.3        | 138.0        | 138.0        |
+|  |  | Min, Max |  80  , 184   | 100  , 194   | 100  , 192   |
+|  | Week 8 | n | 292          | 240          | 224          |
+|  |  | Mean (SD) | 136.3 (17.0) | 134.9 (17.8) | 135.1 (15.5) |
+|  |  | Median | 136.5        | 132.3        | 134.0        |
+|  |  | Min, Max |  90  , 189   |  92  , 200   |  91  , 198   |
+|  | Week 16 | n | 272          | 168          | 148          |
+|  |  | Mean (SD) | 134.6 (18.3) | 132.5 (14.3) | 133.7 (16.0) |
+|  |  | Median | 134.0        | 130.0        | 132.0        |
+|  |  | Min, Max |  76  , 190   | 100  , 168   |  99  , 186   |
+|  | End of Treatment | n | 222          | 177          | 168          |
+|  |  | Mean (SD) | 132.7 (15.4) | 133.0 (17.1) | 132.3 (15.6) |
+|  |  | Median | 131.0        | 130.0        | 131.0        |
+|  |  | Min, Max |  78  , 172   |  92  , 178   | 100  , 177   |
+| Temperature (C) | Baseline | n | 172          | 190          | 144          |
+|  |  | Mean (SD) |  36.6 ( 0.4) |  36.5 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.7        |  36.6        |  36.6        |
+|  |  | Min, Max |  35  , 37    |  35  , 37    |  36  , 37    |
+|  | Week 8 | n | 146          | 118          | 112          |
+|  |  | Mean (SD) |  36.6 ( 0.4) |  36.6 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.6        |  36.7        |  36.7        |
+|  |  | Min, Max |  36  , 37    |  36  , 37    |  36  , 37    |
+|  | Week 16 | n | 136          |  82          |  74          |
+|  |  | Mean (SD) |  36.7 ( 0.3) |  36.6 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.7        |  36.6        |  36.7        |
+|  |  | Min, Max |  36  , 37    |  36  , 37    |  36  , 37    |
+|  | End of Treatment | n |  74          |  59          |  56          |
+|  |  | Mean (SD) |  36.7 ( 0.4) |  36.6 ( 0.4) |  36.6 ( 0.4) |
+|  |  | Median |  36.8        |  36.7        |  36.7        |
+|  |  | Min, Max |  35  , 37    |  35  , 38    |  36  , 37    |
+
+ 
+
+Vital Signs Listing
+
+ 
+
+`skip` places the blank spacer rows between groups and follows the
+`readr::read_csv(col_names = )` pattern: `TRUE` (the default) derives it
+— a `"section"` key or a hidden break-only key breaks, a visible column
+key runs continuous; `FALSE` inserts none (as in the listing above); a
+character subset of `by` breaks on exactly those keys. Here a blank line
+separates parameters but not the visits within one:
+
+``` r
+
+tabular(cdisc_saf_vital, titles = "Vital Signs by Parameter and Visit") |>
+  cols(
+    paramcd = col_spec(visible = FALSE),
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic"
+  ) |>
+  cols_apply(
+    c("placebo", "drug_50", "drug_100"),
+    col_spec(align = "decimal")
+  ) |>
+  group_rows(by = c("param", "visit"), skip = "param")
+```
+
+| Statistic                           | placebo      | drug_50      | drug_100     |
+|-------------------------------------|--------------|--------------|--------------|
+| **Diastolic Blood Pressure (mmHg)** |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 340          | 384          | 288          |
+| Mean (SD)                           |  77.1 (10.7) |  76.6 ( 9.8) |  78.2 (10.3) |
+| Median                              |  77.7        |  76.7        |  78.8        |
+| Min, Max                            |  40  , 110   |  48  , 108   |  51  , 108   |
+| **Week 8**                          |              |              |              |
+| n                                   | 292          | 240          | 224          |
+| Mean (SD)                           |  75.2 ( 9.1) |  75.4 (10.6) |  77.4 ( 9.1) |
+| Median                              |  76.0        |  74.0        |  78.3        |
+| Min, Max                            |  49  , 101   |  52  , 100   |  54  , 98    |
+| **Week 16**                         |              |              |              |
+| n                                   | 272          | 168          | 148          |
+| Mean (SD)                           |  75.1 (10.9) |  75.2 (10.0) |  76.0 ( 9.0) |
+| Median                              |  76.0        |  75.7        |  77.3        |
+| Min, Max                            |  49  , 98    |  55  , 98    |  50  , 92    |
+| **End of Treatment**                |              |              |              |
+| n                                   | 222          | 177          | 168          |
+| Mean (SD)                           |  74.4 (10.7) |  76.0 (11.2) |  76.0 ( 9.9) |
+| Median                              |  73.5        |  76.0        |  78.0        |
+| Min, Max                            |  49  , 104   |  50  , 100   |  56  , 98    |
+|                                     |              |              |              |
+| **Pulse Rate (beats/min)**          |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 340          | 384          | 288          |
+| Mean (SD)                           |  73.5 (11.6) |  72.1 (10.8) |  72.4 (9.7)  |
+| Median                              |  72.3        |  70.0        |  71.7        |
+| Min, Max                            |  51  , 134   |  50  , 104   |  52  , 100   |
+| **Week 8**                          |              |              |              |
+| n                                   | 292          | 240          | 224          |
+| Mean (SD)                           |  71.8 ( 9.0) |  72.6 (11.1) |  74.0 (8.9)  |
+| Median                              |  72.0        |  72.0        |  73.2        |
+| Min, Max                            |  52  , 102   |  49  , 104   |  50  , 104   |
+| **Week 16**                         |              |              |              |
+| n                                   | 272          | 168          | 148          |
+| Mean (SD)                           |  70.6 ( 8.8) |  68.8 ( 9.4) |  73.2 (9.5)  |
+| Median                              |  70.2        |  68.0        |  72.0        |
+| Min, Max                            |  50  , 90    |  48  , 104   |  51  , 96    |
+| **End of Treatment**                |              |              |              |
+| n                                   | 222          | 177          | 168          |
+| Mean (SD)                           |  75.2 (11.5) |  74.1 ( 9.4) |  73.6 (9.6)  |
+| Median                              |  74.0        |  75.0        |  73.0        |
+| Min, Max                            |  51  , 106   |  50  , 94    |  50  , 98    |
+|                                     |              |              |              |
+| **Systolic Blood Pressure (mmHg)**  |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 340          | 384          | 288          |
+|                                     |              |              |              |
+| Mean (SD)                           | 136.8 (17.6) | 137.9 (18.5) | 137.8 (17.2) |
+| Median                              | 136.3        | 138.0        | 138.0        |
+| Min, Max                            |  80  , 184   | 100  , 194   | 100  , 192   |
+| **Week 8**                          |              |              |              |
+| n                                   | 292          | 240          | 224          |
+| Mean (SD)                           | 136.3 (17.0) | 134.9 (17.8) | 135.1 (15.5) |
+| Median                              | 136.5        | 132.3        | 134.0        |
+| Min, Max                            |  90  , 189   |  92  , 200   |  91  , 198   |
+| **Week 16**                         |              |              |              |
+| n                                   | 272          | 168          | 148          |
+| Mean (SD)                           | 134.6 (18.3) | 132.5 (14.3) | 133.7 (16.0) |
+| Median                              | 134.0        | 130.0        | 132.0        |
+| Min, Max                            |  76  , 190   | 100  , 168   |  99  , 186   |
+| **End of Treatment**                |              |              |              |
+| n                                   | 222          | 177          | 168          |
+| Mean (SD)                           | 132.7 (15.4) | 133.0 (17.1) | 132.3 (15.6) |
+| Median                              | 131.0        | 130.0        | 131.0        |
+| Min, Max                            |  78  , 172   |  92  , 178   | 100  , 177   |
+|                                     |              |              |              |
+| **Temperature (C)**                 |              |              |              |
+| **Baseline**                        |              |              |              |
+| n                                   | 172          | 190          | 144          |
+| Mean (SD)                           |  36.6 (0.4)  |  36.5 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.7        |  36.6        |  36.6        |
+| Min, Max                            |  35  , 37    |  35  , 37    |  36  , 37    |
+| **Week 8**                          |              |              |              |
+| n                                   | 146          | 118          | 112          |
+| Mean (SD)                           |  36.6 (0.4)  |  36.6 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.6        |  36.7        |  36.7        |
+| Min, Max                            |  36  , 37    |  36  , 37    |  36  , 37    |
+| **Week 16**                         |              |              |              |
+| n                                   | 136          |  82          |  74          |
+| Mean (SD)                           |  36.7 (0.3)  |  36.6 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.7        |  36.6        |  36.7        |
+| Min, Max                            |  36  , 37    |  36  , 37    |  36  , 37    |
+| **End of Treatment**                |              |              |              |
+| n                                   |  74          |  59          |  56          |
+| Mean (SD)                           |  36.7 (0.4)  |  36.6 (0.4)  |  36.6 (0.4)  |
+| Median                              |  36.8        |  36.7        |  36.7        |
+| Min, Max                            |  35  , 37    |  35  , 38    |  36  , 37    |
+
+ 
+
+Vital Signs by Parameter and Visit
+
+ 
 
 ## BigN in the column headers
 
@@ -91,12 +318,8 @@ data(cdisc_saf_n, package = "tabular")
 N <- stats::setNames(cdisc_saf_n$n, cdisc_saf_n$arm_short)
 
 tabular(cdisc_saf_demo, titles = "Demographics") |>
+  group_rows(by = "variable") |>
   cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
     stat_label = col_spec(label = ""),
     placebo = col_spec(
       label = "Placebo\n(N={N['placebo']})",
@@ -137,14 +360,8 @@ the calling environment, so the BigN looks itself up:
 arm_cols <- c("placebo", "drug_50", "drug_100", "Total")
 
 tabular(cdisc_saf_demo, titles = "Demographics") |>
-  cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
-    stat_label = col_spec(label = "")
-  ) |>
+  group_rows(by = "variable") |>
+  cols(stat_label = col_spec(label = "")) |>
   cols_apply(
     arm_cols,
     col_spec(label = "{.name}\n(N={N[.name]})", align = "decimal")
@@ -167,14 +384,8 @@ builds spanning bands over groups of columns:
 ``` r
 
 tabular(cdisc_saf_demo, titles = "Demographics") |>
-  cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
-    stat_label = col_spec(label = "", width = "2.2in")
-  ) |>
+  group_rows(by = "variable") |>
+  cols(stat_label = col_spec(label = "", width = "2.2in")) |>
   cols_apply(arms, col_spec(align = "decimal", width = "1in")) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total"))
 ```
@@ -236,14 +447,7 @@ tabular(cdisc_saf_aesocpt, titles = "AEs by SOC and PT, descending frequency") |
       label = "SOC / Preferred Term",
       indent = "indent_level"
     ),
-    soc = col_spec(
-      usage = "group",
-      visible = FALSE,
-      group_display = "column_repeat"
-    ),
-    row_type = col_spec(visible = FALSE),
-    n_total = col_spec(visible = FALSE),
-    soc_n = col_spec(visible = FALSE)
+    .hide = c("soc", "row_type", "n_total", "soc_n")
   ) |>
   cols_apply(arms, col_spec(align = "decimal")) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE))
@@ -341,14 +545,7 @@ ae_pages <- tabular(cdisc_saf_aesocpt, titles = "AEs by SOC and PT") |>
       label = "SOC / Preferred Term",
       indent = "indent_level"
     ),
-    soc = col_spec(
-      usage = "group",
-      visible = FALSE,
-      group_display = "column_repeat"
-    ),
-    row_type = col_spec(visible = FALSE),
-    n_total = col_spec(visible = FALSE),
-    soc_n = col_spec(visible = FALSE)
+    .hide = c("soc", "row_type", "n_total", "soc_n")
   ) |>
   cols_apply(
     c("placebo", "drug_50", "drug_100", "Total"),
@@ -447,23 +644,22 @@ emit(ae_pages, "ae_soc_pt.pdf") # continuation marker repeats on each continued 
 ## Panels — wide tables
 
 When the columns don’t fit one page, `paginate(panels = N)` splits the
-**non-group** columns into `N` chunks and repeats every `group`/`id`
-column on each panel (so the row labels reappear). Make the row label
-`usage = "id"` so it rides every panel:
+**non-stub** columns into `N` chunks and repeats the stub on each panel
+(so the row labels reappear). The stub defaults to the
+[`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+keys; name it explicitly with `repeat_cols` to carry the row label too:
 
 ``` r
 
 wide_split <- tabular(cdisc_saf_demo, titles = "Demographics (wide split)") |>
-  cols(
-    variable = col_spec(
-      usage = "group",
-      group_display = "header_row",
-      label = ""
-    ),
-    stat_label = col_spec(usage = "id", label = "") # repeats on every panel
-  ) |>
+  cols(variable = "", stat_label = "") |>
   cols_apply(arms, col_spec(align = "decimal")) |>
-  paginate(panels = 2, continuation = "(continued)")
+  group_rows(by = "variable") |>
+  paginate(
+    panels = 2,
+    repeat_cols = c("variable", "stat_label"), # both ride every panel
+    continuation = "(continued)"
+  )
 wide_split
 ```
 
@@ -495,8 +691,8 @@ Demographics (wide split)
 
 Panels are a paged-backend feature: in HTML and Markdown the table stays
 one continuous block (the preview above), while RTF, PDF, and DOCX place
-each panel on its own page with the `id` / `group` columns repeated.
-Emit to a paged backend to see the split:
+each panel on its own page with the stub columns repeated. Emit to a
+paged backend to see the split:
 
 ``` r
 
@@ -523,13 +719,12 @@ hard page break. A partition-constant column can ride into the banner:
 data(cdisc_saf_subgroup, package = "tabular")
 tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>
   cols(
-    sex = col_spec(visible = FALSE),
-    sex_n = col_spec(visible = FALSE),
-    paramcd = col_spec(visible = FALSE),
-    param = col_spec(usage = "group", label = "Parameter"),
-    visit = col_spec(usage = "group", label = "Visit"),
-    stat_label = col_spec(usage = "id", label = "Statistic")
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic",
+    .hide = c("sex", "sex_n", "paramcd")
   ) |>
+  group_rows(by = c("param", "visit")) |>
   cols_apply(
     c("placebo", "drug_50", "drug_100", "Total"),
     col_spec(align = "decimal")
@@ -662,12 +857,12 @@ big_n <- tibble::tribble(
 
 tabular(cdisc_saf_subgroup, titles = "Vital signs by sex") |>
   cols(
-    sex_n = col_spec(visible = FALSE),
-    paramcd = col_spec(visible = FALSE),
-    param = col_spec(usage = "group", label = "Parameter"),
-    visit = col_spec(usage = "group", label = "Visit"),
-    stat_label = col_spec(usage = "id", label = "Statistic")
+    param = "Parameter",
+    visit = "Visit",
+    stat_label = "Statistic",
+    .hide = c("sex_n", "paramcd")
   ) |>
+  group_rows(by = c("param", "visit")) |>
   cols_apply(
     c("placebo", "drug_50", "drug_100", "Total"),
     col_spec(align = "decimal")
@@ -816,8 +1011,8 @@ tabular(
   footnotes = "No subjects met the inclusion criteria for this cohort.",
   empty_text = "No data available to report"
 ) |>
+  group_rows(by = "variable") |>
   cols(
-    variable = col_spec(usage = "group", label = "Characteristic"),
     stat_label = col_spec(label = "Statistic"),
     placebo = col_spec(label = "Placebo", align = "decimal"),
     drug_50 = col_spec(label = "Drug 50 mg", align = "decimal"),
@@ -826,7 +1021,7 @@ tabular(
   )
 ```
 
-|       Characteristic        | Statistic | Placebo | Drug 50 mg | Drug 100 mg | Total |
+|          variable           | Statistic | Placebo | Drug 50 mg | Drug 100 mg | Total |
 |:---------------------------:|:---------:|:-------:|:----------:|:-----------:|:-----:|
 | No data available to report |           |         |            |             |       |
 

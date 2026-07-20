@@ -15,6 +15,7 @@ paginate(
   .spec,
   keep_together = character(),
   panels = 1,
+  repeat_cols = NULL,
   orphan_floor = 3,
   widow_floor = 2,
   repeat_content = c("titles", "headers", "footnotes"),
@@ -31,10 +32,14 @@ paginate(
 
 - keep_together:
 
-  *Group columns whose runs of identical values must not be split across
-  a page break.* `<character>: default character()`. Every entry must be
-  a `usage = "group"` column declared in
-  [`cols()`](https://vthanik.github.io/tabular/reference/cols.md).
+  *Columns whose runs of identical values must not be split across a
+  page break.* `<character>: default character()`. Every entry must be a
+  column of `data` — typically a
+  [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+  key, or a hidden block-key column (`.hide` in
+  [`cols()`](https://vthanik.github.io/tabular/reference/cols.md)) when
+  the block structure lives in the row text rather than a grouping key
+  (the AE SOC/PT idiom).
 
   **Interaction:** A run too tall to fit in the computed row budget less
   `orphan_floor` is split anyway; pagination is best-effort, not a hard
@@ -47,8 +52,23 @@ paginate(
 
   *Number of horizontal panels for wide tables.*
   `<integer(1)>: default 1`. With `1`, every column is on every page
-  (single vertical scroll). With `N > 1`, the engine splits non-group
-  columns into `N` chunks and repeats every group column on every panel.
+  (single vertical scroll). With `N > 1`, the engine splits non-stub
+  columns into `N` chunks and repeats the stub on every panel.
+
+- repeat_cols:
+
+  *Stub columns repeated on every horizontal panel.*
+  `<character | NULL>: default NULL`. `NULL` derives the stub from the
+  [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+  keys, excluding break-only `col_spec(visible = FALSE)` keys (hidden
+  columns never repeat). An explicit character vector REPLACES that
+  default — name every column the stub should carry (e.g. the grouping
+  key plus a per-row statistic label).
+  [`character()`](https://rdrr.io/r/base/character.html) repeats
+  nothing.
+
+  **Interaction:** Only meaningful with `panels > 1` (or the column-fit
+  horizontal split); a single-panel table renders every column anyway.
 
 - orphan_floor:
 
@@ -144,18 +164,26 @@ active font size, gives the body-row budget per page. Landscape pages
 naturally carry fewer rows than portrait at the same paper size; smaller
 fonts carry more.
 
-**`keep_together` protects group runs.** When a page break would fall in
-the middle of a contiguous run of identical values in a
-`usage = "group"` column listed in `keep_together`, the engine moves the
-break BACK to the start of the run so the whole run rides on the next
-page. Single rule of escape: if moving the break back would leave fewer
-than `orphan_floor` rows on the current page, the engine splits the run
-anyway (a single group too tall to fit on one page cannot be kept
-together).
+**`keep_together` protects block runs.** When a page break would fall in
+the middle of a contiguous run of identical values in a column listed in
+`keep_together`, the engine moves the break BACK to the start of the run
+so the whole run rides on the next page. Single rule of escape: if
+moving the break back would leave fewer than `orphan_floor` rows on the
+current page, the engine splits the run anyway (a single group too tall
+to fit on one page cannot be kept together).
 
-**`panels` and group stickiness.** With `panels > 1`, the engine splits
-the NON-group columns into approximately equal slices and repeats every
-`usage = "group"` column on every panel for row context.
+On the natively-paginating backends (RTF, DOCX) the consumer (Word)
+picks the break against the space remaining on its current page, which
+the engine cannot see — so protection is emitted as row-glue hints
+encoding the floor contract instead: a break inside a run leaves at
+least `orphan_floor` rows behind and carries at least `widow_floor` rows
+forward; runs short enough for the two edges to meet ride as one block.
+
+**`panels` and the stub.** With `panels > 1`, the engine splits the
+non-stub columns into approximately equal slices and repeats the stub —
+`repeat_cols` when set, otherwise the visible
+[`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+keys — on every panel for row context.
 
 ## See also
 
@@ -201,15 +229,11 @@ tabular(
 ) |>
   cols(
     label    = col_spec(label = "SOC / PT", indent = "indent_level"),
-    soc      = col_spec(usage = "group", visible = FALSE,
-                        group_display = "column_repeat"),
-    row_type = col_spec(visible = FALSE),
-    soc_n    = col_spec(visible = FALSE),
-    n_total  = col_spec(visible = FALSE),
-    placebo  = col_spec(label = "Placebo\nN={n['placebo']}"),
-    drug_50  = col_spec(label = "Drug 50\nN={n['drug_50']}"),
-    drug_100 = col_spec(label = "Drug 100\nN={n['drug_100']}"),
-    Total    = col_spec(label = "Total\nN={n['Total']}")
+    placebo  = "Placebo\nN={n['placebo']}",
+    drug_50  = "Drug 50\nN={n['drug_50']}",
+    drug_100 = "Drug 100\nN={n['drug_100']}",
+    Total    = "Total\nN={n['Total']}",
+    .hide    = c("soc", "row_type", "soc_n", "n_total")
   ) |>
   headers("Treatment Group" = c("placebo", "drug_50", "drug_100", "Total")) |>
   sort_rows(by = c("soc_n", "n_total"), descending = c(TRUE, TRUE)) |>
@@ -219,58 +243,58 @@ tabular(
     continuation = "(continued)"
   )
 
-#tabular-11fb8f5e9f { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-11fb8f5e9f .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-11fb8f5e9f p { line-height: inherit; }
-#tabular-11fb8f5e9f .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-11fb8f5e9f .tabular-caption { margin: 0; padding: 0; }
-#tabular-11fb8f5e9f .tabular-pad { margin: 0; line-height: 1; }
-#tabular-11fb8f5e9f .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-11fb8f5e9f .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-11fb8f5e9f .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-11fb8f5e9f .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-11fb8f5e9f .tabular-table th, #tabular-11fb8f5e9f .tabular-table td { padding: .18rem .6rem; }
-#tabular-11fb8f5e9f .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-11fb8f5e9f .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-11fb8f5e9f .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-11fb8f5e9f .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-11fb8f5e9f .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-11fb8f5e9f .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-11fb8f5e9f .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-11fb8f5e9f .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-11fb8f5e9f .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-11fb8f5e9f .tabular-table tbody tr td { border-top: none; }
-#tabular-11fb8f5e9f .tabular-band { text-align: center; }
-#tabular-11fb8f5e9f .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-11fb8f5e9f .tabular-subgroup-label { font-weight: 600; }
-#tabular-11fb8f5e9f .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-11fb8f5e9f .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-11fb8f5e9f .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-11fb8f5e9f .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-11fb8f5e9f .text-left { text-align: left; }
-#tabular-11fb8f5e9f .text-center { text-align: center; }
-#tabular-11fb8f5e9f .text-right { text-align: right; }
-#tabular-11fb8f5e9f .tabular-table thead th.text-left { text-align: left; }
-#tabular-11fb8f5e9f .tabular-table thead th.text-center { text-align: center; }
-#tabular-11fb8f5e9f .tabular-table thead th.text-right { text-align: right; }
-#tabular-11fb8f5e9f .tabular-table td.text-left { text-align: left; }
-#tabular-11fb8f5e9f .tabular-table td.text-center { text-align: center; }
-#tabular-11fb8f5e9f .tabular-table td.text-right { text-align: right; }
-#tabular-11fb8f5e9f .valign-top { vertical-align: top; }
-#tabular-11fb8f5e9f .valign-middle { vertical-align: middle; }
-#tabular-11fb8f5e9f .valign-bottom { vertical-align: bottom; }
-#tabular-11fb8f5e9f .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-11fb8f5e9f .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-11fb8f5e9f .tabular-page-break-row { display: none; }
-#tabular-11fb8f5e9f { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-11fb8f5e9f .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-11fb8f5e9f .tabular-page-header, #tabular-11fb8f5e9f .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-11fb8f5e9f .tabular-page-header { margin-bottom: 1rem; }
-#tabular-11fb8f5e9f .tabular-page-footer { margin-top: 1rem; }
-#tabular-11fb8f5e9f .tabular-page-header-left, #tabular-11fb8f5e9f .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-11fb8f5e9f .tabular-page-header-center, #tabular-11fb8f5e9f .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-11fb8f5e9f .tabular-page-header-right, #tabular-11fb8f5e9f .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-11fb8f5e9f .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-11fb8f5e9f .tabular-table tr { page-break-inside: avoid; } #tabular-11fb8f5e9f .tabular-page-header, #tabular-11fb8f5e9f .tabular-page-footer { display: none; } #tabular-11fb8f5e9f .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-11fb8f5e9f .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-11fb8f5e9f .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-8ae01bbdb5 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-8ae01bbdb5 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-8ae01bbdb5 p { line-height: inherit; }
+#tabular-8ae01bbdb5 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-8ae01bbdb5 .tabular-caption { margin: 0; padding: 0; }
+#tabular-8ae01bbdb5 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-8ae01bbdb5 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-8ae01bbdb5 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-8ae01bbdb5 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-8ae01bbdb5 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-8ae01bbdb5 .tabular-table th, #tabular-8ae01bbdb5 .tabular-table td { padding: .18rem .6rem; }
+#tabular-8ae01bbdb5 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-8ae01bbdb5 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-8ae01bbdb5 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-8ae01bbdb5 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-8ae01bbdb5 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-8ae01bbdb5 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-8ae01bbdb5 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-8ae01bbdb5 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-8ae01bbdb5 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-8ae01bbdb5 .tabular-table tbody tr td { border-top: none; }
+#tabular-8ae01bbdb5 .tabular-band { text-align: center; }
+#tabular-8ae01bbdb5 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-8ae01bbdb5 .tabular-subgroup-label { font-weight: 600; }
+#tabular-8ae01bbdb5 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-8ae01bbdb5 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-8ae01bbdb5 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-8ae01bbdb5 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-8ae01bbdb5 .text-left { text-align: left; }
+#tabular-8ae01bbdb5 .text-center { text-align: center; }
+#tabular-8ae01bbdb5 .text-right { text-align: right; }
+#tabular-8ae01bbdb5 .tabular-table thead th.text-left { text-align: left; }
+#tabular-8ae01bbdb5 .tabular-table thead th.text-center { text-align: center; }
+#tabular-8ae01bbdb5 .tabular-table thead th.text-right { text-align: right; }
+#tabular-8ae01bbdb5 .tabular-table td.text-left { text-align: left; }
+#tabular-8ae01bbdb5 .tabular-table td.text-center { text-align: center; }
+#tabular-8ae01bbdb5 .tabular-table td.text-right { text-align: right; }
+#tabular-8ae01bbdb5 .valign-top { vertical-align: top; }
+#tabular-8ae01bbdb5 .valign-middle { vertical-align: middle; }
+#tabular-8ae01bbdb5 .valign-bottom { vertical-align: bottom; }
+#tabular-8ae01bbdb5 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-8ae01bbdb5 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-8ae01bbdb5 .tabular-page-break-row { display: none; }
+#tabular-8ae01bbdb5 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-8ae01bbdb5 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-8ae01bbdb5 .tabular-page-header, #tabular-8ae01bbdb5 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-8ae01bbdb5 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-8ae01bbdb5 .tabular-page-footer { margin-top: 1rem; }
+#tabular-8ae01bbdb5 .tabular-page-header-left, #tabular-8ae01bbdb5 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-8ae01bbdb5 .tabular-page-header-center, #tabular-8ae01bbdb5 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-8ae01bbdb5 .tabular-page-header-right, #tabular-8ae01bbdb5 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-8ae01bbdb5 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-8ae01bbdb5 .tabular-table tr { page-break-inside: avoid; } #tabular-8ae01bbdb5 .tabular-page-header, #tabular-8ae01bbdb5 .tabular-page-footer { display: none; } #tabular-8ae01bbdb5 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-8ae01bbdb5 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-8ae01bbdb5 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.3.1

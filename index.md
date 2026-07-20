@@ -1,11 +1,11 @@
 # tabular
 
 **tabular** turns a pre-summarised data frame into a submission-grade
-clinical table and emits it natively to **RTF, PDF, HTML, LaTeX, and
-DOCX** — no Java, no LibreOffice, no Word automation. One short pipeline
-gives you decimal alignment via real font metrics, multi-level column
-headers, predicate-targeted styling, and group-aware pagination, built
-for CDISC ADaM workflows and FDA / EMA / PMDA submissions.
+clinical table and emits it natively to **RTF, PDF, HTML, LaTeX, Typst,
+and DOCX** — no Java, no LibreOffice, no Word automation. One short
+pipeline gives you decimal alignment via real font metrics, multi-level
+column headers, predicate-targeted styling, and group-aware pagination,
+built for CDISC ADaM workflows and FDA / EMA / PMDA submissions.
 
 It is the only R table package that pairs a **live HTML preview** with a
 **paginated print deliverable**: the same spec you eyeball in a notebook
@@ -13,9 +13,10 @@ is the one that paginates into the RTF you ship.
 
 > **Scope.** `tabular` renders the full set of clinical outputs –
 > **tables, listings, and figures** (the “T”, “L”, and “F” of TFL) – to
-> RTF, LaTeX, HTML, PDF, and DOCX from one verb pipeline. A zero-row
-> table renders an empty-data placeholder (“No data available to
-> report”) in the body, with the page chrome and column headers intact.
+> RTF, LaTeX, Typst, HTML, PDF, and DOCX from one verb pipeline. A
+> zero-row table renders an empty-data placeholder (“No data available
+> to report”) in the body, with the page chrome and column headers
+> intact.
 
 ## Installation
 
@@ -36,34 +37,50 @@ pak::pak("vthanik/tabular")
 remotes::install_github("vthanik/tabular")
 ```
 
-R dependencies install automatically. The five backends differ in what
-*else* they need:
+R dependencies install automatically. The backends differ in what *else*
+they need:
 
 | Backend | Extra requirement |
 |----|:---|
 | RTF, DOCX, HTML, Markdown | none — pure R, no Java, no `pandoc`, no Office |
-| LaTeX (`.tex` source) | none — `tabular` writes the fragment |
-| PDF | a TeX install (xelatex) with `tabularray` + `ninecolors` |
+| LaTeX (`.tex` source), Typst (`.typ` source) | none — `tabular` writes the source |
+| PDF | one of two engines: a TeX install (xelatex), **or** a typst binary — Quarto ≥ 1.4 bundles one, so most machines already qualify |
 
-PDF is the only backend that shells out. Install
-[`tinytex`](https://yihui.org/tinytex/) once per machine and `tabular`
-compiles with `xelatex` thereafter:
+PDF is the only backend that shells out, and it has **two engines**:
+
+- **LaTeX** — `emit(spec, "out.pdf")` compiles via `xelatex` when a
+  usable TeX is found. `tabularray` + `ninecolors` ship with `tabular`,
+  so no `tlmgr_install()` step is needed even on locked-down servers
+  (Domino, Posit Workbench) where `tlmgr install` is impossible.
+- **Typst** — with no usable TeX,
+  [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) falls
+  back to the `typst` compiler (the standalone binary, or the copy
+  bundled inside Quarto, which ships with RStudio / Posit Workbench). No
+  TeX installation at all, and compiles in well under a second.
+
+Pass `format = "latex"` or `format = "typst"` to pick an engine
+explicitly; with neither engine present, install one:
 
 ``` r
 
 install.packages("tinytex")
-tinytex::install_tinytex() # one-time TeX setup
-tinytex::tlmgr_install(c("tabularray", "ninecolors", "siunitx", "tex-gyre"))
+tinytex::install_tinytex(bundle = "TinyTeX") # one-time TeX setup
+# or: install Quarto (https://quarto.org) — it bundles the typst engine
 ```
 
 [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
-reports which LaTeX packages are present and prints the exact
-`tlmgr_install()` line for anything missing; `check_fonts(spec)` does
-the same for the fonts a spec asks for, per backend.
+reports which LaTeX packages resolve (probed through `kpsewhich`, the
+same resolver `xelatex` uses) and prints the remedy for anything
+genuinely missing;
+[`check_typst()`](https://vthanik.github.io/tabular/reference/check_typst.md)
+does the same for the typst engine (binary, version floor, and the font
+chain PDFs render in); `check_fonts(spec)` audits the fonts a spec asks
+for, per backend.
 
 ``` r
 
-tabular::check_latex()   # PDF readiness, with the install remedy
+tabular::check_latex()   # LaTeX-PDF readiness, with the install remedy
+tabular::check_typst()   # Typst-PDF readiness (no TeX needed)
 ```
 
 > **TeX Live on a managed OS.** If TeX Live came from the system package
@@ -104,8 +121,8 @@ tab <- tabular(
   footnotes = "Percentages are based on the number of subjects per treatment group."
 ) |>
   cols(
-    variable = col_spec(usage = "group", label = "Characteristic"),
-    stat_label = col_spec(label = "Statistic"),
+    variable = "Characteristic",
+    stat_label = "Statistic",
     placebo = col_spec(
       label = "Placebo (N={n['placebo']})",
       align = "decimal"
@@ -119,7 +136,8 @@ tab <- tabular(
       align = "decimal"
     ),
     Total = col_spec(label = "Total (N={n['Total']})", align = "decimal")
-  )
+  ) |>
+  group_rows(by = "variable")
 
 # render to any backend by file extension (or format = "...")
 path <- emit(tab, tempfile(fileext = ".rtf")) # submission deliverable
@@ -127,7 +145,8 @@ path <- emit(tab, tempfile(fileext = ".rtf")) # submission deliverable
 
 The same `tab` emits to every backend from the one spec. The table below
 is tabular’s own HTML render — the identical spec also produces RTF, a
-paginated PDF, a `tabularray` LaTeX fragment, and native OOXML `.docx`:
+paginated PDF (LaTeX- or typst-compiled), a `tabularray` LaTeX fragment,
+a native Typst document, and native OOXML `.docx`:
 
 ![Demographic and baseline characteristics table rendered by tabular:
 decimal-aligned arm columns, a centred multi-line caption, and a single
@@ -135,11 +154,13 @@ footnote.](reference/figures/README-hero.png)
 
 ## Why tabular?
 
-- **Five native backends, one spec.**
+- **Every native backend, one spec.**
   [`emit()`](https://vthanik.github.io/tabular/reference/emit.md)
-  dispatches on the file extension to RTF 1.9.1, PDF (via `tinytex`),
-  self-contained Bootstrap HTML, `tabularray` LaTeX, and native OOXML
-  DOCX. No JVM, no Office round-trip.
+  dispatches on the file extension to RTF 1.9.1, self-contained
+  Bootstrap HTML, `tabularray` LaTeX, native Typst, native OOXML DOCX,
+  and PDF — compiled through LaTeX when a TeX is installed, or through
+  the typst engine (bundled with Quarto) on TeX-less machines. No JVM,
+  no Office round-trip.
 - **Decimal alignment that survives the page.** Numbers align on the
   decimal using the backend’s real font metrics, not guessed padding —
   so columns stay aligned in print, not just on screen.

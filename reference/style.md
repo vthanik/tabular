@@ -179,58 +179,58 @@ tabular(cdisc_saf_aesocpt, titles = "Adverse Events by SOC / PT",
   style(background = "#f0f0f0",
         .at = cells_body(where = row_type == "overall"))
 
-#tabular-7c16651af3 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-7c16651af3 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-7c16651af3 p { line-height: inherit; }
-#tabular-7c16651af3 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-7c16651af3 .tabular-caption { margin: 0; padding: 0; }
-#tabular-7c16651af3 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-7c16651af3 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-7c16651af3 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-7c16651af3 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-7c16651af3 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-7c16651af3 .tabular-table th, #tabular-7c16651af3 .tabular-table td { padding: .18rem .6rem; }
-#tabular-7c16651af3 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-7c16651af3 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-7c16651af3 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-7c16651af3 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-7c16651af3 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-7c16651af3 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-7c16651af3 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-7c16651af3 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-7c16651af3 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-7c16651af3 .tabular-table tbody tr td { border-top: none; }
-#tabular-7c16651af3 .tabular-band { text-align: center; }
-#tabular-7c16651af3 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-7c16651af3 .tabular-subgroup-label { font-weight: 600; }
-#tabular-7c16651af3 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-7c16651af3 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-7c16651af3 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-7c16651af3 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-7c16651af3 .text-left { text-align: left; }
-#tabular-7c16651af3 .text-center { text-align: center; }
-#tabular-7c16651af3 .text-right { text-align: right; }
-#tabular-7c16651af3 .tabular-table thead th.text-left { text-align: left; }
-#tabular-7c16651af3 .tabular-table thead th.text-center { text-align: center; }
-#tabular-7c16651af3 .tabular-table thead th.text-right { text-align: right; }
-#tabular-7c16651af3 .tabular-table td.text-left { text-align: left; }
-#tabular-7c16651af3 .tabular-table td.text-center { text-align: center; }
-#tabular-7c16651af3 .tabular-table td.text-right { text-align: right; }
-#tabular-7c16651af3 .valign-top { vertical-align: top; }
-#tabular-7c16651af3 .valign-middle { vertical-align: middle; }
-#tabular-7c16651af3 .valign-bottom { vertical-align: bottom; }
-#tabular-7c16651af3 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-7c16651af3 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-7c16651af3 .tabular-page-break-row { display: none; }
-#tabular-7c16651af3 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-7c16651af3 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-7c16651af3 .tabular-page-header, #tabular-7c16651af3 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-7c16651af3 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-7c16651af3 .tabular-page-footer { margin-top: 1rem; }
-#tabular-7c16651af3 .tabular-page-header-left, #tabular-7c16651af3 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-7c16651af3 .tabular-page-header-center, #tabular-7c16651af3 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-7c16651af3 .tabular-page-header-right, #tabular-7c16651af3 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-7c16651af3 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-7c16651af3 .tabular-table tr { page-break-inside: avoid; } #tabular-7c16651af3 .tabular-page-header, #tabular-7c16651af3 .tabular-page-footer { display: none; } #tabular-7c16651af3 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-7c16651af3 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-7c16651af3 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-7434ee2d40 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-7434ee2d40 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-7434ee2d40 p { line-height: inherit; }
+#tabular-7434ee2d40 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-7434ee2d40 .tabular-caption { margin: 0; padding: 0; }
+#tabular-7434ee2d40 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-7434ee2d40 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-7434ee2d40 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-7434ee2d40 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-7434ee2d40 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-7434ee2d40 .tabular-table th, #tabular-7434ee2d40 .tabular-table td { padding: .18rem .6rem; }
+#tabular-7434ee2d40 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-7434ee2d40 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-7434ee2d40 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-7434ee2d40 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-7434ee2d40 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7434ee2d40 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7434ee2d40 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7434ee2d40 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-7434ee2d40 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-7434ee2d40 .tabular-table tbody tr td { border-top: none; }
+#tabular-7434ee2d40 .tabular-band { text-align: center; }
+#tabular-7434ee2d40 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-7434ee2d40 .tabular-subgroup-label { font-weight: 600; }
+#tabular-7434ee2d40 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-7434ee2d40 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-7434ee2d40 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-7434ee2d40 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-7434ee2d40 .text-left { text-align: left; }
+#tabular-7434ee2d40 .text-center { text-align: center; }
+#tabular-7434ee2d40 .text-right { text-align: right; }
+#tabular-7434ee2d40 .tabular-table thead th.text-left { text-align: left; }
+#tabular-7434ee2d40 .tabular-table thead th.text-center { text-align: center; }
+#tabular-7434ee2d40 .tabular-table thead th.text-right { text-align: right; }
+#tabular-7434ee2d40 .tabular-table td.text-left { text-align: left; }
+#tabular-7434ee2d40 .tabular-table td.text-center { text-align: center; }
+#tabular-7434ee2d40 .tabular-table td.text-right { text-align: right; }
+#tabular-7434ee2d40 .valign-top { vertical-align: top; }
+#tabular-7434ee2d40 .valign-middle { vertical-align: middle; }
+#tabular-7434ee2d40 .valign-bottom { vertical-align: bottom; }
+#tabular-7434ee2d40 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-7434ee2d40 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-7434ee2d40 .tabular-page-break-row { display: none; }
+#tabular-7434ee2d40 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-7434ee2d40 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-7434ee2d40 .tabular-page-header, #tabular-7434ee2d40 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-7434ee2d40 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-7434ee2d40 .tabular-page-footer { margin-top: 1rem; }
+#tabular-7434ee2d40 .tabular-page-header-left, #tabular-7434ee2d40 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-7434ee2d40 .tabular-page-header-center, #tabular-7434ee2d40 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-7434ee2d40 .tabular-page-header-right, #tabular-7434ee2d40 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-7434ee2d40 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-7434ee2d40 .tabular-table tr { page-break-inside: avoid; } #tabular-7434ee2d40 .tabular-page-header, #tabular-7434ee2d40 .tabular-page-footer { display: none; } #tabular-7434ee2d40 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-7434ee2d40 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-7434ee2d40 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Adverse Events by SOC / PT

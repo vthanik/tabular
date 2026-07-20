@@ -8,16 +8,16 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/vthanik/tabular/blob/v0.2.0/inst/CITATION)
+[`inst/CITATION`](https://github.com/vthanik/tabular/blob/main/inst/CITATION)
 
 Thanikachalam V (2026). *tabular: Render Tables and Listings for
-Clinical Submissions*. R package version 0.2.0,
+Clinical Submissions*. R package version 0.3.0,
 <https://vthanik.github.io/tabular/>.
 
     @Manual{,
       title = {{tabular}: Render Tables and Listings for Clinical Submissions},
       author = {Vignesh Thanikachalam},
       year = {2026},
-      note = {R package version 0.2.0},
+      note = {R package version 0.3.0},
       url = {https://vthanik.github.io/tabular/},
     }

@@ -17,7 +17,7 @@ pipe without losing the path."><meta property="og:image" content="https://vthani
 
     <a class="navbar-brand me-2" href="../index.html">tabular</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,7 +47,7 @@ pipe without losing the path."><meta property="og:image" content="https://vthani
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.svg" class="logo" alt=""><h1>Render a <code>tabular_spec</code> to a file</h1>
-      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/v0.2.0/R/emit.R" class="external-link"><code>R/emit.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/vthanik/tabular/blob/main/R/emit.R" class="external-link"><code>R/emit.R</code></a></small>
       <div class="d-none name"><code>emit.Rd</code></div>
     </div>
 
@@ -100,7 +100,11 @@ polluting the package directory.</p></dd>
 <code>&lt;character(1) | NULL&gt;: default NULL</code>. When set, wins over the
 file extension. Useful for writing <code>.txt</code> files that should
 contain RTF, for round-trip testing, or when the user has a
-custom backend registered under a non-standard name.</p></dd>
+custom backend registered under a non-standard name.</p>
+<p><strong>Interaction:</strong> On a <code>.pdf</code> target, <code>format</code> names the compile
+ENGINE: <code>"latex"</code> compiles via TeX and <code>"typst"</code> via the typst
+binary (see the <em>PDF engines</em> section). On every other
+extension the generic override semantics apply unchanged.</p></dd>
 
 
 <dt id="arg-data-file">data_file<a class="anchor" aria-label="anchor" href="#arg-data-file"></a></dt>
@@ -164,10 +168,36 @@ touches disk.</p>
 <p><strong>Backend dispatch.</strong> The effective backend is resolved from the
 file extension via the table below; the <code>format</code> argument always
 wins when both are supplied. Each backend lives in its own
-<code>R/backend_&lt;fmt&gt;.R</code> file and self-registers at package load time.</p><table class="table table"><tr><td>extension(s)</td><td>format</td><td>backend</td></tr><tr><td><code>.md</code>, <code>.markdown</code></td><td><code>md</code></td><td>GFM pipe table</td></tr><tr><td><code>.html</code>, <code>.htm</code></td><td><code>html</code></td><td>self-contained Bootstrap 5</td></tr><tr><td><code>.tex</code>, <code>.latex</code></td><td><code>latex</code></td><td>tabularray</td></tr><tr><td><code>.pdf</code></td><td><code>pdf</code></td><td>tinytex compile of LaTeX</td></tr><tr><td><code>.rtf</code></td><td><code>rtf</code></td><td>RTF 1.9.1, native</td></tr><tr><td><code>.docx</code></td><td><code>docx</code></td><td>OOXML native, no JVM</td></tr></table><p>Unknown extensions, missing extensions, and formats with no
+<code>R/backend_&lt;fmt&gt;.R</code> file and self-registers at package load time.</p><table class="table table"><tr><td>extension(s)</td><td>format</td><td>backend</td></tr><tr><td><code>.md</code>, <code>.markdown</code></td><td><code>md</code></td><td>GFM pipe table</td></tr><tr><td><code>.html</code>, <code>.htm</code></td><td><code>html</code></td><td>self-contained Bootstrap 5</td></tr><tr><td><code>.tex</code>, <code>.latex</code></td><td><code>latex</code></td><td>tabularray</td></tr><tr><td><code>.typ</code></td><td><code>typst</code></td><td>Typst native <code>#table</code></td></tr><tr><td><code>.pdf</code></td><td>(probed)</td><td>LaTeX (tinytex) or Typst compile</td></tr><tr><td><code>.rtf</code></td><td><code>rtf</code></td><td>RTF 1.9.1, native</td></tr><tr><td><code>.docx</code></td><td><code>docx</code></td><td>OOXML native, no JVM</td></tr></table><p>Unknown extensions, missing extensions, and formats with no
 registered backend all raise <code>tabular_error_input</code>. The error
 message lists the currently registered formats so the failure is
 actionable.</p>
+<p><strong>PDF engines.</strong> A <code>.pdf</code> target compiles through one of two
+engines: <strong>LaTeX</strong> (via <code><a href="https://rdrr.io/pkg/tinytex/man/latexmk.html" class="external-link">tinytex::latexmk()</a></code>; needs a TeX
+installation) or <strong>Typst</strong> (via the standalone <code>typst</code> binary or
+the copy bundled inside Quarto &gt;= 1.4; needs no TeX at all). Pass
+<code>format = "latex"</code> or <code>format = "typst"</code> to pick one explicitly.
+With no <code>format</code>, <code>emit()</code> probes the machine LaTeX-first: a
+usable TeX (found the way the compile finds it, preferring a
+standard-root TinyTeX, and not frozen on a pre-2023 TeX Live
+kernel) keeps the historical LaTeX path; otherwise a discoverable
+typst binary takes over; with neither, <code>emit()</code> aborts up front
+naming both remedies. Audit the toolchains with <code><a href="check_latex.html">check_latex()</a></code>
+and <code><a href="check_typst.html">check_typst()</a></code>.</p>
+<p><strong>Typst capability notes.</strong> The Typst output matches the LaTeX
+layout contract, including the engine's keep-with-next mask
+(<code><a href="paginate.html">paginate()</a></code>'s <code>keep_together</code> / orphan control): Typst has no
+per-row no-break primitive (LaTeX <code>\\\\*</code>, RTF <code>\\keepn</code>, DOCX
+<code>keepNext</code>), so the backend enforces the mask through a hidden
+zero-width column whose unbreakable rowspans pin each keep run to
+one page. Two documented deviations remain: (1) the
+<code>paginate(continuation =)</code> marker appears on continuation panels
+only (the repeating page header is identical on every page),
+matching the RTF tier rather than LaTeX's every-page marker;
+(2) the spanner underline is trimmed by the cell inset at both
+ends (the HTML tier), where LaTeX keeps the table's outer edges
+flush. Conversely, Typst renders per-cell body borders that the
+LaTeX backend cannot (see <code><a href="style.html">style()</a></code>).</p>
 <p><strong><code>data_file</code> is sponsor-neutral.</strong> Pass an explicit path
 (<code>"out/qc.csv"</code>) for a fixed location, or a lambda
 (<code>function(file) -&gt; path</code>) for sponsor-flexible naming. The
@@ -227,13 +257,14 @@ footnotes, labels, cell text).</p></div>
 <span class="r-in"><span>  footnotes <span class="op">=</span> <span class="st">"Source: ADSL."</span></span></span>
 <span class="r-in"><span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="cols.html">cols</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    variable   <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"group"</span>, label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    variable   <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Characteristic"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    stat_label <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Statistic"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    placebo  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Placebo\nN={n['placebo']}"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    drug_50  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 50\nN={n['drug_50']}"</span>,  align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    drug_100 <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Drug 100\nN={n['drug_100']}"</span>, align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    Total    <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Total\nN={n['Total']}"</span>,    align <span class="op">=</span> <span class="st">"decimal"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="group_rows.html">group_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="st">"variable"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="sort_rows.html">sort_rows</a></span><span class="op">(</span>by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"stat_label"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">demo_md</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".md"</span><span class="op">)</span></span></span>
@@ -278,7 +309,7 @@ footnotes, labels, cell text).</p></div>
 <span class="r-in"><span>  manifest  <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># ---- Example 3: Same spec, four backends — one-loop fan-out ----</span></span></span>
+<span class="r-in"><span><span class="co"># ---- Example 3: Same spec, every text backend — one-loop fan-out ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># `emit()` dispatches by file extension, so the same spec can</span></span></span>
 <span class="r-in"><span><span class="co"># render to every backend in one loop. Useful for visual diffs</span></span></span>
@@ -287,7 +318,7 @@ footnotes, labels, cell text).</p></div>
 <span class="r-in"><span><span class="co"># CSR appendix).</span></span></span>
 <span class="r-in"><span><span class="va">eff_spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="tabular.html">tabular</a></span><span class="op">(</span><span class="va">cdisc_eff_resp</span>, titles <span class="op">=</span> <span class="st">"Best Overall Response"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="cols.html">cols</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    stat_label  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>usage <span class="op">=</span> <span class="st">"id"</span>, label <span class="op">=</span> <span class="st">"Response"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    stat_label  <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Response"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    row_type    <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    groupid     <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    group_label <span class="op">=</span> <span class="fu"><a href="col_spec.html">col_spec</a></span><span class="op">(</span>visible <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span></span>
@@ -298,11 +329,11 @@ footnotes, labels, cell text).</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">out_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">out_dir</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="kw">for</span> <span class="op">(</span><span class="va">ext</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">".html"</span>, <span class="st">".rtf"</span>, <span class="st">".tex"</span>, <span class="st">".docx"</span>, <span class="st">".md"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span><span class="kw">for</span> <span class="op">(</span><span class="va">ext</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">".html"</span>, <span class="st">".rtf"</span>, <span class="st">".tex"</span>, <span class="st">".typ"</span>, <span class="st">".docx"</span>, <span class="st">".md"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span>  <span class="fu">emit</span><span class="op">(</span><span class="va">eff_spec</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">out_dir</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"eff"</span>, <span class="va">ext</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">out_dir</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "eff.docx" "eff.html" "eff.md"   "eff.rtf"  "eff.tex" </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "eff.docx" "eff.html" "eff.md"   "eff.rtf"  "eff.tex"  "eff.typ" </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 4: QC artefact via data_file alongside the render ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
@@ -339,7 +370,7 @@ footnotes, labels, cell text).</p></div>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

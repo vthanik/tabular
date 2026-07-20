@@ -88,17 +88,20 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> backend: html
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
 #> x TeX Gyre Cursor (not on this machine)
 #> x Latin Modern Mono (not on this machine)
 #> backend: rtf
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
 
 # ---- Example 2: Diagnose a Courier New request ----
@@ -120,17 +123,20 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> backend: html
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
 #> o monospace (generic, always available)
 #> backend: latex
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
 #> x TeX Gyre Cursor (not on this machine)
 #> x Latin Modern Mono (not on this machine)
 #> backend: rtf
 #> x Courier New (not on this machine)
 #> x Courier (not on this machine)
+#> v Nimbus Mono PS
 #> v Liberation Mono
 
 # ---- Example 3: Explicit cross-platform stack ----
@@ -166,8 +172,9 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #
 # Side-by-side check of the two generic families. Useful when
 # deciding the house-style default: the serif chain leads with
-# Liberation Serif (Linux-server-first); the sans chain leads
-# with Liberation Sans. Both close with the backend's native
+# Times New Roman, the sans chain with Arial, then each walks the
+# PostScript name and the metric-compatible Nimbus / Liberation
+# clones. Both close with the backend's native
 # fallback layer (CSS generic on HTML, Latin Modern on LaTeX).
 if (requireNamespace("systemfonts", quietly = TRUE)) {
   tabular(cdisc_saf_demo) |>
@@ -183,33 +190,39 @@ if (requireNamespace("systemfonts", quietly = TRUE)) {
 #> backend: html
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Nimbus Roman
 #> v Liberation Serif
 #> o serif (generic, always available)
 #> backend: latex
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Nimbus Roman
 #> v Liberation Serif
 #> x TeX Gyre Termes (not on this machine)
 #> x Latin Modern Roman (not on this machine)
 #> backend: rtf
 #> x Times New Roman (not on this machine)
 #> x Times (not on this machine)
+#> v Nimbus Roman
 #> v Liberation Serif
 #> 
 #> ── Font resolution for `font_family = sans` 
 #> backend: html
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Nimbus Sans
 #> v Liberation Sans
 #> o sans-serif (generic, always available)
 #> backend: latex
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Nimbus Sans
 #> v Liberation Sans
 #> x TeX Gyre Heros (not on this machine)
 #> x Latin Modern Sans (not on this machine)
 #> backend: rtf
 #> x Arial (not on this machine)
 #> x Helvetica (not on this machine)
+#> v Nimbus Sans
 #> v Liberation Sans
 ```

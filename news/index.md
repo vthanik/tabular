@@ -1,6 +1,246 @@
 # Changelog
 
+## tabular 0.3.0
+
+### Improvements
+
+- [`as_grid()`](https://vthanik.github.io/tabular/reference/as_grid.md)
+  and [`emit()`](https://vthanik.github.io/tabular/reference/emit.md)
+  are 11-24% faster on long tables across every backend: cell
+  inline-markup ASTs are parsed once per distinct string, style layers
+  extract their overrides once per layer instead of per cell, subgroup
+  splitting / decimal alignment / pagination keys are single-pass,
+  XML/HTML escaping is vectorised, and body rows are assembled without
+  quadratic append.
+
+### New features
+
+- `preset(font_family = )` generic chains (`"mono"` / `"serif"` /
+  `"sans"`) gained the URW/Nimbus Core-35 clone (Nimbus Mono PS / Nimbus
+  Roman / Nimbus Sans) between the PostScript name and the Liberation
+  face, so the default still renders as Courier / Times / Helvetica on
+  Linux images that ship only the ghostscript fonts (and whose Type 1
+  Courier the Typst compiler cannot read); all links are
+  metric-compatible, so layout is unchanged wherever the chain resolves.
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  `.tex`, `.typ`, and PDF now re-expresses plain group-separator blank
+  rows as discardable space (a white tabularray hline band on LaTeX, a
+  `row-gutter` entry on Typst), so a page never ends on a stray blank
+  line above the repeated closing rule when the native page break lands
+  at a group boundary, matching how Word renders the RTF/DOCX output;
+  mid-page the gap keeps the blank row’s exact height, and styled or
+  ruled tables (rowrules, side frames, striped separators) keep the real
+  blank row.
+
+- `preset(decimal_metrics = "afm")` now measures a `font_family` with no
+  bundled metric table (e.g. a system-installed face such as Courier 10
+  Pitch) through a temporary graphics device, so decimal alignment and
+  width measurement stay exact whenever the host can resolve the font;
+  the Times-fallback fidelity warning now fires only when that device
+  probe also fails, and the probe can be disabled with
+  `options(tabular.device_metrics = FALSE)`.
+
+- [`check_typst()`](https://vthanik.github.io/tabular/reference/check_typst.md)
+  is a new diagnostic that audits the Typst PDF toolchain: which typst
+  binary is discoverable (standalone `typst`, or the copy bundled inside
+  Quarto), whether its version meets the 0.11 floor, and which families
+  of the configured font chain the compiler can see; the chain is a
+  fallback chain, so the check reports ready as soon as any family
+  resolves and names the face PDFs render in.
+  [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) warns
+  after a Typst compile only when a family the user explicitly named
+  cannot be found — missing members of the built-in cross-OS fallback
+  chains substitute silently, matching the other backends.
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) gained
+  a Typst backend: `emit(spec, "out.typ")` writes a standalone Typst
+  document (native `#table` with repeating
+  `table.header`/`table.footer`, page chrome via `#set page()` counters,
+  native per-cell borders), and
+  `emit(spec, "out.pdf", format = "typst")` compiles it through the
+  standalone typst binary or Quarto’s bundled copy, so PDF output no
+  longer requires any TeX installation. The table centres on the page,
+  the running header and footer anchor to the body edges (the header
+  grows upward into the top margin, the footer downward, tracking the
+  configured margins), and
+  [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)’s
+  keep-with-next mask is enforced through unbreakable rowspans in a
+  hidden zero-width column.
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) on a
+  bare `.pdf` target now selects its compile engine by probing the
+  machine, LaTeX first: a usable TeX (resolved the way the compile
+  resolves it, and not frozen on a pre-2023 TeX Live kernel) keeps the
+  historical LaTeX path byte-stable, a discoverable typst binary takes
+  over otherwise, and with neither engine the call aborts up front
+  naming both remedies; `format = "latex"` / `format = "typst"` pick the
+  engine explicitly.
+
+- [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
+  now reports the TeX Live release year of the active `xelatex` and
+  fails the check when it predates 2023, the first release whose LaTeX
+  kernel (2022-11-01) can load the bundled tabularray; the report and
+  the [`emit()`](https://vthanik.github.io/tabular/reference/emit.md)
+  PDF compile error both explain the update / user-space TinyTeX remedy
+  for images frozen on an old TeX Live.
+
+- [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
+  and the PDF pre-compile staging now resolve TeX the same way the
+  compile does, preferring a TinyTeX at the standard root (installed by
+  either
+  [`tinytex::install_tinytex()`](https://rdrr.io/pkg/tinytex/man/install_tinytex.html)
+  or `quarto install tinytex`) over the `PATH`, so the diagnostic can no
+  longer describe a different TeX than the one
+  [`emit()`](https://vthanik.github.io/tabular/reference/emit.md)
+  actually runs; remediation hints name the `quarto install tinytex`
+  route, which downloads from GitHub and therefore works behind proxies
+  that block CTAN.
+
+- [`cols()`](https://vthanik.github.io/tabular/reference/cols.md)
+  accepts a bare string as label shorthand (`soc = "SOC / PT"` is
+  `soc = col_spec(label = "SOC / PT")`, including glue interpolation and
+  the deferred `{.name}` token) and a `.hide` argument that hides the
+  named columns in one flat vector.
+
+- [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
+  keep-together protection on the natively-paginating backends (RTF,
+  DOCX) now emits edge-only row glue instead of gluing a whole fitting
+  block, so a block that fits a fresh page but not the space left on the
+  current one no longer bumps wholesale and strands a near-empty page;
+  widow/orphan floors count content rows only, with trailing blank
+  spacer rows still riding with their block.
+
+- `paginate(keep_together = )` now accepts any column of `data`
+  (including hidden block-key columns), not only `usage = "group"`
+  columns.
+
+### Breaking changes
+
+- [`col_spec()`](https://vthanik.github.io/tabular/reference/col_spec.md)
+  no longer has `usage`, `group_display`, or `group_skip` arguments; row
+  grouping is a table-level fact and is now declared once with the new
+  [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+  verb. The inert-knob warning for `group_display`/`group_skip` on
+  non-group columns is gone with them.
+
+- [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+  is the new structural verb: `group_rows(by, display, skip)` names only
+  the structural grouping keys outer to inner (the section headers and
+  any hidden break keys, not the visible label column, which stays an
+  ordinary
+  [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) column
+  and is auto-indented). `display` is a single value applied to every
+  key (`"section"`, `"collapse"`, or `"repeat"`); a hidden break-only
+  key is expressed with `col_spec(visible = FALSE)` rather than a
+  display mode. `skip` follows the `readr::read_csv(col_names = )`
+  pattern: `TRUE` (the default) derives the blank spacers from `display`
+  and key visibility, `FALSE` inserts none, and a character subset of
+  `by` breaks on exactly those keys (e.g. `skip = "param"`). Nesting is
+  just listing the header keys (`by = c("param", "visit")`). It replaces
+  a prior declaration wholesale, and its keys may not overlap
+  `subgroup(by = )`.
+
+- [`paginate()`](https://vthanik.github.io/tabular/reference/paginate.md)
+  gained `repeat_cols`, replacing the `usage = "id"` role: the
+  horizontal-panel stub defaults to the visible
+  [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+  keys, and an explicit `repeat_cols` vector replaces that default.
+
+### Minor improvements and bug fixes
+
+- DESCRIPTION’s SystemRequirements no longer contains the bare word
+  “LaTeX”, which pak’s system-requirements scraper matched and answered
+  by force-installing the `texlive` OS package (a sudo failure on
+  locked-down hosts such as Domino); the TeX distribution remains
+  optional for PDF output.
+
+- Fidelity warnings now render their feature string as inline code
+  instead of a quoted value, so a feature that itself contains quotes
+  (`decimal_metrics = "afm"`) no longer prints with escaped quotes.
+
+- [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
+  now probes package availability through `kpsewhich` (the resolver
+  xelatex itself uses) instead of the tlmgr package database, fixing
+  all-missing false negatives on apt-installed TeX Live and frozen
+  TinyTeX images, no longer requires the tinytex R package, and reports
+  a new `bundled` column.
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  DOCX now stamps the body’s left/right cell margins on section-header,
+  blank-spacer, column-header, and subgroup-banner cells, so their text
+  aligns with body text exactly as in RTF (section headers previously
+  sat one cell margin further left, making nested indents read one
+  character too wide in Word).
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  Typst now folds 2+ space runs in body cells under
+  `preset(whitespace = "collapse")`; the no-wrap hardening previously
+  rewrote the run to non-breaking spaces first, so the knob was a silent
+  no-op on Typst while every other backend honoured it.
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  Typst now stamps the header surface background and padding on the
+  column-label cells, so `preset(colors = list(header = ...))`,
+  `preset(padding = list(header = ...))`, and the equivalent
+  [`style()`](https://vthanik.github.io/tabular/reference/style.md) at
+  [`cells_headers()`](https://vthanik.github.io/tabular/reference/cells.md)
+  render as they do on RTF, HTML, LaTeX, and DOCX.
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  LaTeX/PDF and Typst now places the running header band so its bottom
+  edge sits exactly on the top-margin line, growing upward into the
+  margin, and keeps the body at exactly the configured top margin —
+  matching the RTF and DOCX placement; the LaTeX head lengths moved onto
+  the `geometry` option list (a post-load `\setlength{\headsep}` shifted
+  the body off the margin instead of moving the header) and every band
+  row now carries a `\strut` so the band’s bottom edge no longer depends
+  on descenders in its content.
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  HTML and Markdown no longer drops a
+  [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+  blank spacer when a group transition coincides with a page boundary;
+  the continuous flow keeps every spacer and only the very first row of
+  the table suppresses one.
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to
+  Markdown now renders the indent of nested section headers as `&nbsp;`
+  before the bold markers instead of spaces inside them, which
+  CommonMark refused to parse as bold (literal `**` showed in the
+  render).
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to PDF
+  now writes to a relative `file` path correctly; the path was
+  previously resolved after switching into the temporary compile
+  directory, so the output landed there and was deleted with it.
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) to RTF
+  now resolves the row cell gap of header-band, column-label,
+  blank-spacer, section-header, banner, and title rows from
+  `preset(cell_padding = )` like body rows do (previously hardcoded, so
+  a non-default padding skewed header text relative to body text).
+
+- [`figure()`](https://vthanik.github.io/tabular/reference/figure.md)
+  output no longer spills onto a blank trailing page in Word: the RTF
+  closing paragraph after the full-page image row now carries the body
+  font size (a bare paragraph rendered at RTF’s 12pt default, taller
+  than the reserved row), and the page-size model now budgets the
+  `preset(pagefoot = )` slot rows (and any `pagehead` rows that overflow
+  the top margin), which intrude into the body exactly like footnote
+  lines. The same budget applies to table pagination.
+
+- [`emit()`](https://vthanik.github.io/tabular/reference/emit.md) PDF
+  output now works on TeX installations that lack `tabularray` /
+  `ninecolors` and cannot run `tlmgr install` (locked-down Domino /
+  Posit Workbench images): tabular ships verbatim CTAN copies of both
+  single-file packages in `inst/tex/` and stages them next to the
+  generated `.tex` at compile time whenever the local TeX cannot resolve
+  them.
+
 ## tabular 0.2.0
+
+CRAN release: 2026-07-06
 
 ### New features
 

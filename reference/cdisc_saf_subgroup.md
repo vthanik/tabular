@@ -83,8 +83,8 @@ for the verb this dataset is designed for.
 tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
   cols(
     paramcd    = col_spec(visible = FALSE),
-    param      = col_spec(usage = "group", label = "Parameter"),
-    visit      = col_spec(usage = "group", label = "Visit"),
+    param      = col_spec(label = "Parameter"),
+    visit      = col_spec(label = "Visit"),
     stat_label = col_spec(label = "Statistic"),
     placebo    = col_spec(label = "Placebo",  align = "decimal"),
     drug_50    = col_spec(label = "Drug 50",  align = "decimal"),
@@ -93,58 +93,58 @@ tabular(cdisc_saf_subgroup, titles = "Vital Signs by Visit") |>
   ) |>
   subgroup(by = "sex", label = "Sex: {sex} (N = {sex_n})")
 
-#tabular-c959fb1525 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-c959fb1525 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-c959fb1525 p { line-height: inherit; }
-#tabular-c959fb1525 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-c959fb1525 .tabular-caption { margin: 0; padding: 0; }
-#tabular-c959fb1525 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-c959fb1525 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-c959fb1525 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-c959fb1525 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-c959fb1525 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-c959fb1525 .tabular-table th, #tabular-c959fb1525 .tabular-table td { padding: .18rem .6rem; }
-#tabular-c959fb1525 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-c959fb1525 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-c959fb1525 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-c959fb1525 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-c959fb1525 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-c959fb1525 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-c959fb1525 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-c959fb1525 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-c959fb1525 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-c959fb1525 .tabular-table tbody tr td { border-top: none; }
-#tabular-c959fb1525 .tabular-band { text-align: center; }
-#tabular-c959fb1525 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-c959fb1525 .tabular-subgroup-label { font-weight: 600; }
-#tabular-c959fb1525 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-c959fb1525 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-c959fb1525 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-c959fb1525 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-c959fb1525 .text-left { text-align: left; }
-#tabular-c959fb1525 .text-center { text-align: center; }
-#tabular-c959fb1525 .text-right { text-align: right; }
-#tabular-c959fb1525 .tabular-table thead th.text-left { text-align: left; }
-#tabular-c959fb1525 .tabular-table thead th.text-center { text-align: center; }
-#tabular-c959fb1525 .tabular-table thead th.text-right { text-align: right; }
-#tabular-c959fb1525 .tabular-table td.text-left { text-align: left; }
-#tabular-c959fb1525 .tabular-table td.text-center { text-align: center; }
-#tabular-c959fb1525 .tabular-table td.text-right { text-align: right; }
-#tabular-c959fb1525 .valign-top { vertical-align: top; }
-#tabular-c959fb1525 .valign-middle { vertical-align: middle; }
-#tabular-c959fb1525 .valign-bottom { vertical-align: bottom; }
-#tabular-c959fb1525 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-c959fb1525 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-c959fb1525 .tabular-page-break-row { display: none; }
-#tabular-c959fb1525 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-c959fb1525 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-c959fb1525 .tabular-page-header, #tabular-c959fb1525 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-c959fb1525 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-c959fb1525 .tabular-page-footer { margin-top: 1rem; }
-#tabular-c959fb1525 .tabular-page-header-left, #tabular-c959fb1525 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-c959fb1525 .tabular-page-header-center, #tabular-c959fb1525 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-c959fb1525 .tabular-page-header-right, #tabular-c959fb1525 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-c959fb1525 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-c959fb1525 .tabular-table tr { page-break-inside: avoid; } #tabular-c959fb1525 .tabular-page-header, #tabular-c959fb1525 .tabular-page-footer { display: none; } #tabular-c959fb1525 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-c959fb1525 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-c959fb1525 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-bde4edb2c1 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-bde4edb2c1 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-bde4edb2c1 p { line-height: inherit; }
+#tabular-bde4edb2c1 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-bde4edb2c1 .tabular-caption { margin: 0; padding: 0; }
+#tabular-bde4edb2c1 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-bde4edb2c1 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-bde4edb2c1 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-bde4edb2c1 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-bde4edb2c1 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-bde4edb2c1 .tabular-table th, #tabular-bde4edb2c1 .tabular-table td { padding: .18rem .6rem; }
+#tabular-bde4edb2c1 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-bde4edb2c1 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-bde4edb2c1 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-bde4edb2c1 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-bde4edb2c1 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-bde4edb2c1 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-bde4edb2c1 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-bde4edb2c1 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-bde4edb2c1 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-bde4edb2c1 .tabular-table tbody tr td { border-top: none; }
+#tabular-bde4edb2c1 .tabular-band { text-align: center; }
+#tabular-bde4edb2c1 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-bde4edb2c1 .tabular-subgroup-label { font-weight: 600; }
+#tabular-bde4edb2c1 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-bde4edb2c1 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-bde4edb2c1 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-bde4edb2c1 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-bde4edb2c1 .text-left { text-align: left; }
+#tabular-bde4edb2c1 .text-center { text-align: center; }
+#tabular-bde4edb2c1 .text-right { text-align: right; }
+#tabular-bde4edb2c1 .tabular-table thead th.text-left { text-align: left; }
+#tabular-bde4edb2c1 .tabular-table thead th.text-center { text-align: center; }
+#tabular-bde4edb2c1 .tabular-table thead th.text-right { text-align: right; }
+#tabular-bde4edb2c1 .tabular-table td.text-left { text-align: left; }
+#tabular-bde4edb2c1 .tabular-table td.text-center { text-align: center; }
+#tabular-bde4edb2c1 .tabular-table td.text-right { text-align: right; }
+#tabular-bde4edb2c1 .valign-top { vertical-align: top; }
+#tabular-bde4edb2c1 .valign-middle { vertical-align: middle; }
+#tabular-bde4edb2c1 .valign-bottom { vertical-align: bottom; }
+#tabular-bde4edb2c1 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-bde4edb2c1 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-bde4edb2c1 .tabular-page-break-row { display: none; }
+#tabular-bde4edb2c1 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-bde4edb2c1 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-bde4edb2c1 .tabular-page-header, #tabular-bde4edb2c1 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-bde4edb2c1 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-bde4edb2c1 .tabular-page-footer { margin-top: 1rem; }
+#tabular-bde4edb2c1 .tabular-page-header-left, #tabular-bde4edb2c1 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-bde4edb2c1 .tabular-page-header-center, #tabular-bde4edb2c1 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-bde4edb2c1 .tabular-page-header-right, #tabular-bde4edb2c1 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-bde4edb2c1 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-bde4edb2c1 .tabular-table tr { page-break-inside: avoid; } #tabular-bde4edb2c1 .tabular-page-header, #tabular-bde4edb2c1 .tabular-page-footer { display: none; } #tabular-bde4edb2c1 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-bde4edb2c1 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-bde4edb2c1 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Vital Signs by Visit
@@ -152,5 +152,5 @@ Vital Signs by Visit
 
 
 
-Statistic
+Parameter
 ```

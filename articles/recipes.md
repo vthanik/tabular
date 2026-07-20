@@ -13,9 +13,9 @@ change the extension.
 
 ## Demographics and baseline characteristics
 
-The reference safety table: a `usage = "group"` parameter stub, indented
-statistic rows, decimal-aligned arm columns, and the population BigN
-folded into each header from `cdisc_saf_n`.
+The reference safety table: a grouped parameter stub, indented statistic
+rows, decimal-aligned arm columns, and the population BigN folded into
+each header from `cdisc_saf_n`.
 
 ``` r
 
@@ -31,7 +31,7 @@ demo_tbl <- tabular(
   footnotes = "Percentages are based on the number of subjects per treatment group."
 ) |>
   cols(
-    variable = col_spec(usage = "group", label = "Parameter"),
+    variable = col_spec(label = "Parameter"),
     stat_label = col_spec(label = "Statistic"),
     placebo = col_spec(
       label = "Placebo\nN={n['placebo']}",
@@ -46,7 +46,8 @@ demo_tbl <- tabular(
       align = "decimal"
     ),
     Total = col_spec(label = "Total\nN={n['Total']}", align = "decimal")
-  )
+  ) |>
+  group_rows(by = "variable")
 
 demo_tbl
 ```
@@ -199,9 +200,9 @@ aesocpt_tbl |>
 ## Best overall response and response rates
 
 The efficacy companion: `group_label` synthesises one bold section band
-per analysis block (best overall response, ORR, CBR, DCR) via
-`header_row`, with indented response rows beneath. Denominators come
-from `cdisc_eff_n`.
+per analysis block (best overall response, ORR, CBR, DCR) via the
+default `"section"` display, with indented response rows beneath.
+Denominators come from `cdisc_eff_n`.
 
 ``` r
 
@@ -216,7 +217,6 @@ resp_tbl <- tabular(
   )
 ) |>
   cols(
-    group_label = col_spec(usage = "group", group_display = "header_row"),
     stat_label = col_spec(label = "Response"),
     groupid = col_spec(visible = FALSE),
     row_type = col_spec(visible = FALSE),
@@ -232,7 +232,8 @@ resp_tbl <- tabular(
       label = "Drug 100\nN={ne['drug_100']}",
       align = "decimal"
     )
-  )
+  ) |>
+  group_rows(by = "group_label")
 
 resp_tbl
 ```

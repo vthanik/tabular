@@ -1,22 +1,22 @@
 # Per-column display specification
 
-Build a single column's display attributes — usage, label, format,
-visibility, width, alignment, NA text. The result feeds
+Build a single column's display attributes — label, format, visibility,
+width, alignment, NA text, indent. The result feeds
 [`cols()`](https://vthanik.github.io/tabular/reference/cols.md), which
-stamps the input column name onto the spec from its named- argument
-position and attaches it to the parent `tabular_spec`.
+stamps the input column name onto the spec from its named-argument
+position and attaches it to the parent `tabular_spec`. Row structure
+(section headers, repeat suppression, blank spacers) is not a column
+attribute — declare it once with
+[`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md).
 
 ## Usage
 
 ``` r
 col_spec(
-  usage = NULL,
   label = NA_character_,
   format = NULL,
   visible = NA,
   width = "auto",
-  group_display = NA,
-  group_skip = NA,
   align = NULL,
   valign = NULL,
   na_text = NA_character_,
@@ -25,80 +25,6 @@ col_spec(
 ```
 
 ## Arguments
-
-- usage:
-
-  *Engine role.* `<character(1) | NULL>: default NULL`. One of:
-
-  - **`"display"`** (default in
-    [`cols()`](https://vthanik.github.io/tabular/reference/cols.md)) —
-    pass-through.
-
-  - **`"group"`** — row-label with repeat-suppression and
-    continuation-page repeat keys. Use for `variable`, `soc`,
-    `stat_label`. (Cosmetic indent depth is the separate `indent`
-    argument, not a usage role.)
-
-  - **`"id"`** — a row-identifier column. Renders like `"display"` (one
-    value per row, never collapses) but joins the *stub*: it repeats on
-    every horizontal panel (`paginate(panels = N)`) and shows once on
-    the left when a continuous backend (HTML / Markdown) collapses the
-    panels into one table. The PROC REPORT `ID` role, orthogonal to
-    grouping. Use for a per-row statistic label (`"n"`, `"Mean"`,
-    `"SD"`) that must stay legible on every panel of a wide demographics
-    or efficacy table.
-
-  - **`NULL` / `NA`** — the unset sentinel; resolves to `"display"` at
-    render. `NA` is mergeable, so an explicit `"display"` on a later
-    [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) call
-    can override a prior `"group"` / `"id"`.
-
-      # Two row-label columns and four arm columns.
-      cols(
-        variable   = col_spec(usage = "group"),
-        stat_label = col_spec(usage = "group"),
-        placebo    = col_spec(),
-        drug_50    = col_spec()
-      )
-
-      # Section-band table: the `group_label` column drives section
-      # headers; `stat_label` body rows auto-indent under each header
-      # without an explicit depth column.
-      cols(
-        group_label = col_spec(usage = "group", group_display = "header_row"),
-        stat_label  = col_spec(label = "Response"),
-        placebo     = col_spec(align = "decimal")
-      )
-
-      # End-to-end ARD → wide → tabular pipeline. The cards ARD
-      # `cdisc_saf_demo_ard` is the long upstream input; `pivot_across()`
-      # widens to one column per arm and stamps an internal marker
-      # so [`sort_rows()`] can reject sort keys on those arm columns.
-      # `cols()` then attaches per-column display rules.
-      wide <- pivot_across(
-        cdisc_saf_demo_ard,
-        statistic = list(
-          continuous  = c(N = "{N}", "Mean (SD)" = "{mean} ({sd})"),
-          categorical = "{n} ({p}%)"
-        )
-      )
-      tabular(wide, titles = "Demographics") |>
-        cols(
-          variable                 = col_spec(
-            usage = "group", label = "Characteristic"
-          ),
-          stat_label               = col_spec(
-            usage = "group", label = "Statistic"
-          ),
-          Placebo                  = col_spec(align = "decimal"),
-          `Xanomeline High Dose`   = col_spec(
-            label = "High Dose", align = "decimal"
-          ),
-          `Xanomeline Low Dose`    = col_spec(
-            label = "Low Dose", align = "decimal"
-          ),
-          Total                    = col_spec(align = "decimal")
-        )
 
 - label:
 
@@ -175,13 +101,14 @@ col_spec(
   template are flipped to `visible = FALSE` automatically at engine time
   — restating it here is redundant.
 
-  **Break-only group column.** A hidden `usage = "group"` column emits
-  no header rows and no in-column text; it contributes only its
-  `group_skip` transitions, so `group_display` is ignored while hidden.
-  This is the canonical "spacer" that drops a blank line wherever a
-  marker value changes (e.g. continuous stats vs. categorical groups
-  inside one characteristic):
-  `col_spec(usage = "group", group_skip = TRUE, visible = FALSE)`.
+  **Break-only grouping key.** To drop a blank line wherever a hidden
+  marker column changes (e.g. continuous stats vs. categorical groups
+  inside one characteristic), set `visible = FALSE` here AND name the
+  column in
+  [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)`(by = )`.
+  A hidden grouping key is break-only: it renders nothing and
+  contributes only its group transitions (the blank spacer and the
+  decimal-section reset).
 
 - width:
 
@@ -236,105 +163,6 @@ col_spec(
   calls, `"auto"` is treated as the default: a later call carrying
   `width = "auto"` leaves a previously pinned width intact, and only an
   explicit non-`"auto"` width overrides.
-
-- group_display:
-
-  *How `usage = "group"` values render in the body.*
-  `<character(1)>: default NA`. Active only when `usage = "group"` —
-  setting it on a non-group column is ignored and warns. `NA` (default)
-  is the merge "unset" sentinel and resolves to `"header_row"` at
-  render; an explicit value is mergeable, so a later
-  [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) call
-  can reset it back to `"header_row"`.
-
-  - **`"header_row"`** *(default)* — each unique value emits as a
-    section header row above its block of data rows, and **the body rows
-    beneath are automatically indented one level**. The section header
-    itself sits flush left at depth 0; its child rows render one indent
-    level in. Because the section already supplies that indent, the stub
-    column needs **no** `indent` — adding `indent = 1` there overrides
-    (does not stack) the auto-indent, leaving a single level. The source
-    column is hidden from the visible body. Matches the canonical
-    submission shape used by clinical TFL house templates (Disposition,
-    Demographics, Statistical Report sections).
-
-    A group with exactly **one** member collapses to a single flush-left
-    row: the group value becomes that row's label, its data cells are
-    kept, and no separate header or indent is emitted (the redundant
-    two-line "header plus lone child" is gone). This is the standard
-    occurrence-table shape, where a single binary flag (DEATH, TEAE)
-    sits flush among headed multi-level breakdowns. The collapsed row
-    still receives any
-    [`cells_group_headers()`](https://vthanik.github.io/tabular/reference/cells.md)
-    styling (preset or explicit), so its group identity is not lost. An
-    empty or `NA` group value never emits a header at all; its members
-    render flush left keeping their own labels. *(Collapse applies to a
-    single `header_row` band; a nested two-`header_row` layout keeps a
-    header per value.)*
-
-  - **`"column"`** — column stays visible; repeated values are
-    suppressed (only the first row of each value shows the label). PROC
-    REPORT's default for grouping variables.
-
-  - **`"column_repeat"`** — column stays visible; every row repeats the
-    value (no suppression). The shape `R`'s `print.data.frame` produces.
-
-  **Composition under multiple group columns.** When more than one
-  `usage = "group"` column is declared, the FIRST one encountered in
-  [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) order
-  is the outer group; subsequent group columns nest inside it. Each
-  column's `group_display` choice is independent — a common clinical
-  pattern is the outer `variable` as `"header_row"` plus the inner
-  `stat_label` as `"column"` (visible row labels under each section
-  header).
-
-      # Demographics layout: variable as section header, stat_label
-      # as visible suppressed column.
-      cols(
-        variable   = col_spec(usage = "group", group_display = "header_row"),
-        stat_label = col_spec(usage = "group", group_display = "column"),
-        placebo    = col_spec(label = "Placebo", align = "decimal")
-      )
-
-- group_skip:
-
-  *Insert a blank row between consecutive groups.*
-  `<logical(1)>: default NA`. Active only when `usage = "group"` —
-  setting it on a non-group column is ignored and warns. Three values:
-
-  - **`TRUE`** — engine injects one blank row immediately before each
-    value transition on this column (PROC REPORT's
-    `BREAK AFTER var / SKIP` semantics, lifted to per-column control).
-    Never trails the final group.
-
-  - **`FALSE`** — never insert a blank row for this column.
-
-  - **`NA`** *(default)* — follow `group_display`: `TRUE` when
-    `group_display = "header_row"`, `FALSE` when `"column"` or
-    `"column_repeat"`. Picks the canonical shape without an extra knob
-    to set.
-
-  **Interaction:** When two or more columns have an effective
-  `group_skip = TRUE` and their value transitions coincide on the same
-  row, the engine emits ONE blank row at that boundary, not one per
-  column. Transition row indices are unioned across all contributing
-  group columns.
-
-      # Default: header_row mode auto-injects blanks between sections.
-      col_spec(usage = "group", group_display = "header_row")
-
-      # Override: keep the column visible (suppressed-value mode) but
-      # still insert blank-row separators between value changes.
-      col_spec(usage = "group", group_display = "column", group_skip = TRUE)
-
-      # Override: section headers without the blank-row separator
-      # (denser layout, used when vertical space is tight).
-      col_spec(usage = "group", group_display = "header_row", group_skip = FALSE)
-
-      # Break-only "spacer": pairs with visible = FALSE to drop a blank
-      # line wherever a hidden marker changes, without rendering the
-      # column or any header row. group_display is ignored when hidden.
-      col_spec(usage = "group", group_skip = TRUE, visible = FALSE)
 
 - align:
 
@@ -411,7 +239,7 @@ col_spec(
     indented that many levels (each level is `preset@indent_size`
     space-widths). `indent = 1` is the common "nudge this stub in one
     level" case; `indent = 0` is a real value that flattens children
-    under a `"header_row"` section.
+    under a `"section"` header.
 
   - **A column name (character)** — per-row depth: the engine reads
     `spec@data[[indent]]`, coerces each row to a non-negative integer,
@@ -425,11 +253,12 @@ col_spec(
   carries the literal space-prefix. Synthesised group-header rows are
   never indented — they are the parent at depth 0.
 
-  **Interaction:** an explicit `indent` on a
-  `group_display = "header_row"` host **suppresses** that section's
-  automatic one-level child indent (you take control of the depth) — so
-  a stub under a section needs no `indent` at all, and adding
-  `indent = 1` there yields a single, not double, indent.
+  **Interaction:** an explicit `indent` on the host column of a
+  [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)`(display = "section")`
+  section **suppresses** that section's automatic one-level child indent
+  (you take control of the depth) — so a stub under a section needs no
+  `indent` at all, and adding `indent = 1` there yields a single, not
+  double, indent.
 
   Per-row SOC / PT pattern (the bundled `cdisc_saf_aesocpt` ships the
   canonical depth column, so no upstream construction is needed):
@@ -443,7 +272,9 @@ col_spec(
   Depth-column values `c(0L, 1L, 2L, …)` produce `0`, `1`, `2`, …
   levels. Negative values clamp to 0 (warn); fractional numerics floor
   (warn); NA → 0 (silent). Works in flat listings too — a character
-  `indent` does not require any `usage = "group"` columns.
+  `indent` does not require any
+  [`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+  keys.
 
 ## Value
 
@@ -480,6 +311,10 @@ malformed `sprintf` template is probed at construction
 **Companion verb:**
 [`cols()`](https://vthanik.github.io/tabular/reference/cols.md) attaches
 `col_spec` entries to a `tabular_spec` keyed by input column name.
+
+**Row structure:**
+[`group_rows()`](https://vthanik.github.io/tabular/reference/group_rows.md)
+declares the grouping keys and section rendering at table level.
 
 **Sibling build verbs:**
 [`headers()`](https://vthanik.github.io/tabular/reference/headers.md),
@@ -519,8 +354,8 @@ tabular(
 ) |>
   cols(
     variable   = col_spec(
-      usage = "group", label = "Parameter",
-      width = 2.0,     align = "left"
+      label = "Parameter",
+      width = 2.0, align = "left"
     ),
     stat_label = col_spec(label = "Statistic", align = "left"),
     placebo  = col_spec(
@@ -540,60 +375,61 @@ tabular(
       align = "decimal", na_text = "-"
     )
   ) |>
+  group_rows(by = "variable") |>
   sort_rows(by = c("variable", "stat_label"))
 
-#tabular-3452c76190 { font-family: "Courier New", Courier, "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
-#tabular-3452c76190 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-3452c76190 p { line-height: inherit; }
-#tabular-3452c76190 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
-#tabular-3452c76190 .tabular-caption { margin: 0; padding: 0; }
-#tabular-3452c76190 .tabular-pad { margin: 0; line-height: 1; }
-#tabular-3452c76190 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
-#tabular-3452c76190 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
-#tabular-3452c76190 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
-#tabular-3452c76190 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
-#tabular-3452c76190 .tabular-table th, #tabular-3452c76190 .tabular-table td { padding: .18rem .6rem; }
-#tabular-3452c76190 .tabular-table td { text-align: left; vertical-align: top; }
-#tabular-3452c76190 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
-#tabular-3452c76190 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
-#tabular-3452c76190 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
-#tabular-3452c76190 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-3452c76190 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-3452c76190 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-3452c76190 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
-#tabular-3452c76190 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
-#tabular-3452c76190 .tabular-table tbody tr td { border-top: none; }
-#tabular-3452c76190 .tabular-band { text-align: center; }
-#tabular-3452c76190 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
-#tabular-3452c76190 .tabular-subgroup-label { font-weight: 600; }
-#tabular-3452c76190 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
-#tabular-3452c76190 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
-#tabular-3452c76190 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
-#tabular-3452c76190 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
-#tabular-3452c76190 .text-left { text-align: left; }
-#tabular-3452c76190 .text-center { text-align: center; }
-#tabular-3452c76190 .text-right { text-align: right; }
-#tabular-3452c76190 .tabular-table thead th.text-left { text-align: left; }
-#tabular-3452c76190 .tabular-table thead th.text-center { text-align: center; }
-#tabular-3452c76190 .tabular-table thead th.text-right { text-align: right; }
-#tabular-3452c76190 .tabular-table td.text-left { text-align: left; }
-#tabular-3452c76190 .tabular-table td.text-center { text-align: center; }
-#tabular-3452c76190 .tabular-table td.text-right { text-align: right; }
-#tabular-3452c76190 .valign-top { vertical-align: top; }
-#tabular-3452c76190 .valign-middle { vertical-align: middle; }
-#tabular-3452c76190 .valign-bottom { vertical-align: bottom; }
-#tabular-3452c76190 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
-#tabular-3452c76190 .tabular-empty { font-style: italic; color: #6c757d; }
-#tabular-3452c76190 .tabular-page-break-row { display: none; }
-#tabular-3452c76190 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
-#tabular-3452c76190 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
-#tabular-3452c76190 .tabular-page-header, #tabular-3452c76190 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
-#tabular-3452c76190 .tabular-page-header { margin-bottom: 1rem; }
-#tabular-3452c76190 .tabular-page-footer { margin-top: 1rem; }
-#tabular-3452c76190 .tabular-page-header-left, #tabular-3452c76190 .tabular-page-footer-left { flex: 1; text-align: left; }
-#tabular-3452c76190 .tabular-page-header-center, #tabular-3452c76190 .tabular-page-footer-center { flex: 1; text-align: center; }
-#tabular-3452c76190 .tabular-page-header-right, #tabular-3452c76190 .tabular-page-footer-right { flex: 1; text-align: right; }
-@media print { #tabular-3452c76190 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-3452c76190 .tabular-table tr { page-break-inside: avoid; } #tabular-3452c76190 .tabular-page-header, #tabular-3452c76190 .tabular-page-footer { display: none; } #tabular-3452c76190 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-3452c76190 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-3452c76190 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
+#tabular-ba6debc427 { font-family: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace; color: #212529; margin: 1.5rem; font-size: 10pt; line-height: 1.3; }
+#tabular-ba6debc427 .tabular-content { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-ba6debc427 p { line-height: inherit; }
+#tabular-ba6debc427 .tabular-title { font-size: 10pt; font-weight: 600; text-align: center; margin: .2rem 0; }
+#tabular-ba6debc427 .tabular-caption { margin: 0; padding: 0; }
+#tabular-ba6debc427 .tabular-pad { margin: 0; line-height: 1; }
+#tabular-ba6debc427 .tabular-table-wrap { overflow-x: auto; margin: .2rem 0; }
+#tabular-ba6debc427 .tabular-table { border-collapse: collapse; font-size: 10pt; margin: 0 auto; }
+#tabular-ba6debc427 .tabular-table { --bs-table-bg: transparent; --bs-table-accent-bg: transparent; --bs-table-border-color: transparent; width: auto; }
+#tabular-ba6debc427 .tabular-table > :not(caption) > * > * { border-bottom-width: 0; box-shadow: none; }
+#tabular-ba6debc427 .tabular-table th, #tabular-ba6debc427 .tabular-table td { padding: .18rem .6rem; }
+#tabular-ba6debc427 .tabular-table td { text-align: left; vertical-align: top; }
+#tabular-ba6debc427 .tabular-table thead th { font-weight: 600; text-align: center; vertical-align: bottom; }
+#tabular-ba6debc427 .tabular-table thead tr:first-child th { border-top: 0.5pt solid #212529; }
+#tabular-ba6debc427 .tabular-table thead tr:last-child th { border-bottom: 0.5pt solid #212529; }
+#tabular-ba6debc427 .tabular-table thead .tabular-band { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ba6debc427 .tabular-table thead .tabular-band.tabular-band-flush-left { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0.5em), transparent calc(100% - 0.5em)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ba6debc427 .tabular-table thead .tabular-band.tabular-band-flush-right { background-image: linear-gradient(to right, transparent 0.5em, #adb5bd 0.5em, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ba6debc427 .tabular-table thead .tabular-band.tabular-band-flush-both { background-image: linear-gradient(to right, transparent 0px, #adb5bd 0px, #adb5bd calc(100% - 0px), transparent calc(100% - 0px)); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0.5pt; }
+#tabular-ba6debc427 .tabular-table tbody tr:last-child td { border-bottom: 0.5pt solid #212529; }
+#tabular-ba6debc427 .tabular-table tbody tr td { border-top: none; }
+#tabular-ba6debc427 .tabular-band { text-align: center; }
+#tabular-ba6debc427 .tabular-subgroup td { text-align: center; vertical-align: middle; padding: .15rem .6rem; }
+#tabular-ba6debc427 .tabular-subgroup-label { font-weight: 600; }
+#tabular-ba6debc427 .tabular-subgroup-bign td { text-align: center; border-bottom: 1px solid #adb5bd; }
+#tabular-ba6debc427 .tabular-subgroup-closed td { border-bottom: 1px solid #adb5bd; }
+#tabular-ba6debc427 .tabular-group-header td { font-weight: 600; text-align: left; padding-top: .55rem; }
+#tabular-ba6debc427 .tabular-blank-row td { padding: 0; border: none; height: 1em; line-height: 1em; }
+#tabular-ba6debc427 .text-left { text-align: left; }
+#tabular-ba6debc427 .text-center { text-align: center; }
+#tabular-ba6debc427 .text-right { text-align: right; }
+#tabular-ba6debc427 .tabular-table thead th.text-left { text-align: left; }
+#tabular-ba6debc427 .tabular-table thead th.text-center { text-align: center; }
+#tabular-ba6debc427 .tabular-table thead th.text-right { text-align: right; }
+#tabular-ba6debc427 .tabular-table td.text-left { text-align: left; }
+#tabular-ba6debc427 .tabular-table td.text-center { text-align: center; }
+#tabular-ba6debc427 .tabular-table td.text-right { text-align: right; }
+#tabular-ba6debc427 .valign-top { vertical-align: top; }
+#tabular-ba6debc427 .valign-middle { vertical-align: middle; }
+#tabular-ba6debc427 .valign-bottom { vertical-align: bottom; }
+#tabular-ba6debc427 .tabular-footnote { font-size: 10pt; color: #495057; margin: .25rem 0; }
+#tabular-ba6debc427 .tabular-empty { font-style: italic; color: #6c757d; }
+#tabular-ba6debc427 .tabular-page-break-row { display: none; }
+#tabular-ba6debc427 { --tabular-border-color: #212529; --tabular-border-color-muted: #adb5bd; --tabular-chrome-color: #495057; }
+#tabular-ba6debc427 .tabular-chrome-wrap { width: fit-content; max-width: 100%; margin: 0 auto; }
+#tabular-ba6debc427 .tabular-page-header, #tabular-ba6debc427 .tabular-page-footer { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: .5rem 0; font-size: 9pt; color: var(--tabular-chrome-color); }
+#tabular-ba6debc427 .tabular-page-header { margin-bottom: 1rem; }
+#tabular-ba6debc427 .tabular-page-footer { margin-top: 1rem; }
+#tabular-ba6debc427 .tabular-page-header-left, #tabular-ba6debc427 .tabular-page-footer-left { flex: 1; text-align: left; }
+#tabular-ba6debc427 .tabular-page-header-center, #tabular-ba6debc427 .tabular-page-footer-center { flex: 1; text-align: center; }
+#tabular-ba6debc427 .tabular-page-header-right, #tabular-ba6debc427 .tabular-page-footer-right { flex: 1; text-align: right; }
+@media print { #tabular-ba6debc427 .tabular-table-wrap { overflow-x: visible; margin: 0; } #tabular-ba6debc427 .tabular-table tr { page-break-inside: avoid; } #tabular-ba6debc427 .tabular-page-header, #tabular-ba6debc427 .tabular-page-footer { display: none; } #tabular-ba6debc427 .tabular-page-break-row { display: table-row; page-break-before: always; break-before: page; } #tabular-ba6debc427 .tabular-page-break-row td { border: none; padding: 0; height: 0; line-height: 0; font-size: 0; } #tabular-ba6debc427 .tabular-table + .tabular-table { page-break-before: always; break-before: page; } }
 
  
 Table 14.1.1
