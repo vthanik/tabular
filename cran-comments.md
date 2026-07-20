@@ -1,8 +1,20 @@
+## Resubmission
+
+This is a resubmission (version 0.3.1). The 0.3.0 incoming pretest raised
+one NOTE on the r-devel Debian check:
+
+- `Rd files without \usage: 'print.tabular_spec.Rd'` /
+  `\arguments should not be documented without \usage`. The manual help
+  page for the `print()` method carried `@param` entries but suppressed
+  its usage with `@usage NULL`. It now declares an explicit
+  `\usage{\method{print}{tabular_spec}(...)}`, so `\arguments` is
+  accompanied by `\usage`. No user-facing change.
+
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note
 
-* This is an update from 0.2.0 to 0.3.0. The only NOTE lists some
+* This is an update from 0.2.0 to 0.3.1. The only NOTE lists some
   possibly-misspelled words in the `Description` (all intentional, see
   below). Local `R CMD check --as-cran` and the GitHub Actions runs
   report 0 errors / 0 warnings / 0 notes.
