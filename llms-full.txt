@@ -2577,14 +2577,14 @@ Source:
 [`inst/CITATION`](https://github.com/vthanik/tabular/blob/main/inst/CITATION)
 
 Thanikachalam V (2026). *tabular: Render Tables and Listings for
-Clinical Submissions*. R package version 0.3.1,
+Clinical Submissions*. R package version 0.3.2,
 <https://vthanik.github.io/tabular/>.
 
     @Manual{,
       title = {{tabular}: Render Tables and Listings for Clinical Submissions},
       author = {Vignesh Thanikachalam},
       year = {2026},
-      note = {R package version 0.3.1},
+      note = {R package version 0.3.2},
       url = {https://vthanik.github.io/tabular/},
     }
 # tabular
@@ -2856,7 +2856,20 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # Changelog
 
+## tabular 0.3.2
+
+### Minor improvements and bug fixes
+
+- A
+  [`check_latex()`](https://vthanik.github.io/tabular/reference/check_latex.md)
+  unit test that verifies TinyTeX resolution off the `PATH` now carries
+  `skip_on_cran()`, so it no longer errors on CRAN machines that expose
+  a TinyTeX root without a functional TeX at it (the CRAN macOS arm64
+  check). Package code is unchanged.
+
 ## tabular 0.3.1
+
+CRAN release: 2026-07-20
 
 ### Improvements
 
