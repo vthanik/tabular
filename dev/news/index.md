@@ -4,6 +4,33 @@
 
 ### Improvements
 
+- [`figure()`](https://vthanik.github.io/tabular/dev/reference/figure.md)
+  now rasterises recorded base plots and zero-argument drawing functions
+  through the `ragg` device when that package is installed, resolving
+  system font families and antialiasing text better than the base
+  graphics device, and falls back to
+  [`grDevices::png()`](https://rdrr.io/r/grDevices/png.html) otherwise;
+  ggplot inputs already preferred ragg through
+  [`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html),
+  and file inputs are still embedded byte-for-byte.
+
+## tabular 0.3.2
+
+### Minor improvements and bug fixes
+
+- A
+  [`check_latex()`](https://vthanik.github.io/tabular/dev/reference/check_latex.md)
+  unit test that verifies TinyTeX resolution off the `PATH` now carries
+  `skip_on_cran()`, so it no longer errors on CRAN machines that expose
+  a TinyTeX root without a functional TeX at it (the CRAN macOS arm64
+  check). Package code is unchanged.
+
+## tabular 0.3.1
+
+CRAN release: 2026-07-20
+
+### Improvements
+
 - [`as_grid()`](https://vthanik.github.io/tabular/dev/reference/as_grid.md)
   and
   [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md)

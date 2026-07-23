@@ -7,34 +7,6 @@ notebook inline, Databricks `displayHTML`, and plain-console
 [`cat()`](https://rdrr.io/r/base/cat.html) are all handled without any
 IDE- specific branching.
 
-## Arguments
-
-- x:
-
-  *The `tabular_spec` to render.* `<tabular_spec>: required`. The same
-  object you'd hand to
-  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md).
-
-- ...:
-
-  *Forwarded to `htmltools::print` / `as.tags()`.* Use this to pass
-  `id`, `style`, `class` overrides to the wrapping `<div>`.
-
-- view:
-
-  *Open the viewer?* `<logical(1)>: default `interactive()“. Same role
-  as `gt::gt`'s \`view\` argument: passes through to htmltools as
-  \`browse = view\`. Set \`view = FALSE\` to suppress the viewer for one
-  call (e.g. to capture the HTML string without launching a window).
-
-- output:
-
-  *Force a specific preview format.*
-  `<character(1) | NULL>: default `NULL` (auto)`. See the **`output`
-  argument** section below for the full list. The session default can be
-  set via `options(tabular_print_output = "cli")` for users who prefer
-  the structural summary over the HTML preview.
-
 ## Value
 
 *Invisibly returns `x`.* Side effect: opens the viewer, inlines under a
@@ -92,6 +64,31 @@ describing the failure, so a broken spec never crashes the REPL.
 `getOption("tabular_preview_dir", default = tempdir())`. Override the
 option to keep them in a stable location (handy on Linux distros where
 browsers don't have read access to `/tmp/`).
+
+## Arguments
+
+[`print()`](https://rdrr.io/r/base/print.html) dispatches on a
+`tabular_spec` via an S7 method on the base generic, so its arguments
+are documented here rather than in a formal usage table:
+
+- `x` — *the `tabular_spec` to render.* Required. The same object you'd
+  hand to
+  [`emit()`](https://vthanik.github.io/tabular/dev/reference/emit.md).
+
+- `...` — *forwarded to `htmltools::print` / `as.tags()`.* Pass `id`,
+  `style`, `class` overrides for the wrapping `<div>`.
+
+- `view` — *open the viewer?* `logical(1)`, default
+  [`interactive()`](https://rdrr.io/r/base/interactive.html). Same role
+  as `gt::gt`'s `view` argument: passes through to htmltools as
+  `browse = view`. Set `view = FALSE` to suppress the viewer for one
+  call (e.g. to capture the HTML string without launching a window).
+
+- `output` — *force a specific preview format.* `character(1)` or
+  `NULL`, default `NULL` (auto). See the **`output` argument** section
+  below for the full list. The session default can be set via
+  `options(tabular_print_output = "cli")` for users who prefer the
+  structural summary over the HTML preview.
 
 ## See also
 
