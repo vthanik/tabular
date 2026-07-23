@@ -1,3 +1,9 @@
+# tabular (development version)
+
+## Improvements
+
+* `figure()` now rasterises recorded base plots and zero-argument drawing functions through the `ragg` device when that package is installed, resolving system font families and antialiasing text better than the base graphics device, and falls back to `grDevices::png()` otherwise; ggplot inputs already preferred ragg through `ggplot2::ggsave()`, and file inputs are still embedded byte-for-byte.
+
 # tabular 0.3.2
 
 ## Minor improvements and bug fixes

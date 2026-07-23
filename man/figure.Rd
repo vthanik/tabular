@@ -64,7 +64,15 @@ no-op there; the paged backends honour it exactly.}
 
 \item{dpi}{\emph{Raster resolution for plot inputs.} \verb{<numeric(1)>}.
 Resolution in dots per inch for PNG rasterisation. Ignored for file
-inputs (passed through unchanged) and for vector PDF targets.}
+inputs (passed through unchanged) and for vector PDF targets.
+
+\strong{Note:} PNG rasterisation prefers the \code{ragg} device when that
+package is installed, for system font resolution and better text
+antialiasing, and falls back to the base graphics device otherwise.
+
+\strong{Tip:} for full control of the drawing device, render the plot
+yourself and pass the resulting \code{.png} path as \code{plot} — file inputs
+are embedded byte-for-byte, so both \code{dpi} and the device are yours.}
 
 \item{meta}{\emph{Per-page token data frame.} \verb{<data.frame> | NULL}.
 Multi-page only: one row per plot, whose columns become \code{{token}}

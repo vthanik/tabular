@@ -78,6 +78,22 @@ test_that(".figure_rasterise renders a function to PNG for raster targets", {
   expect_identical(out$bytes[1:4], as.raw(c(0x89, 0x50, 0x4E, 0x47)))
 })
 
+test_that(".figure_rasterise falls back to the base PNG device without ragg", {
+  testthat::local_mocked_bindings(
+    is_installed = function(...) FALSE,
+    .package = "rlang"
+  )
+  out <- tabular:::.figure_rasterise(
+    function() plot(1:5),
+    format = "html",
+    width_in = 4,
+    height_in = 3,
+    dpi = 96
+  )
+  expect_equal(out$ext, "png")
+  expect_identical(out$bytes[1:4], as.raw(c(0x89, 0x50, 0x4E, 0x47)))
+})
+
 test_that(".figure_rasterise renders a function to vector PDF for LaTeX targets", {
   out <- tabular:::.figure_rasterise(
     function() plot(1:5),

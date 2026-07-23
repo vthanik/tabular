@@ -89,7 +89,16 @@
   if (vector_target) {
     grDevices::pdf(path, width = width_in, height = height_in)
   } else {
-    grDevices::png(
+    # ragg resolves system font families and antialiases text better than
+    # the base device; it is optional, so fall back when absent. (The
+    # ggplot path above needs no equivalent: ggsave already prefers
+    # ragg::agg_png when ragg is installed.)
+    png_dev <- if (rlang::is_installed("ragg")) {
+      ragg::agg_png
+    } else {
+      grDevices::png
+    }
+    png_dev(
       path,
       width = width_in,
       height = height_in,

@@ -88,6 +88,14 @@
 #'   Resolution in dots per inch for PNG rasterisation. Ignored for file
 #'   inputs (passed through unchanged) and for vector PDF targets.
 #'
+#'   **Note:** PNG rasterisation prefers the `ragg` device when that
+#'   package is installed, for system font resolution and better text
+#'   antialiasing, and falls back to the base graphics device otherwise.
+#'
+#'   **Tip:** for full control of the drawing device, render the plot
+#'   yourself and pass the resulting `.png` path as `plot` — file inputs
+#'   are embedded byte-for-byte, so both `dpi` and the device are yours.
+#'
 #' @param meta *Per-page token data frame.* `<data.frame> | NULL`.
 #'   Multi-page only: one row per plot, whose columns become `{token}`
 #'   values in that page's `titles` / `footnotes`. Ignored (with a
