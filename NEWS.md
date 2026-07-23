@@ -1,3 +1,9 @@
+# tabular 0.3.2
+
+## Minor improvements and bug fixes
+
+* A `check_latex()` unit test that verifies TinyTeX resolution off the `PATH` now carries `skip_on_cran()`, so it no longer errors on CRAN machines that expose a TinyTeX root without a functional TeX at it (the CRAN macOS arm64 check). Package code is unchanged.
+
 # tabular 0.3.1
 
 ## Improvements
