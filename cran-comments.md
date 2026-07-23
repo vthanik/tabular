@@ -1,40 +1,22 @@
-## Resubmission
+## Reason for the update timing
 
-This is a resubmission (version 0.3.1). The 0.3.0 incoming pretest raised
-one NOTE on the r-devel Debian check:
-
-- `Rd files without \usage: 'print.tabular_spec.Rd'` /
-  `\arguments should not be documented without \usage`. `print()` for a
-  `tabular_spec` is an S7 method on the base `print` generic, so there is
-  no `print.tabular_spec` function object; the manual help page therefore
-  documented the arguments with `@param` while suppressing usage with
-  `@usage NULL`. The page now keeps `@usage NULL` and moves the argument
-  descriptions from `@param` into an `@section Arguments:` prose list, so
-  the Rd contains neither `\arguments` nor `\usage` and the NOTE no longer
-  applies. No user-facing change.
+This is a patch update (0.3.1 to 0.3.2) that fixes an ERROR on the CRAN
+r-release-macos-arm64 and r-oldrel-macos-arm64 checks. A single unit test
+verified that `check_latex()` resolves a TinyTeX installation when it is
+off the `PATH`. Its skip guard relied on `tinytex::tinytex_root()` being
+non-empty, but that returns an expected path even where no functional TeX
+is installed at it (as on the CRAN macOS arm64 machine), so the test ran
+and its assertion then demanded a LaTeX the machine did not have. The test
+now carries `skip_on_cran()`, matching every other LaTeX-dependent test in
+the package. No package code changed; the fix is test-only.
 
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note
 
-* This is an update from 0.2.0 to 0.3.1. The only NOTE lists some
-  possibly-misspelled words in the `Description` (all intentional, see
-  below). Local `R CMD check --as-cran` and the GitHub Actions runs
-  report 0 errors / 0 warnings / 0 notes.
-
-## Reason for the update timing
-
-* 0.2.0 was published on 2026-07-06. This update follows sooner than the
-  usual cadence because it fixes a bug that prevents installation and PDF
-  output on locked-down corporate compute images: the `SystemRequirements`
-  field named a TeX component in a way that pak's system-requirements
-  scraper matched and answered by force-installing an OS `texlive` package,
-  which fails (sudo denied) on such hosts even though the TeX distribution
-  is optional. 0.3.0 removes that trigger and additionally ships a
-  TeX-independent PDF path (a Typst backend), so users on those images can
-  produce PDF output without any TeX installation. The release also folds
-  in cross-backend rendering fixes and internal performance work; see
-  `NEWS.md`.
+* The only NOTE lists some possibly-misspelled words in the `Description`
+  (all intentional, see below). Local `R CMD check --as-cran` reports
+  0 errors / 0 warnings / 0 notes otherwise.
 
 ## Test environments
 

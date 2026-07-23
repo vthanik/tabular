@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use tabular, please cite it as below."
 type: software
 title: "tabular: Render Tables, Listings, and Figures for Clinical Submissions"
-version: 0.3.1
+version: 0.3.2
 abstract: >-
   Native rendering of pre-summarised clinical submission tables,
   listings, and figures to RTF, LaTeX, Typst, HTML, PDF, DOCX, and

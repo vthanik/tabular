@@ -651,6 +651,12 @@ test_that("check_latex() sees a TinyTeX that is not on the PATH", {
   # The compile (tinytex::latexmk) prefers the TinyTeX root over the
   # PATH; the diagnostic must resolve identically or it reports a
   # different TeX than the one emit() will use.
+  #
+  # skip_on_cran(): tinytex::tinytex_root() returns a non-empty *expected*
+  # path even where no functional TeX is installed (as on the CRAN
+  # macOS arm64 box), so the nzchar(root) guard alone does not fire and
+  # the assertion then demands a LaTeX the machine does not have.
+  skip_on_cran()
   skip_if_not_installed("tinytex")
   root <- tryCatch(
     tinytex::tinytex_root(error = FALSE),
